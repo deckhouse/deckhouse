@@ -191,62 +191,6 @@ d8 k get deckhousereleases
   d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
-### Оповещение об обновлении Deckhouse
-
-В режиме обновлений `Auto` можно [настроить](/modules/deckhouse/configuration.html#parameters-update-notification) вызов вебхука для получения оповещения о предстоящем обновлении минорной версии Deckhouse.
-
-Кроме того, оповещения формируются не только при обновлении Deckhouse, но и при обновлении любых модулей, включая их отдельные обновления.
-В отдельных случаях система может инициировать отправку нескольких оповещений одновременно (по 10–20 оповещений) с интервалом около 15 секунд.
-
-{% alert %}
-Оповещения доступны только в режиме обновлений `Auto`, в режиме `Manual` они не формируются.
-{% endalert %}
-
-{% alert %}
-Вебхук указывать не обязательно: если параметр `update.notification.webhook` не задан, но указано время в параметре `update.notification.minimalNotificationTime`, применение новой версии всё равно будет отложено на указанный период. В этом случае оповещением о появлении новой версии можно считать появление в кластере ресурса [DeckhouseRelease](cr.html#deckhouserelease) с именем новой версии.
-{% endalert %}
-
-Оповещения отправляются только один раз для конкретного обновления. Если что-то пошло не так (например, вебхук получил некорректные данные), повторная отправка автоматически не произойдёт. Чтобы отправить оповещение повторно, необходимо удалить соответствующий ресурс [DeckhouseRelease](cr.html#deckhouserelease).
-
-Пример настройки оповещения:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-```
-
-После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес вебхука будет выполнен [POST-запрос](/modules/deckhouse/configuration.html#parameters-update-notification-webhook).
-
-Параметр [minimalNotificationTime](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) позволяет отложить установку обновления на заданный период, обеспечивая время для реакции на оповещение с учётом окон обновлений. Если при этом вебхук недоступен, каждая неудачная попытка отправки будет сдвигать время применения на ту же величину, что может привести к бесконечному откладыванию обновления.
-
-Пример:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-        minimalNotificationTime: 8h
-```
-
 ## Окна обновлений
 
 DKP позволяет задавать *окна обновлений* — временные интервалы,

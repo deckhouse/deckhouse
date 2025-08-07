@@ -198,62 +198,6 @@ Manual approval of DKP updates is required in the following cases:
   d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
-### Deckhouse update notifications
-
-In the `Auto` update mode, you can [configure](/modules/deckhouse/configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor Deckhouse version update.
-
-In addition, notifications are generated not only for Deckhouse updates but also for updates of any modules, including their individual updates.  
-In some cases, the system may initiate the sending of multiple notifications at once (10–20 notifications) at approximately 15-second intervals.
-
-{% alert %}
-Notifications are available only in the `Auto` update mode; in the `Manual` mode they are not generated.
-{% endalert %}
-
-{% alert %}
-Specifying a webhook is optional: if the `update.notification.webhook` parameter is not set but the `update.notification.minimalNotificationTime` parameter is specified, the update will still be postponed for the specified period. In this case, the appearance of a [DeckhouseRelease](cr.html#deckhouserelease) resource in the cluster with the name of the new version can be considered the notification of its availability.
-{% endalert %}
-
-Notifications are sent only once for a specific update. If something goes wrong (for example, the webhook receives incorrect data), they will not be resent automatically. To resend the notification, you must delete the corresponding [DeckhouseRelease](cr.html#deckhouserelease) resource.
-
-Example of notification configuration:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-```
-
-After a new minor Deckhouse version appears on the selected update channel, but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
-
-The [minimalNotificationTime](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
-
-Example:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  version: 1
-  settings:
-    update:
-      releaseChannel: Stable
-      mode: Auto
-      notification:
-        webhook: https://release-webhook.mydomain.com
-        minimalNotificationTime: 8h
-```
-
 ## Update windows
 
 DKP allows you to define *update windows*, which are specific time intervals during which automatic updates are allowed.
