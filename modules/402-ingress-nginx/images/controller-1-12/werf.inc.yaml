@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-08-07.02"
+fromCacheVersion: "2025-08-07.03"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -102,7 +102,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.02"
+fromCacheVersion: "2025-08-04.03"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -125,7 +125,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
-fromCacheVersion: "2025-08-04.02"
+fromCacheVersion: "2025-08-04.03"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -191,7 +191,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-07.02"
+fromCacheVersion: "2025-08-07.03"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -219,25 +219,28 @@ shell:
   - apk add --no-cache linux-headers autoconf automake libtool bash pkgconfig ninja
   - apk add --no-cache build-base g++ cmake # bison flex
   install:
-  # - apk add --no-cache openssl-dev
+  # - apk add --no-cache
   beforeSetup:
-  # - apk add libc-dev
+  # Mandatory
   - apk add pcre-dev
-  # - apk add zlib-dev
-  - apk add libxslt-dev
-  - apk add gd-dev
-  # - apk add perl-dev
-  - apk add libedit-dev
-  - apk add libaio-dev
   - apk add curl-dev
   - apk add libmaxminddb-dev
-  - apk add yajl-dev lmdb-dev
-  # - apk add libxml2-dev
-  - apk add gtest-dev
-  # - apk add c-ares-dev
-  - apk add re2-dev
   - apk add grpc-dev
   - apk add protobuf-dev
+  # Optional
+  # - apk add libxslt-dev
+  # - apk add gd-dev
+  # - apk add openssl-dev
+  # - apk add libedit-dev
+  # - apk add libaio-dev
+  # - apk add perl-dev
+  # - apk add libc-dev
+  # - apk add zlib-dev
+  # - apk add yajl-dev lmdb-dev
+  # - apk add libxml2-dev
+  # - apk add gtest-dev
+  # - apk add c-ares-dev
+  # - apk add re2-dev
 
   # - apk add patch
   # - apk add openssl
@@ -617,7 +620,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
-fromCacheVersion: "2025-08-07.03"
+fromCacheVersion: "2025-08-07.05"
 final: false
 mount:
 - from: build_dir
@@ -716,8 +719,9 @@ from: dev-registry.deckhouse.io/base_images@sha256:2c249890508acd50a61cb216cb1ca
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
+# fromImage: builder/alpine # FIXME replace!
 fromImage: common/distroless
-fromCacheVersion: "2025-08-07.01"
+fromCacheVersion: "2025-08-07.03"
 mount:
 - from: build_dir
   to: /tmp/apps
