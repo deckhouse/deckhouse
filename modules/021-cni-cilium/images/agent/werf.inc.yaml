@@ -74,18 +74,18 @@
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ctstat /usr/sbin/rtstat" }} ### test
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
----
-image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
-from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
-final: false
----
-image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
-from: dev-registry.deckhouse.io/base_images@sha256:21954c21efadd332e4eebeff0598071db052a73c76214c64e5adb7a416d8b4cc
-final: false
----
-image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
-final: false
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
+# final: false
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:21954c21efadd332e4eebeff0598071db052a73c76214c64e5adb7a416d8b4cc
+# final: false
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
+# final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -262,7 +262,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-07-29.1"
+fromCacheVersion: "2025-08-07.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -357,13 +357,13 @@ import:
   to: /usr/bin/mount
   owner: root
   group: root
-- image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+- image: tools/ipset
   before: install
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
   owner: root
   group: root
-- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+- image: tools/kmod
   before: install
   add: /bin/
   to: /usr/bin/
@@ -372,7 +372,7 @@ import:
   includePaths:
   - kmod
   - lsmod
-- image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+- image: tools/kmod
   before: install
   add: /bin/
   to: /usr/sbin/
@@ -385,7 +385,7 @@ import:
   - modinfo
   - modprobe
   - rmmod
-- image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+- image: tools/iproute2
   before: install
   add: /sbin/
   to: /usr/sbin/
@@ -419,15 +419,30 @@ import:
 - image: libs/glibc-v2.41
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
+  owner: root
+  group: root
   before: install
 - image: libs/glibc-v2.41
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
+  owner: root
+  group: root
   before: install
 - image: libs/glibc-v2.41
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
+  owner: root
+  group: root
   before: install
+- image: tools/elfutils
+  add: /usr/lib
+  to: /usr/lib
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
 git:
 {{- include "image mount points" . }}
 imageSpec:
