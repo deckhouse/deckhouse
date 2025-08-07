@@ -224,7 +224,7 @@ shell:
   beforeSetup:
   # - apk add libc-dev
   - apk add pcre-dev
-  - apk add zlib-dev
+  # - apk add zlib-dev
   - apk add libxslt-dev
   - apk add gd-dev
   # - apk add perl-dev
@@ -245,7 +245,7 @@ shell:
   # - apk add libprotobuf
   # - apk add libxml2
   # - apk add python3
-  - apk add yaml-cpp
+  # - apk add yaml-cpp
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -610,11 +610,11 @@ shell:
   #
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
-  # - cp -a /usr/* /chroot/usr/ # FIXME delete
+  - cp -a /usr/* /chroot/usr/ # FIXME delete
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
-  # - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
-  # - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
+  - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
+  - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
