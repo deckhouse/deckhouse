@@ -44,7 +44,7 @@ type Params struct {
 	Scheme     string
 	CA         *x509.Certificate // optional
 
-	EnableSoftSwitch bool
+	CheckMode registry_const.CheckModeType
 }
 
 type Inputs struct {

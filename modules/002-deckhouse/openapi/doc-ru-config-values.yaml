@@ -235,13 +235,12 @@ properties:
               Параметр необходимо указывать, если container registry использует самоподписанный сертификат или сертификат, выданный частным центром сертификации.
               
               Если параметр не указан, будут использоваться сертификаты, определенные в хранилище корневых сертификатов узла.
-          options:
+          checkMode:
             description: |
-              Настройки переключения между container registry в указанном режиме.
-            properties:
-              enableSoftSwitch:
-                description: |
-                  Включить мягкий режим переключения для проверки только наличия тега образа Deckhouse в upstream registry.
+              Режим проверки container registry:
+
+              - `Critical` (по умолчанию) — проверяет наличие всех критически важных компонентов в container registry.
+              - `Soft` — проверяет только наличие тега образа Deckhouse в container registry (используется для переключения между редакциями Deckhouse).
 
       unmanaged:
         description: |

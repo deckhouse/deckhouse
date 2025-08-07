@@ -18,46 +18,54 @@ package checker
 
 import (
 	"fmt"
-	"maps"
 	"sort"
-	"strings"
 
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
-func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository) ([]queueItem, error) {
-	currentRepo, err := gcr_name.NewRepository(info.Repo)
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse registry base %q: %w", info.Repo, err)
-	}
-
+func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, checkMode registry_const.CheckModeType) ([]queueItem, error) {
 	images := make(map[string]string)
-	for d, info := range info.ModulesImagesDigests {
-		image := currentRepo.Digest(d).String()
-		images[image] = info
-	}
 
-	// Merge deckhouse images to modules images
-	maps.Copy(images, collectDeckhouseQueueImages(info.DeckhouseImages, currentRepo))
+	switch checkMode {
+	case registry_const.Soft:
+		// Only deckhouse container image
+		newImageRef, err := updateImageRepo(info.DeckhouseContainerImageRef, repo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update image reference: %w", err)
+		}
+
+		if _, ok := newImageRef.(gcr_name.Tag); ok {
+			images[newImageRef.String()] = "deckhouse/containers/deckhouse"
+		} else {
+			return nil, fmt.Errorf("expected deckhouse image reference to be a tag, but got: %s", newImageRef.String())
+		}
+	default:
+		images = make(map[string]string, len(info.ModulesImagesDigests)+len(info.DeckhouseImagesRefs))
+
+		// Module images
+		for digest, info := range info.ModulesImagesDigests {
+			image := repo.Digest(digest).String()
+			images[image] = info
+		}
+
+		// Deckhouse images
+		for info, image := range info.DeckhouseImagesRefs {
+			newImageRef, err := updateImageRepo(image, repo)
+			if err != nil {
+				return nil, err
+			}
+			images[newImageRef.String()] = info
+		}
+	}
 
 	ret := make([]queueItem, 0, len(images))
 	for image, info := range images {
-		ref, err := gcr_name.ParseReference(image)
-		if err != nil {
-			return ret, fmt.Errorf("cannot parse image %q (%q) reference: %w", image, info, err)
-		}
-
-		if !strings.HasPrefix(ref.String(), currentRepo.String()) {
-			return ret, fmt.Errorf("image %q (%q) ref not starts with repository %q", ref.String(), info, currentRepo.String())
-		}
-
-		imagePath := strings.TrimPrefix(ref.String(), currentRepo.String())
-
 		item := queueItem{
 			Info:  info,
-			Image: repo.String() + imagePath,
+			Image: image,
 		}
-
 		ret = append(ret, item)
 	}
 
@@ -69,27 +77,17 @@ func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository) ([]queueIt
 	return ret, nil
 }
 
-func collectDeckhouseQueueImages(deckhouseImages deckhouseImagesModel, repo gcr_name.Repository) map[string]string {
-	images := make(map[string]string)
-	for name, image := range deckhouseImages.InitContainers {
-		// workaround for overrideImages
-		if !strings.HasPrefix(image, repo.String()) {
-			continue
-		}
-
-		info := fmt.Sprintf("deckhouse/init-containers/%v", name)
-		images[image] = info
+func updateImageRepo(imageRef string, newRepo gcr_name.Repository) (gcr_name.Reference, error) {
+	ref, err := gcr_name.ParseReference(imageRef)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image reference %q: %w", imageRef, err)
 	}
-
-	for name, image := range deckhouseImages.Containers {
-		// workaround for overrideImages
-		if !strings.HasPrefix(image, repo.String()) {
-			continue
-		}
-
-		info := fmt.Sprintf("deckhouse/containers/%v", name)
-		images[image] = info
+	switch refType := ref.(type) {
+	case gcr_name.Digest:
+		return newRepo.Digest(refType.DigestStr()), nil
+	case gcr_name.Tag:
+		return newRepo.Tag(refType.TagStr()), nil
+	default:
+		return nil, fmt.Errorf("unknown reference type for image %q", imageRef)
 	}
-
-	return images
 }

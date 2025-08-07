@@ -406,16 +406,15 @@ properties:
               The root CA certificate (in PEM format) for validating the container registry's server certificate.
               This is necessary if the registry uses a self-signed certificate or a certificate issued by a private Certificate Authority.
               If not provided, the system's trusted root CAs will be used.
-          options:
-            type: object
+          checkMode:
+            type: string
             description: |
-              Settings for switching between container registries in the specified mode.
-            properties:
-              enableSoftSwitch:
-                type: boolean
-                default: false
-                description: |
-                  Enable soft switch mode to only verify the presence of the Deckhouse image tag in the upstream registry.
+              Mode for checking the container registry:
+
+              - `Critical` (default) — checks for the presence of all critical components in the container registry.
+              - `Soft` — checks only for the presence of the Deckhouse image tag in the container registry (used for switching between Deckhouse editions).
+            enum: [Critical, Soft]
+            default: Critical
 
       unmanaged:
         type: object

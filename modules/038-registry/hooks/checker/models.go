@@ -29,13 +29,9 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
-
-type deckhouseImagesModel struct {
-	InitContainers map[string]string
-	Containers     map[string]string
-}
 
 type queueItem struct {
 	Image string `json:"image,omitempty"`
@@ -44,8 +40,9 @@ type queueItem struct {
 }
 
 type Params struct {
-	Registries map[string]RegistryParams `json:"registries,omitempty"`
-	Version    string                    `json:"version,omitempty"`
+	Registries map[string]RegistryParams    `json:"registries,omitempty"`
+	CheckMode  registry_const.CheckModeType `json:"checkMode,omitempty"`
+	Version    string                       `json:"version,omitempty"`
 }
 
 func (params Params) Validate() error {
@@ -121,9 +118,10 @@ type inputsModel struct {
 }
 
 type clusterImagesInfo struct {
-	Repo                 string
-	ModulesImagesDigests map[string]string
-	DeckhouseImages      deckhouseImagesModel
+	Repo                       string
+	ModulesImagesDigests       map[string]string
+	DeckhouseImagesRefs        map[string]string
+	DeckhouseContainerImageRef string
 }
 
 func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
@@ -234,7 +232,7 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 			return fmt.Errorf("cannot parse registry %q params: %w", name, err)
 		}
 
-		repoImages, err := buildRepoQueue(inputs.ImagesInfo, repo)
+		repoImages, err := buildRepoQueue(inputs.ImagesInfo, repo, inputs.Params.CheckMode)
 		if err != nil {
 			return fmt.Errorf("cannot build registry %q queue: %w", name, err)
 		}
