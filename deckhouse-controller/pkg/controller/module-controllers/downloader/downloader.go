@@ -86,17 +86,12 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
-	img, err := md.fetchImage(moduleName, imageTag)
+	digest, err := md.getImgDigest(moduleName, imageTag)
 	if err != nil {
 		return "", nil, err
 	}
 
-	digest, err := img.Digest()
-	if err != nil {
-		return "", nil, err
-	}
-
-	if digest.String() == checksum {
+	if digest == checksum {
 		// module is up-to-date
 		return "", nil, nil
 	}
@@ -105,7 +100,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
+	return digest, md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
@@ -197,6 +192,20 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image,
 	}
 
 	return regCli.Image(context.TODO(), imageTag)
+}
+
+func (md *ModuleDownloader) getImgDigest(moduleName, moduleVersion string) (string, error) {
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return "", fmt.Errorf("fetch module error: %v", err)
+	}
+
+	digest, err := regCli.Digest(context.TODO(), moduleVersion)
+	if err != nil {
+		return "", fmt.Errorf("get image digest: %w", err)
+	}
+
+	return digest, nil
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) (*DownloadStatistic, error) {

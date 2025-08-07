@@ -50,6 +50,7 @@ const (
 
 type Client interface {
 	Image(ctx context.Context, tag string) (crv1.Image, error)
+	Get(ctx context.Context, tag string) (*remote.Descriptor, error)
 	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
 }
@@ -99,9 +100,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	return r, nil
 }
 
-func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
-	imageURL := r.registryURL + ":" + tag
-
+func (r *client) setupRemote(ctx context.Context, imageURL string) (name.Reference, []remote.Option, error) {
 	var nameOpts []name.Option
 	if r.options.useHTTP {
 		nameOpts = append(nameOpts, name.Insecure)
@@ -109,7 +108,7 @@ func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
 
 	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
 	if err != nil {
-		return nil, fmt.Errorf("parse reference: %w", err)
+		return nil, nil, fmt.Errorf("parse reference: %w", err)
 	}
 
 	imageOptions := make([]remote.Option, 0)
@@ -133,12 +132,29 @@ func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
 		imageOptions = append(imageOptions, remote.WithContext(ctx))
 	}
 
-	image, err := remote.Image(ref, imageOptions...)
+	return ref, imageOptions, nil
+}
+
+func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	ref, imageOptions, err := r.setupRemote(ctx, imageURL)
 	if err != nil {
 		return nil, fmt.Errorf("image: %w", err)
 	}
 
-	return image, nil
+	return remote.Image(ref, imageOptions...)
+}
+
+func (r *client) Get(ctx context.Context, tag string) (*remote.Descriptor, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	ref, imageOptions, err := r.setupRemote(ctx, imageURL)
+	if err != nil {
+		return nil, fmt.Errorf("image: %w", err)
+	}
+
+	return remote.Get(ref, imageOptions...)
 }
 
 func (r *client) ListTags(ctx context.Context) ([]string, error) {
@@ -183,17 +199,12 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
-	image, err := r.Image(ctx, tag)
+	desc, err := r.Get(ctx, tag)
 	if err != nil {
 		return "", fmt.Errorf("image: %w", err)
 	}
 
-	d, err := image.Digest()
-	if err != nil {
-		return "", fmt.Errorf("extract digest: %w", err)
-	}
-
-	return d.String(), nil
+	return desc.Digest.String(), nil
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
