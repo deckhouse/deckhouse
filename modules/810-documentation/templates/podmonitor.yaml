@@ -3,7 +3,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: documentation-modules
+  name: documentation
   namespace: d8-monitoring
   labels:
     app: documentation
