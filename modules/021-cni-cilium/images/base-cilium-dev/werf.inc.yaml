@@ -64,11 +64,12 @@ shell:
     iptables iptables-ipv6 iptables-nft \
     coreutils binutils git git-lfs zip unzip wget mount patch patchelf \
     make automake autoconf cmake ccache bison flex ninja-build pkg-config \
-    gcc gcc-c++ \
+    gcc gcc-c++ libstdc++-devel libstdc++-devel-static \
+    glibc glibc-devel glibc-devel-static \
     python python3 python3-module-pip python3-module-virtualenv \
     build-essential libtool \
     libnetfilter_conntrack libnetfilter_conntrack-devel libnfnetlink-devel \
-    libmnl-devel libnftnl-devel
+    libmnl-devel libnftnl-devel elfutils-devel zlib-devel
   # for debug
   - apt-get install -y strace vim-console
   # apt clean
@@ -83,7 +84,7 @@ shell:
     libcap-devel libpcap-devel \
     clang17.0 clang17.0-tools lldb17.0 lld17.0 llvm17.0-devel \
     libcxxabi-devel \
-    gcc11 gcc11-c++
+    gcc11 gcc11-c++ libstdc++11-devel libstdc++11-devel-static
   - apt-get autoclean && apt-get clean
   install:
   # Install Go
