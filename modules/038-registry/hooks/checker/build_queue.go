@@ -38,11 +38,11 @@ func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, mode regis
 	switch mode {
 	case registry_const.Relax:
 		// Only deckhouse container image
-		deckhouseImages, err := collectDeckhouseContainerImage(info.DeckhouseImages, currentRepo)
+		deckhouseContainerImage, err := collectDeckhouseContainerImage(info.DeckhouseImages, currentRepo)
 		if err != nil {
 			return nil, err
 		}
-		maps.Copy(images, deckhouseImages)
+		maps.Copy(images, deckhouseContainerImage)
 	default:
 		// Module images
 		for d, info := range info.ModulesImagesDigests {
