@@ -366,8 +366,7 @@ func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string 
 		q := state.Queues[name]
 
 		if !q.any() {
-			fmt.Fprintf(msg, "%v: all %v items are checked\n",
-				name, q.Processed)
+			fmt.Fprintf(msg, "%v: all %v items are checked\n", name, q.Processed)
 			continue
 		}
 
