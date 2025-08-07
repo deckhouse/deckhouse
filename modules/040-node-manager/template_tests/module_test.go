@@ -2067,8 +2067,8 @@ internal:
 					Expect(vcdTemplate.Field("spec.template.spec.storageProfile").String()).To(Equal("vHDD"))
 					Expect(vcdTemplate.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
 
-					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
-					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
+					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("b58dbcace3fbfc047e5afe3072d2e08febaf93a53106cb98e3a12ebedebc320c"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("b58dbcace3fbfc047e5afe3072d2e08febaf93a53106cb98e3a12ebedebc320c"), "Prevent checksum changing")
 				}
 
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
@@ -2081,16 +2081,16 @@ internal:
 				// zonea
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-02320933",
-					templateName: "worker-6656f66e",
+					templateName: "worker-bc595783",
 				})
 
 				// zoneb
 				assertMachineDeploymentAndItsDeps(f, mdParams{
 					name:         "myprefix-worker-6bdb5b0d",
-					templateName: "worker-d30762c9",
+					templateName: "worker-1a2617d0",
 				})
 
-				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-c10b569f")
+				vcdTemplateWithCatalog := f.KubernetesResource("VCDMachineTemplate", "d8-cloud-instance-manager", "worker-big-60874d37")
 				Expect(vcdTemplateWithCatalog.Exists()).To(BeTrue())
 				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.template").String()).To(Equal("Ubuntu"))
 				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
