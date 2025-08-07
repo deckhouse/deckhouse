@@ -78,7 +78,8 @@ func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, checkMode 
 }
 
 func updateImageRepo(imageRef string, newRepo gcr_name.Repository) (gcr_name.Reference, error) {
-	ref, err := gcr_name.ParseReference(imageRef)
+	// Use StrictValidation
+	ref, err := gcr_name.ParseReference(imageRef, gcr_name.StrictValidation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image reference %q: %w", imageRef, err)
 	}
