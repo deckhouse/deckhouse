@@ -127,7 +127,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
-	svc.Spec.Selector = map[string]string{}
 	if svc.Spec.Selector == nil {
 		svc.Spec.Selector = map[string]string{}
 	}
