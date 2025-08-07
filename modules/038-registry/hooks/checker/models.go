@@ -360,7 +360,7 @@ func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string 
 		q := state.Queues[name]
 
 		if !q.any() {
-			fmt.Fprintf(msg, "mode: %v, %v: all %v items are checked\n",
+			fmt.Fprintf(msg, "%v check mode, %v: all %v items are checked\n",
 				mode, name, q.Processed)
 			continue
 		}
@@ -376,7 +376,7 @@ func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string 
 
 		if len(errItems) > 0 {
 			fmt.Fprintf(msg,
-				"mode: %v, %v: %v of %v items processed, %v items with errors:\n",
+				"%v check mode, %v: %v of %v items processed, %v items with errors:\n",
 				mode, name, q.Processed, q.total(), len(errItems),
 			)
 
@@ -397,7 +397,7 @@ func (state *stateModel) buildMessage(mode registry_const.CheckModeType) string 
 		}
 
 		fmt.Fprintf(msg,
-			"mode: %v, %v: %v of %v items processed\n",
+			"%v check mode, %v: %v of %v items processed\n",
 			mode, name, q.Processed, q.total(),
 		)
 	}
