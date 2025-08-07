@@ -4991,6 +4991,60 @@ alerts:
         A new release for module {{ $labels.moduleName }} has been blocked due to unmet requirements.
       severity: "6"
       markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        This module is significantly outdated and may have compatibility issues.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is {{ $labels.versionLag }} or more minor versions behind the latest available release.
+      severity: "5"
+      markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running 2 minor versions behind the latest available release.
+        Updating is recommended to maintain compatibility and access to latest features.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is 2 minor versions behind the latest available release.
+      severity: "7"
+      markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running 1 minor version behind the latest available release.
+        Consider updating to maintain compatibility and security.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is 1 minor version behind the latest available release.
+      severity: "9"
+      markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
