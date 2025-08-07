@@ -445,6 +445,16 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		}
 	}
 
+	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+
+		return true
+	})
+	if err != nil {
+		r.logger.Error("failed to update module", slog.String("name", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to remove finalizer from ModuleConfig", slog.String("module", moduleConfig.Name), log.Err(err))
 		return ctrl.Result{}, err
