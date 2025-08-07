@@ -26,10 +26,12 @@ import (
 )
 
 func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, checkMode registry_const.CheckModeType) ([]queueItem, error) {
-	images := make(map[string]string)
+	var images map[string]string
 
 	switch checkMode {
 	case registry_const.Relax:
+		images = make(map[string]string)
+
 		// Only deckhouse container image
 		newImageRef, err := updateImageRepo(info.DeckhouseContainerImageRef, repo)
 		if err != nil {
