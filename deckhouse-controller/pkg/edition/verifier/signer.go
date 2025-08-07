@@ -75,10 +75,10 @@ func (s *signer) Sign(moduleName string, modulePath string) error {
 
 func (s *signer) calculateChecksum(modulePath string) (string, error) {
 	templatePath := filepath.Join(modulePath, "templates")
-	openApiPath := filepath.Join(modulePath, "openapi")
+	valuesPath := filepath.Join(modulePath, "openapi")
 	defPath := filepath.Join(modulePath, "module.yaml")
 
-	return addonutils.CalculateChecksumOfPaths(templatePath, openApiPath, defPath)
+	return addonutils.CalculateChecksumOfPaths(templatePath, valuesPath, defPath)
 }
 
 func (s *signer) createSignedCert(subject pkix.Name, pubKey ecdsa.PublicKey) ([]byte, error) {
