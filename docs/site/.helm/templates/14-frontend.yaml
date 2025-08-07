@@ -8,6 +8,7 @@ metadata:
     "werf.io/replicas-on-creation": "1"
   labels:
     service: frontend
+    app.kubernetes.io/part-of: deckhouse-docs
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
