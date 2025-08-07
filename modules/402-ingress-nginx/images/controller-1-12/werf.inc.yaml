@@ -42,22 +42,18 @@ shell:
   - echo "export REPO_INFO=$(git config --get remote.origin.url)" >> .env_pass
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
-  # - git config --global url."$(cat /run/secrets/SOURCE_REPO)".insteadOf https://github.com
-  # - export GIT_TRACE=1
   - mkdir -p /src/nginx-deps
   - git clone -b {{ $controllerBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
     # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
   - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   - git clone -b v3.11.3 $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
-  # - sed -i '7,11d' exporters/fluentd/cmake/nlohmann-json.cmake
-  # - sed -i '7i\    SOURCE_DIR "/src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5/nlohmann_json"' exporters/fluentd/cmake/nlohmann-json.cmake
-  # - cat exporters/fluentd/cmake/nlohmann-json.cmake
   #
   - cd /src/nginx-deps
   - git clone --depth=100 $(cat /run/secrets/SOURCE_REPO)/google/ngx_brotli.git
   - cd ngx_brotli
   - git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
   - git submodule init
+  - git submodule set-url deps/brotli "$(cat /run/secrets/SOURCE_REPO)/google/brotli.git"
   - git submodule update
   #
   - cd /src/nginx-deps
@@ -66,13 +62,20 @@ shell:
   - cd /src/nginx-deps
   - git clone -b v3.0.14 $(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity
   - cd ModSecurity/
-  # - git checkout v3.0.14
   - git submodule init
+  - git submodule set-url test/test-cases/secrules-language-tests "$(cat /run/secrets/SOURCE_REPO)/SpiderLabs/secrules-language-tests"
+  - git submodule set-url others/libinjection "$(cat /run/secrets/SOURCE_REPO)/libinjection/libinjection.git"
+  - git submodule set-url bindings/python "$(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity-Python-bindings.git"
+  - git submodule set-url others/mbedtls "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls.git"
+  - git submodule set-url others/mbedtls/framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
+  - git submodule set-url others/mbedtls/tf-psa-crypto "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/TF-PSA-Crypto.git"
+  - git submodule set-url others/mbedtls/tf-psa-crypto/framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
   - git submodule update
   #
   - cd /src/nginx-deps
-  - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5
-  - cd /src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5
+  - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
+  - cd /src/nginx-deps/opentelemetry-cpp-contrib
+    # Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp-contrib/compare/8933841f0a7f8737f61404cf0a64acf6b079c8a5...main
   - git reset --hard 8933841f0a7f8737f61404cf0a64acf6b079c8a5
   #
   - cd /src/nginx-deps
@@ -85,9 +88,17 @@ shell:
   - rm -rf /src/nginx-deps/.git
   - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/.git
   - rm -rf /src/ngx_brotli/.git
+  - rm -rf /src/ngx_brotli/deps/brotli/.git
   - rm -rf /src/ssdeep/.git
   - rm -rf /src/ModSecurity/.git
-  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib-8933841f0a7f8737f61404cf0a64acf6b079c8a5/.git
+  - rm -rf /src/ModSecurity/test/test-cases/secrules-language-tests/.git
+  - rm -rf /src/ModSecurity/others/libinjection/.git
+  - rm -rf /src/ModSecurity/bindings/python/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/framework/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/tf-psa-crypto/.git
+  - rm -rf /src/ModSecurity/others/mbedtls/tf-psa-crypto/framework.git
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
@@ -106,7 +117,7 @@ import:
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev # FIXME rebuild!
+  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev # FIXME rebuild without deps!
   setup:
   - cd /src/lua-protobuf
   - luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
@@ -206,17 +217,17 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache build-base linux-headers autoconf automake g++ cmake bison libtool flex bash pkgconfig ninja
-  # - mkdir -p ~/.ssh/ # FIXME delete
-  # - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config # FIXME delete
+  - apk add --no-cache linux-headers autoconf automake libtool bash pkgconfig ninja
+  - apk add --no-cache build-base g++ cmake # bison flex
   install:
-  - apk add libc-dev
-  - apk add openssl-dev
+  - apk add --no-cache openssl-dev
+  beforeSetup:
+  # - apk add libc-dev
   - apk add pcre-dev
   - apk add zlib-dev
   - apk add libxslt-dev
   - apk add gd-dev
-  - apk add perl-dev
+  # - apk add perl-dev
   - apk add libedit-dev
   - apk add libaio-dev
   - apk add curl-dev
@@ -231,11 +242,10 @@ shell:
 
   # - apk add patch
   # - apk add openssl
-  - apk add libprotobuf
+  # - apk add libprotobuf
   # - apk add libxml2
   # - apk add python3
   - apk add yaml-cpp
-  beforeSetup:
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -267,12 +277,10 @@ shell:
   - ln -s /usr/local/bin/luajit /usr/local/bin/lua
   - ln -s "$LUAJIT_INC" /usr/local/include/lua
 
-  - echo "### 1"
   - cd "$BUILD_PATH/opentelemetry-cpp"
   - export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
 
   - mkdir .git # A hack to trick the builder
-  - ls -l third_party/nlohmann-json
   - cmake -B build -G Ninja -Wno-dev
     -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/"
     -DCMAKE_INSTALL_PREFIX=/usr
@@ -293,7 +301,6 @@ shell:
   - cmake --build build
   - cmake --install build
 
-  - echo "### 2"
   # Build ssdeep
   - cd "$BUILD_PATH"
   - cd ssdeep/
@@ -418,10 +425,7 @@ shell:
     -Wno-cast-function-type"
 
   - LD_OPT="-fPIE -fPIC -pie -Wl,-z,relro -Wl,-z,now"
-  - |
-    if [[ ${ARCH} == "x86_64" ]]; then
-      CC_OPT+=' -m64 -mtune=generic'
-    fi
+  - CC_OPT+=' -m64 -mtune=generic'
 
   - WITH_MODULES="
     --add-module=$BUILD_PATH/ngx_devel_kit
@@ -465,18 +469,16 @@ shell:
   - make modules
   - make install
 
-  # Check for recent changes: https://github.com/open-telemetry/opentelemetry-cpp-contrib/compare/8933841f0a7f8737f61404cf0a64acf6b079c8a5...main
-  - export OPENTELEMETRY_CONTRIB_COMMIT=8933841f0a7f8737f61404cf0a64acf6b079c8a5
-  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib
 
   - export OTEL_TEMP_INSTALL=/tmp/otel
   - mkdir -p ${OTEL_TEMP_INSTALL}
 
-  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx
+  - cd ${BUILD_PATH}/opentelemetry-cpp-contrib/instrumentation/nginx
   # remove downloading nginx from cmake and clone it manually
   # by default cmake download nginx from internet
   # and change cmake NGINX_DIR
-  - sed -e "35d" nginx.cmake | sed -e "35i set(NGINX_DIR \"${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx/build/nginx/\")" | sed -e "27d" | sed -e "27i \ \ SOURCE_DIR nginx" > nginx.cmake.tmp
+  - sed -e "35d" nginx.cmake | sed -e "35i set(NGINX_DIR \"${BUILD_PATH}/opentelemetry-cpp-contrib/instrumentation/nginx/build/nginx/\")" | sed -e "27d" | sed -e "27i \ \ SOURCE_DIR nginx" > nginx.cmake.tmp
   - rm -f nginx.cmake
   - mv nginx.cmake.tmp nginx.cmake
   - cat nginx.cmake
@@ -563,18 +565,15 @@ shell:
       /var/log/audit \
       /var/log/nginx \
     );
-
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
       chown -R deckhouse:deckhouse ${dir};
     done
-
   - rm -rf /etc/nginx/owasp-modsecurity-crs/.git
   - rm -rf /etc/nginx/owasp-modsecurity-crs/tests
 
   # remove .a files
   - find /usr/local -name "*.a" -print | xargs /bin/rm
-
   setup:
   # Source: rootfs/chroot.sh
   - |
