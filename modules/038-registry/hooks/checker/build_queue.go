@@ -23,22 +23,35 @@ import (
 	"strings"
 
 	gcr_name "github.com/google/go-containerregistry/pkg/name"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
-func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository) ([]queueItem, error) {
+func buildRepoQueue(info clusterImagesInfo, repo gcr_name.Repository, mode registry_const.CheckModeType) ([]queueItem, error) {
 	currentRepo, err := gcr_name.NewRepository(info.Repo)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse registry base %q: %w", info.Repo, err)
 	}
 
 	images := make(map[string]string)
-	for d, info := range info.ModulesImagesDigests {
-		image := currentRepo.Digest(d).String()
-		images[image] = info
-	}
 
-	// Merge deckhouse images to modules images
-	maps.Copy(images, collectDeckhouseQueueImages(info.DeckhouseImages, currentRepo))
+	switch mode {
+	case registry_const.Relax:
+		// Only deckhouse container image
+		deckhouseContainerImage, err := collectDeckhouseContainerImage(info.DeckhouseImages, currentRepo)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(images, deckhouseContainerImage)
+	default:
+		// Module images
+		for d, info := range info.ModulesImagesDigests {
+			image := currentRepo.Digest(d).String()
+			images[image] = info
+		}
+		// Deckhouse images
+		maps.Copy(images, collectDeckhouseQueueImages(info.DeckhouseImages, currentRepo))
+	}
 
 	ret := make([]queueItem, 0, len(images))
 	for image, info := range images {
@@ -92,4 +105,30 @@ func collectDeckhouseQueueImages(deckhouseImages deckhouseImagesModel, repo gcr_
 	}
 
 	return images
+}
+
+func collectDeckhouseContainerImage(deckhouseImages deckhouseImagesModel, repo gcr_name.Repository) (map[string]string, error) {
+	const name = "deckhouse"
+	info := fmt.Sprintf("deckhouse/containers/%s", name)
+
+	image, found := deckhouseImages.Containers[name]
+	if !found {
+		return nil, fmt.Errorf("deckhouse image not found")
+	}
+
+	// workaround for overrideImages
+	if !strings.HasPrefix(image, repo.String()) {
+		return nil, nil
+	}
+
+	ref, err := gcr_name.ParseReference(image)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse image reference %q: %w", image, err)
+	}
+
+	if _, ok := ref.(gcr_name.Tag); !ok {
+		return nil, fmt.Errorf("image reference %q must be a tag", image)
+	}
+
+	return map[string]string{image: info}, nil
 }
