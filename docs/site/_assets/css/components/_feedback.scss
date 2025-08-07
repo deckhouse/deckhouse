@@ -21,11 +21,24 @@
         }
 
         &--icon {
+            display: flex;
             gap: 8px;
 
             .icon {
+                background-color: #F5F5FB;
+                height: 32px;
+                width: 32px;
+                border: none;
+                border-radius: 6px;
                 cursor: pointer;
-                transition: stroke 0.2s ease-in-out;
+                
+                path {
+                    transition: stroke 0.2s ease-in-out;
+                }
+
+                &.icon__dislike {
+                    transform: rotate(180deg);
+                }
 
                 &:hover path {
                     stroke: #0064FF;
@@ -34,9 +47,10 @@
                 &:active path {
                     stroke: #0064FF;
                     transform: scale(0.95);
-                    transition: transform 0.1 ease-in-out;
+                    transition: transform 0.2 ease-in-out;
                 }
             }
+
         }
     }
 }
