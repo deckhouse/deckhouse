@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -71,7 +73,7 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 	for _, snapshot := range snapshots {
 		node, ok := snapshot.(NodesInfo)
 		if !ok {
-			continue
+			return fmt.Errorf("failed to convert snapshot for node: %s", node)
 		}
 
 		hasTaint := false
