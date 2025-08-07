@@ -157,6 +157,56 @@ spec:
         volumeMounts:
           - name: kube-rbac-proxy-ca
             mountPath: /etc/kube-rbac-proxy
+      - name: kube-rbac-proxy-metrics
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+          - "--secure-listen-address=$(KUBE_RBAC_PROXY_METRICS_LISTEN_ADDRESS):9091"
+          - "--client-ca-file=/etc/kube-rbac-proxy/ca.crt"
+          - "--v=2"
+          - "--logtostderr=true"
+          - "--stale-cache-interval=1h30m"
+          - "--livez-path=/livez"
+        env:
+          - name: KUBE_RBAC_PROXY_METRICS_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: KUBE_RBAC_PROXY_CONFIG
+            value: |
+              upstreams:
+              - upstream: http://127.0.0.1:9090/metrics
+                path: /metrics
+                authorization:
+                  resourceAttributes:
+                    namespace: d8-system
+                    apiGroup: apps
+                    apiVersion: v1
+                    resource: deployments
+                    subresource: prometheus-metrics
+                    name: documentation
+        ports:
+          - containerPort: 9091
+            name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 9091
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 9091
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
+        volumeMounts:
+          - name: kube-rbac-proxy-ca
+            mountPath: /etc/kube-rbac-proxy
       volumes:
         - name: config
           configMap:
@@ -187,12 +237,12 @@ metadata:
     module: documentation
   annotations:
     prometheus.io/scrape: "true"
-    prometheus.io/port: "9090"
+    prometheus.io/port: "9091"
 spec:
   selector:
     app: documentation
   ports:
     - name: http-metrics
       port: 9090
-      targetPort: http-metrics
+      targetPort: https-metrics
       protocol: TCP
