@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -37,14 +38,21 @@ type InstanceScope struct {
 	*Scope
 	MachineScope *MachineScope
 
-	Instance    *deckhousev1.StaticInstance
-	Credentials *deckhousev1.SSHCredentials
+	Instance      *deckhousev1.StaticInstance
+	Credentials   *deckhousev1.SSHCredentials
+	SSHLegacyMode bool
 }
+
+const (
+	sshLegacySecretName      = "d8-caps-use-legacy-ssh"
+	sshLegacySecretNamespace = "d8-cloud-instance-manager"
+)
 
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
 	staticInstance *deckhousev1.StaticInstance,
+	ctx context.Context,
 ) (*InstanceScope, error) {
 	if scope == nil {
 		return nil, errors.New("Scope is required when creating an InstanceScope")
@@ -59,10 +67,22 @@ func NewInstanceScope(
 	}
 
 	scope.PatchHelper = patchHelper
+	secret := &v1.Secret{}
+	legasyMode := true
+	secretKey := k8sClient.ObjectKey{
+		Name:      sshLegacySecretName,
+		Namespace: sshLegacySecretNamespace,
+	}
+
+	err = scope.Client.Get(ctx, secretKey, secret)
+	if err != nil {
+		legasyMode = false
+	}
 
 	return &InstanceScope{
-		Scope:    scope,
-		Instance: staticInstance,
+		Scope:         scope,
+		Instance:      staticInstance,
+		SSHLegacyMode: legasyMode,
 	}, nil
 }
 
