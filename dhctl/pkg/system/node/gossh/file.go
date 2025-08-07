@@ -64,6 +64,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 		if rType == "DIR" {
 			remotePath = remotePath + "/" + filepath.Base(srcPath)
 		}
+		log.DebugF("starting upload local %s to remote %s\n", srcPath, remotePath)
 
 		if err := scpClient.CopyFile(ctx, localFile, remotePath, "0755"); err != nil {
 			return fmt.Errorf("failed to copy file to remote host: %w", err)
@@ -203,6 +204,8 @@ func getRemoteFileStat(client *ssh.Client, remoteFilePath string) (string, error
 
 	command := fmt.Sprint("stat -c %F " + remoteFilePath)
 	output, err := session.CombinedOutput(command)
+
+	log.DebugF("remote path %s is %s\n", remoteFilePath, output)
 
 	if strings.TrimSpace(string(output)) == "directory" {
 		return "DIR", nil
