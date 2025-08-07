@@ -45,6 +45,11 @@ If the `htpasswd` command is not available, install the appropriate package:
 
 ## Adding a user to a group
 
+{% alert level="warning" %}
+It is forbidden to use users and groups with the `system:` prefix.  
+Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
+{% endalert %}
+
 To group static users together, create a Group resource.
 
 Example resource definition:
