@@ -1,18 +1,66 @@
 positive:
   configValues:
-    - storageClass:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
         compatibilityFlag: Legacy
-    - storageClass:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
         compatibilityFlag: Migration
   values:
-    - { internal: {} }
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      internal: {}
 negative:
   configValues:
-    - storageClass:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
         compatibilityFlag: legacy
-    - storageClass:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
         compatibilityFlag: migration
-    - storageClass:
+    - host: myhost
+      username: myuname
+      password: myPaSsWd
+      vmFolderPath: dev/test
+      regionTagCategory: myregtagcat
+      zoneTagCategory: myzonetagcat
+      region: myreg
+      zones: ["zonea", "zoneb"]
+      storageClass:
         compatibilityFlag: qwerty
   values:
     - { somethingInConfig: yes }
