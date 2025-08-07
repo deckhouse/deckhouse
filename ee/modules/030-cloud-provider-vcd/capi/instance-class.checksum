@@ -15,6 +15,11 @@
   {{- $placementPolicy = .nodeGroup.instanceClass.placementPolicy }}
 {{- end }}
 
+{{- $additionalMetadata := .nil }}
+{{- if .nodeGroup.instanceClass.additionalMetadata }}
+  {{- $additionalMetadata = .nodeGroup.instanceClass.additionalMetadata }}
+{{- end }}
+
 {{- $_ := set $options "storageProfile" .nodeGroup.instanceClass.storageProfile -}}
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
 {{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
