@@ -74,6 +74,8 @@ spec:
                   description: |
                     Instance disk type.
 
+                    Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
+
                     For more information about possible disk types, read the [provider's documentation](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
                   x-doc-examples: ["network-hdd"]
                   x-doc-default: "network-hdd"

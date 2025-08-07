@@ -187,6 +187,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"csiVsphereSyncer131":       "imageHash-common-csiVsphereSyncer131",
 		"csiVsphereSyncer132":       "imageHash-common-csiVsphereSyncer132",
 		"csiVsphereSyncer133":       "imageHash-common-csiVsphereSyncer133",
+		"debugContainer":            "imageHash-common-debugContainer",
 		"distroless":                "imageHash-common-distroless",
 		"init":                      "imageHash-common-init",
 		"iptablesWrapper":           "imageHash-common-iptablesWrapper",
@@ -398,6 +399,10 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"prometheusPushgateway": map[string]interface{}{
 		"pushgateway": "imageHash-prometheusPushgateway-pushgateway",
+	},
+	"registry": map[string]interface{}{
+		"dockerAuth":         "imageHash-registry-dockerAuth",
+		"dockerDistribution": "imageHash-registry-dockerDistribution",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",

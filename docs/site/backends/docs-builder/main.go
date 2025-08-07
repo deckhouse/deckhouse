@@ -23,11 +23,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/flant/docs-builder/internal/docs"
-	v1 "github.com/flant/docs-builder/internal/http/v1"
-	"github.com/flant/docs-builder/pkg/k8s"
 	"golang.org/x/sync/errgroup"
 
+  "github.com/flant/docs-builder/internal/docs"
+	v1 "github.com/flant/docs-builder/internal/http/v1"
+	"github.com/flant/docs-builder/pkg/k8s"
+  
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )

@@ -81,8 +81,11 @@ class DKP_GSPage < Jekyll::Page
     @path = site.in_source_dir(@base, @dir, @name)
     @path = File.join(@path, "index.html") if url.end_with?("/")
 
+    titleGen = installData['pages_title'][lang][site.data['i18n']['kubernetes-platform'].size, installData['pages_title'][lang].size]
+
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => titleGen ? "#{@stepData['name'][lang]}#{titleGen}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],
@@ -147,8 +150,11 @@ class Stronghold_GSPage < Jekyll::Page
     @path = site.in_source_dir(@base, @dir, @name)
     @path = File.join(@path, "index.html") if url.end_with?("/")
 
+    titleGen = installData['pages_title'][lang][site.data['i18n']['stronghold'].size, installData['pages_title'][lang].size]
+
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => titleGen ? "#{@stepData['name'][lang]}#{titleGen}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],
@@ -214,8 +220,11 @@ class DVP_GSPage < Jekyll::Page
     @path = site.in_source_dir(@base, @dir, @name)
     @path = File.join(@path, "index.html") if url.end_with?("/")
 
+    titleGen = installData['pages_title'][lang][site.data['i18n']['virtualization-platform'].size, installData['pages_title'][lang].size]
+
     self.data = {
       'title' => "%s: %s" % [installData['pages_title'][lang], @stepData['name'][lang]],
+      'title_gen' => titleGen ? "#{@stepData['name'][lang]}#{titleGen}" : nil,
       'title_main' => "%s" % installData['pages_title'][lang],
       'step_name' => @stepData['name'][lang],
       'layout' => @globalData['layout'],

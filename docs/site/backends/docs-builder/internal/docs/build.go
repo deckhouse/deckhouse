@@ -22,8 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/spf13/fsync"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/flant/docs-builder/pkg/hugo"
 )
@@ -82,7 +83,7 @@ func (svc *Service) buildHugo() error {
 			return nil
 		}
 
-		if moduleName, ok := getAssembleErrorPath(buildErr.Error()); ok {
+		if moduleName, ok := getModuleNameFromErrorPath(buildErr.Error()); ok {
 			paths := []string{
 				filepath.Join(svc.baseDir, contentDir, moduleName),
 				filepath.Join(svc.baseDir, modulesDir, moduleName),
@@ -114,7 +115,7 @@ func (svc *Service) removeModuleFromChannelMapping(moduleName string) error {
 	})
 }
 
-func getAssembleErrorPath(errorMessage string) (string, bool) {
+func getModuleNameFromErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
 	if len(match) == 6 {
 		// return only module name
@@ -124,7 +125,7 @@ func getAssembleErrorPath(errorMessage string) (string, bool) {
 	return "", false
 }
 
-func (svc *Service) parseModulePath(modulePath string) (moduleName, channel string) {
+func (svc *Service) parseModulePath(modulePath string) ( /*moduleName*/ string /*channel*/, string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
 		svc.logger.Error("failed to parse", slog.String("path", modulePath))

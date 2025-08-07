@@ -1,6 +1,6 @@
 {{- /* The dashboard will be imported only if the customer enables BGP balancing */ -}}
 {{- if and .Values.metallb.bgpPeers (gt (len .Values.metallb.bgpPeers) 0) }}
-  {{- $resourceName := "d8-metallb-kubernetes-cluster-metallb-bgp" }}
+  {{- $resourceName := "metallb-kubernetes-cluster-metallb-bgp" }}
   {{- $definition := .Files.Get "monitoring/grafana-dashboards/kubernetes-cluster/metallb-bgp.json" }}
   {{- $folder := "Kubernetes Cluster" }}
   {{- include "helm_lib_single_dashboard" (list . $resourceName $folder $definition) }}
@@ -8,14 +8,14 @@
 
 {{- /* The dashboard will be imported only if the customer enables L2 balancing */ -}}
 {{- if and .Values.metallb.internal.l2loadbalancers (gt (len .Values.metallb.internal.l2loadbalancers) 0) }}
-  {{- $resourceName := "d8-metallb-kubernetes-cluster-metallb-l2" }}
+  {{- $resourceName := "metallb-kubernetes-cluster-metallb-l2" }}
   {{- $definition := .Files.Get "monitoring/grafana-dashboards/kubernetes-cluster/metallb-l2.json" }}
   {{- $folder := "Kubernetes Cluster" }}
   {{- include "helm_lib_single_dashboard" (list . $resourceName $folder $definition) }}
 {{- end }}
 
 {{/* Dashboard with a IP pool is always imported */}}
-{{- $resourceName := "d8-metallb-kubernetes-cluster-metallb-pools" }}
+{{- $resourceName := "metallb-kubernetes-cluster-metallb-pools" }}
 {{- $definition := .Files.Get "monitoring/grafana-dashboards/kubernetes-cluster/metallb-pools.json" }}
 {{- $folder := "Kubernetes Cluster" }}
 {{- include "helm_lib_single_dashboard" (list . $resourceName $folder $definition) }}

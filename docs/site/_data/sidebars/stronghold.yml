@@ -5,8 +5,8 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
-        en: Platform overview
-        ru: О платформе
+        en: Product overview
+        ru: О продукте
       folders:
         - title:
             en: Editions

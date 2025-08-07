@@ -26,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const defaultDiskSizeGiB = 40
@@ -93,8 +95,10 @@ func prometheusDisk(input *go_hook.HookInput) error {
 		highAvailability = input.Values.Get("prometheus.highAvailability").Bool()
 	}
 
-	for _, obj := range input.Snapshots["pvcs"] {
-		pvc := obj.(PersistentVolumeClaim)
+	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.NewSnapshots.Get("pvcs")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'pvcs' snapshot: %v", err)
+		}
 
 		if !highAvailability && !strings.HasSuffix(pvc.Name, "-0") {
 			continue

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -25,6 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,12 +62,14 @@ func applyConfigSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func handleConfigRender(input *go_hook.HookInput) error {
-	snap := input.Snapshots["secrets"]
+	snaps := input.NewSnapshots.Get("secrets")
 
 	var managers, relabels, scrapes = bytes.NewBuffer(nil), bytes.NewBuffer(nil), bytes.NewBuffer(nil)
 
-	for _, sn := range snap {
-		data := sn.(map[string][]byte)
+	for data, err := range sdkobjectpatch.SnapshotIter[map[string][]byte](snaps) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'secrets' snapshot: %v", err)
+		}
 
 		if v, ok := data["alert-managers.yaml"]; ok {
 			managers.Write(v)

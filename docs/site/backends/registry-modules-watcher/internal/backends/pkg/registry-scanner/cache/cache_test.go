@@ -15,11 +15,14 @@
 package cache
 
 import (
-	"registry-modules-watcher/internal"
-	"registry-modules-watcher/internal/backends"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal"
+	"registry-modules-watcher/internal/backends"
 )
 
 func TestCache(t *testing.T) {
@@ -44,14 +47,14 @@ func TestCache(t *testing.T) {
 	}
 
 	t.Run("EmptyCache", func(t *testing.T) {
-		cache := New()
+		cache := New(metricsstorage.NewMetricStorage("test"))
 		state := cache.GetState()
 		assert.Empty(t, state, "GetState should return empty state")
 	})
 
 	t.Run("SyncWithRegistryVersions", func(t *testing.T) {
 		t.Run("AddNewVersions", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			tasks := cache.SyncWithRegistryVersions(testVersions)
 
@@ -72,7 +75,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("AddAdditionalVersion", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -122,7 +125,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("UpdateExistingVersion", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -186,7 +189,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("NoChangeNoTask", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -212,7 +215,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("AddNewReleaseChannel", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -266,7 +269,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("RemoveVersion", func(t *testing.T) {
-			cache := New()
+			cache := New(metricsstorage.NewMetricStorage("test"))
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -294,20 +297,49 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("ReleaseData", func(t *testing.T) {
-		cache := New()
+		cache := New(metricsstorage.NewMetricStorage("test"))
 		cache.SyncWithRegistryVersions(testVersions)
 
-		t.Run("GetReleaseChecksum", func(t *testing.T) {
-			checksum, found := cache.GetReleaseChecksum(&testVersions[0])
-			assert.True(t, found, "Checksum should be found")
-			assert.Equal(t, "checksum", checksum, "Checksum should match")
-		})
+		t.Run("GetVersionDataByChecksum", func(t *testing.T) {
+			// Test finding version data by checksum from a different channel
+			newChannelVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "TestModule",
+				ReleaseChannel: "stable",   // Different channel
+				Checksum:       "checksum", // Same checksum as alpha/beta
+			}
 
-		t.Run("GetReleaseVersionData", func(t *testing.T) {
-			version, tarFile, found := cache.GetReleaseVersionData(&testVersions[0])
-			assert.True(t, found, "Version data should be found")
+			version, tarFile := cache.GetGetReleaseVersionData(&newChannelVersion)
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
+		})
+
+		t.Run("GetVersionDataByChecksum_NotFound", func(t *testing.T) {
+			// Test with non-existent checksum
+			notFoundVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "TestModule",
+				ReleaseChannel: "stable",
+				Checksum:       "nonexistent",
+			}
+
+			version, tarFile := cache.GetGetReleaseVersionData(&notFoundVersion)
+			assert.Empty(t, version, "Version should be empty")
+			assert.Nil(t, tarFile, "TarFile should be nil")
+		})
+
+		t.Run("GetVersionDataByChecksum_DifferentModule", func(t *testing.T) {
+			// Test with different module - should not find
+			differentModuleVersion := internal.VersionData{
+				Registry:       "TestReg",
+				ModuleName:     "DifferentModule",
+				ReleaseChannel: "alpha",
+				Checksum:       "checksum",
+			}
+
+			version, tarFile := cache.GetGetReleaseVersionData(&differentModuleVersion)
+			assert.Empty(t, version, "Version should be empty")
+			assert.Nil(t, tarFile, "TarFile should be nil")
 		})
 	})
 }

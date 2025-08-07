@@ -41,7 +41,7 @@ const {
   renderJobStatusOneLine,
   renderJobStatusSeparate,
   renderWorkflowStatusFinal,
-  releaseIssueHeader
+  releaseIssueHeader, renderDocumentationComments
 } = require('./comments');
 
 const { buildFailedE2eTestAdditionalInfo } = require('./e2e/cleanup');
@@ -282,6 +282,10 @@ module.exports.updateCommentOnFinish = async ({
     }
   } else {
     comment = `${comment}\n${statusReport}`;
+  }
+
+  if (statusConfig.includes(',docs')) {
+    comment = `${comment}\n${renderDocumentationComments()}`;
   }
 
   const updateResponse = await github.rest.issues.updateComment({
@@ -1022,30 +1026,10 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
       command.rerunWorkflow = true;
     }
-    // Rerun build workflow if edition label is added or all edition labels are removed.
-    if (labelType === 'edition') {
-      // Gather other edition labels on PR.
-      let removeEditions = [];
-      prLabels.map((l) => {
-        const info = knownLabels[l.name];
-        if (info && info.type === 'edition' && l.name !== label) {
-          removeEditions.push(l.name);
-        }
-      });
-
-      if (event.action === 'labeled' && removeEditions.length > 0) {
-        // If edition/ce label is set, edition/ee label should be removed and vice versa.
-        for (const edition of removeEditions) {
-          core.notice(`Remove label '${edition}' from PR#${prNumber}`);
-          await removeLabel({ github, context, core, issue_number, label: edition });
-        }
-      }
-
-      // Re-run workflow if labeled with edition label or no edition labels left on PR.
-      if (event.action === 'labeled' || (event.action === 'unlabeled' && removeEditions.length === 0)) {
-        command.workflows = ['build-and-test_dev.yml'];
-        command.rerunWorkflow = true;
-      }
+    // Rerun build workflow if edition label is added, ignore 'unlabeled' action.
+    if (labelType === 'edition' && event.action === 'labeled') {
+      command.workflows = ['build-and-test_dev.yml'];
+      command.rerunWorkflow = true;
     }
     if (labelType === 'security') {
       if (labelInfo.security === 'rootless' && event.action === 'labeled') {
