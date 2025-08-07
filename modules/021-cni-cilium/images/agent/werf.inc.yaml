@@ -87,6 +87,10 @@
 # from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
 # final: false
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+from: dev-registry.deckhouse.io/base_images@sha256:418f029e338c89b056675d597b0155d4fb380d5b8cf57b21b6e28e258a433220
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -428,13 +432,60 @@ import:
   before: install
 - image: tools/elfutils
   add: /usr/lib
-  to: /usr/lib
+  to: /lib64
   before: install
   includePaths:
   - libelf.a
   - libelf.so
   - libelf.so.1
   - libelf-0.193.so
+- image: libs/zlib
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libz.a
+  - libz.so
+  - libz.so.1
+  - libz.so.1.3.1
+- image: libs/libcap
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.76
+- image: libs/zstd
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libzstd.a
+  - libzstd.so
+  - libzstd.so.1
+  - libzstd.so.1.5.6
+- image: libs/libxml2
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libzstd.a
+  - libzstd.so
+  - libzstd.so.1
+  - libzstd.so.1.5.6
+- image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libxml2.a
+  - libxml2.la
+  - libxml2.so
+  - libxml2.so.2
+  - libxml2.so.2.13.4
+  - libxml2.so.2.13.8
 imageSpec:
   config:
     env:
