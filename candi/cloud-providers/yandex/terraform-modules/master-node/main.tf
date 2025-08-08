@@ -54,6 +54,16 @@ data "yandex_vpc_subnet" "kube_d" {
   name  = "${local.prefix}-d"
 }
 
+resource "null_resource" "after_detach_barrier" {
+  triggers = {
+    assign_external_ip_address = tostring(local.assign_external_ip_address)
+  }
+
+  depends_on = [
+    yandex_compute_instance.master
+  ]
+}
+
 resource "yandex_vpc_address" "addr" {
   count = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
@@ -64,6 +74,8 @@ resource "yandex_vpc_address" "addr" {
     zone_id = local.internal_subnet.zone
   }
 
+  depends_on = [null_resource.after_detach_barrier]
+  
 #   If we specify this flag and change the zone_id, terraform will exit with an error.
 #   lifecycle {
 #     create_before_destroy = true
