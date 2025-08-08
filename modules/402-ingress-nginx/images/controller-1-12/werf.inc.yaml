@@ -744,9 +744,9 @@ from: dev-registry.deckhouse.io/base_images@sha256:2c249890508acd50a61cb216cb1ca
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine # FIXME replace!
-fromImage: common/distroless
-fromCacheVersion: "2025-08-07.03"
+fromImage: builder/alpine # FIXME replace!
+# fromImage: common/distroless
+fromCacheVersion: "2025-08-07.04"
 mount:
 - from: build_dir
   to: /tmp/apps
