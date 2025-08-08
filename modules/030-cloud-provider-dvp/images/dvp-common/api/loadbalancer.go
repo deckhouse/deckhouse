@@ -118,8 +118,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
 	lbKey := lbLabelKey(name)
-	selectorValue := getNodesSelectorLabels(lbKey)
-
 	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
 		return nil, err
@@ -130,7 +128,8 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	if svc.Spec.Selector == nil {
 		svc.Spec.Selector = map[string]string{}
 	}
-	svc.Spec.Selector[lbKey] = selectorValue[lbKey]
+	svc.Spec.Selector[lbKey] = "loadbalancer"
+
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
 	svc.Spec.ExternalIPs = []string{}
@@ -184,7 +183,6 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
 	lbKey := lbLabelKey(name)
-	selectorValue := getNodesSelectorLabels(lbKey)
 
 	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
@@ -205,7 +203,7 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Type:                  corev1.ServiceTypeLoadBalancer,
 			ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
 			Selector: map[string]string{
-				lbKey: selectorValue[lbKey],
+				lbKey: "loadbalancer",
 			},
 		},
 	}
@@ -279,47 +277,61 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	return nil
 }
 
-func getNodesSelectorLabels(lbName string) map[string]string {
-	return map[string]string{lbLabelKey(lbName): "loadbalancer"}
-}
-
 func (lb *LoadBalancerService) ensureNodeLabels(
 	ctx context.Context,
 	nodes []*corev1.Node,
 	lbKey string,
 ) error {
 	desired := make(map[string]struct{}, len(nodes))
-	for _, node := range nodes {
-		desired[node.Name] = struct{}{}
+	for _, in := range nodes {
+		desired[in.Name] = struct{}{}
+
+		var node corev1.Node
+		if err := lb.client.Get(ctx, types.NamespacedName{Name: in.Name}, &node); err != nil {
+			return err
+		}
+
+		before := node.DeepCopy()
 		if node.Labels == nil {
 			node.Labels = make(map[string]string)
 		}
 		if node.Labels[lbKey] != "loadbalancer" {
-			labledNode := node.DeepCopy()
-			labledNode.Labels[lbKey] = "loadbalancer"
-			if err := lb.client.Update(ctx, labledNode); err != nil {
+			node.Labels[lbKey] = "loadbalancer"
+			if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
 				return err
 			}
 		}
 	}
 
+	sel := labels.SelectorFromSet(labels.Set{
+		lbKey: "loadbalancer",
+	})
 	var list corev1.NodeList
-	if err := lb.client.List(ctx, &list, &client.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labels.Set{
-			lbKey: "loadbalancer",
-		}),
-	}); err != nil {
+	if err := lb.client.List(ctx, &list, &client.ListOptions{LabelSelector: sel}); err != nil {
 		klog.Errorf("Failed to list nodes: %v", err)
 		return err
 	}
 
-	for _, node := range list.Items {
-		if _, ok := desired[node.Name]; ok {
+	for _, item := range list.Items {
+		if _, ok := desired[item.Name]; ok {
 			continue
 		}
-		unlabledNode := node.DeepCopy()
-		delete(unlabledNode.Labels, lbKey)
-		if err := lb.client.Update(ctx, unlabledNode); err != nil {
+		var node corev1.Node
+		if err := lb.client.Get(ctx, types.NamespacedName{Name: item.Name}, &node); err != nil {
+			return err
+		}
+
+		if node.Labels == nil {
+			continue
+		}
+
+		if _, ok := node.Labels[lbKey]; !ok {
+			continue
+		}
+
+		before := node.DeepCopy()
+		delete(node.Labels, lbKey)
+		if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
 			return err
 		}
 	}
