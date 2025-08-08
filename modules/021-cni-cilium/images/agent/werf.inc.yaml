@@ -525,7 +525,6 @@ import:
   to: /lib64
   before: install
   includePaths:
-  - libc.so
   - libcurses.a
   - libcurses.so
   - libform.a
