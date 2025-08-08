@@ -20,11 +20,11 @@ function kubectl_exec() {
 # If reboot flag is not set, nothing to do
 if ! bb-flag? reboot && [ "$FIRST_BASHIBLE_RUN" = "yes" ]; then
   while true; do
-    if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
-      bb-log-info "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
+    if kubectl_exec label nodes $(bb-d8-node-name) node.deckhouse.io/bashible-first-run-finished=true; then
+      bb-log-info "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       break
     fi
-    bb-log-warning "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
+    bb-log-warning "Failed to set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name), retrying in 10 seconds..."
     sleep 10
   done
   bb-flag-unset disruption
@@ -38,11 +38,11 @@ bb-flag-unset reboot
 # If it is first run bashible on bootstrap simple reboot node
 if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
   while true; do
-    if kubectl_exec taint nodes $(bb-d8-node-name) node.deckhouse.io/bashible-uninitialized-; then
-      bb-log-info "Successfully removed bashible-uninitialized taint from node $(bb-d8-node-name)"
+    if kubectl_exec label nodes $(bb-d8-node-name) node.deckhouse.io/bashible-first-run-finished=true; then
+      bb-log-info "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
       break
     fi
-    bb-log-warning "Failed to remove bashible-uninitialized taint from node $(bb-d8-node-name), retrying in 10 seconds..."
+    bb-log-warning "Failed to set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name), retrying in 10 seconds..."
     sleep 10
   done
   bb-flag-unset disruption
