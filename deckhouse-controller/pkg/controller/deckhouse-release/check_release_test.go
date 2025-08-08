@@ -85,6 +85,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		}}
 	suite.Run("Have new deckhouse image", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b777", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -105,6 +107,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Have canary release wave 0", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -125,6 +129,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Have canary release wave 4", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b875", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -144,6 +150,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Existed release suspended", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b876", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -160,6 +168,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	})
 
 	suite.Run("Deployed release suspended", func() {
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b893", nil)
 		dependency.TestDC.CRClient.ImageMock.Return(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -178,6 +188,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("New release suspended", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b877", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -196,6 +208,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Resume suspended release", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b878", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -214,16 +228,9 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Image hash not changed", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0"}`}}}, nil
-			},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857")
-			},
-		}, nil)
+		// Add Digest mock call for optimization - returns same digest as releaseVersionImageHash, so Image() call should NOT happen
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857", nil)
+		// NOTE: Image() call for "stable" channel is NOT expected when digest matches (optimization working correctly)
 
 		suite.setupController("image-hash-not-changed.yaml", initValues, embeddedMUP)
 		suite.ctr.releaseVersionImageHash = "sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f66857"
@@ -233,6 +240,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Release has requirements", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b880", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -253,6 +262,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Release has canary", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b881", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -272,6 +283,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Release has cooldown", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b882", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -298,6 +311,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Inherit release cooldown", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b883", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -324,6 +339,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Patch release has own cooldown", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b884", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -350,6 +367,8 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 
 	suite.Run("Release has disruptions", func() {
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b885", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -394,6 +413,8 @@ global:
 		changelog := fmt.Sprintf(changelogTemplate, "`control-plane`") // global.features[0].description
 
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b886", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -430,6 +451,8 @@ disable:
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
 `
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b887", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -459,6 +482,8 @@ disable:
 			"v1.33.1",
 			"v1.34.0",
 		}, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b888", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -485,6 +510,8 @@ disable:
 			"v1.33.0",
 			"v1.33.1",
 		}, nil)
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b889", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -515,6 +542,8 @@ disable:
 	})
 
 	suite.Run("Restore absent releases from a registry", func() {
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b890", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -585,6 +614,8 @@ disable:
 	})
 
 	suite.Run("Check LTS release channel", func() {
+		// Add Digest mock call for optimization
+		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "lts").Then("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b891", nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "lts").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -713,6 +744,11 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags
 	dc.CRClientMap = map[string]cr.Client{}
 
 	deckhouseVersionsMock = deckhouseVersionsMock.ListTagsMock.Return(tags, nil)
+
+	// Add Digest mock for optimization - return consistent digest for all tags
+	deckhouseVersionsMock = deckhouseVersionsMock.DigestMock.Set(func(_ context.Context, imageTag string) (string, error) {
+		return "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b892", nil
+	})
 
 	dc.CRClientMap["my.registry.com/deckhouse/release-channel"] = deckhouseVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (v1.Image, error) {
 		_, err := semver.NewVersion(imageTag)
