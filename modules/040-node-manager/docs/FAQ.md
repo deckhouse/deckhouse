@@ -1015,6 +1015,10 @@ Here’s a faithful English version of your section, preserving structure, wordi
 
 ## How do I work with GPU nodes?
 
+{% alert level="info" %}
+GPU-node management is available in the **EE** edition only.
+{% endalert %}
+
 ### Step-by-step procedure for adding a GPU node to the cluster
 
 <span id="step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster"></span>
@@ -1300,6 +1304,20 @@ Deckhouse automatically deploys **DCGM Exporter**; GPU metrics are scraped by Pr
 * **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`. See the full list of profiles and limitations in the [**NVIDIA MIG User Guide**](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/).
 
 See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
+
+## How to view available MIG profiles in the cluster?
+
+<span id="how-to-view-available-mig-profiles"></span>
+
+Pre-defined profiles are stored in the **`mig-parted-config`** ConfigMap inside the **`d8-nvidia-gpu`** namespace.
+Show its YAML with:
+
+```bash
+kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+```
+
+The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
+Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
 
 ## MIG profile does not activate — what to check?
 

@@ -77,6 +77,10 @@ spec:
 
 <span id="example-gpu-nodegroup"></span>
 
+{% alert level="info" %}
+GPU-node management is available in the **EE** edition only.
+{% endalert %}
+
 GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two options:
 
 1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
@@ -138,8 +142,10 @@ spec:
 
 A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
-See the [NVIDIA MIG user guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html)
-for the full list of profiles.
+
+For a complete list of supported GPUs and their profiles, see the
+[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles)
+and the official [NVIDIA MIG documentation](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html).
 
 ```yaml
 spec:

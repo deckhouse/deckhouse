@@ -1506,6 +1506,8 @@ spec:
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
                 gpu:
+                  x-doc-d8Editions:
+                    - ee
                   type: object
                   description: |
                     GPU parameters.
