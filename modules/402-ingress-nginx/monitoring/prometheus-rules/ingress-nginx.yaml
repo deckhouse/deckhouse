@@ -247,3 +247,21 @@
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+  - alert: NginxIngressProfilingIsEnabled
+    expr: |
+      d8_ingress_nginx_controller_profiling_enabled == 1
+    for: 3m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        Warning: Profiling mode is enabled in the NGINX Ingress Controller "{{ $labels.controller_name }}".
+      description: |-
+        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        This may increase memory consumption, slow down request processing, and the process may run as root.
+        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
+        To disable profiling, set `controllerNginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+
