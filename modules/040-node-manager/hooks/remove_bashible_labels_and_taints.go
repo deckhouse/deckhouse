@@ -23,8 +23,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/deckhouse/deckhouse/go_lib/taints"
 )
 
 const (
@@ -107,15 +105,19 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 				// Remove the taint if hasTaint is true
 				if hasTaint {
 					fmt.Printf("Original taints: %v\n", nodeObj.Spec.Taints)
-					newTaints := taints.Slice(nodeObj.Spec.Taints).WithoutKey(BashibleUninitializedTaintKey)
-					if len(newTaints) == 0 {
-						nodeObj.Spec.Taints = nil
-					} else {
-						nodeObj.Spec.Taints = newTaints
+					taints := make([]v1.Taint, 0)
+					for _, t := range nodeObj.Spec.Taints {
+						if t.Key != BashibleUninitializedTaintKey {
+							taints = append(taints, t)
+						}
 					}
 					fmt.Printf("Removing bashible taint from node %s\n", node.Name)
-
-					fmt.Printf("Taints after removal: %v\n", newTaints)
+					if len(taints) == 0 {
+						nodeObj.Spec.Taints = nil
+					} else {
+						nodeObj.Spec.Taints = taints
+					}
+					fmt.Printf("Taints after removal: %v\n", taints)
 
 				}
 
