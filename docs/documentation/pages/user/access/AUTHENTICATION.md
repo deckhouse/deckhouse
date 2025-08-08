@@ -12,7 +12,10 @@ Depending on the DKP configuration, authentication can use either an internal us
 
 From the perspective of a cluster user or an application developer, it does not matter how the DKP administrator configured authentication — the user interface and authentication methods for applications will be the same.
 
-> To use authentication in DKP, [configuration is required](../../admin/configuration/access/authentication.html).
+{% alert level="info" %}
+To use authentication in DKP, [configuration is required](../../admin/configuration/access/authentication/).
+{% endalert %}
+
 
 ## Interface
 

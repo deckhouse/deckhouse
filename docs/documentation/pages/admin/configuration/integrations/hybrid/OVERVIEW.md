@@ -53,7 +53,11 @@ DKP automatically sets `static://` in the `.spec.providerID` field of such nodes
 
 ### Storage integration
 
-If you require PersistentVolumes on nodes connected to the cluster from OpenStack, you must create a StorageClass with the appropriate OpenStack volume type. You can get a list of available types using `openstack volume type list` command.
+If you require PersistentVolumes on nodes connected to the cluster from OpenStack, you must create a StorageClass with the appropriate OpenStack volume type. You can get a list of available types using the following command:
+
+```shell
+openstack volume type list
+```
 
 Example for `ceph-ssd` volume type:
 
