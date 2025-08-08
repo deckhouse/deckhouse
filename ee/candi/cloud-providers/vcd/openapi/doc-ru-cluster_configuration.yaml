@@ -134,37 +134,37 @@ apiVersions:
             instanceClass:
               description: |
                 Частичное содержимое полей [VCDInstanceClass](cr.html#vcdinstanceclass).
-            properties:
-              rootDiskSizeGb:
-                description: |
-                  Размер root-диска. Значение указывается в гигабайтах.
-              placementPolicy:
-                description: |
-                  PlacementPolicy, которая будет использоваться на данном компьютере.
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+                placementPolicy:
+                  description: |
+                    PlacementPolicy, которая будет использоваться на данном компьютере.
 
-                  Если PlacementPolicy не указана, для создания узлов будет использоваться PlacementPolicy по умолчанию.
-              sizingPolicy:
-                description: |
-                  SizingPolicy, которая будет использоваться на данном компьютере.
+                    Если PlacementPolicy не указана, для создания узлов будет использоваться PlacementPolicy по умолчанию.
+                sizingPolicy:
+                  description: |
+                    SizingPolicy, которая будет использоваться на данном компьютере.
 
-                  Если SizingPolicy не указана, для создания узлов будет использоваться SizingPolicy по умолчанию.
-              storageProfile:
-                description: |
-                  StorageProfile, который будет использоваться на данном компьютере.
-              template:
-                description: |
-                  Путь к шаблону OVA, который будет использоваться.
+                    Если SizingPolicy не указана, для создания узлов будет использоваться SizingPolicy по умолчанию.
+                storageProfile:
+                  description: |
+                    StorageProfile, который будет использоваться на данном компьютере.
+                template:
+                  description: |
+                    Путь к шаблону OVA, который будет использоваться.
 
-                  Состоит из организации (опционально), каталога и названия или идентификатора шаблона. В случае общих каталогов шаблонов, наименование организации может не совпадать со значением в параметре `provider.organization`.
+                    Состоит из организации (опционально), каталога и названия или идентификатора шаблона. В случае общих каталогов шаблонов, наименование организации может не совпадать со значением в параметре `provider.organization`.
 
-                  Если в нескольких каталогах с одинаковым названием есть шаблоны с одинаковым именем, следует указать идентификатор шаблона.
+                    Если в нескольких каталогах с одинаковым названием есть шаблоны с одинаковым именем, следует указать идентификатор шаблона.
 
-                  Идентификатор шаблона можно найти в URL-адресе при открытии шаблона в пользовательском интерфейсе vCD. Например, если URL-адрес `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, то идентификатор шаблона будет `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
-              mainNetworkIPAddress:
-                description: |
-                  IP-адрес бастион-хоста в `mainNetwork`.
+                    Идентификатор шаблона можно найти в URL-адресе при открытии шаблона в пользовательском интерфейсе vCD. Например, если URL-адрес `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, то идентификатор шаблона будет `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                mainNetworkIPAddress:
+                  description: |
+                    IP-адрес бастион-хоста в `mainNetwork`.
                   
-                  По умолчанию DHCP-клиент включен.
+                    По умолчанию DHCP-клиент включен.
         sshPublicKey:
           description: |
             Публичный ключ для доступа на узлы.
