@@ -373,14 +373,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// Early check if we need to process this module at all
 		if module.Properties.Source != source.Name || !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			// For modules that are not on this source or disabled, we still need to show them in status but without pulling new data
-			meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
-			if err == nil {
-				availableModule.Version = meta.ModuleVersion
-				availableModule.Checksum = meta.Checksum
-			} else {
-				availableModule.Version = "unknown"
-			}
+			// For modules that are not on this source or disabled, we still need to show them in status
+			// but without pulling new data from the registry.
+			availableModule.Version = "unknown"
+			// Keep previously known checksum/version (if any) and avoid network calls.
 			availableModules = append(availableModules, availableModule)
 			continue
 		}

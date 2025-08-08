@@ -168,8 +168,19 @@ func (r *reconciler) getReleaseVersionFromChecksum(ctx context.Context, sourceNa
 		slog.String("source_name", sourceName),
 	)
 
-	version := moduleReleases.Items[0].GetVersion()
-	return version, nil
+	// If multiple releases match the checksum, choose the highest semantic version.
+	best := moduleReleases.Items[0].GetVersion()
+	for i := 1; i < len(moduleReleases.Items); i++ {
+		v := moduleReleases.Items[i].GetVersion()
+		// Guard against nil versions just in case
+		if v == nil {
+			continue
+		}
+		if best == nil || v.GreaterThan(best) {
+			best = v
+		}
+	}
+	return best, nil
 }
 
 // noNeedToEnsureRelease checks if we can skip ensuring the release:
