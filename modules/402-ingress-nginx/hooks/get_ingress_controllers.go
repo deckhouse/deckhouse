@@ -128,17 +128,6 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
-	_, found, err = unstructured.NestedBool(spec, "controllerNginxProfilingEnabled")
-	if err != nil {
-		return nil, fmt.Errorf("cannot get controllerNginxProfilingEnabled from ingress controller spec: %v", err)
-	}
-	if !found {
-		err = unstructured.SetNestedField(spec, "false", "controllerNginxProfilingEnabled")
-		if err != nil {
-			return nil, fmt.Errorf("cannot set default controllerNginxProfilingEnabled in ingress controller spec: %v", err)
-		}
-	}
-
 	// Set validationEnabled to false if suspended annotation is present
 	metadata, _, err := unstructured.NestedMap(obj.Object, "metadata")
 	if err != nil {
@@ -200,6 +189,24 @@ func setInternalValues(input *go_hook.HookInput) error {
 			"controller_name":    controller.Name,
 			"controller_version": version,
 		})
+
+		nginxEnabledMemoryProfiling, found, err := unstructured.NestedBool(controller.Spec, "controllerNginxProfilingEnabled")
+
+		if err != nil {
+			input.Logger.Errorf("cannot get controllerNginxProfilingEnabled from ingress controller spec: %v", err)
+			continue
+		}
+
+		if found && nginxEnabledMemoryProfiling {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
+				"controller_name": controller.Name,
+			})
+		} else {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 0, map[string]string{
+				"controller_name": controller.Name,
+			})
+		}
+
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

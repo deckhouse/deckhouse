@@ -5261,6 +5261,20 @@ alerts:
         Too many NGINX Ingress restarts detected.
       severity: "4"
       markupFormat: markdown
+    - name: NginxIngressProfilingIsEnabled
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        This may increase memory consumption, slow down request processing, and the process may run as root.
+        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
+        To disable profiling, set `controllerNginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+      summary: |
+        Warning: Profiling mode is enabled in the NGINX Ingress Controller &quot;{{ $labels.controller_name }}&quot;.
+      severity: "4"
+      markupFormat: markdown
     - name: NginxIngressProtobufExporterHasErrors
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
