@@ -131,7 +131,9 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
         container.apparmor.security.beta.kubernetes.io/controller: unconfined
+{{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}

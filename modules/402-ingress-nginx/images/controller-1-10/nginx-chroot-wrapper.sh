@@ -16,13 +16,12 @@
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
 
-timestamp=$(date +%Y%m%d_%H%M%S)
-logfile="/var/log/valgrind/memcheck.${timestamp}.log"
-
 if [[ "$PROFILING" == "true" ]]; then
   echo "Profiling enabled"
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  logfile="/var/log/valgrind/memcheck.${timestamp}.log"
 
-  echo "Drop NGINX capabilities"
+  echo "Drop NGINX file capabilities as it prevent valgrind from running"
   nginxchroot="/chroot/usr/local/nginx/sbin/nginx"
 
   if [ -z "$(getcap $nginxchroot)" ]; then

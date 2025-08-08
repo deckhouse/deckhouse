@@ -310,7 +310,7 @@ properties:
                   type: boolean
                   default: false
                   description: |
-                    Enables heap of nginx profiling.
+                    Enables nginx memory profiling.
       externalIngressClasses:
         type: array
         default: []
