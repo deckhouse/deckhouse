@@ -1,4 +1,4 @@
-# Copyright 2021 Flant JSC
+# Copyright 2025 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 variable "clusterConfiguration" {
@@ -9,15 +9,25 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 variable "nodeIndex" {
   type    = number
   default = 0
 }
 
-variable "clusterUUID" {
-  type = string
+variable "cloudConfig" {
+  type    = string
+  default = ""
 }
 
-locals {
-  prefix = var.clusterConfiguration.cloud.prefix
+variable "resourceManagementTimeout" {
+  type    = string
+  default = "10m"
+}
+
+variable "nodeGroupName" {
+  type = string
 }
