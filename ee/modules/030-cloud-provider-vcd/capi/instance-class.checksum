@@ -15,11 +15,17 @@
   {{- $placementPolicy = .nodeGroup.instanceClass.placementPolicy }}
 {{- end }}
 
+{{- $additionalMetadata := .nil }}
+{{- if .nodeGroup.instanceClass.additionalMetadata }}
+  {{- $additionalMetadata = .nodeGroup.instanceClass.additionalMetadata }}
+{{- end }}
+
 {{- $_ := set $options "storageProfile" .nodeGroup.instanceClass.storageProfile -}}
 {{- $_ := set $options "template" .nodeGroup.instanceClass.template -}}
 {{- $_ := set $options "rootDiskSize" $rootDiskSize -}}
 {{- $_ := set $options "sizingPolicy" $sizingPolicy -}}
 {{- $_ := set $options "placementPolicy" $placementPolicy -}}
+{{- $_ := set $options "additionalMetadata" $additionalMetadata -}}
 
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
