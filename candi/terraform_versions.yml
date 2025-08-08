@@ -201,7 +201,7 @@ null-tf:
   namespace: hashicorp
   cloudName: "Null"
   type: "null"
-  version: 3.2.2
+  version: 3.2.4
   artifact: terraform-provider-null
   artifactBinary: terraform-provider-null
   destinationBinary: terraform-provider-null
