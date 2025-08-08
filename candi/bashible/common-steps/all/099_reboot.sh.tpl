@@ -14,7 +14,7 @@
 
 
 function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/admin.conf ${@}
+  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
 }
 
 # If reboot flag is not set, nothing to do
