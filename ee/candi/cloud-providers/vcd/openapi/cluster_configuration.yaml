@@ -542,6 +542,43 @@ apiVersions:
 
             The parameter has an effect only when installing a cluster. In the working cluster, the need to enable the support for outdated versions of the VCD API is determined automatically.
           x-doc-default: false
+        metadata:
+          type: array
+          description: |
+            Custom metadta entries to be stored in the cluster object such as: virtual machines, disks, network, virtual application.
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              key:
+                type: string
+                description: The key of the metadata.
+              value:
+                type: string
+                description: The value of the metadata.
+              type:
+                type: string
+                description: |
+                  The type of the metadata. Can be one of `String`, `Number`, `Boolean` or `DateTime`.
+
+                  Default value is `String`.
+                enum: [String, Number, Boolean, DateTime]
+                default: String
+              userAccess:
+                type: string
+                description: |
+                  The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
+
+                  Default value is `READWRITE`.
+                enum: [READONLY, READWRITE, PRIVATE]
+                default: READWRITE
+              isSystem:
+                type: boolean
+                description: |
+                  Whether the metadata is a system metadata or not.
+
+                  Default value is `false`.
+                default: false
       allOf:
       - oneOf:
         - required: [layout]
