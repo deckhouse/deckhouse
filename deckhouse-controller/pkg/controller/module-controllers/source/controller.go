@@ -375,7 +375,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if module.Properties.Source != source.Name || !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 			// For modules that are not on this source or disabled, we still need to show them in status
 			// but without pulling new data from the registry.
-			availableModule.Version = "unknown"
+			// Preserve previously cached version if available to avoid breaking metrics/API
+			if availableModule.Version == "" {
+				availableModule.Version = "unknown"
+			}
 			// Keep previously known checksum/version (if any) and avoid network calls.
 			availableModules = append(availableModules, availableModule)
 			continue
@@ -398,7 +401,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 
-			availableModule.Version = "unknown"
+			// Preserve previously cached version if available to avoid breaking metrics/API
+			if availableModule.Version == "" {
+				availableModule.Version = "unknown"
+			}
 			availableModules = append(availableModules, availableModule)
 
 			continue
@@ -412,10 +418,17 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		if r.noNeedToEnsureRelease(source, module, availableModule, digestFromRegistry, version != nil) {
 			availableModule.Checksum = digestFromRegistry
-			availableModule.Version = "unknown"
+			// Try to preserve version information to avoid breaking metrics and API
 			if version != nil {
 				availableModule.Version = version.String()
+			} else if availableModule.Version == "" {
+				// Only set "unknown" if no previously cached version exists
+				availableModule.Version = "unknown"
 			}
+			// else: Keep the previously cached version from status if available
+			// This prevents metrics and API from receiving "unknown" version
+			// when we skip registry calls for optimization
+			
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -439,7 +452,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 			}
 
-			availableModule.Version = "unknown"
+			// Preserve previously cached version if available to avoid breaking metrics/API
+			if availableModule.Version == "" {
+				availableModule.Version = "unknown"
+			}
 			availableModules = append(availableModules, availableModule)
 
 			continue
