@@ -35,27 +35,10 @@ func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 
 	var privateKey interface{}
 
-	privateKey, err = ssh.ParseRawPrivateKey(keyData)
-	if err != nil {
-		var passphraseMissingError *ssh.PassphraseMissingError
-		switch {
-		case errors.As(err, &passphraseMissingError):
-			if len(passphrase) == 0 {
-				passphraseFromStdin, err := terminal.AskPassword(
-					fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
-				}
-				passphrase = passphraseFromStdin
-			}
-			privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
-			if err != nil {
-				return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
-			}
-		default:
-			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
-		}
+	if len(passphrase) == 0 {
+		privateKey, err = ssh.ParseRawPrivateKey(keyData)
+	} else {
+		privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
 	}
 
 	return privateKey, nil
