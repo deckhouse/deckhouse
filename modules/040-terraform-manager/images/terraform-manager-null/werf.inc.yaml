@@ -12,18 +12,12 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
-git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ (index .TF "null-tf").version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
+  - git clone --depth 1 --branch v{{ .TF.null-tf.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
   - cd /src
   - rm -rf .git
 ---
