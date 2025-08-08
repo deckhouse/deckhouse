@@ -8,7 +8,9 @@ kind: AuthenticationConfiguration
 jwt:
 - issuer:
     url: {{ .apiserver.oidcIssuerURL }} 
+    {{- if semverCompare ">= 1.30" .clusterConfiguration.kubernetesVersion }}
     discoveryURL: https://dex.d8-user-authn.svc.{{.clusterConfiguration.clusterDomain }}/.well-known/openid-configuration
+    {{- end }}
     {{- if .apiserver.oidcCA }}
     certificateAuthority: |
       {{- .apiserver.oidcCA | nindent 6 }} 
