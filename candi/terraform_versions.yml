@@ -197,7 +197,7 @@ null:
   destinationBinary: terraform-provider-null
   useOpentofu: true
 
-null-tf:
+nulltf:
   namespace: hashicorp
   cloudName: "Null"
   type: "null"
