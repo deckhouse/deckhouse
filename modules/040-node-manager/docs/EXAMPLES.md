@@ -88,18 +88,19 @@ GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. Th
    [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
 
 After the driver is detected and the NodeGroup includes the `spec.gpu` section,
-`node-manager` enables full GPU support by deploying **NFD**, **NVIDIA Device
+`node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
 Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**. The examples
 below demonstrate three common GPU operating modes (Exclusive, TimeSlicing,
 MIG).
 
-> GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
-> regular workloads don’t land there by accident.
-> A workload that needs a GPU just adds the matching `tolerations`
-> and `nodeSelector`.
->
-> See the full field reference in the
-> [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+{% alert level="info" %}
+GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
+regular workloads don’t land there by accident. A workload that needs a GPU just adds the matching `tolerations`
+and `nodeSelector`.
+{% endalert %}
+
+See the full field reference in the
+[NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
 #### 1. Exclusive mode (one Pod — one GPU)
 
@@ -144,8 +145,7 @@ A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
 
 For a complete list of supported GPUs and their profiles, see the
-[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles)
-and the official [NVIDIA MIG documentation](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html).
+[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles).
 
 ```yaml
 spec:

@@ -1009,10 +1009,6 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
 
-Here’s a faithful English version of your section, preserving structure, wording, and examples.
-
----
-
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
@@ -1027,9 +1023,13 @@ Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, 
 
 * configures containerd with `default_runtime = "nvidia"`;
 * applies the required system settings (including fixes for the NVIDIA Container Toolkit);
-* deploys system components: **NFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
+* deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
 
-> Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
+{% alert level="info" %}
+Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
+
+Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
+{% endalert %}
 
 ### 1. Create a NodeGroup for GPU nodes
 
@@ -1055,7 +1055,9 @@ spec:
       effect: NoSchedule
 ```
 
-> If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
+{% alert level="info" %}
+If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
+{% endalert %}
 
 Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
@@ -1186,6 +1188,21 @@ nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
 nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
 ```
 
+NFD Pods in `d8-cloud-instance-manager`:
+
+```bash
+kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+```
+
+**Expected healthy output (example):**
+
+```bash
+NAME                                             READY   STATUS      RESTARTS       AGE
+node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
+node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
+node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
+```
+
 Resource exposure on the node:
 
 ```bash
@@ -1301,7 +1318,7 @@ Deckhouse automatically deploys **DCGM Exporter**; GPU metrics are scraped by Pr
 
 * **Exclusive** — the node exposes the `nvidia.com/gpu` resource; each Pod receives an entire GPU.
 * **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
-* **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`. See the full list of profiles and limitations in the [**NVIDIA MIG User Guide**](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/).
+* **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
 
 See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
 
@@ -1309,8 +1326,7 @@ See examples in [Examples → GPU nodes](../node-manager/examples.html#example-g
 
 <span id="how-to-view-available-mig-profiles"></span>
 
-Pre-defined profiles are stored in the **`mig-parted-config`** ConfigMap inside the **`d8-nvidia-gpu`** namespace.
-Show its YAML with:
+Pre-defined profiles are stored in the **`mig-parted-config`** ConfigMap inside the **`d8-nvidia-gpu`** namespace and can be viewed with the command:
 
 ```bash
 kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
@@ -1331,8 +1347,17 @@ Select the profile that matches your accelerator and set its name in `spec.gpu.m
        partedConfig: all-1g.5gb
    ```
 
-3. **Wait for reconfiguration:** allow `nvidia-mig-manager` to complete (the `mig-reconfigure` taint will be removed).
-4. **If `nvidia.com/mig-*` resources are still missing, check:**
+3. Wait until `nvidia-mig-manager` completes the **drain** of the node and reconfigures the GPU.
+
+   **This process can take several minutes.**
+
+   While it is running, the node is tainted with `mig-reconfigure`. When the operation succeeds, that taint is removed.
+
+4. Track the progress via the `nvidia.com/mig.config.state` label on the node:
+
+   `pending`, `rebooting`, `success` (or `error` if something goes wrong).
+
+5. If `nvidia.com/mig-*` resources are still missing, check:
 
    ```bash
    kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager

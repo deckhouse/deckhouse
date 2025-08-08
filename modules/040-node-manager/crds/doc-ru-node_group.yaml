@@ -497,10 +497,6 @@ spec:
                         - `Exclusive` — без разделения (каждый GPU полностью выделяется одному поду).
                         - `TimeSlicing` — разделение GPU по времени (несколько подов могут одновременно использовать один GPU, поочередно получая доступ к его вычислительным ресурсам).
                         - `MIG` — разделение одного GPU на несколько экземпляров (технология NVIDIA MIG, при наличии поддержки).
-                      enum:
-                        - TimeSlicing
-                        - MIG
-                        - Exclusive
                     mig:
                       type: object
                       properties:
@@ -508,17 +504,15 @@ spec:
                           type: string
                           description: |
                             Выбранная конфигурация разделения MIG.
-                          x-doc-default: all-1g.5gb
                     timeSlicing:
                       description: |
                         Параметры Time-slicing.
                       type: object
                       properties:
-                        gpuPartitionCount:
-                          type: integer
+                        partitionCount:
+                          type: number
                           description: |
-                            Количество разделов (виртуальных GPU) на один физический GPU в режиме time-slicing.
-                          x-doc-default: 4
+                            Количество разделов (виртуальных GPU) на один физический GPU в режиме TimeSlicing.
                     exclusive:
                       type: object
                       description: |

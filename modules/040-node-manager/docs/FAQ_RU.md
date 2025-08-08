@@ -1034,9 +1034,13 @@ metadata:
 Начиная с Deckhouse 1.71, если в `NodeGroup` есть секция `spec.gpu`, модуль `node-manager` **автоматически**:
 - настраивает containerd с `default_runtime = "nvidia"`;
 - применяет необходимые системные параметры (включая фиксы для NVIDIA Container Toolkit);
-- разворачивает системные компоненты: **NFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
+- разворачивает системные компоненты: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
 
-> Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
+{% alert level="info" %}
+Для корректной работы необходимо явно указать режим в `spec.gpu.sharing` (`Exclusive`, `TimeSlicing` или `MIG`).
+
+Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
+{% endalert %}
 
 ### 1. Создайте NodeGroup для GPU-узлов
 
@@ -1062,7 +1066,9 @@ spec:
       effect: NoSchedule
 ```
 
-> Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+{% alert level="info" %}
+Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+{% endalert %}
 
 Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
@@ -1193,6 +1199,21 @@ nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
 nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
 ```
 
+Поды NFD в `d8-cloud-instance-manager`:
+
+```bash
+kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+```
+
+**Ожидаемый корректный вывод (пример):**
+
+```bash
+NAME                                             READY   STATUS      RESTARTS       AGE
+node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
+node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
+node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
+```
+
 Публикация ресурсов на узле:
 
 ```bash
@@ -1309,7 +1330,7 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
 
 * **Exclusive** — узел публикует ресурс `nvidia.com/gpu`; каждому поду выделяется целый GPU.
 * **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
-* **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`. Полный перечень профилей и ограничений см. в [**NVIDIA MIG User Guide**](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/).
+* **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`.
 
 Примеры см. в разделе [Примеры → GPU-узлы](../node-manager/examples.html#пример-gpu-nodegroup).
 
@@ -1317,7 +1338,7 @@ Deckhouse автоматически устанавливает **DCGM Exporter*
 
 <span id="как-посмотреть-доступные-mig-профили-в-кластере"></span>
 
-Предустановленные профили находятся в ConfigMap `mig-parted-config` в namespace `d8-nvidia-gpu`. Посмотреть её YAML можно командой:
+Предустановленные профили находятся в ConfigMap `mig-parted-config` в namespace `d8-nvidia-gpu`, которые можно командой:
 
 ```bash
 kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
@@ -1339,8 +1360,17 @@ kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config
        partedConfig: all-1g.5gb
    ```
 
-3. Дождитесь завершения `nvidia-mig-manager` (taint `mig-reconfigure` будет снят).
-4. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
+3. Дождитесь, пока `nvidia-mig-manager` выполнит **drain** узла и переконфигурирует GPU.
+
+    **Этот процесс может занять несколько минут**.
+
+    Пока операция идёт, на узле стоит taint `mig-reconfigure`. После успешного окончания taint удаляется.
+
+4. Ход процесса можно отслеживать по label `nvidia.com/mig.config.state` на узле:
+
+    `pending`, `rebooting`, `success` (или `error`, если что-то пошло не так).
+
+5. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
 
    ```bash
    kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager

@@ -88,15 +88,16 @@ spec:
 
 После того как драйвер установлен и в NodeGroup добавлен блок `spec.gpu`,
 `node-manager` включает полноценную поддержку GPU: автоматически разворачиваются
-**NFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости,
+**NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости,
 **MIG Manager**. Ниже показаны три типовых режима работы GPU (Exclusive,
 TimeSlicing, MIG).
 
-> Узлы с GPU часто помечают отдельным taint-ом (например,
-> `node-role=gpu:NoSchedule`) — тогда по умолчанию туда не попадают обычные поды.
-> Сервисам, которым нужен GPU, достаточно добавить `tolerations` и `nodeSelector`.
->
-> Подробная схема параметров находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+{% alert level="info" %}
+Узлы с GPU часто помечают отдельным taint-ом (например, `node-role=gpu:NoSchedule`) — тогда по умолчанию туда не попадают обычные поды.
+Сервисам, которым нужен GPU, достаточно добавить `tolerations` и `nodeSelector`.
+{% endalert %}
+
+Подробная схема параметров находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
 #### 1. Эксклюзивный режим (Exclusive)
 
@@ -142,8 +143,7 @@ spec:
 Планировщик увидит ресурсы `nvidia.com/mig-1g.5gb`.
 
 Полный список поддерживаемых GPU-устройств и их профили см. в  
-[FAQ → Как посмотреть доступные MIG-профили в кластере?](../node-manager/faq.html#как-посмотреть-доступные-mig-профили-в-кластере) и в  
-[документации NVIDIA MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/index.html).
+[FAQ → Как посмотреть доступные MIG-профили в кластере?](../node-manager/faq.html#как-посмотреть-доступные-mig-профили-в-кластере).
 
 ```yaml
 spec:
