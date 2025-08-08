@@ -85,9 +85,9 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-// GetGetReleaseVersionData searches for cached version data by checksum across all release channels
+// GetReleaseVersionData searches for cached version data by checksum across all release channels
 // Returns version, tarFile if found, empty values otherwise
-func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string, []byte) {
+func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 

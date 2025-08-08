@@ -309,7 +309,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum", // Same checksum as alpha/beta
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&newChannelVersion)
+			version, tarFile := cache.GetReleaseVersionData(&newChannelVersion)
 			assert.Equal(t, "1.0.0", version, "Version should match")
 			assert.Equal(t, []byte("test"), tarFile, "TarFile should match")
 		})
@@ -323,7 +323,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "nonexistent",
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&notFoundVersion)
+			version, tarFile := cache.GetReleaseVersionData(&notFoundVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})
@@ -337,7 +337,7 @@ func TestCache(t *testing.T) {
 				Checksum:       "checksum",
 			}
 
-			version, tarFile := cache.GetGetReleaseVersionData(&differentModuleVersion)
+			version, tarFile := cache.GetReleaseVersionData(&differentModuleVersion)
 			assert.Empty(t, version, "Version should be empty")
 			assert.Nil(t, tarFile, "TarFile should be nil")
 		})

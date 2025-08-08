@@ -133,7 +133,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// Search across all channels by checksum
-	version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
+	version, tarFile := s.cache.GetReleaseVersionData(versionData)
 	if version != "" {
 		versionData.Version = version
 		versionData.TarFile = tarFile
@@ -169,10 +169,10 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	// Before pull
 	timeBeforePull := time.Now()
-	
+
 	var image crv1.Image
 	var err error
-	
+
 	// If we already have the release image loaded, use it directly
 	if version.Image != nil {
 		image = version.Image
