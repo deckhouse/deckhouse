@@ -41,7 +41,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-null/version.ProviderVersion={{ (index .TF "nulltf").version }}"
-  - mv /go/bin/terraform-provider-null /terraform-provider-null
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o terraform-provider-null -trimpath -buildvcs=false -ldflags="-s -w -extldflags '-static' -X github.com/hashicorp/terraform-provider-null/version.ProviderVersion={{ .TF.nulltf.version }}" .
+  - mv terraform-provider-null /terraform-provider-null
   - chmod -R 755 /terraform-provider-null
   - chown 64535:64535 /terraform-provider-null
