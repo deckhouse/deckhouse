@@ -100,29 +100,6 @@ shell:
   - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact # FIXME Relocate to base_images
-fromImage: builder/alpine
-fromCacheVersion: "2025-08-04.03"
-final: false
-import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/lua-protobuf
-  to: /src/lua-protobuf
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src/lua-iconv
-  to: /src/lua-iconv
-  before: install
-shell:
-  install:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache gcc luarocks lua5.1 lua5.1-dev musl-dev # FIXME rebuild without deps!
-  setup:
-  - cd /src/lua-protobuf
-  - luarocks-5.1 make rockspecs/lua-protobuf-scm-1.rockspec
-  - cd /src/lua-iconv
-  - luarocks-5.1 install lua-iconv-7-3.src.rock
----
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
 fromCacheVersion: "2025-08-04.03"
@@ -189,6 +166,10 @@ shell:
 # from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
 # final: false
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf
+from: dev-registry.deckhouse.io/base_images@sha256:93d2460c69ad88a016ea2b4c059141ae5ce49eabc802aa444a8cf8832ec5e19e
+final: false
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 fromImage: builder/alpine
 fromCacheVersion: "2025-08-07.03"
@@ -210,6 +191,14 @@ import:
   add: /src/nginx-deps
   to: /src/nginx-deps
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf
+  add: /
+  to: /
+  includePaths:
+  - usr/include/*
+  - usr/bin/*
+  - usr/lib/*
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -217,16 +206,39 @@ shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache linux-headers autoconf automake libtool bash pkgconfig ninja
-  - apk add --no-cache build-base g++ cmake # bison flex
-  install:
-  # - apk add --no-cache
-  beforeSetup:
+  - apk add --no-cache build-base g++ cmake # FIXME bison flex
   # Mandatory
   - apk add pcre-dev
   - apk add curl-dev
   - apk add libmaxminddb-dev
   - apk add grpc-dev
-  - apk add protobuf-dev
+  # - apk add protobuf-dev
+  # Maybe need (thinking)
+  # - apk add libxml2
+  # - apk add yajl-dev lmdb-dev
+  # ca-certificates
+
+# ModSecurity -  for Linux
+
+# Mandatory dependencies
+#   + libInjection                                  ....
+#   + Mbed TLS                                      ....
+#   + SecLang tests                                 ....
+
+# Optional dependencies
+#   + GeoIP/MaxMind                                 ....found
+#      * (MaxMind) v1.9.1
+#         -lmaxminddb, -DWITH_MAXMIND
+#   + LibCURL                                       ....found v8.12.1
+#      -lcurl,  -DWITH_CURL_SSLVERSION_TLSv1_2 -DWITH_CURL
+#   + YAJL                                          ....not found
+#   + LMDB                                          ....not found
+#   + LibXML2                                       ....not found
+#   + SSDEEP                                        ....found
+#      -lfuzzy -L/usr/local/lib/, -DWITH_SSDEEP -I/usr/local/include
+#   + LUA                                           ....not found
+#   + PCRE2                                          ....not found
+
   # Optional
   # - apk add libxslt-dev
   # - apk add gd-dev
@@ -236,7 +248,6 @@ shell:
   # - apk add perl-dev
   # - apk add libc-dev
   # - apk add zlib-dev
-  # - apk add yajl-dev lmdb-dev
   # - apk add libxml2-dev
   # - apk add gtest-dev
   # - apk add c-ares-dev
@@ -245,9 +256,10 @@ shell:
   # - apk add patch
   # - apk add openssl
   # - apk add libprotobuf
-  # - apk add libxml2
   # - apk add python3
   # - apk add yaml-cpp
+  # mercurial alpine-sdk findutils curl lmdb-tools wget doxygen bc unzip dos2unix coreutils
+  install:
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -618,6 +630,14 @@ shell:
   - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
   - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf
+from: dev-registry.deckhouse.io/base_images@sha256:bfd71542919fd099c875d4090e581ff1a4f8d35ed70f3e6689ba83cde3068c7e
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv
+from: dev-registry.deckhouse.io/base_images@sha256:4d5dca4e0b7a5e9e544f05f911b09d2ea7e2777b77ffc13df399b4e893645e01
+final: false
+---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine
 fromCacheVersion: "2025-08-07.05"
@@ -642,13 +662,18 @@ import:
   includePaths:
   - chroot
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv
   add: /
   to: /chroot
   includePaths:
-  - usr/local/lib/lua/5.1/iconv.so
-  - usr/local/lib/lua/5.1/pb.so
-  - usr/local/share/lua/5.1/protoc.lua
+  - lib/lua/5.1/iconv.so
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf
+  add: /
+  to: /chroot
+  includePaths:
+  - lib/lua/5.1/pb.so
+  - share/lua/5.1/protoc.lua
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/etc
