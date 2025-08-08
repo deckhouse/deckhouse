@@ -299,6 +299,25 @@ apiserver:
       ...
       -----END CERTIFICATE-----
 `
+	const apiServerWithOidcFullKube129 = `
+internal:
+  admissionWebhookClientCertificateData:
+    cert: mock-cert
+    key: mock-key
+  effectiveKubernetesVersion: "1.29"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn:
+    oidcIssuerURL: https://dex.example.com
+    oidcCA: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+`
 	const apiServerWithOidcIssuerOnly = `
 internal:
   admissionWebhookClientCertificateData:
@@ -761,7 +780,28 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
+				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
+				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+			})
+		})
+		Context("apiserver oidc settings are set fully and kubernetes 1.29", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcFullKube129)
+				f.HelmRender()
+			})
+			It("for issuer[0] should bet set discoveryURL, URL and certificateAuthority", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1alpha1"))
+				Expect(config.JWT[0].Issuer.DiscoveryURL).Should(BeEmpty())
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
 			})
@@ -780,6 +820,7 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).Should(BeEmpty())

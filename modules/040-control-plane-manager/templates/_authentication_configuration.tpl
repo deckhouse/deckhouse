@@ -1,10 +1,16 @@
 {{- define "authenticationConfiguration" }}
+{{- if semverCompare "< 1.30" .clusterConfiguration.kubernetesVersion }}
+apiVersion: apiserver.config.k8s.io/v1alpha1
+{{- else }}
 apiVersion: apiserver.config.k8s.io/v1beta1
+{{- end }}
 kind: AuthenticationConfiguration
 jwt:
 - issuer:
     url: {{ .apiserver.oidcIssuerURL }} 
+    {{- if semverCompare ">= 1.30" .clusterConfiguration.kubernetesVersion }}
     discoveryURL: https://dex.d8-user-authn.svc.{{.clusterConfiguration.clusterDomain }}/.well-known/openid-configuration
+    {{- end }}
     {{- if .apiserver.oidcCA }}
     certificateAuthority: |
       {{- .apiserver.oidcCA | nindent 6 }} 
