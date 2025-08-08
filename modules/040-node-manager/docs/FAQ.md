@@ -1012,7 +1012,7 @@ Node reboots may be required after configuration changes. For example, after cha
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
-GPU-node management is available in the **EE** edition only.
+GPU-node management is available in Enterprise Edition only.
 {% endalert %}
 
 ### Step-by-step procedure for adding a GPU node to the cluster

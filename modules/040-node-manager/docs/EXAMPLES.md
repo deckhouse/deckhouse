@@ -73,7 +73,7 @@ spec:
   nodeType: Static
 ```
 
-### GPU nodes
+### Nodes with GPU
 
 <span id="example-gpu-nodegroup"></span>
 
@@ -102,7 +102,7 @@ and `nodeSelector`.
 See the full field reference in the
 [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
-#### 1. Exclusive mode (one Pod — one GPU)
+#### Exclusive mode (one Pod — one GPU)
 
 Each Pod gets an entire physical GPU; the cluster exposes the `nvidia.com/gpu` resource.
 
@@ -124,7 +124,7 @@ spec:
       effect: NoSchedule
 ```
 
-#### 2. Time-slicing (4 partitions)
+#### Time-slicing (4 partitions)
 
 The GPU is time-sliced: up to four Pods can share one card sequentially.
 Suitable for experiments, CI, and light inference workloads.
@@ -139,7 +139,7 @@ spec:
       partitionCount: 4
 ```
 
-#### 3. MIG (`all-1g.5gb` profile)
+#### MIG (`all-1g.5gb` profile)
 
 A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
