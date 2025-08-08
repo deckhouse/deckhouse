@@ -60,11 +60,16 @@ func TestSecretEdit(t *testing.T) {
 	t.Run("Secret editing", func(t *testing.T) {
 
 		abstractEditing = EditMock
-		err := SecretEdit(f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml")
+		err := SecretEdit(
+			f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml",
+			map[string]string{"name": "test"},
+		)
 		require.NoError(t, err)
 
 		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(context.TODO(), secretTest.Name, metav1.GetOptions{})
 		require.NoError(t, err)
+
+		require.Equal(t, "test", secretTestEdit.Labels["name"])
 
 		require.Equal(t, string(secretTestEdit.Data["cloud-provider-discovery-data.json"]), "{\"test\": \"data\"}")
 

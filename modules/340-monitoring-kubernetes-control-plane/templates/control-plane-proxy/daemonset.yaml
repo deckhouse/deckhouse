@@ -70,6 +70,11 @@ spec:
             path: /livez
             port: 4209
             scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4209
+            scheme: HTTPS
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:

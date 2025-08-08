@@ -882,7 +882,7 @@ Done
 {% endalert %}
 
 {% alert level="danger" %}
-Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
+Добавление кастомных настроек вызывает перезапуск сервиса containerd.
 {% endalert %}
 
 Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
@@ -926,22 +926,85 @@ spec:
   weight: 31
 ```
 
-### Как добавить авторизацию в дополнительный registry?
+### Как добавить конфигурацию для дополнительного registry?
+
+В containerd существует два способа описания конфигурации registry: **старый** и **новый**.
+
+Для проверки наличия **старого** способа конфигурации выполните на узлах кластера следующие команды:
+
+```bash
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+
+# Пример вывода:
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+# [plugins."io.containerd.grpc.v1.cri".registry.configs]
+#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+```
+
+Для проверки наличия **нового** способа конфигурации выполните на узлах кластера следующую команду:
+
+```bash
+cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+
+# Пример вывода:
+# config_path = "/etc/containerd/registry.d"
+```
+
+#### Старый способ
 
 {% alert level="warning" %}
-Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
+Этот формат конфигурации containerd устарел (deprecated).
 {% endalert %}
 
-Разверните скрипт `NodeGroupConfiguration`:
+{% alert level="info" %}
+Используется в containerd v1, если Deckhouse не управляется модулем Registry (режим [`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+{% endalert %}
+
+Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
+
+Пользовательская конфигурация добавляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
+
+Пример конфигурационного файла для директории `/etc/containerd/conf.d/`:
+
+```toml
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+          endpoint = ["https://${REGISTRY_URL}"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+          auth = "${BASE_64_AUTH}"
+          username = "${USERNAME}"
+          password = "${PASSWORD}"
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+          ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
+          insecure_skip_verify = true
+```
+
+{% alert level="danger" %}
+Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса containerd.
+{% endalert %}
+
+##### Как добавить авторизацию в дополнительный registry (старый способ)?
+
+Пример добавления авторизации в дополнительный registry при использовании **старого** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: containerd-additional-config.sh
+  name: containerd-additional-config-auth.sh
 spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  weight: 31
   bundles:
     - '*'
+  nodeGroups:
+    - "*"
   content: |
     # Copyright 2023 Flant JSC
     #
@@ -965,41 +1028,35 @@ spec:
       [plugins."io.containerd.grpc.v1.cri"]
         [plugins."io.containerd.grpc.v1.cri".registry]
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-              endpoint = ["https://registry-1.docker.io"]
             [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
               endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+              username = "username"
+              password = "password"
+              # OR
+              auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
-  nodeGroups:
-    - "*"
-  weight: 31
 ```
 
-### Как настроить сертификат для дополнительного registry?
+##### Как настроить сертификат для дополнительного registry (старый способ)?
 
-{% alert level="warning" %}
-Если используется модуль `registry`, для добавления авторизации следуйте [примеру из документации модуля registry](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html).
-{% endalert %}
-
-{% alert level="info" %}
-Помимо containerd, сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в операционной системе.
-{% endalert %}
-
-Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
+Пример настройки сертификата для дополнительного registry при использовании **старого** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: configure-cert-containerd.sh
+  name: containerd-additional-config-tls.sh
 spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  weight: 31
   bundles:
-  - '*'
-  content: |-
-    # Copyright 2024 Flant JSC
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
     #
     # Licensed under the Apache License, Version 2.0 (the "License");
     # you may not use this file except in compliance with the License.
@@ -1012,66 +1069,278 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-
+    
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
     CERTS_FOLDER="/var/lib/containerd/certs/"
-    CERT_CONTENT=$(cat <<"EOF"
-    -----BEGIN CERTIFICATE-----
-    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
-    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
-    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
-    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
-    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
-    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
-    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
-    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
-    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
-    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
-    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
-    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
-    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
-    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
-    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
-    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
-    -----END CERTIFICATE-----
-    EOF
-    )
 
-    CONFIG_CONTENT=$(cat <<EOF
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
-    EOF
-    )
 
     mkdir -p ${CERTS_FOLDER}
+    bb-sync-file "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
     mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+```
 
-    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+{% alert level="info" %}
+Помимо сontainerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
+{% endalert %}
 
-    CERT_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
-    CONFIG_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+##### Как добавить TLS skip verify (старый способ)?
 
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
+Пример добавления TLS skip verify при использовании **старого** способа конфигурации:
 
-    bb-sync-file \
-      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
-      ${CERT_TMP_FILE} 
-
-    bb-sync-file \
-      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
-      ${CONFIG_TMP_FILE} 
-  nodeGroups:
-  - '*'  
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
   weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              insecure_skip_verify = true
+    EOF
+```
+
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
+
+```bash
+# Через cri-интерфейс
+crictl pull private.registry.example/image/repo:tag
+```
+
+#### Новый способ
+
+{% alert level="info" %}
+Используется в containerd v2.  
+
+Используется в containerd v1, если управление осуществляется через модуль Registry (например, в режиме [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+{% endalert %}
+
+Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
+
+```bash
+/etc/containerd/registry.d
+├── private.registry.example:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
+```
+
+Пример содержимого файла `hosts.toml`:
+
+```toml
+[host]
+  # Mirror 1
+  [host."https://${REGISTRY_URL_1}"]
+    capabilities = ["pull", "resolve"]
+    ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
+
+    [host."https://${REGISTRY_URL_1}".auth]
+      username = "${USERNAME}"
+      password = "${PASSWORD}"
+
+  # Mirror 2
+  [host."http://${REGISTRY_URL_2}"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+```
+
+{% alert level="info" %}
+Изменения конфигураций не приводят к перезапуску сервиса containerd.
+{% endalert %}
+
+##### Как добавить авторизацию в дополнительный registry (новый способ)?
+
+Пример добавления авторизации в дополнительный registry при использовании **нового** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-auth.sh
+spec:
+  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        [host."https://${REGISTRY_URL}".auth]
+          username = "username"
+          password = "password"
+    EOF
+```
+
+##### Как настроить сертификат для дополнительного registry (новый способ)?
+
+Пример настройки сертификата для дополнительного registry? при использовании **нового** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-tls.sh
+spec:
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
+    EOF
+```
+
+{% alert level="info" %}
+Помимо containerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
+{% endalert %}
+
+##### Как добавить TLS skip verify (новый способ)?
+
+Пример добавления TLS skip verify при использовании **нового** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        skip_verify = true
+    EOF
+```
+
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
+
+```bash
+# Через cri интерфейс
+crictl pull private.registry.example/image/repo:tag
+
+# Через ctr с указанием директории с конфигурациями
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+
+# Через ctr для http репозитория
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
 ## Как использовать NodeGroup с приоритетом?

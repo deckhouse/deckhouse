@@ -23,7 +23,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gohugoio/hugo/common/herrors"
 	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/maps"
@@ -34,6 +33,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/fsync"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type hugoBuilder struct {
@@ -55,7 +56,6 @@ func (b *hugoBuilder) withConf(fn func(conf *commonConfig)) {
 	b.confmu.Lock()
 	defer b.confmu.Unlock()
 	fn(b.conf)
-
 }
 
 func (b *hugoBuilder) build() error {
@@ -255,7 +255,6 @@ func (b *hugoBuilder) hugo() (*hugolib.HugoSites, error) {
 		var err error
 		h, err = b.c.HugFromConfig(conf)
 		return err
-
 	}); err != nil {
 		return nil, err
 	}
@@ -291,7 +290,7 @@ func (b *hugoBuilder) loadConfig() error {
 	}
 
 	if len(conf.configs.LoadingInfo.ConfigFiles) == 0 {
-		return errors.New("Unable to locate config file or config directory. Perhaps you need to create a new site.\nRun `hugo help new` for details.")
+		return errors.New("unable to locate config file or config directory, perhaps you need to create a new site, run `hugo help new` for details")
 	}
 
 	conf.configs.Base.Markup.DefaultMarkdownHandler = "goldmark"

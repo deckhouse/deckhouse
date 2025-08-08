@@ -232,7 +232,7 @@ Next, you will need to create an Ingress controller, a user to access the web in
   <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k create -f ingress-nginx-controller.yml
+sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 
@@ -262,7 +262,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <p>Apply it using the following command on the <strong>master node</strong>:</p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k create -f user.yml
+sudo -i d8 k create -f $PWD/user.yml
 ```
 {% endsnippetcut %}
 </li>

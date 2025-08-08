@@ -29,7 +29,7 @@ To create a virtual machine template, go to the _Compute -> Virtual Machines_ se
   - **Template:** `Blank`
   - **Operating system:** depending on the OS in the cloud image.
   - **Optimized for:** High Performance.
-  - **Instance Images:** Attach -> Select the previously downloaded cloud-image of the OS, check “Bootable”. No other disks need to be created or attached.
+  - **Instance Images:** Attach -> Select the previously downloaded cloud-image of the OS, check “Bootable” and select “VirtIO“ interface. No other disks need to be created or attached.
 
     ![ General section ](../../images/cloud-provider-zvirt/template/step_env_en_04.png)
 
