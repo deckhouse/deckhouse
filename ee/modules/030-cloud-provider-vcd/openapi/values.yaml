@@ -53,18 +53,18 @@ properties:
               username: '<USERNAME>'
               password: '<PASSWORD>'
               insecure: true
-        required: [ apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork ]
+        required: [apiVersion, kind, masterNodeGroup, sshPublicKey, layout, provider, organization, virtualDataCenter, virtualApplicationName, mainNetwork]
         properties:
           apiVersion:
             type: string
-            enum: [ deckhouse.io/v1 ]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ VCDClusterConfiguration ]
+            enum: [VCDClusterConfiguration]
           masterNodeGroup:
             type: object
             additionalProperties: false
-            required: [ replicas, instanceClass ]
+            required: [replicas, instanceClass]
             description: |
               The definition of the master's NodeGroup.
 
@@ -78,7 +78,7 @@ properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [ template, storageProfile, sizingPolicy ]
+                required: [template, storageProfile, sizingPolicy]
                 description: |
                   Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
                 properties:
@@ -123,7 +123,7 @@ properties:
 
                       By default, the DHCP client is enabled.
                     x-examples:
-                      - [ "10.1.14.20", "10.1.4.21" ]
+                      - ["10.1.14.20", "10.1.4.21"]
                     items:
                       type: string
                       description: An IP address with a CIDR prefix.
@@ -171,7 +171,7 @@ properties:
               An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
             items:
               type: object
-              required: [ name, replicas, instanceClass ]
+              required: [name, replicas, instanceClass]
               properties:
                 name:
                   type: string
@@ -219,7 +219,7 @@ properties:
                         properties:
                           effect:
                             type: string
-                            enum: [ NoSchedule, PreferNoSchedule, NoExecute ]
+                            enum: [NoSchedule, PreferNoSchedule, NoExecute]
                           key:
                             type: string
                           value:
@@ -227,7 +227,7 @@ properties:
                 instanceClass:
                   type: object
                   additionalProperties: false
-                  required: [ template, storageProfile, sizingPolicy ]
+                  required: [template, storageProfile, sizingPolicy]
                   description: |
                     Partial contents of the fields of the [VCDInstanceClass](cr.html#vcdinstanceclass).
                   properties:
@@ -266,7 +266,7 @@ properties:
 
                         By default, the DHCP client is enabled.
                       x-examples:
-                        - [ "10.1.14.20", "10.1.4.21" ]
+                        - ["10.1.14.20", "10.1.4.21"]
                       items:
                         type: string
                         description: An IP address with a CIDR prefix.
@@ -508,9 +508,46 @@ properties:
             description: |
               If set to `true`, an API version below `37.2` will be used.
             x-doc-default: false
+          metadata:
+            type: array
+            description: |
+              Custom metadta entries to be stored in the cluster object such as: virtual machines, disks, network, virtual application.
+            items:
+              type: object
+              additionalProperties: false
+              properties:
+                key:
+                  type: string
+                  description: The key of the metadata.
+                value:
+                  type: string
+                  description: The value of the metadata.
+                type:
+                  type: string
+                  description: |
+                    The type of the metadata. Can be one of `String`, `Number`, `Boolean` or `DateTime`.
+
+                    Default value is `String`.
+                  enum: [String, Number, Boolean, DateTime]
+                  default: String
+                userAccess:
+                  type: string
+                  description: |
+                    The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
+
+                    Default value is `READWRITE`.
+                  enum: [READONLY, READWRITE, PRIVATE]
+                  default: READWRITE
+                isSystem:
+                  type: boolean
+                  description: |
+                    Whether the metadata is a system metadata or not.
+
+                    Default value is `false`.
+                  default: false
       capcdControllerManagerWebhookCert:
         type: object
-        default: { }
+        default: {}
         x-required-for-helm:
           - crt
           - key
@@ -518,30 +555,30 @@ properties:
         properties:
           crt:
             type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           key:
             type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
           ca:
             type: string
-            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
       discoveryData:
         type: object
         default: {}
         additionalProperties: false
         x-examples:
-        - apiVersion: deckhouse.io/v1
-          kind: VCDCloudProviderDiscoveryData
-          zones: ["default"]
-          vcdInstallationVersion: "10.4.2"
-          vcdAPIVersion: "37.2"
+          - apiVersion: deckhouse.io/v1
+            kind: VCDCloudProviderDiscoveryData
+            zones: ["default"]
+            vcdInstallationVersion: "10.4.2"
+            vcdAPIVersion: "37.2"
         properties:
           apiVersion:
             type: string
-            enum: [ deckhouse.io/v1 ]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ VCDCloudProviderDiscoveryData ]
+            enum: [VCDCloudProviderDiscoveryData]
           sizingPolicies:
             type: array
             items:
@@ -583,18 +620,18 @@ properties:
       providerDiscoveryData:
         type: object
         additionalProperties: false
-        required: [ apiVersion, kind ]
+        required: [apiVersion, kind]
         x-examples:
-        - apiVersion: deckhouse.io/v1
-          kind: VCDCloudProviderDiscoveryData
-          zones: ["default"]
+          - apiVersion: deckhouse.io/v1
+            kind: VCDCloudProviderDiscoveryData
+            zones: ["default"]
         properties:
           apiVersion:
             type: string
-            enum: [ deckhouse.io/v1 ]
+            enum: [deckhouse.io/v1]
           kind:
             type: string
-            enum: [ VCDCloudProviderDiscoveryData ]
+            enum: [VCDCloudProviderDiscoveryData]
           sizingPolicies:
             type: array
             items:
