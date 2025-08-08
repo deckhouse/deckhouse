@@ -746,7 +746,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags
 	deckhouseVersionsMock = deckhouseVersionsMock.ListTagsMock.Return(tags, nil)
 
 	// Add Digest mock for optimization - return consistent digest for all tags
-	deckhouseVersionsMock = deckhouseVersionsMock.DigestMock.Set(func(_ context.Context, imageTag string) (string, error) {
+	deckhouseVersionsMock = deckhouseVersionsMock.DigestMock.Set(func(_ context.Context, _ string) (string, error) {
 		return "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b892", nil
 	})
 
