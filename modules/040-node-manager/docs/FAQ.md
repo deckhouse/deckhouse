@@ -1017,8 +1017,6 @@ GPU-node management is available in Enterprise Edition only.
 
 ### Step-by-step procedure for adding a GPU node to the cluster
 
-<span id="step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster"></span>
-
 Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, the `node-manager` module **automatically**:
 
 * configures containerd with `default_runtime = "nvidia"`;
