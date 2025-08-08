@@ -1,8 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "nulltf") }}'
-git:
-- add: /{{ .ModulePath }}candi/cloud-providers/null
-  to: /deckhouse/candi/cloud-providers/null
 import:
 - image: terraform-provider-null
   add: /terraform-provider-null
