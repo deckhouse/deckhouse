@@ -11,7 +11,8 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
 // ClientMock implements Client
@@ -26,7 +27,14 @@ type ClientMock struct {
 	beforeDigestCounter uint64
 	DigestMock          mClientMockDigest
 
-	funcImage          func(ctx context.Context, tag string) (i1 v1.Image, err error)
+	funcGet          func(ctx context.Context, tag string) (dp1 *remote.Descriptor, err error)
+	funcGetOrigin    string
+	inspectFuncGet   func(ctx context.Context, tag string)
+	afterGetCounter  uint64
+	beforeGetCounter uint64
+	GetMock          mClientMockGet
+
+	funcImage          func(ctx context.Context, tag string) (i1 crv1.Image, err error)
 	funcImageOrigin    string
 	inspectFuncImage   func(ctx context.Context, tag string)
 	afterImageCounter  uint64
@@ -51,6 +59,9 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 
 	m.DigestMock = mClientMockDigest{mock: m}
 	m.DigestMock.callArgs = []*ClientMockDigestParams{}
+
+	m.GetMock = mClientMockGet{mock: m}
+	m.GetMock.callArgs = []*ClientMockGetParams{}
 
 	m.ImageMock = mClientMockImage{mock: m}
 	m.ImageMock.callArgs = []*ClientMockImageParams{}
@@ -406,6 +417,349 @@ func (m *ClientMock) MinimockDigestInspect() {
 	}
 }
 
+type mClientMockGet struct {
+	optional           bool
+	mock               *ClientMock
+	defaultExpectation *ClientMockGetExpectation
+	expectations       []*ClientMockGetExpectation
+
+	callArgs []*ClientMockGetParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// ClientMockGetExpectation specifies expectation struct of the Client.Get
+type ClientMockGetExpectation struct {
+	mock               *ClientMock
+	params             *ClientMockGetParams
+	paramPtrs          *ClientMockGetParamPtrs
+	expectationOrigins ClientMockGetExpectationOrigins
+	results            *ClientMockGetResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// ClientMockGetParams contains parameters of the Client.Get
+type ClientMockGetParams struct {
+	ctx context.Context
+	tag string
+}
+
+// ClientMockGetParamPtrs contains pointers to parameters of the Client.Get
+type ClientMockGetParamPtrs struct {
+	ctx *context.Context
+	tag *string
+}
+
+// ClientMockGetResults contains results of the Client.Get
+type ClientMockGetResults struct {
+	dp1 *remote.Descriptor
+	err error
+}
+
+// ClientMockGetOrigins contains origins of expectations of the Client.Get
+type ClientMockGetExpectationOrigins struct {
+	origin    string
+	originCtx string
+	originTag string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmGet *mClientMockGet) Optional() *mClientMockGet {
+	mmGet.optional = true
+	return mmGet
+}
+
+// Expect sets up expected params for Client.Get
+func (mmGet *mClientMockGet) Expect(ctx context.Context, tag string) *mClientMockGet {
+	if mmGet.mock.funcGet != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Set")
+	}
+
+	if mmGet.defaultExpectation == nil {
+		mmGet.defaultExpectation = &ClientMockGetExpectation{}
+	}
+
+	if mmGet.defaultExpectation.paramPtrs != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by ExpectParams functions")
+	}
+
+	mmGet.defaultExpectation.params = &ClientMockGetParams{ctx, tag}
+	mmGet.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmGet.expectations {
+		if minimock.Equal(e.params, mmGet.defaultExpectation.params) {
+			mmGet.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmGet.defaultExpectation.params)
+		}
+	}
+
+	return mmGet
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Client.Get
+func (mmGet *mClientMockGet) ExpectCtxParam1(ctx context.Context) *mClientMockGet {
+	if mmGet.mock.funcGet != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Set")
+	}
+
+	if mmGet.defaultExpectation == nil {
+		mmGet.defaultExpectation = &ClientMockGetExpectation{}
+	}
+
+	if mmGet.defaultExpectation.params != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Expect")
+	}
+
+	if mmGet.defaultExpectation.paramPtrs == nil {
+		mmGet.defaultExpectation.paramPtrs = &ClientMockGetParamPtrs{}
+	}
+	mmGet.defaultExpectation.paramPtrs.ctx = &ctx
+	mmGet.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmGet
+}
+
+// ExpectTagParam2 sets up expected param tag for Client.Get
+func (mmGet *mClientMockGet) ExpectTagParam2(tag string) *mClientMockGet {
+	if mmGet.mock.funcGet != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Set")
+	}
+
+	if mmGet.defaultExpectation == nil {
+		mmGet.defaultExpectation = &ClientMockGetExpectation{}
+	}
+
+	if mmGet.defaultExpectation.params != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Expect")
+	}
+
+	if mmGet.defaultExpectation.paramPtrs == nil {
+		mmGet.defaultExpectation.paramPtrs = &ClientMockGetParamPtrs{}
+	}
+	mmGet.defaultExpectation.paramPtrs.tag = &tag
+	mmGet.defaultExpectation.expectationOrigins.originTag = minimock.CallerInfo(1)
+
+	return mmGet
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.Get
+func (mmGet *mClientMockGet) Inspect(f func(ctx context.Context, tag string)) *mClientMockGet {
+	if mmGet.mock.inspectFuncGet != nil {
+		mmGet.mock.t.Fatalf("Inspect function is already set for ClientMock.Get")
+	}
+
+	mmGet.mock.inspectFuncGet = f
+
+	return mmGet
+}
+
+// Return sets up results that will be returned by Client.Get
+func (mmGet *mClientMockGet) Return(dp1 *remote.Descriptor, err error) *ClientMock {
+	if mmGet.mock.funcGet != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Set")
+	}
+
+	if mmGet.defaultExpectation == nil {
+		mmGet.defaultExpectation = &ClientMockGetExpectation{mock: mmGet.mock}
+	}
+	mmGet.defaultExpectation.results = &ClientMockGetResults{dp1, err}
+	mmGet.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmGet.mock
+}
+
+// Set uses given function f to mock the Client.Get method
+func (mmGet *mClientMockGet) Set(f func(ctx context.Context, tag string) (dp1 *remote.Descriptor, err error)) *ClientMock {
+	if mmGet.defaultExpectation != nil {
+		mmGet.mock.t.Fatalf("Default expectation is already set for the Client.Get method")
+	}
+
+	if len(mmGet.expectations) > 0 {
+		mmGet.mock.t.Fatalf("Some expectations are already set for the Client.Get method")
+	}
+
+	mmGet.mock.funcGet = f
+	mmGet.mock.funcGetOrigin = minimock.CallerInfo(1)
+	return mmGet.mock
+}
+
+// When sets expectation for the Client.Get which will trigger the result defined by the following
+// Then helper
+func (mmGet *mClientMockGet) When(ctx context.Context, tag string) *ClientMockGetExpectation {
+	if mmGet.mock.funcGet != nil {
+		mmGet.mock.t.Fatalf("ClientMock.Get mock is already set by Set")
+	}
+
+	expectation := &ClientMockGetExpectation{
+		mock:               mmGet.mock,
+		params:             &ClientMockGetParams{ctx, tag},
+		expectationOrigins: ClientMockGetExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmGet.expectations = append(mmGet.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Client.Get return parameters for the expectation previously defined by the When method
+func (e *ClientMockGetExpectation) Then(dp1 *remote.Descriptor, err error) *ClientMock {
+	e.results = &ClientMockGetResults{dp1, err}
+	return e.mock
+}
+
+// Times sets number of times Client.Get should be invoked
+func (mmGet *mClientMockGet) Times(n uint64) *mClientMockGet {
+	if n == 0 {
+		mmGet.mock.t.Fatalf("Times of ClientMock.Get mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmGet.expectedInvocations, n)
+	mmGet.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmGet
+}
+
+func (mmGet *mClientMockGet) invocationsDone() bool {
+	if len(mmGet.expectations) == 0 && mmGet.defaultExpectation == nil && mmGet.mock.funcGet == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmGet.mock.afterGetCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmGet.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// Get implements Client
+func (mmGet *ClientMock) Get(ctx context.Context, tag string) (dp1 *remote.Descriptor, err error) {
+	mm_atomic.AddUint64(&mmGet.beforeGetCounter, 1)
+	defer mm_atomic.AddUint64(&mmGet.afterGetCounter, 1)
+
+	mmGet.t.Helper()
+
+	if mmGet.inspectFuncGet != nil {
+		mmGet.inspectFuncGet(ctx, tag)
+	}
+
+	mm_params := ClientMockGetParams{ctx, tag}
+
+	// Record call args
+	mmGet.GetMock.mutex.Lock()
+	mmGet.GetMock.callArgs = append(mmGet.GetMock.callArgs, &mm_params)
+	mmGet.GetMock.mutex.Unlock()
+
+	for _, e := range mmGet.GetMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.dp1, e.results.err
+		}
+	}
+
+	if mmGet.GetMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmGet.GetMock.defaultExpectation.Counter, 1)
+		mm_want := mmGet.GetMock.defaultExpectation.params
+		mm_want_ptrs := mmGet.GetMock.defaultExpectation.paramPtrs
+
+		mm_got := ClientMockGetParams{ctx, tag}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmGet.t.Errorf("ClientMock.Get got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmGet.GetMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.tag != nil && !minimock.Equal(*mm_want_ptrs.tag, mm_got.tag) {
+				mmGet.t.Errorf("ClientMock.Get got unexpected parameter tag, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmGet.GetMock.defaultExpectation.expectationOrigins.originTag, *mm_want_ptrs.tag, mm_got.tag, minimock.Diff(*mm_want_ptrs.tag, mm_got.tag))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmGet.t.Errorf("ClientMock.Get got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmGet.GetMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmGet.GetMock.defaultExpectation.results
+		if mm_results == nil {
+			mmGet.t.Fatal("No results are set for the ClientMock.Get")
+		}
+		return (*mm_results).dp1, (*mm_results).err
+	}
+	if mmGet.funcGet != nil {
+		return mmGet.funcGet(ctx, tag)
+	}
+	mmGet.t.Fatalf("Unexpected call to ClientMock.Get. %v %v", ctx, tag)
+	return
+}
+
+// GetAfterCounter returns a count of finished ClientMock.Get invocations
+func (mmGet *ClientMock) GetAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGet.afterGetCounter)
+}
+
+// GetBeforeCounter returns a count of ClientMock.Get invocations
+func (mmGet *ClientMock) GetBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmGet.beforeGetCounter)
+}
+
+// Calls returns a list of arguments used in each call to ClientMock.Get.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmGet *mClientMockGet) Calls() []*ClientMockGetParams {
+	mmGet.mutex.RLock()
+
+	argCopy := make([]*ClientMockGetParams, len(mmGet.callArgs))
+	copy(argCopy, mmGet.callArgs)
+
+	mmGet.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockGetDone returns true if the count of the Get invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockGetDone() bool {
+	if m.GetMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.GetMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.GetMock.invocationsDone()
+}
+
+// MinimockGetInspect logs each unmet expectation
+func (m *ClientMock) MinimockGetInspect() {
+	for _, e := range m.GetMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ClientMock.Get at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterGetCounter := mm_atomic.LoadUint64(&m.afterGetCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.GetMock.defaultExpectation != nil && afterGetCounter < 1 {
+		if m.GetMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to ClientMock.Get at\n%s", m.GetMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to ClientMock.Get at\n%s with params: %#v", m.GetMock.defaultExpectation.expectationOrigins.origin, *m.GetMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcGet != nil && afterGetCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.Get at\n%s", m.funcGetOrigin)
+	}
+
+	if !m.GetMock.invocationsDone() && afterGetCounter > 0 {
+		m.t.Errorf("Expected %d calls to ClientMock.Get at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.GetMock.expectedInvocations), m.GetMock.expectedInvocationsOrigin, afterGetCounter)
+	}
+}
+
 type mClientMockImage struct {
 	optional           bool
 	mock               *ClientMock
@@ -444,7 +798,7 @@ type ClientMockImageParamPtrs struct {
 
 // ClientMockImageResults contains results of the Client.Image
 type ClientMockImageResults struct {
-	i1  v1.Image
+	i1  crv1.Image
 	err error
 }
 
@@ -548,7 +902,7 @@ func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, tag string)
 }
 
 // Return sets up results that will be returned by Client.Image
-func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
+func (mmImage *mClientMockImage) Return(i1 crv1.Image, err error) *ClientMock {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -562,7 +916,7 @@ func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
 }
 
 // Set uses given function f to mock the Client.Image method
-func (mmImage *mClientMockImage) Set(f func(ctx context.Context, tag string) (i1 v1.Image, err error)) *ClientMock {
+func (mmImage *mClientMockImage) Set(f func(ctx context.Context, tag string) (i1 crv1.Image, err error)) *ClientMock {
 	if mmImage.defaultExpectation != nil {
 		mmImage.mock.t.Fatalf("Default expectation is already set for the Client.Image method")
 	}
@@ -593,7 +947,7 @@ func (mmImage *mClientMockImage) When(ctx context.Context, tag string) *ClientMo
 }
 
 // Then sets up Client.Image return parameters for the expectation previously defined by the When method
-func (e *ClientMockImageExpectation) Then(i1 v1.Image, err error) *ClientMock {
+func (e *ClientMockImageExpectation) Then(i1 crv1.Image, err error) *ClientMock {
 	e.results = &ClientMockImageResults{i1, err}
 	return e.mock
 }
@@ -620,7 +974,7 @@ func (mmImage *mClientMockImage) invocationsDone() bool {
 }
 
 // Image implements Client
-func (mmImage *ClientMock) Image(ctx context.Context, tag string) (i1 v1.Image, err error) {
+func (mmImage *ClientMock) Image(ctx context.Context, tag string) (i1 crv1.Image, err error) {
 	mm_atomic.AddUint64(&mmImage.beforeImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmImage.afterImageCounter, 1)
 
@@ -1067,6 +1421,8 @@ func (m *ClientMock) MinimockFinish() {
 		if !m.minimockDone() {
 			m.MinimockDigestInspect()
 
+			m.MinimockGetInspect()
+
 			m.MinimockImageInspect()
 
 			m.MinimockListTagsInspect()
@@ -1094,6 +1450,7 @@ func (m *ClientMock) minimockDone() bool {
 	done := true
 	return done &&
 		m.MinimockDigestDone() &&
+		m.MinimockGetDone() &&
 		m.MinimockImageDone() &&
 		m.MinimockListTagsDone()
 }

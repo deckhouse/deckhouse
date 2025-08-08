@@ -638,6 +638,72 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
+	// Optimization: First get only the digest (lightweight operation)
+	imageDigestStr, err := f.registryClient.Digest(ctx, f.GetReleaseChannel())
+	if err != nil {
+		f.logger.Warn("Failed to get image digest, falling back to full image download",
+			slog.String("channel", f.GetReleaseChannel()), log.Err(err))
+
+		// Fallback to original behavior if digest call fails
+		return f.getReleaseImageInfoFallback(ctx, previousImageHash)
+	}
+
+	// Check if image changed before downloading
+	if previousImageHash == imageDigestStr {
+		f.logger.Debug("Image digest unchanged, cache hit",
+			slog.String("digest", imageDigestStr),
+			slog.String("channel", f.GetReleaseChannel()))
+
+		return nil, ErrImageNotChanged
+	}
+
+	f.logger.Debug("Image digest changed, cache miss",
+		slog.String("previous", previousImageHash),
+		slog.String("current", imageDigestStr),
+		slog.String("channel", f.GetReleaseChannel()))
+
+	// Image changed, now get the full image and metadata
+	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
+	if err != nil {
+		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
+	}
+
+	imageDigest, err := image.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	// Verify digest consistency between calls
+	if imageDigestStr != imageDigest.String() {
+		f.logger.Warn("Image digest inconsistency between digest and image calls",
+			slog.String("digest_call", imageDigestStr),
+			slog.String("image_digest", imageDigest.String()),
+			slog.String("channel", f.GetReleaseChannel()))
+	}
+
+	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image metadata: %w", err)
+	}
+
+	if releaseMeta.Version == "" {
+		return nil, fmt.Errorf("version not found, probably image is broken or layer does not exist")
+	}
+
+	return &ReleaseImageInfo{
+		Image:    image,
+		Digest:   imageDigest,
+		Metadata: releaseMeta,
+	}, nil
+}
+
+// getReleaseImageInfoFallback implements the original behavior when digest optimization fails
+func (f *DeckhouseReleaseFetcher) getReleaseImageInfoFallback(ctx context.Context, previousImageHash string) (*ReleaseImageInfo, error) {
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfoFallback")
+	defer span.End()
+
+	f.logger.Debug("Using fallback image retrieval method", slog.String("channel", f.GetReleaseChannel()))
+
 	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
