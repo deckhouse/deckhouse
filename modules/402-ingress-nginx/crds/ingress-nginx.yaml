@@ -1311,7 +1311,7 @@ spec:
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
                 - message: .spec.controllerNginxProfilingEnabled experimental option available only in version 1.10
-                  rule: 'self.controllerNginxProfilingEnabled == true ? self.controllerVersion in [''1.10'']: true'
+                  rule: "!has(self.controllerNginxProfilingEnabled) || !self.controllerNginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
