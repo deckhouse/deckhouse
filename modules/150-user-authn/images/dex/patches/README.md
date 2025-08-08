@@ -33,3 +33,7 @@ Upstream PR: https://github.com/dexidp/dex/pull/3712
 This patch fixes the issue with the `insecureSkipVerify` and `rootCAs` options which do not work in OIDC connector.
 
 Upstream PR: https://github.com/dexidp/dex/pull/4223
+
+### 007-provide-custom-CA-to-gitlab-connector.patch
+
+This patch allows Gitlab connector to use custom CA for HTTPS connections.
