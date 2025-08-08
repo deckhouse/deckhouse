@@ -299,23 +299,18 @@ entries:
                             ru: Интеграция с службами Huawei Cloud
                           url: /admin/integrations/private/huaweicloud/huawei-services.html
                     - title:
-                        en: Integration with Dynamix
                         ru: Интеграция с Dynamix
                       folders:
                         - title:
-                            en: Connection and authorization
                             ru: Подключение и авторизация
                           url: /admin/integrations/private/dynamix/dynamix-authorization.html
                         - title:
-                            en: Layouts and configuration
                             ru: Схемы размещения и настройка
                           url: /admin/integrations/private/dynamix/dynamix-layout.html
                         - title:
-                            en: Storage and load balancing
                             ru: Хранилище и балансировка
                           url: /admin/integrations/private/dynamix/dynamix-storage.html
                         - title:
-                            en: Integration with Dynamix services
                             ru: Интеграция с службами Dynamix
                           url: /admin/integrations/private/dynamix/dynamix-services.html
                 - title:

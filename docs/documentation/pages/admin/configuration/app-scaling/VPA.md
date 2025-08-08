@@ -58,12 +58,12 @@ After creating a [VerticalPodAutoscaler](/modules/vertical-pod-autoscaler/cr.htm
 d8 k describe vpa my-app-vpa
 ```
 
-In the status section, you’ll see the following parameters:
+In the `status` section, you’ll see the following parameters:
 
-`Target`: The recommended resource amount for the pod.
-`Lower Bound`: The minimum recommended resource amount for the application.
-`Upper Bound`: The maximum recommended resource amount for the application.
-`Uncapped Target`: The resource value based on extreme metrics without considering historical data.
+- `Target`: The recommended resource amount for the pod.
+- `Lower Bound`: The minimum recommended resource amount for the application.
+- `Upper Bound`: The maximum recommended resource amount for the application.
+- `Uncapped Target`: The resource value based on extreme metrics without considering historical data.
 
 ## VPA configuration
 

@@ -1,5 +1,5 @@
 ---
-title: "Descheduler"
+title: "Scheduler"
 permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html 
 ---
 
