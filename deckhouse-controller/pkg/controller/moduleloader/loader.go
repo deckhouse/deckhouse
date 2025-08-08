@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -294,6 +295,12 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	if err := l.client.List(ctx, modulesList); err != nil {
 		return fmt.Errorf("list all modules: %w", err)
 	}
+
+	moduleConfigs := new(v1alpha1.ModuleConfigList)
+	if err := l.client.List(ctx, moduleConfigs); err != nil {
+		return fmt.Errorf("list module configs: %w", err)
+	}
+
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
 			l.logger.Debug("delete embedded module", slog.String("name", module.Name))
@@ -302,9 +309,21 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 		}
 
-		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			if err := l.client.Status().Update(ctx, &module); err != nil {
+		var found bool
+		for _, config := range moduleConfigs.Items {
+			if config.GetName() == module.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
 		}

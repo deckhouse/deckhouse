@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
-    modules.deckhouse.io/default-source: "true"
   name: test-source-1
 spec:
   registry:
@@ -24,20 +23,6 @@ spec:
   releaseChannel: Alpha
   update:
     mode: Manual
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: disabledmodule
-properties:
-  source: test-source-1
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "False"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
@@ -63,21 +48,6 @@ properties:
     - test-source-1
 status:
   phase: Available
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: withpolicymodule
-properties:
-  source: test-source-1
-  updatePolicy: test-alpha
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module

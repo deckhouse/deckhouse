@@ -33,6 +33,34 @@ spec:
   settings: 
 ```
 
+Module availability and enabling by default
+
+To determine in which editions the module should be available, or in which bundles it should be enabled by default, use the `accessibility` field in `module.yaml`:
+
+```yaml
+name: test
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+```
+
+This configuration means that the module is available in the `ee` edition (and can be enabled via `ModuleConfig`) and will be enabled by default in the `Default` bundle.
+
+{% alert level="warning" %}
+To use this mechanism, the `module.yaml` file must be included in the release image.
+{% endalert %}
+
+{% alert level="warning" %}
+A module can still be disabled through its `ModuleConfig`.
+{% endalert %}
+
+{% alert level="warning" %}
+A module will remain on the last available release if the next release disables it (e.g., by setting `available: false` in its edition).
+{% endalert %}
+
 Requirements for the resource parameters:
 
 * The module name (`metadata.name`) must match the module name in the ModuleSource (`.status.modules.[].name`).
