@@ -204,6 +204,10 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 		return "", fmt.Errorf("image: %w", err)
 	}
 
+	if desc == nil {
+		return "", fmt.Errorf("received nil descriptor for tag %q", tag)
+	}
+
 	return desc.Digest.String(), nil
 }
 
