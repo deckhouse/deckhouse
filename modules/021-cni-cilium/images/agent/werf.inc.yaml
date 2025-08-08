@@ -91,6 +91,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
 from: dev-registry.deckhouse.io/base_images@sha256:418f029e338c89b056675d597b0155d4fb380d5b8cf57b21b6e28e258a433220
 final: false
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+from: dev-registry.deckhouse.io/base_images@sha256:561d58c555f9d12bf0ff71ac222c08afd98a22e498fe90906614b80c1de93804
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+from: dev-registry.deckhouse.io/base_images@sha256:ddca3c188849a16ec3fa05701a7bc1c196f431d999c630c81adedaa32f709acc
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -508,7 +516,66 @@ import:
   - liblzma.so.5.6.3
   - liblzma.so.5.8.1
 ### place for libedit
+- image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libedit.a
+  - libedit.la
+  - libedit.so
+  - libedit.so.0
+  - libedit.so.0.0.75
+  - libedit.so.3
 ### place for ncurses
+- image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so
+  - libcurses.a
+  - libcurses.so
+  - libform.a
+  - libform.so
+  - libformw.a
+  - libformw_g.a
+  - libformw.so
+  - libformw.so.6
+  - libformw.so.6.5
+  - libmenu.a
+  - libmenu.so
+  - libmenuw.a
+  - libmenuw_g.a
+  - libmenuw.so
+  - libmenuw.so.6
+  - libmenuw.so.6.5
+  - libncurses++.a
+  - libncurses.a
+  - libncurses++.so
+  - libncurses.so
+  - libncurses++w.a
+  - libncursesw.a
+  - libncurses++w_g.a
+  - libncursesw_g.a
+  - libncurses++w.so
+  - libncursesw.so
+  - libncurses++w.so.6
+  - libncursesw.so.6
+  - libncurses++w.so.6.5
+  - libncursesw.so.6.5
+  - libpanel.a
+  - libpanel.so
+  - libpanelw.a
+  - libpanelw_g.a
+  - libpanelw.so
+  - libpanelw.so.6
+  - libpanelw.so.6.5
+  - libtic.a
+  - libtic.so
+  - libtinfo.a
+  - libtinfo.so
+  - libtinfo.so.6
 ### place for llvm
 ### place for gcc
 git:
