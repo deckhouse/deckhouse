@@ -128,12 +128,12 @@ apiVersions:
                     items:
                       description: IP-адрес с префиксом CIDR.
         bastion:
-        description: |
-          Параметры для бастион-хоста, который используется для административного доступа к узлам кластера.
-        properties:
-          instanceClass:
-            description: |
-              Частичное содержимое полей [VCDInstanceClass](cr.html#vcdinstanceclass).
+          description: |
+            Параметры для бастион-хоста, который используется для административного доступа к узлам кластера.
+          properties:
+            instanceClass:
+              description: |
+                Частичное содержимое полей [VCDInstanceClass](cr.html#vcdinstanceclass).
             properties:
               rootDiskSizeGb:
                 description: |
