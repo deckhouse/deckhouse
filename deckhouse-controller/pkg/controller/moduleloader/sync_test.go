@@ -241,6 +241,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 					ManifestStub: manifestStub,
 					LayersStub:   tc.layersStab,
 				}, nil)
+				dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 			}
 
 			require.NoError(suite.T(), module.prepare(true, true))
@@ -290,6 +291,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -324,6 +326,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(false, false))
 
@@ -353,6 +356,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -405,6 +409,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -462,6 +467,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -492,6 +498,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(false, false))
 
@@ -517,6 +524,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -566,6 +574,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
@@ -594,6 +603,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				return []crv1.Layer{&utils.FakeLayer{}}, nil
 			},
 		}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:test-digest", nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
 
