@@ -187,10 +187,20 @@ kubernetes:
   destinationBinary: terraform-provider-kubernetes
   useOpentofu: true
 
-null-tofu:
+null:
   namespace: hashicorp
-  cloudName: Null
-  type: null
+  cloudName: "Null"
+  type: "null"
+  version: 3.2.2
+  artifact: terraform-provider-null
+  artifactBinary: terraform-provider-null
+  destinationBinary: terraform-provider-null
+  useOpentofu: true
+
+null-tf:
+  namespace: hashicorp
+  cloudName: "Null"
+  type: "null"
   version: 3.2.2
   artifact: terraform-provider-null
   artifactBinary: terraform-provider-null

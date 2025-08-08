@@ -1,12 +1,12 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "null") }}'
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "null-tf") }}'
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/null
   to: /deckhouse/candi/cloud-providers/null
 import:
 - image: terraform-provider-null
   add: /terraform-provider-null
-  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "null") }}/{{ (index .TF "null-tofu").namespace }}/{{ (index .TF "null-tofu").type }}/{{ (index .TF "null-tofu").version }}/linux_amd64/terraform-provider-null
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "null-tf") }}/{{ (index .TF "null-tf").namespace }}/{{ (index .TF "null-tf").type }}/{{ (index .TF "null-tf").version }}/linux_amd64/terraform-provider-null
   before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -23,7 +23,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ (index .TF "null-tofu").version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
+  - git clone --depth 1 --branch v{{ (index .TF "null-tf").version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
@@ -48,7 +48,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-null/version.ProviderVersion={{ (index .TF "null-tofu").version }}"
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-null/version.ProviderVersion={{ (index .TF "null-tf").version }}"
   - mv /go/bin/terraform-provider-null /terraform-provider-null
   - chmod -R 755 /terraform-provider-null
   - chown 64535:64535 /terraform-provider-null
