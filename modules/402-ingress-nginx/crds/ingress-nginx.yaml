@@ -1261,15 +1261,12 @@ spec:
                     - "Trace-level logs with detailed step-by-step context."
                 controllerNginxProfilingEnabled:
                   type: boolean
-                  default: false
                   description: |
                     Enables NGINX profiling using Valgrind.
                     A memory analysis report is saved to the /var/log/valgrind directory on the host.
                     When enabled, Valgrind creates a file named memcheck.${timestamp}.log.
 
-                    After debugging is complete, terminate the pod process manually or disable profiling mode, for example:
-
-                    > kubectl -n d8-ingress-nginx delete po main-controller-xxx
+                    After debugging is complete, don't forget to disable profiling mode!
 
                     The report contains information about the process behavior, including potential memory leaks.
 
