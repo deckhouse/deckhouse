@@ -30,8 +30,8 @@ locals {
   external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? element(local.external_subnet_ids, var.nodeIndex) : null
 
   external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
-  assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
-
+  # assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
+  assign_external_ip_address = (local.external_subnet_id == null) && (var.nodeIndex < length(local.external_ip_addresses) ? true : (length(local.external_ip_addresses) > 0))
 }
 
 data "yandex_vpc_subnet" "existing" {
@@ -73,8 +73,6 @@ resource "yandex_vpc_address" "addr" {
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
-
-  depends_on = [null_resource.after_detach_barrier]
   
 #   If we specify this flag and change the zone_id, terraform will exit with an error.
 #   lifecycle {
