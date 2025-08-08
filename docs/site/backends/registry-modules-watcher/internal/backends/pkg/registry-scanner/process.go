@@ -116,24 +116,20 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	// First, get only the digest for cache check (lightweight operation)
+	releaseDigest, err := s.registryClients[registry].ReleaseDigest(ctx, module, releaseChannel)
 	if err != nil {
-		return nil, fmt.Errorf("get release image: %w", err)
-	}
-
-	releaseDigest, err := releaseImage.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("get digest: %w", err)
+		return nil, fmt.Errorf("get release digest: %w", err)
 	}
 
 	versionData := &internal.VersionData{
 		Registry:       registry,
 		ModuleName:     module,
 		ReleaseChannel: releaseChannel,
-		Checksum:       releaseDigest.String(),
+		Checksum:       releaseDigest,
 		Version:        "",
 		TarFile:        make([]byte, 0),
-		Image:          releaseImage,
+		Image:          nil, // Lazy loading - only load when needed
 	}
 
 	// Search across all channels by checksum
@@ -144,6 +140,13 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 
 		return versionData, nil
 	}
+
+	// Cache miss - need to load the full image now
+	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	if err != nil {
+		return nil, fmt.Errorf("get release image: %w", err)
+	}
+	versionData.Image = releaseImage
 
 	// Extract version from image
 	version, err = getVersionFromImage(versionData.Image)
@@ -166,9 +169,19 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	// Before pull
 	timeBeforePull := time.Now()
-	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
-	if err != nil {
-		return nil, fmt.Errorf("get image: %w", err)
+	
+	var image crv1.Image
+	var err error
+	
+	// If we already have the release image loaded, use it directly
+	if version.Image != nil {
+		image = version.Image
+	} else {
+		// Fallback to loading by version - this should rarely happen now
+		image, err = s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
+		if err != nil {
+			return nil, fmt.Errorf("get image: %w", err)
+		}
 	}
 
 	// Pull and untar
