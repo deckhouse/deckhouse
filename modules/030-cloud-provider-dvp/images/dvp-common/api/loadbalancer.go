@@ -261,7 +261,15 @@ func (lb *LoadBalancerService) pollLoadBalancer(ctx context.Context, name string
 		})
 }
 
-func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) error {
+func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) (retErr error) {
+	defer func() {
+		if err := lb.removeNodeLabelsByKey(ctx, lbLabelKey(name)); err != nil {
+			klog.Errorf("Failed to remove node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+			if retErr == nil {
+				retErr = err
+			}
+		}
+	}()
 	svc, err := lb.GetLoadBalancerByName(ctx, name)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
@@ -273,6 +281,36 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	if err = lb.client.Delete(ctx, svc); err != nil {
 		klog.Errorf("Failed to delete LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
 		return err
+	}
+	return nil
+}
+
+func (lb *LoadBalancerService) removeNodeLabelsByKey(ctx context.Context, lbKey string) error {
+	sel := labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"})
+
+	var list corev1.NodeList
+	if err := lb.client.List(ctx, &list, &client.ListOptions{LabelSelector: sel}); err != nil {
+		return err
+	}
+
+	for i := range list.Items {
+		var node corev1.Node
+		if err := lb.client.Get(ctx, types.NamespacedName{Name: list.Items[i].Name}, &node); err != nil {
+			return err
+		}
+		if node.Labels == nil {
+			continue
+		}
+		if _, ok := node.Labels[lbKey]; !ok {
+			continue
+		}
+
+		before := node.DeepCopy()
+		delete(node.Labels, lbKey)
+
+		if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
