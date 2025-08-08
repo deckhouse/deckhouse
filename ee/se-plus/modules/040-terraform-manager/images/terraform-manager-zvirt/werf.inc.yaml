@@ -8,6 +8,10 @@ import:
     add: /terraform-provider-ovirt
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "ovirt") }}/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup
+  - image: terraform-provider-null
+    add: /terraform-provider-null
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "nulltf") }}/{{ .TF.nulltf.namespace }}/{{ .TF.nulltf.type }}/{{ .TF.nulltf.version }}/linux_amd64/terraform-provider-null
+    before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
