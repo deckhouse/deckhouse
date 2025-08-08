@@ -205,6 +205,13 @@ tolerations:
   value: "system"
 {{- end }}
 
+{{- /* Additional strategy "bashible-uninitialized" - used for components that need to run on nodes after bashible completes fully initialization */ -}}
+{{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-bashible-uninitialized") }} */ -}}
+{{- define "_helm_lib_additional_tolerations_bashible_uninitialized" }}
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: "Exists"
+  effect: "NoSchedule"
+{{- end }}
 
 {{- /* Additional strategy "uninitialized" - used for CNI's and kube-proxy to allow cni components scheduled on node after CCM initialization. */ -}}
 {{- /* Usage: {{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} */ -}}

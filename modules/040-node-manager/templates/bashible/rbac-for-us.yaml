@@ -84,6 +84,21 @@ rules:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:bashible:node-taint-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes/taint
+  verbs:
+  - patch
+  - update
+  - get 
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: node-manager:bashible-mcm-bootstrapped-masters
@@ -205,6 +220,21 @@ subjects:
   - kind: Group
     name: system:nodes
     apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:bashible:node-taint-bootstrapped-nodes
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:bashible:node-taint-bootstrapped-nodes
+subjects:
+  - kind: Group
+    name: system:nodes
+    apiGroup: rbac.authorization.k8s.io    
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
