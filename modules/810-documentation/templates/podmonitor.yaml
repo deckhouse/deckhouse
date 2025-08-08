@@ -1,0 +1,59 @@
+{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: documentation
+  namespace: d8-monitoring
+  labels:
+    prometheus.deckhouse.io/custom-target: documentation
+    app: documentation
+    prometheus: main
+    heritage: deckhouse
+    module: documentation
+spec:
+  jobLabel: app
+  namespaceSelector:
+    matchNames:
+      - d8-system
+  podMetricsEndpoints:
+  - port: http-metrics
+    scheme: http
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: "documentation"
+  selector:
+    matchLabels:
+      app: documentation
+      app.kubernetes.io/part-of: deckhouse-docs
+{{- else }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: docs-builder-metrics
+  namespace: d8-system
+  labels:
+    prometheus.deckhouse.io/custom-target: documentation
+    service: documentation
+    heritage: helm
+    module: documentation
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+spec:
+  selector:
+    app: documentation
+  ports:
+    - name: http-metrics
+      port: 9090
+      targetPort: http-metrics
+      protocol: TCP
+{{- end }}

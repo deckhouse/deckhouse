@@ -8,6 +8,7 @@ metadata:
     "werf.io/replicas-on-creation": "1"
   labels:
     service: frontend
+    app.kubernetes.io/part-of: deckhouse-docs
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
@@ -86,6 +87,9 @@ spec:
           ports:
           - containerPort: 8081
             name: http
+            protocol: TCP
+          - containerPort: 9090
+            name: http-metrics
             protocol: TCP
           startupProbe:
             httpGet:
