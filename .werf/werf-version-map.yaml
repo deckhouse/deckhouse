@@ -1,6 +1,6 @@
 ---
 image: version-map-artifact
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 final: false
 import:
 - image: tools/yq
