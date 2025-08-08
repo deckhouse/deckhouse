@@ -697,11 +697,11 @@ func (md *ModuleDownloader) getDigestCache() *moduleDigestCache {
 // getDigestCached retrieves digest with caching to avoid redundant registry calls
 func (md *ModuleDownloader) getDigestCached(ctx context.Context, regCli cr.Client, tag string) (string, error) {
 	cache := md.getDigestCache()
-	
+
 	// Create cache key based on registry client and tag
 	// This is a simple implementation - could be enhanced with proper client identification
 	cacheKey := fmt.Sprintf("%p:%s", regCli, tag)
-	
+
 	// Check cache first
 	cache.mu.RLock()
 	if entry, found := cache.cache[cacheKey]; found {
@@ -736,31 +736,4 @@ func (md *ModuleDownloader) getDigestCached(ctx context.Context, regCli cr.Clien
 		slog.String("digest", digest))
 
 	return digest, nil
-}
-
-// clearExpiredDigestCache removes expired entries from digest cache
-func (md *ModuleDownloader) clearExpiredDigestCache() {
-	if md.digestCache == nil {
-		return
-	}
-
-	cache := md.digestCache
-	cache.mu.Lock()
-	defer cache.mu.Unlock()
-
-	now := time.Now()
-	expired := 0
-
-	for key, entry := range cache.cache {
-		if now.Sub(entry.timestamp) > entry.ttl {
-			delete(cache.cache, key)
-			expired++
-		}
-	}
-
-	if expired > 0 {
-		md.logger.Debug("Module downloader digest cache cleanup",
-			slog.Int("expired_entries", expired),
-			slog.Int("cache_size", len(cache.cache)))
-	}
 }

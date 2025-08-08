@@ -67,12 +67,12 @@ type metadataKey struct {
 
 // Performance metrics for monitoring
 type ModuleCacheMetrics struct {
-	DigestHits    int64
-	DigestMisses  int64
-	MetadataHits  int64
+	DigestHits     int64
+	DigestMisses   int64
+	MetadataHits   int64
 	MetadataMisses int64
-	Evictions     int64
-	TotalRequests int64
+	Evictions      int64
+	TotalRequests  int64
 }
 
 // Module registry cache implementing digest-first optimization
