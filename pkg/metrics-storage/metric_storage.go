@@ -408,17 +408,9 @@ func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Describe(ch)
 	}
-
-	if m.groupedVault != nil {
-		m.groupedVault.Collector().Describe(ch)
-	}
 }
 
 func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
-	if m.groupedVault != nil {
-		m.groupedVault.Collector().Collect(ch)
-	}
-
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Collect(ch)
 	}
