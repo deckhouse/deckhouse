@@ -16,7 +16,6 @@ From the perspective of a cluster user or an application developer, it does not 
 To use authentication in DKP, [configuration is required](../../admin/configuration/access/authentication/).
 {% endalert %}
 
-
 ## Interface
 
 The authentication interface appears upon the first request to a resource for which authentication is enabled — DKP redirects the user to the authentication page. If the user is already authenticated (e.g., via an external identity provider), DKP will redirect the request back to the original resource, enriched with authentication data. If authentication has not yet occurred, the user will see the authentication interface.
