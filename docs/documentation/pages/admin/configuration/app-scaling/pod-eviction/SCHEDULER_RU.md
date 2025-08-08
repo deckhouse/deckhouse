@@ -308,6 +308,7 @@ metadata:
 spec:
   strategies:
     highNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 50
         memory: 50
@@ -330,7 +331,6 @@ spec:
 Пример:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha2
 kind: Descheduler
 metadata:
@@ -338,6 +338,7 @@ metadata:
 spec:
   strategies:
     lowNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 20
       targetThresholds:
