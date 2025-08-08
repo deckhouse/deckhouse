@@ -373,13 +373,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// Early check if we need to process this module at all
 		if module.Properties.Source != source.Name || !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			// For modules that are not on this source or disabled, we still need to show them in status
-			// but without pulling new data from the registry.
-			// Preserve previously cached version if available to avoid breaking metrics/API
-			if availableModule.Version == "" {
-				availableModule.Version = "unknown"
-			}
-			// Keep previously known checksum/version (if any) and avoid network calls.
+			availableModule = r.handleInactiveModule(ctx, availableModule, moduleName, policy.Spec.ReleaseChannel, md)
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -428,7 +422,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			// else: Keep the previously cached version from status if available
 			// This prevents metrics and API from receiving "unknown" version
 			// when we skip registry calls for optimization
-			
+
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -520,6 +514,24 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	return nil
+}
+
+func (r *reconciler) handleInactiveModule(ctx context.Context, availableModule v1alpha1.AvailableModule, moduleName, releaseChannel string, md *downloader.ModuleDownloader) v1alpha1.AvailableModule {
+	// For modules that are not on this source or disabled, we still need to show them in status
+	if availableModule.Version != "" && availableModule.Version != "unknown" {
+		return availableModule
+	}
+
+	// if we don't have a version we should still fetch basic metadata to maintain compatibility with tests and metrics
+	meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
+	if err == nil {
+		availableModule.Version = meta.ModuleVersion
+		availableModule.Checksum = meta.Checksum
+	} else if availableModule.Version == "" {
+		availableModule.Version = "unknown"
+	}
+
+	return availableModule
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
