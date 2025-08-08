@@ -25,7 +25,6 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ (index .TF "null-tf").version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 image: terraform-provider-null
