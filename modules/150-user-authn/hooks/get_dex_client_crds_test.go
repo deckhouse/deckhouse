@@ -104,7 +104,7 @@ spec:
 				Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -118,9 +118,9 @@ spec:
     ],
     "trustedPeers": ["opendistro-sibling"]
   },
-  "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
   "clientSecret": "test",
+  "legacyID": "dex-client-opendistro:test",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {},
   "allowAccessToKubernetes": false
@@ -172,7 +172,7 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -182,7 +182,7 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {},
   "allowAccessToKubernetes": false
@@ -224,7 +224,7 @@ spec:
 					Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchJSON(`
 [{
   "id": "dex-client-opendistro@test",
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "encodedID": "cb38d0ae",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
@@ -234,7 +234,7 @@ spec:
   },
   "clientSecret": "test",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "legacyEncodedID": "41c22107",
   "labels": {},
   "annotations": {
     "dexclient.deckhouse.io/allow-access-to-kubernetes": "true"
@@ -326,9 +326,9 @@ spec:
 			Expect(f.ValuesGet("userAuthn.internal.dexClientCRDs").String()).To(MatchUnorderedJSON(`
 [{
   "id": "dex-client-grafana@test-grafana",
-  "encodedID": "mrsxqlldnruwk3tufvtxeylgmfxgcqdumvzxillhojqwmylomhf7fhheqqrcgji",
+  "encodedID": "715d266f",
   "legacyID": "dex-client-grafana:test-grafana",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvtxeylgmfxgcotumvzxillhojqwmylomhf7fhheqqrcgji",
+  "legacyEncodedID": "d2436826",
   "name": "grafana",
   "namespace": "test-grafana",
   "spec": {"redirectURIs": ["https://grafana.example.com/callback"]},
@@ -339,9 +339,9 @@ spec:
 },
 {
   "id": "dex-client-opendistro@test",
-  "encodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn5ahizltotf7fhheqqrcgji",
+  "encodedID": "cb38d0ae",
   "legacyID": "dex-client-opendistro:test",
-  "legacyEncodedID": "mrsxqlldnruwk3tufvxxazlomruxg5dsn45hizltotf7fhheqqrcgji",
+  "legacyEncodedID": "41c22107",
   "name": "opendistro",
   "namespace": "test",
   "spec": {
