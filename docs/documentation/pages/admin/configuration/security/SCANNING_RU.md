@@ -22,16 +22,17 @@ DKP запускает регулярное сканирование всех к
 
 По умолчанию сканируется только пространство имён `default`.
 
-Чтобы выполнить сканирование в конкретном пространстве имён,
-добавьте для него лейбл `security-scanning.deckhouse.io/enabled=""`.
+Чтобы выполнить сканирование в конкретном пространстве имён, добавьте для него лейбл `security-scanning.deckhouse.io/enabled=""`.
 
-Как только в кластере обнаруживается хотя бы одно пространство имён с указанным лейблом,
-сканирование `default` прекращается.
+Как только в кластере обнаруживается хотя бы одно пространство имён с указанным лейблом, сканирование пространства имён `default` прекращается.
 Чтобы снова включить сканирование для пространства имён `default`, добавьте для него лейбл следующей командой:
 
 ```shell
 d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 ```
+
+В текущей версии функциональности ограничения перечня ресурсов для сканирования в пространстве имён не предусмотрено.  
+DKP сканирует **все ресурсы**, находящиеся в пространстве имён, помеченном лейблом `security-scanning.deckhouse.io/enabled=""`.
 
 ## Повторное сканирование
 
@@ -62,27 +63,4 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
   d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
 
-## Просмотр результатов CIS compliance-проверки
-
-- Чтобы вывести все ресурсы, которые не прошли проверку:
-
-  ```shell
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
-  ```
-
-- Чтобы выполнить поиск по идентификатору конкретной проверки:
-
-  ```shell
-  check_id="5.7.3"
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
-  ```
-
-- Чтобы выполнить поиск по описанию проверки:
-
-  ```shell
-  check_desc="Apply Security Context to Your Pods and Containers"
-  d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
-    jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
-  ```
+Для получения информации о том, как просматривать результаты сканирования, [см. раздел «Сканирование контейнерных образов на уязвимости»](../../../user/security/scanning.html).
