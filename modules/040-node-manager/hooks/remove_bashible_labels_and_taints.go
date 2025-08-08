@@ -106,6 +106,7 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 
 				// Remove the taint if hasTaint is true
 				if hasTaint {
+					fmt.Printf("Original taints: %v\n", nodeObj.Spec.Taints)
 					newTaints := taints.Slice(nodeObj.Spec.Taints).WithoutKey(BashibleUninitializedTaintKey)
 					if len(newTaints) == 0 {
 						nodeObj.Spec.Taints = nil
@@ -113,6 +114,9 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 						nodeObj.Spec.Taints = newTaints
 					}
 					fmt.Printf("Removing bashible taint from node %s\n", node.Name)
+
+					fmt.Printf("Taints after removal: %v\n", newTaints)
+
 				}
 
 				return sdk.ToUnstructured(nodeObj)
