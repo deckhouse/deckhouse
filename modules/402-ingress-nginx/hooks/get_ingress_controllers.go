@@ -193,7 +193,7 @@ func setInternalValues(input *go_hook.HookInput) error {
 		nginxEnabledMemoryProfiling, found, err := unstructured.NestedBool(controller.Spec, "controllerNginxProfilingEnabled")
 
 		if err != nil {
-			input.Logger.Errorf("cannot get controllerNginxProfilingEnabled from ingress controller spec: %v", err)
+			input.Logger.Error(fmt.Sprintf("cannot get controllerNginxProfilingEnabled from ingress controller spec: %v", err))
 			continue
 		}
 
@@ -206,7 +206,6 @@ func setInternalValues(input *go_hook.HookInput) error {
 				"controller_name": controller.Name,
 			})
 		}
-
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)
