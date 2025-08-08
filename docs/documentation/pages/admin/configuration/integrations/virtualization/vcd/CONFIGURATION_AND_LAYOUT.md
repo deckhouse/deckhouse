@@ -40,7 +40,7 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-## WithNAT
+### WithNAT
 
 When using this layout, you must confirm the type of network virtualization platform with your administrator and specify it in the `edgeGateway.type` parameter. Two options are supported: `NSX-T` and `NSX-V`.
 
