@@ -37,12 +37,10 @@ masterNodeGroup:
 
 ## WithNAT
 
-![WithNAT layout](../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
-
 When using this placement scheme, you must check with the administrator which network virtualization platform is in use and specify it in the `edgeGateway.type` parameter.  
 Two options are supported: `NSX-T` and `NSX-V`.
 
-For administrative access to cluster nodes, a bastion host is deployed, whose parameters are described in `bastion`.
+To ensure administrative access to the cluster nodes, a bastion is deployed. The parameters for its configuration are described in [the `bastion` section](./cluster_configuration.html#vcdclusterconfiguration-bastion).
 
 If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically enabled in the created network for the nodes.  
 It will assign IP addresses starting from the 30th address in the subnet up to the second-to-last (just before the broadcast address).  
