@@ -6,6 +6,11 @@ properties:
     type: object
     default: {}
     properties:
+      exclusiveCNIPlugin:
+        type: boolean
+        default: false
+        description: |
+          The switch indicates whether cni-exclusive feature of cilium agent must be enabled in the cluster.
       minimalRequiredKernelVersionConstraint:
         type: string
         description: |
