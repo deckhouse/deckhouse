@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -53,6 +54,22 @@ const (
 	tracerName = "downloader"
 )
 
+// Cache entry for digest caching
+type digestCacheEntry struct {
+	digest    string
+	timestamp time.Time
+	ttl       time.Duration
+}
+
+// Simple digest cache for Module Downloader
+type moduleDigestCache struct {
+	mu    sync.RWMutex
+	cache map[string]digestCacheEntry
+}
+
+// Error returned when digest matches expected value (cache hit)
+var ErrDigestMatches = errors.New("digest matches expected value")
+
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
@@ -60,6 +77,10 @@ type ModuleDownloader struct {
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 	logger          *log.Logger
+
+	// Simple digest cache to avoid redundant registry calls
+	digestCache     *moduleDigestCache
+	digestCacheOnce sync.Once
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
@@ -208,12 +229,39 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 }
 
 func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
+	return md.fetchImageWithDigestCheck(context.TODO(), moduleName, imageTag, "")
+}
+
+// fetchImageWithDigestCheck implements digest-first optimization for image fetching
+func (md *ModuleDownloader) fetchImageWithDigestCheck(ctx context.Context, moduleName, imageTag, expectedDigest string) (crv1.Image, error) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(context.TODO(), imageTag)
+	// Optimization: Check digest first if expected digest is provided
+	if expectedDigest != "" {
+		md.logger.Debug("Checking image digest before fetch",
+			slog.String("module", moduleName),
+			slog.String("tag", imageTag),
+			slog.String("expected_digest", expectedDigest))
+
+		currentDigest, err := md.getDigestCached(ctx, regCli, imageTag)
+		if err != nil {
+			md.logger.Warn("Failed to get digest, falling back to full image fetch",
+				slog.String("module", moduleName),
+				slog.String("tag", imageTag),
+				log.Err(err))
+		} else if currentDigest == expectedDigest {
+			md.logger.Debug("Digest matches expected, skipping image fetch",
+				slog.String("module", moduleName),
+				slog.String("digest", currentDigest))
+			return nil, ErrDigestMatches
+		}
+	}
+
+	// Fetch full image
+	return regCli.Image(ctx, imageTag)
 }
 
 func (md *ModuleDownloader) getImageDigest(moduleName, moduleVersion string) (string, error) {
@@ -408,18 +456,51 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 // getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
 // return error if version.json not found in metadata
 func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
+	return md.getReleaseImageInfoWithOptimization(ctx, regCli, imageTag, "")
+}
+
+// getReleaseImageInfoWithOptimization implements digest-first optimization for release image fetching
+func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Context, regCli cr.Client, imageTag, expectedDigest string) (*ReleaseImageInfo, error) {
+	// Optimization: Check digest first if expected digest is provided
+	if expectedDigest != "" {
+		md.logger.Debug("Checking release digest before full fetch",
+			slog.String("tag", imageTag),
+			slog.String("expected_digest", expectedDigest))
+
+		currentDigest, err := md.getDigestCached(ctx, regCli, imageTag)
+		if err != nil {
+			md.logger.Warn("Failed to get release digest, proceeding with full fetch",
+				slog.String("tag", imageTag),
+				log.Err(err))
+		} else if currentDigest == expectedDigest {
+			md.logger.Debug("Release digest unchanged, would use cached metadata if available",
+				slog.String("tag", imageTag),
+				slog.String("digest", currentDigest))
+			// For now, still fetch full image since we need metadata
+			// Future enhancement: implement metadata caching here
+		}
+	}
+
+	// Fetch full image for metadata extraction
 	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
 
-	// fill releaseImageInfo.Digest
+	// Verify digest consistency if we had a prior digest check
 	digest, err := img.Digest()
 	if err != nil {
 		return nil, fmt.Errorf("fetch digest error: %w", err)
 	}
 
-	// fill releaseImageInfo.Metadata
+	if expectedDigest != "" && expectedDigest != digest.String() {
+		md.logger.Warn("Release image digest inconsistency between digest and image calls",
+			slog.String("expected_digest", expectedDigest),
+			slog.String("image_digest", digest.String()),
+			slog.String("tag", imageTag))
+	}
+
+	// Extract release metadata
 	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata error: %w", err)
@@ -599,4 +680,87 @@ type ReleaseImageInfo struct {
 	Metadata *ModuleReleaseMetadata
 	Image    crv1.Image
 	Digest   crv1.Hash
+}
+
+// Cache implementation for Module Downloader
+
+// getDigestCache initializes digest cache lazily
+func (md *ModuleDownloader) getDigestCache() *moduleDigestCache {
+	md.digestCacheOnce.Do(func() {
+		md.digestCache = &moduleDigestCache{
+			cache: make(map[string]digestCacheEntry),
+		}
+	})
+	return md.digestCache
+}
+
+// getDigestCached retrieves digest with caching to avoid redundant registry calls
+func (md *ModuleDownloader) getDigestCached(ctx context.Context, regCli cr.Client, tag string) (string, error) {
+	cache := md.getDigestCache()
+	
+	// Create cache key based on registry client and tag
+	// This is a simple implementation - could be enhanced with proper client identification
+	cacheKey := fmt.Sprintf("%p:%s", regCli, tag)
+	
+	// Check cache first
+	cache.mu.RLock()
+	if entry, found := cache.cache[cacheKey]; found {
+		if time.Since(entry.timestamp) < entry.ttl {
+			cache.mu.RUnlock()
+			md.logger.Debug("Digest cache hit",
+				slog.String("tag", tag),
+				slog.String("digest", entry.digest))
+			return entry.digest, nil
+		}
+		// Entry expired, will fetch new digest
+	}
+	cache.mu.RUnlock()
+
+	// Cache miss or expired - fetch from registry
+	digest, err := regCli.Digest(ctx, tag)
+	if err != nil {
+		return "", err
+	}
+
+	// Cache the result with 5 minute TTL
+	cache.mu.Lock()
+	cache.cache[cacheKey] = digestCacheEntry{
+		digest:    digest,
+		timestamp: time.Now(),
+		ttl:       5 * time.Minute,
+	}
+	cache.mu.Unlock()
+
+	md.logger.Debug("Digest cached",
+		slog.String("tag", tag),
+		slog.String("digest", digest))
+
+	return digest, nil
+}
+
+// clearExpiredDigestCache removes expired entries from digest cache
+func (md *ModuleDownloader) clearExpiredDigestCache() {
+	if md.digestCache == nil {
+		return
+	}
+
+	cache := md.digestCache
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+
+	now := time.Now()
+	expired := 0
+
+	for key, entry := range cache.cache {
+		if now.Sub(entry.timestamp) > entry.ttl {
+			delete(cache.cache, key)
+			expired++
+		}
+	}
+
+	if expired > 0 {
+		md.logger.Debug("Module downloader digest cache cleanup",
+			slog.Int("expired_entries", expired),
+			slog.Int("cache_size", len(cache.cache)))
+	}
 }
