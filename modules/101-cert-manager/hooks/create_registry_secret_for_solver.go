@@ -235,7 +235,9 @@ func handleChallenge(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Delete("v1", "Secret", ns, solverSecretName)
+		// NOTE: This deletion is async because synchronous deletion might hang.
+		// Kubernetes GC will handle the actual cleanup.
+		input.PatchCollector.DeleteInBackground("v1", "Secret", ns, solverSecretName)
 	}
 
 	// gc SA's
@@ -245,7 +247,9 @@ func handleChallenge(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Delete("v1", "ServiceAccount", ns, solverServiceAccountName)
+		// NOTE: This deletion is async because synchronous deletion might hang.
+		// Kubernetes GC will handle the actual cleanup.
+		input.PatchCollector.DeleteInBackground("v1", "ServiceAccount", ns, solverServiceAccountName)
 	}
 
 	return nil

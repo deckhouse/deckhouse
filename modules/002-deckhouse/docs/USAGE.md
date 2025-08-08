@@ -80,11 +80,24 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
   kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
-### Deckhouse update notification
+### Deckhouse update notifications
 
-In the `Auto` update mode, you can [set up](configuration.html#parameters-update-notification) a webhook call, to be notified of an upcoming Deckhouse minor version update.
+In the `Auto` update mode, you can [configure](configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor Deckhouse version update.
 
-An example:
+In addition, notifications are generated not only for Deckhouse updates but also for updates of any modules, including their individual updates.  
+In some cases, the system may initiate the sending of multiple notifications at once (10–20 notifications) at approximately 15-second intervals.
+
+{% alert %}
+Notifications are available only in the `Auto` update mode; in the `Manual` mode they are not generated.
+{% endalert %}
+
+{% alert %}
+Specifying a webhook is optional: if the `update.notification.webhook` parameter is not set but the `update.notification.minimalNotificationTime` parameter is specified, the update will still be postponed for the specified period. In this case, the appearance of a [DeckhouseRelease](../../cr.html#deckhouserelease) resource in the cluster with the name of the new version can be considered the notification of its availability.
+{% endalert %}
+
+Notifications are sent only once for a specific update. If something goes wrong (for example, the webhook receives incorrect data), they will not be resent automatically. To resend the notification, you must delete the corresponding [DeckhouseRelease](../../cr.html#deckhouserelease) resource.
+
+Example of notification configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -101,11 +114,11 @@ spec:
         webhook: https://release-webhook.mydomain.com
 ```
 
-After a new Deckhouse minor version appears on the update channel, a [POST request](configuration.html#parameters-update-notification-webhook) will be executed to the webhook's URL before it is applied in the cluster.
+After a new minor Deckhouse version appears on the selected update channel, but before it is applied in the cluster, a [POST request](configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
 
-Set the [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter to have enough time to react to a Deckhouse update notification. In this case, the update will happen after the specified time, considering the update windows.
+The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
-An example:
+Example:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -122,10 +135,6 @@ spec:
         webhook: https://release-webhook.mydomain.com
         minimalNotificationTime: 8h
 ```
-
-{% alert %}
-If you do not specify the address in the [update.notification.webhook](configuration.html#parameters-update-notification-webhook) parameter, but specify the time in the [update.notification.minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter, then the release will still be postponed for at least the time specified in the `minimalNotificationTime` parameter. In this case, the notification of the appearance of a new version can be considered the appearance of a [DeckhouseRelease](../../cr.html#deckhouserelease) resource with a name corresponding to the new version.
-{% endalert %}
 
 ## Collect debug info
 

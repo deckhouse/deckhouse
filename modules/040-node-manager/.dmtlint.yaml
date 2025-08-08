@@ -125,6 +125,10 @@ linters-settings:
   module:
     conversions:
       disable: true
+    exclude-rules:
+      license:
+        files:
+          - images/nvidia-dcgm/scripts/llvm.sh
   openapi:
     exclude-rules:
       enum:

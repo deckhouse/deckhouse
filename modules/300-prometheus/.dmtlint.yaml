@@ -7,34 +7,16 @@ linters-settings:
   container:
     exclude-rules:
       readiness-probe:
-        - kind: Deployment
-          name: aggregating-proxy
-          container: kube-rbac-proxy
-        - kind: Deployment
-          name: grafana-v10
-          container: kube-rbac-proxy
-        - kind: Deployment
-          name: trickster
-          container: kube-rbac-proxy
         - kind: StatefulSet
           name: memcached
           container: exporter
       liveness-probe:
-        - kind: Deployment
-          name: aggregating-proxy
-          container: kube-rbac-proxy
         - kind: Deployment
           name: grafana-v10
           container: dashboard-provisioner
         - kind: Deployment
           name: grafana-v10
           container: grafana
-        - kind: Deployment
-          name: grafana-v10
-          container: kube-rbac-proxy
-        - kind: Deployment
-          name: trickster
-          container: kube-rbac-proxy
         - kind: StatefulSet
           name: memcached
           container: exporter
