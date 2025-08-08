@@ -484,13 +484,9 @@ spec:
                   description: |
                     Максимальная продолжительность периода (в секундах), в течение которого контроллер будет пытаться переселить поды на новую машину в процессе выполнения drain на узле.
                 gpu:
-                  x-doc-d8Editions:
-                    - ee
-                  type: object
                   description: |
                     Параметры GPU.
                   properties:
-                    sharing:
                       type: string
                       description: |
                         Стратегия разделения GPU:
@@ -498,23 +494,20 @@ spec:
                         - `TimeSlicing` — разделение GPU по времени (несколько подов могут одновременно использовать один GPU, поочередно получая доступ к его вычислительным ресурсам).
                         - `MIG` — разделение одного GPU на несколько экземпляров (технология NVIDIA MIG, при наличии поддержки).
                     mig:
-                      type: object
+                      description: |
+                        Параметры для стратегии `MIG`.
                       properties:
                         partedConfig:
-                          type: string
                           description: |
-                            Выбранная конфигурация разделения MIG.
+                            Имя используемой конфигурация MIG.
                     timeSlicing:
                       description: |
-                        Параметры Time-slicing.
-                      type: object
+                        Параметры для стратегии `TimeSlicing`.
                       properties:
                         partitionCount:
-                          type: number
                           description: |
-                            Количество разделов (виртуальных GPU) на один физический GPU в режиме TimeSlicing.
+                            Количество разделов (виртуальных GPU) на один физический GPU.
                     exclusive:
-                      type: object
                       description: |
                         Режим без разделения GPU.
                 cri:
