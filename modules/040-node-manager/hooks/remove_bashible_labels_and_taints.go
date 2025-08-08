@@ -83,12 +83,14 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 				break
 			}
 		}
+		fmt.Printf("Node %s has bashible taint: %t", node.Name, hasTaint)
 
 		hasLabel := false
 		_, labelExists := node.Labels[BashibleFirstRunFinishedLabel]
 		if labelExists {
 			hasLabel = true
 		}
+		fmt.Printf("Node %s has bashible label: %t\n", node.Name, hasLabel)
 
 		if hasLabel {
 			input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -100,6 +102,7 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 
 				// Remove the label if hasLabel is true
 				delete(nodeObj.Labels, BashibleFirstRunFinishedLabel)
+				fmt.Printf("Removing bashible label from node %s\n", node.Name)
 
 				// Remove the taint if hasTaint is true
 				if hasTaint {
@@ -109,6 +112,7 @@ func cleanupBashibleArtifacts(input *go_hook.HookInput) error {
 					} else {
 						nodeObj.Spec.Taints = newTaints
 					}
+					fmt.Printf("Removing bashible taint from node %s\n", node.Name)
 				}
 
 				return sdk.ToUnstructured(nodeObj)
