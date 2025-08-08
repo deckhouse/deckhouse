@@ -503,7 +503,6 @@ spec:
                           type: string
                           description: |
                             Выбранная конфигурация разделения MIG.
-                          x-doc-default: all-1g.5gb
                     timeSlicing:
                       description: |
                         Параметры Time-slicing.
