@@ -8,9 +8,15 @@
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
-{% if page.ee_only == true and page.se_support == nil or page.platform_code == 'vsphere'%}
+{% if page.ee_only == true and page.se_support == nil %}
 {% alert level="warning" %}
 Установка {{ page.title_main }} возможна только в редакции Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% endif %}
+
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} в редакции Community Edition недоступна. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
 {% endalert %}
 {% endif %}
 
