@@ -30,8 +30,7 @@ locals {
   external_subnet_id_from_ids = length(local.external_subnet_ids) > 0 ? element(local.external_subnet_ids, var.nodeIndex) : null
 
   external_subnet_id         = local.external_subnet_id_from_ids == null ? local.external_subnet_id_deprecated : local.external_subnet_id_from_ids
-  # assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
-  assign_external_ip_address = (local.external_subnet_id == null) && (var.nodeIndex < length(local.external_ip_addresses) ? true : (length(local.external_ip_addresses) > 0))
+  assign_external_ip_address = (local.external_subnet_id == null) && (local.external_ip_address != null) ? true : false
 }
 
 data "yandex_vpc_subnet" "existing" {
@@ -54,22 +53,11 @@ data "yandex_vpc_subnet" "kube_d" {
   name  = "${local.prefix}-d"
 }
 
-resource "null_resource" "after_detach_barrier" {
-  triggers = {
-    assign_external_ip_address = tostring(local.assign_external_ip_address)
-  }
-
-  depends_on = [
-    yandex_compute_instance.master
-  ]
-}
-
 resource "yandex_vpc_address" "addr" {
   count = (var.nodeIndex < length(local.external_ip_addresses)
     ? (local.external_ip_addresses[var.nodeIndex] == "Auto" ? 1 : 0)
     : (length(local.external_ip_addresses) > 0 ? 1 : 0))
   name  = join("-", [local.prefix, "master", var.nodeIndex])
-
   external_ipv4_address {
     zone_id = local.internal_subnet.zone
   }
@@ -114,6 +102,13 @@ resource "null_resource" "master_vm_marker" {
   }
 }
 
+resource "null_resource" "vm_replace_key" {
+  triggers = {
+    external_enabled = local.assign_external_ip_address ? "on" : "off"
+    external_ip      = local.external_ip_address != null ? local.external_ip_address : "none"
+  }
+}
+
 resource "yandex_compute_instance" "master" {
   name     = join("-", [local.prefix, "master", var.nodeIndex])
   hostname = join("-", [local.prefix, "master", var.nodeIndex])
@@ -122,7 +117,7 @@ resource "yandex_compute_instance" "master" {
   allow_stopping_for_update = true
 
   platform_id = local.platform
-
+  depends_on = [yandex_vpc_address.addr]
   resources {
     cores  = local.cores
     memory = local.memory
@@ -166,6 +161,7 @@ resource "yandex_compute_instance" "master" {
       metadata,
       secondary_disk,
     ]
+    replace_triggered_by = [null_resource.vm_replace_key.id]
   }
 
   timeouts {
