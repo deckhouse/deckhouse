@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: examples"
+title: "Cluster SLA Monitoring: examples"
 ---
 
 ## An example of the `UpmeterRemoteWrite` configuration
