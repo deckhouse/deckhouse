@@ -1644,7 +1644,7 @@ entries:
       - title:
           en: Storage configuration
           ru: Настройка хранилищ
-        url: /storage/admin/supported-storage.html
+        url: /storage/admin/supported-storage.html  
       - title:
           en: SDS
           ru: Программно-определяемые хранилища
@@ -1665,6 +1665,10 @@ entries:
               en: Distributed Ceph storage
               ru: Распределённое хранилище Ceph
             url: /storage/admin/external/ceph.html
+          - title:
+              en: vSphere data storage
+              ru: Хранилище данных vSphere
+            url: /storage/admin/external/vsphere.html  
           - title:
               en: HPE data storage
               ru: Хранилище данных HPE
@@ -1689,6 +1693,26 @@ entries:
               en: TATLIN.UNIFIED (Yadro) unified storage
               ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
             url: /storage/admin/external/yadro.html
+      - title:
+         en: csi-vsphere (TEST)
+         ru: csi-vsphere (ТЕСТ)
+        folders:
+          - title:
+             en: Description
+             ru: Описание
+            url: /modules/csi-vsphere/
+          - title:
+             en: Configuration
+             ru: Настройки
+            url: /modules/csi-vsphere/configuration.html
+          - title:
+             en: Examples
+             ru: Примеры
+            url: /modules/csi-vsphere/examples.html  
+          - title:
+             en: FAQ
+             ru: FAQ
+            url: /modules/csi-vsphere/faq.html      
       - title:
          en: Module settings
          ru: Настройки модулей
