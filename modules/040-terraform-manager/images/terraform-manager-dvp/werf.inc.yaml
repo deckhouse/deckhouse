@@ -8,6 +8,10 @@ import:
   add: /terraform-provider-kubernetes
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
   before: setup
+- image: terraform-provider-null
+  add: /terraform-provider-null
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "nulltf") }}/{{ .TF.nulltf.namespace }}/{{ .TF.nulltf.type }}/{{ .TF.nulltf.version }}/linux_amd64/terraform-provider-null
+  before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
