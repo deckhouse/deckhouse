@@ -61,12 +61,10 @@ Fix cve vulnerabilities.
 
 Build nginx for controller on ALT Linux.
 
-### 012-protect-validation-port.patch
+### 012-validation-mode.patch
 
-Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
-which the validator server trusts (CA and Common Name verification).  
-Without a valid client certificate, access to the validation service will be denied.
+Slightly tunes some logic related to validating ingress objects.
 
 ### 013-verbose-maxmind-logs.patch
 
-Added additional logging for downloading GeoIP databases from the MaxMind service.
+Added additional logging when downloading GeoIP databases from the MaxMind service.

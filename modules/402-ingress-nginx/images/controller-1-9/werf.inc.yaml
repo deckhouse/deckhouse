@@ -62,7 +62,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
   - patch -p1 < /patches/ingress-nginx/010-cve.patch
   - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
-  - patch -p1 < /patches/ingress-nginx/012-protect-validation-port.patch
+  - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
