@@ -22,13 +22,18 @@ import (
 	"log/slog"
 	"net/http"
 	neturl "net/url"
-	"registry-modules-watcher/internal/backends"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 var (
@@ -42,6 +47,7 @@ type Sender struct {
 	client *http.Client
 
 	logger *log.Logger
+	ms     *metricsstorage.MetricStorage
 }
 
 // New creates a new sender instance with the provided logger.
@@ -56,7 +62,7 @@ func (s *Sender) newBackOff() *backoff.ExponentialBackOff {
 
 // New creates a new sender instance with the provided logger.
 // It initializes an HTTP client with a custom transport.
-func New(logger *log.Logger) *Sender {
+func New(logger *log.Logger, ms *metricsstorage.MetricStorage) *Sender {
 	tr := &http.Transport{
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Second,
@@ -66,6 +72,7 @@ func New(logger *log.Logger) *Sender {
 	return &Sender{
 		client: client,
 		logger: logger,
+		ms:     ms,
 	}
 }
 
@@ -132,11 +139,25 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 	}
 
 	operation := func() error {
+		// before request
+		timeBeforeRequest := time.Now()
+
+		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
+		// after request - calculate metrics
+		defer func() {
+			requestTime := time.Since(timeBeforeRequest).Seconds()
+			labels := map[string]string{
+				"status_code": strconv.Itoa(resp.StatusCode),
+				"backend":     backend,
+			}
+			s.ms.HistogramObserve(metrics.SenderDeleteRequestsSecondsMetric, requestTime, labels, nil)
+			s.ms.CounterAdd(metrics.SenderDeleteRequestsCountMetric, 1.0, labels)
+		}()
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusNoContent {
@@ -173,11 +194,25 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 	req.Header.Set("Content-Type", "application/tar")
 
 	operation := func() error {
+		// before request
+		timeBeforeRequest := time.Now()
+
+		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
+		// after request - calculate metrics
+		defer func() {
+			requestTime := time.Since(timeBeforeRequest).Seconds()
+			labels := map[string]string{
+				"status_code": strconv.Itoa(resp.StatusCode),
+				"backend":     backend,
+			}
+			s.ms.HistogramObserve(metrics.SenderUploadRequestsSecondsMetric, requestTime, labels, nil)
+			s.ms.CounterAdd(metrics.SenderUploadRequestsCountMetric, 1.0, labels)
+		}()
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusCreated {
@@ -216,11 +251,25 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	operation := func() error {
+		// before request
+		timeBeforeRequest := time.Now()
+
+		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
+		// after request - calculate metrics
+		defer func() {
+			requestTime := time.Since(timeBeforeRequest).Seconds()
+			labels := map[string]string{
+				"status_code": strconv.Itoa(resp.StatusCode),
+				"backend":     backend,
+			}
+			s.ms.HistogramObserve(metrics.SenderBuildRequestsSecondsMetric, requestTime, labels, nil)
+			s.ms.CounterAdd(metrics.SenderBuildRequestsCountMetric, 1.0, labels)
+		}()
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {

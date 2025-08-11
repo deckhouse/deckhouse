@@ -17,6 +17,7 @@ data:
         denial 9984 5 5    # <cache size> <TTL max> <TTL min>
         prefetch 10 1m 25%
         serve_stale 1h immediate
+        servfail 0 # disable caching servfail
       }
       dynamicforward {
         namespace kube-system
@@ -28,6 +29,9 @@ data:
       }
       reload 2s
       loop
+{{- if .Values.nodeLocalDns.enableLogs }}
+      log
+{{- end }}
 
 
 {{- if not (.Values.global.enabledModules | has "cni-cilium") }}

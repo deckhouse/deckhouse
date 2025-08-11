@@ -27,6 +27,14 @@ entries:
           en: Monitoring and control
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html
+      - title:
+          en: Service account
+          ru: Сервисный аккаунт
+        url: /code/documentation/admin/service-account.html
+      - title:
+          en: Audit events
+          ru: События аудита безопасности
+        url: /code/documentation/admin/audit-events.html
   - title:
       en: User guide
       ru: Руководство пользователя

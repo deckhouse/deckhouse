@@ -1,4 +1,6 @@
 name: cloud-provider-vsphere
+descriptions:
+  en: Cloud provider Vsphere
 critical: true
 weight: 30
 subsystems:

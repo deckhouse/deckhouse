@@ -54,6 +54,15 @@ const (
 	kubeVersionStatusField = "kubernetesVersion"
 )
 
+// cloud providers names in lower case
+type CloudFillerFunc func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error
+
+var fillCloudSpecificDefaults = map[string][]CloudFillerFunc{
+	"vsphere": {
+		fillVsphereMainNewtork,
+	},
+}
+
 type InstanceClassCrdInfo struct {
 	Name string
 	Spec interface{}
@@ -425,8 +434,13 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 
 			// Put instanceClass.spec into values.
-			ngForValues["instanceClass"] = instanceClassSpec
+			providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
+			updatedSpecMap, err := applyCloudSpecificDefaults(input, providerName, instanceClassSpec)
+			if err != nil {
+				return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
+			}
 
+			ngForValues["instanceClass"] = updatedSpecMap
 			var zones []string
 			if nodeGroup.Spec.CloudInstances.Zones != nil {
 				zones = nodeGroup.Spec.CloudInstances.Zones
@@ -650,4 +664,56 @@ func serializeTaints(info NodeGroupCrdInfo) string {
 	}
 
 	return strings.Join(res, ",")
+}
+
+func fillVsphereMainNewtork(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
+	if _, ok := instanceClass["mainNetwork"]; ok {
+		return nil
+	}
+	instancesRaw, ok := cloudVariables["instances"]
+	if !ok {
+		return nil
+	}
+
+	instancesMap, ok := instancesRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("cloudVariables.instances: expected map[string]interface{}, got %T", instancesRaw)
+	}
+
+	val, ok := instancesMap["mainNetwork"]
+	if !ok {
+		return nil
+	}
+
+	mn, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("instances.mainNetwork: expected string, got %T", val)
+	}
+
+	instanceClass["mainNetwork"] = mn
+	return nil
+}
+
+func applyCloudSpecificDefaults(input *go_hook.HookInput, providerName string, instanceClassSpec interface{}) (interface{}, error) {
+	specMap, ok := instanceClassSpec.(map[string]interface{})
+	if !ok {
+		return instanceClassSpec, nil
+	}
+
+	raw, ok := input.Values.GetOk("nodeManager.internal.cloudProvider." + providerName)
+	if !ok || !raw.IsObject() {
+		return specMap, nil
+	}
+	cloudVariables, ok := raw.Value().(map[string]interface{})
+	if !ok {
+		return specMap, nil
+	}
+
+	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
+		if err := fillFn(cloudVariables, specMap); err != nil {
+			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
+		}
+	}
+
+	return specMap, nil
 }

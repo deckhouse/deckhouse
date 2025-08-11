@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -76,6 +77,7 @@ var ErrSettingsNotChanged = errors.New("settings not changed")
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	edition *d8edition.Edition,
 	dc dependency.Container,
 	metricStorage metric.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
@@ -87,6 +89,7 @@ func RegisterController(
 		dc:                   dc,
 		logger:               logger,
 		moduleManager:        mm,
+		edition:              edition,
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
@@ -155,6 +158,7 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
+	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
 }
@@ -341,6 +345,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
+			// skip modules that require resync
+			if errors.Is(err, ErrRequireResync) {
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
 			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
 		}
 
@@ -399,6 +410,15 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
 				}
+
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("update the '%s' module status: %w", moduleName, err)
+			}
+
+			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+				module.Properties.Source = source.Name
 
 				return nil
 			})

@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -89,7 +90,12 @@ type DeckhouseController struct {
 	log            *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
+func NewDeckhouseController(
+	ctx context.Context,
+	version string,
+	operator *addonoperator.AddonOperator,
+	logger *log.Logger,
+) (*DeckhouseController, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
@@ -251,7 +257,7 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 	})
 
 	dc := dependency.NewDependencyContainer()
-	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil)
+	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
@@ -264,12 +270,12 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
@@ -295,7 +301,11 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		operator.ModuleManager,
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
-		operator.MetricStorage)
+		operator.MetricStorage,
+		config.NewSchemaStore(),
+		settingsContainer,
+		exts,
+	)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -361,7 +371,8 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		configBytes, _ := deckhouseConfig.AsBytes("yaml")
 		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel: "",
+			ReleaseChannel:           "",
+			AllowExperimentalModules: false,
 		}
 		settings.Update.Mode = "Auto"
 		settings.Update.DisruptionApprovalMode = "Auto"
@@ -372,6 +383,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.log.Debug("update deckhouse settings")
+
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy

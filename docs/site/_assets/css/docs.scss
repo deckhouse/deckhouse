@@ -390,15 +390,11 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 135.5px);
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.layout-sidebar__sidebar_right .sidebar__wrapper-inner {
-  padding-top: 5px;
+  padding-top: 14px;
 }
 
 .layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) .layout-sidebar__sidebar--guides :not(.layout-sidebar__sidebar_right) {

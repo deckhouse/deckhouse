@@ -28,8 +28,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -63,7 +63,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	var userPassedHosts []session.Host
 	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
 	if sshCl != nil {
-		userPassedHosts = append(make([]session.Host, 0), sshCl.Settings.AvailableHosts()...)
+		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
 	}
 
 	nodesNames := make([]string, 0, len(c.state.State))
@@ -225,7 +225,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				panic("NodeInterface is not ssh")
 			}
 
-			sshCl.Settings.AddAvailableHosts(masterIPForSSHList...)
+			sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
 		}
 
 		// we hide deckhouse logs because we always have config

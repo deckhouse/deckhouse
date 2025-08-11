@@ -198,7 +198,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		ngState := nodesState[nodeGroupName]
 
-		log.DebugF("NodeGroup for converge %v", nodeGroupName)
+		log.DebugF("NodeGroup for converge %v\n", nodeGroupName)
 
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true)
 		err := rr.Run(ctx)

@@ -1204,7 +1204,6 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
-              featureStatus: experimental
               folders:
                 - title:
                     en: Description
@@ -1278,8 +1277,8 @@ entries:
                     ru: Настройки
                   url: /modules/prometheus-pushgateway/configuration.html
             - title:
-                en: upmeter
-                ru: upmeter
+                en: Cluster SLA Monitoring
+                ru: Мониторинг SLA кластера
               moduleName: upmeter
               folders:
                 - title:
@@ -1629,6 +1628,10 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/operator-trivy/faq.html
+                - title:
+                    en: "Custom Resources"
+                    ru: "Custom Resources"
+                  url: /modules/operator-trivy/cr.html
     - title:
         en: Storage
         ru: Хранилище

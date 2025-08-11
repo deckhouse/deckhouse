@@ -44,7 +44,10 @@ var emptySecret = &v1.Secret{
 	Data:       make(map[string][]byte),
 }
 
-func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string) error {
+func SecretEdit(
+	kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string,
+	labels map[string]string,
+) error {
 	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
@@ -53,6 +56,14 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, Namespace
 	case err != nil:
 		return err
+	}
+
+	for k, v := range labels {
+		if config.ObjectMeta.Labels == nil {
+			config.ObjectMeta.Labels = make(map[string]string, len(labels))
+		}
+
+		config.ObjectMeta.Labels[k] = v
 	}
 
 	configData := config.Data[dataKey]

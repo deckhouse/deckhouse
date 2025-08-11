@@ -189,6 +189,17 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("common.internal.testSubPath.effectiveStorageClass").String()).To(Equal("false"))
 		})
+
+		It("Should set d8_emptydir_usage metric to 1 (because AllowEmptyDir is not set)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(1))
+
+			metric := f.MetricsCollector.CollectedMetrics()[0]
+			Expect(metric.Name).To(Equal("d8_emptydir_usage"))
+			Expect(*metric.Value).To(Equal(float64(1)))
+			Expect(metric.Labels["namespace"]).To(Equal("d8-module-name"))
+			Expect(metric.Labels["module_name"]).To(Equal("common"))
+		})
 	})
 
 })
