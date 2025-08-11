@@ -2,14 +2,13 @@ module github.com/flant/docs-builder
 
 go 1.23.8
 
-
 require (
 	github.com/bep/clocks v0.5.0
 	github.com/bep/lazycache v0.8.0
 	github.com/bep/logg v0.4.0
 	github.com/bep/overlayfs v0.10.0
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250722112004-0f1287733653
-	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250722112553-8817d999b83d
+	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250811070913-d560e0957593
 	github.com/gohugoio/hugo v0.147.7
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/spf13/afero v1.14.0

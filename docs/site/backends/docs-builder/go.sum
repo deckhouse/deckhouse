@@ -102,6 +102,8 @@ github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250722112004-0f1287733653 h1:8jy
 github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250722112004-0f1287733653/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250722112553-8817d999b83d h1:Kb4fHswp9Ii6uqiDFeDTTl2RjhOPZy4+BAGbP7bOlfQ=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250722112553-8817d999b83d/go.mod h1:7+Ifw+0DacehvGTUZnnaTqvT3PD76meH2RebsoICtrw=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250811070913-d560e0957593 h1:GSmyvisrPz2e3V6fJVpsDTPYqFzMgsd4wnBHSHuIDUc=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250811070913-d560e0957593/go.mod h1:N61zCcP85xaeKv7EL6qsC6RSe1RF2ljbCzCwfID74sc=
 github.com/disintegration/gift v1.2.1 h1:Y005a1X4Z7Uc+0gLpSAsKhWi4qLtsdEcMIbbdvdZ6pc=
 github.com/disintegration/gift v1.2.1/go.mod h1:Jh2i7f7Q2BM7Ezno3PhfezbR1xpUg9dUg3/RlKGr4HI=
 github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZQ=
