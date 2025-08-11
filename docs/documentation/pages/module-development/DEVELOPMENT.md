@@ -47,14 +47,14 @@ accessibility:
         - Default
 ```
 
-This configuration means that the module is available in the `ee` edition (and can be enabled via `ModuleConfig`) and will be enabled by default in the `Default` bundle.
+This configuration means that the module is available in DKP Enterprise Edition (can be enabled). Also, the module will be enabled by default in the `Default` bundle.
 
 {% alert level="warning" %}
 To use this mechanism, the `module.yaml` file must be included in the release image.
 {% endalert %}
 
 {% alert level="warning" %}
-A module can still be disabled through its `ModuleConfig`.
+A module can still be disabled.
 {% endalert %}
 
 {% alert level="warning" %}
