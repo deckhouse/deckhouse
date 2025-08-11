@@ -113,7 +113,7 @@ shell:
   - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
 ---
-{{- include "vex_mitigation" (list $ (printf "%s/%s-src-artifact-%s" $.ModuleName $.ImageName ($full_version | replace "." "-"))) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-src-artifact-%s" $.ModuleName $.ImageName ($full_version | replace "." "-"))) }}
 {{- end }}
 
 # verify that all required patches present across all kubernetes versions

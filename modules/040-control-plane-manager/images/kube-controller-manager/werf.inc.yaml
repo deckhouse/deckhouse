@@ -25,5 +25,5 @@ imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-controller-manager"]
 ---
-{{- include "vex_mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}
