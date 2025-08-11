@@ -3,15 +3,18 @@ title: "The monitoring-kubernetes module"
 description: "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform."
 ---
 
-The module is intended for the basic monitoring of cluster nodes.
+The `monitoring-kubernetes` module provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
 
-It safely collects metrics and provides a basic set of rules for monitoring of:
-- The current container runtime version (docker, containerd) on the node and if it complies with the requirements.
-- The overall health of the cluster monitoring subsystem (Dead man's switch).
-- The availability of file descriptors, sockets, abundance of free space and inodes.
-- The operation of `kube-state-metrics`, `node-exporter`, `kube-dns`.
-- The state of cluster nodes (NotReady, drain, cordon).
-- The state of time synchronization between nodes.
-- The cases of the prolonged CPU stealing.
-- The state of the Conntrack table on nodes.
-- The Pods that report an incorrect state (due to kubelet-related or other issues), etc.
+Module features:
+
+- provides an opportunity to plan infrastructure resources (Capacity planning);
+- monitors the container runtime version (docker, containerd) on each node and checks it for compliance with the allowed versions;
+- monitors the performance of the cluster monitoring subsystem itself (Dead man's switch);
+- gets metrics about the availability of file descriptors, sockets, free space, and inodes on each node;
+- monitors the correct operation of key monitoring components: kube-state-metrics, node-exporter, kube-dns;
+- checks the status of all nodes (`NotReady`, `drain`, `cordon`) and promptly reports problems;
+- monitors time synchronization and notifies about deviations;
+- detects cases of prolonged CPU steal overrun (when the node does not receive the required CPU time);
+- controls the status of the Conntrack table on the nodes;
+- shows pods with incorrect statuses, for example, if kubelet failed to do its job;
+- allows you to export metrics to external monitoring systems for a single point of control.
