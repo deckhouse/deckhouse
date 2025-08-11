@@ -37,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-
 type moduleReleaseService struct {
 	dc dependency.Container
 
@@ -45,7 +44,6 @@ type moduleReleaseService struct {
 	registryOptions []cr.Option
 
 	logger *log.Logger
-
 }
 
 func newModuleReleaseService(registryAddress string, registryConfig *utils.RegistryConfig, logger *log.Logger) *moduleReleaseService {
@@ -93,7 +91,6 @@ func (svc *moduleReleaseService) ListModuleTags(ctx context.Context, moduleName 
 
 	return ls, err
 }
-
 
 // GetModuleRelease with digest-first optimization
 func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
@@ -237,4 +234,3 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 
 	return meta, nil
 }
-

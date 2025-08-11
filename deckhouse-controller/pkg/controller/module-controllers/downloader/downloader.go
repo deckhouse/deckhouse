@@ -63,7 +63,6 @@ type ModuleDownloader struct {
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 	logger          *log.Logger
-
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
@@ -664,4 +663,3 @@ type ReleaseImageInfo struct {
 	Image    crv1.Image
 	Digest   crv1.Hash
 }
-
