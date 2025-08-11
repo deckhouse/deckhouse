@@ -42,6 +42,8 @@ masterNodeGroup:
 
 ### WithNAT
 
+![WithNAT layout](../../../../images/cloud-provider-vcd/vcd-withnat.png)
+
 When using this layout, you must confirm the type of network virtualization platform with your administrator and specify it in the `edgeGateway.type` parameter. Two options are supported: `NSX-T` and `NSX-V`.
 
 To ensure administrative access to the cluster nodes, a bastion is deployed. The parameters for its configuration are described in [the `bastion` section](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-bastion).

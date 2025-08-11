@@ -44,6 +44,8 @@ masterNodeGroup:
 
 ### WithNAT
 
+![Схема размещения WithNAT](../../../../images/cloud-provider-vcd/vcd-withnat.png)
+
 При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
 
 Для обеспечения административного доступа к узлам кластера разворачивается бастион. Параметры для его настройки описываются [в секции `bastion`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-bastion).
