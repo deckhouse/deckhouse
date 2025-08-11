@@ -103,7 +103,7 @@ TimeSlicing, MIG).
 
 #### Эксклюзивный режим (Exclusive)
 
-Каждому поду выделяется целый GPU в кластере публикуется ресурс `nvidia.com/gpu`.
+Каждому поду выделяется целый GPU, в кластере публикуется ресурс `nvidia.com/gpu`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
