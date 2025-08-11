@@ -88,7 +88,7 @@
 # final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:418f029e338c89b056675d597b0155d4fb380d5b8cf57b21b6e28e258a433220
+from: dev-registry.deckhouse.io/base_images@sha256:8e85b9364489a8dc665ff38054e29693399f1d609bb1171b46cb474183227f54
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
