@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	neturl "net/url"
 	"strconv"
@@ -76,6 +77,8 @@ func New(logger *log.Logger, ms *metricsstorage.MetricStorage) *Sender {
 	}
 }
 
+var ErrRequestTimedOut = errors.New("request timed out")
+
 func (s *Sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
 	syncChan := make(chan struct{}, 10)
 	wg := new(sync.WaitGroup)
@@ -110,6 +113,10 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 
 		s.logger.Info("sender upload", slog.String("backend", backend))
 		err := s.upload(ctx, backend, version)
+		if err != nil && errors.Is(err, ErrRequestTimedOut) {
+			s.logger.Error("backend upload processing stopped", slog.String("backend", backend), log.Err(err))
+			return
+		}
 		if err != nil {
 			s.logger.Error("send upload docs", log.Err(err))
 		}
@@ -197,6 +204,8 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 
 	req.Header.Set("Content-Type", "application/tar")
 
+	var criticalError error
+
 	operation := func() error {
 		// before request
 		timeBeforeRequest := time.Now()
@@ -204,6 +213,10 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				criticalError = ErrRequestTimedOut
+				return nil
+			}
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
@@ -238,6 +251,9 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
 		return fmt.Errorf("send request: %w", err)
+	}
+	if criticalError != nil {
+		return fmt.Errorf("send request: critical error: %w", criticalError)
 	}
 
 	return nil
