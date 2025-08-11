@@ -30,10 +30,18 @@ EOF
     return 0
   fi
 
+  hasPorts=$(context::jq -r '.review.request.object.spec | has("ports")')
+  if [ "$hasPorts" != "true" ];then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"A service without the '.spec.ports' field cannot be published."}
+EOF
+    return 0
+  fi
+
   portWithoutName=$(context::jq -r '.review.request.object.spec.ports | map(select(has("name") | not)) | first | "\(.protocol) \(.port)"')
   if [ "$portWithoutName" != "null null" ];then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Port \"$portWithoutName\" of the service has no name field set and cannot be published. Please, define the port name according to the following list of name suffixes supported by Istio: http, http2, https, tcp, tls, grpc, grpc-web."}
+{"allowed":false, "message":"Port \"$portWithoutName\" of the service has no 'name' field set and cannot be published. Please, define the port name according to the following list of name suffixes supported by Istio: http, http2, https, tcp, tls, grpc, grpc-web."}
 EOF
     return 0
   fi
