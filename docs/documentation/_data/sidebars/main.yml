@@ -30,9 +30,25 @@ entries:
                 ru: Описание
               url: /
             - title:
-               en: Switching editions
-               ru: Переключение редакций
-              url: /admin/editions.html
+                en: Registers and editions
+                ru: Реестры и редакции
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/registry.html
+                - title:
+                    en: Third-party registry
+                    ru: Сторонний реестр
+                  url: /admin/configuration/registry/third-party-registry.html
+                - title:
+                    en: Internal registry
+                    ru: Внутренний реестр
+                  url: /admin/configuration/registry/internal-registry.html
+                - title:
+                    en: Switching editions
+                    ru: Переключение редакций
+                  url: /admin/editions.html
             - title:
                 en: Access
                 ru: Доступ
