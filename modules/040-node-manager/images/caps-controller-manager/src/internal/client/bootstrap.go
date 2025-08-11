@@ -114,10 +114,13 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		if err != nil {
 			instanceScope.Logger.Info("bootstrap script returned error")
 			instanceScope.Logger.Info(err.Error())
+			if strings.Contains(err.Error(), "Process exited with status 2") {
+				return true
+			}
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
-				if strings.Contains(str, "debug1: Exit status 2") || strings.Contains(str, "Process exited with status 2") {
+				if strings.Contains(str, "debug1: Exit status 2") {
 					return true
 				}
 			}
