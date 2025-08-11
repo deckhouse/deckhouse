@@ -37,6 +37,8 @@ masterNodeGroup:
 
 ## WithNAT
 
+![WithNAT layout](../../images/cloud-provider-vcd/vcd-withnat.png)
+
 When using this placement scheme, you must check with the administrator which network virtualization platform is in use and specify it in the `edgeGateway.type` parameter.  
 Two options are supported: `NSX-T` and `NSX-V`.
 
