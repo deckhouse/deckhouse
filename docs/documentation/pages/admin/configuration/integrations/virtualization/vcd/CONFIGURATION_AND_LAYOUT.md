@@ -5,7 +5,7 @@ permalink: en/admin/integrations/virtualization/vcd/configuration-and-layout-sch
 
 ## Layouts
 
-Deckhouse Kubernetes Platform supports one layout for deploying resources in VCD.
+Deckhouse Kubernetes Platform supports two layouts for deploying resources in VCD.
 
 ### Standard
 
@@ -40,11 +40,13 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-## StandardWithNetwork
+### WithNAT
 
-![StandardWithNetwork layout](../../../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+![WithNAT layout](../../../../images/cloud-provider-vcd/vcd-withnat.png)
 
 When using this layout, you must confirm the type of network virtualization platform with your administrator and specify it in the `edgeGateway.type` parameter. Two options are supported: `NSX-T` and `NSX-V`.
+
+To ensure administrative access to the cluster nodes, a bastion is deployed. The parameters for its configuration are described in [the `bastion` section](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-bastion).
 
 If the Edge Gateway is based on `NSX-T`, a DHCP server will be automatically enabled for the created node network. It will assign IP addresses starting from the 30th address in the subnet up to the penultimate one (before the broadcast address). The starting address of the DHCP pool can be changed using the `internalNetworkDHCPPoolStartAddress` parameter.
 
@@ -57,7 +59,7 @@ It is not recommended to use dynamic addressing for the first master node togeth
 This layout assumes the automatic creation of the following NAT rules:
 
 - **SNAT** — translation of internal node network addresses to the external address specified in `edgeGateway.externalIP`.
-- **DNAT** — translation of the external address and port specified in `edgeGateway.externalIP` and `edgeGateway.externalPort` to the internal IP address of the first master node on port 22 (TCP) to provide administrative SSH access.
+- **DNAT** — translating the external address and port, specified in the `edgeGateway.externalIP` and `edgeGateway.externalPort` properties, respectively, to the internal address of the bastion instance on port 22 using the TCP protocol for administrative access to the nodes via SSH.
 
 {% alert level="warning" %}
 If the Edge Gateway is powered by `NSX-V`, you must specify the name and type of the network to which the rule will be bound in the `edgeGateway.NSX-V.externalNetworkName` and `edgeGateway.NSX-V.externalNetworkType` properties. Usually, this is the network connected to the Edge Gateway in the `Gateway Interfaces` section and having an external IP address.
@@ -76,13 +78,12 @@ The following rules will be created:
 - Allow all incoming ICMP traffic;
 - Allow incoming TCP and UDP traffic on ports 30000–32767 for `NodePort` services.
 
-Example configuration for the StandardWithNetwork layout using `NSX-T`:
+Example configuration for the WithNAT layout using `NSX-T`:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -93,12 +94,23 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-T"
   externalIP: 10.0.0.1
   externalPort: 10022
+createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -109,13 +121,12 @@ masterNodeGroup:
     - 192.168.199.2
 ```
 
-Example configuration for the StandardWithNetwork layout using `NSX-V`:
+Example configuration for the WithNAT layout using `NSX-V`:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -126,7 +137,17 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-V"
@@ -135,6 +156,7 @@ edgeGateway:
   NSX-V:
     externalNetworkName: external
     externalNetworkType: ext
+createDefaultFirewallRules: true
 masterNodeGroup:
   replicas: 1
   instanceClass:

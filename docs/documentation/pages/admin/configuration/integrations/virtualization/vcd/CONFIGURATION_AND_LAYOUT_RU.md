@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-Deckhouse Kubernetes Platform поддерживает одну схему размещения ресурсов в VCD.
+Deckhouse Kubernetes Platform поддерживает две схемы размещения ресурсов в VCD.
 
 ### Standard
 
@@ -42,11 +42,13 @@ masterNodeGroup:
     mainNetwork: internal
 ```
 
-## StandardWithNetwork
+### WithNAT
 
-![Схема размещения StandardWithNetwork](../../../../images/cloud-provider-vcd/vcd-standardwithnetwork.png)
+![Схема размещения WithNAT](../../../../images/cloud-provider-vcd/vcd-withnat.png)
 
 При использовании данной схемы размещения необходимо уточнить у администратора тип платформы сетевой виртуализации и указать его в параметре `edgeGateway.type`. Поддерживаются два варианта: `NSX-T` и `NSX-V`.
+
+Для обеспечения административного доступа к узлам кластера разворачивается бастион. Параметры для его настройки описываются [в секции `bastion`](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration-bastion).
 
 Если Edge Gateway работает на базе `NSX-T`, в созданной сети для узлов автоматически активируется DHCP-сервер. Он будет выделять IP-адреса, начиная с 30-го адреса в подсети и до предпоследнего (перед broadcast-адресом). Начальный адрес DHCP-пула можно изменить с помощью параметра `internalNetworkDHCPPoolStartAddress`.
 
@@ -59,7 +61,7 @@ masterNodeGroup:
 Схема размещения предполагает автоматическое создание следующих правил NAT:
 
 - SNAT — трансляция адресов внутренней сети узлов во внешний адрес, указанный в параметре `edgeGateway.externalIP`.
-- DNAT — трансляция внешнего адреса и порта, заданных в параметрах `edgeGateway.externalIP` и `edgeGateway.externalPort`, на внутренний IP-адрес первого master-узла по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
+- DNAT — трансляция внешнего адреса и порта, заданных в параметрах `edgeGateway.externalIP` и `edgeGateway.externalPort`, на внутренний IP-адрес бастиона по порту 22 (протокол TCP) для обеспечения административного доступа по SSH.
 
 {% alert level="warning" %}
 Если Edge Gateway обеспечивается средствами `NSX-V`, то для построения правил необходимо указать имя и тип сети, к которым правило будет привязано в свойствах `edgeGateway.NSX-V.externalNetworkName` и `edgeGateway.NSX-V.externalNetworkType` соответственно. Как правило, это сеть, подключённая к Edge Gateway в разделе `Gateway Interfaces` и имеющая внешний IP-адрес.
@@ -81,10 +83,9 @@ masterNodeGroup:
 Пример конфигурации схемы размещения с использованием `NSX-T`:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -95,12 +96,23 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-T"
   externalIP: 10.0.0.1
   externalPort: 10022
+createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
@@ -114,10 +126,9 @@ masterNodeGroup:
 Пример конфигурации схемы размещения с использованием `NSX-V`:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDClusterConfiguration
-layout: Standard
+layout: WithNAT
 provider:
   server: '<SERVER>'
   username: '<USERNAME>'
@@ -128,7 +139,17 @@ organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
 internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
 mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: 2cpu1mem
+    template: "catalog/Ubuntu 22.04 Server"
+    storageProfile: Fast vHDD
+    mainNetworkIPAddress: 10.1.4.10
 edgeGateway:
   name: "edge-gateway-01"
   type: "NSX-V"
@@ -137,6 +158,7 @@ edgeGateway:
   NSX-V:
     externalNetworkName: external
     externalNetworkType: ext
+createDefaultFirewallRules: true
 masterNodeGroup:
   replicas: 1
   instanceClass:
