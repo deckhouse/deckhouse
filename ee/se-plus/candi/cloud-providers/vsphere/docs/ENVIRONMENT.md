@@ -125,8 +125,8 @@ Also, after the virtual machine is started, the following services associated wi
 
 To add SSH keys to user's authorized keys, the `default_user` parameter must be specified in the `/etc/cloud/cloud.cfg` file.
 
-{% alert %}
-The provider does not expect the VM template to work with more than one disk.
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
 {% alert level="warning" %}
