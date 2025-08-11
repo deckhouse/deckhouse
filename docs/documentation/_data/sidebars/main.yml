@@ -1674,27 +1674,7 @@ entries:
           - title:
               en: TATLIN.UNIFIED (Yadro) unified storage
               ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
-            url: /storage/admin/external/yadro.html
-      - title:
-         en: csi-vsphere (TEST)
-         ru: csi-vsphere (ТЕСТ)
-        folders:
-          - title:
-             en: Description
-             ru: Описание
-            url: /modules/csi-vsphere/
-          - title:
-             en: Configuration
-             ru: Настройки
-            url: /modules/csi-vsphere/configuration.html
-          - title:
-             en: Examples
-             ru: Примеры
-            url: /modules/csi-vsphere/examples.html  
-          - title:
-             en: FAQ
-             ru: FAQ
-            url: /modules/csi-vsphere/faq.html      
+            url: /storage/admin/external/yadro.html     
       - title:
          en: Module settings
          ru: Настройки модулей
@@ -1707,6 +1687,10 @@ entries:
               en: csi-hpe
               ru: csi-hpe
             url: /reference/mc/csi-hpe/
+          - title:
+              en: csi-vsphere
+              ru: csi-vsphere
+            url: /reference/mc/vsphere/  
           - title:
               en: csi-huawei
               ru: csi-huawei
