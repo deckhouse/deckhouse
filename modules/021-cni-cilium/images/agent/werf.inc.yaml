@@ -134,6 +134,10 @@ import:
   includePaths:
   - clang
   - llc
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /lib64/libLLVM.so.19.1
+  to: /lib64/libLLVM.so.19.1
+  before: install
 - image: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
