@@ -5,11 +5,11 @@ cleanup:
   keepImagesBuiltWithinLastNHours: 24 # don't touch fresh builds for 24h
   disableKubernetesBasedPolicy: true
   keepPolicies:
-  # keep 13 days dev builds
+  # keep 7 days dev builds
   - references:
       branch: /.*/
       limit:
-        in: 312h
+        in: 168h
     imagesPerReference:
       last: 1
   # keep 3 pre-release builds
