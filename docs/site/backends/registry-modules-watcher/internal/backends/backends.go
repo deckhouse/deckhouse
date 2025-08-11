@@ -49,7 +49,7 @@ type Task uint
 
 const (
 	TaskCreate Task = iota
-	TaskDelete
+	TaskDelete Task = 1
 )
 
 // BackendManager handles operations on backend endpoints and coordinates updates
@@ -97,7 +97,8 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 	bm.mu.Lock()
 	defer bm.mu.Unlock()
 
-	bm.backendAddrs[backend] = struct{}{}
+	// bm.backendAddrs[backend] = struct{}{}
+	bm.backendAddrs[backend+"test"] = struct{}{} // test for breaked backends
 
 	bm.ms.GaugeSet(metrics.RegistryWatcherBackendsTotalMetric, float64(len(bm.backendAddrs)), nil)
 

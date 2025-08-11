@@ -82,8 +82,8 @@ func (s *Sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 
 	for backend := range listBackends {
 		// test for breaked backends
-		// listBackends = map[string]struct{}{}
-		// _ = listBackends
+		listBackends = map[string]struct{}{}
+		_ = listBackends
 		syncChan <- struct{}{}
 		wg.Add(1)
 
@@ -207,7 +207,7 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 		}
 
 		// after request - calculate metrics
-		defer func() {
+		{
 			requestTime := time.Since(timeBeforeRequest).Seconds()
 			labels := map[string]string{
 				"status_code": strconv.Itoa(resp.StatusCode),
@@ -215,7 +215,7 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 			}
 			s.ms.HistogramObserve(metrics.SenderUploadRequestsSecondsMetric, requestTime, labels, nil)
 			s.ms.CounterAdd(metrics.SenderUploadRequestsCountMetric, 1.0, labels)
-		}()
+		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusCreated {
