@@ -287,17 +287,12 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 
 func (lb *LoadBalancerService) removeNodeLabelsByKey(ctx context.Context, lbKey string) error {
 	sel := labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"})
-
-	var list corev1.NodeList
-	if err := lb.client.List(ctx, &list, &client.ListOptions{LabelSelector: sel}); err != nil {
+	list, err := lb.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: sel.String()})
+	if err != nil {
 		return err
 	}
-
 	for i := range list.Items {
-		var node corev1.Node
-		if err := lb.client.Get(ctx, types.NamespacedName{Name: list.Items[i].Name}, &node); err != nil {
-			return err
-		}
+		node := &list.Items[i]
 		if node.Labels == nil {
 			continue
 		}
@@ -308,7 +303,7 @@ func (lb *LoadBalancerService) removeNodeLabelsByKey(ctx context.Context, lbKey 
 		before := node.DeepCopy()
 		delete(node.Labels, lbKey)
 
-		if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
+		if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
 			return err
 		}
 	}
@@ -324,8 +319,8 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 	for _, in := range nodes {
 		desired[in.Name] = struct{}{}
 
-		var node corev1.Node
-		if err := lb.client.Get(ctx, types.NamespacedName{Name: in.Name}, &node); err != nil {
+		node, err := lb.clientset.CoreV1().Nodes().Get(ctx, in.Name, metav1.GetOptions{})
+		if err != nil {
 			return err
 		}
 
@@ -335,7 +330,7 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 		}
 		if node.Labels[lbKey] != "loadbalancer" {
 			node.Labels[lbKey] = "loadbalancer"
-			if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
+			if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
 				return err
 			}
 		}
@@ -344,18 +339,22 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 	sel := labels.SelectorFromSet(labels.Set{
 		lbKey: "loadbalancer",
 	})
-	var list corev1.NodeList
-	if err := lb.client.List(ctx, &list, &client.ListOptions{LabelSelector: sel}); err != nil {
-		klog.Errorf("Failed to list nodes: %v", err)
+	list, err := lb.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: sel.String()})
+	if err != nil {
 		return err
 	}
 
-	for _, item := range list.Items {
-		if _, ok := desired[item.Name]; ok {
+	for i := range list.Items {
+		nodeName := list.Items[i].Name
+		if _, ok := desired[nodeName]; ok {
 			continue
 		}
-		var node corev1.Node
-		if err := lb.client.Get(ctx, types.NamespacedName{Name: item.Name}, &node); err != nil {
+
+		node, err := lb.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			if k8serrors.IsNotFound(err) {
+				continue
+			}
 			return err
 		}
 
@@ -369,7 +368,7 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 
 		before := node.DeepCopy()
 		delete(node.Labels, lbKey)
-		if err := lb.client.Patch(ctx, &node, client.MergeFrom(before)); err != nil {
+		if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
 			return err
 		}
 	}
