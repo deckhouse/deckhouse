@@ -409,7 +409,7 @@ entries:
                 - title:
                     en: Configuring updates
                     ru: Настройка обновлений
-                  url: /admin/configuration/update/update-configuration.html
+                  url: /admin/configuration/update/configuration.html
                 - title:
                     en: Configuring notifications
                     ru: Настройка уведомлений

@@ -1,6 +1,6 @@
 ---
 title: Настройка обновлений
-permalink: ru/admin/configuration/update/update-configuration.html
+permalink: ru/admin/configuration/update/configuration.html
 lang: ru
 ---
 

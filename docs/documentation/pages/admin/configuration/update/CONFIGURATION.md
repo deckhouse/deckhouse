@@ -1,6 +1,6 @@
 ---
 title: Configuring updates
-permalink: en/admin/configuration/update/update-configuration.html
+permalink: en/admin/configuration/update/configuration.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports a flexible update mechanism,
