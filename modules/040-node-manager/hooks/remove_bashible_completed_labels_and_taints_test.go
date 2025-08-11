@@ -14,9 +14,10 @@ limitations under the License.
 package hooks
 
 import (
-	. "github.com/deckhouse/deckhouse/testing/hooks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: nodeManager :: hooks :: remove_bashible_completed_labels_and_taints ::", func() {
