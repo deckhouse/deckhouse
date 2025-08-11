@@ -92,7 +92,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:418f029e338c89b056675d597b015
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
-from: dev-registry.deckhouse.io/base_images@sha256:561d58c555f9d12bf0ff71ac222c08afd98a22e498fe90906614b80c1de93804
+from: dev-registry.deckhouse.io/base_images@sha256:cc004a98d78a0fc52f5d40550a21c3ce6b0d51c383ce497752950ed802c1f10d
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
