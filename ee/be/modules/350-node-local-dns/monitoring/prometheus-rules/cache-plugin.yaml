@@ -1,0 +1,37 @@
+- name: d8.node-local-dns.cache
+  rules:
+    - alert: D8NodeLocalDNSCacheSuccessEvictionsHigh
+      expr: |
+        increase(coredns_cache_evictions_total{type="success", job="node-local-dns"}[5m]) > 100
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: node-local-dns success cache is being frequently evicted.
+        description: |
+          The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
+
+          This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+
+          Affected node: `{{$labels.node}}`
+
+    - alert: D8NodeLocalDNSCacheDenialEvictionsHigh
+      expr: |
+        increase(coredns_cache_evictions_total{type="denial", job="node-local-dns"}[5m]) > 100
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: node-local-dns denial cache is being frequently evicted.
+        description: |
+          The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
+
+          This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+
+          Affected node: `{{$labels.node}}`

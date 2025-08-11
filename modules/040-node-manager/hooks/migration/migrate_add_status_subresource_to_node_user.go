@@ -17,12 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -58,13 +61,16 @@ func applyNodeUsersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 }
 
 func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
-	nodeUserSnap := input.Snapshots["node_user"]
-	if len(nodeUserSnap) == 0 {
+	nodeUserSnaps := input.NewSnapshots.Get("node_user")
+	if len(nodeUserSnaps) == 0 {
 		return nil
 	}
 
-	for _, item := range nodeUserSnap {
-		nu := item.(existingStatus)
+	for nu, err := range sdkobjectpatch.SnapshotIter[existingStatus](nodeUserSnaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_user' snapshot: %w", err)
+		}
+
 		if nu.StatusExists {
 			input.Logger.Debug("Status already exists for node user", slog.String("user", nu.UserName))
 			continue

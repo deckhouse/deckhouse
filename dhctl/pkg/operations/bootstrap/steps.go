@@ -55,9 +55,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -256,7 +256,7 @@ func cleanupPreviousBashibleRunIfNeed(ctx context.Context, nodeInterface node.In
 	})
 }
 
-func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl *ssh.Client) (*frontend.ReverseTunnel, error) {
+func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHClient) (node.ReverseTunnel, error) {
 	port := "5444"
 	listenAddress := "127.0.0.1"
 
@@ -541,8 +541,8 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		})
 }
 
-func setupRPPTunnel(ctx context.Context, sshClient *ssh.Client) (func(), error) {
-	var tun *frontend.ReverseTunnel
+func setupRPPTunnel(ctx context.Context, sshClient node.SSHClient) (func(), error) {
+	var tun node.ReverseTunnel
 	log.DebugLn("Starting reverse tunnel routine")
 	tun, err := SetupSSHTunnelToRegistryPackagesProxy(ctx, sshClient)
 	if err != nil {
@@ -657,7 +657,7 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInteface node.Interface) er
 	})
 }
 
-func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient *ssh.Client) error {
+func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient) error {
 	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
 		availabilityCheck := sshClient.Check()
 		_ = log.Process("default", "Connection string", func() error {

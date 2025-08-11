@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"github.com/flant/docs-builder/internal/docs"
 )
 
@@ -69,7 +70,7 @@ func (h *DocsBuilderHandler) handleHealthZ(w http.ResponseWriter, _ *http.Reques
 	_, _ = io.WriteString(w, "ok")
 }
 
-func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, r *http.Request) {
+func (h *DocsBuilderHandler) handleGetDocsInfo(w http.ResponseWriter, _ *http.Request) {
 	h.logger.Info("getting all docs info")
 
 	modules, err := h.docsService.GetDocumentationInfo()
@@ -121,7 +122,7 @@ func (h *DocsBuilderHandler) handleUpload(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, r *http.Request) {
+func (h *DocsBuilderHandler) handleBuild(w http.ResponseWriter, _ *http.Request) {
 	err := h.docsService.Build()
 	if err != nil {
 		h.logger.Error("build", log.Err(err))

@@ -14,6 +14,7 @@
 
 # If reboot flag is not set, nothing to do
 if ! bb-flag? reboot; then
+  bb-flag-unset disruption
   exit 0
 fi
 

@@ -49,6 +49,21 @@ spec:
     releaseChannel: Stable
     logLevel: Info
 ---
+# [<en>] Turn on cni-cilium module.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cni-cilium/
+# [<ru>] Включение модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cni-cilium/
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bpfLBMode: SNAT
+    tunnelMode: VXLAN
+---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.

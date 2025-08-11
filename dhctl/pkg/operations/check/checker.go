@@ -29,11 +29,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type Params struct {
-	SSHClient     *ssh.Client
+	SSHClient     node.SSHClient
 	StateCache    dhctlstate.Cache
 	CommanderMode bool
 	CommanderUUID uuid.UUID

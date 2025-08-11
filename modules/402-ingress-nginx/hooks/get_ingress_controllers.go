@@ -22,6 +22,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type Controller struct {
@@ -45,6 +47,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
+
+	// If deletion timestamp exists — skip controller to force helm deleting the resources by excluding the controller from "ingressNginx.internal.ingressControllers".
+	// need for handle_finalizers hook proper work
+	if obj.GetDeletionTimestamp() != nil {
+		return nil, nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from ingress controller %s: %v", name, err)
 	}
@@ -119,8 +128,20 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
-	// Set spec.validationEnabled = false to resolve high resource utilization issue
-	spec["validationEnabled"] = false
+	// Set validationEnabled to false if suspended annotation is present
+	metadata, _, err := unstructured.NestedMap(obj.Object, "metadata")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get metadata from ingress controller: %v", err)
+	}
+	annotationsRaw, ok := metadata["annotations"]
+	if ok && annotationsRaw != nil {
+		annotations, ok := annotationsRaw.(map[string]interface{})
+		if ok {
+			if _, hasAnnotation := annotations[internal.IngressNginxControllerSuspendAnnotation]; hasAnnotation {
+				spec["validationEnabled"] = false
+			}
+		}
+	}
 
 	return Controller{Name: name, Spec: spec}, nil
 }
@@ -147,6 +168,9 @@ func setInternalValues(input *go_hook.HookInput) error {
 	controllers := make([]Controller, 0, len(controllersFilterResult))
 
 	for _, c := range controllersFilterResult {
+		if c == nil {
+			continue
+		}
 		controller := c.(Controller)
 
 		version, found, err := unstructured.NestedString(controller.Spec, "controllerVersion")

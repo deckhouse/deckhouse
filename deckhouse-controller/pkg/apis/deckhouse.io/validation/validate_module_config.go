@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 )
 
@@ -43,6 +44,11 @@ type AnnotationsOnly struct {
 	ObjectMeta `json:"metadata,omitempty"`
 }
 
+type EnabledOnly struct {
+	Spec struct {
+		Enabled *bool `json:"enabled,omitempty"`
+	} `json:"spec,omitempty"`
+}
 type ObjectMeta struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
@@ -56,11 +62,13 @@ func moduleConfigValidationHandler(
 	metricStorage metric.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
+	setting *helpers.DeckhouseSettingsContainer,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
-			cfg = new(v1alpha1.ModuleConfig)
-			ok  bool
+			cfg                      = new(v1alpha1.ModuleConfig)
+			ok                       bool
+			allowExperimentalModules = setting.Get().AllowExperimentalModules
 		)
 
 		switch review.Operation {
@@ -96,7 +104,6 @@ func moduleConfigValidationHandler(
 				}
 
 				metricStorage.GaugeSet("d8_moduleconfig_allowed_to_disable", 0, map[string]string{"module": cfg.GetName()})
-
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -110,6 +117,15 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
+			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+					definition := module.GetModuleDefinition()
+
+					if definition.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+					}
+				}
+			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
 
@@ -118,14 +134,34 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("can not parse old module config: %w", err)
 			}
 
+			buf = bytes.NewBuffer(review.OldObjectRaw)
+			oldFlag := new(EnabledOnly)
+			if err := json.NewDecoder(buf).Decode(oldFlag); err != nil {
+				return nil, fmt.Errorf("can not parse old module config: %w", err)
+			}
+
 			cfg, ok = obj.(*v1alpha1.ModuleConfig)
 			if !ok {
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
+			oldEnabled := oldFlag.Spec.Enabled != nil && *oldFlag.Spec.Enabled
+			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
+
+			if !oldEnabled && newEnabled {
+				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
+					definition := module.GetModuleDefinition()
+
+					if definition.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+					}
+				}
+			}
+
 			// if no annotations and module is disabled, check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
+
 			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {

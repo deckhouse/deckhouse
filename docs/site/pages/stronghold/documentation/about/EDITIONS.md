@@ -22,7 +22,7 @@ The table below provides brief a comparison of editions listing its main feature
 |-------------------------------------------------------------------------------------------------------|------------------------------------|---------------------------------------------|
 | Secure management of the lifecycle of secrets (storage, creation, delivery, revocation, and rotation) | {{ supported }}                    | {{ supported }}                             |
 | The ability to use IaC automation tools Ansible and Terraform                                         | {{ supported }}                    | {{ supported }}                             |
-| Support for authentication methods                                                                    | JWT, OIDC, Kubernetes, LDAP, Token | JWT, OIDC, Kubernetes, LDAP, Token, **TLS** |
+| Support for authentication methods                                                                    | JWT, OIDC, Kubernetes, LDAP, Token | JWT, OIDC, Kubernetes, LDAP, Token |
 | Support for Secret Engines KV, Kubernetes, Database, SSH, PKI                                         | {{ supported }}                    | {{ supported }}                             |
 | Deploying to an air-gapped environment                                                                | {{ supported }}                    | {{ supported }}                             |
 | Administrator web interface                                                                           | {{ supported }}                    | {{ supported }}                             |

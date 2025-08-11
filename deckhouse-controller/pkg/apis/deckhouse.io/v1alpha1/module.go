@@ -40,6 +40,7 @@ const (
 	ModuleConditionIsReady                = "IsReady"
 	ModuleConditionIsOverridden           = "IsOverridden"
 
+	ModulePhaseUnavailable      = "Unavailable"
 	ModulePhaseAvailable        = "Available"
 	ModulePhaseDownloading      = "Downloading"
 	ModulePhaseDownloadingError = "DownloadingError"
@@ -58,6 +59,8 @@ const (
 	ModuleReasonKubernetesVersionExtender = "KubernetesVersionExtender"
 	ModuleReasonBootstrappedExtender      = "BootstrappedExtender"
 	ModuleReasonModuleDependencyExtender  = "ModuleDependencyExtender"
+	ModuleReasonEditionAvailableExtender  = "EditionAvailableExtender"
+	ModuleReasonEditionEnabledExtender    = "EditionEnabledExtender"
 	ModuleReasonNotInstalled              = "NotInstalled"
 	ModuleReasonDisabled                  = "Disabled"
 	ModuleReasonConflict                  = "Conflict"
@@ -87,6 +90,8 @@ const (
 	DeckhouseRequirementFieldName        string = "deckhouse"
 	KubernetesRequirementFieldName       string = "kubernetes"
 	ModuleDependencyRequirementFieldName string = "modules"
+
+	ExperimentalModuleStage = "Experimental"
 )
 
 var (
@@ -159,6 +164,16 @@ type ModuleProperties struct {
 	AvailableSources []string              `json:"availableSources,omitempty"`
 	Requirements     *ModuleRequirements   `json:"requirements,omitempty" yaml:"requirements,omitempty"`
 	DisableOptions   *ModuleDisableOptions `json:"disableOptions,omitempty" yaml:"disableOptions,omitempty"`
+	Accessibility    *ModuleAccessibility  `json:"accessibility,omitempty" yaml:"accessibility,omitempty"`
+}
+
+type ModuleAccessibility struct {
+	Editions map[string]ModuleEdition `json:"editions" yaml:"editions"`
+}
+
+type ModuleEdition struct {
+	Available        bool     `json:"available" yaml:"available"`
+	EnabledInBundles []string `json:"enabledInBundles" yaml:"enabledInBundles"`
 }
 
 type ModuleDisableOptions struct {
@@ -342,4 +357,8 @@ func (m *Module) HasCondition(condName string) bool {
 
 func (m *Module) GetVersion() string {
 	return m.Properties.Version
+}
+
+func (m *Module) IsExperimental() bool {
+	return m.Properties.Stage == ExperimentalModuleStage
 }

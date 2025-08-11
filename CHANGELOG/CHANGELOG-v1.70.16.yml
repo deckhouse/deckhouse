@@ -1,0 +1,9 @@
+cloud-provider-aws:
+  fixes:
+    - summary: fix root_block_device converge
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14429
+runtime-audit-engine:
+  fixes:
+    - summary: Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14688
+

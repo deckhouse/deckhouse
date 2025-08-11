@@ -661,6 +661,8 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
+{% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
+
 ### Auto upgrading istio data-plane
 
 {% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}

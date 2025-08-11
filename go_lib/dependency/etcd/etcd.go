@@ -19,9 +19,11 @@ package etcd
 //go:generate minimock -i Client -o etcd_mock.go
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"net"
 	"os"
 	"time"
 
@@ -51,6 +53,13 @@ func New(endpoints []string, options ...Option) (Client, error) {
 		DialKeepAliveTime:    60 * time.Second,
 		DialKeepAliveTimeout: 5 * time.Second,
 	}
+	// ignore HTTPS_PROXY settings
+	direct := func(ctx context.Context, addr string) (net.Conn, error) {
+		var d net.Dialer
+		return d.DialContext(ctx, "tcp", addr)
+	}
+	cfg.DialOptions = append(cfg.DialOptions, grpc.WithContextDialer(direct))
+
 	if opts.tls != nil {
 		cfg.TLS = opts.tls
 	}

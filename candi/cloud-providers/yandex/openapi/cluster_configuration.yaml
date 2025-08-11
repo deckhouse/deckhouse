@@ -130,7 +130,7 @@ apiVersions:
               diskType: &instanceClassDiskType
                 type: string
                 description: |
-                  Yandex Compute Instance disk type.
+                  Yandex Compute Instance disk type. Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
                 example: network-ssd-io-m3
                 x-doc-default: network-ssd
                 enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]

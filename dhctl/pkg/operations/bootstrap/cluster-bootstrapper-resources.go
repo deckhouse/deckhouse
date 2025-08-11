@@ -63,17 +63,20 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		return nil
 	}
 
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
+
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
 		sshClient := wrapper.Client()
 		if sshClient != nil {
-			if _, err := sshClient.Start(); err != nil {
+			if err := sshClient.Start(); err != nil {
 				return fmt.Errorf("unable to start ssh-client: %w", err)
 			}
 		}
-	}
-
-	if err := terminal.AskBecomePassword(); err != nil {
-		return err
 	}
 
 	return log.Process("bootstrap", "Create resources", func() error {

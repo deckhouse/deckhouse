@@ -107,6 +107,11 @@ spec:
             path: /healthz
             scheme: HTTPS
             port: 8081
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTPS
+            port: 8081
         volumeMounts:
         {{- with .Values.global.modulesImages.registry.dockercfg }}
         - name: deckhouse-registry-dockercfg
@@ -128,9 +133,20 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         ports:
         - containerPort: 8081
           name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8081
+            scheme: HTTPS
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:

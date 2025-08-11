@@ -70,9 +70,6 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: HostWithFailover
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
   nodeSelector:
     node-role.kubernetes.io/master: ''
   tolerations:

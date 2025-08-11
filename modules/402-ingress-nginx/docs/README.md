@@ -9,7 +9,7 @@ The module supports running and configuring several NGINX Ingress controllers si
 
 ## Traffic routing
 
-Traffic to nginx-ingress can be routed in several ways:
+Traffic to `ingress-nginx` can be routed in several ways:
 
 - Directly without the use of an external load balancer
 - Using an external LoadBalancer; the following LB varieties are supported:

@@ -150,7 +150,7 @@ type updateApprover struct {
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
-	var concurrency = 1
+	concurrency := 1
 	switch ngCon.Type {
 	case intstr.Int:
 		concurrency = ngCon.IntValue()
@@ -208,19 +208,17 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		if currentUpdates >= concurrency {
 			continue
 		}
-
 		// Skip ng, if it has no waiting nodes
 		if !hasWaitingForApproval {
 			continue
 		}
 
 		countToApprove := concurrency - currentUpdates
-
-		approvedNodeNames := make(map[string]struct{}, countToApprove)
+		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
-			var allReady = true
+			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
 					allReady = false
@@ -231,8 +229,8 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			if allReady {
 				for _, ngn := range nodeGroupNodes {
 					if ngn.IsWaitingForApproval {
-						approvedNodeNames[ngn.Name] = struct{}{}
-						if len(approvedNodeNames) == countToApprove {
+						approvedNodes[ngn] = struct{}{}
+						if len(approvedNodes) == countToApprove {
 							break
 						}
 					}
@@ -240,43 +238,28 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 			}
 		}
 
-		if len(approvedNodeNames) < countToApprove {
+		if len(approvedNodes) < countToApprove {
 			//    Allow one of not ready nodes, if any
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady && ngn.IsWaitingForApproval {
-					approvedNodeNames[ngn.Name] = struct{}{}
-					if len(approvedNodeNames) == countToApprove {
+					approvedNodes[ngn] = struct{}{}
+					if len(approvedNodes) == countToApprove {
 						break
 					}
 				}
 			}
 		}
 
-		if len(approvedNodeNames) == 0 {
+		if len(approvedNodes) == 0 {
 			continue
 		}
 
-		for approvedNodeName := range approvedNodeNames {
-			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", approvedNodeName)
-			setNodeStatusesMetrics(input, approvedNodeName, ng.Name, "Approved")
+		for approvedNode := range approvedNodes {
+			ar.nodeApproved(input, &approvedNode)
 		}
-
-		ar.finished = true
 	}
-
 	return nil
 }
-
-var (
-	approvedPatch = map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/approved":             "",
-				"update.node.deckhouse.io/waiting-for-approval": nil,
-			},
-		},
-	}
-)
 
 func (ar *updateApprover) needDrainNode(input *go_hook.HookInput, node *updateApprovalNode, nodeNg *updateNodeGroup) bool {
 	// we can not drain single control-plane node because deckhouse webhook will evict
@@ -310,12 +293,14 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 	}
 
 	for _, node := range ar.nodes {
-		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
+		if !node.IsApproved {
+			continue
+		}
+		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) || node.IsDisruptionApproved {
 			continue
 		}
 
 		ngName := node.NodeGroup
-
 		ng := ar.nodeGroups[ngName]
 
 		switch ng.Disruptions.ApprovalMode {
@@ -335,59 +320,15 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 			}
 		}
 
-		ar.finished = true
-
-		// If approvalMode == RollingUpdate simply delete machine
-		if ng.Disruptions.ApprovalMode == "RollingUpdate" {
-			input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name))
-			input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
-			continue
-		}
-
-		var patch map[string]interface{}
-		var metricStatus string
-
-		drainBeforeApproval := ar.needDrainNode(input, &node, &ng)
-
 		switch {
-		case !drainBeforeApproval:
-			// Skip draining if it's disabled in the NodeGroup
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
-			metricStatus = "DisruptionApproved"
-
+		case ng.Disruptions.ApprovalMode == "RollingUpdate":
+			// If approvalMode == RollingUpdate simply delete machine
+			ar.nodeDeleteRollingUpdate(input, &node)
+		case !ar.needDrainNode(input, &node, &ng) || node.IsDrained:
+			ar.nodeDisruptionApproved(input, &node)
 		case !node.IsUnschedulable:
-			// If node is not unschedulable – mark it for draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						drainingAnnotationKey: "bashible",
-					},
-				},
-			}
-			metricStatus = "DrainingForDisruption"
-
-		default:
-			// Node is unschedulable (is drained by us, or was marked as unschedulable by someone before), skip draining
-			patch = map[string]interface{}{
-				"metadata": map[string]interface{}{
-					"annotations": map[string]interface{}{
-						"update.node.deckhouse.io/disruption-approved": "",
-						"update.node.deckhouse.io/disruption-required": nil,
-					},
-				},
-			}
-			metricStatus = "DisruptionApproved"
+			ar.nodeDrainingForDisruption(input, &node)
 		}
-
-		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
-		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, metricStatus)
 	}
 
 	return nil
@@ -408,43 +349,72 @@ func (ar *updateApprover) processUpdatedNodes(input *go_hook.HookInput) error {
 
 		nodeChecksum := node.ConfigurationChecksum
 		ngName := node.NodeGroup
-
 		ngChecksum := ar.ngChecksums[ngName]
 
 		if nodeChecksum == "" || ngChecksum == "" {
 			continue
 		}
-
 		if nodeChecksum != ngChecksum {
 			continue
 		}
-
 		if !node.IsReady {
 			continue
 		}
 
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"annotations": map[string]interface{}{
-					"update.node.deckhouse.io/approved":             nil,
-					"update.node.deckhouse.io/waiting-for-approval": nil,
-					"update.node.deckhouse.io/disruption-required":  nil,
-					"update.node.deckhouse.io/disruption-approved":  nil,
-					drainedAnnotationKey:                            nil,
-				},
-			},
-		}
-		if node.IsDrained {
-			patch["spec"] = map[string]interface{}{
-				"unschedulable": nil,
-			}
-		}
-		input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
-		setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
-		ar.finished = true
+		ar.nodeUpToDate(input, &node)
 	}
 
 	return nil
+}
+
+func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApprovalNode) {
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             nil,
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+				"update.node.deckhouse.io/disruption-required":  nil,
+				"update.node.deckhouse.io/disruption-approved":  nil,
+				drainedAnnotationKey:                            nil,
+			},
+		},
+	}
+	if node.IsDrained {
+		patch["spec"] = map[string]interface{}{
+			"unschedulable": nil,
+		}
+	}
+	input.Logger.Info("Node UpToDate", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "UpToDate")
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Delete instances due to RollingUpdate strategy", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "Instance", "", node.Name)
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeDisruptionApproved(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node DisruptionApproved", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(disruptionApprovedPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DisruptionApproved")
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeDrainingForDisruption(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node DrainingForDisruption", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(drainingPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "DrainingForDisruption")
+	ar.finished = true
+}
+
+func (ar *updateApprover) nodeApproved(input *go_hook.HookInput, node *updateApprovalNode) {
+	input.Logger.Info("Node Approved", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", node.Name)
+	setNodeStatusesMetrics(input, node.Name, node.NodeGroup, "Approved")
+	ar.finished = true
 }
 
 type updateApprovalNode struct {
@@ -473,6 +443,32 @@ type updateNodeGroup struct {
 
 	Concurrency *intstr.IntOrString
 }
+
+var (
+	approvedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/approved":             "",
+				"update.node.deckhouse.io/waiting-for-approval": nil,
+			},
+		},
+	}
+	disruptionApprovedPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/disruption-approved": "",
+				"update.node.deckhouse.io/disruption-required": nil,
+			},
+		},
+	}
+	drainingPatch = map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				drainingAnnotationKey: "bashible",
+			},
+		},
+	}
+)
 
 func updateApprovalNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng ngv1.NodeGroup

@@ -63,10 +63,14 @@ resource "ovirt_disk" "master-kubernetes-data" {
 
 resource "ovirt_disk_attachment" "master-kubernetes-data-attachment" {
   disk_id        = ovirt_disk.master-kubernetes-data.id
-  disk_interface = "virtio_scsi"
+  disk_interface = "virtio"
   vm_id          = ovirt_vm.master_vm.id
   bootable       = false
   active         = true
+
+  lifecycle {
+    ignore_changes = [disk_interface]
+  }
 }
 
 resource "ovirt_vm_start" "master_vm" {

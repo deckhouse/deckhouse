@@ -390,15 +390,11 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 135.5px);
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.layout-sidebar__sidebar_right .sidebar__wrapper-inner {
-  padding-top: 5px;
+  padding-top: 14px;
 }
 
 .layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) .layout-sidebar__sidebar--guides :not(.layout-sidebar__sidebar_right) {
@@ -829,7 +825,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 20px;
+  scroll-margin-top: 70px;
 }
 
 .docs ul.resources li::before {
@@ -1197,6 +1193,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background-color: #F6F7F8;
         border-right: 1px solid #C4CAD4;
         color: #A7B0BE;
+    }
+
+    &:has(.language-tree) {
+      &::before {
+        content: none;
+      }
     }
 
     .icon--copy {

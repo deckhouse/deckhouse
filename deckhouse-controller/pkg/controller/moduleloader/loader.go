@@ -207,7 +207,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Accessibility, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -336,11 +336,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
-						Weight:       def.Weight,
-						Stage:        def.Stage,
-						Source:       v1alpha1.ModuleSourceEmbedded,
-						Critical:     def.Critical,
-						Requirements: def.Requirements,
+						Weight:        def.Weight,
+						Stage:         def.Stage,
+						Source:        v1alpha1.ModuleSourceEmbedded,
+						Critical:      def.Critical,
+						Requirements:  def.Requirements,
+						Accessibility: def.Accessibility.ToV1Alpha1(),
 					},
 				}
 				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
@@ -359,6 +360,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.DisableOptions = def.DisableOptions
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
 			module.Properties.Critical = def.Critical
+			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())

@@ -15,16 +15,18 @@
 package ssh
 
 import (
+	"reflect"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type NodeInterfaceWrapper struct {
-	sshClient *Client
+	sshClient node.SSHClient
 }
 
-func NewNodeInterfaceWrapper(sshClient *Client) *NodeInterfaceWrapper {
-	if sshClient == nil {
+func NewNodeInterfaceWrapper(sshClient node.SSHClient) *NodeInterfaceWrapper {
+	if sshClient == nil || reflect.ValueOf(sshClient).IsNil() {
 		return nil
 	}
 
@@ -49,6 +51,6 @@ func (n *NodeInterfaceWrapper) UploadScript(scriptPath string, args ...string) n
 	return n.sshClient.UploadScript(scriptPath, args...)
 }
 
-func (n *NodeInterfaceWrapper) Client() *Client {
+func (n *NodeInterfaceWrapper) Client() node.SSHClient {
 	return n.sshClient
 }

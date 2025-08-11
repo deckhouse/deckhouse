@@ -1,0 +1,10 @@
+- name: Docker auth
+  link: https://github.com/cesanta/docker_auth
+  description: docker_auth is an authentication server for Docker Registry 2.0, providing token-based authentication and authorization, with support for multiple user authentication methods and ACLs for access control. Configurable via YAML, it facilitates setups ranging from simple static lists to complex database integrations.
+  license: Apache License 2.0 (https://github.com/cesanta/docker_auth/blob/1.12.0/LICENSE)
+
+- name: Docker distribution
+  link: https://github.com/distribution/distribution
+  description: distribution/distribution is an open-source toolkit used to pack, ship, store, and deliver container content, providing a secure and scalable foundation for developing large-scale registry solutions or managing private registries. It supports the OCI Distribution Specification, which is used by major registry operators like Docker Hub and GitHub Container Registry.
+  logo: https://github.com/distribution/distribution/blob/main/distribution-logo.svg
+  license: Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)

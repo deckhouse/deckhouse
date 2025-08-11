@@ -23,12 +23,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/flant/docs-builder/internal/docs"
-	v1 "github.com/flant/docs-builder/internal/http/v1"
-	"github.com/flant/docs-builder/pkg/k8s"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/flant/docs-builder/internal/docs"
+	v1 "github.com/flant/docs-builder/internal/http/v1"
+	"github.com/flant/docs-builder/pkg/k8s"
 )
 
 // flags

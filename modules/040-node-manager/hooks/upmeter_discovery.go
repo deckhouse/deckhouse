@@ -17,9 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -78,8 +83,13 @@ type upmeterDiscovery struct {
 func collectDynamicProbeConfig(input *go_hook.HookInput) error {
 	// Input
 	key := "nodeManager.internal.upmeterDiscovery"
+	parseNodeGroupNames, err := parseNames(input.NewSnapshots.Get("nodegroups"))
+	if err != nil {
+		return fmt.Errorf("failed to parse nodegroup names: %w", err)
+	}
+
 	discovery := upmeterDiscovery{
-		EphemeralNodeGroupNames: parseNames(input.Snapshots["nodegroups"]),
+		EphemeralNodeGroupNames: parseNodeGroupNames,
 	}
 
 	// Output
@@ -88,11 +98,16 @@ func collectDynamicProbeConfig(input *go_hook.HookInput) error {
 }
 
 // parseNames parses filter string result to a sorted strings slice
-func parseNames(results []go_hook.FilterResult) []string {
+func parseNames(results []pkg.Snapshot) ([]string, error) {
 	s := set.New()
-	for _, name := range results {
-		s.Add(name.(string))
+
+	for name, err := range sdkobjectpatch.SnapshotIter[string](results) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over 'nodegroups' snapshot: %w", err)
+		}
+
+		s.Add(name)
 	}
 	s.Delete("") // throw away invalid ones
-	return s.Slice()
+	return s.Slice(), nil
 }

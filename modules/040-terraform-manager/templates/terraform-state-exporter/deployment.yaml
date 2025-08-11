@@ -104,15 +104,16 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         livenessProbe:
             httpGet:
               path: /livez
-              port: 8080
+              port: 9100
               scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 8080
+            port: 9100
             scheme: HTTPS
         ports:
         - containerPort: 9100

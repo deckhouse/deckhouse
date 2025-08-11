@@ -57,7 +57,7 @@ Deckhouse allows you to flexibly configure alerts for each namespace and specify
 
 - Empty space and inodes on a disk.
 - CPU usage for a node and a container.
-- Percent of `5xx` errors on `nginx-ingress`.
+- Percent of `5xx` errors on `ingress-nginx`.
 - Number of unavailable Pods in a `Deployment`, `StatefulSet`, `DaemonSet`.
 
 ## Alerts

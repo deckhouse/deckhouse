@@ -14,4 +14,5 @@ var _ = storage_class_change.RegisterHook(storage_class_change.Args{
 	LabelSelectorValue: "trivy-server",
 	ObjectKind:         "StatefulSet",
 	ObjectName:         "trivy-server",
+	AllowEmptyDir:      true,
 })

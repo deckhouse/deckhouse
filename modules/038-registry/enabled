@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# 	 http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /deckhouse/shell_lib.sh
+
+function __main__() {
+  # By default, the module is disabled
+  echo "false" >"$MODULE_ENABLED_RESULT"
+
+  # Enable the module only if all of the following conditions are met:
+
+  # 1. global.clusterConfiguration exists — this indicates that the cluster is managed by Deckhouse.
+  #    If it's missing, the cluster is considered externally managed (e.g., AWS, Yandex Cloud),
+  #    and the module must not be enabled.
+  #    This check is consistent with the validation performed by the control-plane-manager on startup.
+
+  # 2. global.clusterConfiguration.defaultCRI is set and is in the allowed list
+  #    of container runtimes the module supports.
+
+  if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
+    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
+
+    case "$containerd_mode" in
+      "Containerd" | "ContainerdV2")
+        echo "true" >"$MODULE_ENABLED_RESULT"
+        ;;
+    esac
+  fi
+}
+
+enabled::run "$@"
