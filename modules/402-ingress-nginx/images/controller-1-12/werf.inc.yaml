@@ -166,8 +166,28 @@ shell:
 # from: dev-registry.deckhouse.io/base_images@sha256:85e8330e51b5c47ac58e489970eddb76842d86432e1b4ddb14f64ae4e9535451
 # final: false
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf
+image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf # FIXME delete
 from: dev-registry.deckhouse.io/base_images@sha256:93d2460c69ad88a016ea2b4c059141ae5ce49eabc802aa444a8cf8832ec5e19e
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-cpp # FIXME delete
+from: localhost:5001/base-images:ea5bb5848057cef68617b82e21dddad21a6d95be7874ebc9fa326200-1753713504829
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-grpc # FIXME delete
+from: localhost:5001/base-images:441fd72cbe538756b0d8e8396d6ac45d3de2e213b025cf1b7e9ee69a-1754910331227
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-re2 # FIXME delete
+from: localhost:5001/base-images:e81e39d5c2aaf9dc4d9973c6d8452ff996a1509fec894b230fcd83ad-1754909854258
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-icu # FIXME delete
+from: localhost:5001/base-images:6ef05d0e14787a44b922c481d16e9b70a9c3aef05f88cc49b1a98b88-1753713510664
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre # FIXME delete
+from: localhost:5001/base-images:44473f2d9600b08eeb81c7b96f0542124fd9b2851f4bb7f4c93d1ccf-1754916948365
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -192,12 +212,54 @@ import:
   to: /src/nginx-deps
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf
-  add: /
-  to: /
-  includePaths:
-  - usr/include/*
-  - usr/bin/*
-  - usr/lib/*
+  add: /usr
+  to: /protobuf
+  # includePaths:
+  # - usr/include/google/protobuf
+  # - usr/include/google/utf8*
+  # - usr/lib/cmake/protobuf
+  # - usr/lib/cmake/utf8_range
+  # - usr/bin/protoc*
+  # - usr/lib/libproto*
+  # - usr/lib/libutf8*
+  # - usr/lib/pkgconfig/libproto*
+  # - usr/lib/pkgconfig/utf8*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-cpp
+  add: /usr
+  to: /abseil-cpp
+  # includePaths:
+  # - usr/include/absl
+  # - usr/lib/cmake/absl
+  # - usr/lib/libabsl*
+  # - usr/lib/pkgconfig/absl*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-grpc
+  add: /usr
+  to: /grpc
+  # includePaths:
+  # - usr/include/grpc*
+  # - usr/lib/cmake/grpc
+  # - usr/lib/cmake/grpc/modules
+  # - usr/lib/libgrpc*
+  # - usr/lib/libgpr*
+  # - usr/lib/libaddress*
+  # - usr/lib/libupb*
+  # - usr/lib/libutf8_range_lib*
+  # - usr/lib/pkgconfig/gpr*
+  # - usr/lib/pkgconfig/grpc*
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-re2
+  add: /usr
+  to: /re2
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-icu
+  add: /usr
+  to: /icu
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre
+  add: /usr
+  to: /pcre
   before: install
 secrets:
 - id: SOURCE_REPO
@@ -205,15 +267,14 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache linux-headers autoconf automake libtool bash pkgconfig ninja
-  - apk add --no-cache build-base g++ cmake # FIXME bison flex
+  - apk add --no-cache build-base g++ cmake linux-headers autoconf automake libtool bash pkgconfig ninja
   # Mandatory
-  - apk add pcre-dev
+  # - apk add pcre-dev
   - apk add curl-dev
   - apk add libmaxminddb-dev
-  - apk add grpc-dev
+  # - apk add grpc-dev
   # - apk add protobuf-dev
-  # Maybe need (thinking)
+  # Maybe need (need think)
   # - apk add libxml2
   # - apk add yajl-dev lmdb-dev
   # ca-certificates
@@ -260,6 +321,12 @@ shell:
   # - apk add yaml-cpp
   # mercurial alpine-sdk findutils curl lmdb-tools wget doxygen bc unzip dos2unix coreutils
   install:
+  - cp -a /protobuf/* /usr
+  - cp -a /grpc/* /usr
+  - cp -a /abseil-cpp/* /usr
+  - cp -a /re2/* /usr
+  - cp -a /icu/* /usr
+  - cp -a /pcre/* /usr
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -630,11 +697,11 @@ shell:
   - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
   - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf # FIXME delete
 from: dev-registry.deckhouse.io/base_images@sha256:bfd71542919fd099c875d4090e581ff1a4f8d35ed70f3e6689ba83cde3068c7e
 final: false
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv
+image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv # FIXME delete
 from: dev-registry.deckhouse.io/base_images@sha256:4d5dca4e0b7a5e9e544f05f911b09d2ea7e2777b77ffc13df399b4e893645e01
 final: false
 ---
