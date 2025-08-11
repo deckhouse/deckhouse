@@ -10,7 +10,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.10.4-0.20250805135649-0a7c46faa487
+	github.com/flant/addon-operator v1.10.4-0.20250811073825-2361a30a2917
 	github.com/flant/kube-client v1.3.1
 	github.com/flant/shell-operator v1.9.1
 	github.com/go-openapi/spec v0.19.8
@@ -257,12 +257,12 @@ require (
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31 // indirect
 	github.com/wI2L/jsondiff v0.5.0 // indirect
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
-	github.com/werf/3p-helm v0.0.0-20250725100513-d2679f19b582 // indirect
+	github.com/werf/3p-helm v0.0.0-20250731134240-58a9eff8ec5b // indirect
 	github.com/werf/common-go v0.0.0-20250520111308-b0eda28dde0d // indirect
-	github.com/werf/kubedog v0.13.1-0.20250722214151-94b0a931853d // indirect
+	github.com/werf/kubedog v0.13.1-0.20250801120242-28c356abdc84 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.8.1-0.20250725103630-3b947dd149fc // indirect
+	github.com/werf/nelm v1.10.0 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
