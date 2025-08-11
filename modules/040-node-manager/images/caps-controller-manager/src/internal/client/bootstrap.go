@@ -98,8 +98,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
+			instanceScope.Logger.Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
+			instanceScope.Logger.Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 		if err != nil {
@@ -189,8 +191,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
+			instanceScope.Logger.Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
+			instanceScope.Logger.Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 		if err != nil {
