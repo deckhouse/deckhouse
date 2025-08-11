@@ -107,7 +107,8 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 		slog.String("backend", backend),
 		slog.Int("docs_count", len(state)))
 
-	bm.sender.Send(ctx, map[string]struct{}{backend: {}}, state)
+	// bm.sender.Send(ctx, map[string]struct{}{backend: {}}, state)
+	bm.sender.Send(ctx, map[string]struct{}{backend + "test": {}}, state) // test for breaked backends
 
 	bm.newBackends.Add(1)
 }

@@ -81,9 +81,6 @@ func (s *Sender) Send(ctx context.Context, listBackends map[string]struct{}, ver
 	wg := new(sync.WaitGroup)
 
 	for backend := range listBackends {
-		// test for breaked backends
-		listBackends = map[string]struct{}{}
-		_ = listBackends
 		syncChan <- struct{}{}
 		wg.Add(1)
 
