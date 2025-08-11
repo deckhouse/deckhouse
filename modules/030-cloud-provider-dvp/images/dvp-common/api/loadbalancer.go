@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -117,6 +118,7 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	name := loadBalancer.Name
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
+
 	lbKey := lbLabelKey(name)
 	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
@@ -125,11 +127,12 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
-	if svc.Spec.Selector == nil {
-		svc.Spec.Selector = map[string]string{}
+	mergedSelector := map[string]string{}
+	for k, v := range service.Spec.Selector {
+		mergedSelector[k] = v
 	}
-	svc.Spec.Selector[lbKey] = "loadbalancer"
-
+	mergedSelector[lbKey] = "loadbalancer"
+	svc.Spec.Selector = mergedSelector
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
 	svc.Spec.ExternalIPs = []string{}
@@ -191,6 +194,12 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
+	mergedSelector := map[string]string{}
+	for k, v := range service.Spec.Selector {
+		mergedSelector[k] = v
+	}
+	mergedSelector[lbKey] = "loadbalancer"
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -202,9 +211,7 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Ports:                 ports,
 			Type:                  corev1.ServiceTypeLoadBalancer,
 			ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
-			Selector: map[string]string{
-				lbKey: "loadbalancer",
-			},
+			Selector:              mergedSelector,
 		},
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
@@ -263,7 +270,7 @@ func (lb *LoadBalancerService) pollLoadBalancer(ctx context.Context, name string
 
 func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) (retErr error) {
 	defer func() {
-		if err := lb.removeNodeLabelsByKey(ctx, lbLabelKey(name)); err != nil {
+		if err := lb.removeVMLabelsByKey(ctx, lbLabelKey(name)); err != nil {
 			klog.Errorf("Failed to remove node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
 			if retErr == nil {
 				retErr = err
@@ -285,25 +292,23 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	return nil
 }
 
-func (lb *LoadBalancerService) removeNodeLabelsByKey(ctx context.Context, lbKey string) error {
-	sel := labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"})
-	list, err := lb.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: sel.String()})
-	if err != nil {
+func (lb *LoadBalancerService) removeVMLabelsByKey(ctx context.Context, lbKey string) error {
+	var vmList v1alpha2.VirtualMachineList
+	if err := lb.client.List(ctx, &vmList, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"}),
+	}); err != nil {
 		return err
 	}
-	for i := range list.Items {
-		node := &list.Items[i]
-		if node.Labels == nil {
+
+	cs := &ComputeService{Service: lb.Service}
+	for i := range vmList.Items {
+		vm := &vmList.Items[i]
+		hostname := vm.Labels[DVPVMHostnameLabel]
+		if hostname == "" {
 			continue
 		}
-		if _, ok := node.Labels[lbKey]; !ok {
-			continue
-		}
-
-		before := node.DeepCopy()
-		delete(node.Labels, lbKey)
-
-		if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
+		if err := cs.RemoveVMLabelByHostname(ctx, hostname, lbKey); err != nil && !k8serrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -316,62 +321,42 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 	lbKey string,
 ) error {
 	desired := make(map[string]struct{}, len(nodes))
+	hostnames := make([]string, 0, len(nodes))
 	for _, in := range nodes {
 		desired[in.Name] = struct{}{}
+		hostnames = append(hostnames, in.Name)
+	}
 
-		node, err := lb.clientset.CoreV1().Nodes().Get(ctx, in.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	cs := &ComputeService{Service: lb.Service}
 
-		before := node.DeepCopy()
-		if node.Labels == nil {
-			node.Labels = make(map[string]string)
-		}
-		if node.Labels[lbKey] != "loadbalancer" {
-			node.Labels[lbKey] = "loadbalancer"
-			if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
-				return err
-			}
+	for _, h := range hostnames {
+		if err := cs.EnsureVMLabelByHostname(ctx, h, lbKey, "loadbalancer"); err != nil {
+			return fmt.Errorf("ensure VM label for hostname %q: %w", h, err)
 		}
 	}
 
-	sel := labels.SelectorFromSet(labels.Set{
-		lbKey: "loadbalancer",
-	})
-	list, err := lb.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{LabelSelector: sel.String()})
-	if err != nil {
-		return err
+	var vml v1alpha2.VirtualMachineList
+	if err := lb.client.List(ctx, &vml, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"}),
+	}); err != nil {
+		return fmt.Errorf("list VMs by %s=loadbalancer: %w", lbKey, err)
 	}
 
-	for i := range list.Items {
-		nodeName := list.Items[i].Name
-		if _, ok := desired[nodeName]; ok {
+	for i := range vml.Items {
+		vm := &vml.Items[i]
+		hostname := vm.Labels[DVPVMHostnameLabel]
+		if hostname == "" {
 			continue
 		}
-
-		node, err := lb.clientset.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-		if err != nil {
-			if k8serrors.IsNotFound(err) {
-				continue
-			}
-			return err
-		}
-
-		if node.Labels == nil {
+		if _, ok := desired[hostname]; ok {
 			continue
 		}
-
-		if _, ok := node.Labels[lbKey]; !ok {
-			continue
-		}
-
-		before := node.DeepCopy()
-		delete(node.Labels, lbKey)
-		if err := lb.client.Patch(ctx, node, client.MergeFrom(before)); err != nil {
-			return err
+		if err := cs.RemoveVMLabelByHostname(ctx, hostname, lbKey); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("remove VM label for hostname %q: %w", hostname, err)
 		}
 	}
+
 	return nil
 }
 

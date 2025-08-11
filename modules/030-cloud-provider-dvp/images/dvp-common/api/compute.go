@@ -416,3 +416,36 @@ func (c *ComputeService) DeleteCloudInitProvisioningSecret(ctx context.Context, 
 	}
 	return nil
 }
+
+func (c *ComputeService) EnsureVMLabelByHostname(ctx context.Context, hostname, key, val string) error {
+	vm, err := c.GetVMByHostname(ctx, hostname)
+	if err != nil {
+		return err
+	}
+
+	before := vm.DeepCopy()
+	if vm.Labels == nil {
+		vm.Labels = map[string]string{}
+	}
+	if cur, ok := vm.Labels[key]; ok && cur == val {
+		return nil
+	}
+	vm.Labels[key] = val
+	return c.client.Patch(ctx, vm, client.MergeFrom(before))
+}
+
+func (c *ComputeService) RemoveVMLabelByHostname(ctx context.Context, hostname, key string) error {
+	vm, err := c.GetVMByHostname(ctx, hostname)
+	if err != nil {
+		return err
+	}
+	if vm.Labels == nil {
+		return nil
+	}
+	if _, ok := vm.Labels[key]; !ok {
+		return nil
+	}
+	before := vm.DeepCopy()
+	delete(vm.Labels, key)
+	return c.client.Patch(ctx, vm, client.MergeFrom(before))
+}
