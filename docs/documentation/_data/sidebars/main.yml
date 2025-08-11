@@ -568,7 +568,7 @@ entries:
                         ru: NLB
                       folders:
                         - title:
-                            en: Balancing by MetalLB means
+                            en: Balancing with MetalLB
                             ru: Балансировка средствами MetalLB
                           url: /admin/configuration/network/ingress/nlb/metallb.html
                         - title:

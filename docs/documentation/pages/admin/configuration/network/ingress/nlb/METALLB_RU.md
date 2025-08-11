@@ -5,14 +5,14 @@ lang: ru
 ---
 
 Модуль [`metallb`](../../../../../modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
-Он подходит как для bare metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
+Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->
 
 Поддерживаются два режима работы:
 
 - **Layer 2** — усовершенствованный (относительно стандартного режима L2 в MetalLB) механизм балансировки, который позволяет использовать несколько публичных адресов для сервисов.
-- **BGP** — полностью основан на решении [MetalLB](https://metallb.universe.tf/) и доступен только в редакции Enterprise Edition.
+- **BGP** — полностью основан на решении [MetalLB](https://metallb.universe.tf/) и доступен только в DKP Enterprise Edition.
 
 ## Режим Layer 2
 
@@ -25,7 +25,7 @@ lang: ru
 
 ### Преимущества модуля перед классическим MetalLB
 
-В классическом MetalLB (режим L2) при создании Service с типом `LoadBalancer` балансировка работает за счёт того, что один из узлов кластера имитирует ARP-ответы от публичного IP. Это означает:
+В классическом MetalLB (режим L2) при создании сервиса с типом LoadBalancer балансировка работает за счёт того, что один из узлов кластера имитирует ARP-ответы от публичного IP. Это означает:
 
 - Одновременно только один узел обслуживает весь входящий трафик для данного IP.
 - Узел, выбранный в качестве лидера, становится «узким местом» без возможности горизонтального масштабирования.
@@ -34,11 +34,11 @@ lang: ru
 <div data-presentation="../../../../../presentations/metallb/basics_metallb_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1cs1uKeX53DB973EMtLFcc8UQ8BFCW6FY2vmEWua1tu8/ --->
 
-Модуль `metallb` устраняет эти ограничения. Он предоставляет ресурс `MetalLoadBalancerClass`, который позволяет:
+Модуль `metallb` устраняет эти ограничения. Он предоставляет ресурс MetalLoadBalancerClass, который позволяет:
 
-- Связать группу узлов с пулом IP-адресов с помощью `nodeSelector`;
-- Создать стандартный Service с типом `LoadBalancer` и указать имя нужного `MetalLoadBalancerClass`;
-- Через аннотацию определить количество IP-адресов для L2-анонсирования.
+- связать группу узлов с пулом IP-адресов с помощью `nodeSelector`;
+- создать стандартный объект Service с типом LoadBalancer и указать имя нужного MetalLoadBalancerClass;
+- через аннотацию определить количество IP-адресов для L2-анонсирования.
 
 <div data-presentation="../../../../../presentations/metallb/basics_metallb_l2balancer_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jDqC4Bhg5NMLZWaFM32bIAzqpkUo0hOkAaRzC0yKRxE/ --->
@@ -46,7 +46,7 @@ lang: ru
 Таким образом:
 
 - Приложение получает сразу несколько публичных IP. Их нужно указать как A-записи в DNS.
-- Для масштабирования достаточно добавить балансировочные узлы; связанные с ними Service создадутся автоматическипотребуется лишь добавить их в список A-записей прикладного домена.
+- Для масштабирования достаточно добавить балансировочные узлы; связанные с ними объекты Service создадутся автоматически — потребуется лишь добавить их в список A-записей прикладного домена.
 - При выходе одного из балансировщиков из строя трафик переключится только частично, без полного разрыва соединений.
 
 #### Сравнение поведения
@@ -63,115 +63,123 @@ lang: ru
 
 ### Пример использования MetalLB в режиме L2 LoadBalancer
 
-1. Включите модуль:
+1. Включите модуль `metallb`:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: metallb
-    spec:
-      enabled: true
-      version: 2
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: metallb
+   spec:
+     enabled: true
+     version: 2
+   ```
 
 1. Подготовьте приложение, которое хотите опубликовать:
 
-    ```shell
-    d8 k create deploy nginx --image=nginx
-    ```
+   ```shell
+   d8 k create deploy nginx --image=nginx
+   ```
 
 1. Создайте ресурс MetalLoadBalancerClass:
 
-    ```yaml
-    apiVersion: network.deckhouse.io/v1alpha1
-    kind: MetalLoadBalancerClass
-    metadata:
-      name: ingress
-    spec:
-      addressPool:
-        - 192.168.2.100-192.168.2.150
-      isDefault: false
-      nodeSelector:
-        node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
-      type: L2
-    ```
+   ```yaml
+   apiVersion: network.deckhouse.io/v1alpha1
+   kind: MetalLoadBalancerClass
+   metadata:
+     name: ingress
+   spec:
+     addressPool:
+       - 192.168.2.100-192.168.2.150
+     isDefault: false
+     nodeSelector:
+       node-role.kubernetes.io/loadbalancer: "" # Селектор узлов-балансировщиков.
+     type: L2
+   ```
 
 1. Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass:
 
-    ```yaml
-    apiVersion: v1
-    kind: Service
-    metadata:
-      name: nginx-deployment
-      annotations:
-        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-    spec:
-      type: LoadBalancer
-      loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
-      ports:
-      - port: 8000
-        protocol: TCP
-        targetPort: 80
-      selector:
-        app: nginx
-    ```
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: nginx-deployment
+     annotations:
+       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+   spec:
+     type: LoadBalancer
+     loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
+     ports:
+     - port: 8000
+       protocol: TCP
+       targetPort: 80
+     selector:
+       app: nginx
+   ```
 
-В результате, созданному сервису с типом `LoadBalancer` будут присвоены адреса в заданном количестве:
+В результате, созданному сервису с типом LoadBalancer будут присвоены адреса в заданном количестве:
 
 ```shell
-$ d8 k get svc
+d8 k get svc
+```
+
+Пример вывода:
+
+```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```
 
-Полученные EXTERNAL-IP можно прописывать в качестве A-записей для прикладного домена:
+Полученные `EXTERNAL-IP` можно прописывать в качестве A-записей для прикладного домена:
 
 ```shell
-$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
-200
-$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
-200
-$ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
+curl -s -o /dev/null -w "%{http_code}" 192.168.2.100:8000
+curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
+curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
+```
+
+Пример вывода:
+
+```console
 200
 ```
 
 ## Режим BGP
 
 {% alert level="info" %}
-Доступен только в редакции Enterprise Edition.
+Доступен только в DKP Enterprise Edition.
 {% endalert %}
 
-`metallb` в режиме BGP используется для предоставления сервисов типа `LoadBalancer` в кластерах Kubernetes, развёрнутых на физической инфраструктуре.
-IP-адреса сервисов анонсируются напрямую в маршрутизаторы (или Top-of-Rack коммутаторы) с помощью протокола BGP.
+`metallb` в режиме BGP используется для предоставления сервисов типа LoadBalancer в кластерах Kubernetes, развёрнутых на физической инфраструктуре.
+IP-адреса сервисов анонсируются напрямую в маршрутизаторы (или Top-of-Rack-коммутаторы) с помощью протокола BGP.
 
 ### Принцип работы
 
 #### Конфигурация
 
-- Определяется пул IP-адресов, доступных для назначения Service'ам.
+- Определяется пул IP-адресов, доступных для назначения сервисам.
 - Указываются параметры BGP-сессий: AS (Autonomous System) number кластера Kubernetes, IP-адреса маршрутизаторов (пиров), AS number пиров, пароли для аутентификации (при необходимости).
 - Для каждого пула IP-адресов могут быть заданы специфические параметры анонсирования, например, community strings.
 
 #### Установка BGP-сессий
 
-- На каждом узле кластера Kubernetes, где запущен `metallb`, компонент speaker устанавливает BGP-сессии с указанными маршрутизаторами.
+- На каждом узле кластера Kubernetes, где запущен `metallb`, компонент `speaker` устанавливает BGP-сессии с указанными маршрутизаторами.
 - Выполняется обмен маршрутной информацией между `metallb` и маршрутизаторами.
 
-#### Назначение IP-адресов Service'ам
+#### Назначение IP-адресов сервисам
 
-- При создании Service типа `LoadBalancer`, `metallb` выбирает свободный IP-адрес из сконфигурированного пула и назначает его Service'у.
-- Компонент controller отслеживает изменения в Service'ах и управляет назначениями IP-адресов.
+- При создании объекта Service типа LoadBalancer, `metallb` выбирает свободный IP-адрес из сконфигурированного пула и назначает его сервису.
+- Компонент `controller` отслеживает изменения в сервисах и управляет назначениями IP-адресов.
 
 #### Анонсирование IP-адресов
 
-- После назначения IP-адреса компонент speaker на одном из узлов (лидере для данного Service) начинает анонсировать его через установленные BGP-сессии.
+- После назначения IP-адреса компонент `speaker` на одном из узлов (лидере для данного сервиса) начинает анонсировать его через установленные BGP-сессии.
 - Маршрутизаторы получают анонс и обновляют таблицы маршрутизации, направляя трафик на соответствующий узел.
 
 #### Распределение трафика
 
-- Маршрутизаторы используют протоколы ECMP (Equal-Cost Multi-Path) или другие алгоритмы балансировки для распределения трафика между узлами, анонсирующими один и тот же IP-адрес Service'а.
-- После доставки на узел входящий трафик перенаправляется на поды Service'а с помощью механизмов используемого CNI (iptables/IPVS, eBPF-программы и т.д.).
+- Маршрутизаторы используют протоколы Equal-Cost Multi-Path (ECMP) или другие алгоритмы балансировки для распределения трафика между узлами, анонсирующими один и тот же IP-адрес сервиса.
+- После доставки на узел входящий трафик перенаправляется на поды сервиса с помощью механизмов используемого CNI (iptables/IPVS, eBPF-программы и т.д.).
 
 ### Преимущества использования BGP
 
@@ -189,30 +197,30 @@ IP-адреса сервисов анонсируются напрямую в м
 
 ### Пример использования MetalLB в режиме BGP LoadBalancer
 
-1. Включите модуль и настройте все необходимые параметры:
+1. Включите модуль `metallb` и настройте все необходимые параметры:
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    metadata:
-      name: metallb
-    spec:
-      enabled: true
-      settings:
-        addressPools:
-        - addresses:
-          - 192.168.219.100-192.168.219.200
-          name: mypool
-          protocol: bgp
-        bgpPeers:
-        - hold-time: 3s
-          my-asn: 64600
-          peer-address: 172.18.18.10
-          peer-asn: 64601
-        speaker:
-          nodeSelector:
-            node-role.deckhouse.io/metallb: ""
-      version: 2
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: metallb
+   spec:
+     enabled: true
+     settings:
+       addressPools:
+       - addresses:
+         - 192.168.219.100-192.168.219.200
+         name: mypool
+         protocol: bgp
+       bgpPeers:
+       - hold-time: 3s
+         my-asn: 64600
+         peer-address: 172.18.18.10
+         peer-asn: 64601
+       speaker:
+         nodeSelector:
+           node-role.deckhouse.io/metallb: ""
+     version: 2
+   ```
 
 1. Настройте BGP-пиринг на сетевом оборудовании.
