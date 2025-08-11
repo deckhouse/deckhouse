@@ -150,7 +150,6 @@ spec:
 {{- end }}
             - start
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
-          {{- end }}
           imagePullPolicy: Always
           env:
 {{- if (.Values.global.enabledModules | has "control-plane-manager") }}
