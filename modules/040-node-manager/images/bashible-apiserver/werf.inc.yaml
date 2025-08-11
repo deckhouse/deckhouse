@@ -58,6 +58,7 @@ import:
   add: /src/bashible-apiserver
   to: /bashible-apiserver
   before: setup
+{{- include "image mount points" . }}
 git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 - add: /{{ .ModulePath }}candi/bashible
