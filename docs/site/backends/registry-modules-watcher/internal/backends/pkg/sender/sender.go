@@ -104,6 +104,10 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 	for _, version := range versions {
 		if version.Task == backends.TaskDelete {
 			err := s.delete(ctx, backend, version)
+			if err != nil && errors.Is(err, ErrRequestTimedOut) {
+				s.logger.Error("backend delete processing stopped", slog.String("backend", backend), log.Err(err))
+				return
+			}
 			if err != nil {
 				s.logger.Error("send delete docs", log.Err(err))
 			}
@@ -126,6 +130,10 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 	}
 
 	err := s.build(ctx, backend)
+	if err != nil && errors.Is(err, ErrRequestTimedOut) {
+		s.logger.Error("backend build processing stopped", slog.String("backend", backend), log.Err(err))
+		return
+	}
 	if err != nil {
 		s.logger.Error("send build docs", log.Err(err))
 	}
@@ -149,6 +157,7 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 		return fmt.Errorf("client: could not create request: %s", err)
 	}
 
+	var criticalError error
 	operation := func() error {
 		// before request
 		timeBeforeRequest := time.Now()
@@ -156,6 +165,10 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				criticalError = ErrRequestTimedOut
+				return nil
+			}
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
@@ -187,6 +200,9 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
 		return fmt.Errorf("send request: %w", err)
+	}
+	if criticalError != nil {
+		return fmt.Errorf("send request: critical error: %w", criticalError)
 	}
 
 	return nil
@@ -270,6 +286,8 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
+	var criticalError error
+
 	operation := func() error {
 		// before request
 		timeBeforeRequest := time.Now()
@@ -277,6 +295,10 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
+			if err, ok := err.(net.Error); ok && err.Timeout() {
+				criticalError = ErrRequestTimedOut
+				return nil
+			}
 			return fmt.Errorf("client: error making http request: %s", err)
 		}
 
@@ -310,6 +332,9 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))
 	if err != nil {
 		return fmt.Errorf("send request: %w", err)
+	}
+	if criticalError != nil {
+		return fmt.Errorf("send request: critical error: %w", criticalError)
 	}
 
 	return nil
