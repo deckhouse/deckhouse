@@ -4,13 +4,13 @@
 
 {% if page.ee_only == true and page.se_support == nil %}
 {% alert level="warning" %}
-Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 {% endif %}
 
 {% if page.ee_only == true and page.platform_code == 'vsphere'%}
 {% alert level="warning" %}
-The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+Installation of {{ page.title_main }} is only possible in the Standard Edition+ and Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 {% endif %}
 
