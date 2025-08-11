@@ -4,7 +4,7 @@ permalink: ru/storage/admin/external/vsphere.html
 lang: ru
 ---
 
-Модуль `csi-vsphere` предназначен для организации заказа (provisioning) дисков в статических кластерах на базе VMware vSphere, где отсутствует возможность использовать модуль [`cloud-provider-vsphere`](../../modules/cloud-provider-vsphere/).
+Модуль `csi-vsphere` предназначен для организации заказа (provisioning) дисков в статических кластерах на базе VMware vSphere, где отсутствует возможность использовать модуль [`cloud-provider-vsphere`](../../../modules/cloud-provider-vsphere/).
 
 ## Системные требования
 
@@ -143,4 +143,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 Модуль автоматически создает StorageClass для каждого Datastore и DatastoreCluster из зон.
 
-Также он позволяет настроить имя StorageClass’а, который будет использоваться в кластере по умолчанию (параметр [default](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) и отфильтровать ненужные StorageClass’ы (параметр [exclude](../../modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).
+Также он позволяет настроить имя StorageClass’а, который будет использоваться в кластере по умолчанию (параметр [default](../../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) и отфильтровать ненужные StorageClass’ы (параметр [exclude](../../../modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).

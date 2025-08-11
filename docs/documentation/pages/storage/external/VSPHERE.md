@@ -3,7 +3,7 @@ title: "vSphere data storage"
 permalink: en/storage/admin/external/vsphere.html
 ---
 
-The `csi-vsphere` module is designed for provisioning disks in static clusters based on VMware vSphere, where it is not possible to use the [`cloud-provider-vsphere`](../../modules/cloud-provider-vsphere/) module.
+The `csi-vsphere` module is designed for provisioning disks in static clusters based on VMware vSphere, where it is not possible to use the [`cloud-provider-vsphere`](../../../modules/cloud-provider-vsphere/) module.
 
 ## System requirements
 
@@ -142,4 +142,4 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 The module automatically creates a StorageClass for each Datastore and DatastoreCluster from zones.
 
-It also allows you to configure the name of the default StorageClass to be used in the cluster (parameter [default](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) and filter out unnecessary StorageClasses (parameter [exclude](../../modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).
+It also allows you to configure the name of the default StorageClass to be used in the cluster (parameter [default](../../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass)) and filter out unnecessary StorageClasses (parameter [exclude](../../../modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude)).
