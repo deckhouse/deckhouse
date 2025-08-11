@@ -1,18 +1,5 @@
 type: object
 properties:
-  imagesOverride:
-    type: object
-    default: {}
-    description: |
-      Images override
-    properties:
-      deckhouse:
-        type: string
-        description: |
-          Deckhouse img full path
-        x-example:
-          - dev-registry.deckhouse.io/deckhouse:latest
-        x-dmt-default: ""
 
   logLevel:
     type: string
