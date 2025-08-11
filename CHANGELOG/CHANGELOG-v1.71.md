@@ -14,6 +14,7 @@
 
 
  - **[admission-policy-engine]** Added SecurityPolicy with ability to check images, signed with cosign (for SE+). [#13699](https://github.com/deckhouse/deckhouse/pull/13699)
+ - **[candi]** Add rosa 12.6. [#14631](https://github.com/deckhouse/deckhouse/pull/14631)
  - **[candi]** Add bashible step to check for upgrade k8s to 1.31 and ask for approval. [#14390](https://github.com/deckhouse/deckhouse/pull/14390)
     Upgrade process on the node will be stopped  until it's not approved.
  - **[candi]** contained configuration && new registry bashible context model [#14147](https://github.com/deckhouse/deckhouse/pull/14147)
@@ -23,6 +24,7 @@
  - **[cni-cilium]** Added optional least-conn load-balancing algorithm for Services. [#13867](https://github.com/deckhouse/deckhouse/pull/13867)
  - **[cni-cilium]** Added a traffic encryption mode using WireGuard (`pod-to-pod` and `node-to-node`). [#13749](https://github.com/deckhouse/deckhouse/pull/13749)
  - **[cni-cilium]** Cni-cilium is updated to consider Virtualization Nesting Level when discovering tunnel-port value. [#9996](https://github.com/deckhouse/deckhouse/pull/9996)
+ - **[deckhouse-controller]** add validation for module source changes [#14821](https://github.com/deckhouse/deckhouse/pull/14821)
  - **[deckhouse-controller]** Added user notify when module config has conflict. [#14296](https://github.com/deckhouse/deckhouse/pull/14296)
  - **[deckhouse-controller]** Optimized ModuleRelease update flow. [#14144](https://github.com/deckhouse/deckhouse/pull/14144)
  - **[deckhouse-controller]** Added readiness probe hook support. [#13748](https://github.com/deckhouse/deckhouse/pull/13748)
@@ -46,6 +48,7 @@
 ## Fixes
 
 
+ - **[candi]** containerd migration fix [#14622](https://github.com/deckhouse/deckhouse/pull/14622)
  - **[candi]** Resolved the issue with downloading packages for external modules using ctr for bb-rp-fetch. [#14236](https://github.com/deckhouse/deckhouse/pull/14236)
  - **[candi]** Fixed double preview version in candi/version_map. [#13670](https://github.com/deckhouse/deckhouse/pull/13670)
  - **[candi]** Added audit rules for containerd. [#13560](https://github.com/deckhouse/deckhouse/pull/13560)
@@ -55,6 +58,7 @@
  - **[cloud-provider-dynamix]** Fixed `sshPublicKey` absence on CloudEphemeral nodes. [#13907](https://github.com/deckhouse/deckhouse/pull/13907)
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled. [#14766](https://github.com/deckhouse/deckhouse/pull/14766)
  - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
  - **[cni-cilium]** EgressGateway controller optimized for large setups with lot's of EgressGateways. [#14288](https://github.com/deckhouse/deckhouse/pull/14288)
@@ -87,6 +91,7 @@
  - **[metallb]** Fixed import logic of MetalLB dashboards. [#13478](https://github.com/deckhouse/deckhouse/pull/13478)
  - **[monitoring-ping]** Reducing PROCESSOR time consumption by changing the method of waiting for incoming packets. [#14502](https://github.com/deckhouse/deckhouse/pull/14502)
  - **[node-local-dns]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
+ - **[node-manager]** containerd migration fix [#14622](https://github.com/deckhouse/deckhouse/pull/14622)
  - **[node-manager]** Changed draining logic in update_approval [#14646](https://github.com/deckhouse/deckhouse/pull/14646)
  - **[node-manager]** fixed render nvidia-mig-manager [#14560](https://github.com/deckhouse/deckhouse/pull/14560)
  - **[node-manager]** Added support scaling from zero to CAPI node groups. [#13744](https://github.com/deckhouse/deckhouse/pull/13744)

@@ -8,11 +8,11 @@ description: ""
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-- During the first switch, the `Containerd V1` service will be restarted, as the switch to the [new authorization configuration](faq.html#how-to-prepare-containerd-v1) will take place.
+- During the first switch, the containerd v1 service will be restarted, as the switch to the [new authorization configuration](faq.html#how-to-prepare-containerd-v1) will take place.
 - When changing the registry mode or registry parameters, Deckhouse will be restarted.
 {% endalert %}
 
-1. If the cluster is running with `Containerd V1`, [you need to prepare custom containerd configuration](faq.html#how-to-prepare-containerd-v1).
+1. If the cluster is running with containerd v1, [you need to prepare custom containerd configuration](faq.html#how-to-prepare-containerd-v1).
 
 1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
 
@@ -168,4 +168,8 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    target_mode: Unmanaged
    ```
 
-1. If you need to switch back to the previous `Containerd V1` auth configuration, refer to the [instruction](faq.html#how-to-switch-back-to-the-previous-containerd-v1-auth-configuration).
+1. If you need to switch back to the previous containerd v1 auth configuration, refer to the [instruction](faq.html#how-to-switch-back-to-the-previous-containerd-v1-auth-configuration).
+
+{% alert level="warning" %}
+This containerd configuration format is deprecated.
+{% endalert %}

@@ -28,8 +28,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 type KubeClientSwitcher struct {
@@ -59,7 +62,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 
 	if convergeState.NodeUserCredentials == nil {
 		log.DebugLn("Generate node user")
-		nodeUser, nodeUserCredentials, err := generateNodeUser()
+		nodeUser, nodeUserCredentials, err := GenerateNodeUser()
 		if err != nil {
 			return fmt.Errorf("failed to generate NodeUser: %w", err)
 		}
@@ -115,7 +118,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		panic("Node interface is not ssh")
 	}
 
-	settings := sshCl.Settings
+	settings := sshCl.Session()
 
 	for nodeName, stateBytes := range state {
 		metaConfig, err := s.ctx.MetaConfig()
@@ -153,9 +156,14 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	kubeCl.KubeProxy.StopAll()
 
+	if !app.SSHLegacyMode {
+		log.DebugF("Old SSH Client: %-v\n", sshCl)
+		sshCl.Stop()
+	}
+
 	log.DebugLn("Create new ssh client for replacing kube client")
 
-	newSSHClient := ssh.NewClient(session.NewSession(session.Input{
+	sess := session.NewSession(session.Input{
 		User:           convergeState.NodeUserCredentials.Name,
 		Port:           settings.Port,
 		BastionHost:    settings.BastionHost,
@@ -164,23 +172,34 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		ExtraArgs:      settings.ExtraArgs,
 		AvailableHosts: settings.AvailableHosts(),
 		BecomePass:     convergeState.NodeUserCredentials.Password,
-	}), []session.AgentPrivateKey{privateKey})
-	// Avoid starting a new ssh agent
-	newSSHClient.InitializeNewAgent = false
+	})
 
-	_, err = newSSHClient.Start()
+	var newSSHClient node.SSHClient
+	if app.SSHLegacyMode {
+		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
+		// Avoid starting a new ssh agent
+		newSSHClient.(*clissh.Client).InitializeNewAgent = false
+	} else {
+		pkeys := append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
+		newSSHClient = gossh.NewClient(sess, pkeys)
+	}
+
+	err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
 	log.DebugLn("ssh client started for replacing kube client")
 
-	err = newSSHClient.Agent.AddKeys(newSSHClient.PrivateKeys)
-	if err != nil {
-		return fmt.Errorf("failed to add keys to ssh agent: %w", err)
-	}
+	// adding keys to agent is actual only in legacy mode
+	if app.SSHLegacyMode {
+		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
+		if err != nil {
+			return fmt.Errorf("failed to add keys to ssh agent: %w", err)
+		}
 
-	log.DebugLn("private keys added for replacing kube client")
+		log.DebugLn("private keys added for replacing kube client")
+	}
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {

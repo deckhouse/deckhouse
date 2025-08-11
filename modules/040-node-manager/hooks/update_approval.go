@@ -150,7 +150,7 @@ type updateApprover struct {
 }
 
 func calculateConcurrency(ngCon *intstr.IntOrString, totalNodes int) int {
-	var concurrency = 1
+	concurrency := 1
 	switch ngCon.Type {
 	case intstr.Int:
 		concurrency = ngCon.IntValue()
@@ -218,7 +218,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
 		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
-			var allReady = true
+			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
 					allReady = false
@@ -296,7 +296,7 @@ func (ar *updateApprover) approveDisruptions(input *go_hook.HookInput) error {
 		if !node.IsApproved {
 			continue
 		}
-		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) {
+		if node.IsDraining || (!node.IsDisruptionRequired && !node.IsRollingUpdate) || node.IsDisruptionApproved {
 			continue
 		}
 
@@ -391,8 +391,8 @@ func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApp
 }
 
 func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
-	input.Logger.Info("Delete machine d8-cloud-instance-manager due to RollingUpdate strategy", slog.String("name", node.Name), slog.String("ng", node.NodeGroup))
-	input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", node.Name)
+	input.Logger.Info("Delete instances due to RollingUpdate strategy", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
+	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "Instance", "", node.Name)
 	ar.finished = true
 }
 

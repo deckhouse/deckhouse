@@ -107,6 +107,7 @@ function inhibitor::start() {
   if bb-flag? reboot; then
     exit 0
   fi
+  bb-event-fire 'restart-inhibitor-if-needed'  
 
   # Do nothing if already started.
   if systemctl is-active --quiet "${inhibitor_service_name}"; then

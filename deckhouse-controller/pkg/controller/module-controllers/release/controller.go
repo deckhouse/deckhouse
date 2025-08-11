@@ -1087,6 +1087,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
+		"error":   "",
 	}
 
 	if err = def.Validate(values, logger); err != nil {

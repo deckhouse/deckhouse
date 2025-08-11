@@ -1629,6 +1629,10 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/operator-trivy/faq.html
+                - title:
+                    en: "Custom Resources"
+                    ru: "Custom Resources"
+                  url: /modules/operator-trivy/cr.html
     - title:
         en: Storage
         ru: Хранилище

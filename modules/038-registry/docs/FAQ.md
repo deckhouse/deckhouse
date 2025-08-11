@@ -3,9 +3,9 @@ title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to prepare Containerd V1?
+## How to prepare containerd v1?
 
-When switching to the `Direct` mode, the `Containerd V1` service will be restarted.  
+When switching to the `Direct` mode, the containerd v1 service will be restarted.  
 The authorization configuration will be switched to Mirror Auth (this configuration is used by default in `Containerd V2`).  
 After switching back to `Unmanaged`, the updated authorization configuration will remain unchanged.
 
@@ -37,12 +37,12 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with `Containerd V1` in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) present on nodes with containerd v1 in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
 {% alert level="danger" %}
-- After deleting [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
+- After deleting [custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
 - New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
 
@@ -92,12 +92,16 @@ If such configurations exist:
 
 1. Delete auth configurations from the `/etc/containerd/conf.d` directory.
 
-## How to switch back to the previous Containerd V1 auth configuration?
+## How to switch back to the previous containerd v1 auth configuration?
+
+{% alert level="warning" %}
+This containerd configuration format is deprecated.
+{% endalert %}
 
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
 - When switching to the legacy `Containerd V1` auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.
-- [Custom auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
+- [Custom registry configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
 {% endalert %}
 
 1. Switch the registry mode to `Unmanaged`.
@@ -198,9 +202,9 @@ Description of conditions:
 
 | Condition                         | Description                                                                                                                                                                      |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContainerdConfigPreflightReady`  | State of the `containerd` configuration preflight check. Verifies there are no custom `containerd` auth configurations on the nodes.                                             |
-| `TransitionContainerdConfigReady` | State of preparing the `containerd` configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                 |
-| `FinalContainerdConfigReady`      | State of finalizing the switch to the new `containerd` mode. Verifies that the `containerd` configuration has been successfully applied and contains only the new mode settings. |
+| `ContainerdConfigPreflightReady`  | State of the containerd configuration preflight check. Verifies there are no custom containerd auth configurations on the nodes.                                             |
+| `TransitionContainerdConfigReady` | State of preparing the containerd configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                 |
+| `FinalContainerdConfigReady`      | State of finalizing the switch to the new containerd mode. Verifies that the containerd configuration has been successfully applied and contains only the new mode settings. |
 | `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                   |
 | `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                   |
 | `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                       |

@@ -524,6 +524,7 @@ spec:
 
             [Usage example...](usage.html#configuring-a-provider)
 
+            **Warning.** It is forbidden to use users and groups with the `system:` prefix. Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
           properties:
             spec:
               type: object

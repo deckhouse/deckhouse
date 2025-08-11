@@ -26,6 +26,8 @@ When publishing a new version of the module to the [update channel](../../deckho
 During its life cycle, a module may be at any of the following stages:
 
 - **Experimental** refers t to an experimental version. The module functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+  > Modules in the `Experimental` stage cannot be enabled by default.
+  > To allow the use of such modules, set the [allowExperimentalModules parameter](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to true.
 - **Preview** refers to a preliminary version. The module functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
 - **General Availability (GA)** refers to a generally available version. The module is ready to be used in production environments.
 - **Deprecated** refers to a module version that has been deprecated.
