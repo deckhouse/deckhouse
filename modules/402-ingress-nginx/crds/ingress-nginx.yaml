@@ -1263,16 +1263,16 @@ spec:
                   type: boolean
                   description: |
                     Enables NGINX profiling using Valgrind.
-                    A memory analysis report is saved to the /var/log/valgrind directory on the host.
-                    When enabled, Valgrind creates a file named memcheck.${timestamp}.log.
+                    A memory analysis report is saved to the `/var/log/valgrind` directory on the host.
+                    When enabled, Valgrind creates a file named `memcheck.${timestamp}.log`.
 
                     After debugging is complete, don't forget to disable profiling mode!
 
                     The report contains information about the process behavior, including potential memory leaks.
 
-                    > Caution: Enabling this option significantly increases memory usage and slows down HTTP/S request handling by the NGINX process.
+                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/S request handling by the NGINX process.
 
-                    > Be aware: When the option under Ingress is enabled, the IngressNginxController starts in privileged mode.
+                    > **Be aware.** When the option under Ingress is enabled, the IngressNginxController starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:
