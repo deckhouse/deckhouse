@@ -7,6 +7,10 @@ terraform {
       source = "terraform-provider-openstack/openstack"
       version = "1.32.0"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.4"
+    }
   }
   required_version = ">= 0.13"
 }

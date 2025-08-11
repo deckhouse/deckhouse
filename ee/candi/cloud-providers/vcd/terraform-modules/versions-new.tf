@@ -7,6 +7,10 @@ terraform {
       source = "vmware/vcd"
       version = "3.14.1"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.4"
+    }
   }
   required_version = ">= 0.13"
 }

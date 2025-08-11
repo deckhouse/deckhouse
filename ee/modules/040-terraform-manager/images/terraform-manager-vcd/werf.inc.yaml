@@ -11,6 +11,10 @@ import:
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
   before: setup
 {{- end }}
+- image: terraform-provider-null
+  add: /terraform-provider-null
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "nulltf") }}/{{ .TF.nulltf.namespace }}/{{ .TF.nulltf.type }}/{{ .TF.nulltf.version }}/linux_amd64/terraform-provider-null
+  before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false

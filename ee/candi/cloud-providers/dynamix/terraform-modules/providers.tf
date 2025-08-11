@@ -9,3 +9,5 @@ provider "decort" {
   app_id               = var.providerClusterConfiguration.provider.appId
   app_secret           = var.providerClusterConfiguration.provider.appSecret
 }
+
+provider "null" {}

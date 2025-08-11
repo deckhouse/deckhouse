@@ -7,6 +7,10 @@ terraform {
       version = ">=4.6.1"
       source  = "terraform-provider-decort/decort"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.4"
+    }
   }
   required_version = ">= 0.13"
 }

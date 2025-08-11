@@ -11,3 +11,5 @@ provider "openstack" {
   password    = var.providerClusterConfiguration.provider.password
   region      = var.providerClusterConfiguration.provider.region
 }
+
+provider "null" {}

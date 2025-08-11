@@ -12,3 +12,5 @@ provider "vcd" {
   allow_unverified_ssl = lookup(var.providerClusterConfiguration.provider, "insecure", false)
   max_retry_timeout = 60
 }
+
+provider "null" {}

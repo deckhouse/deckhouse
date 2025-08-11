@@ -8,6 +8,10 @@ import:
   add: /terraform-provider-yandex
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
+- image: terraform-provider-null
+  add: /terraform-provider-null
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "nulltf") }}/{{ .TF.nulltf.namespace }}/{{ .TF.nulltf.type }}/{{ .TF.nulltf.version }}/linux_amd64/terraform-provider-null
+  before: setup
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
