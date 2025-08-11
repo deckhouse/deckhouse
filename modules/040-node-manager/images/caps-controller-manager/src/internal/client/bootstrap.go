@@ -117,7 +117,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
-				if strings.Contains(str, "debug1: Exit status 2") {
+				if strings.Contains(str, "debug1: Exit status 2") || strings.Contains(str, "Process exited with status 2") {
 					return true
 				}
 			}
