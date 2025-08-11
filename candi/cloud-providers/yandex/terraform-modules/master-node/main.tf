@@ -98,6 +98,12 @@ resource "yandex_compute_disk" "kubernetes_data" {
   }
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = yandex_compute_instance.master.id
+  }
+}
+
 resource "yandex_compute_instance" "master" {
   name     = join("-", [local.prefix, "master", var.nodeIndex])
   hostname = join("-", [local.prefix, "master", var.nodeIndex])

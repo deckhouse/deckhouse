@@ -70,6 +70,13 @@ locals {
   base_security_groups = var.associate_ssh_accessible_sg == true ? [data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id] : [data.aws_security_group.node.id]
 }
 
+
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = aws_instance.master.id
+  }
+}
+
 resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType

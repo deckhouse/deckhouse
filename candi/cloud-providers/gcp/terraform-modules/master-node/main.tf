@@ -41,6 +41,12 @@ resource "google_compute_disk" "kubernetes_data" {
   }
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = google_compute_instance.master.id
+  }
+}
+
 resource "google_compute_instance" "master" {
   zone         = local.zone
   name         = join("-", [local.prefix, "master", var.nodeIndex])

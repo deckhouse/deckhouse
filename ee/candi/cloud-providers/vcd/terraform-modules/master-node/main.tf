@@ -52,6 +52,11 @@ resource "vcd_vm_internal_disk" "kubernetes_data"{
   unit_number     = 1
   bus_type        = "paravirtual"
 }
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = vcd_vapp_vm.master.id
+  }
+}
 
 resource "vcd_vapp_vm" "master" {
   vapp_name        = local.vapp_name

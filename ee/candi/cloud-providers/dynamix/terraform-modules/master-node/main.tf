@@ -50,6 +50,11 @@ resource "decort_disk" "kubernetes_data_disk" {
   }
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = decort_kvmvm.master_vm.id
+  }
+}
 resource "decort_kvmvm" "master_vm" {
   name           = local.master_node_name
   driver         = local.driver

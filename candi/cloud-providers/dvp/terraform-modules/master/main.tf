@@ -83,6 +83,12 @@ locals {
 
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = kubernetes_manifest.vm.id
+  }
+}
+
 resource "kubernetes_manifest" "vm" {
 
   field_manager {
