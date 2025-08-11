@@ -61,5 +61,6 @@ func RegisterAdmissionHandlers(
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", providerConfigurationHandler(schemaStore))
 	reg.RegisterHandler("/validate/v1/static-configuration-secret", staticConfigurationHandler(schemaStore))
 	reg.RegisterHandler("/validate/v1alpha1/update-policies", updatePolicyHandler(cli))
+	reg.RegisterHandler("/validate/v1alpha1/module-sources", sourceValidationHandler(cli))
 	reg.RegisterHandler("/validate/v1alpha1/deckhouse-releases", DeckhouseReleaseValidationHandler(cli, metricStorage, mm, exts))
 }
