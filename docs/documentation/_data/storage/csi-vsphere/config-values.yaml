@@ -53,7 +53,7 @@ properties:
     type: boolean
     description: |
       Disable time synchronization on the vSphere side.
-      > **Caution!** This parameter will not disable the NTP daemons in the guest OS, but only disable the time correction on the part of ESXi.
+      > **Caution.** This parameter will not disable the NTP daemons in the guest OS, but only disable the time correction on the part of ESXi.
   region:
     type: string
     description: |
