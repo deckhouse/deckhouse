@@ -244,8 +244,7 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 	}
 
 	b := backoff.NewExponentialBackOff()
-	// b.MaxElapsedTime = MaxElapsedTime
-	b.MaxElapsedTime = time.Minute // test
+	b.MaxElapsedTime = MaxElapsedTime
 	b.MaxInterval = MaxInterval
 
 	err = backoff.Retry(operation, backoff.WithMaxRetries(b, maxRetries))

@@ -86,8 +86,6 @@ func (s *registryscanner) processModules(ctx context.Context, registry Client, m
 		releaseChannels := getReleaseChannelsFromTags(tags)
 		vers := s.processReleaseChannels(ctx, registry.Name(), module, releaseChannels)
 		versions = append(versions, vers...)
-
-		// time.Sleep(10 * time.Second) // debug, delete this
 	}
 
 	return versions
