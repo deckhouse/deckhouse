@@ -102,3 +102,7 @@ Without a valid client certificate, access to the validation service will be den
 ### 016-verbose-maxmind-logs.patch
 
 Added additional logging for downloading GeoIP databases from the MaxMind service.
+
+### 017-maxmind-alerts.patch
+
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
