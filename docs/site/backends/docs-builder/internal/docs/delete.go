@@ -16,6 +16,7 @@ package docs
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -25,11 +26,14 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 	defer func() {
 		dur := time.Since(start).Seconds()
 		if svc.metrics != nil {
+			svc.logger.Info("Recording delete metrics", slog.String("status", status), slog.Float64("duration", dur))
 			svc.metrics.CounterAdd("docs_builder_delete_total", 1, map[string]string{"status": status})
 			svc.metrics.HistogramObserve("docs_builder_delete_duration_seconds", dur, map[string]string{"status": status}, nil)
 			if status == "ok" {
 				svc.updateCachedModulesGauge()
 			}
+		} else {
+			svc.logger.Warn("Metrics storage is nil")
 		}
 	}()
 
