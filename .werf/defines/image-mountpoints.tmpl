@@ -1,0 +1,12 @@
+# add mount points from file mount_points.yaml in the build dir
+
+{{- define "image mount points" }}
+{{- $context := . }}
+{{- $mountPoints := (.Files.Get "/{{ $context.ModulePath }}modules/{{ $context.ModulePriority }}-{{ $context.ModuleName }}/images/{{ $context.ImageName }}/mount_points.yaml" | fromYaml) }}
+  {{- range $v := $mountPoints.dirs }}
+- image: base/distroless
+  add: /tmp
+  to: {{ $v }}
+  before: install
+  {{- end }}
+{{- end }}
