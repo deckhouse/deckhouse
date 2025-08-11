@@ -33,7 +33,7 @@ EOF
   serviceType=$(context::jq -r '.review.request.object.spec.type')
   if [ "$serviceType" == "ExternalName" ]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"A service of ExternalName type cannot be published."}
+{"allowed":false, "message":"A service of ExternalName type cannot be published in federation."}
 EOF
     return 0
   fi
@@ -41,7 +41,7 @@ EOF
   hasPorts=$(context::jq -r '.review.request.object.spec | has("ports")')
   if [ "$hasPorts" != "true" ];then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"A service without the '.spec.ports' field cannot be published."}
+{"allowed":false, "message":"A service without the '.spec.ports' field cannot be published in federation."}
 EOF
     return 0
   fi
