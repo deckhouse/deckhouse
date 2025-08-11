@@ -27,7 +27,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -54,19 +53,6 @@ const (
 	tracerName = "downloader"
 )
 
-// Cache entry for digest caching
-type digestCacheEntry struct {
-	digest    string
-	timestamp time.Time
-	ttl       time.Duration
-}
-
-// Simple digest cache for Module Downloader
-type moduleDigestCache struct {
-	mu    sync.RWMutex
-	cache map[string]digestCacheEntry
-}
-
 // Error returned when digest matches expected value (cache hit)
 var ErrDigestMatches = errors.New("digest matches expected value")
 
@@ -78,9 +64,6 @@ type ModuleDownloader struct {
 	registryOptions []cr.Option
 	logger          *log.Logger
 
-	// Simple digest cache to avoid redundant registry calls
-	digestCache     *moduleDigestCache
-	digestCacheOnce sync.Once
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
@@ -246,7 +229,7 @@ func (md *ModuleDownloader) fetchImageWithDigestCheck(ctx context.Context, modul
 			slog.String("tag", imageTag),
 			slog.String("expected_digest", expectedDigest))
 
-		currentDigest, err := md.getDigestCached(ctx, regCli, imageTag)
+		currentDigest, err := regCli.Digest(ctx, imageTag)
 		if err != nil {
 			md.logger.Warn("Failed to get digest, falling back to full image fetch",
 				slog.String("module", moduleName),
@@ -467,7 +450,7 @@ func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Cont
 			slog.String("tag", imageTag),
 			slog.String("expected_digest", expectedDigest))
 
-		currentDigest, err := md.getDigestCached(ctx, regCli, imageTag)
+		currentDigest, err := regCli.Digest(ctx, imageTag)
 		if err != nil {
 			md.logger.Warn("Failed to get release digest, proceeding with full fetch",
 				slog.String("tag", imageTag),
@@ -682,58 +665,3 @@ type ReleaseImageInfo struct {
 	Digest   crv1.Hash
 }
 
-// Cache implementation for Module Downloader
-
-// getDigestCache initializes digest cache lazily
-func (md *ModuleDownloader) getDigestCache() *moduleDigestCache {
-	md.digestCacheOnce.Do(func() {
-		md.digestCache = &moduleDigestCache{
-			cache: make(map[string]digestCacheEntry),
-		}
-	})
-	return md.digestCache
-}
-
-// getDigestCached retrieves digest with caching to avoid redundant registry calls
-func (md *ModuleDownloader) getDigestCached(ctx context.Context, regCli cr.Client, tag string) (string, error) {
-	cache := md.getDigestCache()
-
-	// Create cache key based on registry client and tag
-	// This is a simple implementation - could be enhanced with proper client identification
-	cacheKey := fmt.Sprintf("%p:%s", regCli, tag)
-
-	// Check cache first
-	cache.mu.RLock()
-	if entry, found := cache.cache[cacheKey]; found {
-		if time.Since(entry.timestamp) < entry.ttl {
-			cache.mu.RUnlock()
-			md.logger.Debug("Digest cache hit",
-				slog.String("tag", tag),
-				slog.String("digest", entry.digest))
-			return entry.digest, nil
-		}
-		// Entry expired, will fetch new digest
-	}
-	cache.mu.RUnlock()
-
-	// Cache miss or expired - fetch from registry
-	digest, err := regCli.Digest(ctx, tag)
-	if err != nil {
-		return "", err
-	}
-
-	// Cache the result with 5 minute TTL
-	cache.mu.Lock()
-	cache.cache[cacheKey] = digestCacheEntry{
-		digest:    digest,
-		timestamp: time.Now(),
-		ttl:       5 * time.Minute,
-	}
-	cache.mu.Unlock()
-
-	md.logger.Debug("Digest cached",
-		slog.String("tag", tag),
-		slog.String("digest", digest))
-
-	return digest, nil
-}
