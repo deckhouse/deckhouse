@@ -1,6 +1,11 @@
 {% assign revision=include.revision %}
 
 {% if revision != "ce" %}
+{% if page.ee_only == true and revision == 'ee' and page.se_support == nil %}
+{% alert level="warning" %}
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
 {% include getting_started/global/EE_ACCESS.md revision=revision %}
 <div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
