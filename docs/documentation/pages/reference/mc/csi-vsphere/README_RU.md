@@ -7,3 +7,5 @@ lang: ru
 ---
 
 {% include module-configuration.liquid %}
+
+<!-- SCHEMA -->
