@@ -161,6 +161,7 @@ func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command
 		}
 		str := strings.TrimSpace(string(stderrBytes))
 		instanceScope.Logger.Info(str, "stderr")
+		instanceScope.Logger.Error(err, "commnad finisher with error")
 		return str, err
 	}
 
