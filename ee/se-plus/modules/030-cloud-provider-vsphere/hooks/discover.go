@@ -94,13 +94,13 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 		storageClasses := make([]storageClass, 0, len(scSnaps))
 
-		for sc, err := range objectpatch.SnapshotIter[storage.StorageClass](scSnaps) {
+		for snapshotSc, err := range objectpatch.SnapshotIter[storage.StorageClass](scSnaps) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over storage classes: %v", err)
 			}
 
 			var zones []string
-			for _, t := range sc.AllowedTopologies {
+			for _, t := range snapshotSc.AllowedTopologies {
 				for _, m := range t.MatchLabelExpressions {
 					if m.Key == "failure-domain.beta.kubernetes.io/zone" {
 						zones = append(zones, m.Values...)
@@ -110,11 +110,17 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 			slices.Sort(zones)
 			zones = slices.Compact(zones)
 
-			storageClasses = append(storageClasses, storageClass{
-				Name:         sc.Name,
+			sc := storageClass{
+				Name:         snapshotSc.Name,
 				Zones:        zones,
-				DatastoreURL: sc.Parameters["DatastoreURL"],
-			})
+				DatastoreURL: snapshotSc.Parameters["DatastoreURL"],
+			}
+
+			if spName, found := snapshotSc.Parameters["StoragePolicyName"]; found {
+				sc.StoragePolicyName = spName
+			}
+
+			storageClasses = append(storageClasses, sc)
 		}
 		input.Logger.Info("found vSphere storage classes using storage_classes snapshots", slog.Any("storage_classes", storageClasses))
 		input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
@@ -122,33 +128,27 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 	}
 
 	secret := new(v1.Secret)
-	err := ddSnaps[0].UnmarshalTo(secret)
-	if err != nil {
+	if err := ddSnaps[0].UnmarshalTo(secret); err != nil {
 		return fmt.Errorf("failed to unmarshal secret: %v", err)
 	}
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi"})
-	if err != nil {
+	if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/se-plus/candi/cloud-providers/vsphere/openapi"}); err != nil {
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	var discoveryData cloudDataV1.VsphereCloudDiscoveryData
-	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
-	if err != nil {
+	if err := json.Unmarshal(discoveryDataJSON, &discoveryData); err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
-
-	if err := handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores); err != nil {
-		return err
-	}
+	handleDiscoveryDataVolumeTypes(input, discoveryData.Datastores, discoveryData.StoragePolicies)
 
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore) error {
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore, storagePolicies []cloudDataV1.VsphereStoragePolicy) {
 	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
 
 	for _, ds := range zonedDataStores {
@@ -167,26 +167,30 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 		}
 	}
 
-	storageClassSnapshots := make(map[string]storage.StorageClass)
-	sclasses, err := objectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
+	lenStorageClasses := len(zonedDataStores)
+	if len(storagePolicies) > 0 {
+		lenStorageClasses *= len(storagePolicies)
 	}
-
-	for _, s := range sclasses {
-		storageClassSnapshots[s.Name] = s
-	}
-
-	storageClasses := make([]storageClass, 0, len(zonedDataStores))
+	storageClasses := make([]storageClass, 0, lenStorageClasses)
 	for name, domain := range storageClassStorageDomain {
-		sc := storageClass{
+		storageClasses = append(storageClasses, storageClass{
 			Name:          name,
 			Path:          domain.InventoryPath,
 			Zones:         domain.Zones,
 			DatastoreType: domain.DatastoreType,
 			DatastoreURL:  domain.DatastoreURL,
+		})
+
+		for _, sp := range storagePolicies {
+			storageClasses = append(storageClasses, storageClass{
+				Name:              fmt.Sprintf("%s-%s", name, sp.Name),
+				Path:              domain.InventoryPath,
+				Zones:             domain.Zones,
+				DatastoreType:     domain.DatastoreType,
+				DatastoreURL:      domain.DatastoreURL,
+				StoragePolicyName: sp.Name,
+			})
 		}
-		storageClasses = append(storageClasses, sc)
 	}
 
 	sort.SliceStable(storageClasses, func(i, j int) bool {
@@ -195,7 +199,6 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 
 	input.Logger.Info("Found vSphere storage classes using cloud_provider_discovery_data", slog.Any("data", storageClasses))
 	input.Values.Set("cloudProviderVsphere.internal.storageClasses", storageClasses)
-	return nil
 }
 
 // Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
@@ -213,16 +216,15 @@ func getStorageClassName(value string) string {
 	}
 
 	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
-	value = strings.Map(mapFn, value)
-
 	// must start and end with an alphanumeric character
-	return strings.Trim(value, "-.")
+	return strings.Trim(strings.Map(mapFn, value), "-.")
 }
 
 type storageClass struct {
-	Name          string   `json:"name"`
-	Path          string   `json:"path"`
-	Zones         []string `json:"zones"`
-	DatastoreType string   `json:"datastoreType"`
-	DatastoreURL  string   `json:"datastoreURL"`
+	Name              string   `json:"name"`
+	Path              string   `json:"path"`
+	Zones             []string `json:"zones"`
+	DatastoreType     string   `json:"datastoreType"`
+	DatastoreURL      string   `json:"datastoreURL"`
+	StoragePolicyName string   `json:"storagePolicyName"`
 }
