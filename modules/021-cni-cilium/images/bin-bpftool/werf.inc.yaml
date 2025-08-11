@@ -37,22 +37,6 @@ import:
   before: install
 shell:
   install:
-  # - |
-  #   if [[ -d /libs ]]; then
-  #       for lib in $(ls -1 /libs); do
-  #         cd /libs/${lib}
-  #         rsync -aulv * /
-  #       done
-  #     rm -rf /libs
-  #   fi
-  # - |
-  #   if [[ -d /tools ]]; then
-  #     for tool in $(ls -1 /tools); do
-  #       cd /tools/${tool}
-  #       rsync -aulv * /
-  #     done
-  #     rm -rf /tools
-  #   fi
   - export GCC_VERSION=11
   - cd /src/linux/tools/bpf/bpftool
   - make -j "$(getconf _NPROCESSORS_ONLN)"

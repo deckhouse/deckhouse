@@ -42,7 +42,7 @@
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }} #### problem with dynamic link
 # from cni-plugins-artifact
@@ -134,10 +134,6 @@ import:
   includePaths:
   - clang
   - llc
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /lib64/libLLVM.so.19.1
-  to: /lib64/libLLVM.so.19.1
-  before: install
 - image: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
@@ -580,7 +576,23 @@ import:
   - libtinfo.so
   - libtinfo.so.6
 ### place for llvm
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /lib64/libLLVM.so.19.1
+  to: /lib64/libLLVM.so.19.1
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  before: install
 ### place for gcc
+- image: {{ .ModuleName }}/bpftool-artifact
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libstdc++.so.6
+  - libstdc++.so.6.0.32
+  - libgcc_s.so.1
 git:
 {{- include "image mount points" . }}
 imageSpec:
