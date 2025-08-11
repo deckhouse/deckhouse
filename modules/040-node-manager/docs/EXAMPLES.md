@@ -78,20 +78,18 @@ spec:
 <span id="example-gpu-nodegroup"></span>
 
 {% alert level="info" %}
-GPU-node management is available in the **EE** edition only.
+GPU-node management is available in the Enterprise edition only.
 {% endalert %}
 
-GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two options:
+GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two ways to install the driver:
 
 1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
-2. **Automation via `NodeGroupConfiguration`** (see the
+1. **Automation via `NodeGroupConfiguration`** (see the
    [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
 
 After the driver is detected and the NodeGroup includes the `spec.gpu` section,
 `node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
-Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**. The examples
-below demonstrate three common GPU operating modes (Exclusive, TimeSlicing,
-MIG).
+Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**.
 
 {% alert level="info" %}
 GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
@@ -101,6 +99,9 @@ and `nodeSelector`.
 
 See the full field reference in the
 [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+Below are examples of NodeGroup manifests for typical GPU operating modes (Exclusive,
+TimeSlicing, MIG).
 
 #### Exclusive mode (one Pod — one GPU)
 

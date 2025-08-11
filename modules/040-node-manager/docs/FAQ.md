@@ -1019,9 +1019,9 @@ GPU-node management is available in Enterprise Edition only.
 
 Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, the `node-manager` module **automatically**:
 
-* configures containerd with `default_runtime = "nvidia"`;
-* applies the required system settings (including fixes for the NVIDIA Container Toolkit);
-* deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
+- configures containerd with `default_runtime = "nvidia"`;
+- applies the required system settings (including fixes for the NVIDIA Container Toolkit);
+- deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
 
 {% alert level="info" %}
 Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
@@ -1029,294 +1029,304 @@ Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing
 Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
 {% endalert %}
 
-### 1. Create a NodeGroup for GPU nodes
+To add a GPU node to the cluster, perform the following steps:
 
-An example with **TimeSlicing** enabled (`partitionCount: 4`) and typical taint/label:
+1. Create a NodeGroup for GPU nodes.
 
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure
-  gpu:
-    sharing: TimeSlicing
-    timeSlicing:
-      partitionCount: 4
-  nodeTemplate:
-    labels:
-      node-role/gpu: ""
-    taints:
-    - key: node-role
-      value: gpu
-      effect: NoSchedule
-```
+   An example with **TimeSlicing** enabled (`partitionCount: 4`) and typical taint/label:
 
-{% alert level="info" %}
-If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
-{% endalert %}
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: gpu
+   spec:
+     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure
+     gpu:
+       sharing: TimeSlicing
+       timeSlicing:
+         partitionCount: 4
+     nodeTemplate:
+       labels:
+         node-role/gpu: ""
+       taints:
+       - key: node-role
+         value: gpu
+         effect: NoSchedule
+   ```
 
-Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+   > If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
 
-### 2. Install the NVIDIA driver and nvidia-container-toolkit
+   Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
-Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
-Below are NodeGroupConfiguration examples for the gpu NodeGroup
+1. Install the NVIDIA driver and nvidia-container-toolkit.
 
-#### Ubuntu
+   Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
+   Below are NodeGroupConfiguration examples for the gpu NodeGroup
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - ubuntu-lts
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
+   **Ubuntu**
 
-    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    fi
-    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - ubuntu-lts
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
 
-#### CentOS
+       if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+         curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/   sources.list.d/nvidia-container-toolkit.list
+       fi
+       bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - centos
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
+   **CentOS**
 
-    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    fi
-    bb-dnf-install nvidia-container-toolkit nvidia-driver
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - centos
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
 
-After these configurations are applied, perform bootstrap and **reboot** the nodes so that settings are applied and the drivers get installed.
+       if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+       fi
+       bb-dnf-install nvidia-container-toolkit nvidia-driver
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
 
-### 3. Verify installation on the node
+   After these configurations are applied, perform bootstrap and **reboot** the nodes so that settings are applied and the drivers get installed.
 
-```bash
-nvidia-smi
-```
+1. Verify installation on the node using the command:
 
-**Expected healthy output (example):**
+   ```bash
+   nvidia-smi
+   ```
 
-```bash
-root@k8s-dvp-w1-gpu:~# nvidia-smi
-Tue Aug  5 07:08:48 2025
-+---------------------------------------------------------------------------------------+
-| NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
-|-----------------------------------------+----------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
-|                                         |                      |               MIG M. |
-|=========================================+======================+======================|
-|   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
-| N/A   32C    P0              35W / 250W |      0MiB / 32768MiB |      0%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
+   **Expected healthy output (example):**
 
-+---------------------------------------------------------------------------------------+
-| Processes:                                                                            |
-|  No running processes found                                                           |
-+---------------------------------------------------------------------------------------+
-```
+   ```console
+   root@k8s-dvp-w1-gpu:~# nvidia-smi
+   Tue Aug  5 07:08:48 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   32C    P0              35W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
 
-### 4. Verify infrastructure components in the cluster
+1. Verify infrastructure components in the cluster
 
-NVIDIA Pods in `d8-nvidia-gpu`:
+   NVIDIA Pods in `d8-nvidia-gpu`:
 
-```bash
-kubectl -n d8-nvidia-gpu get pod
-```
+   ```bash
+   kubectl -n d8-nvidia-gpu get pod
+   ```
 
-**Expected healthy output (example):**
+   **Expected healthy output (example):**
 
-```bash
-NAME                                  READY   STATUS    RESTARTS   AGE
-gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
-nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
-nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
-nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
-```
+   ```console
+   NAME                                  READY   STATUS    RESTARTS   AGE
+   gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
+   nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
+   nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
+   nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
+   ```
 
-NFD Pods in `d8-cloud-instance-manager`:
+   NFD Pods in `d8-cloud-instance-manager`:
 
-```bash
-kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
-```
+   ```bash
+   kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   ```
 
-**Expected healthy output (example):**
+   **Expected healthy output (example):**
 
-```bash
-NAME                                             READY   STATUS      RESTARTS       AGE
-node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
-node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
-node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
-```
+   ```console
+   NAME                                             READY   STATUS      RESTARTS       AGE
+   node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
+   node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
+   node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
+   ```
 
-Resource exposure on the node:
+   Resource exposure on the node:
 
-```bash
-kubectl describe node <node-name>
-```
+   ```bash
+   kubectl describe node <node-name>
+   ```
 
-**Output snippet (example):**
+   **Output snippet (example):**
 
-```bash
-Capacity:
-  cpu:                40
-  memory:             263566308Ki
-  nvidia.com/gpu:     4
-Allocatable:
-  cpu:                39930m
-  memory:             262648294441
-  nvidia.com/gpu:     4
-```
+   ```console
+   Capacity:
+     cpu:                40
+     memory:             263566308Ki
+     nvidia.com/gpu:     4
+   Allocatable:
+     cpu:                39930m
+     memory:             262648294441
+     nvidia.com/gpu:     4
+   ```
 
-### 5. Run functional tests
+1. Run functional tests
 
-#### Option A. Invoke `nvidia-smi` from inside a container
+   **Option A. Invoke `nvidia-smi` from inside a container.**
 
-Create a Job:
+   Create a Job:
 
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: nvidia-cuda-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: nvidia-cuda-test
-          image: nvidia/cuda:11.6.2-base-ubuntu20.04
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - nvidia-smi
-```
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: nvidia-cuda-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: nvidia-cuda-test
+             image: nvidia/cuda:11.6.2-base-ubuntu20.04
+             imagePullPolicy: "IfNotPresent"
+             command:
+               - nvidia-smi
+   ```
 
-Check the logs:
+   Check the logs using the command:
 
-```bash
-kubectl logs job/nvidia-cuda-test
-Tue Aug  5 07:48:02 2025
-+---------------------------------------------------------------------------------------+
-| NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
-|-----------------------------------------+----------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
-|                                         |                      |               MIG M. |
-|=========================================+======================+======================|
-|   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
-| N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
-|                                         |                      |                  N/A |
-+-----------------------------------------+----------------------+----------------------+
+   ```bash
+   kubectl logs job/nvidia-cuda-test
+   ```
 
-+---------------------------------------------------------------------------------------+
-| Processes:                                                                            |
-|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
-|        ID   ID                                                             Usage      |
-|=======================================================================================|
-|  No running processes found                                                           |
-+---------------------------------------------------------------------------------------+
-```
+   Output example:
 
-#### Option B. CUDA sample (vectoradd)
+   ```console
+   Tue Aug  5 07:48:02 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+   |        ID   ID                                                             Usage      |
+   |=======================================================================================|
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
 
-Create a Job:
+   **Option B. CUDA sample (vectoradd).**
 
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gpu-operator-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: gpu-operator-test
-          image: nvidia/samples:vectoradd-cuda10.2
-          imagePullPolicy: "IfNotPresent"
-```
+   Create a Job:
 
-Check the logs:
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: gpu-operator-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: gpu-operator-test
+             image: nvidia/samples:vectoradd-cuda10.2
+             imagePullPolicy: "IfNotPresent"
+   ```
 
-```bash
-kubectl logs job/gpu-operator-test
-[Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
-Test PASSED
-Done
-```
+   Check the logs using the command::
+
+   ```bash
+   kubectl logs job/gpu-operator-test
+   ```
+
+   Output example:
+
+   ```console
+   [Vector addition of 50000 elements]
+   Copy input data from the host memory to the CUDA device
+   CUDA kernel launch with 196 blocks of 256 threads
+   Copy output data from the CUDA device to the host memory
+   Test PASSED
+   Done
+   ```
 
 ## How to monitor GPUs?
 
-Deckhouse automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
+Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
 
 ## Which GPU modes are supported?
 
-* **Exclusive** — the node exposes the `nvidia.com/gpu` resource; each Pod receives an entire GPU.
-* **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
-* **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
+- **Exclusive** — the node exposes the `nvidia.com/gpu` resource; each Pod receives an entire GPU.
+- **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
+- **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
 
 See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
 
@@ -1336,7 +1346,7 @@ Select the profile that matches your accelerator and set its name in `spec.gpu.m
 ## MIG profile does not activate — what to check?
 
 1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
-2. **NodeGroup configuration:**
+1. **NodeGroup configuration:**
 
    ```yaml
    gpu:
@@ -1345,17 +1355,17 @@ Select the profile that matches your accelerator and set its name in `spec.gpu.m
        partedConfig: all-1g.5gb
    ```
 
-3. Wait until `nvidia-mig-manager` completes the **drain** of the node and reconfigures the GPU.
+1. Wait until `nvidia-mig-manager` completes the **drain** of the node and reconfigures the GPU.
 
    **This process can take several minutes.**
 
    While it is running, the node is tainted with `mig-reconfigure`. When the operation succeeds, that taint is removed.
 
-4. Track the progress via the `nvidia.com/mig.config.state` label on the node:
+1. Track the progress via the `nvidia.com/mig.config.state` label on the node:
 
    `pending`, `rebooting`, `success` (or `error` if something goes wrong).
 
-5. If `nvidia.com/mig-*` resources are still missing, check:
+1. If `nvidia.com/mig-*` resources are still missing, check:
 
    ```bash
    kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
