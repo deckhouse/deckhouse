@@ -525,6 +525,10 @@ dependencies:
 
 - `namespace` — *Строка.* Пространство имён, где будут развернуты компоненты модуля.
 - `subsystems` — *Массив строк.* Список подсистем, к которым относится модуль.
+- `accessability` - *Object* Настройки доступности модуля.
+  - `editions` - *Object* Настройки изданий.
+    - `availabe` - *Boolean* Доступность модуля в издании.
+    - `enabledInBundles` - *Array of strings* В каком бандле модуль должен быть включен по умолчанию.
 - `descriptions` — *Объект.* Произвольное текстовое описание назначения модуля.
   - `en` — *Строка.* Текстовое описание на английском языке.
   - `ru` — *Строка.* Текстовое описание на русском языке.
@@ -560,6 +564,12 @@ exclusiveGroup: "group"
 subsystems:
   - test
   - test1
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
 descriptions:
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."

@@ -136,9 +136,10 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	}
 
 	res := &ModuleDownloadResult{
-		Checksum:      releaseImageInfo.Digest.String(),
-		ModuleVersion: "v" + releaseImageInfo.Metadata.Version.String(),
-		Changelog:     releaseImageInfo.Metadata.Changelog,
+		Checksum:         releaseImageInfo.Digest.String(),
+		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
+		Changelog:        releaseImageInfo.Metadata.Changelog,
+		ModuleDefinition: releaseImageInfo.Metadata.ModuleDefinition,
 	}
 
 	return res, nil
