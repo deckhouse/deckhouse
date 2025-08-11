@@ -129,6 +129,13 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-huawei/stable/"
   },
+  "csi-vsphere": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/vsphere/stable/"
+  },
   "csi-nfs": {
     "editions": [
       "ce",
