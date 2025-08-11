@@ -127,12 +127,7 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
-	mergedSelector := map[string]string{}
-	for k, v := range service.Spec.Selector {
-		mergedSelector[k] = v
-	}
-	mergedSelector[lbKey] = "loadbalancer"
-	svc.Spec.Selector = mergedSelector
+	svc.Spec.Selector = map[string]string{lbKey: "loadbalancer"}
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
 	svc.Spec.ExternalIPs = []string{}
@@ -194,12 +189,6 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 
 	ports := lb.CreateLoadBalancerPorts(service)
 
-	mergedSelector := map[string]string{}
-	for k, v := range service.Spec.Selector {
-		mergedSelector[k] = v
-	}
-	mergedSelector[lbKey] = "loadbalancer"
-
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -211,7 +200,7 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Ports:                 ports,
 			Type:                  corev1.ServiceTypeLoadBalancer,
 			ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
-			Selector:              mergedSelector,
+			Selector:              map[string]string{lbKey: "loadbalancer"},
 		},
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
