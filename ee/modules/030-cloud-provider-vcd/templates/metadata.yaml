@@ -1,5 +1,6 @@
 {{- $providerClusterConfiguration := .Values.cloudProviderVcd.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
-{{- $metadata := ($providerClusterConfiguration.metadata | default "") | toYaml | b64enc | quote }}
+{{- $metadata := dict -}}
+{{- $_ := set $metadata "metadata" ($providerClusterConfiguration.metadata | default list) }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,4 +9,4 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "vcd-cloud-controller")) | nindent 2 }}
   name: vcd-metadata
 data:
-  metadata.yaml: {{ $metadata }}
+  metadata.yaml: {{ $metadata | toYaml | b64enc | quote }}
