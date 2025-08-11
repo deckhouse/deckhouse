@@ -108,10 +108,14 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 			continue
 		}
 
+		s.logger.Info("sender upload", slog.String("backend", backend))
 		err := s.upload(ctx, backend, version)
 		if err != nil {
 			s.logger.Error("send upload docs", log.Err(err))
 		}
+
+		s.logger.Info("sender sleep", slog.String("backend", backend))
+		time.Sleep(10 * time.Second) // test delete this
 	}
 
 	err := s.build(ctx, backend)
