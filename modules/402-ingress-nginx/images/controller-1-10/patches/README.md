@@ -103,4 +103,4 @@ Added additional logging when downloading GeoIP databases from the MaxMind servi
 
 ### 017-maxmind-alerts.patch
 
-The metric `geo2_download_errors_total` is added, indicating the number of errors when downloading geo databases from the MaxMind service.
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
