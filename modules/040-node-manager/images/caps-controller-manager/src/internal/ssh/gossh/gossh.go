@@ -88,6 +88,10 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		pass = string(passBytes)
 	}
 
+	if s.sshClient == nil {
+		return fmt.Errorf("ssh client in nil")
+	}
+
 	defer s.sshClient.Close()
 
 	session, err := s.sshClient.NewSession()
