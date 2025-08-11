@@ -943,6 +943,14 @@ entries:
                 ru: Canary deployment
               url: /user/network/canary-deployment.html
         - title:
+            en: Security
+            ru: Безопасность
+          folders:
+            - title:
+                en: Container image vulnerability scanning
+                ru: Сканирование контейнерных образов на уязвимости
+              url: /user/security/scanning.html
+        - title:
             en: Interfaces
             ru: Интерфейсы
           folders:
