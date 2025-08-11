@@ -1690,7 +1690,7 @@ entries:
           - title:
               en: csi-vsphere
               ru: csi-vsphere
-            url: /reference/mc/vsphere/  
+            url: /reference/mc/csi-vsphere/  
           - title:
               en: csi-huawei
               ru: csi-huawei
