@@ -666,6 +666,7 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 	checkerVersion, err := helpers.ComputeHash(
 		params,
 		state.TargetMode,
+		inputs.Params.CheckMode,
 	)
 	if err != nil {
 		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
@@ -676,7 +677,8 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 		Registries: map[string]checker.RegistryParams{
 			registryAddr: params,
 		},
-		Version: checkerVersion,
+		CheckMode: inputs.Params.CheckMode,
+		Version:   checkerVersion,
 	}
 
 	isReady := state.setCheckerCondition(inputs)

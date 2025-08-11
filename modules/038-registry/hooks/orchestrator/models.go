@@ -43,6 +43,8 @@ type Params struct {
 	TTL        string
 	Scheme     string
 	CA         *x509.Certificate // optional
+
+	CheckMode registry_const.CheckModeType
 }
 
 type Inputs struct {
