@@ -75,8 +75,6 @@ spec:
 
 ### Nodes with GPU
 
-<span id="example-gpu-nodegroup"></span>
-
 {% alert level="info" %}
 GPU-node management is available in the Enterprise edition only.
 {% endalert %}

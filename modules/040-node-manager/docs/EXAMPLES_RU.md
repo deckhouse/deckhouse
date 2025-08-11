@@ -75,8 +75,6 @@ spec:
 
 ### Узлы с GPU
 
-<span id="пример-gpu-nodegroup"></span>
-
 {% alert level="info" %}
 Функциональность управления GPU-узлами доступна только в Enterprise Edition.
 {% endalert %}
