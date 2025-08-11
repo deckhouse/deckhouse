@@ -96,7 +96,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:561d58c555f9d12bf0ff71ac222c0
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
-from: dev-registry.deckhouse.io/base_images@sha256:ddca3c188849a16ec3fa05701a7bc1c196f431d999c630c81adedaa32f709acc
+from: dev-registry.deckhouse.io/base_images@sha256:beec6cc450129dc8a2428ca41187634302d5025182959f55cd38594c8ea3afd0
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
