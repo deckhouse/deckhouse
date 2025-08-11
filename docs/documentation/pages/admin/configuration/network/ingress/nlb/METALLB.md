@@ -33,7 +33,7 @@ This means:
 - The leader node becomes a bottleneck with no horizontal scaling.
 - If the leader node fails, all active connections are dropped during the switchover to the new node.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_en.pdf"></div>
+<div data-presentation="../../../../../presentations/metallb/basics_metallb_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/18vcVJ1cY2yn19vBM_dTNW3hF0w9SE4S81VZc2P6fVFM/ --->
 
 The `metallb` module removes these limitations. It provides the MetalLoadBalancerClass resource, which lets you:
@@ -42,7 +42,7 @@ The `metallb` module removes these limitations. It provides the MetalLoadBalance
 - Create a standard LoadBalancer Service and specify the name of the target MetalLoadBalancerClass.
 - Define the number of IP addresses for L2 announcement via an annotation.
 
-<div data-presentation="../../presentations/metallb/basics_metallb_l2balancer_en.pdf"></div>
+<div data-presentation="../../../../../presentations/metallb/basics_metallb_l2balancer_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1FYbc7jUhvJFy8x592ihm644i0qpeQSJFUc4Ly2coWFQ/ --->
 
 This approach means:
