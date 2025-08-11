@@ -38,5 +38,5 @@ import:
   to: /kubectl
   before: setup
 ---
-{{- include "vex_mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
