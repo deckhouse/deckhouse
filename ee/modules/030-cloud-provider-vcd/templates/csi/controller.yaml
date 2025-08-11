@@ -2,6 +2,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
+- "--metadata-path=/etc/cloud/metadata/metadata.yaml"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -19,6 +20,9 @@
 - name: vcd-credentials-volume
   secret:
     secretName: vcd-credentials
+- name: vcd-metadata-volume
+  secret:
+    secretName: vcd-metadata
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
@@ -27,6 +31,9 @@
   readOnly: true
 - name: vcd-credentials-volume
   mountPath: /etc/kubernetes/vcloud/basic-auth
+  readOnly: true
+- name: vcd-metadata-volume
+  mountPath: /etc/cloud/metadata
   readOnly: true
 {{- end }}
 
