@@ -1,0 +1,4 @@
+excludeNamespaces:
+  - all
+additionalNamespaces:
+  - kube-system
