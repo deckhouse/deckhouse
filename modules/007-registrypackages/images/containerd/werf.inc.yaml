@@ -171,7 +171,7 @@ shell:
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) -}}
+  {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
   - echo "Using next build options:'{{ $additionalBuildOptions }}'"
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" {{ $additionalBuildOptions }} all
   - mv bin/* /out
