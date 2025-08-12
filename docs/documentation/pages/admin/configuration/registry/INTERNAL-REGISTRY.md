@@ -7,7 +7,21 @@ The ability to use internal registry is implemented by the `registry` module.
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
-## Switching to Direct Mode
+## Modes of operation with the internal registry
+
+The `registry` module, which implements internal storage, operates in the following modes:
+
+- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
+
+- `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../third-party-registry.html).
+
+{% alert level="info" %}
+- The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](../../../installing/configuration.html#clusterconfiguration).
+{% endalert %}
+
+## Examples of switching
+
+### Switching to Direct Mode
 
 To switch an already running cluster to `Direct` mode, follow these steps:
 
@@ -93,7 +107,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    target_mode: Direct
    ```
 
-## Switching to Unmanaged Mode
+### Switching to Unmanaged Mode
 
 {% alert level="danger" %}
 When changing the registry mode or registry parameters, Deckhouse will be restarted.

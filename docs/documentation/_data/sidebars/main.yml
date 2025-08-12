@@ -1217,6 +1217,10 @@ entries:
                 en: Sysctl parameters
                 ru: Параметры sysctl
               url: /architecture/security/sysctl.html
+        - title:
+            en: Direct mode architecture (registry)
+            ru: Архитектура режима Direct (реестр)
+          url: /architecture/registry-direct-mode.html
     - title:
         en: Reference
         ru: Справка
