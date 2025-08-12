@@ -3,6 +3,25 @@
 {{- $containerd2runc := dict "1.7.27" "1.2.5" "2.1.3" "1.3.0" }}
 {{- $containerd_integrity_patches_version := "0" }}
 
+{{- define "render_containerd_build_options" }}
+{{- $context := .rootContext -}}
+{{- $is_v2 := .isV2 -}}
+
+{{- if and (eq $context.Env "CSE") $is_v2 -}}
+  {{- $namespacesSettings := ($context.Files.Get "/tools/build_includes/integrity-check-namespaces.yaml" | fromYaml) }}
+  {{- if not hasKey $namespacesSettings "namespaces_for_integrity" -}}
+    {{- fail "file /tools/build_includes/integrity-check-namespaces.yaml has not key namespaces_for_integrity" -}}
+  {{- end }}
+
+  {{- $namespaces := get $context.TF $context.providerName | join "," -}}
+  {{- if $namespaces -}}
+INTEGRITY_NAMESPACES="{{ $namespaces }}"
+  {{- end }}
+{{- end }}
+
+{{- end }}
+
+
 {{- range $runc_version := $runc_versions }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -55,6 +74,7 @@ shell:
 
 {{- range $containerd_version := $containerd_versions }}
   {{- $image_version := $containerd_version | replace "." "-" }}
+  {{- $is_v2 := hasPrefix "2." $containerd_version }}
   {{- $major_version := index (splitList "-" $image_version) 0 }}
   {{- $runc_version := index $containerd2runc $containerd_version }}
 ---
@@ -105,15 +125,18 @@ secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
 - id: DECKHOUSE_PRIVATE_REPO
-  value: {{ $.DECKHOUSE_PRIVATE_REPO }}
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-{{- if eq $.Env "CSE" }}
-  - echo "Attention! Build with integrity patches"
-  - git clone --depth=1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} $(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
-  - cp /src/integrity-patches/* /patches
+{{- if and (eq $.Env "CSE") $is_v2 }}
+  - echo "Attention! Use integrity patches!"
+  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
+  - alias cp='cp'
+  - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
-{{- end -}}
+  - echo "Patches list:"
+  - ls -lh /patches
+{{- end }}
   - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
   - cd /src/containerd
   - git describe --match 'v[0-9]*' --dirty='.m' --always > VERSION
@@ -145,7 +168,9 @@ shell:
   - cd /src/containerd
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" all
+  {{- $buildOptions := include "render_containerd_build_options" (dict "rootContext" $. "isV2" $is_v2 ) -}}
+  - echo "Using next build options:'{{$buildOptions}}'"
+  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" $buildOptions all
   - mv bin/* /out
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out
