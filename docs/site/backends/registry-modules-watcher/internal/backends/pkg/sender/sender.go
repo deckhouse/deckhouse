@@ -25,7 +25,6 @@ import (
 	neturl "net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -49,6 +48,7 @@ type Sender struct {
 
 	logger *log.Logger
 	ms     *metricsstorage.MetricStorage
+	sendCh chan *addBackendRequest
 }
 
 // New creates a new sender instance with the provided logger.
@@ -61,43 +61,62 @@ func (s *Sender) newBackOff() *backoff.ExponentialBackOff {
 	return b
 }
 
+type addBackendRequest struct {
+	ctx      context.Context
+	backend  string
+	versions []backends.DocumentationTask
+}
+
 // New creates a new sender instance with the provided logger.
 // It initializes an HTTP client with a custom transport.
 func New(logger *log.Logger, ms *metricsstorage.MetricStorage) *Sender {
+	ch := make(chan *addBackendRequest, 10)
 	tr := &http.Transport{
 		MaxIdleConns:    10,
 		IdleConnTimeout: 30 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 
-	return &Sender{
+	s := &Sender{
 		client: client,
 		logger: logger,
 		ms:     ms,
+		sendCh: ch,
 	}
+
+	go func() {
+		syncChan := make(chan struct{}, 10)
+
+		for req := range ch {
+			if req == nil {
+				continue
+			}
+
+			syncChan <- struct{}{}
+
+			go func() {
+				defer func() {
+					<-syncChan
+				}()
+
+				s.processBackend(req.ctx, req.backend, req.versions)
+			}()
+		}
+	}()
+
+	return s
 }
 
 var ErrRequestTimedOut = errors.New("request timed out")
 
 func (s *Sender) Send(ctx context.Context, listBackends map[string]struct{}, versions []backends.DocumentationTask) {
-	syncChan := make(chan struct{}, 10)
-	wg := new(sync.WaitGroup)
-
 	for backend := range listBackends {
-		syncChan <- struct{}{}
-		wg.Add(1)
-
-		go func(backend string) {
-			defer func() {
-				wg.Done()
-				<-syncChan
-			}()
-
-			s.processBackend(ctx, backend, versions)
-		}(backend)
+		s.sendCh <- &addBackendRequest{
+			ctx:      ctx,
+			backend:  backend,
+			versions: versions,
+		}
 	}
-
-	wg.Wait()
 }
 
 func (s *Sender) processBackend(ctx context.Context, backend string, versions []backends.DocumentationTask) {
