@@ -27,6 +27,18 @@ metadata:
 spec:
   enabled: true
   version: 1
+  settings:
+    # Required parameters.
+    host: myhost
+    password: myPaSsWd
+    region: myreg
+    regionTagCategory: myregtagcat
+    username: myuname
+    vmFolderPath: dev/test
+    zoneTagCategory: myzonetagcat
+    zones:
+      - zonea
+      - zoneb
 EOF
 ```
 
