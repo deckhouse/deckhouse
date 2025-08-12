@@ -10,7 +10,9 @@ lang: ru
 
 Модуль устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes.
 
-> Модуль удаляет ранее установленные kubeadm’ом Deployment, ConfigMap и RBAC для CoreDNS.
+{% alert level="info" %}
+Модуль удаляет объекты Deployment, ConfigMap и RBAC для CoreDNS, установленные через утилиту `kubeadm`.
+{% endalert %}
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/kube-dns/examples.html -->
 

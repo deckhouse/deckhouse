@@ -632,7 +632,7 @@ entries:
                     ru: Другие возможности настройки сети
                   folders:
                     - title:
-                        en: Management of static routes and ip rules on cluster nodes
+                        en: Managing static routes and ip rules on cluster nodes
                         ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
                       url: /admin/configuration/network/other/static-routes.html
                     - title:
@@ -644,7 +644,7 @@ entries:
                         ru: Кэширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
-                        en: Operation modes of bpfLB for external traffic processing
+                        en: BpfLB operation modes for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
                       url: /admin/configuration/network/other/bpflb.html
                     - title:

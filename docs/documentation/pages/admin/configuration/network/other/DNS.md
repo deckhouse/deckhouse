@@ -3,15 +3,13 @@ title: "Managing DNS in a Kubernetes cluster"
 permalink: en/admin/configuration/network/other/dns.html
 ---
 
-DNS management in a Kubernetes cluster is implemented using the `kube-dns` module.
-
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/kube-dns/ -->
+DNS management in a Kubernetes cluster is implemented using the [`kube-dns`](/modules/kube-dns/) module.
 
 The module installs CoreDNS components for managing DNS in the Kubernetes cluster.
 
-> The module deletes all the previously installed kubeadm Deployments, ConfigMaps as well as RBAC for CoreDNS.
-
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/kube-dns/ -->
+{% alert level="info" %}
+The module deletes Deployments, ConfigMaps as well as RBAC for CoreDNS that were previously created using the `kubeadm` tool.
+{% endalert %}
 
 ## Configuration example
 
