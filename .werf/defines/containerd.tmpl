@@ -3,7 +3,7 @@
 #   rootContext - context of template. Should contain Files and Env (werf env) keys
 #   isV2 - bool value that indicates that we render container v2 template
 {{- define "render_containerd_build_options" }}
-{{- $ctx := $. -}}
+{{- $ctx := . -}}
 {{- $context := $ctx.rootContext -}}
 {{- $is_v2 := $ctx.isV2 -}}
 
