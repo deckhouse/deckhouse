@@ -24,7 +24,6 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -111,7 +110,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	session.Stdout = stdout
 	session.Stderr = stderr
 
-	command = fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c "%s"`, command)
+	command = fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c '%s'`, command)
 	// Set up a pipe to write to the session's stdin
 	stdin, err := session.StdinPipe()
 	if err != nil {
@@ -140,7 +139,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 
 			}
 		}
-		if len(stdoutBuf.Bytes()) > 0 {
+		if len(stdoutBuf.Bytes()) > 0 || len(stderrBuf.Bytes()) > 0 {
 			break
 		}
 	}
@@ -155,14 +154,7 @@ func (s *SSH) ExecSSHCommandToString(instanceScope *scope.InstanceScope, command
 	stderr := bytes.Buffer{}
 	err := s.ExecSSHCommand(instanceScope, command, &stdout, &stderr)
 	if err != nil {
-		stderrBytes, err2 := io.ReadAll(&stderr)
-		if err2 != nil {
-			return "", errors.Wrap(err2, "failed to read stderr from ssh command")
-		}
-		str := strings.TrimSpace(string(stderrBytes))
-		instanceScope.Logger.Info(str, "stderr")
-		instanceScope.Logger.Error(err, "commnad finisher with error")
-		return str, err
+		return stderr.String(), err
 	}
 
 	return stdout.String(), nil

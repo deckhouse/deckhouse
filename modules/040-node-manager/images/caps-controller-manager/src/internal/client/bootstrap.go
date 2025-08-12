@@ -112,8 +112,6 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
 		if err != nil {
-			instanceScope.Logger.Info("bootstrap script returned error")
-			instanceScope.Logger.Info(err.Error())
 			if strings.Contains(err.Error(), "Process exited with status 2") {
 				return true
 			}
