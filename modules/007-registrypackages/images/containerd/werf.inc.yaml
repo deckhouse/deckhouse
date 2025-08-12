@@ -4,7 +4,6 @@
 {{- $containerd_integrity_patches_version := "0" }}
 
 {{- define "render_containerd_build_options" }}
-{{- $ctx := . -}}
 {{- $context := $ctx.rootContext -}}
 {{- $is_v2 := $ctx.isV2 -}}
 
