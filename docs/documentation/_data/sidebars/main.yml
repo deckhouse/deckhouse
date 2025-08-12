@@ -604,8 +604,8 @@ entries:
                     ru: Межкластерное взаимодействие (альянс)
                   folders:
                     - title:
-                        en: Inter-cluster cooperation (alliance)
-                        ru: Межкластерное взаимодействие (альянс)
+                        en: Overview
+                        ru: Обзор
                       url: /admin/configuration/network/alliance/
                     - title:
                         en: Multicluster

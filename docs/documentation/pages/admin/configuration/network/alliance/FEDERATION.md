@@ -3,47 +3,59 @@ title: "Federation"
 permalink: en/admin/configuration/network/alliance/federation.html
 ---
 
-## Federation of Istio funds (Service Mesh)
+## Federation with Istio (Service Mesh)
 
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/istio/#federation -->
+{% alert level="info" %}
+Available only in DKP Enterprise Edition (EE).
+{% endalert %}
 
 ### Requirements for clusters
 
-* Each cluster must have a unique domain in the [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) parameter of the resource [_ClusterConfiguration_](../../reference/cr/clusterconfiguration/). Please note that none of the clusters should use the domain `cluster.local`, which is the default setting.
+* Each cluster must have a unique domain in the [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the ClusterConfiguration resource.
+  Note that none of the clusters should use the domain `cluster.local`, which is the default setting.
 
-  > `cluster.local` is an unmodified alias for the local cluster domain.
-  > When specifying `cluster.local` as a principals in the AuthorizationPolicy, it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`.
-  > [source](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)
+  > `cluster.local` can't be used as it's an unmodified alias for the local cluster domain.
+  > When specifying `cluster.local` as a principals in the AuthorizationPolicy,
+  > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`
+  > (for details, refer to the [Istio documentation](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Pod and Service subnets in the [`podSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../reference/cr/clusterconfiguration/#clusterconfiguration-servicesubnetcidr) parameters of the resource [_ClusterConfiguration_](../../reference/cr/clusterconfiguration/) must be unique for each federation member.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the ClusterConfiguration resource must be unique for each federation member.
 
-  > - When analyzing HTTP and HTTPS traffic _(in istio terminology)_, you can identify them and decide on further routing or blocking based on their headers.
-  > - At the same time, when analyzing TCP traffic _(in istio terminology)_, it is possible to identify them and decide on further routing or blocking based only on their destination IP address or port number.
+  > When analyzing traffic, Istio uses:
+  > - For HTTP and HTTPS requests — headers.
+  > - For TCP requests — destination IP address and port number.
   >
-  > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the istio's rules.
-  > The intersection of subnets of services and pods is strictly prohibited in `single-network` mode, and is acceptable but not recommended in `multi-networks` mode.
-  > [source](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network )
+  > If the IP addresses of services or pods in different clusters match,
+  > requests from other pods in other clusters may mistakenly fall under the istio's rules.
+  > The intersection of subnets of services and pods is strictly prohibited in single-network mode,
+  > and is acceptable but not recommended in multi-networks mode.
+  > For details, refer to the [Istio documentation](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network).
   >
   > - In the single-network mode, pods from different clusters can communicate with each other directly.
   > - In the multi-networks mode, pods from different clusters can only communicate with each other if they use the Istio-gateway.
 
 ### General principles of federation
 
-* Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
-* You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
+* Federation requires mutual trust between clusters.
+  It requires a mutual root certificate exchange: cluster A must trust cluster B, and vice versa.
+* Configuring inter-cluster access to services requires exchanging information about public services.
+  To expose the bar service from cluster B to cluster A, you must create a ServiceEntry resource in cluster A,
+  defining the Ingress gateway public address of cluster B.
 
 <div data-presentation="../../../../presentations/istio/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
 
-### Enabling the federation
+### Enabling the federation — created services
 
-Enabling federation (via the `istio.federation.enabled = true` module parameter) results in the following activities:
+Enabling federation (via the `istio.federation.enabled = true` module parameter) results in the following:
 
-* The `ingressgateway` service is added to the cluster. Its task is to proxy mTLS traffic coming from outside of the cluster to application services.
-* A service gets added to the cluster that exports the following cluster metadata to the outside:
+* The `ingressgateway` service is added to the cluster.
+  Its task is to proxy mTLS traffic coming from outside to application services.
+* Another added service exports the following cluster metadata to the outside:
   * Istio root certificate (accessible without authentication).
   * List of public services in the cluster (available only for authenticated requests from neighboring clusters).
-  * List of public addresses of the `ingressgateway` service (available only for authenticated requests from neighboring clusters).
+  * List of public addresses of the `ingressgateway` service
+    (available only for authenticated requests from neighboring clusters).
 
 ### Managing the federation
 
@@ -52,34 +64,23 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 To establish a federation, you must:
 
-* Create a set of `IstioFederation` resources in each cluster that describe all the other clusters.
-  * After successful auto-negotiation between clusters, the status of `IstioFederation` resource will be filled with neighbour's public and private metadata (`status.metadataCache.public` and `status.metadataCache.private`).
-* Add the `federation.istio.deckhouse.io/public-service: ""` label to each resource(`service`) that is considered public within the federation.
-  * In the other federation clusters, a corresponding `ServiceEntry` will be created for each `service`, leading to the `ingressgateway` of the original cluster.
+* Create a set of [IstioFederation](/modules/istio/cr.html#istiofederation) resources in each cluster
+  that describe all the other clusters.
+  * After successful auto-negotiation between clusters,
+    the IstioFederation resource will be filled with necessary service data in `status.metadataCache.public` and `status.metadataCache.private`.
+* Add the `federation.istio.deckhouse.io/public-service: ""` label to each Service resource
+  that is considered public within the federation.
+  * In the other federation clusters, a corresponding ServiceEntry will be created for each Service,
+    leading to the `ingressgateway` of the original cluster.
 
-> It is important, that in these `services`, in the `.spec.ports` section, each port must have the `name` field filled.
-
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/istio/#federation -->
+> **Important**. Ensure that the `name` field in the `.spec.ports` section of the Services resource is filled in for each port.
+> Otherwise, there may be issues in the federation's work.
 
 ### Example of configuring a federation of two clusters
 
-> Available in Enterprise Edition only.
-
-Use custom resource IstioFederation to customize the federation using Istio tools.
+To set up a federation with Istio, use the [IstioFederation](/modules/istio/cr.html#istiofederation) custom resource.
 
 Cluster A:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: cluster-b
-spec:
-  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
-  trustDomain: cluster-b.local
-```
-
-Cluster B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -89,4 +90,16 @@ metadata:
 spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
   trustDomain: cluster-a.local
+```
+
+Cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+  trustDomain: cluster-b.local
 ```
