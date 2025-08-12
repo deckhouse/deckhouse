@@ -98,6 +98,16 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 		return nil, fmt.Errorf("no Nodes provided")
 	}
 
+	// DEBUG
+	nodeNames := make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		nodeNames = append(nodeNames, n.Name)
+	}
+	klog.InfoS("ensureLB called",
+		"lbName", defaultLoadBalancerName(service),
+		"nodes", nodeNames,
+	)
+
 	lbName := defaultLoadBalancerName(service)
 
 	lb := api.LoadBalancer{

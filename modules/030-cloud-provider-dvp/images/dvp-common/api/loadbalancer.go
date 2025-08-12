@@ -120,14 +120,19 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	serviceLabels := loadBalancer.ServiceLabels
 
 	lbKey := lbLabelKey(name)
+	// DEBUG
+	klog.InfoS("updateLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
 	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
 		return nil, err
 	}
 
 	ports := lb.CreateLoadBalancerPorts(service)
-
+	// DEBUG
+	oldSel := svc.Spec.Selector
 	svc.Spec.Selector = map[string]string{lbKey: "loadbalancer"}
+	klog.InfoS("updateLoadBalancerService: set external selector",
+		"lbName", name, "oldSelector", oldSel, "newSelector", svc.Spec.Selector)
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
 	svc.Spec.ExternalIPs = []string{}
@@ -181,7 +186,8 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
 	lbKey := lbLabelKey(name)
-
+	// DEBUG
+	klog.InfoS("createLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
 	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
 		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
 		return nil, err
@@ -203,6 +209,9 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Selector:              map[string]string{lbKey: "loadbalancer"},
 		},
 	}
+	// DEBUG
+	klog.InfoS("createLoadBalancerService: creating Service",
+		"lbName", name, "selector", svc.Spec.Selector)
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
 	}
@@ -315,6 +324,11 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 		desired[in.Name] = struct{}{}
 		hostnames = append(hostnames, in.Name)
 	}
+	// DEBUG
+	klog.InfoS("ensureNodeLabels: input",
+		"lbKey", lbKey,
+		"nodesCount", len(nodes),
+		"nodes", hostnames)
 
 	cs := &ComputeService{Service: lb.Service}
 
@@ -322,6 +336,8 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 		if err := cs.EnsureVMLabelByHostname(ctx, h, lbKey, "loadbalancer"); err != nil {
 			return fmt.Errorf("ensure VM label for hostname %q: %w", h, err)
 		}
+		// DEBUG
+		klog.V(2).InfoS("ensureNodeLabels: set VM label OK", "hostname", h, "lbKey", lbKey)
 	}
 
 	var vml v1alpha2.VirtualMachineList
@@ -344,6 +360,8 @@ func (lb *LoadBalancerService) ensureNodeLabels(
 		if err := cs.RemoveVMLabelByHostname(ctx, hostname, lbKey); err != nil && !k8serrors.IsNotFound(err) {
 			return fmt.Errorf("remove VM label for hostname %q: %w", hostname, err)
 		}
+		// DEBUG
+		klog.V(2).InfoS("ensureNodeLabels: removed VM label", "hostname", hostname, "lbKey", lbKey)
 	}
 
 	return nil
