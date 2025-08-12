@@ -603,12 +603,9 @@ import:
   - libgcc_s.so.1
 ### temp
 - image: {{ .ModuleName }}/{{ .ImageName }}-musl
-  add: /lib64
-  to: /lib64
+  add: /lib64/libc.musl-x86_64.so.1
+  to: /lib64/libc.musl-x86_64.so.1
   before: install
-  includePaths:
-  - libc.so.6
-  - libc.musl-x86_64.so.1
 git:
 {{- include "image mount points" . }}
 imageSpec:
