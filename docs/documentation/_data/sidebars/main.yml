@@ -580,11 +580,11 @@ entries:
                         ru: ALB
                       folders:
                         - title:
-                            en: ALB by NGINX Ingress controller
+                            en: ALB with NGINX Ingress controller
                             ru: ALB средствами NGINX Ingress controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
-                            en: ALB means Istio
+                            en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html
                     - title:

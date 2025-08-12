@@ -20,7 +20,7 @@ kind: IngressIstioController
 metadata:
  name: main
 spec:
-  # ingressGatewayClass содержит значение селектора меток, используемое при создании ресурса Gateway.
+  # ingressGatewayClass содержит значение селектора лейблов, используемое при создании ресурса Gateway.
   ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
@@ -59,7 +59,7 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # Селектор меток для использования Istio Ingress Gateway main-hp.
+    # Селектор лейблов для использования Istio Ingress Gateway main-hp.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
@@ -76,13 +76,13 @@ spec:
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # Ресурс Secret с сертификатом и ключом, который должен быть создан в d8-ingress-istio namespace.
+        # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имен d8-ingress-istio.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com
 ```
 
-Поддерживаемые форматы Secret'ов можно посмотреть [на официальном сайте](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
+Поддерживаемые форматы Secret'ов можно посмотреть [на официальном сайте проекта Istio](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
 ```yaml
 apiVersion: networking.istio.io/v1alpha3
@@ -104,6 +104,7 @@ spec:
 ### NGINX Ingress
 
 Для работы с NGINX Ingress требуется подготовить:
+
 * Ingress-контроллер, добавив к нему sidecar от Istio. Для этого установите параметр `enableIstioSidecar` кастомного ресурса [IngressNginxController](../../../../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [`ingress-nginx`](../../../../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — эта аннотация указывает Ingress-контроллеру направлять запросы на ClusterIP сервиса (из диапазона Service CIDR), а не напрямую в поды приложения. Это необходимо, поскольку sidecar-контейнер `istio-proxy` перехватывает только трафик, направленный на диапазон Service CIDR. Запросы вне этого диапазона не проходят через Istio;

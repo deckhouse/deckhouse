@@ -1,11 +1,10 @@
 ---
-title: "ALB means Istio"
+title: "ALB with Istio"
 permalink: en/admin/configuration/network/ingress/alb/istio.html
 ---
 
-Istio ALB is implemented via Istio Ingress Gateway or NGINX Ingress. The [istio](../../reference/mc/istio/) module is used for this purpose.
-
-<!-- Transferred with minor modifications from [https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ ](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#ingress-to-publish-applications)-->
+ALB with Istio is implemented via Istio Ingress Gateway or NGINX Ingress.
+The [`istio`](/modules/istio/) module is used for this purpose.
 
 ## Ingress to publish applications
 
@@ -19,7 +18,7 @@ kind: IngressIstioController
 metadata:
  name: main
 spec:
-  # ingressGatewayClass contains the label selector value used to create the Gateway resource
+  # ingressGatewayClass contains the label selector value used to create the Gateway resource.
   ingressGatewayClass: istio-hp
   inlet: HostPort
   hostPort:
@@ -41,7 +40,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: app-tls-secert
-  namespace: d8-ingress-istio # note the namespace isn't app-ns
+  namespace: d8-ingress-istio # Note that the namespace is not app-ns.
 type: kubernetes.io/tls
 data:
   tls.crt: |
@@ -58,29 +57,30 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # label selector for using the Istio Ingress Gateway main-hp
+    # Label selector for using the Istio Ingress Gateway main-hp.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
-        # standard template for using the HTTP protocol
+        # Standard template for using the HTTP protocol.
         number: 80
         name: http
         protocol: HTTP
       hosts:
         - app.example.com
     - port:
-        # standard template for using the HTTPS protocol
+        # Standard template for using the HTTPS protocol.
         number: 443
         name: https
         protocol: HTTPS
       tls:
         mode: SIMPLE
-        # a secret with a certificate and a key, which must be created in the d8-ingress-istio namespace
-        # supported secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
+        # A Secret resource with a certificate and a key, which must be created in the d8-ingress-istio namespace.
         credentialName: app-tls-secrets
       hosts:
         - app.example.com
 ```
+
+Supported Secret formats can be found at the [official website of the Istio project](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -101,11 +101,17 @@ spec:
 
 ### NGINX Ingress
 
-To use Ingress, you need to:
-* Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../reference/mc/ingress-nginx/) module's [IngressNginxController](../../reference/cr/ingressnginxcontroller/) custom resource.
+To use NGINX Ingress, you need to:
+
+* Configure the Ingress controller by adding Istio sidecar to it.
+  Enable the `enableIstioSidecar` parameter in the [`ingress-nginx`](/modules/ingress-nginx/) module's [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
-  * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
-  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — using this annotation, the sidecar container can identify the application service that serves requests.
+  * `nginx.ingress.kubernetes.io/service-upstream: "true"`: Using this annotation,
+    the Ingress controller sends requests to the Service ClusterIP (from Service CIDR) instead of sending them directly
+    to the application's pods. This is required because the `istio-proxy` sidecar container only catches traffic
+    directed to Service CIDR. Any requests out of this range do not go through Istio.
+  * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc`: Using this annotation,
+    the sidecar container can identify the application service that serves requests.
 
 Examples:
 

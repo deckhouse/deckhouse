@@ -3,17 +3,20 @@ title: "Ensuring high availability and fault tolerance (keepalived)"
 permalink: en/admin/configuration/network/ingress/keepalived.html
 ---
 
-In Deckhouse Kubernetes Platform, the [keepalived](reference/mc/keepalived/) module can be used to provide high availability and fault tolerance.
+In Deckhouse Kubernetes Platform,
+the [`keepalived`](/modules/keepalived/) module can be used to provide high availability and fault tolerance.
 
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
+To configure keepalived clusters, custom resources are used.
 
 ## Module usage examples
 
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
+### Multiple public IP addresses
 
-### Three public IP addresses
-
-Suppose there are three public IP addresses on three front nodes. Each virtual IP address is placed in a separate VRRP group. Thus, each address "jumps" independently of the others, and if there are three nodes in the cluster with the `node-role.deckhouse.io/frontend: ""` labels, then each IP gets its own MASTER node.
+In the following example, there are three public IP addresses on three front nodes.
+Each virtual IP address is assigned to a separate VRRP group.
+Thus, each address "jumps" independently of the others,
+and if there are three nodes in the cluster with the `node-role.deckhouse.io/frontend: ""` labels,
+each IP address gets its own master node.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -21,7 +24,7 @@ kind: KeepalivedInstance
 metadata:
   name: front
 spec:
-  nodeSelector: # Mandatory.
+  nodeSelector: # Required.
     node-role.deckhouse.io/frontend: ""
   tolerations:  # Optional.
   - key: dedicated.deckhouse.io
@@ -46,7 +49,10 @@ spec:
     - address: 42.43.44.103/32
 ```
 
-Suppose there is a gateway with a pair of IP addresses for LAN and WAN. In the case of the gateway, the private and public IPs are bind together, and they will "jump" between the nodes in tandem. In the below example, the VRRP traffic is routed through the LAN interface. It can be detected using the NetworkAddress method (assuming that each node has an IP belonging to this subnet).
+In the following example, there is a gateway with a pair of IP addresses for LAN and WAN.
+In the case of the gateway, the private and public IPs are bind together, and they will "jump" between the nodes in tandem.
+In the below example, the VRRP traffic is routed through the LAN interface.
+It can be detected using the NetworkAddress method (assuming that each node has an IP address belonging to this subnet).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -70,5 +76,22 @@ spec:
     - address: 42.43.44.1/28
       interface:
         detectionStrategy: Name
-        name: ens7 # we use the fact that an interface for public IPs is called "ens7" on all nodes
+        name: ens7 # The interface for public IPs is called "ens7" on all nodes, therefore it needs to be named explicitly.
 ```
+
+## Switching keepalived manually
+
+1. Go to the target pod:
+
+   ```shell
+   d8 k -n d8-keepalived exec -it keepalived-<name> -- sh
+   ```
+
+1. Edit the `/etc/keepalived/keepalived.conf` file and in the line with the `priority` parameter,
+   replace the value with the number of keepalived pods + 1.
+
+1. Send a signal to reread the configuration:
+
+   ```shell
+   kill -HUP 1
+   ```
