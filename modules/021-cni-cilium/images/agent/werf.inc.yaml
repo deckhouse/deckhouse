@@ -104,7 +104,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:aed20ec34738390c11ade2afcae80
 final: false
 shell:
   install:
-  - cd lib64/
+  - cd /lib64/
   - ln -s libc.so.6 libc.musl-x86_64.so.1
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
