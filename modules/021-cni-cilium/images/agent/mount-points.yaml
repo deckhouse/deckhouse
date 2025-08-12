@@ -1,7 +1,6 @@
 files:
   - /run/xtables.lock
 dirs:
-  - /sys/fs/bpf
   - /host/proc/sys/net
   - /host/proc/sys/kernel
   - /run/cilium/cgroupv2
