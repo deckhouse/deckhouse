@@ -255,9 +255,6 @@ internal:
 
 	const apiServerWithOidcFull = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -274,9 +271,6 @@ apiserver:
 `
 	const apiServerWithOidcFullKube129 = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.29"
   etcdServers:
     - https://192.168.199.186:2379
@@ -293,9 +287,6 @@ apiserver:
 `
 	const apiServerWithOidcIssuerOnly = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -309,9 +300,6 @@ apiserver:
 
 	const apiServerWithOidcEmpty = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
