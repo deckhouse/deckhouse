@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/sync/errgroup"
 	coordination "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +28,8 @@ import (
 	coordinationclientv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

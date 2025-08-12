@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/flant/addon-operator v1.10.3
+	github.com/flant/addon-operator v1.11.0
 	github.com/flant/kube-client v1.3.1
-	github.com/flant/shell-operator v1.9.1
+	github.com/flant/shell-operator v1.10.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
 	github.com/google/go-cmp v0.7.0
@@ -110,8 +110,8 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/bramvdbogaerde/go-scp v1.5.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/containerd v1.7.27 // indirect

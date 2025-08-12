@@ -216,6 +216,17 @@ apiVersions:
       sshPublicKey:
         description: |
           Публичный ключ для доступа на узлы.
+      disableDefaultSecurityGroup:
+        description: |
+          Если установлено значение `true`, то security group по умолчанию создаваться не будут. 
+
+          **Важно.** При использовании `disableDefaultSecurityGroup: true` вы обязаны самостоятельно создать все необходимые security group для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
+
+          - `additionalSecurityGroups` в секции `masterNodeGroup` ресурса AWSClusterConfiguration;
+          - `additionalSecurityGroups` в ресурсе AWSInstanceClass;
+          - `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
+
+          Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
       sshAllowList:
         description: |
           Список CIDR, разрешенных для подключения к узлам по SSH.
