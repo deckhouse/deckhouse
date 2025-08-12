@@ -4,7 +4,7 @@ check_changelog:
   name: Check changelog
   runs-on: ubuntu-latest
   steps:
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 4 }!}
+  {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
       run: |
         if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
@@ -68,7 +68,7 @@ steps:
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-      COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+      COSIGN_ACCESS_TOKEN: ${{ steps.secrets.outputs.access_token }}
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -136,6 +136,7 @@ steps:
         # Set cosign auth values
         export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
         export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+        export COSIGN_ACCESS_TOKEN="${COSIGN_ACCESS_TOKEN}"
 
         # The Git tag may contain a '+' sign, so use slugify for this situation.
         # Slugify doesn't change a tag with safe-only characters.

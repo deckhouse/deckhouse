@@ -21,8 +21,8 @@ secrets:
   value: {{ $context.CosignLogin }}
 - id: COSIGN_PASSWORD
   value: {{ $context.CosignPassword }}
-- id: COSIGN_KEY
-  value: {{ $context.CosignKey }}
+- id: COSIGN_ACCESS_TOKEN
+  value: {{ $context.CosignAccessToken }}
 import:
 - image: tools/cosign
   add: /usr/bin/cosign
@@ -46,13 +46,15 @@ shell:
   setup:
   - |
     COSIGN_PASSWORD="" \
-    COSIGN_KEY=$(cat /run/secrets/COSIGN_KEY | base64 -d) \
+    VAULT_TOKEN="$(cat /run/secrets/COSIGN_ACCESS_TOKEN)" \
+    TRANSIT_SECRET_ENGINE_PATH=dh-signer \
+    VAULT_ADDR=https://seguro.flant.com \
     cosign attest \
       --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key env://COSIGN_KEY \
+      --key hashivault://${TRANSIT_SECRET_ENGINE_PATH}/dh-2025-aug-dev \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
