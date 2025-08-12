@@ -100,4 +100,22 @@ resource "vcd_vapp_vm" "master" {
     "public-keys"     = var.providerClusterConfiguration.sshPublicKey
     "disk.EnableUUID" = "1"
   }, length(var.cloudConfig) > 0 ? { "user-data" = var.cloudConfig } : {})
+
+  dynamic "metadata_entry" {
+    for_each = local.additional_metadata
+
+    content {
+      type        = format("Metadata%sValue", metadata_entry.value.type)
+      is_system   = metadata_entry.value.isSystem
+      user_access = metadata_entry.value.userAccess
+      key         = metadata_entry.value.key
+      value       = metadata_entry.value.value
+    }
+  }
+
+  # stub metadata_entry for deleting metadata if field was deleted
+  dynamic "metadata_entry" {
+    for_each = length(local.additional_metadata) == 0 ? [1] : []
+    content {}
+  }
 }

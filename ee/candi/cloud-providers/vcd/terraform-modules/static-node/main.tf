@@ -87,8 +87,6 @@ resource "vcd_vapp_vm" "node" {
     "public-keys"     = var.providerClusterConfiguration.sshPublicKey
     "user-data"       = var.cloudConfig
     "disk.EnableUUID" = "1"
-<<<<<<< HEAD
-=======
   }
 
   dynamic "metadata_entry" {
@@ -101,7 +99,6 @@ resource "vcd_vapp_vm" "node" {
       key         = metadata_entry.value.key
       value       = metadata_entry.value.value
     }
->>>>>>> 82fd6ae55c (add additionalMetadata to static instances)
   }
 
   # stub metadata_entry for deleting metadata if field was deleted
