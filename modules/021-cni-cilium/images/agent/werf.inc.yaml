@@ -99,6 +99,14 @@ image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
 from: dev-registry.deckhouse.io/base_images@sha256:beec6cc450129dc8a2428ca41187634302d5025182959f55cd38594c8ea3afd0
 final: false
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-musl
+from: dev-registry.deckhouse.io/base_images@sha256:aed20ec34738390c11ade2afcae8021928663f5ad1b7bbad0a1345452d7e8bdf
+final: false
+shell:
+  install:
+  - cd lib64/
+  - ln -s libc.so.6 libc.musl-x86_64.so.1
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -593,6 +601,14 @@ import:
   - libstdc++.so.6
   - libstdc++.so.6.0.32
   - libgcc_s.so.1
+### temp
+- image: {{ .ModuleName }}/{{ .ImageName }}-musl
+  add: /lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so.6
+  - libc.musl-x86_64.so.1
 git:
 {{- include "image mount points" . }}
 imageSpec:
