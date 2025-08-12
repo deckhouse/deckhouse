@@ -139,7 +139,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 
 			}
 		}
-		if len(stdoutBuf.Bytes()) > 0 || len(stderrBuf.Bytes()) > 0 {
+		if len(stdoutBuf.Bytes()) > 0 {
 			break
 		}
 	}
