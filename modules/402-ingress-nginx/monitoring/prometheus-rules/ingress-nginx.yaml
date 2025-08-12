@@ -275,13 +275,13 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: |-
-        GeoIP DB download error occurred in controller `{{ $labels.controller }}`
+        GeoIP DB download error in controller `{{ $labels.controller }}`.
       description: |-
-        An error occurred during GeoIP DB download in controller `{{ $labels.controller }}`.
+        The controller `{{ $labels.controller }}` failed to download the GeoIP database.
 
         **Reason:** `{{ $labels.reason }}`
 
         **Type:** `{{ $labels.type }}`
 
-        If this persists, investigate the network connectivity or DB availability.
+        If this issue persists, investigate network connectivity or database availability.
 
