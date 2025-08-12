@@ -128,7 +128,7 @@ secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
 - id: DECKHOUSE_PRIVATE_REPO
-  value: {{ .DECKHOUSE_PRIVATE_REPO }}
+  value: {{ $.DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
 {{- if and (eq $.Env "CSE") $is_v2 }}
