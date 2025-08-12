@@ -470,11 +470,15 @@ func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, module
 		return false, fmt.Errorf("failed to marshal unstructured module: %w", err)
 	}
 
-	module := deckhousev1alpha1.Module{}
-	decoder := serializer.NewCodecFactory(runtime.NewScheme()).UniversalDeserializer()
+	var module deckhousev1alpha1.Module
+	decoder := serializer.
+		NewCodecFactory(runtime.NewScheme()).
+		UniversalDeserializer()
 	if _, _, err := decoder.Decode(moduleJSON, nil, &module); err != nil {
 		return false, fmt.Errorf("failed to decode module JSON: %w", err)
 	}
 
-	return module.ConditionStatus(deckhousev1alpha1.ModuleConditionEnabledByModuleManager), nil
+	enabled := module.ConditionStatus(
+		deckhousev1alpha1.ModuleConditionEnabledByModuleManager)
+	return enabled, nil
 }
