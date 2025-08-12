@@ -3,7 +3,7 @@ title: Using an internal container image registry
 permalink: en/admin/configuration/registry/internal-registry.html
 ---
 
-The ability to use internal registry is implemented by the `registry` module.
+The ability to use internal registry is implemented by the [`registry`](../../../../../../../modules/registry/) module.
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
@@ -11,9 +11,9 @@ The internal registry allows for optimizing the downloading and storage of image
 
 The `registry` module, which implements internal storage, operates in the following modes:
 
-- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
+- `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
 
-- `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../third-party-registry.html).
+- `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../registry/third-party-registry.html).
 
 {% alert level="info" %}
 - The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](../../../installing/configuration.html#clusterconfiguration).
@@ -27,12 +27,12 @@ To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
 
-- During the first switch, the containerd v1 service will be restarted, as the switch to the [new authorization configuration](#how-to-prepare-containerd-v1) will take place.
+- During the first switch, the containerd v1 service will be restarted, as the switch to the [new authorization configuration](#preparation-of-containerd-v1) will take place.
 - When changing the registry mode or registry parameters, Deckhouse will be restarted.
 
 {% endalert %}
 
-1. If the cluster is running with containerd v1, [you need to prepare custom containerd configuration](#how-to-prepare-containerd-v1).
+1. If the cluster is running with containerd v1, [you need to prepare custom containerd configuration](#preparation-of-containerd-v1).
 
 1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
 
@@ -71,7 +71,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    registry   38     ...  Ready   True                         True
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](../deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](../../../../../../../modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -92,7 +92,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
            license: <LICENSE_KEY> # Replace with your license key
    ```
 
-1. Check the registry switch status in the `registry-state` secret using [this guide](#how-to-check-the-registry-mode-switch-status). Example output:
+1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status). Example output:
 
    ```yaml
    conditions:
@@ -143,7 +143,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    master-2   Ready,SchedulingDisabled    control-plane,master  ...
    ```
 
-1. Ensure that the `registry` module is running in `Direct` mode and the switch status to `Direct` is `Ready`. You can verify the state via the `registry-state` secret using [this guide](#how-to-check-the-registry-mode-switch-status). Example output:
+1. Ensure that the `registry` module is running in `Direct` mode and the switch status to `Direct` is `Ready`. You can verify the state via the `registry-state` secret using [this guide](#check-registry-mode-switch-status). Example output:
 
    ```yaml
    conditions:
@@ -173,7 +173,7 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
          mode: Unmanaged
    ```
 
-1. Check the registry switch status in the `registry-state` secret using [this guide](#how-to-check-the-registry-mode-switch-status). Example output:
+1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status). Example output:
 
    ```yaml
    conditions:
@@ -188,9 +188,9 @@ To switch the cluster to `Unmanaged` mode, follow these steps:
    target_mode: Unmanaged
    ```
 
-1. If you need to switch back to the previous containerd v1 auth configuration, refer to the [instruction](#how-to-switch-back-to-the-previous-containerd-v1-auth-configuration).
+1. If you need to switch back to the previous containerd v1 auth configuration, refer to the [instruction](#switch-to-the-previous-containerd-v1-authorization-configuration).
 
-## How to prepare Containerd V1?
+## Preparation of containerd v1
 
 When switching to the `Direct` mode, the `Containerd V1` service will be restarted.  
 The authorization configuration will be switched to Mirror Auth (this configuration is used by default in containerd v2).  
@@ -224,12 +224,12 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with containerd V1 in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom authorization configurations](../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with containerd V1 in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
 {% alert level="danger" %}
-- After deleting [custom authorization configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
+- After deleting [custom authorization configurations](../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
 - New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
 
@@ -279,17 +279,17 @@ If such configurations exist:
 
 1. Delete auth configurations from the `/etc/containerd/conf.d` directory.
 
-## How to switch back to the previous containerd v1 auth configuration?
+## Switch to the previous containerd v1 authorization configuration
 
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
 - When switching to the legacy containerd v1 auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.
-- [Custom auth configurations](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
+- [Custom auth configurations](/../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
 {% endalert %}
 
 1. Switch the registry mode to `Unmanaged`.
 
-1. Check the switching status using [this guide](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
+1. Check the switching status using [this guide](#check-registry-mode-switch-status). Example output:
 
    ```yaml
    conditions:
@@ -312,7 +312,7 @@ If such configurations exist:
 
 1. After deleting the secret, wait for the auth configuration to switch back to the legacy one in containerd v1.
 
-   You can use [this guide](./faq.html#how-to-check-the-registry-mode-switch-status) to track the switch. Example output:
+   You can use [this guide](#check-registry-mode-switch-status) to track the switch. Example output:
 
    ```yaml
    conditions:
@@ -327,11 +327,10 @@ If such configurations exist:
    target_mode: Unmanaged
    ```
 
-## How to check the registry mode switch status?
+## Check registry mode switch status
 
 The status of the registry mode switch can be retrieved using the following command:
 
-<!-- TODO(nabokihms): replace with d8 subcommand when available -->
 ```bash
 d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .state | map_values(@base64d) | .conditions = (.conditions | from_yaml)'
 ```
