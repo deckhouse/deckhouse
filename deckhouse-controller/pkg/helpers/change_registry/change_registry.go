@@ -36,11 +36,13 @@ import (
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -50,13 +52,25 @@ import (
 // (waiting for new "go-containerregistry" version)
 
 const (
-	d8SystemNS = "d8-system"
-	caKey      = "ca"
+	d8SystemNS              = "d8-system"
+	caKey                   = "ca"
+	registryStateSecretName = "registry-state"
 )
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
 	logEntry := logger.With("operator.component", "ChangeRegistry")
+
+	kubeCl, err := newKubeClient()
+	if err != nil {
+		return err
+	}
+
+	// Perform the check at the very beginning.
+	logEntry.Info("Checking cluster registry mode...")
+	if err := checkRegistryModuleMode(ctx, kubeCl); err != nil {
+		return err
+	}
 
 	authConfig := newAuthConfig(username, password)
 
@@ -74,11 +88,6 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	caTransport := cr.GetHTTPTransport(caContent)
 
 	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
-		return err
-	}
-
-	kubeCl, err := newKubeClient()
-	if err != nil {
 		return err
 	}
 
@@ -434,4 +443,38 @@ func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *docker
 		Password: authConfig.Password,
 		Auth:     base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password)),
 	}
+}
+
+// checkRegistryModuleMode verifies that the registry module is in Unmanaged mode.
+func checkRegistryModuleMode(ctx context.Context, kubeCl *kclient.KubernetesClient) error {
+	secret, err := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS).Get(ctx, registryStateSecretName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			// Secret not found means the registry module is not active, which is equivalent to Unmanaged mode.
+			// The helper is allowed to run.
+			return nil
+		}
+		return fmt.Errorf("cannot get registry state: %w", err)
+	}
+
+	mode := string(secret.Data["mode"])
+	targetMode := string(secret.Data["target_mode"])
+
+	// The legacy helper should only run when the registry module is fully in Unmanaged mode.
+	// An empty value for a mode is treated as Unmanaged.
+	isModeSafe := mode == registry_const.ModeUnmanaged || mode == ""
+	isTargetModeSafe := targetMode == registry_const.ModeUnmanaged || targetMode == ""
+
+	if isModeSafe && isTargetModeSafe {
+		// Cluster is in a safe state to run the helper.
+		return nil
+	}
+
+	// If we are here, the cluster is in a managed mode or transitioning to one. Block the helper.
+	errMsg := fmt.Sprintf(
+		"registry is currently managed by the \"registry\" module. This command may be used only in '%s' registry mode.",
+		registry_const.ModeUnmanaged,
+	)
+
+	return errors.New(errMsg)
 }

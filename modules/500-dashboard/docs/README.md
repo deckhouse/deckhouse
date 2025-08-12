@@ -1,5 +1,6 @@
 ---
 title: "The dashboard module"
+description: "Kubernetes Dashboard Web UI for managing applications in the Deckhouse Kubernetes Platform cluster."
 webIfaces:
 - name: dashboard
 ---

@@ -1,5 +1,5 @@
 ---
-title: Deckhouse CLI
+title: "Описание и установка Deckhouse CLI"
 permalink: ru/deckhouse-cli/
 description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
 lang: ru
@@ -10,7 +10,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 В командной строке к утилите можно обратиться как `d8`. Все команды сгруппированы по функциям:
 
 {% alert level="info" %}
-Группы команд `d8 d` и `d8 mirror` недоступны для Community Edition (CE) и Basic Edition (BE).
+Группы команд `d8 dk` и `d8 mirror` недоступны для Community Edition (CE) и Basic Edition (BE).
 {% endalert %}
 
 * `d8 k` — команды, которые в кластерах Kubernetes выполняет `kubectl`.  

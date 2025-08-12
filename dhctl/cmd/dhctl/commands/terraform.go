@@ -29,7 +29,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -55,7 +59,21 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.InfoLn("Check started ...\n")
 
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		var sshClient node.SSHClient
+		var err error
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		if app.SSHLegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(true)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(true)
+		}
 		if err != nil {
 			return err
 		}

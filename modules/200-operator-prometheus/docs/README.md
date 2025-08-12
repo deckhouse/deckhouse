@@ -1,5 +1,6 @@
 ---
 title: "The operator-prometheus module"
+description: "Installation and management of the monitoring system in the Deckhouse Kubernetes Platform cluster."
 ---
 
 This module installs the [prometheus operator](https://github.com/coreos/prometheus-operator) for creating [Prometheus](https://prometheus.io/) installations and managing them in an automated manner.

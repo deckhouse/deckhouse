@@ -1,5 +1,6 @@
 ---
 title: "The metallb module"
+description: "Load balancing for services in bare metal clusters."
 ---
 
 This module implements the `LoadBalancer` mechanism for services in bare metal clusters.

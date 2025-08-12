@@ -1,5 +1,6 @@
 ---
 title: "The user-authz module"
+description: "Authorization and role-based access control to the resources of the Deckhouse Kubernetes Platform cluster."
 ---
 
 The module generates role-based access model objects based on the standard Kubernetes RBAC mechanism. The module creates a set of cluster roles (`ClusterRole`) suitable for most user and group access management tasks.

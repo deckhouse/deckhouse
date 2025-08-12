@@ -38,7 +38,7 @@ func updatePolicyHandler(cli client.Client) http.Handler {
 		if !ok {
 			log.Debug("unexpected type", log.Type("expected", v1alpha2.ModuleUpdatePolicy{}), log.Type("got", obj))
 
-			return nil, fmt.Errorf("expect Secret as unstructured, got %T", obj)
+			return nil, fmt.Errorf("expect ModuleUpdatePolicy as unstructured, got %T", obj)
 		}
 
 		configs := new(v1alpha1.ModuleConfigList)
@@ -52,7 +52,7 @@ func updatePolicyHandler(cli client.Client) http.Handler {
 			}
 		}
 
-		return allowResult("")
+		return allowResult(nil)
 	})
 
 	// Create webhook.

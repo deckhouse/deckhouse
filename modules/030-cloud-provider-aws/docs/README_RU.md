@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — AWS"
+description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Amazon AWS."
 ---
 
 Взаимодействие с облачными ресурсами провайдера [AWS](https://aws.amazon.com/) осуществляется с помощью модуля `cloud-provider-aws`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы AWS при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).

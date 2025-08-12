@@ -4,6 +4,7 @@ kind: ModuleSource
 metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+    modules.deckhouse.io/default-source: "true"
   name: test-source-1
 spec:
   registry:
@@ -51,6 +52,17 @@ status:
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: bundlenabledmodule
+properties:
+  source: test-source-1
+  availableSources:
+    - test-source-1
+status:
+  phase: Available
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module

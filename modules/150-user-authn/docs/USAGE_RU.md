@@ -124,7 +124,7 @@ spec:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket
@@ -183,9 +183,30 @@ spec:
       - groups
 ```
 
-{% alert level="warning" %}
-При использовании Keycloak, как Identity Provider [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»). Это необходимо для корректной обработки значения `true` поля [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав неверифицированным пользователям.
-{% endalert %}
+Если в KeyCloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
+
+* Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
+  Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
+
+* Если отредактировать или удалить маппинг `Email verified` невозможно, создайте отдельный Client Scope с именем `email_dkp` (или любым другим) и добавьте в него два маппинга:
+  * `email`: «Client Scopes» → `email_dkp` → «Add mapper» → «From predefined mappers» → `email`;
+  * `email verified`: «Client Scopes» → `email_dkp` → «Add mapper» → «By configuration» → «Hardcoded claim». Укажите следующие поля:
+    * «Name»: `email verified`;
+    * «Token Claim Name»: `emailVerified`;
+    * «Claim value»: `true`;
+    * «Claim JSON Type»: `boolean`.
+  
+  После этого в клиенте, зарегистрированном для кластера DKP, в разделе «Clients» для `Client scopes` замените значение `email` на `email_dkp`.
+
+  В ресурсе DexProvider укажите параметр `insecureSkipEmailVerified: true` и в поле `.spec.oidc.scopes` замените название Client Scope на `email_dkp`, следуя примеру:
+
+  ```yaml
+      scopes:
+        - openid
+        - profile
+        - email_dkp
+        - groups
+  ```
 
 #### Okta
 
@@ -353,13 +374,21 @@ data:
 
 ## Пример создания статического пользователя
 
-Придумайте пароль и укажите его хэш-сумму в поле `password`.
+Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
 
 Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
+
+{% alert level="info" %}
+Если команда `htpasswd` недоступна, установите соответствующий пакет:
+
+* `apache2-utils` — для дистрибутивов, основанных на Debian;
+* `httpd-tools` — для дистрибутивов, основанных на CentOS;
+* `apache2-htpasswd` — для ALT Linux.
+{% endalert %}
 
 Также можно воспользоваться [онлайн-сервисом](https://bcrypt-generator.com/).
 
@@ -374,7 +403,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 

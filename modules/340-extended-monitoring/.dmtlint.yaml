@@ -6,20 +6,7 @@ linters-settings:
       disable: true
   container:
     exclude-rules:
-      readiness-probe:
-        - kind: Deployment
-          name: extended-monitoring-exporter
-          container: kube-rbac-proxy
-        - kind: Deployment
-          name:  image-availability-exporter
-          container: kube-rbac-proxy
       liveness-probe:
-        - kind: Deployment
-          name: extended-monitoring-exporter
-          container: kube-rbac-proxy
         - kind: Deployment
           name: image-availability-exporter
           container: image-availability-exporter
-        - kind: Deployment
-          name:  image-availability-exporter
-          container: kube-rbac-proxy

@@ -335,7 +335,7 @@ type SimpleLogger struct {
 
 func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 	//todo: now unused, need change formatter to text when our slog implementation will support it
-	l := log.NewLogger(log.Options{})
+	l := log.NewLogger()
 
 	if opts.OutStream != nil {
 		l.SetOutput(opts.OutStream)
@@ -349,7 +349,7 @@ func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 
 func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
 	//json is default formatter for our slog implementation
-	l := log.NewLogger(log.Options{})
+	l := log.NewLogger()
 
 	if opts.OutStream != nil {
 		l.SetOutput(opts.OutStream)

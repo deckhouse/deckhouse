@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 if [[ "$FIRST_BASHIBLE_RUN" == "yes" ]]; then
   if command -v containerd >/dev/null 2>&1; then
     bb-log-error "containerd is detected on $HOSTNAME. Deckhouse does not support pre-provisioned containerd installations. Please uninstall containerd and try again."

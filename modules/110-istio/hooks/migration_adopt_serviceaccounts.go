@@ -26,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
@@ -90,8 +92,11 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	for _, serviceAccountSnap := range input.Snapshots["istio_serviceaccounts"] {
-		serviceAccount := serviceAccountSnap.(ServiceAccountInfo)
+	for serviceAccount, err := range sdkobjectpatch.SnapshotIter[ServiceAccountInfo](input.NewSnapshots.Get("istio_serviceaccounts")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'istio_serviceaccounts' snapshot: %w", err)
+		}
+
 		if !serviceAccount.IsLabeledAndAnnotated {
 			input.PatchCollector.PatchWithMerge(patch, "v1", "ServiceAccount", "d8-istio", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 		}

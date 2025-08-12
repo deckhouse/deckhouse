@@ -33,28 +33,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
     env:
       WERF_ENV: "FE"
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
@@ -65,8 +56,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "EE"
@@ -78,8 +67,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE"
@@ -91,8 +78,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "SE-plus"
@@ -104,8 +89,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "BE"
@@ -117,8 +100,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
     env:
       WERF_ENV: "CE"
@@ -301,3 +282,24 @@ jobs:
             echo "No released versions exist. Skipping."
           fi
       {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  compare_internal_modules:
+    name: Compare internal modules
+    needs:
+      - build_fe
+      - build_ee
+      - build_ce
+      - build_be
+      - build_se
+      - build_se_plus
+    if: ${{ always() && needs.build_fe.result == 'success' }}
+    runs-on: regular
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Get artifacts
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+      - name: Compare modules
+        run: python .github/scripts/python/compare_internal_modules.py

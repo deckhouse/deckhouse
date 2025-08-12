@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -111,9 +115,13 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 
 	var hasStaticInstancesField bool
 
-	nodeGroupSnapshots := input.Snapshots["node_group"]
-	for _, nodeGroupSnapshot := range nodeGroupSnapshots {
-		hasStaticInstancesField = nodeGroupSnapshot.(bool)
+	nodeGroupSnapshots := input.NewSnapshots.Get("node_group")
+	for hasStaticInstancesFieldSnapshot, err := range sdkobjectpatch.SnapshotIter[bool](nodeGroupSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
+		}
+
+		hasStaticInstancesField = hasStaticInstancesFieldSnapshot
 		if hasStaticInstancesField {
 			input.Logger.Info("Found staticInstances field in node group")
 			break // we need at least one NodeGroup with staticInstances field
@@ -130,13 +138,18 @@ func handleClusterAPIDeploymentRequired(input *go_hook.HookInput) error {
 	var capiEnabled bool
 	var capsEnabled bool
 
-	configMapSnapshots := input.Snapshots["config_map"]
-	if len(configMapSnapshots) > 0 {
-		capiEnabledFromCM := configMapSnapshots[0].(bool)
-		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capiEnabledFromCM)
+	configMapSnapshots := input.NewSnapshots.Get("config_map")
 
-		capiEnabled = hasCapiProvider || capiEnabledFromCM
-		capsEnabled = configMapSnapshots[0].(bool)
+	if len(configMapSnapshots) > 0 {
+		var capsFromStartSnap bool
+		err := configMapSnapshots[0].UnmarshalTo(&capsFromStartSnap)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal start 'config_map' snapshot: %w", err)
+		}
+		input.Logger.Info("Found ConfigMap d8-cloud-instance-manager/capi-controller-manager that indicated that CAPI should deployed", "enabled", capsFromStartSnap)
+
+		capiEnabled = hasCapiProvider || capsFromStartSnap
+		capsEnabled = capsFromStartSnap
 
 		input.Logger.Info("Calculated flags", "capiEnabled", capiEnabled, "capsEnabled", capsEnabled)
 	} else {

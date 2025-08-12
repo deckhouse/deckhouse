@@ -1,13 +1,18 @@
 ---
-title: "The monitoring-ping module"
+title: "Monitoring network interaction between all cluster nodes, as well as (optionally) up to additional external nodes"
+description: "Monitoring network interaction between all cluster nodes, as well as (optionally) up to additional external nodes"
 ---
 
 ## Description
 
-This module monitors network connectivity between cluster nodes and external nodes (optionally).
+The network communication monitoring module provides continuous connectivity verification between all the main and, if necessary, external nodes of the cluster.
 
-Each node sends ICMP packets to all other cluster nodes (as well as to optional external nodes) twice per second and exports the data to `Prometheus`.
-It is bundled with a dashboard for `Grafana` that displays the corresponding graphs.
+Module features:
+
+- automatically checks the availability of all cluster nodes (and, optionally, external systems) using ICMP (ping) — testing is started every two seconds;
+- all results are exported in metrics format to the Prometheus monitoring system.;
+- included is a ready—made dashboard for Grafana, where current availability, delay schedules, and potential network connectivity issues are visualized in real time;
+- allows you to quickly identify nodes with degraded connectivity and speeds up the response to incidents.
 
 ## How does it work?
 

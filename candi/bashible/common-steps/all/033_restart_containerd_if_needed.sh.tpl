@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 if bb-flag? containerd-need-restart; then
   bb-log-warning "'containerd-need-restart' flag was set, restarting containerd."
   if out=$(containerd config dump 2>&1); then

@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
@@ -126,25 +128,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getDexAuthenticator)
 
 func getDexAuthenticator(input *go_hook.HookInput) error {
-	authenticators := input.Snapshots["authenticators"]
-	credentials := input.Snapshots["credentials"]
+	authenticators := input.NewSnapshots.Get("authenticators")
+	credentials := input.NewSnapshots.Get("credentials")
 
 	credentialsByID := make(map[string]Credentials, len(credentials))
 
-	for _, secret := range credentials {
-		dexSecret, ok := secret.(DexAuthenticatorSecret)
-		if !ok {
-			return fmt.Errorf("cannot convert dex authenticator secret")
+	for dexSecret, err := range sdkobjectpatch.SnapshotIter[DexAuthenticatorSecret](credentials) {
+		if err != nil {
+			return fmt.Errorf("cannot convert dex authenticator secret: failed to iterate over 'credentials' snapshot: %w", err)
 		}
 
 		credentialsByID[dexSecret.ID] = dexSecret.Credentials
 	}
 
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
-	for _, authenticator := range authenticators {
-		dexAuthenticator, ok := authenticator.(DexAuthenticator)
-		if !ok {
-			return fmt.Errorf("cannot convert dex authenticaor")
+	for dexAuthenticator, err := range sdkobjectpatch.SnapshotIter[DexAuthenticator](authenticators) {
+		if err != nil {
+			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
 		}
 
 		existedCredentials, ok := credentialsByID[fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.ID)]

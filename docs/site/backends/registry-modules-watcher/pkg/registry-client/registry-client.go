@@ -17,12 +17,16 @@ package registryclient
 import (
 	"context"
 	"fmt"
-	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	registryscanner "registry-modules-watcher/internal/backends/pkg/registry-scanner"
+	"registry-modules-watcher/internal/metrics"
 )
 
 type registryOptions struct {
@@ -33,14 +37,15 @@ type registryOptions struct {
 type Option func(options *registryOptions)
 
 type client struct {
-	registryURL string
-	authConfig  authn.AuthConfig
-	options     *registryOptions
+	registryURL   string
+	authConfig    authn.AuthConfig
+	options       *registryOptions
+	metricStorage *metricsstorage.MetricStorage
 }
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
 // Repo example: "cr.example.com/ns/app"
-func NewClient(repo string, options ...Option) (registryscanner.Client, error) {
+func NewClient(repo string, metricStorage *metricsstorage.MetricStorage, options ...Option) (registryscanner.Client, error) {
 	opts := &registryOptions{}
 
 	for _, opt := range options {
@@ -48,8 +53,9 @@ func NewClient(repo string, options ...Option) (registryscanner.Client, error) {
 	}
 
 	client := &client{
-		registryURL: repo,
-		options:     opts,
+		registryURL:   repo,
+		metricStorage: metricStorage,
+		options:       opts,
 	}
 
 	if !opts.withoutAuth {
@@ -93,6 +99,7 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage)) // calculace metrics
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	return remote.Image(
@@ -106,9 +113,9 @@ func (c *client) Modules(ctx context.Context) ([]string, error) {
 }
 
 func (c *client) ListTags(ctx context.Context, moduleName string) ([]string, error) {
-	listTagsUrl := c.registryURL + "/" + moduleName + "/release"
+	listTagsURL := c.registryURL + "/" + moduleName + "/release"
 
-	return c.list(ctx, listTagsUrl)
+	return c.list(ctx, listTagsURL)
 }
 
 func (c *client) list(ctx context.Context, url string) ([]string, error) {
@@ -119,6 +126,7 @@ func (c *client) list(ctx context.Context, url string) ([]string, error) {
 		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
 	}
 
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
 	imageOptions = append(imageOptions, remote.WithContext(ctx))
 
 	repo, err := name.NewRepository(url, nameOpts...)

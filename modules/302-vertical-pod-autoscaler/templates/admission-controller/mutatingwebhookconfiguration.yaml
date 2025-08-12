@@ -21,8 +21,6 @@ webhooks:
       operator: NotIn
       values:
       - vpa-admission-controller
-      - vpa-recommender
-      - vpa-updater
   rules:
   - apiGroups:
     - ""

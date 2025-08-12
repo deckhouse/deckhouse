@@ -25,3 +25,9 @@ if [[ -f /var/lib/bashible/node-spec-provider-id ]]; then
   fi
 fi
 {{- end }}
+
+{{/*
+  This annotation is required by the registry module to track which 
+  version of the registry configuration is currently applied on the node.
+*/}}
+kubectl_exec annotate node $(bb-d8-node-name) registry.deckhouse.io/version={{ .registry.version | quote }} --overwrite

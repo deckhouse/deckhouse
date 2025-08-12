@@ -103,6 +103,21 @@ status:
 		})
 	})
 
+	Context("Module cni-cilium with extraLoadBalancerAlgorithmsEnabled parameter is enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium]"))
+			f.ValuesSet("cniCilium.internal.minimalRequiredKernelVersionConstraint", ">= 4.9.17")
+			f.ValuesSet("cniCilium.extraLoadBalancerAlgorithmsEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(stateNode1 + stateNode2 + stateNode3))
+
+			f.RunHook()
+		})
+
+		It("Hook must execute successfully", func() {
+			Expect(f.ValuesGet("cniCilium.internal.minimalRequiredKernelVersionConstraint").String()).To(Equal(">= 5.15.0"))
+		})
+	})
+
 	Context("Values cniCilium.internal.minimalRequiredKernelVersionConstraint is set when cni-cilium,istio,openvpn enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", []byte("[cni-cilium, istio, openvpn]"))

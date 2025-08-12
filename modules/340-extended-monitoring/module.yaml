@@ -1,10 +1,10 @@
 name: extended-monitoring
-weight: 340
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring
 
 requirements:
-  bootstrapped: true
   modules:
     prometheus: ">= 0.0.0"
+  deckhouse: ">= 1.68"

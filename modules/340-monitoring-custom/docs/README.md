@@ -1,11 +1,12 @@
 ---
-title: "The monitoring-custom module"
+title: "Automatic configuration of the monitoring system to collect metrics from user applications"
+description: "Monitoring user applications in Deckhouse Kubernetes Platform."
 type:
   - instruction
 search: prometheus
 ---
 
-The module extends the capabilities of the [prometheus](../../modules/prometheus/) module for monitoring user applications.
+Additional configuration is required to monitor user applications running in the cluster. This module simplifies the setup process by reducing it to specifying a specific label for the desired application.
 
 To enable the `monitoring-custom` module to collect application metrics, you must:
 

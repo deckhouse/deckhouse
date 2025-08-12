@@ -39,8 +39,8 @@ d8 k get modules sds-node-configurator -w
 In the output, you should see information about the `sds-node-configurator` module:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator   900      Enabled   deckhouse           Ready
+NAME                    STAGE   SOURCE      PHASE       ENABLED   READY
+sds-node-configurator           deckhouse   Available   False     False
 ```
 
 Then, to enable the `sds-local-volume` module with default settings, run the following command:
@@ -66,8 +66,8 @@ d8 k get modules sds-local-volume -w
 In the output, you should see information about the state of the `sds-local-volume` module:
 
 ```console
-NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
-sds-local-volume   920      Enabled   Embedded           Ready
+NAME                    STAGE   SOURCE    PHASE       ENABLED   READY
+sds-local-volume                          Available   True      True
 ```
 
 To verify that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are deployed on all nodes where LVM resources are planned to be used, use the following commands:

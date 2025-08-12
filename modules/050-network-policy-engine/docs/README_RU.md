@@ -1,5 +1,6 @@
 ---
 title: "Модуль network-policy-engine"
+description: Управление сетевыми политиками в кластере Deckhouse Kubernetes Platform.
 ---
 
 {% alert level="warning" %}

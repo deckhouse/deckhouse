@@ -1,5 +1,6 @@
 ---
 title: "Модуль dashboard"
+description: "Веб-интерфейс Kubernetes Dashboard для управления кластером Deckhouse Kubernetes Platform."
 webIfaces:
 - name: dashboard
 ---

@@ -1,0 +1,53 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
+  creationTimestamp: null
+  name: v1.31.0
+  resourceVersion: "1000"
+spec:
+  version: v1.31.0
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v2.10.0
+  resourceVersion: "1000"
+spec:
+  version: v2.10.0
+status:
+  approved: false
+  message: major version is greater than deployed v1.31.0
+  phase: Pending
+  transitionTime: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  namespace: d8-system
+  resourceVersion: "999"
+spec:
+  selector: null
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - image: my.registry.com/deckhouse:v1.31.0
+        name: deckhouse
+        resources: {}
+status: {}

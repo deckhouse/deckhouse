@@ -34,6 +34,8 @@ import (
 	apimtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	capiv1beta1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/conditions"
@@ -269,16 +271,21 @@ func updStatusFilterCpSecrets(obj *unstructured.Unstructured) (go_hook.FilterRes
 func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	var defaultZonesNum int32
 
-	snap := input.Snapshots["zones_count"]
-	if len(snap) > 0 {
-		defaultZonesNum = snap[0].(int32)
+	snaps := input.NewSnapshots.Get("zones_count")
+	if len(snaps) > 0 {
+		err := snaps[0].UnmarshalTo(&defaultZonesNum)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal start 'zones_count' snapshot: %w", err)
+		}
 	}
 
+	snaps = input.NewSnapshots.Get("mds")
 	// machine deployments snapshot
-	snap = input.Snapshots["mds"]
 	mdMap := make(map[string][]statusMachineDeployment)
-	for _, res := range snap {
-		md := res.(statusMachineDeployment)
+	for md, err := range sdkobjectpatch.SnapshotIter[statusMachineDeployment](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'mds' snapshots: %w", err)
+		}
 
 		// group by nodeGroup
 		if v, ok := mdMap[md.NodeGroup]; ok {
@@ -299,9 +306,12 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 	// count instances of each node group
 	instances := make(map[string]int32)
-	snap = input.Snapshots["instances"]
-	for _, res := range snap {
-		instanceNodeGroup := res.(string)
+	snaps = input.NewSnapshots.Get("instances")
+	for instanceNodeGroup, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'instances' snapshots: %w", err)
+		}
+
 		if count, ok := instances[instanceNodeGroup]; ok {
 			count++
 			instances[instanceNodeGroup] = count
@@ -309,9 +319,13 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 			instances[instanceNodeGroup] = 1
 		}
 	}
-	snap = input.Snapshots["capi_instances"]
-	for _, res := range snap {
-		instanceNodeGroup := res.(string)
+
+	snaps = input.NewSnapshots.Get("capi_instances")
+	for instanceNodeGroup, err := range sdkobjectpatch.SnapshotIter[string](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'capi_instances' snapshots: %w", err)
+		}
+
 		if count, ok := instances[instanceNodeGroup]; ok {
 			count++
 			instances[instanceNodeGroup] = count
@@ -322,24 +336,35 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 
 	// store configuration checksums for each node group
 	checksums := make(map[string]string)
-	snap = input.Snapshots["configuration_checksums_secret"]
-	if len(snap) > 0 {
-		for k, v := range snap[0].(shared.ConfigurationChecksum) {
+	snaps = input.NewSnapshots.Get("configuration_checksums_secret")
+	if len(snaps) > 0 {
+		var cfgChecksum shared.ConfigurationChecksum
+		err := snaps[0].UnmarshalTo(&cfgChecksum)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal start 'zones_count' snapshot: %w", err)
+		}
+
+		for k, v := range cfgChecksum {
 			checksums[k] = v
 		}
 	}
 
-	snap = input.Snapshots["nodes"]
-	nodes := make([]statusNode, 0, len(snap))
-	for _, sn := range snap {
-		node := sn.(statusNode)
+	snaps = input.NewSnapshots.Get("nodes")
+	nodes := make([]statusNode, 0, len(snaps))
+	for node, err := range sdkobjectpatch.SnapshotIter[statusNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
+
 		nodes = append(nodes, node)
 	}
 
 	// iterate over all node groups and calculate desired and current status
-	snap = input.Snapshots["ngs"]
-	for _, res := range snap {
-		nodeGroup := res.(statusNodeGroup)
+	snaps = input.NewSnapshots.Get("ngs")
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[statusNodeGroup](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
 
 		ngName := nodeGroup.Name
 
@@ -460,6 +485,9 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 	return nil
 }
 
+// TODO (core): fix linter
+//
+//nolint:unparam
 func createEvent(input *go_hook.HookInput, nodeGroup statusNodeGroup, msg string) error {
 	eventType := corev1.EventTypeWarning
 	reason := "MachineFailed"

@@ -44,7 +44,7 @@ spec:
                         coreFraction:
                           type: string
                           default: "100%"
-                          enum: ["5%", "10%", "25%", "50%", "100%"]
+                          pattern: ^100%$|^[1-9][0-9]?%$
                           description: |
                             Guaranteed share of CPU fraction that will be allocated to the virtual machine.
                           x-doc-example: "100%"

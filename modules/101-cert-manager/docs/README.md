@@ -1,5 +1,6 @@
 ---
 title: "The cert-manager module"
+description: "Managing certificates in the Deckhouse Kubernetes Platform cluster."
 ---
 
 This module installs the reliable and highly available cert-manager v1.17.1 [release](https://github.com/jetstack/cert-manager).

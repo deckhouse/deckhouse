@@ -33,8 +33,8 @@ d8 k get module csi-yadro -w
 В результате будет выведена информация о модуле:
 
 ```console
-NAME        WEIGHT   STATE     SOURCE     STAGE   STATUS
-csi-yadro   910      Enabled   Embedded           Ready
+NAME        STAGE   SOURCE   PHASE       ENABLED   READY
+csi-yadro                    Available   True      True
 ```
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED

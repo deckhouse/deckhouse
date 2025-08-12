@@ -134,7 +134,7 @@ spec:
   selectors:
     - podSelector:
         matchLabels:
-          # Данная политика будет применена для все виртуальных машин с меткой app=backend в пространстве default.
+          # Данная политика будет применена для всех подов с меткой app=backend в пространстве имён default на всех виртуальных машинах.
           app: backend
           io.kubernetes.pod.namespace: default
 EOF

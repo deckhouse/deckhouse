@@ -64,3 +64,7 @@ linters-settings:
         - kind: Deployment
           name: csi-controller
           container: snapshotter
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.discoveryData.properties.apiVersion"

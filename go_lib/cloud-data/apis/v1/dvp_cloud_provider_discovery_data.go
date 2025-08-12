@@ -23,7 +23,10 @@ type DVPCloudProviderDiscoveryData struct {
 }
 
 type DVPStorageClass struct {
-	Name      string `json:"name,omitempty"`
-	IsEnabled bool   `json:"isEnabled,omitempty"`
-	IsDefault bool   `json:"isDefault,omitempty"`
+	Name                 string `json:"name,omitempty"`
+	VolumeBindingMode    string `json:"volumeBindingMode,omitempty"`
+	ReclaimPolicy        string `json:"reclaimPolicy,omitempty"`
+	AllowVolumeExpansion bool   `json:"allowVolumeExpansion,omitempty"`
+	IsEnabled            bool   `json:"isEnabled,omitempty"`
+	IsDefault            bool   `json:"isDefault,omitempty"`
 }

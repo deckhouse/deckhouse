@@ -4,14 +4,14 @@ description: How to view resources that have not passed CIS compliance checks in
 ---
 {% raw %}
 
-## How to view all resources that have not passed CIS compliance checks?
+## Viewing resources that failed CIS compliance checks
 
 ```bash
 kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson | 
   jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
-## How to view resources that have not passed a specific CIS compliance check?
+## Viewing resources that have not passed a specific CIS compliance check
 
 By check `id`:
 
@@ -31,7 +31,7 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 {% endraw %}
 
-## How to manually restart resource scanning and when is a resource rescanned?
+## Manual rescan of a resource
 
 The module rescans resources every 24 hours according to the following algorithm:
 
@@ -49,3 +49,23 @@ Example command for overwriting the annotation `trivy-operator.aquasecurity.gith
 ```bash
 kubectl annotate VulnerabilityReport -n <namespace> <reportName> trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
+
+## Who has access to scan results
+
+Access to scan results (including the ability to view [resources with results](trivy-cr.html)) is granted to users with the following [access roles](../user-authz/#experimental-access-model):
+
+- `d8:manage:networking:viewer` or higher;
+- `d8:manage:permission:module:operator-trivy:view`.
+
+## How to limit the list of resources scanned in a namespace
+
+The current version does not support limiting the list of scanned resources within a namespace.  
+The operator scans **all resources** located in any namespace labeled with `security-scanning.deckhouse.io/enabled=""`.
+
+## How to view the scan report for your application
+
+To view the scan results of your application, use the Grafana dashboard `Security / Trivy Image Vulnerability Overview`.  
+You can filter the results by the desired namespace and resource.
+
+You can also directly view the [resources](trivy-cr.html) that contain scan results created for each scanned object.  
+Details about naming structure and resource location are available in the [documentation](trivy-cr.html).

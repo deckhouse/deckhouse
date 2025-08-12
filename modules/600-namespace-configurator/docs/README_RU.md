@@ -1,5 +1,6 @@
 ---
 title: "Модуль namespace-configurator"
+description: "Автоматическое управление аннотациями и лейблами на пространствах имён в Deckhouse Kubernetes Platform."
 ---
 
 Модуль namespace-configurator позволяет автоматически управлять аннотациями и лейблами на пространствах имён.

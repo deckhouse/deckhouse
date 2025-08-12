@@ -96,10 +96,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250404120920-86b2e172d961 h1:DaV4qmJ6VeAAD7nZaX4qy8gY/zEaHn0KPDiZWk+SLvw=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250404120920-86b2e172d961/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250602225314-cf9422af13fa h1:jVEJWuTcugbtmEK5KG7Md1J5murCmjA3n29mcRDLtdg=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250602225314-cf9422af13fa/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
+github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250707071005-ceea64ca880e h1:W+cm4UanCiQ3epEfcTFYoa+XCwC7Bfz1NdtlSxyBrbU=
+github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250707071005-ceea64ca880e/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/disintegration/gift v1.2.1 h1:Y005a1X4Z7Uc+0gLpSAsKhWi4qLtsdEcMIbbdvdZ6pc=
 github.com/disintegration/gift v1.2.1/go.mod h1:Jh2i7f7Q2BM7Ezno3PhfezbR1xpUg9dUg3/RlKGr4HI=
 github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZQ=

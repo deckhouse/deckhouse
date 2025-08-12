@@ -601,7 +601,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		}
 
 		// TODO(ipaqsa): remove it
-		if policy.Spec.Update.Mode == v1alpha1.ModuleUpdatePolicyModeIgnore {
+		if policy.Spec.Update.Mode == v1alpha2.ModuleUpdatePolicyModeIgnore {
 			if err := r.updateReleaseStatusMessage(ctx, release, disabledByIgnorePolicy); err != nil {
 				logger.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
@@ -710,7 +710,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("process pending release")
 
-	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, logger)
+	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, releaseUpdater.WithLogger(logger))
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
@@ -759,7 +759,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	us := &releaseUpdater.Settings{
 		NotificationConfig: config,
-		Mode:               v1alpha1.ParseUpdateMode(policy.Spec.Update.Mode),
+		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
 		Windows:            policy.Spec.Update.Windows,
 		Subject:            releaseUpdater.SubjectModule,
 	}
@@ -1078,6 +1078,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
+		"error":   "",
 	}
 
 	if err = def.Validate(values, logger); err != nil {
@@ -1435,13 +1436,13 @@ func (r *reconciler) deleteOutdatedModuleReleases(ctx context.Context, moduleSou
 	outdatedReleases := make(map[string][]outdatedRelease)
 
 	// get all outdated releases by module names
-	for _, outdated := range releases.Items {
-		if outdated.GetPhase() == v1alpha1.ModuleReleasePhaseSuperseded ||
-			outdated.GetPhase() == v1alpha1.ModuleReleasePhaseSuspended ||
-			outdated.GetPhase() == v1alpha1.ModuleReleasePhaseSkipped {
-			outdatedReleases[outdated.Spec.ModuleName] = append(outdatedReleases[outdated.Spec.ModuleName], outdatedRelease{
-				name:    outdated.GetName(),
-				version: outdated.GetVersion(),
+	for _, release := range releases.Items {
+		if release.GetPhase() == v1alpha1.ModuleReleasePhaseSuperseded ||
+			release.GetPhase() == v1alpha1.ModuleReleasePhaseSuspended ||
+			release.GetPhase() == v1alpha1.ModuleReleasePhaseSkipped {
+			outdatedReleases[release.Spec.ModuleName] = append(outdatedReleases[release.Spec.ModuleName], outdatedRelease{
+				name:    release.GetName(),
+				version: release.GetVersion(),
 			})
 		}
 	}

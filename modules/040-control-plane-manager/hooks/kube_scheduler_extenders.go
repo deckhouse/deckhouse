@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -66,10 +68,13 @@ func handleExtenders(input *go_hook.HookInput) error {
 
 	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.NewSnapshots.Get("kube_scheduler_extenders")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
+		}
 
-	for _, snapshot := range input.Snapshots["kube_scheduler_extenders"] {
-		for _, config := range snapshot.([]KubeSchedulerWebhook) {
-			err := verifyCAChain(config.ClientConfig.CABundle)
+		for _, config := range snapshot {
+			err = verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
 				input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
 				config.ClientConfig.CABundle = kubernetesCABase64

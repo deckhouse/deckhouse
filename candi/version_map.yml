@@ -159,3 +159,5 @@ d8:
   d8CliVersion: v0.13.2
 jq:
   version: 1.7.1
+yq:
+  version: 4.45.1

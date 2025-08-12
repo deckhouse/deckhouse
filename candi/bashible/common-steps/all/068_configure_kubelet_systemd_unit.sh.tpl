@@ -20,7 +20,7 @@ rm -f /var/lib/kubelet/kubeadm-flags.env
 # Read previously discovered IP
 discovered_node_ip="$(bb-d8-node-ip)"
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
 cri_socket_path="/run/containerd/containerd.sock"
 {{- end }}
 

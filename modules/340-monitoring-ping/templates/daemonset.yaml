@@ -56,13 +56,25 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       automountServiceAccountToken: true
       serviceAccountName: monitoring-ping
+      initContainers:
+      - name: monitoring-ping-clean-node-exporter-stale # TODO remove container in future, need for clean staled metrics
+        image: {{ include "helm_lib_module_image" (list . "monitoringPing") }}
+        args:
+          - "--cleanup-node-exporter-metrics=true"
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        volumeMounts: # TODO remove volumes in future, need for clean staled metrics
+          - name: textfile
+            mountPath: /node-exporter-textfile
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list . "monitoringPing") }}
         name: monitoring-ping
-        {{- /*
-          UID: 0 GID:0 using for privilege access for fping because using hostNetwork
-          it is necessary to make a launch from user deckhouse after allocation of the file /var/run/node-exporter-textfile/monitoring-ping_*.prom
-        */}}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -71,17 +83,11 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsGroup: 0
-          runAsNonRoot: false
-          runAsUser: 0
         env:
           - name: MY_NODE_NAME
             valueFrom:
               fieldRef:
                 fieldPath: spec.nodeName
-        volumeMounts: # TODO remove volumes in future, need for clean staled metrics
-          - name: textfile
-            mountPath: /node-exporter-textfile
         livenessProbe:
           httpGet:
             path: /healthz

@@ -1,0 +1,29 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-distribution
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-auth
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-mirrorer
+      liveness-probe:
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: kube-rbac-proxy
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-distribution
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-auth
+        - kind: DaemonSet
+          name: registry-nodeservices-manager
+          container: image-holder-mirrorer

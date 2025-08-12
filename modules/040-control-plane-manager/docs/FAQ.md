@@ -624,27 +624,27 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster on master node:
 
-1. Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-   etcdctl version
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   etcdutl version
    ```
 
-   The result must be a correct output of `etcdctl version` command without errors.
+   The result must be a correct output of `etcdutl version` command without errors.
 
-   Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
+   Alternatively, you can download [etcdutl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
    You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
 1. Stop the etcd.
@@ -662,7 +662,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Clean the etcd directory.
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
 1. Put the etcd backup to `~/etcd-backup.snapshot` file.
@@ -670,8 +670,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Restore the etcd database.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
 1. Run etcd. The process may take some time.
@@ -680,6 +679,21 @@ Follow these steps to restore a single-master cluster on master node:
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
+
+   To verify that etcd is running, use the command:
+
+   ```shell
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Output example:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
+
+1. Restart the master node.
 
 #### Restoring a multi-master cluster
 
@@ -933,26 +947,34 @@ When using the `failurePolicy: Fail` option, in case of an error in the webhook'
 
 ## How does kubelet certificate rotation work?
 
-You can read about configuring and enabling kubelet certificate rotation in the official Kubernetes [documentation](https://kubernetes.io/docs/tasks/tls/certificate-rotation/).
-
-The `/var/lib/kubelet/config.yaml` file contains the kubelet configuration and specifies the path to the certificate (`tlsCertFile`) and private key (`tlsPrivateKeyFile`).
-
-Kubelet handles server certificates using the following logic:
-- If `tlsCertFile` and `tlsPrivateKeyFile` are not empty, kubelet will use them as the default certificate and key.
-  - When a client requests the kubelet API by specifying an IP address (e.g. [https://10.1.1.2:10250/](https://10.1.1.2:10250/)), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
-  - When a client requests the kubelet API by specifying a host name (e.g. [https://k8s-node:10250/](https://k8s-node:10250/)), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
-
-- If `tlsCertFile` and `tlsPrivateKeyFile` are empty, a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish the TLS connection. In this case, certificate rotation will work.
-
-Since Deckhouse Kubernetes Platform uses IP addresses to make requests to the kubelet API, the kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the `operator-trivy` module.
+In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
 
 The kubelet uses a client TLS certificate (`/var/lib/kubelet/pki/kubelet-client-current.pem`) with which it can request a new client certificate or a new server certificate (`/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver.
 
 When there is 5-10% (random value from the range) of time left before the certificate expires, kubelet requests a new certificate from kube-apiserver. For a description of the algorithm, see the official [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization) documentation.
 
-To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
+### Certificates lifetime
 
+By default, lifetime of certificates is 1 year (8760 hours). If necessary, this value can be changed using `--cluster-signing-duration` argument in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. But to ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour.
+
+{% alert level="warning" %}
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
+{% endalert %}
+
+### Specifics of working with kubelet server certificates in Deckhouse Kubernetes Platform
+
+Deckhouse Kubernetes Platform uses IP addresses for kubelet API requests. The kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the Deckhouse Kubernetes Platform (in the `operator-trivy` module).
+
+{% offtopic title="Information about the logic of working with server certificates in Kubernetes" %}
+
+Kubelet handles server certificates using the following logic:
+
+* If `tlsCertFile` and `tlsPrivateKeyFile` are not empty, kubelet will use them as the default certificate and key.
+  * When a client requests the kubelet API by specifying an IP address (e.g., `https://10.1.1.2:10250/`), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
+  * When a client requests the kubelet API by specifying a host name (e.g., `https://k8s-node:10250/`), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
+
+* If `tlsCertFile` and `tlsPrivateKeyFile` are empty, a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish the TLS connection. In this case, certificate rotation will work.
+{% endofftopic %}
 
 ## How to manually update control plane component certificates?
 

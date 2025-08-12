@@ -1,0 +1,7 @@
+istio:
+  fixes:
+    - summary: >-
+        fixed an error in processing custom input gateway addresses using the configuration option
+        of the alliance.ingressGateway.advertise module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14850
+

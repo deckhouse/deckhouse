@@ -17,7 +17,40 @@ apiVersions:
         minLength: 1
       resourcePoolPath:
         type: string
+      datacenter:
+        type: string
       zones:
         type: array
         items:
           type: string
+      datastores:
+        type: array
+        items:
+          type: object
+          required: [name]
+          properties:
+            zones:
+              type: array
+              items:
+                type: string
+            path:
+              type: string
+            name:
+              type: string
+              minLength: 1
+            datastoreType:
+              type: string
+            datastoreURL:
+              type: string
+        description: List of datastores
+      internalNetworkNames:
+        description: List of cluster internal network names
+        type: array
+        items:
+          type: string
+      instances:
+        type: object
+        additionalProperties: false
+        properties:
+          mainNetwork:
+            type: string

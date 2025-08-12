@@ -26,7 +26,11 @@ func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 type gracefulShutdownPostpone struct{}
 
 func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusTrue, ReasonOnStart)
+	if err := uncordonOnStart(nodeName); err != nil {
+		return err
+	}
+
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusFalse, ReasonOnStart)
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
@@ -51,6 +55,96 @@ func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) err
 	k := kubernetes.NewDefaultKubectl()
 	err := k.PatchCondition("Node", nodeName, GracefulShutdownPostponeType, status, reason, "")
 	return reformatExitError(err)
+}
+
+func nodeIsReady(k *kubernetes.Kubectl, nodeName string) (bool, error) {
+	nodeNotReadyCondition, err := k.GetCondition(nodeName, "KubeletNotReady")
+	if err != nil {
+		return false, reformatExitError(err)
+	}
+	if nodeNotReadyCondition != nil &&
+		nodeNotReadyCondition.Status == "False" &&
+		nodeNotReadyCondition.Type == "Ready" &&
+		nodeNotReadyCondition.Reason == "KubeletNotReady" {
+		return false, fmt.Errorf("node %q is not ready", nodeName)
+	}
+	return true, nil
+}
+
+func cordonedByInhibitor(k *kubernetes.Kubectl, nodeName string) (bool, error) {
+	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
+	if err != nil {
+		fmt.Printf("uncordonOnStart: error getting cordonBy annotation: %v\n", err)
+		return false, reformatExitError(err)
+	}
+
+	if cordonBy == kubernetes.CordonAnnotationValue {
+		return true, nil
+	}
+	return false, nil
+}
+
+func uncordonAndCleanup(k *kubernetes.Kubectl, nodeName string) error {
+	if _, err := k.Uncordon(nodeName); err != nil {
+		fmt.Printf("uncordonAndCleanup: error during Uncordon: %v\n", err)
+		return reformatExitError(err)
+	}
+
+	if _, err := k.RemoveCordonAnnotation(nodeName); err != nil {
+		fmt.Printf("uncordonAndCleanup: error removing cordon annotation: %v\n", err)
+		return reformatExitError(err)
+	}
+	return nil
+}
+
+func isShutdownInhibitedByPods(condition *kubernetes.Condition) bool {
+	fmt.Printf("isShutdownInhibitedByPods: condition=%+v\n", condition)
+	if condition == nil {
+		return false
+	}
+	return condition.Status == "True" &&
+		condition.Type == GracefulShutdownPostponeType &&
+		condition.Reason == ReasonPodsArePresent
+}
+
+func uncordonOnStart(nodeName string) error {
+	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
+	k := kubernetes.NewDefaultKubectl()
+
+	// 1. isOurCordon?
+	isOurCordon, err := cordonedByInhibitor(k, nodeName)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
+
+	if !isOurCordon {
+		fmt.Println("uncordonOnStart: Node is not cordoned by inhibitor. No action needed")
+		return nil
+	}
+
+	// 1. nodeIsReady?
+	isReady, err := nodeIsReady(k, nodeName)
+	if err != nil {
+		isReady = false
+	}
+	fmt.Printf("uncordonOnStart: isReady %t\n", isReady)
+
+	// 3. isInhibitorShutdownActive?
+	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
+	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
+	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
+
+	if !isReady && isInhibited {
+		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
+		return nil
+	}
+	if isReady {
+		fmt.Println("uncordonOnStart: uncordonAndCleanup")
+		// 4. Uncordon
+		return uncordonAndCleanup(k, nodeName)
+	}
+	return nil
 }
 
 func reformatExitError(err error) error {

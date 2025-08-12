@@ -33,13 +33,15 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+const cleanupDeckhouseReleasePeriod = 24 * time.Hour
+
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		err := r.cleanupDeckhouseRelease(ctx)
 		if err != nil {
-			r.logger.Error("check Deckhouse release", log.Err(err))
+			r.logger.Warn("cleaup Deckhouse release", log.Err(err))
 		}
-	}, 24*time.Hour)
+	}, cleanupDeckhouseReleasePeriod)
 }
 
 func (r *deckhouseReleaseReconciler) cleanupDeckhouseRelease(ctx context.Context) error {

@@ -132,21 +132,26 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func dnsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, r.RequestURI)
-	_, err := net.LookupIP("kubernetes.default")
-	if err != nil {
-		w.WriteHeader(500)
-		log.Error(err)
-		return
-	}
-	fmt.Fprintf(w, "ok")
+    timeout := 2 * time.Second
+    ctx, cancel := context.WithTimeout(context.Background(), timeout)
+    defer cancel()
+    resolver := &net.Resolver{}
+    _, err := resolver.LookupIP(ctx, "ip", "kubernetes.default")
+
+    if err != nil {
+        w.WriteHeader(500)
+        log.Error(r.RemoteAddr, r.RequestURI, " Failed to resolve domain ", "kubernetes.default", err)
+        fmt.Fprintf(w, "Error: %v\n", err)
+        return
+    }
+    log.Info(r.RemoteAddr, r.RequestURI, " DNS resolution succeeded")
+    fmt.Fprintf(w, "ok")
 }
 
 // neighborHandler checks other smoke-mini pods availabilty. It gets responses from pods via
 // headless single-instance service URL, e.g. for "c" it would be "http://smoke-mini-c:<port>", which
 // targets single pod "smoke-mini-c-0".
 func neighborHandler(w http.ResponseWriter, r *http.Request) {
-	log.Info(r.RemoteAddr, r.RequestURI)
 	for i := len(targetServices) - 1; i >= 0; i-- {
 		if podHost(targetServices[i]) == os.Getenv("HOSTNAME") {
 			targetServices = append(targetServices[:i], targetServices[i+1:]...)
@@ -171,10 +176,12 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 				errorCount++
 			}
 		} else {
+			log.Error(r.RemoteAddr, r.RequestURI, " Failed to check neighbor ")
 			w.WriteHeader(500)
 			return
 		}
 	}
+	log.Info(r.RemoteAddr, r.RequestURI, " Check neighbor succeeded")
 	fmt.Fprintf(w, "ok")
 }
 
@@ -184,7 +191,6 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 	maxErrors := 2
 
-	log.Info(r.RemoteAddr, r.RequestURI)
 	client := http.Client{Timeout: 2 * time.Second}
 
 	errorCount := 0
@@ -204,11 +210,12 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 				errorCount++
 			}
 		} else {
+			log.Error(r.RemoteAddr, r.RequestURI, " Failed to check neighborViaService")
 			w.WriteHeader(500)
 			return
 		}
 	}
-
+    log.Info(r.RemoteAddr, r.RequestURI, " Check neighborViaService succeeded")
 	fmt.Fprintf(w, "ok")
 }
 

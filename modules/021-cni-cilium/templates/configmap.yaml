@@ -20,6 +20,7 @@ data:
   #
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
+  vlan-bpf-bypass: "0"
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
   pprof: "true"
@@ -116,6 +117,9 @@ data:
   bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
+  {{- if .Values.cniCilium.extraLoadBalancerAlgorithmsEnabled }}
+  bpf-lb-algorithm-annotation: "true"
+  {{- end }}
 
   enable-session-affinity: "true"
   {{- if .Values.cniCilium.svcSourceRangeCheck }}

@@ -88,18 +88,24 @@ spec:
             port: http
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+          failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /healthz
             port: http
             scheme: HTTP
           initialDelaySeconds: 5
-          periodSeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+          failureThreshold: 3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "metadata_discovery_resources" . | nindent 12 }}
+            {{- include "metadata_exporter_resources" . | nindent 12 }}
   {{- end }}
 {{- end }}

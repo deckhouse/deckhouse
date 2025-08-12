@@ -605,27 +605,27 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления выполните следующие шаги на master-узле:
 
-1. Найдите утилиту `etcdctl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-   etcdctl version
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   etcdutl version
    ```
 
-   Должен отобразиться корректный вывод `etcdctl version` без ошибок.
+   Должен отобразиться корректный вывод `etcdutl version` без ошибок.
 
-   Также вы можете загрузить исполняемый файл [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdctl` была такая же, как и версия etcd в кластере):
+   Также вы можете загрузить исполняемый файл [etcdutl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdutl` была такая же, как и версия etcd в кластере):
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
    Проверить версию etcd в кластере можно выполнив следующую команду (команда может не сработать, если etcd и Kubernetes API недоступны):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
 1. Остановите etcd.
@@ -643,7 +643,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Очистите директорию etcd.
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
 1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
@@ -651,16 +651,29 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Восстановите базу данных etcd.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
 1. Запустите etcd. Запуск может занять некоторое время.
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+      ```
+
+   Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
+
+   ```shell
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
+
+   Пример вывода:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
+
+1. Перезапустите master-узел.
 
 <div id='восстановление-кластерa-multi-master'></div>
 
@@ -914,26 +927,33 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 
 ## Как происходит ротация сертификатов kubelet?
 
-С настройкой и включением ротации сертификатов kubelet вы можете ознакомиться в официальной документации [Kubernetes](https://kubernetes.io/docs/tasks/tls/certificate-rotation/).
+В Deckhouse Kubernetes Platform ротация сертификатов kubelet происходит автоматически.
 
-В файле `/var/lib/kubelet/config.yaml` хранится конфигурация kubelet и указывается путь к сертификату (`tlsCertFile`) и закрытому ключу (`tlsPrivateKeyFile`).
+Kubelet использует клиентский TLS-сертификат (`/var/lib/kubelet/pki/kubelet-client-current.pem`), при помощи которого может запросить у kube-apiserver новый клиентский сертификат или новый серверный сертификат (`/var/lib/kubelet/pki/kubelet-server-current.pem`).
+
+Когда до истечения времени жизни сертификата остается 5-10% (случайное значение из диапазона) времени, kubelet запрашивает у kube-apiserver новый сертификат. С описанием алгоритма можно ознакомиться в официальной документации [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization).
+
+### Время жизни сертификатов
+
+По умолчанию время жизни сертификатов равно 1 году (8760 часов). При необходимости это значение можно изменить с помощью аргумента `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. Но чтобы kubelet успел установить сертификат до его истечения, рекомендуем устанавливать время жизни сертификатов более, чем 1 час.
+
+{% alert level="warning" %}
+Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
+{% endalert %}
+
+### Особенности работы с серверными сертификатами kubelet в Deckhouse Kubernetes Platform
+
+В Deckhouse Kubernetes Platform для запросов в kubelet API используются IP-адреса. Поэтому в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не указываются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также, из-за использования динамического сертификата, в Deckhouse Kubernetes Platform (в модуле `operator-trivy`) отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
+
+{% offtopic title="Информация о логике работы с серверными сертификатами в Kubernetes" %}
 
 В kubelet реализована следующая логика работы с серверными сертификатами:
 
 * Если `tlsCertFile` и `tlsPrivateKeyFile` не пустые, то kubelet будет использовать их как сертификат и ключ по умолчанию.
-  * При запросе клиента в kubelet API с указанием IP-адреса (например [https://10.1.1.2:10250/](https://10.1.1.2:10250/)), для установления соединения по TLS-протоколу будет использован закрытый ключ по умолчанию (`tlsPrivateKeyFile`). В данном случае ротация сертификатов не будет работать.
-  * При запросе клиента в kubelet API с указанием названия хоста (например [https://k8s-node:10250/](https://k8s-node:10250/)), для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
+  * При запросе клиента в kubelet API с указанием IP-адреса (например `https://10.1.1.2:10250/`), для установления соединения по TLS-протоколу будет использован закрытый ключ по умолчанию (`tlsPrivateKeyFile`). В данном случае ротация сертификатов не будет работать.
+  * При запросе клиента в kubelet API с указанием названия хоста (например `https://k8s-node:10250/`), для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
 * Если `tlsCertFile` и `tlsPrivateKeyFile` пустые, то для установления соединения по TLS-протоколу будет использован динамически сгенерированный закрытый ключ из директории `/var/lib/kubelet/pki/`. В данном случае ротация сертификатов будет работать.
-
-Поскольку в Deckhouse Kubernetes Platform для запросов в kubelet API используются IP-адреса, то в конфигурации kubelet поля `tlsCertFile` и `tlsPrivateKeyFile` не используются, а используется динамический сертификат, который kubelet генерирует самостоятельно. Также в модуле `operator-trivy` отключены проверки CIS benchmark `AVD-KCV-0088` и `AVD-KCV-0089`, которые отслеживают, были ли переданы аргументы `--tls-cert-file` и `--tls-private-key-file` для kubelet.
-
-Kubelet использует клиентский TLS сертификат(`/var/lib/kubelet/pki/kubelet-client-current.pem`), при помощи которого может запросить у kube-apiserver новый клиентский сертификат или новый серверный сертификат(`/var/lib/kubelet/pki/kubelet-server-current.pem`).
-
-Когда до истечения времени жизни сертификата остается 5-10% (случайное значение из диапазона) времени, kubelet запрашивает у kube-apiserver новый сертификат. С описанием алгоритма ознакомьтесь в официальной документации [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization).
-
-Чтобы kubelet успел установить сертификат до его истечения, рекомендуем устанавливать время жизни сертификатов более, чем 1 час. Время устанавливается с помощью аргумента `--cluster-signing-duration` в манифесте `/etc/kubernetes/manifests/kube-controller-manager.yaml`. По умолчанию это значение равно 1 году (8760 часов).
-
-Если истекло время жизни клиентского сертификата, то kubelet не сможет делать запросы к kube-apiserver и не сможет обновить сертификаты. В данном случае узел (Node) будет помечен как `NotReady` и пересоздан.
+{% endofftopic %}
 
 ## Как вручную обновить сертификаты компонентов управляющего слоя?
 

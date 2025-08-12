@@ -140,7 +140,7 @@ spec:
   selectors:
     - podSelector:
         matchLabels:
-          # This policy will be applied to all virtual machines with the app=backend label in the default namespace
+          # This policy will be applied to all pods with the label app=backend in the default namespace on all virtual machines
           app: backend
           io.kubernetes.pod.namespace: default
 EOF

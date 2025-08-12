@@ -11,13 +11,13 @@
 <thead class="versioning-table">
   <tr>
     <th style="text-align: lest; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
-    {%- for edition in site.data.dvp.comparison.editions %}
+    {%- for edition in site.data.virtualization-platform.comparison.editions %}
     <th style="text-align: center; white-space: nowrap;">{{edition | upcase }}</th>
     {%- endfor %}
   </tr>
 </thead>
 <tbody>
-{%- for featureSection in site.data.dvp.comparison.featureSections %}
+{%- for featureSection in site.data.virtualization-platform.comparison.featureSections %}
   {% if featureSection['title'][page.lang] %}
   <tr>
     <td style="text-align: left; white-space: nowrap;" colspan="3">
@@ -31,7 +31,7 @@
       <td style="text-align: left">
         {{ feature['title'][page.lang] }}
       </td>
-      {%- for edition in site.data.dvp.comparison.editions %}
+      {%- for edition in site.data.virtualization-platform.comparison.editions %}
       <td style="text-align: center;">
         <div class="icon" style="padding: 0 0;">
           {% case feature.editions[edition] %}

@@ -1,5 +1,6 @@
 ---
 title: "Модуль documentation"
+description: "Веб-интерфейс с документацией Deckhouse Kubernetes Platform."
 webIfaces:
 - name: documentation
 ---

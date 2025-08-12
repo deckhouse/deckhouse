@@ -12,7 +12,6 @@ Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 
 - [Deckhouse Kubernetes Platform version](#deckhouse-kubernetes-platform-version-dependency);
 - [Kubernetes version](#kubernetes-version-dependency);
-- [cluster installation status](#cluster-installation-status-dependency).
 - [version of other modules](#dependency-on-the-version-of-other-modules).
 
 ### Deckhouse Kubernetes Platform version dependency
@@ -112,7 +111,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
    ```console
-   root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   root@dev-master-0:~# d8 platform edit cluster-configuration
    ```
 
    Output information:
@@ -143,24 +142,6 @@ Deckhouse checks whether the dependency is met in the following cases:
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
-
-### Cluster installation status dependency
-
-This dependency indicates that the module requires a cluster whose installation and configuration is complete. The dependency can only be set for built-in DKP modules.
-
-Here is how you can enable this dependency on the cluster installation status in the `module.yaml` file:
-
-```yaml
-name: ingress-nginx
-weight: 402
-description: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
-requirements:
-    bootstrapped: true
-```
-
-This check is carried out only once - during the initial module analysis. If the cluster installation and configuration is not complete, the module will not be enabled.
 
 ### Dependency on the version of other modules
 

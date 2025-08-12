@@ -1,5 +1,5 @@
 name: log-shipper
-weight: 460
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-log-shipper
@@ -9,4 +9,4 @@ descriptions:
   en: |
     Collecting logs in the Kubernetes cluster
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"

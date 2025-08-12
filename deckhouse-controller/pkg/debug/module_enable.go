@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/sdk"
 	kubeclient "github.com/flant/kube-client/client"
@@ -82,11 +83,20 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 		return fmt.Errorf("kubernetes client is not initialized")
 	}
 
-	if _, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			return errors.New("module not found")
+	if enabled {
+		unstructuredObjModule, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return errors.New("module not found")
+			}
+			return fmt.Errorf("get the '%s' module: %w", name, err)
 		}
-		return fmt.Errorf("get the '%s' module: %w", name, err)
+
+		sources, ok, _ := unstructured.NestedStringSlice(unstructuredObjModule.Object, "properties", "availableSources")
+		source, _, _ := unstructured.NestedString(unstructuredObjModule.Object, "properties", "source")
+		if ok && len(sources) > 1 && source == "" {
+			fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(sources, ", "))
+		}
 	}
 
 	unstructuredObj, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleConfigGVR).Get(ctx, name, metav1.GetOptions{})

@@ -44,6 +44,8 @@
 }
 
 .breadcrumbs {
+    display: flex;
+    flex-wrap: wrap;
     color: #bbb;
     font-size: 14px;
     font-weight: normal;
@@ -388,15 +390,11 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
-  top: 135.5px;
   //width: 260px;
   height: calc(100vh - 135.5px);
   overflow-x: hidden;
   overflow-y: auto;
-}
-
-.layout-sidebar__sidebar_right .sidebar__wrapper-inner {
-  padding-top: 5px;
+  padding-top: 14px;
 }
 
 .layout-sidebar :not(.layout-sidebar__sidebar_right) .sidebar__wrapper-inner:has(#toc-sidebar) .layout-sidebar__sidebar--guides :not(.layout-sidebar__sidebar_right) {
@@ -802,6 +800,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding-bottom: 10px;
     margin-left: 30px;
     position: relative;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul > li::before {
@@ -823,7 +825,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 20px;
+  scroll-margin-top: 70px;
 }
 
 .docs ul.resources li::before {
@@ -883,6 +885,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs ol li {
     padding-bottom: 10px;
     margin-left: 30px;
+
+    ul, ol {
+      margin-top: 1em;
+    }
 }
 
 .docs ul li:last-child, .docs ol li:last-child {
@@ -1156,7 +1162,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     border-radius: 4px;
   
     .code__transfer {
-      position: relative;
       padding-right: 70px;
       padding-left: 48px;
     }
@@ -1188,6 +1193,12 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background-color: #F6F7F8;
         border-right: 1px solid #C4CAD4;
         color: #A7B0BE;
+    }
+
+    &:has(.language-tree) {
+      &::before {
+        content: none;
+      }
     }
 
     .icon--copy {
@@ -2101,7 +2112,7 @@ select#contact-select {
     .wrap {
       white-space: pre-wrap;
       overflow-x: auto;
-      word-wrap: break-word;
+      word-break: normal;
     }
 
     button.wrap__button {
@@ -2112,6 +2123,7 @@ select#contact-select {
       border: 0;
       opacity: 0;
       cursor: pointer;
+      user-select: none;
       z-index: 2;
       transition: opacity .25s;
 

@@ -43,6 +43,14 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+automountServiceAccountToken: false
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -313,5 +321,36 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: nvidia-mig-manager
+  namespace: d8-nvidia-gpu
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - pods
+  verbs:
+  - get
+  - list
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+  namespace: d8-nvidia-gpu
+  {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: node-manager:nvidia-gpu:nvidia-dcgm-exporter
+subjects:
+- kind: ServiceAccount
+  name: nvidia-dcgm-exporter
   namespace: d8-nvidia-gpu
 {{- end }}

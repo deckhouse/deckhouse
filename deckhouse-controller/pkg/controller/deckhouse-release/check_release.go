@@ -55,18 +55,19 @@ import (
 )
 
 const (
-	metricUpdatingFailedGroup = "d8_updating_is_failed"
-	serviceName               = "check-release"
-	ltsChannelName            = "lts"
+	metricUpdatingFailedGroup   = "d8_updating_is_failed"
+	serviceName                 = "check-release"
+	ltsChannelName              = "lts"
+	checkDeckhouseReleasePeriod = 3 * time.Minute
 )
 
 func (r *deckhouseReleaseReconciler) checkDeckhouseReleaseLoop(ctx context.Context) {
 	wait.UntilWithContext(ctx, func(ctx context.Context) {
 		err := r.checkDeckhouseRelease(ctx)
 		if err != nil {
-			r.logger.Error("check Deckhouse release", log.Err(err))
+			r.logger.Warn("check Deckhouse release", log.Err(err))
 		}
-	}, 3*time.Minute)
+	}, checkDeckhouseReleasePeriod)
 }
 
 type DeckhouseReleaseFetcherConfig struct {

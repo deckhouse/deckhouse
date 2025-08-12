@@ -1,0 +1,19 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: fix logic of work with disks and coreFraction validation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14284
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: fix virtualMachineClassName in terraform
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14251
+deckhouse:
+  fixes:
+    - summary: Filter deleted pvcs in storage class change hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14458
+    - summary: Filter deleted pvcs in storage class change hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14286
+deckhouse-controller:
+  fixes:
+    - summary: make metrics more verbose
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14420
+

@@ -515,6 +515,397 @@ spec:
 {%- endalert %}
 {% raw %}
 
+## Преобразование логов
+
+### Преобразование логов в структурированный объект
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы преобразовать строку в поле `message` в структурированный объект.
+При использовании нескольких трансформаций `ParseMessage`, преобразование строки должно выполняться последним.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: string-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: String
+        string:
+          targetField: msg
+```
+
+Пример изначальной записи в логе:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+```
+
+Результат преобразования:
+
+```json
+{... "message": { 
+  "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+```
+
+### Преобразование логов в формате Klog в структурированный объект
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы распарсить логи в формате Klog и преобразовать их в структурированный объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Klog
+```
+
+Пример изначальной записи в логе:
+
+```text
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
+```
+
+### Преобразование логов в формате Syslog в структурированный объект
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы распарсить логи в формате Syslog и преобразовать их в структурированный объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: syslog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Syslog
+```
+
+Пример изначальной записи в логе:
+
+```text
+<13>1 2020-03-13T20:45:38.119Z dynamicwireless.name non 2426 ID931 [exampleSDID@32473 iut="3" eventSource= "Application" eventID="1011"] Try to override the THX port, maybe it will reboot the neural interface!
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "appname": "non",
+  "exampleSDID@32473": {
+    "eventID": "1011",
+    "eventSource": "Application",
+    "iut": "3"
+  },
+  "facility": "user",
+  "hostname": "dynamicwireless.name",
+  "message": "Try to override the THX port, maybe it will reboot the neural interface!",
+  "msgid": "ID931",
+  "procid": 2426,
+  "severity": "notice",
+  "timestamp": "2020-03-13T20:45:38.119Z",
+  "version": 1
+}}
+```
+
+### Преобразование логов в формате CLF в структурированный объект
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы распарсить логи в формате CLF и преобразовать их в структурированный объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: clf-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: CLF
+```
+
+Пример изначальной записи в логе:
+
+```text
+127.0.0.1 bob frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "host": "127.0.0.1",
+  "identity": "bob",
+  "message": "GET /apache_pb.gif HTTP/1.0",
+  "method": "GET",
+  "path": "/apache_pb.gif",
+  "protocol": "HTTP/1.0",
+  "size": 2326,
+  "status": 200,
+  "timestamp": "2000-10-10T20:55:36Z",
+  "user": "frank"
+}}
+```
+
+### Преобразование логов в формате LogFmt в структурированный объект
+
+Вы можете использовать трансформацию `ParseMessage`,
+чтобы распарсить логи в формате Logfmt и преобразовать их в структурированный объект.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: logfmt-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Logfmt
+```
+
+Пример изначальной записи в логе:
+
+```text
+@timestamp=\"Sun Jan 10 16:47:39 EST 2021\" level=info msg=\"Stopping all fetchers\" tag#production=stopping_fetchers id=ConsumerFetcherManager-1382721708341 module=kafka.consumer.ConsumerFetcherManager
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "@timestamp": "Sun Jan 10 16:47:39 EST 2021",
+  "id": "ConsumerFetcherManager-1382721708341",
+  "level": "info",
+  "module": "kafka.consumer.ConsumerFetcherManager",
+  "msg": "Stopping all fetchers",
+  "tag#production": "stopping_fetchers"
+}}
+```
+
+### Парсинг JSON и уменьшение вложенности
+
+Вы можете использовать трансформацию `ParseMessage`, чтобы парсить записи в логах в формате JSON.
+С помощью параметра `depth` можно контролировать глубину вложенности.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+        json:
+          depth: 1
+```
+
+Пример изначальной записи в логе:
+
+```text
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "level" : "{ \"severity\": \"info\" }",
+  "msg" : "fetching.module.release"
+  }
+}
+```
+
+### Пример парсинга записей смешанных форматов в объект
+
+Преобразование строки должно выполняться последним.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourseFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+        string:
+          targetField: "text"
+```
+
+Пример изначальной записи в логе:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+{... "message": {
+  "level" : "{ "severity": "info" }",
+  "msg" : "fetching.module.release"
+  }
+}
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
+```
+
+### Замена лейблов
+
+Вы можете использовать трансформацию `ReplaceKeys`, чтобы заменить `source` на `target` в заданных ключах лейблов.
+
+> Перед применением трансформации `ReplaceKeys` к полю `message` или его вложенным полям
+> необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: replace-dot
+spec:
+  ...
+  transformations:
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - .pod_labels
+```
+
+Пример изначальной записи в логе:
+
+```text
+{"msg" : "fetching.module.release"} # Лейбл пода pod.app=test
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  },
+  "pod_labels": {
+    "pod_app": "test"
+  }
+}
+```
+
+### Удаление лейблов
+
+Вы можете использовать трансформацию `DropLabels`, чтобы удалить заданные лейблы из записей логов.
+
+> Перед применением трансформации `DropLabels` к полю `message` или его вложенным полям
+> необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .example
+```
+
+#### Пример удаления заданного лейбла из структурированного сообщения
+
+В этом примере показано как вы можете удалить лейбл из структурированного JSON-сообщения.
+Сначала применяется трансформация `ParseMessage` для парсинга сообщения,
+после чего применяется `DropLabels` для удаления указанного лейбла.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .message.example
+```
+
+Пример изначальной записи в логе:
+
+```text
+{"msg" : "fetching.module.release", "example": "test"}
+```
+
+Результат преобразования:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  }
+}
+```
+
 ## Настройка сборки логов с продуктовых пространств имен, используя опцию namespace label selector
 
 ```yaml

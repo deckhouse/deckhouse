@@ -11,7 +11,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:vertical-pod-autoscaler:updater:evictioner
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
 rules:
 - apiGroups:
   - "apps"
@@ -28,10 +28,24 @@ rules:
   - create
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:vertical-pod-autoscaler:updater:in-place
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/resize
+      - pods # required for patching vpaInPlaceUpdated annotations onto the pod
+    verbs:
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:vertical-pod-autoscaler:updater:evictioner
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -40,6 +54,20 @@ subjects:
 - kind: ServiceAccount
   name: d8-vertical-pod-autoscaler-updater
   namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:updater:in-place
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:vertical-pod-autoscaler:updater:in-place
+subjects:
+  - kind: ServiceAccount
+    name: d8-vertical-pod-autoscaler-updater
+    namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -70,7 +98,7 @@ kind: RoleBinding
 metadata:
   name: d8:vertical-pod-autoscaler:updater:leader-locking
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -84,7 +112,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:vertical-pod-autoscaler:updater:vpa-status-reader
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
 rules:
   - apiGroups:
       - "coordination.k8s.io"
@@ -99,7 +127,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:vertical-pod-autoscaler:updater:vpa-status-reader
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -108,3 +136,17 @@ subjects:
 - kind: ServiceAccount
   name: d8-vertical-pod-autoscaler-updater
   namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:updater:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-updater")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: d8-vertical-pod-autoscaler-updater
+    namespace: kube-system

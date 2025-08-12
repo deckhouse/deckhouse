@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,16 +46,14 @@ func annotateNode() error {
 func waitNodeApproval() error {
 	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
 
-	for i := 0; i < maxRetries; i++ {
-		log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
-		node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if _, ok := node.Annotations[approvedAnnotation]; ok {
-			return nil
-		}
-		time.Sleep(1 * time.Second)
+	log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
+	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
+	if _, ok := node.Annotations[approvedAnnotation]; ok {
+		return nil
+	}
+
 	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }

@@ -1,4 +1,8 @@
 linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.license.properties.edition"
   container:
     exclude-rules:
       read-only-root-filesystem:
@@ -27,4 +31,3 @@ linters-settings:
           name: d8:rbac-proxy
         - kind: ClusterRoleBinding
           name: d8-sudouser
-

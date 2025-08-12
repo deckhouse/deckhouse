@@ -300,16 +300,20 @@ bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
-	chmod +x bin/trdl
+	@if ! command -v werf >/dev/null 2>&1; then \
+		curl -sSfL https://tuf.trdl.dev/targets/releases/0.7.0/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
+		chmod +x bin/trdl; \
+	fi
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
-	@if command -v bin/werf >/dev/null 2>&1; then \
-		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
-	else \
-		trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
-		ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 2 alpha | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+	@if ! command -v werf >/dev/null 2>&1; then \
+		bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'; \
+		if command -v bin/werf >/dev/null 2>&1; then \
+			trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
+		else \
+			trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
+			ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 2 alpha | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+		fi; \
 	fi
 
 bin/gh: bin ## Install gh cli.
@@ -429,6 +433,25 @@ build: set-build-envs ## Build Deckhouse images.
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
+GO=$(shell which go)
+GIT=$(shell which git)
+GOLANGCI_LINT=$(shell which golangci-lint)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
+
 .PHONY: go-module-version
-go-module-version:
+go-module-version: go-check
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
+.PHONY: all-mod
+all-mod: go-check
+	@for dir in $$(find . -mindepth 2 -name go.mod | sed -r 's/(.*)(go.mod)/\1/g'); do \
+		echo "Running go mod tidy in $${dir}"; \
+		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
+	done
+
+define error-if-empty
+@if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi
+endef

@@ -60,15 +60,13 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 		opt(suite)
 	}
 
-	loggerOpts := log.Options{
-		Level:  slog.LevelWarn,
-		Output: suite.logOutput,
-		TimeFunc: func(_ time.Time) time.Time {
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelWarn),
+		log.WithOutput(suite.logOutput),
+		log.WithTimeFunc(func(_ time.Time) time.Time {
 			return dependency.TestDC.GetClock().Now()
-		},
-	}
-
-	logger := log.NewLogger(loggerOpts)
+		}),
+	)
 	suite.logger = logger.Named("suite")
 
 	var err error

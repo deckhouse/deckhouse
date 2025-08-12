@@ -1,6 +1,7 @@
 ---
 title: "Модуль vertical-pod-autoscaler"
 search: autoscaler
+description: "Автоматическое вычисление и установка параметров запроса ресурсов подов в кластере Deckhouse Kubernetes Platform."
 ---
 
 Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)) — это инфраструктурный сервис, который позволяет не выставлять точные resource requests, если неизвестно, сколько ресурсов необходимо контейнеру для работы. При использовании VPA и включении соответствующего режима работы resource requests выставляются автоматически на основе потребления ресурсов (полученных данных из Prometheus).

@@ -1,0 +1,20 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  labels:
+    heritage: deckhouse
+properties: {}
+status:
+  phase: Ready
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True" 

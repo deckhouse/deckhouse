@@ -1,0 +1,22 @@
+control-plane-manager:
+  fixes:
+    - summary: >-
+        Fixed issues with etcd backup restoration process, ensuring reliable master node scaling
+        from 1 to 3.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14083
+      impact: >-
+        Users can now restore etcd backups and scale their master nodes efficiently without
+        encountering previous errors.
+deckhouse-controller:
+  fixes:
+    - summary: fix nil annotations map for module fetcher
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14332
+ingress-nginx:
+  fixes:
+    - summary: Validation is switched off temporarily.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14348
+prometheus:
+  fixes:
+    - summary: Fix fake longterm emptydir alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14100
+

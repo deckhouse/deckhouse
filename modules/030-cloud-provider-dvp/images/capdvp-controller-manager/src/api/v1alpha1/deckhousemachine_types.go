@@ -48,7 +48,7 @@ type CPU struct {
 	// Fraction is a guaranteed share of CPU time that will be allocated to the VM.
 	// Expressed as percentage.
 	// +kubebuilder:default="100%"
-	// +kubebuilder:validation:Enum:={"5%", "10%", "25%", "50%", "100%"}
+	// +kubebuilder:validation:Pattern=`^100%$|^[1-9][0-9]?%$`
 	Fraction string `json:"cpuFraction"`
 }
 

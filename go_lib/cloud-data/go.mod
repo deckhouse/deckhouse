@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse/go_lib/cloud-data
 
-go 1.22.8
+go 1.23.1
 
 toolchain go1.23.4
 
@@ -17,7 +17,7 @@ require (
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250115075301-5b6ae3aa8eb7
+	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250704135428-7600b0581807
 	github.com/prometheus/client_golang v1.12.1
 	k8s.io/api v0.25.5
 )

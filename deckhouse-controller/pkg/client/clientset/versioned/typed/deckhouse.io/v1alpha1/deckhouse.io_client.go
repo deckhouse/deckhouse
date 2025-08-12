@@ -36,7 +36,6 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleReleasesGetter
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
-	ModuleUpdatePoliciesGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
@@ -74,10 +73,6 @@ func (c *DeckhouseV1alpha1Client) ModuleSettingsDefinitions() ModuleSettingsDefi
 
 func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 	return newModuleSources(c)
-}
-
-func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
-	return newModuleUpdatePolicies(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.

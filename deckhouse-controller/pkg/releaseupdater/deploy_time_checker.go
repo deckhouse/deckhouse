@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -160,11 +161,11 @@ func (c *DeployTimeService) CalculatePatchDeployTime(release v1alpha1.Release, m
 	c.checkCanary(result, release)
 	c.checkNotify(result, release)
 
-	if c.settings.Mode != v1alpha1.UpdateModeManual && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode != v1alpha2.UpdateModeManual && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
-	if c.settings.Mode == v1alpha1.UpdateModeManual && !release.GetManuallyApproved() {
+	if c.settings.Mode == v1alpha2.UpdateModeManual && !release.GetManuallyApproved() {
 		c.processManualApproved(result, release, metricLabels)
 	}
 
@@ -203,11 +204,11 @@ func (c *DeployTimeService) CalculateMinorDeployTime(release v1alpha1.Release, m
 
 	c.checkNotify(result, release)
 
-	if c.settings.Mode == v1alpha1.UpdateModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
+	if c.settings.Mode == v1alpha2.UpdateModeAuto && !c.settings.Windows.IsAllowed(result.ReleaseApplyTime) {
 		c.processWindow(result)
 	}
 
-	if c.settings.Mode != v1alpha1.UpdateModeAuto && !release.GetManuallyApproved() {
+	if c.settings.Mode != v1alpha2.UpdateModeAuto && !release.GetManuallyApproved() {
 		c.processManualApproved(result, release, metricLabels)
 	}
 

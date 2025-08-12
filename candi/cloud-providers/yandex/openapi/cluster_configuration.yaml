@@ -130,7 +130,7 @@ apiVersions:
               diskType: &instanceClassDiskType
                 type: string
                 description: |
-                  Yandex Compute Instance disk type.
+                  Yandex Compute Instance disk type. Size of `network-ssd-nonreplicated` and `network-ssd-io-m3` disks must be a multiple of 93 GB.
                 example: network-ssd-io-m3
                 x-doc-default: network-ssd
                 enum: [ network-ssd, network-ssd-io-m3, network-ssd-nonreplicated ]
@@ -414,6 +414,8 @@ apiVersions:
           natInstanceResources:
             description: |
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
+
+              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../../modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
             type: object
             default: {"cores": 2, "memory": 2048}
             x-doc-default: {}

@@ -91,6 +91,17 @@ spec:
     app: nginx2
   type: LoadBalancer
   loadBalancerClass: config_mlbc
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: 1 of 1 public IPs were assigned
+    reason: AllIPsAssigned
+    status: "True"
+    type: AllPublicIPsAssigned
+  loadBalancer:
+    ingress:
+    - ip: 10.3.29.200
+      ipMode: VIP
 ---
 apiVersion: v1
 kind: Service
@@ -110,6 +121,17 @@ spec:
   selector:
     app: nginx3
   type: LoadBalancer
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: 1 of 1 public IPs were assigned
+    reason: AllIPsAssigned
+    status: "True"
+    type: AllPublicIPsAssigned
+  loadBalancer:
+    ingress:
+    - ip: 10.3.29.200
+      ipMode: VIP
 ---
 apiVersion: network.deckhouse.io/v1alpha1
 kind: MetalLoadBalancerClass
@@ -305,21 +327,54 @@ metadata:
           }
 ]
 `))
-
-			status := svc.Field("status")
-			conditions := status.Get("conditions").Array()[0]
-			Expect(conditions.Get("message").String()).To(Equal("config_mlbc"))
-			Expect(conditions.Get("reason").String()).To(Equal("LoadBalancerClassBound"))
-			Expect(conditions.Get("status").String()).To(Equal("True"))
-			Expect(conditions.Get("type").String()).To(Equal("network.deckhouse.io/load-balancer-class"))
-
-			status = svc2.Field("status")
-			conditions = status.Get("conditions").Array()[0]
-			Expect(conditions.Get("message").String()).To(Equal("default_mlbc"))
-			Expect(conditions.Get("reason").String()).To(Equal("LoadBalancerClassBound"))
-			Expect(conditions.Get("status").String()).To(Equal("True"))
-			Expect(conditions.Get("type").String()).To(Equal("network.deckhouse.io/load-balancer-class"))
-
+			Expect(svc.Field("status").String()).To(MatchJSON(`{
+"conditions": [
+	{
+		"message": "1 of 1 public IPs were assigned",
+		"reason": "AllIPsAssigned",
+		"status": "True",
+		"type": "AllPublicIPsAssigned"
+	},
+	{
+		"message": "config_mlbc",
+		"reason": "LoadBalancerClassBound",
+		"status": "True",
+		"type": "network.deckhouse.io/load-balancer-class"
+	}
+],
+"loadBalancer": {
+	"ingress": [
+		{
+			"ip": "10.3.29.200",
+			"ipMode": "VIP"
+		}
+	]
+}
+}`))
+			Expect(svc2.Field("status").String()).To(MatchJSON(`{
+"conditions": [
+	{
+		"message": "1 of 1 public IPs were assigned",
+		"reason": "AllIPsAssigned",
+		"status": "True",
+		"type": "AllPublicIPsAssigned"
+	},
+	{
+		"message": "default_mlbc",
+		"reason": "LoadBalancerClassBound",
+		"status": "True",
+		"type": "network.deckhouse.io/load-balancer-class"
+	}
+],
+"loadBalancer": {
+	"ingress": [
+		{
+			"ip": "10.3.29.200",
+			"ipMode": "VIP"
+		}
+	]
+}
+}`))
 		})
 	})
 

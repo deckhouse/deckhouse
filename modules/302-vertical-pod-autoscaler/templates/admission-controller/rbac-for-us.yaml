@@ -64,7 +64,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:vertical-pod-autoscaler:admission-controller
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -73,3 +73,17 @@ subjects:
 - kind: ServiceAccount
   name: d8-vertical-pod-autoscaler-admission-controller
   namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:vertical-pod-autoscaler:admission-controller:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "vpa-admission-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
+subjects:
+  - kind: ServiceAccount
+    name: d8-vertical-pod-autoscaler-admission-controller
+    namespace: kube-system

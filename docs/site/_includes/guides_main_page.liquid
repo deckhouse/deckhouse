@@ -1,4 +1,4 @@
-<script type="text/javascript" src='{% javascript_asset_tag tile %}[_assets/js/tile.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='/assets/js/tile.js?v={{ "now" | date: "%Y-%m-%d %H:%M:%S" | sha256 }}'></script>
 
 <p class="tile__descr">{{ site.data.i18n.common['guides_description'][page.lang] }}</p>
 

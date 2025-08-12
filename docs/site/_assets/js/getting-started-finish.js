@@ -25,7 +25,7 @@ function domain_update() {
     }
 }
 
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
     domain_update();
     generate_password();
     replace_snippet_password();

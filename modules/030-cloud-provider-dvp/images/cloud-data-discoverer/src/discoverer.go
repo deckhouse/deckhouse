@@ -24,11 +24,11 @@ import (
 	"fmt"
 	"sort"
 
-	storagev1 "k8s.io/api/storage/v1"
-
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 )
 
 type CloudConfig struct {
@@ -60,7 +60,7 @@ func (c *CloudConfig) client() (*api.DVPCloudAPI, error) {
 func NewDiscoverer(logger *log.Logger) *Discoverer {
 	config, err := newCloudConfig()
 	if err != nil {
-		logger.Fatalf("Cannot get opts from env: %v", err)
+		logger.Fatal("Cannot get opts from env: %v", err)
 	}
 
 	return &Discoverer{
@@ -97,15 +97,16 @@ func (d *Discoverer) DiscoveryData(
 
 	discoveryData.StorageClassList = mergeStorageDomains(discoveryData.StorageClassList, sd)
 
-	discoveryDataJson, err := json.Marshal(discoveryData)
+	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	d.logger.Debugf("discovery data: %v", discoveryDataJson)
-	return discoveryDataJson, nil
+	d.logger.Debug("discovery data", "discoveryDataJSON", discoveryDataJSON)
+	return discoveryDataJSON, nil
 }
 
+// getDVPStorageClass return storage classes list from DVP
 func (d *Discoverer) getDVPStorageClass(
 	ctx context.Context,
 	dvpClient *api.DVPCloudAPI,
@@ -117,31 +118,49 @@ func (d *Discoverer) getDVPStorageClass(
 	return scl.Items, nil
 }
 
-// NotImplemented
+// DisksMeta NotImplemented
 func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
 	return []v1alpha1.DiskMeta{}, nil
 }
 
-// NotImplemented
+// InstanceTypes NotImplemented
 func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
 	return nil, nil
 }
 
 func mergeStorageDomains(
-	sds []cloudDataV1.DVPStorageClass,
-	cloudSds []storagev1.StorageClass,
+	sds []cloudDataV1.DVPStorageClass, // stored storage classes
+	cloudSds []storagev1.StorageClass, // discovered storage classes
 ) []cloudDataV1.DVPStorageClass {
 	result := []cloudDataV1.DVPStorageClass{}
 	cloudSdsMap := make(map[string]cloudDataV1.DVPStorageClass)
-	for _, sd := range cloudSds {
+	for _, sc := range cloudSds {
 
-		cloudSdsMap[sd.Name] = cloudDataV1.DVPStorageClass{
-			Name:      sd.Name,
-			IsEnabled: true,
-			IsDefault: false,
+		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
+		if sc.VolumeBindingMode != nil {
+			volumeBindingMode = *sc.VolumeBindingMode
 		}
 
-		result = append(result, cloudSdsMap[sd.Name])
+		reclaimPolicy := corev1.PersistentVolumeReclaimDelete
+		if sc.ReclaimPolicy != nil {
+			reclaimPolicy = *sc.ReclaimPolicy
+		}
+
+		allowVolumeExpansion := false
+		if sc.AllowVolumeExpansion != nil {
+			allowVolumeExpansion = *sc.AllowVolumeExpansion
+		}
+
+		cloudSdsMap[sc.Name] = cloudDataV1.DVPStorageClass{
+			Name:                 sc.Name,
+			VolumeBindingMode:    string(volumeBindingMode),
+			ReclaimPolicy:        string(reclaimPolicy),
+			AllowVolumeExpansion: allowVolumeExpansion,
+			IsEnabled:            true,
+			IsDefault:            false,
+		}
+
+		result = append(result, cloudSdsMap[sc.Name])
 	}
 
 	for _, sd := range sds {

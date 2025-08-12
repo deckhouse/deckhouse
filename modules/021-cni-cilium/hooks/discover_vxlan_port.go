@@ -27,6 +27,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -177,9 +179,14 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 		input.Logger.Warn("Virtualization nesting level is not set globally - assuming level 0")
 	}
 
-	if len(input.Snapshots["cilium-configmap"]) > 0 {
+	ports, err := sdkobjectpatch.UnmarshalToStruct[int](input.NewSnapshots, "cilium-configmap")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cilium-configmap' snapshot: %w", err)
+	}
+
+	if len(ports) > 0 {
 		instStatus = existingInstallation
-		if port, ok := input.Snapshots["cilium-configmap"][0].(int); ok && port > 0 {
+		if port := ports[0]; port > 0 {
 			sourcePort = port
 		}
 	}

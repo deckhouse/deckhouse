@@ -68,13 +68,16 @@ func filterPkiSecret(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 }
 
 func handlePKIChecksum(input *go_hook.HookInput) error {
-	snap := input.Snapshots["pki_checksum"]
-
-	if len(snap) == 0 {
+	snaps := input.NewSnapshots.Get("pki_checksum")
+	if len(snaps) == 0 {
 		return fmt.Errorf(`there is no Secret named "d8-pki" in NS "kube-system"`)
 	}
 
-	sData := snap[0].(secretData)
+	var sData secretData
+	err := snaps[0].UnmarshalTo(&sData)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'pki_checksum' snapshot: %w", err)
+	}
 
 	keys := make([]string, 0, len(sData))
 

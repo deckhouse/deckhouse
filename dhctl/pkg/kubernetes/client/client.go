@@ -33,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -49,7 +48,7 @@ type KubeClient interface {
 type KubernetesClient struct {
 	KubeClient
 	NodeInterface node.Interface
-	KubeProxy     *frontend.KubeProxy
+	KubeProxy     node.KubeProxy
 }
 
 type KubernetesInitParams struct {
@@ -72,11 +71,13 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 }
 
 func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesClient {
-	k.NodeInterface = client
+	if client != nil && !reflect.ValueOf(client).IsNil() {
+		k.NodeInterface = client
+	}
 	return k
 }
 
-func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
+func (k *KubernetesClient) NodeInterfaceAsSSHClient() node.SSHClient {
 	if k.NodeInterface == nil || reflect.ValueOf(k.NodeInterface).IsNil() {
 		return nil
 	}
@@ -143,16 +144,16 @@ func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (port strin
 	return "6445", nil
 }
 
-func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl *ssh.Client) (port string, err error) {
-	err = retry.NewLoop("Starting kube proxy", sshCl.Settings.CountHosts(), 1*time.Second).
+func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.SSHClient) (port string, err error) {
+	err = retry.NewLoop("Starting kube proxy", sshCl.Session().CountHosts(), 1*time.Second).
 		RunContext(ctx, func() error {
-			log.InfoF("Using host %s\n", sshCl.Settings.Host())
+			log.InfoF("Using host %s\n", sshCl.Session().Host())
 
 			k.KubeProxy = sshCl.KubeProxy()
 			port, err = k.KubeProxy.Start(-1)
 
 			if err != nil {
-				sshCl.Settings.ChoiceNewHost()
+				sshCl.Session().ChoiceNewHost()
 				return fmt.Errorf("start kube proxy: %v", err)
 			}
 

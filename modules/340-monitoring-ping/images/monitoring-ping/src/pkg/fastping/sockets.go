@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"net"
 	"sync"
 	"syscall"
@@ -37,17 +38,36 @@ type pendingPacket struct {
 
 type socketConn struct {
 	fd          int // raw socket file descriptor
+	epfd int        // event poll file descriptor
 	id          int
 	seqPerHost  map[string]int
 	pending     sync.Map // thread-safe map: key -> pendingPacket
 	pendingLock sync.Mutex
 }
 
-func newSocket(ctx context.Context) (*socketConn, error) {
+func newSocket(_ context.Context) (*socketConn, error) {
 	// Create raw ICMP socket
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create raw socket: %w", err)
+	}
+
+	// Create EPOLL FD
+	epfd, err := syscall.EpollCreate1(0)
+	if err != nil {
+		syscall.Close(fd)
+		return nil, fmt.Errorf("failed to create epfd: %w", err)
+	}
+
+	// Register EPOLL
+	event := &unix.EpollEvent{
+		Events: unix.EPOLLIN,
+		Fd:     int32(fd),
+	}
+	if err := unix.EpollCtl(epfd, unix.EPOLL_CTL_ADD, fd, event); err != nil {
+		syscall.Close(fd)
+		unix.Close(epfd)
+		return nil, fmt.Errorf("failed to register socket in epoll: %w", err)
 	}
 
 	// Set socket to non-blocking mode
@@ -96,6 +116,7 @@ func newSocket(ctx context.Context) (*socketConn, error) {
 
 	conn := &socketConn{
 		fd:         fd,
+		epfd: epfd,
 		id:         genIdentifier(),
 		seqPerHost: make(map[string]int),
 		pending:    sync.Map{},
@@ -110,6 +131,11 @@ func (s *socketConn) Close() error {
 	// Close the raw socket
 	if err := syscall.Close(s.fd); err != nil {
 		log.Warn(fmt.Sprintf("failed to close socket fd: %v", err))
+	}
+
+	// Close EPOLL FD
+	if s.epfd > 0 {
+		unix.Close(s.epfd)
 	}
 
 	// Clear the pending map to free memory and avoid memory leak
@@ -178,15 +204,28 @@ func (s *socketConn) ReadPacket(ctx context.Context, timeout time.Duration) (str
 		case <-ctx.Done():
 			return "", 0, ctx.Err()
 		default:
+			// Wait for the socket to become readable using epoll
+			timeoutMS := int(time.Until(deadline).Milliseconds())
+			if timeoutMS < 0 {
+				return "", 0, fmt.Errorf("read timeout after %s", timeout)
+			}
+			events := make([]unix.EpollEvent, 1)
+			n, err := unix.EpollWait(s.epfd, events, timeoutMS)
+			if err != nil {
+				if err == syscall.EINTR {
+					continue // interrupted by signal, retry
+				}
+				return "", 0, fmt.Errorf("epoll_wait error: %w", err)
+			}
+			if n == 0 {
+				return "", 0, fmt.Errorf("read timeout after %s", timeout)
+			}
+
 			// Receive message using recvmsg to also get control messages
 			n, oobn, _, from, err := syscall.Recvmsg(s.fd, buf, oob, 0)
 			if err != nil {
 				if err == syscall.EAGAIN || err == syscall.EWOULDBLOCK {
-					if time.Now().After(deadline) {
-						return "", 0, fmt.Errorf("read timeout after %s", timeout)
-					}
-					time.Sleep(10 * time.Microsecond)
-					continue
+					continue // shouldn't happen after epoll, but just in case
 				}
 				if err == syscall.EINTR {
 					continue

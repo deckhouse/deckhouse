@@ -1,19 +1,19 @@
 ---
-title: "The upmeter module"
+title: "Cluster SLA Monitoring"
+description: "Collecting availability statistics for Deckhouse Kubernetes Platform cluster components."
 webIfaces:
 - name: status
 - name: upmeter
 ---
 
-The `upmeter` module collects statistics by availability type for cluster components and Deckhouse.
+The module tests the availability of the platform and the status of cluster components in real time, and outputs information in the form of corresponding dashboards.
 
-The module also:
+Module features:
 
-* Evaluates the degree of SLA fulfillment on components.
-* Displays availability data in the web interface.
-* Generates a web page with the status of the cluster components.
-
-You can export availability metrics over the [Prometheus Remote Write](https://docs.sysdig.com/en/docs/installation/prometheus-remote-write/) protocol using the [UpmeterRemoteWrite](cr.html#upmeterremotewrite) custom resource.
+- continuous testing scenarios have been developed for all major cluster components;
+- the test results are saved as metrics;
+- displays a dashboard showing the functionality of the components;
+- the data can be exported to any external Prometheus-compatible monitoring system.
 
 Module composition:
 

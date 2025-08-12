@@ -207,7 +207,10 @@ func (lo *LogOutput) Text() ([]byte, error) {
 		render.buf = append(render.buf, ' ')
 	}
 
-	render.FieldsToString(lo.Fields, "")
+	if len(lo.Fields) > 0 {
+		render.FieldsToString(lo.Fields, "")
+		render.buf = append(render.buf, ' ')
+	}
 
 	if lo.Stacktrace != "" {
 		render.TextKeyValue(StacktraceKey, lo.Stacktrace)
@@ -231,40 +234,47 @@ func (r *Render) TextQuotedKeyValue(key, value string) {
 	r.buf = append(r.buf, '\'')
 }
 
-func (r *Render) FieldsToString(m map[string]any, keyPrefix string) {
-	keys := slices.Collect(maps.Keys(m))
-	slices.Sort(keys)
+func (r *Render) FieldsToString(m any, keyPrefix string) {
+	switch val := m.(type) {
+	case map[string]any:
+		keys := slices.Collect(maps.Keys(val))
+		slices.Sort(keys)
+		for i, k := range keys {
+			if i > 0 {
+				r.buf = append(r.buf, ' ')
+			}
 
-	for _, k := range keys {
-		v := m[k]
+			v := val[k]
+			if keyPrefix != "" {
+				k = keyPrefix + "." + k
+			}
 
-		if keyPrefix != "" {
-			k = keyPrefix + "." + k
+			r.FieldsToString(v, k)
 		}
+	case []any:
+		for i, item := range val {
+			if i > 0 {
+				r.buf = append(r.buf, ' ')
+			}
 
-		switch val := v.(type) {
-		case string:
-			r.TextQuotedKeyValue(k, val)
-		case float64:
-			r.TextQuotedKeyValue(k, strconv.FormatFloat(val, 'f', -1, 64))
-		case int:
-			r.TextQuotedKeyValue(k, strconv.Itoa(val))
-		case uint:
-			r.TextQuotedKeyValue(k, strconv.FormatUint(uint64(val), 10))
-		case int64:
-			r.TextQuotedKeyValue(k, strconv.FormatInt(val, 10))
-		case uint64:
-			r.TextQuotedKeyValue(k, strconv.FormatUint(val, 10))
-		case bool:
-			r.TextQuotedKeyValue(k, strconv.FormatBool(val))
-		case map[string]any:
-			r.FieldsToString(val, k)
-			continue
-		default:
-			r.buf = append(r.buf, fmt.Sprintf("!SOMETHING GOES WRONG. type: %T", v)...)
-			continue
+			key := keyPrefix + "[" + strconv.Itoa(i) + "]"
+			r.FieldsToString(item, key)
 		}
-
-		r.buf = append(r.buf, ' ')
+	case string:
+		r.TextQuotedKeyValue(keyPrefix, val)
+	case float64:
+		r.TextQuotedKeyValue(keyPrefix, strconv.FormatFloat(val, 'f', -1, 64))
+	case int:
+		r.TextQuotedKeyValue(keyPrefix, strconv.Itoa(val))
+	case uint:
+		r.TextQuotedKeyValue(keyPrefix, strconv.FormatUint(uint64(val), 10))
+	case int64:
+		r.TextQuotedKeyValue(keyPrefix, strconv.FormatInt(val, 10))
+	case uint64:
+		r.TextQuotedKeyValue(keyPrefix, strconv.FormatUint(val, 10))
+	case bool:
+		r.TextQuotedKeyValue(keyPrefix, strconv.FormatBool(val))
+	default:
+		r.buf = append(r.buf, fmt.Sprintf("!SOMETHING GOES WRONG. type: %T", val)...)
 	}
 }

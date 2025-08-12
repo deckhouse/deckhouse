@@ -241,6 +241,21 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 		policy.Rules = append(policy.Rules, rule)
 	}
 
+	// A rule collecting logs about create and delete events of node resources.
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelRequestResponse,
+			Verbs: []string{"create", "delete"},
+			Resources: []audit.GroupResources{
+				{
+					Group:     "",
+					Resources: []string{"nodes"},
+				},
+			},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+
 	// A rule collecting logs about actions of service accounts from system namespaces.
 	{
 		rule := audit.PolicyRule{

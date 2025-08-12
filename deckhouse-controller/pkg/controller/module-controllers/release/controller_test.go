@@ -52,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
@@ -67,7 +68,7 @@ var (
 
 	embeddedMUP = &v1alpha2.ModuleUpdatePolicySpec{
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-			Mode:    v1alpha1.UpdateModeAuto.String(),
+			Mode:    v1alpha2.UpdateModeAuto.String(),
 			Windows: make(update.Windows, 0),
 		},
 		ReleaseChannel: "Stable",
@@ -324,7 +325,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed patch release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -339,7 +340,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Postponed minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -354,7 +355,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		suite.Run("Approved minor release", func() {
 			mup := embeddedMUP.DeepCopy()
-			mup.Update.Mode = v1alpha1.UpdateModeAutoPatch.String()
+			mup.Update.Mode = v1alpha2.UpdateModeAutoPatch.String()
 
 			testData := suite.fetchTestFileData("auto-patch-mode-minor-release-approved.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
@@ -522,6 +523,40 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, commander.Status.Phase)
 		})
 	})
+
+	suite.Run("Process major releases", func() {
+		suite.Run("major release from 0 to 1 must be allowed", func() {
+			// Setup initial state
+			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
+
+			repeatTest(func() {
+				mr := suite.getModuleRelease("parca-0.26.2")
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				// Test updating Parca module
+				mr = suite.getModuleRelease("parca-1.0.0")
+				_, err = suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		suite.Run("major release from 1 to 2 must be not allowed", func() {
+			// Setup initial state
+			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-1-2.yaml"))
+
+			repeatTest(func() {
+				mr := suite.getModuleRelease("parca-1.26.2")
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				// Test updating Parca module
+				mr = suite.getModuleRelease("parca-2.0.0")
+				_, err = suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+			})
+		})
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
@@ -645,7 +680,7 @@ type: Opaque
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, logger), releaseUpdater.ModuleReleaseBlockedMetricName),
-		exts:           extenders.NewExtendersStack("", log.NewNop()),
+		exts:           extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	for _, option := range options {

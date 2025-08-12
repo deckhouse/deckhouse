@@ -1,5 +1,6 @@
 ---
 title: "Модуль ingress-nginx"
+description: "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью NGINX Ingress controller."
 ---
 
 Устанавливает и управляет [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) с помощью Custom Resources. Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме и учитывает все особенности реализации инфраструктуры облаков и bare metal, а также кластеров Kubernetes различных типов.
@@ -8,7 +9,7 @@ title: "Модуль ingress-nginx"
 
 ## Варианты терминирования трафика
 
-Трафик к nginx-ingress может быть отправлен несколькими способами:
+Трафик к `ingress-nginx` может быть отправлен несколькими способами:
 
 - напрямую без внешнего балансировщика;
 - через внешний LoadBalancer, в том числе поддерживаются:

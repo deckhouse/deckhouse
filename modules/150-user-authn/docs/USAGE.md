@@ -178,9 +178,30 @@ spec:
       - groups
 ```
 
-{% alert level="warning" %}
-When using Keycloak as an Identity Provider, remove the `Email verified` mapping in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Client Scopes" → "Email" → "Mappers"). This is necessary for correct processing of `true` value of [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field  and to grant permissions to unverified users.
-{% endalert %}
+If email verification is not enabled in KeyCloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
+
+* Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
+  This is required for proper processing of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
+
+* If you can't modify or delete the `Email verified` mapping, create a new Client Scope named `email_dkp` (or any other name) and add two mappings:
+  * `email`: "Client Scopes" → `email_dkp` → "Add mapper" → "From predefined mappers" → `email`.
+  * `email verified`: "Client Scopes" → `email_dkp` → "Add mapper" → "By configuration" → "Hardcoded claim". Specify the following fields:
+    * "Name": `email verified`
+    * "Token Claim Name": `emailVerified`
+    * "Claim value": `true`
+    * "Claim JSON Type": `boolean`
+
+  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+
+  In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
+  
+  ```yaml
+      scopes:
+        - openid
+        - profile
+        - email_dkp
+        - groups
+  ```
 
 #### Okta
 
@@ -348,13 +369,21 @@ data:
 
 ## An example of creating a static user
 
-Create a password and enter its hash in the `password` field.
+Create a password and enter its hash encoded in base64 in the `password` field.
 
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
+
+{% alert level="info" %}
+If the `htpasswd` command is not available, install the appropriate package:
+
+* `apache2-utils` — for Debian-based distributions.
+* `httpd-tools` — for CentOS-based distributions.
+* `apache2-htpasswd` — for ALT Linux.
+{% endalert %}
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
@@ -369,7 +398,8 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 

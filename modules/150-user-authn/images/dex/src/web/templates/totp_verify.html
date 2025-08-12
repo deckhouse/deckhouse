@@ -1,0 +1,68 @@
+{{ template "header.html" . }}
+
+<div class="content">
+  <h2 class="content-title">
+    {{ if eq (extra "lang") "en" }}
+    Two-factor authentication
+    {{ else }}
+    Второй фактор аутентификации
+    {{ end }}
+  </h2>
+  {{ if not (eq .QRCode "") }}
+  <div class="content-text">
+    {{ if eq (extra "lang") "en" }}
+    Scan the QR code with your authenticator app
+    {{ else }}
+    Отсканируйте QR-код в приложении для аутентификации
+    {{ end }}
+    <br/>
+    <img src="data:image/png;base64, {{ .QRCode }}" style="display: block; margin: 0 auto;" alt="QR code"/>
+  </div>
+  {{ else }}
+  <div class="content-text">
+    {{ if eq (extra "lang") "en" }}
+  Open your authenticator app and enter the code for <b>{{ .Issuer }}: ({{ .Connector }})</b>
+    {{ else }}
+  Откройте приложение для аутентификации и введите код для <b>{{ .Issuer }}: ({{ .Connector }})</b>
+    {{ end }}
+  </div>
+  {{ end }}
+  <form method="post" action="{{ .PostURL }}">
+    <label for="totp" class="input-label">
+      {{- if eq (extra "lang") "en" }}
+      One-time password:
+      {{- else }}
+      Одноразовый пароль:
+      {{- end }}
+    </label>
+    <input tabindex="1" required id="totp" name="totp" type="password" class="input" {{ if .Invalid }} autofocus onfocusout="this.value = this.value.trim()" {{ end }}/>
+    {{ if .Invalid }}
+    <br/>
+    <div id="login-error" class="form-error">
+      {{- if eq (extra "lang") "en" }}
+      Invalid or Expired User Code
+      {{- else }}
+      Неверный или устаревший User Code
+      {{- end }}
+    </div>
+    {{ end }}
+    <br/>
+    <button tabindex="2" id="submit-login" type="submit" class="btn btn-primary">
+      {{ if eq (extra "lang") "en" }}
+      Submit
+      {{ else }}
+      Отправить
+      {{ end }}
+      <img src="{{ url $.ReqPath "static/img/next-icon.svg" }}" />
+    </button>
+  </form>
+</div>
+
+<script type="text/javascript">
+  document.querySelector('form').onsubmit = function(e) {
+    var el = document.querySelector('#submit-login');
+    el.setAttribute('disabled', 'disabled');
+  };
+</script>
+
+{{ template "footer.html" . }}

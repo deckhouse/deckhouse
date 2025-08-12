@@ -16,14 +16,16 @@ package registryscanner
 
 import (
 	"context"
-	"registry-modules-watcher/internal/backends"
-	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
+	"log/slog"
 	"time"
 
-	"log/slog"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 )
 
 type Client interface {
@@ -40,6 +42,7 @@ type registryscanner struct {
 	cache           *cache.Cache
 
 	logger *log.Logger
+	ms     *metricsstorage.MetricStorage
 }
 
 var releaseChannelsTags = map[string]string{
@@ -51,11 +54,13 @@ var releaseChannelsTags = map[string]string{
 }
 
 // New
-func New(logger *log.Logger, registryClients ...Client) *registryscanner {
+// nolint: revive
+func New(logger *log.Logger, ms *metricsstorage.MetricStorage, registryClients ...Client) *registryscanner {
 	registryscanner := registryscanner{
 		registryClients: make(map[string]Client),
-		cache:           cache.New(),
+		cache:           cache.New(ms),
 		logger:          logger,
+		ms:              ms,
 	}
 
 	for _, client := range registryClients {

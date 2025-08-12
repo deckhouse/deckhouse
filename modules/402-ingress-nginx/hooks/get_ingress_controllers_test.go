@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -279,6 +281,62 @@ spec:
 "validationEnabled": true,
 "controllerLogLevel": "Info"
 }`))
+		})
+	})
+
+	var IngressNginxControllerWithDeletionTomeStamp = `
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-3
+  deletionTimestamp: "2025-05-26T08:35:00Z"
+  finalizers:
+  - finalizer.ingress-nginx.deckhouse.io
+spec:
+  ingressClass: test
+  inlet: LoadBalancerWithProxyProtocol
+`
+
+	Context("A controller with deletion timestamp", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(IngressNginxControllerWithDeletionTomeStamp))
+			f.RunGoHook()
+		})
+
+		It("controller has to be excluded from internal.ingressControllers", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).Should(BeEmpty())
+		})
+	})
+
+	Context("With suspended validation annotation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-suspended
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  validationEnabled: true
+`))
+			f.RunHook()
+		})
+		It("Should disable validationEnabled when annotation is present", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()).To(Equal("test-suspended"))
+
+			name := f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()
+			validationEnabled := f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.validationEnabled").Bool()
+
+			fmt.Println(name, validationEnabled)
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.validationEnabled").Bool()).To(BeFalse())
 		})
 	})
 })

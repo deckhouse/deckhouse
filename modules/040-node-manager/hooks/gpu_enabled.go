@@ -30,6 +30,7 @@ const (
 	devicePluginLabel = "node.deckhouse.io/device-gpu.config"
 	ngLabel           = "node.deckhouse.io/group"
 	migConfigLabel    = "nvidia.com/mig.config"
+	migDisabled       = "all-disabled"
 )
 
 // This hook discovers nodegroup GPU sharing type and labels nodes
@@ -97,56 +98,56 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-var disabledMigLabel = map[string]interface{}{
-	"metadata": map[string]interface{}{
-		"labels": map[string]interface{}{
-			migConfigLabel: "all-disabled",
-		},
-	},
-}
-
 func setGPULabel(input *go_hook.HookInput) error {
-	ngs := input.Snapshots["nodegroups"]
-	nodes := input.Snapshots["nodes"]
+	ngs := input.NewSnapshots.Get("nodegroups")
+	nodes := input.NewSnapshots.Get("nodes")
 
-	for _, ng := range ngs {
-		ngName := ng.(nodeGroupInfo).Name
-		gpuSharing := ng.(nodeGroupInfo).GpuSharing
-		if gpuSharing == "" {
+	for _, ngSnapshot := range ngs {
+		var ng nodeGroupInfo
+		err := ngSnapshot.UnmarshalTo(&ng)
+		if err != nil {
+			return err
+		}
+		if ng.GpuSharing == "" {
 			continue
 		}
-		input.Logger.Info("Processing GPU nodegroup %s", ngName)
+		input.Logger.Info("Processing GPU nodegroup %s", ng.Name)
 
-		for _, node := range nodes {
-			if _, ok := node.(NodeInfo).Labels[ngLabel]; ok {
-				if node.(NodeInfo).Labels[ngLabel] != ngName {
+		for _, nodeSnapshot := range nodes {
+			var node NodeInfo
+			err := nodeSnapshot.UnmarshalTo(&node)
+			if err != nil {
+				return err
+			}
+			if _, ok := node.Labels[ngLabel]; ok {
+				if node.Labels[ngLabel] != ng.Name {
 					continue
 				}
 			}
 
-			labels := map[string]interface{}{
-				gpuEnabledLabel:   "",
-				devicePluginLabel: gpuSharing,
-			}
+			labels := map[string]interface{}{}
 
-			if ng.(nodeGroupInfo).MIGConfig != nil {
-				labels[migConfigLabel] = ng.(nodeGroupInfo).MIGConfig
+			if ng.MIGConfig != nil {
+				labels[migConfigLabel] = ng.MIGConfig
 			} else {
 				// remove MIG label if it's set and it's not a MIG node
-				if _, ok := node.(NodeInfo).Labels[migConfigLabel]; ok {
-					input.PatchCollector.PatchWithMerge(disabledMigLabel, "v1", "Node", "", node.(NodeInfo).Name)
+				if _, ok := node.Labels[migConfigLabel]; ok {
+					labels[migConfigLabel] = migDisabled
 				}
 			}
 
-			if _, ok := node.(NodeInfo).Labels[gpuEnabledLabel]; ok {
-				if sharingType, ok := node.(NodeInfo).Labels[devicePluginLabel]; ok {
-					if sharingType == gpuSharing {
-						continue
+			if _, ok := node.Labels[gpuEnabledLabel]; ok {
+				if sharingType, ok := node.Labels[devicePluginLabel]; ok {
+					if sharingType != ng.GpuSharing {
+						labels[devicePluginLabel] = ng.GpuSharing
 					}
 				}
+			} else {
+				labels[gpuEnabledLabel] = ""
+				labels[devicePluginLabel] = ng.GpuSharing
 			}
 
-			input.Logger.Info("Labeling %s node with %s=%v label", node.(NodeInfo).Name, devicePluginLabel, gpuSharing)
+			input.Logger.Info("Labeling %s node with %s=%v label", node.Name, devicePluginLabel, ng.GpuSharing)
 
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
@@ -154,7 +155,7 @@ func setGPULabel(input *go_hook.HookInput) error {
 				},
 			}
 
-			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.(NodeInfo).Name)
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Node", "", node.Name)
 		}
 	}
 	return nil

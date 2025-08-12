@@ -1,5 +1,6 @@
 ---
 title: "Модуль keepalived"
+description: "Управление кластерами keepalived на узлах Deckhouse Kubernetes Platform."
 ---
 
 {% alert level="warning" %}

@@ -92,7 +92,7 @@ function prepare_environment() {
   fi
 
   # shellcheck disable=SC2016
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" ="$FOX_DOCKERCFG" \
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
@@ -228,11 +228,6 @@ function wait_cluster_ready() {
 
   if [[ $test_failed == "true" ]] ; then
     return 1
-  fi
-
-  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
-    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
-    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
   chmod 755 /deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh

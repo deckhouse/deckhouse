@@ -36,11 +36,6 @@ resource "kubernetes_manifest" "root-disk" {
       )
     }
   }
-  wait {
-    fields = {
-      "status.phase" = "Ready"
-    }
-  }
   timeouts {
     create = var.timeouts.create
     update = var.timeouts.update

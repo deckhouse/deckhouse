@@ -80,7 +80,7 @@ func applyDeploymentCorednsPortsFilter(obj *unstructured.Unstructured) (go_hook.
 }
 
 func ensureCorednsPorts(input *go_hook.HookInput) error {
-	portsSnap := input.Snapshots[snap]
+	portsSnap := input.NewSnapshots.Get(snap)
 	if len(portsSnap) == 0 {
 		return nil
 	}

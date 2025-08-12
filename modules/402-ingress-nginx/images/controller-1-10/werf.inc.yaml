@@ -3,7 +3,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-06-11.2"
+fromCacheVersion: "2025-07-10"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -52,7 +52,8 @@ shell:
   - patch -p1 < /patches/010-nginx-build.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
-  - patch -p1 < /patches/015-protect-validation-port.patch
+  - patch -p1 < /patches/015-validation-mode.patch
+  - patch -p1 < /patches/016-verbose-maxmind-logs.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
