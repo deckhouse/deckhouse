@@ -70,7 +70,23 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
+  # Пример для узлов типа Static
   nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: system
+  # Пример для узлов типа CloudEphemeral
+  # nodeType: CloudEphemeral
+  # cloudInstances:
+  #   classReference:
+  #     kind: YandexInstanceClass
+  #     name: large
+  #   maxPerZone: 2
+  #   minPerZone: 1
+  #   zones:
+  #   - ru-central1-d
 ```
 
 ### Узлы с GPU
