@@ -73,6 +73,8 @@ import:
   add: /chrony_exporter/chrony_exporter
   to: /bin/chrony_exporter
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bin/chrony_exporter"]

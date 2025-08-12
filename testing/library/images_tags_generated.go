@@ -231,6 +231,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"web":            "imageHash-dashboard-web",
 	},
 	"deckhouse": map[string]interface{}{
+		"init":           "imageHash-deckhouse-init",
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
 	"deckhouseTools": map[string]interface{}{
