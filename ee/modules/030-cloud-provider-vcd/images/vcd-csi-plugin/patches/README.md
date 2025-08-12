@@ -28,6 +28,7 @@ Files:
 - cmd/csi/main.go
 - pkg/csi/controller.go
 - pkg/vcdcsiclient/disks.go
+- pkg/csi/driver.go
 
 Changes:
 

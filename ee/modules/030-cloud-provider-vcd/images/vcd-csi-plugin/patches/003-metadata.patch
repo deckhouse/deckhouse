@@ -1,5 +1,5 @@
 diff --git a/cmd/csi/main.go b/cmd/csi/main.go
-index fccc62c..55bc4d3 100644
+index fccc62c..127a97f 100644
 --- a/cmd/csi/main.go
 +++ b/cmd/csi/main.go
 @@ -23,10 +23,11 @@ import (
@@ -27,7 +27,7 @@ index fccc62c..55bc4d3 100644
  	logs.InitLogs()
  	defer logs.FlushLogs()
  
-@@ -114,6 +117,21 @@ func runCommand() {
+@@ -114,6 +117,23 @@ func runCommand() {
  		panic(fmt.Errorf("unable to parse configuration: [%v]", err))
  	}
  
@@ -44,12 +44,14 @@ index fccc62c..55bc4d3 100644
 +		if err != nil {
 +			panic(fmt.Errorf("unable to parse metadata configuration: [%v]", err))
 +		}
++
++		klog.Infof("Successfully parsed metadata config: %+v", metadataConfig)
 +	}
 +
  	for {
  		err = config.SetAuthorization(cloudConfig)
  		if err == nil {
-@@ -147,8 +165,9 @@ func runCommand() {
+@@ -147,8 +167,9 @@ func runCommand() {
  	}
  
  	if err = d.Setup(&vcdcsiclient.DiskManager{
@@ -62,19 +64,36 @@ index fccc62c..55bc4d3 100644
  		panic(fmt.Errorf("error while setting up driver: [%v]", err))
  	}
 diff --git a/pkg/csi/controller.go b/pkg/csi/controller.go
-index 39e9647..5af0c6a 100644
+index 39e9647..cc19d28 100644
 --- a/pkg/csi/controller.go
 +++ b/pkg/csi/controller.go
-@@ -138,6 +138,16 @@ func (cs *controllerServer) CreateVolume(ctx context.Context,
+@@ -55,12 +55,13 @@ type controllerServer struct {
+ }
+ 
+ // NewControllerService creates a controllerService
+-func NewControllerService(driver *VCDDriver, vcdClient *vcdsdk.Client, clusterID string, vAppName string) csi.ControllerServer {
++func NewControllerService(driver *VCDDriver, vcdClient *vcdsdk.Client, clusterID string, vAppName string, metadataConfig *vcdcsiclient.MetadataConfig) csi.ControllerServer {
+ 	return &controllerServer{
+ 		Driver: driver,
+ 		DiskManager: &vcdcsiclient.DiskManager{
+-			VCDClient: vcdClient,
+-			ClusterID: clusterID,
++			VCDClient:      vcdClient,
++			ClusterID:      clusterID,
++			MetadataConfig: metadataConfig,
+ 		},
+ 		VAppName: vAppName,
+ 	}
+@@ -138,6 +139,16 @@ func (cs *controllerServer) CreateVolume(ctx context.Context,
  	}
  	klog.Infof("Successfully created disk [%s] of size [%d]MB", diskName, sizeMB)
  
 +	for _, metadataEntry := range cs.DiskManager.MetadataConfig.Metadata {
-+	typedValue, err := vcdcsiclient.ConvertMetadataType(metadataEntry.Type)
-+	if err != nil {
-+		klog.Errorf("Failed to convert metadata type [%s] for disk [%s]: [%v]", metadataEntry.Type, diskName, err)
-+		continue
-+	}
++		typedValue, err := vcdcsiclient.ConvertMetadataType(metadataEntry.Type)
++		if err != nil {
++			klog.Errorf("Failed to convert metadata type [%s] for disk [%s]: [%v]", metadataEntry.Type, diskName, err)
++			continue
++		}
 +		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(disk.HREF, metadataEntry.Key, metadataEntry.Value, typedValue, metadataEntry.UserAccess, metadataEntry.IsSystem)
 +	}
 +	klog.Infof("Successfully updated disk [%s] metadata", diskName)
@@ -82,7 +101,7 @@ index 39e9647..5af0c6a 100644
  	attributes := make(map[string]string)
  	attributes[BusTypeParameter] = BusTypesFromValues[disk.BusType]
  	attributes[BusSubTypeParameter] = disk.BusSubType
-@@ -475,6 +485,16 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context,
+@@ -475,6 +486,16 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context,
  	klog.Infof("Using [%s] expansion mode since volume Access Mode is [%s], attached VM count is [%d], and block mode is [%v]",
  		expansionMode.String(), volumeAccessMode.Mode.String(), len(attachedVMs), volumeCapability.GetBlock() != nil)
  
@@ -99,8 +118,21 @@ index 39e9647..5af0c6a 100644
  	switch expansionMode {
  	case csi.PluginCapability_VolumeExpansion_OFFLINE:
  		if len(attachedVMs) > 0 {
+diff --git a/pkg/csi/driver.go b/pkg/csi/driver.go
+index e8eba3b..7105056 100644
+--- a/pkg/csi/driver.go
++++ b/pkg/csi/driver.go
+@@ -136,7 +136,7 @@ func NewDriver(nodeID string, endpoint string) (*VCDDriver, error) {
+ func (d *VCDDriver) Setup(diskManager *vcdcsiclient.DiskManager, VAppName string, nodeID string, upgradeRde bool) error {
+ 	klog.Infof("Driver setup called")
+ 	d.ns = NewNodeService(d, nodeID)
+-	d.cs = NewControllerService(d, diskManager.VCDClient, diskManager.ClusterID, VAppName)
++	d.cs = NewControllerService(d, diskManager.VCDClient, diskManager.ClusterID, VAppName, diskManager.MetadataConfig)
+ 	d.ids = NewIdentityServer(d)
+ 	if !upgradeRde {
+ 		klog.Infof("Skipping RDE CSI section upgrade as upgradeRde flag is false")
 diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
-index 292de7c..c52ad92 100644
+index 292de7c..6ff1a06 100644
 --- a/pkg/vcdcsiclient/disks.go
 +++ b/pkg/vcdcsiclient/disks.go
 @@ -9,6 +9,8 @@ import (
@@ -112,14 +144,17 @@ index 292de7c..c52ad92 100644
  	"net/http"
  	"strings"
  	"time"
-@@ -26,15 +28,63 @@ import (
+@@ -25,16 +27,64 @@ import (
+ )
  
  type DiskManager struct {
- 	VCDClient *vcdsdk.Client
-+	*MetadataConfig
- 	ClusterID string
- }
- 
+-	VCDClient *vcdsdk.Client
+-	ClusterID string
++	VCDClient      *vcdsdk.Client
++	MetadataConfig *MetadataConfig
++	ClusterID      string
++}
++
 +type MetadataConfig struct {
 +	Metadata []*Metadata `yaml:"metadata"`
 +}
@@ -130,8 +165,8 @@ index 292de7c..c52ad92 100644
 +	Type       string `yaml:"type,omitempty"`
 +	UserAccess string `yaml:"userAccess,omitempty"`
 +	IsSystem   bool   `yaml:"isSystem,omitempty"`
-+}
-+
+ }
+ 
 +const (
 +	VCDMetadataTypeString   string = "String"
 +	VCDMetadataTypeNumber   string = "Number"
