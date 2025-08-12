@@ -73,6 +73,114 @@ spec:
   nodeType: Static
 ```
 
+### Узлы с GPU
+
+{% alert level="info" %}
+Функциональность управления GPU-узлами доступна только в Enterprise Edition.
+{% endalert %}
+
+Для работы узлов с GPU требуются **драйвер NVIDIA** и **NVIDIA Container Toolkit**. Возможны два варианта установки драйвера:
+
+1. **Ручная установка** — администратор устанавливает драйвер до включения узла в кластер.
+1. **Автоматизация через `NodeGroupConfiguration`** (см. [Порядок действий по добавлению GPU-узла в кластер](../node-manager/faq.html#порядок-действий-по-добавлению-gpu-узла-в-кластер)).
+
+После того как драйвер установлен и в NodeGroup добавлен блок `spec.gpu`,
+`node-manager` включает полноценную поддержку GPU: автоматически разворачиваются
+**NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости,
+**MIG Manager**.
+
+{% alert level="info" %}
+Узлы с GPU часто помечают отдельным taint-ом (например, `node-role=gpu:NoSchedule`) — тогда по умолчанию туда не попадают обычные поды.
+Сервисам, которым нужен GPU, достаточно добавить `tolerations` и `nodeSelector`.
+{% endalert %}
+
+Подробная схема параметров находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+Ниже представлены примеры манифестов NodeGroup для типовых режимов работы GPU (Exclusive,
+TimeSlicing, MIG).
+
+#### Эксклюзивный режим (Exclusive)
+
+Каждому поду выделяется целый GPU, в кластере публикуется ресурс `nvidia.com/gpu`.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: gpu-exclusive
+spec:
+  nodeType: Static
+  gpu:
+    sharing: Exclusive
+  nodeTemplate:
+    labels:
+      node-role/gpu: ""
+    taints:
+    - key: node-role
+      value: gpu
+      effect: NoSchedule
+```
+
+#### TimeSlicing (4 слота)
+
+GPU распределяется по временным слотам: до 4 подов могут последовательно
+использовать одну карту. Подходит для экспериментов, CI и лёгких
+inference-задач.
+
+Поды по-прежнему запрашивают ресурс `nvidia.com/gpu`.
+
+```yaml
+spec:
+  gpu:
+    sharing: TimeSlicing
+    timeSlicing:
+      partitionCount: 4
+```
+
+#### MIG (профиль `all-1g.5gb`)
+
+Физический GPU (A100, A30 и др.) делится на аппаратные экземпляры.
+Планировщик увидит ресурсы `nvidia.com/mig-1g.5gb`.
+
+Полный список поддерживаемых GPU-устройств и их профили см. в  
+[FAQ → Как посмотреть доступные MIG-профили в кластере?](../node-manager/faq.html#как-посмотреть-доступные-mig-профили-в-кластере).
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: all-1g.5gb
+```
+
+#### Проверка работы: тестовая задача (CUDA vectoradd)
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cuda-vectoradd
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        node-role/gpu: ""
+      tolerations:
+      - key: node-role
+        value: gpu
+        effect: NoSchedule
+      containers:
+      - name: cuda-vectoradd
+        image: nvcr.io/nvidia/k8s/cuda-sample:vectoradd-cuda11.7.1-ubuntu20.04
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+```
+
+Эта задача (Job) запускает демонстрационный пример **vectoradd** из набора CUDA-samples.
+Если под завершается успешно (`Succeeded`), значит GPU-устройство доступно и корректно настроено.
+
 ## Добавление статического узла в кластер
 
 <span id="пример-описания-статичной-nodegroup"></span>

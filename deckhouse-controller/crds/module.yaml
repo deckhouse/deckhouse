@@ -98,7 +98,7 @@ spec:
                   properties:
                     editions:
                       type: object
-                      description: Module availability in Deckhouse editions.
+                      description: Editions settings.
                       additionalProperties:
                         type: object
                         properties:

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 variable "clusterConfiguration" {
   type = any
 }
@@ -54,4 +53,6 @@ locals {
   actual_zones = lookup(var.providerClusterConfiguration, "zones", {}) != {} ? tolist(setintersection(data.aws_availability_zones.available.names, var.providerClusterConfiguration.zones)) : data.aws_availability_zones.available.names
   zones = lookup(local.node_group, "zones", {}) != {} ? tolist(setintersection(local.actual_zones, local.node_group["zones"])) : local.actual_zones
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.node_group, "additionalTags", {}))
+  disable_default_sg       = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
+  ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
 }

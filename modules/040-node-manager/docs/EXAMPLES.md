@@ -73,6 +73,115 @@ spec:
   nodeType: Static
 ```
 
+### Nodes with GPU
+
+{% alert level="info" %}
+GPU-node management is available in the Enterprise edition only.
+{% endalert %}
+
+GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two ways to install the driver:
+
+1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
+1. **Automation via `NodeGroupConfiguration`** (see the
+   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
+
+After the driver is detected and the NodeGroup includes the `spec.gpu` section,
+`node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
+Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**.
+
+{% alert level="info" %}
+GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
+regular workloads don’t land there by accident. A workload that needs a GPU just adds the matching `tolerations`
+and `nodeSelector`.
+{% endalert %}
+
+See the full field reference in the
+[NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+Below are examples of NodeGroup manifests for typical GPU operating modes (Exclusive,
+TimeSlicing, MIG).
+
+#### Exclusive mode (one Pod — one GPU)
+
+Each Pod gets an entire physical GPU; the cluster exposes the `nvidia.com/gpu` resource.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: gpu-exclusive
+spec:
+  nodeType: Static
+  gpu:
+    sharing: Exclusive
+  nodeTemplate:
+    labels:
+      node-role/gpu: ""
+    taints:
+    - key: node-role
+      value: gpu
+      effect: NoSchedule
+```
+
+#### Time-slicing (4 partitions)
+
+The GPU is time-sliced: up to four Pods can share one card sequentially.
+Suitable for experiments, CI, and light inference workloads.
+
+Pods still request the `nvidia.com/gpu` resource.
+
+```yaml
+spec:
+  gpu:
+    sharing: TimeSlicing
+    timeSlicing:
+      partitionCount: 4
+```
+
+#### MIG (`all-1g.5gb` profile)
+
+A hardware-partitioned GPU (A100, A30, etc.) is split into independent
+instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
+
+For a complete list of supported GPUs and their profiles, see the
+[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles).
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: all-1g.5gb
+```
+
+#### Smoke-test Job (CUDA **vectoradd**)
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cuda-vectoradd
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        node-role/gpu: ""
+      tolerations:
+      - key: node-role
+        value: gpu
+        effect: NoSchedule
+      containers:
+      - name: cuda-vectoradd
+        image: nvcr.io/nvidia/k8s/cuda-sample:vectoradd-cuda11.7.1-ubuntu20.04
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+```
+
+This Job runs NVIDIA’s **vectoradd** CUDA sample.
+If the Pod finishes with `Succeeded`, the GPU is present and configured correctly.
+
 ## Adding a static node to a cluster
 
 <span id='an-example-of-the-static-nodegroup-configuration'></span>
