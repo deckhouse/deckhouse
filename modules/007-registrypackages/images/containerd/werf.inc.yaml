@@ -4,8 +4,6 @@
 {{- $containerd_integrity_patches_version := "0" }}
 
 {{- define "render_containerd_build_options" }}
-{{- $context := .rootContext -}}
-{{- $is_v2 := .isV2 -}}
 
 {{- if and (eq $context.Env "CSE") $is_v2 -}}
   {{- $namespacesSettings := ($context.Files.Get "/tools/build_includes/integrity-check-namespaces.yaml" | fromYaml) }}
