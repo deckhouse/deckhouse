@@ -9,7 +9,7 @@ that may cause degradation of key service performance indicators:
 - By default, the Linux kernel does not cache DNS requests, so there is no local cache in Pods.
 - All DNS requests from a container result in a network request to the cluster DNS.
   This is also true for requests to resources located on the same node.
-- A Pod’s DNS request is first resolved through cluster DNS zones, and only afterward sent to external DNS servers.
+- A Pod's DNS request is first resolved through cluster DNS zones, and only afterward sent to external DNS servers.
   For example, a request to `ya.com` will first be resolved through cluster zones like `cluster.local`,
   `svc.cluster.local`, and `<namespace>.svc.cluster.local`.
   Only after receiving negative responses (meaning, on the second attempt or later) it will be resolved correctly.
@@ -29,7 +29,7 @@ caching is enough to significantly improve DNS resolution performance.
 When the caching DNS server is deployed,
 the [`node-local-dns`](../../modules/node-local-dns/) module applies the following configuration steps on each cluster node:
 
-- Configuring an interface with the IP address of the `kube-dns` service’s clusterIP.
+- Configuring an interface with the IP address of the `kube-dns` service's clusterIP.
 - Starting a caching CoreDNS that listens on that address.
 - Adding an iptables rule: if the socket is open, traffic is redirected to it.
   Otherwise, a standard Kubernetes routing via ClusterIP is used:

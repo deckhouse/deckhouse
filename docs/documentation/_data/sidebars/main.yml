@@ -1175,7 +1175,7 @@ entries:
             ru: Сеть
           folders:
           - title:
-              en: Architecture of the cluster with Istio enabled
+              en: Cluster architecture with Istio enabled
               ru: Архитектура кластера с включенным Istio
             url: /architecture/network/cluster-with-istio.html
           - title:
