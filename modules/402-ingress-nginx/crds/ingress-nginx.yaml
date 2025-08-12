@@ -1270,7 +1270,7 @@ spec:
 
                     The report contains information about the process behavior, including potential memory leaks.
 
-                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/S request handling by the NGINX process.
+                    > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/HTTPS request handling by the NGINX process.
 
                     > **Be aware.** When the option under Ingress is enabled, the IngressNginxController starts in privileged mode.
               oneOf:
