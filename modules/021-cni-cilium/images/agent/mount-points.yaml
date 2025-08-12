@@ -1,0 +1,15 @@
+files:
+  - /run/xtables.lock
+dirs:
+  - /sys/fs/bpf
+  - /host/proc/sys/net
+  - /host/proc/sys/kernel
+  - /run/cilium/cgroupv2
+  - /var/run/cilium
+  - /var/run/cilium/netns
+  - /host/opt/cni/bin
+  - /host/etc/cni/net.d
+  - /lib/modules
+  - /var/lib/cilium/tls/hubble
+  - /hostproc
+  - /hostbin
