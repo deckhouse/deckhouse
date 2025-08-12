@@ -189,7 +189,8 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 		}
 
 		// after request - calculate metrics
-		defer func() {
+		// metrics code group
+		{
 			requestTime := time.Since(timeBeforeRequest).Seconds()
 			labels := map[string]string{
 				"status_code": strconv.Itoa(resp.StatusCode),
@@ -197,7 +198,7 @@ func (s *Sender) delete(ctx context.Context, backend string, version backends.Do
 			}
 			s.ms.HistogramObserve(metrics.SenderDeleteRequestsSecondsMetric, requestTime, labels, nil)
 			s.ms.CounterAdd(metrics.SenderDeleteRequestsCountMetric, 1.0, labels)
-		}()
+		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusNoContent {
@@ -253,6 +254,7 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 		}
 
 		// after request - calculate metrics
+		// metrics code group
 		{
 			requestTime := time.Since(timeBeforeRequest).Seconds()
 			labels := map[string]string{
@@ -319,7 +321,8 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 		}
 
 		// after request - calculate metrics
-		defer func() {
+		// metrics code group
+		{
 			requestTime := time.Since(timeBeforeRequest).Seconds()
 			labels := map[string]string{
 				"status_code": strconv.Itoa(resp.StatusCode),
@@ -327,7 +330,7 @@ func (s *Sender) build(ctx context.Context, backend string) error {
 			}
 			s.ms.HistogramObserve(metrics.SenderBuildRequestsSecondsMetric, requestTime, labels, nil)
 			s.ms.CounterAdd(metrics.SenderBuildRequestsCountMetric, 1.0, labels)
-		}()
+		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
