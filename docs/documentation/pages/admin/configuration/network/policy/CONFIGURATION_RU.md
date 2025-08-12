@@ -45,23 +45,23 @@ spec:
     ports:
     - protocol: TCP
       port: 5978
-
 ```
 
 ## Настройка сетевых политик на уровне всего кластера с помощью CiliumClusterwideNetworkPolicy
 
-Для определения сетевых политик на уровне всего кластера в Deckhouse Kubernetes Platform можно использовать CiliumClusterwideNetworkPolicies модуля [`cni-cilium`](../../../../modules/cni-cilium/).
+Для определения сетевых политик на уровне всего кластера в Deckhouse Kubernetes Platform можно использовать объекты CiliumClusterwideNetworkPolicy модуля [`cni-cilium`](../../../../modules/cni-cilium/).
 
 <!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-ciliumclusterwidenetworkpolicies -->
 
 {% alert level="danger" %}
-Использование CiliumClusterwideNetworkPolicies без включения параметра `policyAuditMode` в настройках модуля `cni-cilium` может привести к некорректной работе Control plane или потере доступа ко всем узлам кластера по SSH.
+Использование объектов CiliumClusterwideNetworkPolicy без включения параметра `policyAuditMode` в настройках модуля `cni-cilium` может привести к некорректной работе control plane или потере доступа ко всем узлам кластера по SSH.
 {% endalert %}
 
-Для использования CiliumClusterwideNetworkPolicies выполните следующие шаги:
+Для использования объектов CiliumClusterwideNetworkPolicy выполните следующие шаги:
 
-1. Примените первичный набор объектов `CiliumClusterwideNetworkPolicy`. Для этого в настройки модуля cni-cilium добавьте конфигурационную опцию [`policyAuditMode`](../../../../modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
-Опция `policyAuditMode` может быть удалена после применения всех `CniliumClusterwideNetworkPolicy`-объектов и проверки корректности их работы в Hubble UI.
+1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](../../../../modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+
+   Опция `policyAuditMode` может быть удалена после применения всех объектов CniliumClusterwideNetworkPolicy и проверки корректности их работы в Hubble UI.
 
 1. Примените правило политики сетевой безопасности:
 
@@ -79,4 +79,4 @@ spec:
          node-role.kubernetes.io/control-plane: ""
    ```
 
-В случае, если CiliumClusterwideNetworkPolicies не применяются, Control plane может некорректно работать до одной минуты во время перезагрузки `cilium-agent`-подов. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет избежать проблемы.
+В случае, если объекты CiliumClusterwideNetworkPolicy не применяются, control plane может некорректно работать до одной минуты во время перезагрузки подов `cilium-agent`. Это происходит из-за [сброса Conntrack-таблицы](https://github.com/cilium/cilium/issues/19367). Привязка к entity `kube-apiserver` позволяет избежать проблемы.
