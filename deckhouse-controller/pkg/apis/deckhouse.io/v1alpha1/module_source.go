@@ -31,6 +31,8 @@ const (
 
 	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
 
+	ModuleSourceMessageProcessErrors = "Some errors occurred while processing modules. Inspect status for details"
+
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
 
@@ -106,12 +108,13 @@ type ModuleSourceStatus struct {
 }
 
 type AvailableModule struct {
-	Name       string `json:"name"`
-	Version    string `json:"version,omitempty"`
-	Policy     string `json:"policy,omitempty"`
-	Checksum   string `json:"checksum,omitempty"`
-	PullError  string `json:"pullError,omitempty"`
-	Overridden bool   `json:"overridden,omitempty"`
+	Name         string `json:"name"`
+	Version      string `json:"version,omitempty"`
+	Policy       string `json:"policy,omitempty"`
+	Checksum     string `json:"checksum,omitempty"`
+	ProcessError string `json:"processError,omitempty"`
+	PullError    string `json:"pullError,omitempty"`
+	Overridden   bool   `json:"overridden,omitempty"`
 }
 
 func (s *ModuleSource) IsDefault() bool {
