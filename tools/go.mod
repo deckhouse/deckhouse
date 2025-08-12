@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/deckhouse/deckhouse v0.0.0
 	github.com/golangci/golangci-lint v1.40.1
-	github.com/iancoleman/strcase v0.2.0
+	github.com/iancoleman/strcase v0.3.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/yuin/goldmark v1.4.13
 	gopkg.in/yaml.v2 v2.4.0
