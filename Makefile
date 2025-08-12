@@ -429,7 +429,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
   endif
 
 build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	bin/werf config render --dev
+	bin/werf config render --dev --debug-templates
 
 GO=$(shell which go)
 GIT=$(shell which git)
