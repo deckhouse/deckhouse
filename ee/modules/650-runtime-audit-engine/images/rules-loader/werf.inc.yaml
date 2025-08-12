@@ -33,6 +33,7 @@ git:
   stageDependencies:
     install:
     - '**/*'
+{{- include "image mount points" . }}
 imageSpec:
   config:
     env: { "SHELL_OPERATOR_HOOKS_DIR": "/hooks", "LOG_TYPE": "json", "PYTHONPATH": "/hooks" }
