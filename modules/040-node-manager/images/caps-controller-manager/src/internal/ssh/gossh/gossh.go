@@ -110,7 +110,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	session.Stdout = stdout
 	session.Stderr = stderr
 
-	command = fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c '%s'`, command)
+	command = fmt.Sprintf(`sudo -p SudoPassword -H -S -i bash -c 'echo SUDO-SUCCESS && %s'`, command)
 	// Set up a pipe to write to the session's stdin
 	stdin, err := session.StdinPipe()
 	if err != nil {
