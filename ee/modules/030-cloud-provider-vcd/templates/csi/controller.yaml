@@ -38,7 +38,7 @@
 {{- end }}
 
 {{- define "csi_controller_pod_annotations" }}
-checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list) | sha256sum | quote }}
+checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list) | toString | sha256sum | quote }}
 {{- end }}
 
 {{- define "csi_node_args" }}
