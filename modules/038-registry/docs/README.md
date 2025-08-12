@@ -12,10 +12,7 @@ The internal registry allows for optimizing the downloading and storage of image
 The module can operate in the following modes:
 
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
-
 - `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry).
-
-- `Unmanaged` — operates without using the internal registry. In this mode, access inside the cluster is performed via an address that can be [set during the cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), or [changed in a deployed cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry).
 
 {% alert level="info" %}
 - The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration).
