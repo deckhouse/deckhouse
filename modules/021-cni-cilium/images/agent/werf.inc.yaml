@@ -472,7 +472,7 @@ import:
   - libcap.a
   - libcap.so
   - libcap.so.2
-  - libcap.so.2.76
+  - libcap.so.2.71
 - image: libs/zstd
   add: /usr/lib
   to: /lib64
