@@ -250,7 +250,7 @@ index 9a6fee3035..8769cce01a 100644
 +	/* after cilium bpf prog update we must always replace callback on new version */
 +	/* otherwise old bpf prog will not deleted from system memory and its callback will be executed */
 +	if (timer_set_callback(&svc->tmr, lb4_select_least_conn_backend_cb)) {
-+		printk("FAILED set timer cb\n");
++		printk("FAILED111 set timer cb\n");
 +		return;
 +	}
 +
