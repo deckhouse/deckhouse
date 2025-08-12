@@ -24,7 +24,7 @@ d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: csi-huawei
+  name: csi-vsphere
 spec:
   enabled: true
   version: 1
