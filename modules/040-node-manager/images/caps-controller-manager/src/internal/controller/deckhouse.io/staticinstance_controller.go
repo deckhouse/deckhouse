@@ -82,7 +82,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, errors.Wrap(err, "failed to create scope")
 	}
 
-	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance)
+	instanceScope, err := scope.NewInstanceScope(newScope, staticInstance, ctx)
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed to create instance scope")
 	}

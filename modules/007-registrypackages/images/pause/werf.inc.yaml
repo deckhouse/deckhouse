@@ -44,3 +44,10 @@ shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
   - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /pause.tar
+  - mkdir /tmp/pause
+  - tar -xf /pause.tar -C /tmp/pause
+  - cd /tmp/pause
+  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
+  - rm /pause.tar
+  - tar -cvf /pause.tar ./
+  - rm -rf /tmp/pause
