@@ -548,10 +548,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, err
 	}
 
-	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
-
-	r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
-
 	return res, nil
 }
 
@@ -728,7 +724,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
-
 	defer func() {
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
