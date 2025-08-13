@@ -1,6 +1,6 @@
 ---
 title: "Switching editions"
-permalink: en/admin/editions.html
+permalink: en/admin/configuration/registry/switching-editions.html
 ---
 
 ## Switching DKP from EE to CE
@@ -145,10 +145,10 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
 
 1. Apply the `webhook-handler` image:
 
-  ```shell
-  HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
-  ```
+   ```shell
+   HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
+   ```
 
 1. Apply the DKP CE image:
 

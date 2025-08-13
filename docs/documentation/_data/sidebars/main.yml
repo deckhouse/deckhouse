@@ -36,19 +36,19 @@ entries:
                 - title:
                     en: Overview
                     ru: Обзор
-                  url: /admin/configuration/registry.html
+                  url: /admin/configuration/registry/
                 - title:
                     en: Third-party registry
                     ru: Сторонний реестр
-                  url: /admin/configuration/registry/third-party-registry.html
+                  url: /admin/configuration/registry/third-party.html
                 - title:
                     en: Internal registry
                     ru: Внутренний реестр
-                  url: /admin/configuration/registry/internal-registry.html
+                  url: /admin/configuration/registry/internal.html
                 - title:
                     en: Switching editions
                     ru: Переключение редакций
-                  url: /admin/editions.html
+                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: Access
                 ru: Доступ

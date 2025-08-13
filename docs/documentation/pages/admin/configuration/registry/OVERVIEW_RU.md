@@ -1,6 +1,6 @@
 ---
 title: Работа с реестрами образов и редакциями
-permalink: ru/admin/configuration/registry.html
+permalink: ru/admin/configuration/registry/
 lang: ru
 ---
 

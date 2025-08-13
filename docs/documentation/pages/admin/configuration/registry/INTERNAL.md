@@ -1,6 +1,6 @@
 ---
 title: Using an internal container image registry
-permalink: en/admin/configuration/registry/internal-registry.html
+permalink: en/admin/configuration/registry/internal.html
 ---
 
 The ability to use internal registry is implemented by the [`registry`](../../../../../../../modules/registry/) module.

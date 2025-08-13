@@ -1,6 +1,6 @@
 ---
 title: Switching a running DKP cluster to use an external registry
-permalink: en/admin/configuration/registry/third-party-registry.html
+permalink: en/admin/configuration/registry/third-party.html
 ---
 
 {% alert level="warning" %}
@@ -60,7 +60,27 @@ To switch the cluster to use an external registry, follow these steps:
    ```
 
 1. Wait until the registry pod reaches the `Ready` status. If the pod is in the `ImagePullBackoff` state, restart it.
-1. Wait for bashible to apply the new settings on the master node. The `bashible` journal on the master node (`journalctl -u bashible`) should contain the message: `Configuration is in sync, nothing to do`.
+1. Wait for bashible to apply the new settings on the master node.
+
+   Check the bashible system service log on the master node, for example, using the following command:
+
+   ```shell
+   journalctl -u bashible -n 20
+   ``` 
+
+   The log should contain the message `Configuration is in sync, nothing to do`.
+
+   Example of output when viewing the bashible service log:
+
+   ```console
+   $ journalctl -u bashible -n 20
+   ...
+   Aug 13 05:03:08 kube-master-0 systemd[1]: Started Bashible service.
+   Aug 13 05:03:10 kube-master-0 bash[1847265]: Configuration is in sync, nothing to do.   <--
+   Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Deactivated successfully.
+   Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
+   ```
+
 1. If you need to disable automatic registry updates via the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
 1. Check if any pods in the cluster are still using the original registry address:
 

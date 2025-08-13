@@ -1,6 +1,6 @@
 ---
 title: "Переключение редакций"
-permalink: ru/admin/editions.html
+permalink: ru/admin/configuration/registry/switching-editions.html
 lang: ru
 ---
 
@@ -142,10 +142,10 @@ lang: ru
 
 1. Примените образ webhook-handler:
 
-  ```shell
-  HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
-  ```
+   ```shell
+   HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
+   ```
 
 1. Примените образ DKP CE:
 

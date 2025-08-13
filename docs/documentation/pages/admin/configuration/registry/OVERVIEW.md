@@ -1,6 +1,6 @@
 ---
 title: Working with the image registry
-permalink: en/admin/configuration/registry.html
+permalink: en/admin/configuration/registry/
 ---
 
 This section describes how to work with image registries and editions in Deckhouse Kubernetes Platform.
