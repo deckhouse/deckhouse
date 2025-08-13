@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +26,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type ReservedNode struct {
@@ -90,10 +93,13 @@ func exposeDomainNodes(input *go_hook.HookInput) error {
 	// Adding reserved names
 	enabledModules.Add("monitoring", "system", "frontend")
 
-	nodes := input.Snapshots["nodes"]
+	nodes := input.NewSnapshots.Get("nodes")
 
-	for _, o := range nodes {
-		node := o.(ReservedNode)
+	for node, err := range sdkobjectpatch.SnapshotIter[ReservedNode](nodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
+
 		if checkLabelsAndTaints(node.UsedLabelsAndTaints, enabledModules) {
 			input.MetricsCollector.Set(
 				"reserved_domain_nodes",

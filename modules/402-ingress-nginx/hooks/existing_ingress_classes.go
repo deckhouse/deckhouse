@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -53,12 +57,16 @@ func filterIngressClass(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func handleExternalIngressClasses(input *go_hook.HookInput) error {
-	snap := input.Snapshots["external-ingress-class"]
+	snap := input.NewSnapshots.Get("external-ingress-class")
 
 	externalIngressClasses := make([]string, 0, len(snap))
 
-	for _, sn := range snap {
-		externalIngressClasses = append(externalIngressClasses, sn.(string))
+	for sn, err := range sdkobjectpatch.SnapshotIter[string](snap) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'external-ingress-class' snapshots: %w", err)
+		}
+
+		externalIngressClasses = append(externalIngressClasses, sn)
 	}
 
 	input.Values.Set("ingressNginx.internal.externalIngressClasses", externalIngressClasses)

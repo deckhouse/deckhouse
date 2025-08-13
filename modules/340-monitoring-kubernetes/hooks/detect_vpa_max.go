@@ -58,10 +58,10 @@ const (
 )
 
 func delectVPAMax(input *go_hook.HookInput) error {
-	nodeSnap := input.Snapshots["nodes"]
+	nodeSnap := input.NewSnapshots.Get("nodes")
 
 	// TODO use node CAPACITY in calculationsinput
-	nodeCount := int64(len(nodeSnap))
+	nodeCount := int64(len(nodeSnap)) //nolint:gosec
 	maxMemory := fmt.Sprintf("%dMi", 150+memoryPerNode*nodeCount)
 	maxCPU := fmt.Sprintf("%dm", 100+cpuPerNode*nodeCount)
 

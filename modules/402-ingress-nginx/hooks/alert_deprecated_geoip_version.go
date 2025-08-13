@@ -35,6 +35,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // TODO: Remove this alerting hook after deprecating ingress controllers of 1.10< versions
@@ -98,11 +100,14 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 		return fmt.Errorf("couldn't parse defaultControllerVersion as semver: %w", err)
 	}
 
-	controllers := input.Snapshots["controller"]
+	controllers := input.NewSnapshots.Get("controller")
 
 	// check ingressnginxcontrollers' configs
-	for _, c := range controllers {
-		controller := c.(controllerVersion)
+	for controller, err := range sdkobjectpatch.SnapshotIter[controllerVersion](controllers) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshots: %w", err)
+		}
+
 		var cVer *semver.Version
 
 		if len(controller.Version) == 0 {
