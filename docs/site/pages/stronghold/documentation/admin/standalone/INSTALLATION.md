@@ -181,7 +181,6 @@ You can use any other ports by specifying them in the configuration file `/opt/s
 
 Create the file `/opt/stronghold/config.hcl` for the Raft configuration. If the `/etc/stronghold/` directory does not exist, create it. Add the following content to the file, replacing the values of the parameters with your own:
 
-
 ```hcl
 ui = true
 cluster_addr  = "https://10.20.30.10:8201"
