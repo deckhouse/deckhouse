@@ -70,6 +70,7 @@ func NewClient(repo string, metricStorage *metricsstorage.MetricStorage, options
 	return client, nil
 }
 
+// Returns registry URL
 func (c *client) Name() string {
 	return c.registryURL
 }
