@@ -287,10 +287,6 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 
-		// update status message to make issues visible to users
-		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{}, uerr
-		}
 		return ctrl.Result{}, err
 	}
 
@@ -488,11 +484,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		source.Status.ModulesCount = len(availableModules)
 		source.Status.Message = ""
 
-		if pullErrorsExist {
-			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
-		}
-		if processErrorsExist {
-			source.Status.Message = v1alpha1.ModuleSourceMessageProcessErrors
+		if pullErrorsExist || processErrorsExist {
+			source.Status.Message = v1alpha1.ModuleSourceMessageErrors
 		}
 
 		return nil

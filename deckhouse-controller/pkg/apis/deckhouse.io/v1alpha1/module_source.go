@@ -29,9 +29,7 @@ const (
 	ModuleSourcePhaseActive      = "Active"
 	ModuleSourcePhaseTerminating = "Terminating"
 
-	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
-
-	ModuleSourceMessageProcessErrors = "Some errors occurred while processing modules. Inspect status for details"
+	ModuleSourceMessageErrors = "Some errors occurred. Inspect status for details"
 
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
