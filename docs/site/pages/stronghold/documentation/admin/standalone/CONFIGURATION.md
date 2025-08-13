@@ -317,6 +317,7 @@ The list of mappings is of the type:
   "key1" = ["value1", "value2", ...],
   "key2" = ["value1", "value2", ...],
 }
+```
 
 allows mapping header names to an array of values. The headers specified in this section are set for status codes that fall into the specified status code groups.
 
