@@ -51,7 +51,7 @@ spec:
                         description: Ошибка скачивания модуля.
                       error:
                         type: string
-                        description: Ошибка модуля.
+                        description: Ошибка процессинга модуля.
                       checksum:
                         type: string
                         description: Чексумма релиза.

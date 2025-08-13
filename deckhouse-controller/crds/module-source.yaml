@@ -106,7 +106,7 @@ spec:
                         description: The module pull error.
                       error:
                         type: string
-                        description: The module error.
+                        description: The module processing error.
                       policy:
                         type: string
                         description: The module policy name.
