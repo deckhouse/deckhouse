@@ -12,6 +12,8 @@ import:
     add: /usr/sbin/setcap
     to: /tools/setcap
     before: setup
+git:
+{{- include "image mount points" . }}
 shell:
   setup:
   - /tools/setcap cap_net_raw=+eip /monitoring-ping # Need for run icmp ping from non root user

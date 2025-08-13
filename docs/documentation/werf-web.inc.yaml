@@ -19,6 +19,8 @@ imageSpec:
     entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ else }}
 fromImage: common/nginx-static
+git:
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
