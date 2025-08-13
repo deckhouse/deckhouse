@@ -18,6 +18,8 @@ import:
   add: /out/usr/share/falco/plugins
   to: /usr/share/falco/plugins
   before: install
+git:
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     cmd: ["/usr/bin/falco"]
