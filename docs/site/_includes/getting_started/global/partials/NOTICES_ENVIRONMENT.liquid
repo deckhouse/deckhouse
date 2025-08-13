@@ -47,6 +47,13 @@ After the virtual machine is started, the following services associated with thi
 * `cloud-init.service`.
 {%- endif %}
 {% endalert %}
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{%- else %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{%- endif %}
+{% endalert %}
 {%- endif %}
 {%- if page.platform_type == 'existing' %}
 {%- endif %}
