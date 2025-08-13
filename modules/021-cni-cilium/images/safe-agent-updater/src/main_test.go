@@ -258,7 +258,7 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
-			_, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(fakeClientset, test.nodeName)
+			_, _, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(fakeClientset, test.nodeName)
 			podRestartNeeded := !isCurrentAgentPodGenerationDesired
 
 			switch test.expectSuccess {
