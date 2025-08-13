@@ -722,29 +722,20 @@
       {
         "current": {
           "selected": false,
-          "text": "Prometheus",
-          "value": "$ds_prometheus"
+          "text": "default",
+          "value": "default"
         },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "$ds_prometheus"
-        },
-        "definition": "label_values(prometheus_build_info, __name__)",
         "hide": 0,
         "includeAll": false,
-        "label": "Data Source",
+        "label": "Prometheus",
         "multi": false,
         "name": "ds_prometheus",
         "options": [],
-        "query": {
-          "query": "label_values(prometheus_build_info, __name__)",
-          "refId": "StandardVariableQuery"
-        },
+        "query": "prometheus",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
-        "sort": 0,
-        "type": "prometheus"
+        "type": "datasource"
       }
     ]
   },
