@@ -744,7 +744,7 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "prometheus"
       }
     ]
   },
