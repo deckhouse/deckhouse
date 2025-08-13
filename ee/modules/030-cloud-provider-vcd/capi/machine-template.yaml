@@ -1,10 +1,10 @@
 {{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.vcd | required "cloudProvider.vcd is required" -}}
 {{- $metadata := dict -}}
 {{- if $cloudProviderValues.metadata -}}
-{{- $metadata = merge (deepCopy $cloudProviderValues.metadata) $metadata }}
+  {{- $metadata = merge (deepCopy $cloudProviderValues.metadata) $metadata }}
 {{- end -}}
 {{- if .nodeGroup.instanceClass.additionalMetadata -}}
-{{- $metadata = merge (deepCopy .nodeGroup.instanceClass.additionalMetadata) $metadata -}}
+  {{- $metadata = merge (deepCopy .nodeGroup.instanceClass.additionalMetadata) $metadata -}}
 {{- end -}}
 
 {{- $templateOrg := "" }}
