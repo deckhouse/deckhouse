@@ -32,7 +32,7 @@ func RegisterMetrics(mStorage *metricsstorage.MetricStorage) error {
 		return err
 	}
 
-	// Histograms:time taken for upload/build/delete requests (ok/fail)
+	// Histograms:time taken for upload/build/delete requests (ok/fail) - will take 10 minutes as a base unit
 	defaultBuckets := []float64{0.1, 0.5, 1, 2.5, 5, 10}
 	_, err = mStorage.RegisterHistogram("docs_builder_upload_duration_seconds", []string{"status"}, defaultBuckets)
 	if err != nil {
