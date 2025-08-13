@@ -3,7 +3,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-07-10"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -191,6 +190,7 @@ shell:
       /chroot/usr/local/nginx
       /chroot/usr/share
       /chroot/usr/bin
+      /chroot/usr/lib/locale
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
       /chroot/etc/ingress-controller/auth
@@ -223,6 +223,7 @@ shell:
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
   - cp -a /lib64/* /chroot/lib64/
   - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
+  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
   - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
   - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
@@ -250,6 +251,8 @@ shell:
   - chown www-data:www-data /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
+  # takes ~1GB
+  - rm -rf /chroot/usr/lib64/locale
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
