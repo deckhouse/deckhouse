@@ -603,7 +603,7 @@ lang: ru
    d8 platform queue list
    ```
 
-1. Проверьте, не осталось ли в кластере подов с адресом рееста для DKP EE:
+1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq

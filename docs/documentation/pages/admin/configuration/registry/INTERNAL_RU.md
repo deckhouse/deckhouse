@@ -1,6 +1,6 @@
 ---
 title: Использование внутреннего реестра образов контейнеров
-permalink: ru/admin/configuration/registry/internal-registry.html
+permalink: ru/admin/configuration/registry/internal.html
 lang: ru
 ---
 
