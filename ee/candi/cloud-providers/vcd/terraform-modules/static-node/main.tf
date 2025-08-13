@@ -90,20 +90,14 @@ resource "vcd_vapp_vm" "node" {
   }
 
   dynamic "metadata_entry" {
-    for_each = local.additional_metadata
+    for_each = local.metadata
 
     content {
-      type        = format("Metadata%sValue", metadata_entry.value.type)
-      is_system   = metadata_entry.value.isSystem
-      user_access = metadata_entry.value.userAccess
-      key         = metadata_entry.value.key
-      value       = metadata_entry.value.value
+      type        = "MetadataStringValue"
+      is_system   = false
+      user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
     }
-  }
-
-  # stub metadata_entry for deleting metadata if field was deleted
-  dynamic "metadata_entry" {
-    for_each = length(local.additional_metadata) == 0 ? [1] : []
-    content {}
   }
 }

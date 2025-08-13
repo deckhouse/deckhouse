@@ -39,3 +39,10 @@ variable "internal_network_dhcp_pool_start_address" {
   type    = number
   default = 30
 }
+
+variable "metadata" {
+  type = object(
+    map(string)
+  )
+  default = {}
+}
