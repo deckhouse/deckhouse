@@ -195,7 +195,7 @@ from: localhost:5001/base-images:f73507b11c7df72807ec6fa610c8ab91f2ade9d23151583
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-curl # FIXME delete
-from: localhost:5001/base-images:1f3a6677aaef8a2b04dfbf8cc9b891c70cf9db2b54cd6e21095f501a-1755026757736
+from: localhost:5001/base-images:32a1f29035ba7ab0548bd8ac689b47115eba049629dd101e871e675a-1755091307794
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-zlib # FIXME delete
@@ -208,6 +208,34 @@ final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-openssl # FIXME delete
 from: localhost:5001/base-images:189dd9fd160d6303784a1beec55dca2a6291c3767a0931d49e3161d6-1755002542206
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli # FIXME delete
+from: localhost:5001/base-images:4c952905032f6cee2fb5b404faba5489097f80dcf4e8b50472f0782d-1755023749409
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libidn2 # FIXME delete
+from: localhost:5001/base-images:4b6ff7570e8a0425be4e98f7ee3aa361b218449f872a3521de451177-1755013605798
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libzstd # FIXME delete
+from: localhost:5001/base-images:7272e93072cf75f70d5f44f71fc975339286842abc93c3cd259f4949-1755002527727
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libpsl # FIXME delete
+from: localhost:5001/base-images:ab73e782652271d668fa13d0c298c9579bed2c46f57b72bd3dc9efef-1755013623907
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libnghttp2 # FIXME delete
+from: localhost:5001/base-images:d8ee378b147a476210cfcccf953b5d35acae755a94a35640870fc225-1755023820824
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-xz # FIXME delete
+from: localhost:5001/base-images:2e9bfdb406d9e63ffd923032463dc991458d88ae0484469e6d44012f-1755002544477
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libxml2 # FIXME delete
+from: localhost:5001/base-images:33b293ed2871b02fb4aee245e44ba3862a7123a0a78204eadf05208b-1755004501512
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -301,6 +329,34 @@ import:
   add: /usr
   to: /openssl
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli
+  add: /usr
+  to: /brotli
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libidn2
+  add: /usr
+  to: /libidn2
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libzstd
+  add: /usr
+  to: /libzstd
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libpsl
+  add: /usr
+  to: /libpsl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libnghttp2
+  add: /usr
+  to: /libnghttp2
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-xz
+  add: /usr
+  to: /xz
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libxml2
+  add: /usr
+  to: /libxml2
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -343,7 +399,7 @@ shell:
   # Optional
   # - apk add libxslt-dev
   # - apk add gd-dev
-  - apk add openssl-dev
+  # - apk add openssl-dev
   # - apk add libedit-dev
   # - apk add libaio-dev
   # - apk add perl-dev
@@ -369,11 +425,18 @@ shell:
   - cp -a /pcre/* /usr
   - cp -a /libmaxminddb/* /usr
   - cp -a /curl/* /usr
+  - cp -a /libidn2/* /usr
+  - cp -a /libzstd/* /usr
+  - cp -a /libpsl/* /usr
+  - cp -a /libnghttp2/* /usr
+  - cp -a /brotli/* /usr
   - cp -a /zlib/* /usr
   - cp -a /c-ares/* /usr
-  # - cp -a /openssl/* /usr
-  # - mkdir -p /usr/lib64
-  # - cp -a /openssl/lib/* /usr/lib64
+  - cp -a /openssl/* /usr
+  - mkdir -p /usr/lib64
+  - cp -a /openssl/lib/* /usr/lib64
+  - cp -a /xz/* /usr
+  - cp -a /libxml2/* /usr
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -771,7 +834,7 @@ import:
 #   group: "64535"
 #   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-curl
-  add: /usr/bin/curl
+  add: /usr/bin/curl-static
   to: /chroot/usr/bin/curl
   owner: "64535"
   group: "64535"
