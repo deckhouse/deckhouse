@@ -23,6 +23,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type GrafanaAdditionalDatasource map[string]interface{}
@@ -66,7 +68,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, grafanaDatasourcesHandler)
 
 func grafanaDatasourcesHandler(input *go_hook.HookInput) error {
-	gad := input.Snapshots["grafana_additional_datasources"]
+	gad, err := sdkobjectpatch.UnmarshalToStruct[GrafanaAdditionalDatasource](input.NewSnapshots, "grafana_additional_datasources")
+	if err != nil {
+		return fmt.Errorf("failed to get grafana_additional_datasources: %w", err)
+	}
 
 	if len(gad) == 0 {
 		input.Values.Set("prometheus.internal.grafana.additionalDatasources", make([]interface{}, 0))

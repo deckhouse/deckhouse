@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	dsv1alpha2 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -72,9 +76,12 @@ type InternalValuesDeschedulerSpec struct {
 }
 
 func getCRDsHandler(input *go_hook.HookInput) error {
-	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.Snapshots["deschedulers"]))
-	for _, v := range input.Snapshots["deschedulers"] {
-		item := v.(DeschedulerSnapshotItem)
+	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.NewSnapshots.Get("deschedulers")))
+	for item, err := range sdkobjectpatch.SnapshotIter[DeschedulerSnapshotItem](input.NewSnapshots.Get("deschedulers")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'deschedulers' snapshots: %w", err)
+		}
+
 		ds := &InternalValuesDeschedulerSpec{
 			Name:       item.Name,
 			Strategies: item.Spec.Strategies,

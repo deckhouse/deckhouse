@@ -76,8 +76,8 @@ func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func enablePrompp(input *go_hook.HookInput) error {
-	hasModule := len(input.Snapshots["prompp_module"]) > 0
-	hasModuleConfig := len(input.Snapshots["prompp_moduleconfig"]) > 0
+	hasModule := len(input.NewSnapshots.Get("prompp_module")) > 0
+	hasModuleConfig := len(input.NewSnapshots.Get("prompp_moduleconfig")) > 0
 
 	if !hasModule {
 		input.Logger.Info("no prompp module found, won't create ModuleConfig")

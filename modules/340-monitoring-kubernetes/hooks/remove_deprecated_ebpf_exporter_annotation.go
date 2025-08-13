@@ -21,6 +21,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -58,12 +60,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, unlabelNodes)
 
 func unlabelNodes(input *go_hook.HookInput) error {
-	snapshot := input.Snapshots["nodes"]
-	for _, labeledNodeRaw := range snapshot {
-		if labeledNodeRaw == nil {
+	snapshot := input.NewSnapshots.Get("nodes")
+	for labeledNodeRaw, err := range sdkobjectpatch.SnapshotIter[NodeWithLabel](snapshot) {
+		if err != nil {
 			continue
 		}
-		labeledNode := labeledNodeRaw.(*NodeWithLabel)
 
 		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var node v1.Node
@@ -75,7 +76,7 @@ func unlabelNodes(input *go_hook.HookInput) error {
 			delete(node.Labels, deprecatedEbpfSchedulingLabelKey)
 
 			return sdk.ToUnstructured(&node)
-		}, "v1", "Node", "", labeledNode.Name)
+		}, "v1", "Node", "", labeledNodeRaw.Name)
 	}
 
 	return nil

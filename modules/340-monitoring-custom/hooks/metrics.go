@@ -169,9 +169,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, exposeMetrics)
 
 func exposeMetrics(input *go_hook.HookInput) error {
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_service_monitor_total", float64(len(input.Snapshots["service_monitors"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_pod_monitor_total", float64(len(input.Snapshots["pod_monitors"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_unknown_prometheus_rules_total", float64(len(input.Snapshots["rules"])), nil)
-	input.MetricsCollector.Set("d8_monitoring_custom_old_prometheus_custom_targets_total", float64(len(input.Snapshots["custom_services"])), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_service_monitor_total", float64(len(input.NewSnapshots.Get("service_monitors"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_pod_monitor_total", float64(len(input.NewSnapshots.Get("pod_monitors"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_unknown_prometheus_rules_total", float64(len(input.NewSnapshots.Get("rules"))), nil)
+	input.MetricsCollector.Set("d8_monitoring_custom_old_prometheus_custom_targets_total", float64(len(input.NewSnapshots.Get("custom_services"))), nil)
+
 	return nil
 }

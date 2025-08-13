@@ -22,6 +22,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type RemoteWrite struct {
@@ -58,7 +60,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, remoteWriteHandler)
 
 func remoteWriteHandler(input *go_hook.HookInput) error {
-	prw := input.Snapshots["prometheusremotewrite"]
+	var prw []RemoteWrite
+	prw, err := sdkobjectpatch.UnmarshalToStruct[RemoteWrite](input.NewSnapshots, "prometheusremotewrite")
+	if err != nil {
+		return fmt.Errorf("failed to get prometheusremotewrite: %w", err)
+	}
 
 	if len(prw) == 0 {
 		input.Values.Set("prometheus.internal.remoteWrite", make([]interface{}, 0))
