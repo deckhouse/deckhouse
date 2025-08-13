@@ -180,7 +180,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
-  - cp -R /usr/lib64 /chroot/usr/lib64
+  - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - |
@@ -251,8 +251,6 @@ shell:
   - chown www-data:www-data /chroot/etc
   - cp -R /src/rootfs/etc/* /chroot/etc
   - rm -rf /src/rootfs/etc
-  # takes ~1GB
-  - rm -rf /chroot/usr/lib64/locale
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11-artifact
@@ -335,6 +333,8 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
+  # takes ~1GB
+  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /
