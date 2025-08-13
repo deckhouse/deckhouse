@@ -186,6 +186,7 @@ data:
   {
 	"datastoreType": "DatastoreCluster",
 	"datastoreURL": "",
+    "storagePolicyName": "",
 	"name": "test-1-k8s-3cf5ce84",
 	"path": "/DCTEST/datastore/test_1_k8s",
 	"zones": [
@@ -195,6 +196,7 @@ data:
   {
 	"datastoreType": "Datastore",
     "datastoreURL":"ds:///vmfs/volumes/503a9af1-291d17b0-52e0-1d01842f428c/",
+    "storagePolicyName": "",
 	"name": "test-1-lun101-b39d82fa",
 	"path": "/DCTEST/datastore/test_1_Lun101",
 	"zones": [
@@ -204,6 +206,7 @@ data:
   {
 	"datastoreType": "Datastore",
     "datastoreURL":"ds:///vmfs/volumes/55832249-30a68048-496f-33f77fed3c5c/",
+    "storagePolicyName": "",
 	"name": "test-1-lun102-0403073a",
 	"path": "/DCTEST/datastore/test_1_Lun102",
 	"zones": [
@@ -232,6 +235,7 @@ data:
   {
 	"datastoreType": "DatastoreCluster",
 	"datastoreURL": "",
+    "storagePolicyName": "",
 	"name": "test-1-k8s-3cf5ce84",
 	"path": "/DCTEST/datastore/test_1_k8s",
 	"zones": [
