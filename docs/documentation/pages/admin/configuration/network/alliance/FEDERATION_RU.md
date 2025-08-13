@@ -7,26 +7,26 @@ lang: ru
 ## Федерация средствами Istio (Service Mesh)
 
 {% alert level="info" %}
-Доступно только в редакциях Enterprise Edition (EE) и Certified Security Edition Pro (CSE Pro 1.67+).
+Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro 1.67+).
 {% endalert %}
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F -->
 
 ### Требования к кластерам
 
-* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) в ресурсе [ClusterConfiguration](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration). Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
+* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе ClusterConfiguration. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
   > Значение `cluster.local` использовать нельзя — зарезервированный псевдоним для домена локального кластера.
-  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](../../reference/cr/clusterconfiguration/#clusterconfiguration-clusterdomain) явно определен как `cluster.local`. Подробнее – в документации [Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices).
+  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Подсети сервисов и подов, заданные в параметрах [`serviceSubnetCIDR`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) должны различаться между кластерами.
+* Подсети сервисов и подов, заданные в параметрах [`serviceSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны различаться между кластерами.
 
   > При анализе трафика Istio использует:
   > - для HTTP/HTTPS-запросов — заголовки;
   > - для TCP-запросов — IP-адрес назначения и порт.
   >
   > Если IP-адреса пересекаются, Istio может ошибочно применить правила маршрутизации к запросам из других кластеров.
-  > В режиме single-network пересечения подсетей строго запрещены. В режиме multi-networks — формально допустимы, но не рекомендуются. Подробнее – в документации [Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network).
+  > В режиме single-network пересечения подсетей строго запрещены. В режиме multi-networks — формально допустимы, но не рекомендуются. Подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network).
   >
   > - В режиме single-network поды разных кластеров могут взаимодействовать напрямую.
   > - В режиме multi-networks поды разных кластеров взаимодействуют только через istio-gateway.
@@ -56,32 +56,20 @@ lang: ru
 
 Для настройки федерации необходимо:
 
-* В каждом кластере создать набор ресурсов [IstioFederation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/istio/cr.html#istiofederation) для описания других кластеров.
-  * После успешного автосогласования между кластерами в ресурсе `IstioFederation` будут записаны необходимые служебные данные в `status.metadataCache.public` и `status.metadataCache.private`.
-* Каждый ресурс(`service`), который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
-  * В остальных кластерах из состава федерации, для каждого `service` создадутся соответствующие `ServiceEntry`, указывающие на `ingressgateway` исходного кластера.
+* В каждом кластере создать набор ресурсов [IstioFederation](/modules/istio/cr.html#istiofederation) для описания других кластеров.
+  * После успешного автосогласования между кластерами в ресурсе IstioFederation будут записаны необходимые служебные данные в `status.metadataCache.public` и `status.metadataCache.private`.
+* Каждый ресурс (Service), который считается публичным в рамках федерации, пометить лейблом `federation.istio.deckhouse.io/public-service: ""`.
+  * В остальных кластерах из состава федерации, для каждого ресурса Service создадутся соответствующие ServiceEntry, указывающие на `ingressgateway` исходного кластера.
 
-> **Внимание**! Убедитесь, что в ресурсе `service`, в разделе `.spec.ports`, поле `name` заполнено для каждого порта, иначе работа будет некорректной.
+> **Важно**. Убедитесь, что поле `name` в разделе `.spec.ports` ресурса Service заполнено для каждого порта, иначе могут быть проблемы в работе федерации.
 
 <!-- перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#%D1%83%D1%81%D1%82%D1%80%D0%BE%D0%B9%D1%81%D1%82%D0%B2%D0%BE-%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B8%D0%B7-%D0%B4%D0%B2%D1%83%D1%85-%D0%BA%D0%BB%D0%B0%D1%81%D1%82%D0%B5%D1%80%D0%BE%D0%B2-%D1%81-%D0%BF%D0%BE%D0%BC%D0%BE%D1%89%D1%8C%D1%8E-custom-resource-istiofederation -->
 
 ### Пример устройства федерации из двух кластеров
 
-Для настройки федерации средствами Istio используйте кастомный ресурс [IstioFederation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/istio/cr.html#istiofederation).
+Для настройки федерации средствами Istio используйте кастомный ресурс [IstioFederation](/modules/istio/cr.html#istiofederation).
 
 Кластер A:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: IstioFederation
-metadata:
-  name: cluster-b
-spec:
-  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
-  trustDomain: cluster-b.local
-```
-
-Кластер B:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -91,4 +79,16 @@ metadata:
 spec:
   metadataEndpoint: https://istio.k8s-a.example.com/metadata/
   trustDomain: cluster-a.local
+```
+
+Кластер B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: cluster-b
+spec:
+  metadataEndpoint: https://istio.k8s-b.example.com/metadata/
+  trustDomain: cluster-b.local
 ```

@@ -80,6 +80,16 @@ spec:
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
 
-1. Зайдите в нужный под: `d8 k -n d8-keepalived exec -it keepalived-<name> -- sh`.
+1. Зайдите в нужный под:
+
+   ```shell
+   d8 k -n d8-keepalived exec -it keepalived-<name> -- sh
+   ```
+
 1. Отредактируйте файл `vi /etc/keepalived/keepalived.conf`, где в строке с параметром `priority` замените значение на число подов keepalived + 1.
-1. Отправьте сигнал на перечитывание конфигурации: `kill -HUP 1`.
+
+1. Отправьте сигнал на перечитывание конфигурации:
+
+   ```shell
+   kill -HUP 1
+   ```

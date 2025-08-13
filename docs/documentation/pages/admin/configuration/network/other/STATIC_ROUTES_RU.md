@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/network/other/static-routes.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform управление статичными маршрутами и правилами ip rule на узлах кластера реализуется с помощью модуля [`static-routing-manager`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/static-routing-manager/).
+В Deckhouse Kubernetes Platform управление статичными маршрутами и правилами ip rule на узлах кластера реализуется с помощью модуля [`static-routing-manager`](/modules/static-routing-manager/stable/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/static-routing-manager/examples.html -->
 
@@ -29,8 +29,12 @@ spec:
 На узлах, попадающих под `nodeSelector`, будет создан маршрут `10.0.0.0/8 via 192.168.0.1`:
 
 ```shell
-$ ip -4 route ls
-...
+ip -4 route ls
+```
+
+Пример вывода:
+
+```console
 10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
 ```
 
@@ -56,7 +60,12 @@ status:
 На узлах, попадающих под `nodeSelector`, будет создан маршрут `0.0.0.0/0 via 192.168.0.1` в таблице `10000`:
 
 ```shell
-$ ip -4 route ls table 10000
+ip -4 route ls table 10000
+```
+
+Пример вывода:
+
+```console
 default via 192.168.0.1 dev eth0 realm 216
 ```
 
@@ -94,8 +103,13 @@ spec:
 На узлах, попадающих под `nodeSelector`, будет создан ip rule. Команда для просмотра:
 
 ```shell
-$ ip rule list
+ip rule list
+```
 
+Пример вывода:
+
+```console
+...
 50: from 192.168.111.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 50: from 192.168.222.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 50: from 192.168.222.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216

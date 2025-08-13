@@ -1,26 +1,29 @@
 ---
-title: "Customizing istio-proxy sidecar resource management"
+title: "Configuring resources for istio-proxy sidecars"
 permalink: en/user/network/istio-sidecar-resource-management.html
 ---
 
-When using the [`istio`](../../modules/istio/) module in a cluster, you can manage the resources allocated to istio-proxy sidecars to workloads. Annotations are used for this purpose.
+When using the [`istio`](../../modules/istio/) module in a cluster,
+you can manage the resources allocated for istio-proxy sidecars in specific workloads.
+Annotations are used for this purpose.
 
 ## Supported annotations
 
-To override global resource limits for istio-proxy sidecars, annotations are supported in individual workloads:
+To override global resource limits for istio-proxy sidecars, the following annotations are supported in individual workloads:
 
-|Annotation                          | Description                  | Example Value |
+|Annotation                          | Description                  | Example value |
 |-------------------------------------|-----------------------------|---------------|
-| `sidecar.istio.io/proxyCPU`         | CPU request for sidecar     | `200m`        |
-| `sidecar.istio.io/proxyCPULimit`    | CPU limit for sidecar       | `"1"`         |
-| `sidecar.istio.io/proxyMemory`      | Memory request for sidecar  | `128Mi`       |
-| `sidecar.istio.io/proxyMemoryLimit` | Memory limit for sidecar    | `512Mi`       |
+| `sidecar.istio.io/proxyCPU`         | CPU request for a sidecar     | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | CPU limit for a sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Memory request for a sidecar  | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Memory limit for a sidecar    | `512Mi`       |
 
 {% alert level="warning" %}
-All annotations from the table must be specified in the workload manifest at the same time. Partial configuration is not supported.
+All annotations from the table must be specified in the workload manifest at the same time.
+Partial configuration is not supported.
 {% endalert %}
 
-## Configuration Examples
+## Configuration examples
 
 For Deployments:
 
@@ -37,7 +40,7 @@ spec:
         sidecar.istio.io/proxyCPULimit: "1"
         sidecar.istio.io/proxyMemory: 128Mi
         sidecar.istio.io/proxyMemoryLimit: 512Mi
-# ... rest of your deployment spec
+# ... Rest of the manifest.
 ```
 
 For ReplicaSets:
@@ -55,10 +58,10 @@ spec:
         sidecar.istio.io/proxyCPULimit: "1"
         sidecar.istio.io/proxyMemory: 128Mi
         sidecar.istio.io/proxyMemoryLimit: 512Mi
-# ... rest of your deployment spec
+# ... Rest of the manifest.
 ```
 
-For Pod:
+For Pods:
 
 ```yaml
 apiVersion: v1
@@ -69,5 +72,5 @@ metadata:
     sidecar.istio.io/proxyCPULimit: "1"
     sidecar.istio.io/proxyMemory: 128Mi
     sidecar.istio.io/proxyMemoryLimit: 512Mi
-# ... rest of your pod spec
+# ... Rest of the manifest.
 ```

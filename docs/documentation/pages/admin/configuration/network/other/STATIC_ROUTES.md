@@ -1,13 +1,11 @@
 ---
-title: "Management of static routes and ip rules on cluster nodes"
+title: "Managing static routes and ip rules on cluster nodes"
 permalink: en/admin/configuration/network/other/static-routes.html
 ---
 
-In Deckhouse Kubernetes Platform, static-routing and ip rule management on cluster nodes is implemented using the [static-routing-manager](../../reference/mc/static-routing-manager/) module.
+In Deckhouse Kubernetes Platform, static-routing and ip rule management on cluster nodes is implemented using the [`static-routing-manager`](/modules/static-routing-manager/stable/) module.
 
-<!-- Transferred with minor modifications from https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/static-routing-manager/examples.html -->
-
-## Settings examples
+## Configuration examples
 
 ### Creating a route in main routing table
 
@@ -17,7 +15,7 @@ kind: RoutingTable
 metadata:
   name: myrt-main
 spec:
-  ipRoutingTableID: 254 # main routing table id is 254
+  ipRoutingTableID: 254 # Main routing table ID is 254.
   routes:
   - destination: 10.0.0.0/8
     gateway: 192.168.0.1
@@ -25,13 +23,16 @@ spec:
     node-role.deckhouse.io: load-balancer
 ```
 
-According to this resource, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes hitting `nodeSelector`:
+Based on this configuration, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes falling under `nodeSelector`:
 
 ```shell
-$ ip -4 route ls
-...
+ip -4 route ls
+```
+
+Example output:
+
+```console
 10.0.0.0/8 via 192.168.0.1 dev eth0 realm 216
-...
 ```
 
 The `realm 216` instruction in the route is used as a marker to identify the route under module control (d8 hex = 216 dec).
@@ -50,18 +51,22 @@ spec:
   nodeSelector:
     node-role.deckhouse.io: load-balancer
 status:
-  ipRoutingTableID: 10000 # if spec.ipRoutingTableID is not specified, it will be generated automatically and placed in status
-  ...
+  ipRoutingTableID: 10000 # If spec.ipRoutingTableID is not specified, it will be generated automatically and placed in status.
 ```
 
-According to this resource, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes hitting `nodeSelector` in the table 10000:
+According to this configuration, the route `10.0.0.0.0/8 via 192.168.0.1` will be created on the nodes falling under `nodeSelector` in the table `10000`:
 
 ```shell
-$ ip -4 route ls table 10000
+ip -4 route ls table 10000
+```
+
+Example output:
+
+```console
 default via 192.168.0.1 dev eth0 realm 216
 ```
 
-### Creating an `ip rule`
+### Creating an ip rule
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -92,10 +97,15 @@ spec:
     node-role.deckhouse.io: load-balancer
 ```
 
-According to this resource, an ip rule will be created on the nodes falling under `nodeSelector`:
+According to this configuration, an ip rule will be created on the nodes falling under `nodeSelector`. To view results, run:
 
 ```shell
-$ ip rule list
+ip rule list
+```
+
+Example output:
+
+```console
 ...
 50: from 192.168.111.0/24 to 172.16.8.0/21 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216
 50: from 192.168.222.0/24 to 8.8.8.8 ipproto tcp sport 100-200 dport 300-400 lookup 10000 realms 216

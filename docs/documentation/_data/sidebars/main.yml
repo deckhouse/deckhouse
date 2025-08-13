@@ -543,12 +543,12 @@ entries:
                         ru: Шифрование трафика между подами
                       url: /admin/configuration/network/internal/encrypting-pods.html
                     - title:
-                        en: Configuring Cluster Network Stack Visualization
+                        en: Configuring cluster network stack visualization
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching from CNI flannel to cilium
-                        ru: Переключение с CNI flannel на cilium
+                        en: Switching CNI from Flannel to Cilium
+                        ru: Переключение CNI с Flannel на Cilium
                       url: /admin/configuration/network/internal/flannel-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
@@ -563,7 +563,7 @@ entries:
                         ru: NLB
                       folders:
                         - title:
-                            en: Balancing by MetalLB means
+                            en: Balancing with MetalLB
                             ru: Балансировка средствами MetalLB
                           url: /admin/configuration/network/ingress/nlb/metallb.html
                         - title:
@@ -575,11 +575,11 @@ entries:
                         ru: ALB
                       folders:
                         - title:
-                            en: ALB by NGINX Ingress controller
+                            en: ALB with NGINX Ingress controller
                             ru: ALB средствами NGINX Ingress controller
                           url: /admin/configuration/network/ingress/alb/nginx.html
                         - title:
-                            en: ALB means Istio
+                            en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html
                     - title:
@@ -599,8 +599,8 @@ entries:
                     ru: Межкластерное взаимодействие (альянс)
                   folders:
                     - title:
-                        en: Inter-cluster cooperation (alliance)
-                        ru: Межкластерное взаимодействие (альянс)
+                        en: Overview
+                        ru: Обзор
                       url: /admin/configuration/network/alliance/
                     - title:
                         en: Multicluster
@@ -627,7 +627,7 @@ entries:
                     ru: Другие возможности настройки сети
                   folders:
                     - title:
-                        en: Management of static routes and ip rules on cluster nodes
+                        en: Managing static routes and ip rules on cluster nodes
                         ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
                       url: /admin/configuration/network/other/static-routes.html
                     - title:
@@ -639,7 +639,7 @@ entries:
                         ru: Кэширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
-                        en: Operation modes of bpfLB for external traffic processing
+                        en: BpfLB operation modes for external traffic processing
                         ru: Режимы работы bpfLB для обработки внешнего трафика
                       url: /admin/configuration/network/other/bpflb.html
                     - title:
@@ -903,7 +903,7 @@ entries:
                     ru: ALB
                   url: /user/network/ingress/alb.html
             - title:
-                en: Intra-cluster interaction
+                en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
               url: /user/network/intra-cluster.html
             - title:
@@ -915,11 +915,11 @@ entries:
                 ru: Маршрутизация запросов с Istio
               url: /user/network/request_routing_istio.html
             - title:
-                en: Istio activation for applications
+                en: Enabling Istio for applications
                 ru: Активация Istio для приложений
               url: /user/network/app_istio_activation.html
             - title:
-                en: Managing request balancing between service Endpoints with Istio
+                en: Managing request balancing between service endpoints with Istio
                 ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
@@ -927,12 +927,12 @@ entries:
                 ru: Locality failover с Istio
               url: /user/network/locality_failover_istio.html
             - title:
-                en: Configuring Retry for requests with Istio
-                ru: Настройка Retry для запросов с Istio
+                en: Configuring request retries with Istio
+                ru: Настройка retry для запросов с Istio
               url: /user/network/retry_istio.html
             - title:
-                en: Customizing istio-proxy sidecar resource management
-                ru: Настройка для ресурсов istio-proxy сайдкаров
+                en: Configuring resources for istio-proxy sidecars
+                ru: Настройка ресурсов для istio-proxy сайдкаров
               url: /user/network/istio-sidecar-resource-management.html
             - title:
                 en: Circuit Breaker
@@ -1166,7 +1166,7 @@ entries:
             ru: Сеть
           folders:
           - title:
-              en: Architecture of the cluster with Istio enabled
+              en: Cluster architecture with Istio enabled
               ru: Архитектура кластера с включенным Istio
             url: /architecture/network/cluster-with-istio.html
           - title:

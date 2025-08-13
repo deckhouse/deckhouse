@@ -11,13 +11,15 @@ If required, you can disable this built-in mechanism and configure custom NTP da
 
 ## Enabling built-in time synchronization
 
-Enable the chrony module to activate time synchronization:
+Enable the [`chrony`](/modules/chrony/) module to activate time synchronization:
 
 ```shell  
 d8 platform module enable chrony
 ```
 
-By default, the time source is the server `pool.ntp.org`. You can specify a list of NTP servers using the `ntpServers` parameter in the configuration of the `chrony` module.
+By default, the time source is the server `pool.ntp.org`.
+You can specify a list of NTP servers using the [`ntpServers`](/modules/chrony/configuration.html#parameters-ntpservers) parameter
+in the configuration of the `chrony` module.
 
 An example of the module configuration specifying NTP servers:
 
@@ -38,7 +40,8 @@ spec:
 ## Using custom NTP daemons
 
 To disable the built-in time synchronization mechanism and use your own NTP daemons on the nodes, follow these steps:
-1. Disable the `chrony` module:
+
+1. Disable the [`chrony`](/modules/chrony/) module:
 
    ```shell
    d8 platform module disable chrony
@@ -50,7 +53,8 @@ To disable the built-in time synchronization mechanism and use your own NTP daem
    Module chrony disabled
    ```
 
-1. Create a [NodeGroupConfiguration](../../reference/cr/nodegroupconfiguration.html) resource to enable the NTP daemons on the nodes.
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource
+   to enable the NTP daemons on the nodes.
 
    Example for `systemd-timesyncd`:
 
