@@ -304,8 +304,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)
-	var pullErrorsExist bool
-	var processErrorsExist bool
+	var errorsExist bool
 
 	for _, moduleName := range pulledModules {
 		logger := r.logger.With(slog.String("module_name", moduleName))
@@ -328,8 +327,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		// clear pull error
-		availableModule.PullError = ""
 		// clear process error
 		availableModule.Error = ""
 
@@ -342,7 +339,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
-			processErrorsExist = true
+			errorsExist = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -364,7 +361,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			logger.Warn("failed to ensure module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
-			processErrorsExist = true
+			errorsExist = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -376,7 +373,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			logger.Warn("failed to get module pull override, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
-			processErrorsExist = true
+			errorsExist = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -397,8 +394,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
-				availableModule.PullError = err.Error()
-				pullErrorsExist = true
+				availableModule.Error = err.Error()
+				errorsExist = true
 
 				metricLabels := map[string]string{
 					"module":   moduleName,
@@ -421,7 +418,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
-			processErrorsExist = true
+			errorsExist = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
@@ -441,7 +438,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				availableModule.Version = "unknown"
-				processErrorsExist = true
+				errorsExist = true
 				availableModules = append(availableModules, availableModule)
 				continue
 			}
@@ -463,10 +460,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
-				availableModule.PullError = err.Error()
+				availableModule.Error = err.Error()
 				// wipe checksum to trigger meta downloading
 				meta.Checksum = ""
-				processErrorsExist = true
+				errorsExist = true
 			}
 		}
 
@@ -484,7 +481,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		source.Status.ModulesCount = len(availableModules)
 		source.Status.Message = ""
 
-		if pullErrorsExist || processErrorsExist {
+		if errorsExist {
 			source.Status.Message = v1alpha1.ModuleSourceMessageErrors
 		}
 

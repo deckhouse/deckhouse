@@ -106,11 +106,12 @@ type ModuleSourceStatus struct {
 }
 
 type AvailableModule struct {
-	Name       string `json:"name"`
-	Version    string `json:"version,omitempty"`
-	Policy     string `json:"policy,omitempty"`
-	Checksum   string `json:"checksum,omitempty"`
-	Error      string `json:"error,omitempty"`
+	Name     string `json:"name"`
+	Version  string `json:"version,omitempty"`
+	Policy   string `json:"policy,omitempty"`
+	Checksum string `json:"checksum,omitempty"`
+	Error    string `json:"error,omitempty"`
+	// Deprecated: use Error instead
 	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
 }
