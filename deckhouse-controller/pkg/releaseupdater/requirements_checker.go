@@ -463,7 +463,7 @@ func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, sour
 	for _, availableModule := range source.Status.AvailableModules {
 		if availableModule.Name == moduleName {
 			// If there's a pull error, the module is not actually available
-			return availableModule.PullError == ""
+			return availableModule.Error == ""
 		}
 	}
 	return false
