@@ -27,8 +27,6 @@ cleanup:
       branch: main
     imagesPerReference:
       last: 10
-gitWorktree:
-  forceShallowClone: true
 ---
 # Files.Get prefix
 {{- $_ := set . "prefix" "" }}
