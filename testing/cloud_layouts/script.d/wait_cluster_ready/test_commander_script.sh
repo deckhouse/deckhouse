@@ -46,10 +46,13 @@ for i in $(seq $attempts); do
   # Sleeping at the start for readability. First iterations do not succeed anyway.
   sleep 30
   if [[ -n "$ingress_inlet" ]]; then
+    echo "Ingress inlet: ${ingress_inlet}"
     case "$ingress_inlet" in
       LoadBalancer)
         if ingress_service="$(kubectl -n d8-ingress-nginx get svc nginx-load-balancer -ojson 2>/dev/null)"; then
+          echo "Ingress service: ${ingress_service}"
           if ingress_lb_addr="$(jq -re '.status.loadBalancer.ingress | if .[0].hostname then .[0].hostname else .[0].ip end' <<< "$ingress_service")"; then
+            echo "Ingress LB address: ${ingress_lb_addr}"
             if ingress_lb_code="$(d8-curl -o /dev/null -s -w "%{http_code}" "$ingress_lb_addr")"; then
               if [[ "$ingress_lb_code" == "404" ]]; then
                 ingress="ok"
