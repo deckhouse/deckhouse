@@ -346,6 +346,10 @@ entries:
                 ru: Механизм секретов Kubernetes
               url: /stronghold/documentation/user/secrets-engines/kubernetes.html
             - title:
+                en: LDAP Secrets engine
+                ru: Механизм секретов LDAP
+              url: /stronghold/documentation/user/secrets-engines/ldap.html
+            - title:
                 en: Identity Secrets engine
                 ru: Механизм секретов Identity
               folders:
