@@ -13,4 +13,4 @@ lang: ru
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../images/registry-module/direct-ru.png)
 
-Подробнее о режиме `Direct` — в разделе [«Использование внутреннего реестра образов контейнеров»](../admin/configuration/registry/internal-registry.html).
+Подробнее о режиме `Direct` — в разделе [«Использование внутреннего реестра образов контейнеров»](../admin/configuration/registry/internal.html).

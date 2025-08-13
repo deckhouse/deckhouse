@@ -12,4 +12,4 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](../images/registry-module/direct-en.png)
 
-For more information about the `Direct` mode, see the section [Using the internal container image registry](../admin/configuration/registry/internal-registry.html).
+For more information about the `Direct` mode, see the section [Using the internal container image registry](../admin/configuration/registry/internal.html).
