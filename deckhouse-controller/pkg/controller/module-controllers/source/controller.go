@@ -335,7 +335,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// clear pull error
 		availableModule.PullError = ""
 		// clear process error
-		availableModule.ProcessError = ""
+		availableModule.Error = ""
 
 		// clear overridden
 		availableModule.Overridden = false
@@ -344,7 +344,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
 			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
-			availableModule.ProcessError = err.Error()
+			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			processErrorsExist = true
 			availableModules = append(availableModules, availableModule)
@@ -366,7 +366,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 
 			logger.Warn("failed to ensure module, skipping", slog.String("name", moduleName), log.Err(err))
-			availableModule.ProcessError = err.Error()
+			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			processErrorsExist = true
 			availableModules = append(availableModules, availableModule)
@@ -378,7 +378,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			logger.Warn("failed to get module pull override, skipping", slog.String("name", moduleName), log.Err(err))
-			availableModule.ProcessError = err.Error()
+			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			processErrorsExist = true
 			availableModules = append(availableModules, availableModule)
@@ -423,7 +423,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
 			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
-			availableModule.ProcessError = err.Error()
+			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			processErrorsExist = true
 			availableModules = append(availableModules, availableModule)
@@ -443,7 +443,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			})
 			if err != nil {
 				logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
-				availableModule.ProcessError = err.Error()
+				availableModule.Error = err.Error()
 				availableModule.Version = "unknown"
 				processErrorsExist = true
 				availableModules = append(availableModules, availableModule)

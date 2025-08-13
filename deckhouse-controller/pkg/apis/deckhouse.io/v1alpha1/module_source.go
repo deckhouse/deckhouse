@@ -108,13 +108,13 @@ type ModuleSourceStatus struct {
 }
 
 type AvailableModule struct {
-	Name         string `json:"name"`
-	Version      string `json:"version,omitempty"`
-	Policy       string `json:"policy,omitempty"`
-	Checksum     string `json:"checksum,omitempty"`
-	ProcessError string `json:"processError,omitempty"`
-	PullError    string `json:"pullError,omitempty"`
-	Overridden   bool   `json:"overridden,omitempty"`
+	Name       string `json:"name"`
+	Version    string `json:"version,omitempty"`
+	Policy     string `json:"policy,omitempty"`
+	Checksum   string `json:"checksum,omitempty"`
+	Error      string `json:"error,omitempty"`
+	PullError  string `json:"pullError,omitempty"`
+	Overridden bool   `json:"overridden,omitempty"`
 }
 
 func (s *ModuleSource) IsDefault() bool {
