@@ -1,4 +1,4 @@
-2431
+2437
 1GB
 2GB
 5XX
@@ -307,6 +307,7 @@ CSI
 CSR
 css
 csv
+CUDA
 CurrentChannel
 CurrentGroup
 CurrentPageURL
@@ -357,6 +358,7 @@ Datastores
 Datastream
 datastreams
 Datastreams
+DCGM
 DDTHH
 de
 Debian
@@ -531,6 +533,7 @@ Gemfile
 geo
 geohash
 GeoIP
+GFD
 ghcr
 Gi
 GiB
@@ -931,6 +934,7 @@ NetworkPolicy
 nexthop
 nexthops
 nf
+NFD
 NG
 nginx
 NGINX’s
@@ -1397,6 +1401,7 @@ ThinLVM
 Thymeleaf
 TiB
 timeframe
+TimeSlicing
 timeslot
 timestamp
 TLF
@@ -1454,6 +1459,7 @@ vCloud
 vCPU
 vCPUs
 ve
+vectoradd
 Venafi
 versioned
 versioning
