@@ -1237,6 +1237,13 @@ You can migrate to containerd v2 in one of the following ways:
 Migration to containerd v2 is possible if the following conditions are met:
 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
+  To verify the requirements, use the commands:
+   ```shell
+   uname -r | cut -d- -f1
+   stat -f -c %T /sys/fs/cgroup
+   systemctl --version | awk 'NR==1{print $2}'
+   modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+   ```
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 {% endalert %}
 

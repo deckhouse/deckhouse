@@ -1541,6 +1541,13 @@ spec:
 Миграция на containerd v2 возможна при выполнении следующих условий:
 
 * Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
+  Для проверки необходимых компонентов воспользуйтесь командами:
+   ```shell
+   uname -r | cut -d- -f1
+   stat -f -c %T /sys/fs/cgroup
+   systemctl --version | awk 'NR==1{print $2}'
+   modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+   ```
 * На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 {% endalert %}
 
