@@ -7,12 +7,12 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,8 +32,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "SDNInternalL2LBService",
 			FilterFunc: applyL2LBServiceFilter,
 		},
+		{
+			Name:       "services",
+			ApiVersion: "v1",
+			Kind:       "Service",
+			FilterFunc: applyServiceFilterForStatusUpdater,
+		},
 	},
 }, dependency.WithExternalDependencies(handleL2LBServices))
+
+func applyServiceFilterForStatusUpdater(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var service v1.Service
+	err := sdk.FromUnstructured(obj, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
+		// we only need service of LoadBalancer type
+		return nil, nil
+	}
+
+	return ServiceUpdaterInfo{
+		Name:       service.GetName(),
+		Namespace:  service.GetNamespace(),
+		Conditions: service.Status.Conditions,
+	}, nil
+}
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var l2LBService SDNInternalL2LBService
@@ -69,13 +94,18 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 			IPsForStatus = append(IPsForStatus, map[string]string{"ip": ip})
 		}
 
-		k8sClient, err := dc.GetK8sClient()
-		if err != nil {
-			return err
+		var service *ServiceUpdaterInfo
+		for srv, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.NewSnapshots.Get("services")) {
+			if err != nil {
+				continue
+			}
+			if namespacedName.Name == srv.Name && namespacedName.Namespace == srv.Namespace {
+				service = &srv
+				break
+			}
 		}
-		service, err := k8sClient.CoreV1().Services(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
+		if service == nil {
+			return nil
 		}
 
 		conditionStatus := metav1.ConditionFalse
@@ -84,7 +114,7 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
-		conditions := updateCondition(service.Status.Conditions, metav1.Condition{
+		conditions := updateCondition(service.Conditions, metav1.Condition{
 			Status:  conditionStatus,
 			Type:    "AllPublicIPsAssigned",
 			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),

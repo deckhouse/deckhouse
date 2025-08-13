@@ -7,13 +7,8 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
-	"context"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -98,12 +93,6 @@ status:
     ingress:
     - ip: 10.0.0.2
 ` + serviceManifest))
-			var service v1.Service
-			err := yaml.Unmarshal([]byte(serviceManifest), &service)
-			Expect(err).To(BeNil())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err = k8sClient.CoreV1().Services(service.GetNamespace()).Create(context.TODO(), &service, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 
@@ -183,12 +172,6 @@ spec:
     name: nginx
     namespace: nginx
 ` + serviceManifest))
-			var service v1.Service
-			err := yaml.Unmarshal([]byte(serviceManifest), &service)
-			Expect(err).To(BeNil())
-			k8sClient := f.BindingContextController.FakeCluster().Client
-			_, err = k8sClient.CoreV1().Services(service.GetNamespace()).Create(context.TODO(), &service, metav1.CreateOptions{})
-			Expect(err).To(BeNil())
 			f.RunHook()
 		})
 
