@@ -299,7 +299,7 @@ The platform will create a LoadBalancer Service with the specified number of IPs
 d8 k -n d8-ingress-nginx get svc
 ```
 
-Пример вывода:
+Example output:
 
 ```console
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE

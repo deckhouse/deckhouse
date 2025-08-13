@@ -188,9 +188,9 @@ Pods of different versions have different labels (`version: v1` and `version: v2
 
 Two custom resources need to be configured:
 
-- [DestinationRule](../network/managing_request_between_service_istio.html#ресурс-destinationrule) describing
+- [DestinationRule](../network/managing_request_between_service_istio.html#destinationrule-resource) describing
   how to identify different versions of your application (subsets).
-- [VirtualService](../network/retry_istio.html#ресурс-virtualservice) describing
+- [VirtualService](../network/retry_istio.html#virtualservice-resource) describing
   how to distribute traffic between different application versions.
 
 Example:

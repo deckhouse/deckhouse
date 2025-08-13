@@ -8,7 +8,7 @@ to configure the BPF Load Balancer (bpfLB) mode of operation in Deckhouse Kubern
 
 In Kubernetes, traffic typically comes through a load balancer
 that distributes incoming requests among servers and processes responses.
-Thus, the total throughput is limited by the load balancer resources. 
+Thus, the total throughput is limited by the load balancer resources.
 
 To optimize traffic and unload the balancer, the `DSR` mechanism is used,
 in which incoming packets go through the load balancer, and outgoing ones go directly from the terminating servers.

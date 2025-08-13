@@ -21,7 +21,7 @@ lang: ru
 
 В редакциях Community Edition (CE), Basic Edition (BE), Standard Edition (SE), Standard Edition+ (SE+) и Certified Security Edition Lite (CSE 1.67+) можно применять сервис-меш только в рамках одного кластера, например для реализации паттернов Circuit Braker, Canary Deployment и т.д.
 
-| Сценарий использования | СE / BE / SE / SE+ / CSE Lite (1.67+)  | EE | CSE Pro (1.67+) |
+| Сценарий использования | CE / BE / SE / SE+ / CSE Lite (1.67+)  | EE | CSE Pro (1.67+) |
 |---------------|---------------------------------------|------------------------|-----------------|
 | Сервис-меш в одном кластере | +                                     | +                      | +               |
 | Федерация     | -                                     | +                      | +               |

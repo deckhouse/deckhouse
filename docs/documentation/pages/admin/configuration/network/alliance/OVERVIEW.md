@@ -21,7 +21,7 @@ In the Community Edition (CE), Basic Edition (BE), Standard Edition (SE), and St
 the service mesh can only be used within a single cluster — for example, to implement patterns such as Circuit Breaker,
 Canary Deployment, and others.
 
-| Use case | СE / BE / SE / SE+  | EE |
+| Use case | CE / BE / SE / SE+  | EE |
 |----------|---------------------|----|
 | Service mesh in one cluster | +  | +  |
 | Federation                  | -  | +  |
