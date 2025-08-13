@@ -10,8 +10,6 @@ variable "vapp_name" {
 }
 
 variable "metadata" {
-  type = object(
-    map(string)
-  )
+  type    = map(string)
   default = {}
 }
