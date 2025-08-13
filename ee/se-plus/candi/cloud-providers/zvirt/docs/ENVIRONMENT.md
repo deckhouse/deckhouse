@@ -23,6 +23,10 @@ The cloud image of the operating system must be placed in the zVirt disk storage
 
 ### Prepare a virtual machine template
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 To create a virtual machine template, go to the _Compute -> Virtual Machines_ section of the zVirt Administration Portal and create a new virtual machine with the following parameters:
 
 - Section _General_:
