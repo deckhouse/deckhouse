@@ -64,6 +64,22 @@ spec:
                       description: A list of other modules required for the module release. Ensure the modules are enabled.
                       additionalProperties:
                         type: string
+                updateConstraints:
+                  type: object
+                  description: Optional transition rules to allow skipping step-by-step updates.
+                  properties:
+                    versions:
+                      type: array
+                      items:
+                        type: object
+                        required: [from, to]
+                        properties:
+                          from:
+                            type: string
+                            description: Minimal version allowed to upgrade from.
+                          to:
+                            type: string
+                            description: Target endpoint version within the same constraint.
                 changelog:
                   type: object
                   description: Release's changelog for the module.

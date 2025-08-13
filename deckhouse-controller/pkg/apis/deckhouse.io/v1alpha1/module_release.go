@@ -296,9 +296,21 @@ type ModuleReleaseSpec struct {
 	Version    string `json:"version,omitempty"`
 	Weight     uint32 `json:"weight,omitempty"`
 
-	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
-	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
-	Changelog    Changelog                  `json:"changelog,omitempty"`
+	ApplyAfter        *metav1.Time               `json:"applyAfter,omitempty"`
+	Requirements      *ModuleReleaseRequirements `json:"requirements,omitempty"`
+	UpdateConstraints *ModuleUpdateConstraints   `json:"updateConstraints,omitempty"`
+	Changelog         Changelog                  `json:"changelog,omitempty"`
+}
+
+type ModuleUpdateConstraints struct {
+	Versions []ModuleUpdateConstraint `json:"versions,omitempty"`
+}
+
+// ModuleUpdateConstraint defines a semver range [from, to] where From is the minimal version that can upgrade directly
+// to the To endpoint. Values support major.minor or full semver.
+type ModuleUpdateConstraint struct {
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 type ModuleReleaseStatus struct {
