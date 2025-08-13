@@ -9,32 +9,32 @@ permalink: en/admin/configuration/backup/backup-and-restore.html
 
 To properly restore the cluster, follow these steps on the master node:
 
-1. Prepare the `etcdctl` utility. Locate and copy the executable on the node:
+1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
-   Check the version of `etcdctl`:
+   Check the version of `etcdutl`:
 
    ```shell
-   etcdctl version
+   etcdutl version
    ```
 
-   Make sure the output of `etcdctl version` is displayed without errors.
+   Make sure the output of `etcdutl version` is displayed without errors.
 
-   If `etcdctl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
+   If `etcdutl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
 1. Check the etcd version in the cluster (if the Kubernetes API is accessible):
 
    ```shell
-   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
    If the command executes successfully, it will display the current etcd version.
@@ -64,13 +64,13 @@ To properly restore the cluster, follow these steps on the master node:
 1. Clean the etcd directory. Remove old data to prepare for restore:
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
-   Verify that `/var/lib/etcd/member/` is now empty or does not exist:
+   Verify that `/var/lib/etcd` is now empty or does not exist:
 
    ```shell
-   ls -la /var/lib/etcd/member/
+   ls -la /var/lib/etcd
    ```
 
 1. Place the etcd snapshot file. Copy or move the `etcd-backup.snapshot` file to the current user's (root) home directory:
@@ -85,11 +85,10 @@ To properly restore the cluster, follow these steps on the master node:
    ls -la ~/etcd-backup.snapshot
    ```
 
-1. Restore the etcd database from the snapshot using `etcdctl`:
+1. Restore the etcd database from the snapshot using `etcdutl`:
 
    ```shell
-   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
    After the command completes, check that files have appeared in `/var/lib/etcd/`, reflecting the restored state.
@@ -107,6 +106,13 @@ To properly restore the cluster, follow these steps on the master node:
    ```
 
    Pod startup may take some time. Once etcd is running, the cluster will be restored from the snapshot.
+
+   Output example:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
 
 1. Restart the master node.
 
