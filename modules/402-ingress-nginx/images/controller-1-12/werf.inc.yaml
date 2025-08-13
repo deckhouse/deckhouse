@@ -223,7 +223,6 @@ shell:
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
   - cp -a /lib64/* /chroot/lib64/
   - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
-  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
   - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
   - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
@@ -293,6 +292,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
+  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -326,7 +326,7 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
-  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
+  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/usr/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
   - ldconfig
 # Create ld.so.cache inside chroot
   - cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
