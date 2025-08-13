@@ -41,8 +41,6 @@ variable "internal_network_dhcp_pool_start_address" {
 }
 
 variable "metadata" {
-  type = object(
-    map(string)
-  )
+  type    = map(string)
   default = {}
 }

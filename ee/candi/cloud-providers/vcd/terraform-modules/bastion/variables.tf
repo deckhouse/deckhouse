@@ -53,9 +53,7 @@ variable "root_disk_size_gb" {
 }
 
 variable "metadata" {
-  type = object(
-    map(string)
-  )
+  type    = map(string)
   default = {}
 }
 
