@@ -9,7 +9,7 @@ lang: ru
 Вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости.
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`.
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`.
 {% endalert %}
 
 Для переключения Deckhouse Community Edition на Enterprise Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
@@ -116,7 +116,7 @@ lang: ru
      Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
      ```
 
-1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry DKP, выполнив следующую команду:
 
    ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -198,7 +198,7 @@ lang: ru
 ## Переключение DKP с EE на CE
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. Использование реестров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
+Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. Использование registries, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 
 В DKP CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
 {% endalert %}
@@ -318,7 +318,7 @@ lang: ru
    Module node-local-dns disabled
    ```
 
-1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry DKP, выполнив следующую команду:
 
    ```bash
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -361,7 +361,7 @@ lang: ru
    d8 platform queue list
    ```
 
-1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
+1. Проверьте, не осталось ли в кластере подов с адресом registry для DKP EE:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
@@ -385,7 +385,7 @@ lang: ru
 Для переключения вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/kubernetes-platform), нажав на кнопку *Получить консультацию*.
 
 {% alert level="info" %}
-В инструкции используется публичный адрес реестра контейнеров: `registry.deckhouse.ru`.
+В инструкции используется публичный адрес container registry: `registry.deckhouse.ru`.
 
 В DKP SE не поддерживается работа облачных провайдеров `dynamix`, `openstack`, `VCD`, `VSphere` и ряда модулей.
 {% endalert %}
@@ -556,7 +556,7 @@ lang: ru
 
    Дождитесь, пока под DKP перейдёт в состояние `Ready`.
 
-1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry DKP, выполнив следующую команду:
 
    ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -603,7 +603,7 @@ lang: ru
    d8 platform queue list
    ```
 
-1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
+1. Проверьте, не осталось ли в кластере подов с адресом registry для DKP EE:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.status.phase=="Running" or .status.phase=="Pending" or .status.phase=="PodInitializing") | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
@@ -641,7 +641,7 @@ lang: ru
 ## Переключение DKP с EE на CSE
 
 {% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry-cse.deckhouse.ru`.
+Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`.
 
 В DKP CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
 
@@ -849,7 +849,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
    ```
 
-1. Актуализируйте секрет доступа к реестру DKP CSE, выполнив следующую команду:
+1. Актуализируйте секрет доступа к registry DKP CSE, выполнив следующую команду:
 
    ```shell
    kubectl -n d8-system create secret generic deckhouse-registry \
@@ -890,7 +890,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    d8 platform queue list
    ```
 
-1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
+1. Проверьте, не осталось ли в кластере подов с адресом registry для DKP EE:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]

@@ -1,23 +1,23 @@
 ---
-title: Переключение работающего кластера DKP на использование стороннего реестра
+title: Переключение работающего кластера DKP на использование стороннего registry
 permalink: ru/admin/configuration/registry/third-party.html
 lang: ru
 ---
 
 {% alert level="warning" %}
-Использование реестров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
+Использование registries, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
 {% endalert %}
 
-Для переключения кластера на использование стороннего реестра выполните следующие действия:
+Для переключения кластера на использование стороннего registry выполните следующие действия:
 
-1. Выполните команду `deckhouse-controller helper change-registry` из пода DKP с параметрами нового реестра.
+1. Выполните команду `deckhouse-controller helper change-registry` из пода DKP с параметрами нового registry.
    Пример запуска:
 
    ```shell
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
    ```
 
-1. Если реестр использует самоподписанные сертификаты, положите корневой сертификат соответствующего сертификата реестра в файл `/tmp/ca.crt` в поде DKP и добавьте к вызову опцию `--ca-file /tmp/ca.crt` или вставьте содержимое CA в переменную, как в примере ниже:
+1. Если registry использует самоподписанные сертификаты, положите корневой сертификат соответствующего сертификата registry в файл `/tmp/ca.crt` в поде DKP и добавьте к вызову опцию `--ca-file /tmp/ca.crt` или вставьте содержимое CA в переменную, как в примере ниже:
 
    ```shell
    CA_CONTENT=$(cat <<EOF
@@ -62,7 +62,7 @@ lang: ru
                      http - provide '--scheme' flag with http value
    ```
 
-1. Дождитесь перехода пода реестра в статус `Ready`. Если под находится в статусе `ImagePullBackoff`, перезапустите его.
+1. Дождитесь перехода пода registry в статус `Ready`. Если под находится в статусе `ImagePullBackoff`, перезапустите его.
 1. Дождитесь применения новых настроек на master-узле.
 
    Проверьте журнал системного сервиса bashible на master-узле, например, с помощью следующей команды:
@@ -84,8 +84,9 @@ lang: ru
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
 
-1. Если необходимо отключить автоматическое обновление реестра через сторонний реестр, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
-1. Проверьте, не осталось ли в кластере подов с оригинальным адресом реестра:
+1. Если необходимо отключить автоматическое обновление registry через сторонний registry, удалите параметр `releaseChannel` из конфигурации модуля `deckhouse`.
+
+1. Проверьте, не осталось ли в кластере подов с оригинальным адресом registry:
 
    ```shell
    d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]

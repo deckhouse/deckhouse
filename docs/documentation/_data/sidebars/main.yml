@@ -30,8 +30,8 @@ entries:
                 ru: Описание
               url: /
             - title:
-                en: Registers and editions
-                ru: Реестры и редакции
+                en: Registries and editions
+                ru: Registries и редакции
               folders:
                 - title:
                     en: Overview
@@ -39,11 +39,11 @@ entries:
                   url: /admin/configuration/registry/
                 - title:
                     en: Third-party registry
-                    ru: Сторонний реестр
+                    ru: Сторонний registry
                   url: /admin/configuration/registry/third-party.html
                 - title:
                     en: Internal registry
-                    ru: Внутренний реестр
+                    ru: Внутренний registry
                   url: /admin/configuration/registry/internal.html
                 - title:
                     en: Switching editions
@@ -1219,7 +1219,7 @@ entries:
               url: /architecture/security/sysctl.html
         - title:
             en: Direct mode architecture (registry)
-            ru: Архитектура режима Direct (реестр)
+            ru: Архитектура режима Direct (registry)
           url: /architecture/registry-direct-mode.html
     - title:
         en: Reference
