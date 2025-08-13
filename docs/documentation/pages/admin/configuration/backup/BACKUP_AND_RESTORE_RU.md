@@ -10,32 +10,32 @@ lang: ru
 
 Для корректного восстановления кластера выполните следующие шаги на master-узле:
 
-1. Подготовьте утилиту `etcdctl`. Найдите и скопируйте исполняемый файл на узле:
+1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
-   Проверьте версию `etcdctl`:
+   Проверьте версию `etcdutl`:
 
    ```shell
-   etcdctl version
+   etcdutl version
    ```
 
    Убедитесь, что результат команды `etcdctl version` отображается без ошибок.
 
-   **При отсутствии** `etcdctl` скачайте исполняемый файл с [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
+   **При отсутствии** `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
 1. Проверьте версию etcd в кластере (при доступном Kubernetes API) выполнив команду:
 
    ```shell
-   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
    Если команда выполнится успешно, вы увидите актуальную версию etcd.
@@ -65,13 +65,13 @@ lang: ru
 1. Очистите директорию etcd. Удалите старые данные, чтобы подготовить etcd к восстановлению из резервной копии:
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
-   Проверьте, что каталог `/var/lib/etcd/member/` теперь пуст или отсутствует:
+   Проверьте, что каталог `/var/lib/etcd` теперь пуст или отсутствует:
 
    ```shell
-   ls -la /var/lib/etcd/member/
+   ls -la /var/lib/etcd
    ```
 
 1. Переместите файл резервной копии etcd. Скопируйте или перенесите файл снапшота `etcd-backup.snapshot` в домашнюю директорию текущего пользователя (root):
@@ -86,11 +86,10 @@ lang: ru
    ls -la ~/etcd-backup.snapshot
    ```
 
-1. Восстановите базу данных etcd из резервной копии. Воспользуйтесь `etcdctl` для восстановления:
+1. Восстановите базу данных etcd из резервной копии. Воспользуйтесь `etcdutl` для восстановления:
 
    ```shell
-   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot --data-dir=/var/lib/etcd
    ```
 
    После завершения команды проверьте, что в каталоге `/var/lib/etcd/` появились файлы, соответствующие восстановленному состоянию.
@@ -108,6 +107,13 @@ lang: ru
    ```
 
    Процесс запуска может занять некоторое время. После успешного старта etcd кластер будет восстановлен из резервной копии.
+
+   Пример вывода:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
 
 1. Перезапустите master-узел.
 
