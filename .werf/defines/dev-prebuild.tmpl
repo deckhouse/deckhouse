@@ -39,6 +39,10 @@
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
+- image: tools/erofs-utils
+  add: /usr/bin/mkfs.erofs
+  to: /usr/bin/mkfs.erofs
+  after: setup
 - image: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
