@@ -160,25 +160,13 @@ steps:
       fi
       type werf && source $(werf ci-env github --verbose --as-file)
 
-#      werf config render > ${TEMP_WORKDIR}/werf-rendered.yaml
-
       werf build \
-#        --config ${TEMP_WORKDIR}/werf-rendered.yaml \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json
 
       cp images_tags_werf.json "$TEMP_WORKDIR"
-
-#      # Encrypting the rendered build file before dumping it into artifacts
-#      echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
-#      ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
-#      openssl rand -out ${TEMP_WORKDIR}/key.bin 32
-#      openssl enc -aes-256-cbc -pbkdf2 -salt -in ${TEMP_WORKDIR}/werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:${TEMP_WORKDIR}/key.bin
-#      openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
-#      rm -f ${TEMP_WORKDIR}/key.bin
-#      rm -f ${TEMP_WORKDIR}/werf-rendered.yaml
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -231,8 +219,6 @@ steps:
       name: build_report_${{ env.WERF_ENV }}
       path: |
         ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-#        ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
-#        ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
 # </template: build_template>
 {!{ end }!}
