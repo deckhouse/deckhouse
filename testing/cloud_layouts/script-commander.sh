@@ -214,7 +214,7 @@ function prepare_environment() {
       \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
       \"defaultCRI\": \"${CRI}\",
       \"masterCount\": \"${MASTERS_COUNT}\",
-      \"osPassword\": \"${OS_PASSWORD}\",
+      \"osPassword\": \"${LAYOUT_OS_PASSWORD}\",
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
