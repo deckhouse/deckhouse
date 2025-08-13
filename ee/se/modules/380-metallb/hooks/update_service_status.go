@@ -95,12 +95,12 @@ func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error
 		}
 
 		var service *ServiceUpdaterInfo
-		for srv, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.NewSnapshots.Get("services")) {
+		for svc, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.NewSnapshots.Get("services")) {
 			if err != nil {
 				continue
 			}
-			if namespacedName.Name == srv.Name && namespacedName.Namespace == srv.Namespace {
-				service = &srv
+			if namespacedName.Name == svc.Name && namespacedName.Namespace == svc.Namespace {
+				service = &svc
 				break
 			}
 		}

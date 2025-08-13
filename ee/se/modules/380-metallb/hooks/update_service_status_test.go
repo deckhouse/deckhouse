@@ -209,4 +209,31 @@ spec:
 }`))
 		})
 	})
+	Context("Cluster without service and 1 L2LBServices", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
+metadata:
+  name: nginx-0
+  namespace: nginx
+spec:
+  serviceRef:
+    name: nginx
+    namespace: nginx
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.0.0.1
+`))
+			f.RunHook()
+		})
+
+		It("Should execute successfully without applying patches when service is missing", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Service", "nginx/nginx").Exists()).To(BeFalse())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
+		})
+	})
 })
