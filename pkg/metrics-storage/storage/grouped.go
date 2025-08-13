@@ -238,9 +238,7 @@ func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, bucke
 }
 
 func (v *GroupedVault) CounterAdd(group string, name string, value float64, labels map[string]string) {
-	metricName := v.resolveMetricNameFunc(name)
-
-	c, err := v.RegisterCounter(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterCounter(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
 			"CounterAdd",
@@ -257,9 +255,7 @@ func (v *GroupedVault) CounterAdd(group string, name string, value float64, labe
 }
 
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
-	metricName := v.resolveMetricNameFunc(name)
-
-	c, err := v.RegisterGauge(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
 			"GaugeSet",
@@ -276,9 +272,7 @@ func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels
 }
 
 func (v *GroupedVault) GaugeAdd(group string, name string, value float64, labels map[string]string) {
-	metricName := v.resolveMetricNameFunc(name)
-
-	c, err := v.RegisterGauge(metricName, labelspkg.LabelNames(labels))
+	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
 			"GaugeAdd",
@@ -295,9 +289,7 @@ func (v *GroupedVault) GaugeAdd(group string, name string, value float64, labels
 }
 
 func (v *GroupedVault) HistogramObserve(group string, name string, value float64, labels map[string]string, buckets []float64) {
-	metricName := v.resolveMetricNameFunc(name)
-
-	c, err := v.RegisterHistogram(metricName, labelspkg.LabelNames(labels), buckets)
+	c, err := v.RegisterHistogram(name, labelspkg.LabelNames(labels), buckets)
 	if err != nil {
 		v.logger.Error(
 			"HistogramObserve",
