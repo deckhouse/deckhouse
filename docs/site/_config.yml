@@ -24,6 +24,9 @@ metrics:
     ru: 78422802
     en: 100410448
 
+sass:
+    style: compressed
+
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
   ru: "https://crm.flant.ru/upload/crm/site_button/loader_3_20bbbd.js"
@@ -91,6 +94,26 @@ defaults:
       product_code: kubernetes-platform
       search_bage_enabled: true
       lang: en
+  - scope:
+      path: "pages/admin"
+    values:
+      sidebar: main
+      sitemap_include: false
+  - scope:
+      path: "pages/architecture"
+      sitemap_include: false
+    values:
+      sidebar: main
+  - scope:
+      path: "pages/user"
+    values:
+      sidebar: main
+      sitemap_include: false
+  - scope:
+      path: "pages/reference"
+      sitemap_include: false
+    values:
+      sidebar: main
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -196,4 +219,3 @@ defaults:
     values:
       featureStatus: experimental
 timezone: Europe/Moscow
-
