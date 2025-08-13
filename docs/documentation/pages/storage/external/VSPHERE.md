@@ -18,6 +18,8 @@ To work with storage based on VMware vSphere, where it is not possible to use th
 - The CSI driver will be registered;
 - The service pods for the `csi-vsphere` component will be launched.
 
+To enable the module, run the command:
+
 ```yaml
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
