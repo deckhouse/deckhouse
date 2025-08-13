@@ -27,7 +27,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.43.0"
+  WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -40,6 +40,7 @@ env:
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
+  WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -62,6 +63,10 @@ env:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
 
@@ -389,6 +394,25 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -721,6 +745,25 @@ jobs:
     steps:
 
 
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1051,6 +1094,25 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1383,6 +1445,25 @@ jobs:
     steps:
 
 
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1714,6 +1795,25 @@ jobs:
     steps:
 
 
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
+
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -2044,6 +2144,25 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources

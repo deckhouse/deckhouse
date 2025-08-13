@@ -14,7 +14,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
 3. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
     * Installing operating system (see the list of [supported OS](../../supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
-    * Configuring nginx (and the system for automatically updating the lsit of upstreams) to balance node (kubelet) requests over API servers.
+    * Configuring nginx (and the system for automatically updating the list of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.
     * Managing node updates and their downtime (disruptions):
         * Automatic determination of a valid minor Kubernetes version for a node group based on its settings (the kubernetesVersion parameter specified for a group), the default version for the whole cluster, and the current control-plane version (no nodes can be updated ahead of the control-plane update).
@@ -32,6 +32,10 @@ The `node-manager` module is responsible for managing nodes and has the followin
 
      Available for both [cloud providers](#scaling-nodes-in-the-cloud) and static nodes (when using [Cluster API Provider Static](#working-with-static-nodes)).
 5. Managing Linux users on nodes.
+6. Managing GPU resources on nodes:
+   * Automatic detection and enablement of NVIDIA GPU.
+   * Configurable GPU sharing modes per NodeGroup: Exclusive, TimeSlicing, MIG.
+   * Monitoring integration — ready-made Grafana dashboards are available to visualize key GPU metrics.
 
 Nodes are managed through the [NodeGroup](cr.html#nodegroup) resource, and each node group performs specific tasks. Below are examples of node groups pooled by their tasks performed:
 

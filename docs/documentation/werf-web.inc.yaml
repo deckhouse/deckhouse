@@ -1,6 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
   - apk add --no-cache nginx
