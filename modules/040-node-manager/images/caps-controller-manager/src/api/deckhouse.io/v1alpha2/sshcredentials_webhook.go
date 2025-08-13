@@ -57,14 +57,16 @@ var _ webhook.Validator = &SSHCredentials{}
 func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 	sshcredentialslog.Info("validate create", "name", r.Name)
 
-	privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
-	if err != nil {
-		return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
-	}
+	if len(r.Spec.PrivateSSHKey) > 0 {
+		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
+		}
 
-	_, err = ssh.ParseRawPrivateKey(privateSSHKey)
-	if err != nil {
-		return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		_, err = ssh.ParseRawPrivateKey(privateSSHKey)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		}
 	}
 
 	if r.Spec.SudoPasswordEncoded != "" {
@@ -82,14 +84,16 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	sshcredentialslog.Info("validate update", "name", r.Name)
 
-	privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
-	if err != nil {
-		return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
-	}
+	if len(r.Spec.PrivateSSHKey) > 0 {
+		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
+		}
 
-	_, err = ssh.ParseRawPrivateKey(privateSSHKey)
-	if err != nil {
-		return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		_, err = ssh.ParseRawPrivateKey(privateSSHKey)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		}
 	}
 
 	if r.Spec.SudoPasswordEncoded != "" {
