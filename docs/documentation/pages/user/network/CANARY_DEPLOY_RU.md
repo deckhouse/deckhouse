@@ -4,14 +4,14 @@ permalink: ru/user/network/canary-deployment.html
 lang: ru
 ---
 
-Canary Deployment — стратегия развертывания приложений, которая позволяет постепенно внедрять в production новую версию приложения.
+Canary deployment — стратегия развертывания приложений, которая позволяет постепенно внедрять в production новую версию приложения.
 Этот подход даёт возможность тестировать новые версии на небольшой части трафика, минимизируя риски и обеспечивая плавный переход.
-С помощью Canary Deployment возможно переключение трафика на новую версию по мере уверенности в её стабильности, с возможностью быстрого отката на старую версию при возникновении проблем.
-В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [ingress-nginx](../../modules/ingress-nginx/) или [istio](../../modules/istio/) (рекомендуемый способ).
+С помощью Canary deployment возможно переключение трафика на новую версию по мере уверенности в её стабильности, с возможностью быстрого отката на старую версию при возникновении проблем.
+В Deckhouse Kubernetes Platform Canary deployment может быть реализован средствами [`ingress-nginx`](../../modules/ingress-nginx/) или [`istio`](../../modules/istio/) (рекомендуемый способ).
 
 ## Примеры настроек Canary deployment средствами Ingress NGINX
 
-Для реализации Canary Deployment средствами Ingress NGINX используются аннотации и правила, которые определяют направление части трафика на новую версию приложения.
+Для реализации Canary deployment средствами Ingress NGINX используются аннотации и правила, которые определяют направление части трафика на новую версию приложения.
 
 ### Создание Deployment и Service для стабильной версии
 
@@ -92,14 +92,14 @@ spec:
     targetPort: 80
 ```
 
-### Настройка Ingress для Canary Deployment
+### Настройка Ingress для Canary deployment
 
-Для реализации Canary Deployment с использованием Ingress NGINX используются специальные аннотации:
+Для реализации Canary deployment с использованием Ingress NGINX используются специальные аннотации:
 
 - `nginx.ingress.kubernetes.io/canary` — включает Canary-режим для Ingress.
 - `nginx.ingress.kubernetes.io/canary-weight` — указывает процент трафика, который будет направлен на Canary-версию.
 
-Пример манифеста для Ingress (10% трафика будет направлено на Canary-версию (`app-canary-service`), 90% трафика — на стабильную версию (`app-service`):
+Пример манифеста для Ingress (10% трафика будет направлено на Canary-версию (`app-canary-service`), 90% трафика — на стабильную версию (`app-service`)):
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -108,7 +108,7 @@ metadata:
   name: app-ingress
   annotations:
     nginx.ingress.kubernetes.io/canary: "true"
-    nginx.ingress.kubernetes.io/canary-weight: "10" # 10% трафика на Canary
+    nginx.ingress.kubernetes.io/canary-weight: "10" # 10% трафика на Canary.
 spec:
   rules:
   - host: example.com
@@ -142,18 +142,18 @@ spec:
 
 ### Постепенное увеличение трафика на Canary-версию
 
-Вы можете постепенно увеличивать процент трафика на Canary-версию, изменяя значение аннотации `nginx.ingress.ernetes.io/canary-weight`. Например, чтобы направить 50% трафика на Canary-версию, обновите аннотацию:
+Вы можете постепенно увеличивать процент трафика на Canary-версию, изменяя значение аннотации `nginx.ingress.ernetes.io/canary-weight`. Например, чтобы направить 50% трафика на Canary-версию, обновите аннотацию следующим образом:
 
 ```yaml
 nginx.ingress.kubernetes.io/canary-weight: "50"
 ```
 
-### Откат или завершение Canary Deployment
+### Откат или завершение Canary deployment
 
 Если Canary-версия работает стабильно, вы можете полностью переключить трафик на новую версию, удалив Canary-аннотации и обновив основной Ingress.
 Если возникли проблемы, вы можете уменьшить процент трафика на Canary-версию или полностью отключить ее, установив `nginx.ingress.kubernetes.io/canary-weight: "0"`.
 
-### Дополнительные аннотации для Canary Deployment
+### Дополнительные аннотации для Canary deployment
 
 - `nginx.ingress.kubernetes.io/canary-by-header` — направляет трафик на Canary-версию на основе значения HTTP-заголовка.
 - `nginx.ingress.kubernetes.io/canary-by-cookie` — направляет трафик на Canary-версию на основе значения cookie.
@@ -243,7 +243,7 @@ spec:
     - destination:
         host: productpage
         subset: v1 # Ссылка на subset из DestinationRule.
-      weight: 90 # Процент трафика, который получат поды с лейблом version: v1.
+      weight: 90 # Процент трафика, который получат поды с лейблом `version: v1`.
   - route:
     - destination:
         host: productpage

@@ -4,7 +4,7 @@ permalink: ru/user/network/circuit-breaker.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform Circuit Breaker реализуется средствами Istio (модуль [`istio`](../../modules/istio/)) и обеспечивает следующие возможности:
+В Deckhouse Kubernetes Platform механизм Circuit Breaker реализуется средствами Istio (модуль [`istio`](../../modules/istio/)) и обеспечивает следующие возможности:
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B7%D0%B0%D0%B4%D0%B0%D1%87%D0%B8-%D0%BA%D0%BE%D1%82%D0%BE%D1%80%D1%8B%D0%B5-%D1%80%D0%B5%D1%88%D0%B0%D0%B5%D1%82-istio -->
 
@@ -31,12 +31,12 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число коннектов в сторону host, суммарно для всех эндпойнтов.
+        maxConnections: 100 # Максимальное число соединений в сторону host, суммарно для всех эндпойнтов.
       http:
-        maxRequestsPerConnection: 10 # Каждые 10 запросов коннект будет пересоздаваться.
+        maxRequestsPerConnection: 10 # Каждые 10 запросов соединение будет пересоздаваться.
     outlierDetection:
-      consecutive5xxErrors: 7 # Допустимо 7 ошибок (включая пятисотые, TCP-таймауты и HTTP-таймауты)
-      interval: 5m            # в течение пяти минут,
+      consecutive5xxErrors: 7 # Допускается 7 ошибок (включая `5xx`, TCP-таймауты и HTTP-таймауты)
+      interval: 5m            # в течение 5 минут,
       baseEjectionTime: 15m   # после которых эндпойнт будет исключен из балансировки на 15 минут.
 ```
 

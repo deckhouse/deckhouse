@@ -908,7 +908,7 @@ entries:
                     ru: ALB
                   url: /user/network/ingress/alb.html
             - title:
-                en: Intra-cluster interaction
+                en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
               url: /user/network/intra-cluster.html
             - title:
@@ -920,11 +920,11 @@ entries:
                 ru: Маршрутизация запросов с Istio
               url: /user/network/request_routing_istio.html
             - title:
-                en: Istio activation for applications
+                en: Enabling Istio for applications
                 ru: Активация Istio для приложений
               url: /user/network/app_istio_activation.html
             - title:
-                en: Managing request balancing between service Endpoints with Istio
+                en: Managing request balancing between service endpoints with Istio
                 ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
@@ -932,12 +932,12 @@ entries:
                 ru: Locality failover с Istio
               url: /user/network/locality_failover_istio.html
             - title:
-                en: Configuring Retry for requests with Istio
-                ru: Настройка Retry для запросов с Istio
+                en: Configuring request retries with Istio
+                ru: Настройка retry для запросов с Istio
               url: /user/network/retry_istio.html
             - title:
-                en: Customizing istio-proxy sidecar resource management
-                ru: Настройка для ресурсов istio-proxy сайдкаров
+                en: Configuring resources for istio-proxy sidecars
+                ru: Настройка ресурсов для istio-proxy сайдкаров
               url: /user/network/istio-sidecar-resource-management.html
             - title:
                 en: Circuit Breaker

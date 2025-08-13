@@ -12,7 +12,7 @@ lang: ru
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/examples.html#locality-failover -->
 
 {% alert level="info" %}
-При необходимости ознакомьтесь с документацией [Locality failover](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
+При необходимости ознакомьтесь с [документацией Locality failover](https://istio.io/latest/docs/tasks/traffic-management/locality-load-balancing/failover/).
 {% endalert %}
 
 С использованием Istio настраивается приоритетный географический фейловер между эндпойнтами. Для определения зоны применяются лейблы узлов с соответствующей иерархией:

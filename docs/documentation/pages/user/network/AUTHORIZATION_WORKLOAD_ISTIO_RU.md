@@ -11,11 +11,11 @@ lang: ru
 
 ## Авторизация
 
-Управление авторизацией осуществляется с помощью ресурса [AuthorizationPolicy](#ресурс-authorizationpolicy) от istio.io. Когда для сервиса создается этот ресурс, применяются следующие правила принятия решения о запросах:
+Управление авторизацией осуществляется с помощью ресурса [AuthorizationPolicy](#ресурс-authorizationpolicy) от Istio. Когда для сервиса создается этот ресурс, применяются следующие правила принятия решения о запросах:
 
-* Если запрос попадает под политику DENY — запретить запрос.
-* Если для данного сервиса нет политик ALLOW — разрешить запрос.
-* Если запрос попадает под политику ALLOW — разрешить запрос.
+* Если запрос попадает под политику `DENY` — запретить запрос.
+* Если для данного сервиса нет политик `ALLOW` — разрешить запрос.
+* Если запрос попадает под политику `ALLOW` — разрешить запрос.
 * Все остальные запросы — запретить.
 
 Иными словами, если явно что-то запретить, работает только запрет. Если же что-то явно разрешить, будут разрешены только явно одобренные запросы (запреты при этом имеют приоритет).
@@ -23,7 +23,7 @@ lang: ru
 Для написания правил авторизации можно использовать следующие аргументы:
 
 * идентификаторы сервисов и wildcard на их основе (`mycluster.local/ns/myns/sa/myapp` или `mycluster.local/*`);
-* namespace;
+* пространство имен;
 * диапазоны IP;
 * HTTP-заголовки;
 * JWT-токены из прикладных запросов.
@@ -32,22 +32,23 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#authorizationpolicy -->
 
-Подробнее ознакомиться с AuthorizationPolicy можно в документации [Istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
+Подробнее ознакомиться с AuthorizationPolicy можно [в документации Istio](https://istio.io/v1.19/docs/reference/config/security/authorization-policy/).
 
-Включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила, описанные выше.
+Ресурс AuthorizationPolicy включает и определяет контроль доступа к workload. Поддерживает как ALLOW-, так и DENY-правила, описанные выше.
 
 Аргументы для принятия решения об авторизации:
-* source:
-  * namespace;
-  * principal (идентификатор юзера, полученный после аутентификации);
+
+* `source`:
+  * `namespace`;
+  * `principal` (идентификатор юзера, полученный после аутентификации);
   * IP.
-* destination:
-  * метод (GET, POST...);
-  * Host;
-  * порт;
+* `destination`:
+  * `method` (`GET`, `POST` и т. д.);
+  * `host`;
+  * `port`;
   * URI.
-* [conditions](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
+* [`conditions`](https://istio.io/v1.19/docs/reference/config/security/conditions/#supported-conditions):
   * HTTP-заголовки;
-  * аргументы source;
-  * аргументы destination;
+  * аргументы `source`;
+  * аргументы `destination`;
   * JWT-токены.
