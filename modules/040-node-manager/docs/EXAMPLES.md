@@ -57,6 +57,10 @@ You can also use a method that [adds static nodes using the Cluster API Provider
 
 <span id='an-example-of-the-static-nodegroup-for-system-nodes-configuration'></span>
 
+Below is an example of a system node group manifest.
+When describing a NodeGroup with Static nodes, specify the value `Static` in the `nodeType` field and use the [`staticInstances`](./cr.html#nodegroup-v1-spec-staticinstances) field to describe the parameters for provisioning static machines to the cluster.
+When describing a NodeGroup with CloudEphemeral type cloud nodes, specify the value `CloudEphemeral` in the `nodeType` field and use the [`cloudInstances`](./cr.html#nodegroup-v1-spec-cloudinstances) field to describe the parameters for provisioning the cloud-based VMs.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
