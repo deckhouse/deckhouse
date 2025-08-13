@@ -4,191 +4,6 @@ permalink: ru/admin/configuration/registry/switching-editions.html
 lang: ru
 ---
 
-## Переключение DKP с EE на CE
-
-{% alert level="warning" %}
-Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. Использование реестров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
-
-В DKP CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
-{% endalert %}
-
-Для переключения Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
-
-1. Чтобы получить актуальные дайджесты образов и список модулей, создайте временный под DKP CE с помощью следующей команды:
-
-   ```shell
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
-   ```
-
-   Запустите образ последней установленной версии DKP в кластере. Определить, какая версия сейчас установлена, можно командой:
-
-   ```shell
-   d8 k get deckhousereleases | grep Deployed
-   ```
-
-1. Как только под перейдёт в статус `Running`, выполните следующие команды:
-
-   Получите значение `CE_REGISTRY_PACKAGE_PROXY`:
-
-   ```shell
-   CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
-   ```
-
-   Загрузите CE-образ DKP по полученному значению:
-
-   ```shell
-   crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
-   ```
-
-   Пример вывода:
-
-   ```console
-   Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
-   ```
-
-   Получите значение `CE_MODULES`:
-
-   ```shell
-   CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-   ```
-
-   Проверка:
-
-   ```shell
-   echo $CE_MODULES
-   ```
-
-   Пример вывода:
-
-   ```console
-   common priority-class deckhouse external-module-manager registrypackages ...
-   ```
-
-   Получите значение `USED_MODULES`:
-
-   ```shell
-   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-   ```
-
-   Проверка:
-
-   ```shell
-   echo $USED_MODULES
-   ```
-
-   Пример вывода:
-
-   ```console
-   admission-policy-engine cert-manager chrony ...
-   ```
-
-   Получите значение `MODULES_WILL_DISABLE`:
-
-   ```shell
-   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
-   ```
-
-   Проверка:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE
-   ```
-
-   Пример вывода
-
-   ```console
-   node-local-dns registry-packages-proxy
-   ```
-
-   > Обратите внимание, если в `$MODULES_WILL_DISABLE` присутствует `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение описано в 8 пункте.
-
-1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CE.
-
-   Список модулей, которые не поддерживаются и будут отключены, можно вывести командой:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE
-   ```
-
-   Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере и вы готовы к их отключению.
-
-   Отключите не поддерживаемые в DKP CE модули:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE |
-     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-   ```
-
-   Пример результата выполнения:
-
-   ```console
-   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
-   Module node-local-dns disabled
-   ```
-
-1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
-
-   ```bash
-   kubectl -n d8-system create secret generic deckhouse-registry \
-     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
-     --from-literal="address"=registry.deckhouse.ru \
-     --from-literal="path"=/deckhouse/ce \
-     --from-literal="scheme"=https \
-     --type=kubernetes.io/dockerconfigjson \
-     --dry-run='client' \
-     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
-   ```
-
-1. Примените образ webhook-handler:
-
-   ```shell
-   HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
-   ```
-
-1. Примените образ DKP CE:
-
-   ```shell
-   DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-   DECKHOUSE_INIT_CONTAINER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
-   ```
-
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
-
-   Проверка статуса пода DKP:
-
-   ```shell
-   d8 k -n d8-system get po -l app=deckhouse
-   ```
-
-   Проверка состояния очереди Deckhouse:
-
-   ```shell
-   d8 platform queue list
-   ```
-
-1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
-
-   ```shell
-   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-   ```
-
-   Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
-
-   ```shell
-   d8 platform module enable registry-packages-proxy
-   ```
-
-1. Удалите временный под DKP CE:
-
-   ```shell
-   d8 k delete pod ce-image
-   ```
-
 ## Переключение DKP с CE на EE
 
 Вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html) при необходимости.
@@ -378,6 +193,191 @@ lang: ru
 
    ```shell
    d8 k delete ngc del-temp-config.sh
+   ```
+
+## Переключение DKP с EE на CE
+
+{% alert level="warning" %}
+Инструкция подразумевает использование публичного адреса реестра контейнеров: `registry.deckhouse.ru`. Использование реестров, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
+
+В DKP CE не поддерживается работа облачных кластеров на OpenStack и VMware vSphere.
+{% endalert %}
+
+Для переключения Deckhouse Enterprise Edition на Community Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
+
+1. Чтобы получить актуальные дайджесты образов и список модулей, создайте временный под DKP CE с помощью следующей команды:
+
+   ```shell
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
+
+   Запустите образ последней установленной версии DKP в кластере. Определить, какая версия сейчас установлена, можно командой:
+
+   ```shell
+   d8 k get deckhousereleases | grep Deployed
+   ```
+
+1. Как только под перейдёт в статус `Running`, выполните следующие команды:
+
+   Получите значение `CE_REGISTRY_PACKAGE_PROXY`:
+
+   ```shell
+   CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
+   ```
+
+   Загрузите CE-образ DKP по полученному значению:
+
+   ```shell
+   crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+   ```
+
+   Пример вывода:
+
+   ```console
+   Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
+   ```
+
+   Получите значение `CE_MODULES`:
+
+   ```shell
+   CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   ```
+
+   Проверка:
+
+   ```shell
+   echo $CE_MODULES
+   ```
+
+   Пример вывода:
+
+   ```console
+   common priority-class deckhouse external-module-manager registrypackages ...
+   ```
+
+   Получите значение `USED_MODULES`:
+
+   ```shell
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   ```
+
+   Проверка:
+
+   ```shell
+   echo $USED_MODULES
+   ```
+
+   Пример вывода:
+
+   ```console
+   admission-policy-engine cert-manager chrony ...
+   ```
+
+   Получите значение `MODULES_WILL_DISABLE`:
+
+   ```shell
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
+   ```
+
+   Проверка:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   Пример вывода
+
+   ```console
+   node-local-dns registry-packages-proxy
+   ```
+
+   > Обратите внимание, если в `$MODULES_WILL_DISABLE` присутствует `registry-packages-proxy`, то его надо будет включить обратно, иначе кластер не сможет перейти на образы DKP CE. Включение описано в 8 пункте.
+
+1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CE.
+
+   Список модулей, которые не поддерживаются и будут отключены, можно вывести командой:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере и вы готовы к их отключению.
+
+   Отключите не поддерживаемые в DKP CE модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE |
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   ```
+
+   Пример результата выполнения:
+
+   ```console
+   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+   Module node-local-dns disabled
+   ```
+
+1. Актуализируйте секрет доступа к реестру DKP, выполнив следующую команду:
+
+   ```bash
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
+     --from-literal="address"=registry.deckhouse.ru \
+     --from-literal="path"=/deckhouse/ce \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+   ```
+
+1. Примените образ webhook-handler:
+
+   ```shell
+   HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
+   ```
+
+1. Примените образ DKP CE:
+
+   ```shell
+   DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   DECKHOUSE_INIT_CONTAINER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
+   ```
+
+1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+
+   Проверка статуса пода DKP:
+
+   ```shell
+   d8 k -n d8-system get po -l app=deckhouse
+   ```
+
+   Проверка состояния очереди Deckhouse:
+
+   ```shell
+   d8 platform queue list
+   ```
+
+1. Проверьте, не осталось ли в кластере подов с адресом реестра для DKP EE:
+
+   ```shell
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   Если ранее был отключён модуль `registry-packages-proxy`, включите его повторно:
+
+   ```shell
+   d8 platform module enable registry-packages-proxy
+   ```
+
+1. Удалите временный под DKP CE:
+
+   ```shell
+   d8 k delete pod ce-image
    ```
 
 ## Переключение DKP с EE на SE
