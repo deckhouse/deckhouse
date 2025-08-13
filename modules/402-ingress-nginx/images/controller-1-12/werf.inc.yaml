@@ -167,27 +167,47 @@ shell:
 # final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:93d2460c69ad88a016ea2b4c059141ae5ce49eabc802aa444a8cf8832ec5e19e
+from: localhost:5001/base-images:bc6e1d748a30bf3edd289927b79b9613cbcb1d1c6ee35b2e0584bbfb-1755014793620
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-cpp # FIXME delete
-from: localhost:5001/base-images:ea5bb5848057cef68617b82e21dddad21a6d95be7874ebc9fa326200-1753713504829
+from: localhost:5001/base-images:ea5bb5848057cef68617b82e21dddad21a6d95be7874ebc9fa326200-1755002533670
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-grpc # FIXME delete
-from: localhost:5001/base-images:441fd72cbe538756b0d8e8396d6ac45d3de2e213b025cf1b7e9ee69a-1754910331227
+from: localhost:5001/base-images:441fd72cbe538756b0d8e8396d6ac45d3de2e213b025cf1b7e9ee69a-1755006856822
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-re2 # FIXME delete
-from: localhost:5001/base-images:e81e39d5c2aaf9dc4d9973c6d8452ff996a1509fec894b230fcd83ad-1754909854258
+from: localhost:5001/base-images:e81e39d5c2aaf9dc4d9973c6d8452ff996a1509fec894b230fcd83ad-1755004496505
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-icu # FIXME delete
-from: localhost:5001/base-images:6ef05d0e14787a44b922c481d16e9b70a9c3aef05f88cc49b1a98b88-1753713510664
+from: localhost:5001/base-images:6ef05d0e14787a44b922c481d16e9b70a9c3aef05f88cc49b1a98b88-1755002567817
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre # FIXME delete
-from: localhost:5001/base-images:44473f2d9600b08eeb81c7b96f0542124fd9b2851f4bb7f4c93d1ccf-1754916948365
+from: localhost:5001/base-images:714397829b798fc31d213bf97fa04a2efd8aab77ab3126d87d965f02-1755010671105
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-libmaxminddb # FIXME delete
+from: localhost:5001/base-images:f73507b11c7df72807ec6fa610c8ab91f2ade9d231515833fa4953e7-1755030829240
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-curl # FIXME delete
+from: localhost:5001/base-images:1f3a6677aaef8a2b04dfbf8cc9b891c70cf9db2b54cd6e21095f501a-1755026757736
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-zlib # FIXME delete
+from: localhost:5001/base-images:23f50c694fa4caea578a6dc20d97b2e8aef47828ab18df512e4fd8d1-1755002546724
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-c-ares # FIXME delete
+from: localhost:5001/base-images:8957afc5ec0e4e2c4af17ef05e84ec9b74750de3f46f95eabb0c3299-1755002536054
+final: false
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-openssl # FIXME delete
+from: localhost:5001/base-images:189dd9fd160d6303784a1beec55dca2a6291c3767a0931d49e3161d6-1755002542206
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -261,6 +281,26 @@ import:
   add: /usr
   to: /pcre
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-libmaxminddb
+  add: /usr
+  to: /libmaxminddb
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-curl
+  add: /usr
+  to: /curl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-zlib
+  add: /usr
+  to: /zlib
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-c-ares
+  add: /usr
+  to: /c-ares
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-openssl
+  add: /usr
+  to: /openssl
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -270,8 +310,8 @@ shell:
   - apk add --no-cache build-base g++ cmake linux-headers autoconf automake libtool bash pkgconfig ninja
   # Mandatory
   # - apk add pcre-dev
-  - apk add curl-dev
-  - apk add libmaxminddb-dev
+  # - apk add curl-dev
+  # - apk add libmaxminddb-dev
   # - apk add grpc-dev
   # - apk add protobuf-dev
   # Maybe need (need think)
@@ -303,7 +343,7 @@ shell:
   # Optional
   # - apk add libxslt-dev
   # - apk add gd-dev
-  # - apk add openssl-dev
+  - apk add openssl-dev
   # - apk add libedit-dev
   # - apk add libaio-dev
   # - apk add perl-dev
@@ -327,6 +367,13 @@ shell:
   - cp -a /re2/* /usr
   - cp -a /icu/* /usr
   - cp -a /pcre/* /usr
+  - cp -a /libmaxminddb/* /usr
+  - cp -a /curl/* /usr
+  - cp -a /zlib/* /usr
+  - cp -a /c-ares/* /usr
+  # - cp -a /openssl/* /usr
+  # - mkdir -p /usr/lib64
+  # - cp -a /openssl/lib/* /usr/lib64
   # Add deckhouse user
   - echo "deckhouse:x:64535:64535:deckhouse:/:/sbin/nologin" >> /etc/passwd
   - echo "deckhouse:x:64535:" >> /etc/group
@@ -691,18 +738,18 @@ shell:
   #
   - mkdir -p  /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
-  - cp -a /usr/* /chroot/usr/ # FIXME delete
+  # - cp -a /usr/* /chroot/usr/ # FIXME delete
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
-  - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
-  - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
+  # - cp /lib/ld-musl-* /chroot/lib/ # FIXME delete
+  # - cp /usr/lib/libcrypto* /usr/lib/libssl* /usr/lib/libz* /chroot/usr/lib/ # FIXME delete
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:bfd71542919fd099c875d4090e581ff1a4f8d35ed70f3e6689ba83cde3068c7e
+from: localhost:5001/base-images:707b1028f58b5b50bded392404c8a615efc16a6e9833e9acc9b608bd-1755007284873
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:4d5dca4e0b7a5e9e544f05f911b09d2ea7e2777b77ffc13df399b4e893645e01
+from: localhost:5001/base-images:b9866e628ea2b02d7a81c8508d18ae64e66fad4ae8903fdbee09acc6-1755007284788
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
@@ -717,8 +764,14 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
-- image: registrypackages/d8-curl-artifact-8-9-1 # FIXME rebuild!
-  add: /d8-curl
+# - image: registrypackages/d8-curl-artifact-8-9-1 # FIXME rebuild!
+#   add: /d8-curl
+#   to: /chroot/usr/bin/curl
+#   owner: "64535"
+#   group: "64535"
+#   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-curl
+  add: /usr/bin/curl
   to: /chroot/usr/bin/curl
   owner: "64535"
   group: "64535"
@@ -795,19 +848,19 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-bash # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:7cd24a890378d0c527ad3baf555c2ce59bd34dea2835a0ab831e00e715c59f43
+from: localhost:5001/base-images:385bbc6bbda0e7222b1d4f32e8bf3f933802a45bdc97499d1cd3163b-1755006801555
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-procps # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:053f0fe0e754b2d5bbb8df9e7f81fd346f61e80c94aeb6c94687876316d99b5d
+from: localhost:5001/base-images:63e07c963faf8587bb3dc07c1dc662776ded745a46c55e1ad6410e33-1755004492077
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-diffutils # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:5dbcc20e9deb7d020388e16d726475c1faa1270f1b7800cb0348d1c5c54d9763
+from: localhost:5001/base-images:b1b46e7a4b6f8d2daf30ff7b75646e15a787f59aa5acbdc1b3bcf579-1755002537094
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:2c249890508acd50a61cb216cb1ca8e9263601547a88ee93de814bce0a4525bb
+from: localhost:5001/base-images:8e35b1916c0e0ae2391d735ab147098d711008a118f3e47ec6ff0990-1755002537798
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -887,18 +940,18 @@ import:
   add: /usr/bin/unshare
   to: /usr/bin/unshare
   before: install
-- image: tools/openssl
-  add: /
-  to: /
-  includePaths:
-  - usr/lib/libcrypto.so*
-  - usr/lib/libssl.so*
-  - usr/lib/engines-3
-  - usr/lib/ossl-modules
-  - usr/bin/openssl
-  - usr/lib/libc.so
-  - lib/ld-musl-x86_64.so.1
-  before: install
+# - image: tools/openssl
+#   add: /
+#   to: /
+#   includePaths:
+#   - usr/lib/libcrypto.so*
+#   - usr/lib/libssl.so*
+#   - usr/lib/engines-3
+#   - usr/lib/ossl-modules
+#   - usr/bin/openssl
+#   - usr/lib/libc.so
+#   - lib/ld-musl-x86_64.so.1
+#   before: install
 - image: tools/coreutils
   add: /
   to: /
