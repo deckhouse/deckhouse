@@ -24,7 +24,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -103,7 +103,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -123,7 +123,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -202,7 +202,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -222,7 +222,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -301,7 +301,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -321,7 +321,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -400,7 +400,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "code",
@@ -420,7 +420,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -499,7 +499,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -519,7 +519,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -598,7 +598,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -618,7 +618,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "P0D6E4079E36703EB"
+        "uid": "$ds_prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -697,7 +697,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "P0D6E4079E36703EB"
+            "uid": "$ds_prometheus"
           },
           "disableTextWrap": false,
           "editorMode": "builder",
@@ -718,7 +718,35 @@
   "schemaVersion": 39,
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "Prometheus",
+          "value": "$ds_prometheus"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "definition": "label_values(prometheus_build_info, __name__)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": {
+          "query": "label_values(prometheus_build_info, __name__)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-6h",
