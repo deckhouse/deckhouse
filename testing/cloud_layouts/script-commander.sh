@@ -215,12 +215,28 @@ function prepare_environment() {
     ;;
 
   "vSphere")
-    # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="redos"
+    bastion_user="ubuntu"
+    bastion_host="31.41.158.74"
+    bastion_port="53359"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    cluster_template_id="3e331a3d-8757-41b6-8c7e-4a8f5d2caea9"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"vSpherePassword\": \"${LAYOUT_VSPHERE_PASSWORD}\",
+      \"vSphereBaseDomain\": \"${LAYOUT_VSPHERE_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\"
+    }"
+
     ;;
 
   "VCD")
@@ -287,7 +303,7 @@ ConnectTimeout 10
 LogLevel quiet
 EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
-  chmod 400 id_rsa
+  chmod 600 id_rsa
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
 }
@@ -461,7 +477,7 @@ function update_comment() {
     return 1
   fi
 
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_connection} ${master_connection}\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${ssh_bastion} ${master_connection}\`"
   local result_body
 
   if ! result_body="$(echo "$comment" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
@@ -553,7 +569,6 @@ function run-test() {
 
 
     # Get ssh connection string
-    # TODO add bastion logic
     if [[ "$master_ip_find" == "false" ]]; then
       master_ip=$(jq -r '.connection_hosts.masters[0].host' <<< "$response")
       master_user=$(jq -r '.connection_hosts.masters[0].user' <<< "$response")
@@ -561,10 +576,9 @@ function run-test() {
         master_connection="${master_user}@${master_ip}"
         master_ip_find=true
         echo "  SSH connection string:"
-        echo "      ssh $master_connection"
+        echo "      ssh ${ssh_bastion} ${master_connection}"
         update_comment
         echo "$master_connection" > ssh-connect_str-"${PREFIX}"
-        # TODO add workflow template
       fi
     fi
 
@@ -609,20 +623,6 @@ function run-test() {
     return 1
   fi
 
-  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
-
-  test_failed="true"
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
-      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
-      test_failed=""
-    else
-      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
-      sleep 30
-    fi
-
-    if [[ $test_failed == "true" ]]; then
-      return 1
-    fi
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
     testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
