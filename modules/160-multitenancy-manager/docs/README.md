@@ -38,6 +38,8 @@ For platform users:
 
 ## Limitations
 
+The module works only within the limits below:
+
 - Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
 - Template resources are applied only to a single namespace whose name matches the project name.
 
