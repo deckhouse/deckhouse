@@ -1,0 +1,131 @@
+{% comment %}
+  Copyright 2022 Richard Dominick
+  https://github.com/RichDom2185/jekyll-fancy-tables
+{% endcomment %}
+{% capture newline %}
+{% endcapture %}
+{% assign starts = '|--;|:-' | split: ';' -%}
+{% if include.markdown %}
+  {% assign html = include.markdown | markdownify %}
+{% else %}
+  {% assign html = include.html %}
+{% endif %}
+{%- assign nodes = html
+  | strip
+  | split: '<pre><code class="language-'
+-%}
+{{ nodes.first }}
+{%- for node in nodes offset:1 -%}
+  {% assign tag = node | split: '">' | first %}
+  {%- if tag == 'table' -%}
+    {% assign contents = node
+      | replace_first: tag, ''
+      | replace_first: '">', ''
+      | strip
+      | split: '</code></pre>'
+    %}
+    {% assign data = contents.first | split: '```alignment' -%}
+    {% assign text = data[0] -%}
+    {% assign alignments = data[1] | replace: newline, '' | replace: ' ', '' | split: '' -%}
+    {% capture text %}{% include table_generation/capturehtml.liquid text=text %}{% endcapture -%}
+    {% assign lines = text | strip | split: newline -%}
+    {% assign check_first_row = lines.first | replace: ' ', '' | slice: 0, 3 -%}
+    {% if starts contains check_first_row %}
+      {% assign offset = 1 %}
+    {% else %}
+      {% assign offset = 2 %}
+    {% endif -%}
+
+    {% assign cell_index = 0 -%}
+    <table>
+      {% unless starts contains check_first_row -%}
+        <thead>
+          <tr>
+            {%- assign cells = lines.first | strip | split: '|' -%}
+            {% for cell in cells offset:1 -%}
+              {% assign cleaned = cell | replace: '\', '' -%}
+              {% assign col_span = cell.size | minus: cleaned.size | plus: 1 -%}
+
+              {% assign alignment = alignments[cell_index] | upcase -%}
+              {% case alignment %}
+                {% when "R" %}
+                  {% assign align = 'right' %}
+                {% when "C" %}
+                  {% assign align = 'center' %}
+                {% else %}
+                  {% assign align = 'left' %}
+              {% endcase %}
+              <th colspan="{{ col_span }}" data-nth-cell="{{ cell_index | plus: 1 }}" align="{{ align }}">
+                {{- cleaned | strip | markdownify | split: '<p>' | shift | join: '<p>' | split: '</p>' | pop | join: '</p>' -}}
+              </th>
+
+              {%- assign cell_index = cell_index | plus: 1 -%}
+            {% endfor %}
+          </tr>
+        </thead>
+      {% endunless -%}
+      <tbody>
+        {% for row in lines offset:offset -%}
+          <tr>
+            {%- assign cells = row | strip | split: '|' -%}
+            {% assign col_index = 1 -%}
+            {% for cell in cells offset:1 -%}
+              {% assign cleaned = cell | replace: '\', '' -%}
+              {% assign col_span = cell.size | minus: cleaned.size | plus: 1 -%}
+              {% assign cleaned = cleaned | strip -%}
+              {% assign prefix = cleaned | slice: 0, 2 -%}
+              {% if prefix == '^^' %}{% continue %}{% endif -%}
+
+              {% assign lookbelow_index = forloop.parentloop.index | plus: offset -%}
+              {% assign contents_to_add = '' | split: '' -%}
+              {% assign row_span = 1 -%}
+              {% assign no_of_checks = forloop.parentloop.length | minus: forloop.parentloop.index -%}
+              {% for i in (1..no_of_checks) -%}
+                {% assign next_row_cells = lines[lookbelow_index] | replace: '\', '|' | strip | split: '|' -%}
+                {% assign cell_below = next_row_cells[col_index] | strip -%}
+                {% assign prefix = cell_below | slice: 0, 2 -%}
+                {% if prefix == '^^' -%}
+                  {% assign row_span = row_span | plus: 1 -%}
+                  {% assign content_to_add = cell_below | slice: 2, cell_below.size | strip | markdownify | split: '<p>' | shift | join: '<p>' | split: '</p>' | pop | join: '</p>' -%}
+                  {% if content_to_add != '' %}{% assign contents_to_add = contents_to_add | push: content_to_add %}{% endif -%}
+                {% else -%}
+                  {% break %}
+                {% endif -%}
+                {% assign lookbelow_index = lookbelow_index | plus: 1 -%}
+              {% endfor -%}
+
+              {% assign alignment = alignments[cell_index] | upcase -%}
+              {% case alignment %}
+                {% when "R" %}
+                  {% assign align = 'right' %}
+                {% when "C" %}
+                  {% assign align = 'center' %}
+                {% else %}
+                  {% assign align = 'left' %}
+              {% endcase %}
+              <td colspan="{{ col_span }}" rowspan="{{ row_span }}" data-nth-cell="{{ cell_index | plus: 1 }}" align="{{ align }}">
+                {{- cleaned | strip | markdownify | split: '<p>' | shift | join: '<p>' | split: '</p>' | pop | join: '</p>' -}}
+                {% if contents_to_add.size > 0 %}<br>{{ contents_to_add | join: '<br>' }}{% endif -%}
+              </td>
+
+              {%- assign carried_over = 0 -%}
+              {% for i in (col_index..forloop.length) -%}
+                {% assign sibling_index = i | plus: 1 -%}
+                {% assign sibling = cells[sibling_index] | strip | slice: 0, 2 -%}
+                {% if sibling != '^^' %}{% break %}{% endif %}
+                {% assign carried_over = carried_over | plus: 1 -%}
+              {% endfor -%}
+              {% assign col_index = col_index | plus: col_span | plus: carried_over -%}
+              {% assign cell_index = cell_index | plus: 1 -%}
+            {% endfor %}
+          </tr>
+        {% endfor -%}
+      </tbody>
+    </table>
+    {%- for tail in contents offset:1 -%}
+      {{ tail }}</code></pre>
+    {%- endfor -%}
+  {%-else -%}
+    <pre><code class="language-{{ node }}
+  {%- endif -%}
+{%- endfor -%}
