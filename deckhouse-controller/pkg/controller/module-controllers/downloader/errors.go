@@ -42,7 +42,7 @@ type ReleaseChannelError struct {
 }
 
 func (e *ReleaseChannelError) Error() string {
-	return fmt.Sprintf("release channel `%s` for module `%s` %s: %v",
+	return fmt.Sprintf("release channel \"%s\" for module \"%s\" %s: %v",
 		e.ReleaseChannel, e.ModuleName, e.Operation, e.Err)
 }
 

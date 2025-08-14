@@ -38,7 +38,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "stable",
 			operation:      "get digest",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel `stable` for module `test-module` get digest: release channel not found",
+			expectMessage:  "release channel \"stable\" for module \"test-module\" get digest: release channel not found",
 		},
 		{
 			name:           "404 error",
@@ -47,7 +47,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "beta",
 			operation:      "get image",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel `beta` for module `test-module` get image: release channel not found",
+			expectMessage:  "release channel \"beta\" for module \"test-module\" get image: release channel not found",
 		},
 		{
 			name:           "NAME_UNKNOWN error",
@@ -56,7 +56,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "alpha",
 			operation:      "get digest",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel `alpha` for module `test-module` get digest: release channel not found",
+			expectMessage:  "release channel \"alpha\" for module \"test-module\" get digest: release channel not found",
 		},
 		{
 			name:           "Other error",
@@ -65,7 +65,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "stable",
 			operation:      "get digest",
 			expectType:     nil, // Indicates we expect the original error to be wrapped
-			expectMessage:  "release channel `stable` for module `test-module` get digest: connection timeout",
+			expectMessage:  "release channel \"stable\" for module \"test-module\" get digest: connection timeout",
 		},
 	}
 
