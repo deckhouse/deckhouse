@@ -1,4 +1,4 @@
-## Version 1.70
+## Version 1.71
 
 ### Important
 
@@ -17,6 +17,8 @@
 ### Major changes
 
 - You can now enforce two-factor authentication for static users. This is configured via the [`staticUsers2FA`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter section of the `user-authn` module.
+
+- Added support for GPUs on nodes. Three GPU resource sharing modes are now available: Exclusive (no sharing), TimeSlicing (time-based sharing), and MIG (a single GPU split into multiple instances). The NodeGroup [spec.gpu](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter section is used to configure the GPU resource sharing mode. Using a GPU on a node requires installing the NVIDIA Container Toolkit and the GPU driver.
 
 - When enabling a module (with `d8 platform module enable`) or editing a ModuleConfig resource, a warning is now displayed if multiple module sources are found. In such a case, explicitly specify the module source using the [source](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) parameter in the module’s configuration.
 
@@ -37,7 +39,7 @@
 
 - The documentation now includes a [reference for the Deckhouse CLI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/deckhouse-cli/reference/) (`d8` utility) commands and parameters.
 
-- When using CEF encoding for collecting logs from [Apache Kafka](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) or [socket](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef) sources, you can now configure auxiliary CEF fields such as Device Product, Device Vendor, and Device ID.
+- When using CEF encoding for collecting logs from [Apache Kafka](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) or [socket](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef) sources, you can now configure auxiliary CEF fields such as Device Product, Device Vendor, and Device ID.
 
 - The [`passwordHash`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodeuser-v1-spec-passwordhash) field in the NodeUser resource is no longer required. This allows you to create users without passwords — for example, in clusters that use external authentication systems (such as PAM or LDAP).
 
@@ -61,7 +63,7 @@
 
 - Fixed the logic for determining service readiness in the [ServiceWithHealthcheck](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/service-with-healthchecks/cr.html#servicewithhealthchecks) resource. Previously, Pods without an IP address (for example, in `Pending` state) could be mistakenly included in the load balancing list.
 
-- Added support for the least-conn load balancing algorithm. This algorithm directs traffic to the service backend with the fewest active connections, improving performance for connection-heavy applications (such as WebSocket services). To use this algorithm, enable the [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter in the `cni-cilium` module settings and use the `cilium.io/bpf-lb-algorithm` annotation on the service and set it to a supported value: random, maglev, or least-conn.
+- Added support for the least-conn load balancing algorithm. This algorithm directs traffic to the service backend with the fewest active connections, improving performance for connection-heavy applications (such as WebSocket services). To use this algorithm, enable the [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter in the `cni-cilium` module settings and use the `service.cilium.io/lb-algorithm` annotation on the service and set it to a supported value: random, maglev, or least-conn.
 
 - Fixed an issue in Cilium 1.17 `cilium-operator` where IP addresses were not reused after a `CiliumEndpoint` was deleted. The issue was caused by improper cleanup of priority filters, which could lead to IP pool exhaustion in large clusters.
 
@@ -313,7 +315,7 @@ The following DKP components have been updated:
   Previously, these addresses were determined automatically;
   however, in some configurations, they could not be resolved.
 
-- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
+- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
   that controls high availability mode.
   In high availability mode, multiple replicas of the authenticator are launched.
   Previously, high availability mode of all authenticators was determined by a [global parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/deckhouse-configure-global.html#parameters-highavailability)

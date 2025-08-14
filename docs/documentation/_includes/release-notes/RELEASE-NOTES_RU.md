@@ -18,6 +18,8 @@
 
 - Добавлена возможность включения обязательного использования двухфакторной аутентификации для статических пользователей. Управляется секцией параметров [`staticUsers2FA`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) модуля `user-authn`.
 
+- Добавлена поддержка GPU на узлах. Доступно управление тремя режимами разделения ресурсов GPU: `Exclusive` (без разделения), `TimeSlicing` (разделение по времени), `MIG` (разделение одного GPU на несколько экземпляров). Для управления режимом разделения ресурсов GPU используется секция параметров [spec.gpu](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) в NodeGroup. Использование GPU на узле возможно после установки NVIDIA Container Toolkit и драйвера GPU.
+
 - При включении модуля (`d8 platform module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
 
 - Улучшена обработка ошибок конфигурации модулей. Теперь ошибки при работе модуля не блокируют работу DKP, а отображаются в статусах объектов Module и ModuleRelease.
@@ -37,7 +39,7 @@
 
 - В документацию добавлена [справка](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/deckhouse-cli/reference/) по командам и параметрам Deckhouse CLI (утилита `d8`).
 
-- При использовании кодирования CEF при сборе логов из [Apache Kafka](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) или из сокета, появилась возможность настраивать служебные поля формата, такие как Device Product, Device Vendor и Device ID.
+- При использовании кодирования CEF при сборе логов из [Apache Kafka](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) или [из сокета](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef), появилась возможность настраивать служебные поля формата, такие как Device Product, Device Vendor и Device ID.
 
 - Поле [`passwordHash`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodeuser-v1-spec-passwordhash) в ресурсе NodeUser больше не является обязательным. Это позволяет создавать пользователей без пароля, например, в кластерах с внешними системами аутентификации (например, PAM, LDAP).
 
@@ -61,7 +63,7 @@
 
 - Исправлена логика определения готовности сервиса (ресурс [ServiceWithHealthcheck](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/service-with-healthchecks/cr.html#servicewithhealthchecks)). Ранее поды без IP-адреса (например, находящихся в состоянии `Pending`) могли ошибочно попадать в список балансировки.
 
-- Добавлена поддержка алгоритма балансировки нагрузки least-conn для сервисов. Алгоритм least-conn направляет трафик на бэкенд сервиса с наименьшим числом активных подключений, что повышает производительность приложений с большим количеством соединений (например, WebSocket). Чтобы управлять алгоритмом балансировки, необходимо включить параметр [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) в настройках модуля `cni-cilium`, и использовать на уровне сервиса аннотацию `cilium.io/bpf-lb-algorithm`, выбрав поддерживаемый алгоритм (random, maglev или least-conn).
+- Добавлена поддержка алгоритма балансировки нагрузки least-conn для сервисов. Алгоритм least-conn направляет трафик на бэкенд сервиса с наименьшим числом активных подключений, что повышает производительность приложений с большим количеством соединений (например, WebSocket). Чтобы управлять алгоритмом балансировки, необходимо включить параметр [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) в настройках модуля `cni-cilium`, и использовать на уровне сервиса аннотацию `service.cilium.io/lb-algorithm`, выбрав поддерживаемый алгоритм (random, maglev или least-conn).
 
 - В Cilium 1.17 исправлена ошибка в `cilium-operator`, из-за которой IP-адреса могли не переиспользоваться после удаления `CiliumEndpoint`. Это происходило из-за некорректной очистки фильтра приоритетов, что могло привести к исчерпанию IP-пула в больших кластерах.
 

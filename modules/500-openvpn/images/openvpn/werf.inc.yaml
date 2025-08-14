@@ -80,7 +80,7 @@ shell:
 ---
 image: {{ .ModuleName }}/openssl-artifact
 final: false
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/openssl
@@ -98,7 +98,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src

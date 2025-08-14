@@ -3,7 +3,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-07-10"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -52,7 +51,7 @@ shell:
   - patch -p1 < /patches/010-nginx-build.patch
   - patch -p1 < /patches/012-new-metrics.patch
   - patch -p1 < /patches/013-default-backend-fix.patch
-  - patch -p1 < /patches/015-protect-validation-port.patch
+  - patch -p1 < /patches/015-validation-mode.patch
   - patch -p1 < /patches/016-verbose-maxmind-logs.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
@@ -210,7 +209,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
-  - cp -R /usr/lib64 /chroot/usr/lib64
+  - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - |
@@ -220,6 +219,7 @@ shell:
       /chroot/usr/local/nginx
       /chroot/usr/share
       /chroot/usr/bin
+      /chroot/usr/lib/locale
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
       /chroot/etc/ingress-controller/auth
@@ -321,6 +321,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
+  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -361,8 +362,10 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
-# remove owasp-modsecurity-crs/util bash scripts cve
+# remove owasp-modsecurity-crs/util because of bash scripts cve
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+# takes ~1GB
+  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /

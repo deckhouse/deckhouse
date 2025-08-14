@@ -10,6 +10,9 @@
 {% endalert %}
 {%- endif %}
 {%- if page.platform_code == "dynamix" %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
 {%- alert level="warning" %}
 Доступно начиная с версии 1.66 Deckhouse Kubernetes Platform.
 {% endalert %}

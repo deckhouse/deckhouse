@@ -20,18 +20,29 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/fsync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
 func (svc *Service) Build() error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		svc.metrics.CounterAdd(metrics.DocsBuilderBuildTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderBuildDurationSeconds, dur, map[string]string{"status": status}, nil)
+	}()
+
 	err := svc.buildHugo()
 	if err != nil {
 		svc.isReady.Store(false)
+		status = "fail"
 
 		return fmt.Errorf("hugo build: %w", err)
 	}
