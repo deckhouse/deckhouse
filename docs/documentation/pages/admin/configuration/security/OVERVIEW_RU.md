@@ -1,5 +1,5 @@
 ---
-title: Средства обеспечения безопасности в Deckhouse Kubernetes Platform
+title: Обзор
 permalink: ru/admin/configuration/security/
 lang: ru
 ---

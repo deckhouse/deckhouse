@@ -5,70 +5,77 @@ permalink: en/admin/configuration/security/certificates.html
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates in the cluster and supports:
 
-- requesting certificates from all supported sources, such as [Let’s Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/);
-- issuing self-signed certificates;
-- automatic renewal and expiration monitoring;
-- deploying `cm-acme-http-solver` on master nodes and dedicated nodes.
+- Requesting certificates from all supported sources, such as [Let's Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/).
+- Issuing self-signed certificates.
+- Automatic renewal and expiration monitoring.
+- Deploying `cm-acme-http-solver` on master nodes and dedicated nodes.
 
-This page describes the available certificate management features in DKP and the procedure for working with certificate issuers.
+This page describes the available certificate management features in DKP
+and the procedure for working with certificate issuers.
 
 {% alert level="info" %}
-Examples of certificate configuration, usage of the `tls-acme` annotation, and secure handling of credentials are described [on the "Using TLS Certificates" page](../../../user/tls.html).
+Examples of certificate configuration, usage of the `tls-acme` annotation,
+and secure handling of credentials are described in [Using TLS certificates](../../../user/security/tls.html).
 {% endalert %}
 
 ## Monitoring
 
 DKP exports metrics to Prometheus, allowing you to monitor:
 
-- certificate expiration dates;
-- certificate renewal status.
+- Certificate expiration dates
+- Certificate renewal status
 
 ## Access roles
 
 DKP provides several predefined roles for accessing resources:
 
-| Role           | Access rights |
+| Role           | Permissions |
 |----------------|---------------|
-| `User`         | View `Certificate` and `Issuer` resources in available namespaces, as well as global `ClusterIssuer` resources. |
-| `Editor`       | Manage `Certificate` and `Issuer` resources in available namespaces. |
-| `ClusterEditor`| Manage `Certificate` and `Issuer` resources in all namespaces. |
+| `User`         | View Certificate and Issuer resources in available namespaces, as well as global ClusterIssuer resources. |
+| `Editor`       | Manage Certificate and Issuer resources in available namespaces. |
+| `ClusterEditor`| Manage Certificate and Issuer resources in all namespaces. |
 | `SuperAdmin`   | Manage internal system objects. |
 
 ## Working with certificate issuers
 
-DKP supports the following default certificate issuers (`ClusterIssuer`):
+DKP supports the following default certificate issuers (ClusterIssuer):
 
-- `letsencrypt` — issues TLS certificates using the public CA Let’s Encrypt and ACME HTTP validation.  
-  Suitable for automatically obtaining trusted certificates for most public services.  
+- `letsencrypt`: Issues TLS certificates using the public CA Let's Encrypt and ACME HTTP validation.
+  Suitable for automatically obtaining trusted certificates for most public services.
   Configuration details can be found in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/).
 
-- `letsencrypt-staging` — similar to `letsencrypt`, but uses Let’s Encrypt’s staging server.  
-  Useful for debugging configuration and testing the certificate issuance process.  
-  More details available in the [Let’s Encrypt staging docs](https://letsencrypt.org/docs/staging-environment/).
+- `letsencrypt-staging`: Similar to `letsencrypt`, but uses Let's Encrypt's staging server.
+  Useful for debugging configuration and testing the certificate issuance process.
+  More details available in the [Let's Encrypt staging docs](https://letsencrypt.org/docs/staging-environment/).
 
-- `selfsigned` — issues self-signed certificates.  
-  Useful for internal services where external trust is not required.
+- `selfsigned`: Issues self-signed certificates.
+  Useful when external trust is not required (for example, for internal services).
 
-- `selfsigned-no-trust` — also issues self-signed certificates but without automatically adding the root certificate to the trust store. Suitable for manual trust management.
+- `selfsigned-no-trust`: Also issues self-signed certificates
+  but without automatically adding the root certificate to the trust store.
+  Suitable for manual trust management.
 
-In some cases, additional types of `ClusterIssuer` may be needed:
+In some cases, additional types of ClusterIssuer may be needed:
 
-- if you want to use a Let’s Encrypt certificate with DNS validation via a third-party DNS provider;
-- if you need to use a certificate authority (CA) other than Let’s Encrypt.  
+- If you want to use a Let's Encrypt certificate with DNS validation via a third-party DNS provider.
+- if you need to use a certificate authority (CA) other than Let's Encrypt.
   See the full list of supported CAs in the [`cert-manager` documentation](https://cert-manager.io/docs/configuration/issuers/).
 
-### Adding a ClusterIssuer with `DNS-01` validation via webhook
+### Adding a ClusterIssuer with DNS-01 validation via webhook
 
-To verify domain ownership with Let’s Encrypt using the `DNS-01` method, the `cert-manager` module must be able to create TXT records in the DNS zone associated with the domain.
+To verify domain ownership with Let's Encrypt using the `DNS-01` method,
+the `cert-manager` module must be able to create TXT records in the DNS zone associated with the domain.
 
-`cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.  
+`cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.
 A full list is available in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
-If your provider is not directly supported, you can configure a webhook and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates.
+If your provider is not directly supported, you can configure a webhook
+and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates.
 
 The following example is based on using Yandex Cloud DNS:
 
-1. To handle the webhook, deploy the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
+1. To handle the webhook, deploy the `Yandex Cloud DNS ACME webhook` service in the cluster
+   according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
 
 1. Create a ClusterIssuer resource using the following example:
 
@@ -81,7 +88,7 @@ The following example is based on using Yandex Cloud DNS:
    spec:
      acme:
        # Replace this email address with your own.
-       # Let’s Encrypt will use it to notify you about expiring certificates
+       # Let's Encrypt will use it to notify you about expiring certificates
        # and issues related to your account.
        email: your@email.com
        server: https://acme-staging-v02.api.letsencrypt.org/directory
@@ -119,7 +126,7 @@ The following example is based on using Yandex Cloud DNS:
      d8 k create secret tls internal-ca-key-pair -n d8-cert-manager --key="rootCAKey.pem" --cert="rootCACert.pem"
      ```
 
-   - Example of creating a secret from a YAML file (the certificate file contents must be base64-encoded):
+   - Example of creating a secret from a YAML file (the certificate file contents must be Base64-encoded):
 
      ```yaml
      apiVersion: v1
@@ -147,7 +154,8 @@ The following example is based on using Yandex Cloud DNS:
 
 You can now use the created ClusterIssuer to issue certificates for all DKP components or for a specific component.
 
-For example, to use this ClusterIssuer for issuing certificates for all DKP components, set its name in the global parameter `clusterIssuerName`:
+For example, to use this ClusterIssuer for issuing certificates for all DKP components,
+set its name in the global parameter [`clusterIssuerName`](../../../reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
 
 ```yaml
   spec:
@@ -177,7 +185,7 @@ After configuring the PKI and [enabling Kubernetes authentication](../access/aut
 
 1. Create the Issuer resource:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: Issuer
@@ -201,7 +209,7 @@ After configuring the PKI and [enabling Kubernetes authentication](../access/aut
 
 1. Create the Certificate resource to obtain a TLS certificate signed by Vault CA:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: cert-manager.io/v1
    kind: Certificate

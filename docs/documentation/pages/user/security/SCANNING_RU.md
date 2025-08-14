@@ -7,7 +7,7 @@ lang: ru
 Deckhouse Kubernetes Platform (DKP) соответствует рекомендациям [CIS Kubernetes Benchmark](https://www.cisecurity.org/benchmark/kubernetes), обеспечивая безопасность как на уровне отдельных компонентов, так и всей платформы в целом.
 
 Для постоянного мониторинга соответствия требованиям CIS в каждом кластере DKP автоматически выполняются проверки.
-Результаты этих проверок представлены в виде отчётов и доступны в Grafana на дашборде Security / CIS Kubernetes Benchmark.
+Результаты этих проверок представлены в виде отчётов и доступны в Grafana на дашборде `Security / CIS Kubernetes Benchmark`.
 
 DKP предоставляет встроенное средство для автоматического поиска уязвимостей в контейнерных образах на основе проекта [Trivy](https://github.com/aquasecurity/trivy).
 
@@ -25,7 +25,7 @@ DKP предоставляет встроенное средство для ав
 Для просмотра результатов сканирования вашего приложения воспользуйтесь Grafana-дашбордом `Security / Trivy Image Vulnerability Overview`.
 Вы можете отфильтровать результаты по нужному пространству имён и ресурсу.
 
-![Пример дашборда в Grafana](../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)  
+![Пример дашборда в Grafana](../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
 ## Просмотр результатов CIS compliance-проверки
 
@@ -275,7 +275,7 @@ report:
 
 ##### SbomReport
 
-[SbomReport](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/sbom-report/) — ресурс, содержащий отчёт SBOM (Software Bill of Materials) для контейнерного образа, используемого в рабочей нагрузке Kubernetes.
+[SbomReport](https://aquasecurity.github.io/trivy-operator/v0.22.0/docs/crds/sbom-report/) — ресурс, содержащий отчёт Software Bill of Materials (SBOM) для контейнерного образа, используемого в рабочей нагрузке Kubernetes.
 
 Он представляет собой перечень всех компонентов программного обеспечения, включая системные пакеты и зависимости приложений, найденные в контейнере.  
 Такая информация полезна для анализа состава образа, аудита безопасности и соответствия требованиям поставщиков.

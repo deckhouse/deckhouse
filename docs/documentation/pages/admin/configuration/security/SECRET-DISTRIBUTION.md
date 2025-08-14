@@ -22,7 +22,7 @@ when pulling container images or working with Ceph RBD storage.
 
 ### Incompatibility with multitenancy mode
 
-The automatic secret distribution mechanism is not compatible with the [multitenancy mode](../multitenancy.html).
+The automatic secret distribution mechanism is not compatible with the [multitenancy mode](../../multitenancy.html).
 
 Multitenancy mode creates isolated environments for users within projects.
 Automatically distributing secrets to all namespaces may violate this security model.
@@ -36,8 +36,8 @@ A cluster administrator must define them in the project configuration.
 ## Configuring automatic secret distribution
 
 1. Create a Secret resource in the `default` namespace.
-2. Add the label `secret-copier.deckhouse.io/enabled: ""`.
-3. Apply the resource using the `d8 k apply` command.
+1. Add the label `secret-copier.deckhouse.io/enabled: ""`.
+1. Apply the resource using the `d8 k apply` command.
    It will then be automatically distributed to all namespaces.
 
 {% alert level="warning" %}
@@ -49,5 +49,5 @@ will be automatically deleted.
 ## Distributing secrets to selected namespaces
 
 To copy a secret to specific namespaces only,
-use the annotation with a label selector `secret-copier.deckhouse.io/target-namespace-selector`.
+use the annotation with a label selector `secret-copier.deckhouse.io/target-namespace-selector: "app=custom"`.
 In this case, the secret will be copied only to namespaces that match the specified selector.
