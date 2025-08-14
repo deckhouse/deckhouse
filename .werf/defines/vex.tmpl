@@ -46,9 +46,10 @@ shell:
   setup:
   - |
     COSIGN_PASSWORD="" \
-    VAULT_TOKEN="$(cat /run/secrets/COSIGN_ACCESS_TOKEN)" \
+    COSIGN_ACCESS_TOKEN="$(cat /run/secrets/COSIGN_ACCESS_TOKEN)" \
     TRANSIT_SECRET_ENGINE_PATH=dh-signer \
     VAULT_ADDR=https://seguro.flant.com \
+    VAULT_TOKEN="$(curl -v --request POST ${VAULT_ADDR}/v1/auth/ar/login --data "{\"role_id\":\"dh-signer-dev_dh-signer-dev\",\"secret_id\":\"${COSIGN_ACCESS_TOKEN}\"}")" \
     cosign attest \
       --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
