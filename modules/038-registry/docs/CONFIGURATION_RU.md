@@ -7,6 +7,15 @@ description: ""
 
 {% include module-bundle.liquid %}
 
-Модуль не имеет настроек.
+Для настройки параметров registry используйте секцию [`registry`](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
 
-Режим работы registry Deckhouse Kubernetes Platform, адрес для подключения и другие параметры указываются в секции [registry](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
+В секции указываются:
+
+- Режим доступа к container registry.
+- Параметры для режима доступа `Direct`:
+  - Корневой сертификат центра сертификации.
+  - Адрес репозитория в container registry.
+  - Лицензионный ключ для доступа к container registry.
+  - Пароль для аутентификации в container registry.
+  - Протокол для подключения к container registry.
+  - Имя пользователя для аутентификации в container registry.

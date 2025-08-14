@@ -10,6 +10,15 @@ description: ""
 
 {% include module-bundle.liquid %}
 
-The module does not have any settings.
+To configure registry parameters, use the [`registry`](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.
 
-The operation mode of the registry for the Deckhouse Kubernetes Platform, connection address, and other parameters are specified in the [registry](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.
+It specifies:
+
+- The mode for accessing the container registry with Deckhouse images.
+- Parameters for the `Direct` access mode:
+  - The root CA certificate.
+  - The address of the container registry repository.
+  - The license key for accessing the container registry.
+  - The password for authenticating with the container registry.
+  - The protocol to use for connecting to the registry.
+  - The username for authenticating with the container registry.
