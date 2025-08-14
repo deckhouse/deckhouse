@@ -45,7 +45,7 @@ spec:
       sleep 10
     done
 
-    if ! $is_migration_required; then
+    if [[ "$is_migration_required" == "false" ]]; then
       exit 0
     fi
 
