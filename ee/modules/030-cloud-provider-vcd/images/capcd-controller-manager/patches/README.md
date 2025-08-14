@@ -55,7 +55,7 @@ Changes:
 
 - Add TemplateOrg field to VCDMachine spec
 
-### 006-add-additional-metadata.patch
+### 006-add-metadata.patch
 
 Files:
 
