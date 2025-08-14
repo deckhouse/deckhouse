@@ -244,6 +244,8 @@ shell:
   - cp -a /usr/local/lib /chroot/usr/local/
   - cp -a /usr/local/share/lua* /chroot/usr/local/share/
   - cp -a /usr/local/lib64 /chroot/usr/local/
+  # override old opentelemtry libs with new ones
+  - cp -a /usr/local/lib64/libopentelemetry* /chroot/lib64/
   - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
@@ -326,7 +328,7 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
-  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/usr/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
+  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
   - ldconfig
 # Create ld.so.cache inside chroot
   - cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
