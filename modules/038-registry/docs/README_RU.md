@@ -5,17 +5,20 @@ description: ""
 
 ## Описание
 
-Модуль реализует внутреннее хранилище образов контейнеров (container registry, registry).
+Модуль реализует управление конфигурацией registry Deckhouse компонентов, и реализует внутреннее хранилище образов контейнеров (container registry, registry).
 
 Внутренний registry позволяет оптимизировать загрузку и хранение образов, а также помогает обеспечивать высокую доступность и отказоустойчивость Deckhouse Kubernetes Platform.
 
 Модуль работает в следующих режимах:
 
 - `Direct` — работа с использованием внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
-- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется по адресу, который можно [задать при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или [изменить в развернутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
+- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется напрямую к внешнему registry.
+  Существует 2 вида режима `Unmanaged`:
+  - Конфигурируемый - режим, управляемый с помощью модуля registry. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
+  - Неконфиругируемый (deprecated) - режим используемый по-умолчанию. Параметры конфигурации задаются [при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развернутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry) с помощью `helper change registry` (deprecated).
 
 {% alert level="info" %}
-Для работы в режиме `Direct` необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration)
+Для работы в режиме `Direct` и `Unmanaged` (конфигурируемый) необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration)
 {% endalert %}
 
 ## Архитектура режима Direct
