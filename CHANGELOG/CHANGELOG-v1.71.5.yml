@@ -1,0 +1,47 @@
+candi:
+  fixes:
+    - summary: >-
+        Added warnings to the VMware Cloud Director environment documentation about Edge
+        requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14994
+cni-cilium:
+  fixes:
+    - summary: fixed invalid annotation name for lb-algorithm in docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14947
+docs:
+  fixes:
+    - summary: Fix D8KubernetesStaleTokensDetected alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14913
+    - summary: There should be one disk in the template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14906
+    - summary: Updates for Observability docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+log-shipper:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+loki:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-custom:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-kubernetes:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-ping:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+prometheus:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+upmeter:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+
