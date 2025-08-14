@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -56,6 +57,16 @@ const (
 // Error returned when digest matches expected value (cache hit)
 var ErrDigestMatches = errors.New("digest matches expected value")
 
+// Simple digest cache to avoid excessive registry calls
+type digestCacheEntry struct {
+	digest string
+}
+
+type simpleDigestCache struct {
+	mu    sync.RWMutex
+	cache map[string]digestCacheEntry
+}
+
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
@@ -63,6 +74,8 @@ type ModuleDownloader struct {
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 	logger          *log.Logger
+	
+	digestCache *simpleDigestCache
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
@@ -72,8 +85,34 @@ func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, m
 		ms:                   ms,
 		registryOptions:      registryOptions,
 		logger:               logger,
+		digestCache: &simpleDigestCache{
+			cache: make(map[string]digestCacheEntry),
+		},
 	}
 }
+
+// Get digest from cache
+func (c *simpleDigestCache) get(key string) (string, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	entry, exists := c.cache[key]
+	if !exists {
+		return "", false
+	}
+	return entry.digest, true
+}
+
+// Set digest in cache
+func (c *simpleDigestCache) set(key, digest string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	c.cache[key] = digestCacheEntry{
+		digest: digest,
+	}
+}
+
 
 type ModuleDownloadResult struct {
 	Checksum      string
@@ -197,6 +236,22 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
+	// Create cache key
+	cacheKey := fmt.Sprintf("%s:%s:%s", md.ms.Spec.Registry.Repo, moduleName, releaseChannel)
+	
+	// Check cache first
+	if cachedDigest, found := md.digestCache.get(cacheKey); found {
+		md.logger.Debug("Digest cache hit", 
+			slog.String("module", moduleName),
+			slog.String("channel", releaseChannel),
+			slog.String("digest", cachedDigest))
+		return cachedDigest, nil
+	}
+
+	md.logger.Debug("Digest cache miss, fetching from registry", 
+		slog.String("module", moduleName),
+		slog.String("channel", releaseChannel))
+
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
 		return "", fmt.Errorf("get registry client for release digest: %w", err)
@@ -206,6 +261,14 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 	if err != nil {
 		return "", fmt.Errorf("get release digest: %w", err)
 	}
+
+	// Cache the result indefinitely
+	md.digestCache.set(cacheKey, digest)
+	
+	md.logger.Debug("Cached digest from registry", 
+		slog.String("module", moduleName),
+		slog.String("channel", releaseChannel),
+		slog.String("digest", digest))
 
 	return digest, nil
 }
