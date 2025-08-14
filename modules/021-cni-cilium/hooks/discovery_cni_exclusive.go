@@ -69,7 +69,7 @@ func discoveryIsExclusiveCNIPluginEnabled(input *go_hook.HookInput) error {
 		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", false)
 	} else {
 		eCNIP := input.Values.Get("cniCilium.exclusiveCNIPlugin")
-		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", eCNIP)
+		input.Values.Set("cniCilium.internal.exclusiveCNIPlugin", eCNIP.Bool())
 	}
 	return nil
 }
