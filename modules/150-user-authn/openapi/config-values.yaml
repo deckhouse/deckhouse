@@ -106,6 +106,12 @@ properties:
           Reserved for future use.
       complexityLevel:
         type: string
+        enum:
+          - "None"
+          - "Low"
+          - "Fair"
+          - "Good"
+          - "Excellent"
         default: "Fair"
         description: |
           Sets password complexity requirements
