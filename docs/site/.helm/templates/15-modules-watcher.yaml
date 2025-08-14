@@ -17,6 +17,7 @@ spec:
     metadata:
       labels:
         app: registry-modules-watcher
+        app.kubernetes.io/part-of: deckhouse-docs
       annotations:
         checksum/auths: {{ .Values.global.moduleWatcherAuths | sha256sum }}
     spec:
@@ -71,6 +72,7 @@ metadata:
   labels:
     # need to prometheus scrape "podMonitor/d8-monitoring/custom-pod"
     prometheus.deckhouse.io/custom-target: registry-modules-watcher
+    app.kubernetes.io/part-of: deckhouse-docs
 spec:
   clusterIP: None
   selector:
