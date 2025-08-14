@@ -3,7 +3,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-07-10"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -30,7 +29,7 @@ secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
-  setup:
+  install:
   - mkdir -p /src
   - cd /src
   - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
