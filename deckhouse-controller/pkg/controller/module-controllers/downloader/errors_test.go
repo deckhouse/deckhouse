@@ -64,7 +64,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			moduleName:     "test-module",
 			releaseChannel: "stable",
 			operation:      "get digest",
-			expectType:     errors.New("connection timeout"),
+			expectType:     nil, // Indicates we expect the original error to be wrapped
 			expectMessage:  "release channel 'stable' for module 'test-module' get digest: connection timeout",
 		},
 	}
@@ -79,7 +79,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 
 			var releaseErr *ReleaseChannelError
 			if errors.As(result, &releaseErr) {
-				if tt.expectType == tt.originalError {
+				if tt.expectType == nil {
 					// For "Other error" case, we expect the original error to be wrapped
 					if releaseErr.Err.Error() != tt.originalError.Error() {
 						t.Errorf("Expected wrapped original error %q, got %q", tt.originalError.Error(), releaseErr.Err.Error())
@@ -124,12 +124,12 @@ func TestClassifyRegistryError(t *testing.T) {
 		},
 		{
 			name:          "Manifest error",
-			originalError: errors.New("manifest unknown"),
+			originalError: errors.New("MANIFEST_UNKNOWN: manifest not found"),
 			moduleName:    "test-module",
 			version:       "v1.0.0",
 			operation:     "load manifest",
-			expectType:    errors.New("manifest unknown"),
-			expectMessage: "registry error for module 'test-module' version 'v1.0.0' load manifest: manifest unknown",
+			expectType:    ErrManifestNotFound,
+			expectMessage: "registry error for module 'test-module' version 'v1.0.0' load manifest: manifest not found",
 		},
 		{
 			name:          "Other error",
@@ -137,7 +137,7 @@ func TestClassifyRegistryError(t *testing.T) {
 			moduleName:    "test-module",
 			version:       "v1.0.0",
 			operation:     "get digest",
-			expectType:    errors.New("network error"),
+			expectType:    nil, // Indicates we expect the original error to be wrapped
 			expectMessage: "registry error for module 'test-module' version 'v1.0.0' get digest: network error",
 		},
 	}
@@ -152,7 +152,7 @@ func TestClassifyRegistryError(t *testing.T) {
 
 			var registryErr *RegistryError
 			if errors.As(result, &registryErr) {
-				if tt.expectType == tt.originalError {
+				if tt.expectType == nil {
 					// For "Other error" case, we expect the original error to be wrapped
 					if registryErr.Err.Error() != tt.originalError.Error() {
 						t.Errorf("Expected wrapped original error %q, got %q", tt.originalError.Error(), registryErr.Err.Error())
