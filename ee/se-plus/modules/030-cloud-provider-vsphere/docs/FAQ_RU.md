@@ -7,6 +7,11 @@ title: "Cloud provider — VMware vSphere: FAQ"
 Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы vSphere. Для создания такого кластера
 необходимо наличие L2-сети между всеми узлами кластера.
 
+{% alert level="info" %}
+В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
+Для этого используйте параметр [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
+{% endalert %}
+
 Чтобы поднять гибридный кластер, необходимо:
 
 1. Удалить flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
