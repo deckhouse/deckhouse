@@ -74,7 +74,7 @@ type ModuleDownloader struct {
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 	logger          *log.Logger
-	
+
 	digestCache *simpleDigestCache
 }
 
@@ -95,7 +95,7 @@ func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, m
 func (c *simpleDigestCache) get(key string) (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	entry, exists := c.cache[key]
 	if !exists {
 		return "", false
@@ -107,12 +107,11 @@ func (c *simpleDigestCache) get(key string) (string, bool) {
 func (c *simpleDigestCache) set(key, digest string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.cache[key] = digestCacheEntry{
 		digest: digest,
 	}
 }
-
 
 type ModuleDownloadResult struct {
 	Checksum      string
@@ -238,17 +237,17 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 
 	// Create cache key
 	cacheKey := fmt.Sprintf("%s:%s:%s", md.ms.Spec.Registry.Repo, moduleName, releaseChannel)
-	
+
 	// Check cache first
 	if cachedDigest, found := md.digestCache.get(cacheKey); found {
-		md.logger.Debug("Digest cache hit", 
+		md.logger.Debug("Digest cache hit",
 			slog.String("module", moduleName),
 			slog.String("channel", releaseChannel),
 			slog.String("digest", cachedDigest))
 		return cachedDigest, nil
 	}
 
-	md.logger.Debug("Digest cache miss, fetching from registry", 
+	md.logger.Debug("Digest cache miss, fetching from registry",
 		slog.String("module", moduleName),
 		slog.String("channel", releaseChannel))
 
@@ -264,8 +263,8 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 
 	// Cache the result indefinitely
 	md.digestCache.set(cacheKey, digest)
-	
-	md.logger.Debug("Cached digest from registry", 
+
+	md.logger.Debug("Cached digest from registry",
 		slog.String("module", moduleName),
 		slog.String("channel", releaseChannel),
 		slog.String("digest", digest))

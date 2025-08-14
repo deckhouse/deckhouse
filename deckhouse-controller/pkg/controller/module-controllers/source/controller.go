@@ -386,13 +386,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			// Check if this is a release channel not found error
 			if downloader.IsReleaseChannelNotFoundError(err) {
 				r.logger.Debug("release channel not found, skipping module",
-					slog.String("name", moduleName), 
+					slog.String("name", moduleName),
 					slog.String("release_channel", policy.Spec.ReleaseChannel),
 					log.Err(err))
 				// Don't add this module to available modules if release channel doesn't exist
 				continue
 			}
-			
+
 			r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
 			availableModule.PullError = err.Error()
 			pullErrorsExist = true
@@ -446,13 +446,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				// Check if this is a release channel not found error
 				if downloader.IsReleaseChannelNotFoundError(err) {
 					r.logger.Debug("release channel not found during metadata download, skipping module",
-						slog.String("name", moduleName), 
+						slog.String("name", moduleName),
 						slog.String("release_channel", policy.Spec.ReleaseChannel),
 						log.Err(err))
 					// Don't add this module to available modules if release channel doesn't exist
 					continue
 				}
-				
+
 				// Provide more specific error messages for registry errors
 				var errorMsg string
 				if downloader.IsVersionNotInRegistryError(err) {
@@ -460,7 +460,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				} else {
 					errorMsg = err.Error()
 				}
-				
+
 				r.logger.Warn("failed to download module metadata", slog.String("name", moduleName), log.Err(err))
 				availableModule.PullError = errorMsg
 				pullErrorsExist = true
