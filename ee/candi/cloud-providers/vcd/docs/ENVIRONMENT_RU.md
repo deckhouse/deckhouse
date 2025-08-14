@@ -19,9 +19,7 @@ description: "Подготовка окружения VMware Cloud Director дл
 Ресурсы Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Catalog должны быть предоставлены вашим поставщиком услуг VMware Cloud Director.
 
 {% alert level="warning" %}
-В каждом VDC (Virtual Data Center) должен быть настроен Edge Gateway, иначе кластер не будет развернут.
-
-Также обратите внимание, что если с одного Edge Gateway раздаются две сети, бутстрап кластера также может завершиться ошибкой.
+В каждом VDC (Virtual Data Center) должен быть настроен Edge Gateway, сеть кластера должна быть подключена к нему.
 {% endalert %}  
 
 Network (внутренняя сеть) может быть настроена вашим поставщиком услуг VMware Cloud Director, либо вы можете настроить ее самостоятельно. При выборе схемы размещения `WithNAT` сеть создается автоматически. Далее описан способ самостоятельной настройки внутренней сети.
