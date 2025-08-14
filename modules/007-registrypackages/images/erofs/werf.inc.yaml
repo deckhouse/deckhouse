@@ -45,4 +45,4 @@ shell:
   - mkdir -p /opt/deckhouse
   setup:
   - mv /usr/bin/*.erofs /
-  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /ld-musl-x86_64.so.1 /install /uninstall
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall
