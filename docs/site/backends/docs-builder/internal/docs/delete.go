@@ -26,9 +26,6 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 		dur := time.Since(start).Seconds()
 		svc.metrics.CounterAdd("docs_builder_delete_total", 1, map[string]string{"status": status})
 		svc.metrics.HistogramObserve("docs_builder_delete_duration_seconds", dur, map[string]string{"status": status}, nil)
-		if status == "ok" {
-			svc.updateCachedModulesGauge()
-		}
 	}()
 
 	err := svc.cleanModulesFiles(moduleName, channels)

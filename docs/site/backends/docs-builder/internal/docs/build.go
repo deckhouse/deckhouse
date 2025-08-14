@@ -36,9 +36,6 @@ func (svc *Service) Build() error {
 		dur := time.Since(start).Seconds()
 		svc.metrics.CounterAdd("docs_builder_build_total", 1, map[string]string{"status": status})
 		svc.metrics.HistogramObserve("docs_builder_build_duration_seconds", dur, map[string]string{"status": status}, nil)
-		if status == "ok" {
-			svc.updateCachedModulesGauge()
-		}
 	}()
 
 	err := svc.buildHugo()
