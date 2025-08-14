@@ -39,7 +39,7 @@ spec:
 
     until
       is_migration_required="$(kubectl_exec get node $(bb-d8-node-name) -o json | \
-      jq -e '.metadata.annotations."network.deckhouse.io/cilium-1-17-migration-disruptive-update-required"')";
+      jq -er '.metadata.annotations."network.deckhouse.io/cilium-1-17-migration-disruptive-update-required"')";
     do
       bb-log-info "Waiting until the safe-agent-updater calculates the need for an disruptive-update and annotates the node."
       sleep 10

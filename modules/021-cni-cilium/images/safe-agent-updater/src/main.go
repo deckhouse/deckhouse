@@ -97,6 +97,10 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "false")
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Infof("[SafeAgentUpdater] Finished and exit")
 }
 
