@@ -61,7 +61,8 @@
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
       {{- $_ := set $ctx "CosignLogin" $Root.CosignLogin }}
       {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
-      {{- $_ := set $ctx "ActionsIDToken" $Root.ActionsIDToken }}
+      {{- $_ := set $ctx "ActionsIDTokenRequestToken" $Root.ActionsIDTokenRequestToken }}
+      {{- $_ := set $ctx "ActionsIDTokenRequestURL" $Root.ActionsIDTokenRequestURL }}
 
       {{- $_ := set $ctx "ProjectName" (list $ctx.ModuleName $ctx.ImageName | join "/") }}
       {{- $_ := set $ctx "SVACE_ENABLED" $Root.SVACE_ENABLED }}
