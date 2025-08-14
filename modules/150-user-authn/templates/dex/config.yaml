@@ -23,7 +23,8 @@
     {{ if . }}
     passwordPolicy:
       id: {{ .id | quote }}
-      complexityLevel: {{ .complexityLevel | default "Fair" | quote }}
+      complexityLevel: {{ .complexityLevel | quote }}
+      passwordHistoryLimit: {{ .passwordHistoryLimit }}
       {{- if .rotation }}
       rotation:
         interval: {{ .rotation.interval | quote }}

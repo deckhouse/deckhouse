@@ -133,6 +133,14 @@ properties:
                         • One digit
                         • One special character (!@#$%^&* etc.)
                         • No more than 2 identical characters in a row
+      passwordHistoryLimit:
+        type: integer
+        minimum: 0
+        default: 5
+        description: |
+          Sets the limit for stored passwords previously used by the user.
+
+          Used to prevent the reuse of old passwords.
       rotation:
         type: object
         required: ["rotationInterval"]
