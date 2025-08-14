@@ -130,7 +130,7 @@
         color: #C4CAD4;
         border: 1px solid #C4CAD4;
         background-color: #fff;
-        background-image: url(../images/icons/reset_icon.svg);
+        background-image: url(/images/icons/reset_icon.svg);
         background-position: calc(100% - 50px) center;
         background-repeat: no-repeat;
         cursor: pointer;
@@ -152,13 +152,13 @@
         }
 
         &.active {
-            background-image: url(../images/icons/reset_icon-active.svg);
+            background-image: url(/images/icons/reset_icon-active.svg);
             border-color:#0064FF;
             color: #0064FF;
 
             &:hover {
                 border-color: #222a5e;
-                background-image: url(../images/icons/reset_icon.svg);
+                background-image: url(/images/icons/reset_icon.svg);
                 background-color: #f5f5fb;
                 color: #C4CAD4;
             }
