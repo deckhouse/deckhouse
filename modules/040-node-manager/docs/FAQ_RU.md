@@ -734,7 +734,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 {% endalert %}
 
 {% alert level="info" %}
-Используется в containerd v1, если Deckhouse не управляется модулем Registry (режим [`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если Deckhouse не управляется [модулем Registry](../registry).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
@@ -928,7 +928,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль Registry (например, в режиме [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через [модуль Registry](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
