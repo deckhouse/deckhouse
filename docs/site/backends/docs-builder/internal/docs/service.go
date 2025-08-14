@@ -66,12 +66,12 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 	}
 
 	svc.metrics.AddCollectorFunc(func(s metricsstorage.Storage) {
-		modules, err := svc.channelMappingEditor.get()
+		modulesCount, err := svc.channelMappingEditor.getModulesCount()
 		if err != nil {
-			svc.logger.Warn("can not read modules from channel mapping editor")
+			svc.logger.Warn("can not read modules count from channel mapping editor")
 		}
 
-		s.GaugeSet("docs_builder_cached_modules", float64(len(modules)), nil)
+		s.GaugeSet("docs_builder_cached_modules", float64(modulesCount), nil)
 	})
 
 	return svc
