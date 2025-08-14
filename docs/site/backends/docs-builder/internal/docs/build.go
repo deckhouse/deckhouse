@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
@@ -34,8 +35,8 @@ func (svc *Service) Build() error {
 	status := "ok"
 	defer func() {
 		dur := time.Since(start).Seconds()
-		svc.metrics.CounterAdd("docs_builder_build_total", 1, map[string]string{"status": status})
-		svc.metrics.HistogramObserve("docs_builder_build_duration_seconds", dur, map[string]string{"status": status}, nil)
+		svc.metrics.CounterAdd(metrics.DocsBuilderBuildTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderBuildDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
 	err := svc.buildHugo()

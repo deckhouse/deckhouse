@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
@@ -30,8 +32,8 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	status := "ok"
 	defer func() {
 		dur := time.Since(start).Seconds()
-		svc.metrics.CounterAdd("docs_builder_upload_total", 1, map[string]string{"status": status})
-		svc.metrics.HistogramObserve("docs_builder_upload_duration_seconds", dur, map[string]string{"status": status}, nil)
+		svc.metrics.CounterAdd(metrics.DocsBuilderUploadTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderUploadDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
 	err := svc.cleanModulesFiles(moduleName, channels)

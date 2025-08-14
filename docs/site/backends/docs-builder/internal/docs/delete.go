@@ -17,6 +17,8 @@ package docs
 import (
 	"fmt"
 	"time"
+
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 func (svc *Service) Delete(moduleName string, channels []string) error {
@@ -24,8 +26,8 @@ func (svc *Service) Delete(moduleName string, channels []string) error {
 	status := "ok"
 	defer func() {
 		dur := time.Since(start).Seconds()
-		svc.metrics.CounterAdd("docs_builder_delete_total", 1, map[string]string{"status": status})
-		svc.metrics.HistogramObserve("docs_builder_delete_duration_seconds", dur, map[string]string{"status": status}, nil)
+		svc.metrics.CounterAdd(metrics.DocsBuilderDeleteTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderDeleteDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
 	err := svc.cleanModulesFiles(moduleName, channels)

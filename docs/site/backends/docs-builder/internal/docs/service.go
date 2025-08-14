@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
@@ -46,13 +47,13 @@ type Service struct {
 	metrics *metricsstorage.MetricStorage
 }
 
-func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger, metrics *metricsstorage.MetricStorage) *Service {
+func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger, ms *metricsstorage.MetricStorage) *Service {
 	svc := &Service{
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
 		logger:               logger,
-		metrics:              metrics,
+		metrics:              ms,
 	}
 
 	if !highAvailability {
@@ -71,7 +72,7 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 			svc.logger.Warn("can not read modules count from channel mapping editor")
 		}
 
-		s.GaugeSet("docs_builder_cached_modules", float64(modulesCount), nil)
+		s.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
 	})
 
 	return svc

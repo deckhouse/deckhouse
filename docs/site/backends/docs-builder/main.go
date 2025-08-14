@@ -25,10 +25,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-  "github.com/flant/docs-builder/internal/docs"
+	"github.com/flant/docs-builder/internal/docs"
 	v1 "github.com/flant/docs-builder/internal/http/v1"
+	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/k8s"
-  
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -63,7 +64,7 @@ func main() {
 
 	mStorage := metricsstorage.NewMetricStorage("docs_builder")
 
-	if err := RegisterMetrics(mStorage); err != nil {
+	if err := metrics.RegisterMetrics(mStorage); err != nil {
 		logger.Fatal("failed to register metrics", log.Err(err))
 	}
 
