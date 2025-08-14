@@ -34,15 +34,10 @@ func (svc *Service) Build() error {
 	status := "ok"
 	defer func() {
 		dur := time.Since(start).Seconds()
-		if svc.metrics != nil {
-			svc.logger.Info("Recording build metrics", slog.String("status", status), slog.Float64("duration", dur))
-			svc.metrics.CounterAdd("docs_builder_build_total", 1, map[string]string{"status": status})
-			svc.metrics.HistogramObserve("docs_builder_build_duration_seconds", dur, map[string]string{"status": status}, nil)
-			if status == "ok" {
-				svc.updateCachedModulesGauge()
-			}
-		} else {
-			svc.logger.Warn("Metrics storage is nil")
+		svc.metrics.CounterAdd("docs_builder_build_total", 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve("docs_builder_build_duration_seconds", dur, map[string]string{"status": status}, nil)
+		if status == "ok" {
+			svc.updateCachedModulesGauge()
 		}
 	}()
 
@@ -50,6 +45,7 @@ func (svc *Service) Build() error {
 	if err != nil {
 		svc.isReady.Store(false)
 		status = "fail"
+
 		return fmt.Errorf("hugo build: %w", err)
 	}
 

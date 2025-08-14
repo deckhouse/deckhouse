@@ -65,6 +65,15 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		svc.logger.Error("mkdir all", log.Err(err))
 	}
 
+	svc.metrics.AddCollectorFunc(func(s metricsstorage.Storage) {
+		modules, err := svc.channelMappingEditor.get()
+		if err != nil {
+			svc.logger.Warn("can not read modules from channel mapping editor")
+		}
+
+		s.GaugeSet("docs_builder_cached_modules", float64(len(modules)), nil)
+	})
+
 	return svc
 }
 

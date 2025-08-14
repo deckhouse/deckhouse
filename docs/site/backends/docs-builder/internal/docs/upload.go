@@ -32,22 +32,17 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	status := "ok"
 	defer func() {
 		dur := time.Since(start).Seconds()
-		if svc.metrics != nil {
-			svc.logger.Info("Recording upload metrics", slog.String("status", status), slog.Float64("duration", dur))
-			svc.metrics.CounterAdd("docs_builder_upload_total", 1, map[string]string{"status": status})
-			svc.metrics.HistogramObserve("docs_builder_upload_duration_seconds", dur, map[string]string{"status": status}, nil)
-
-			if status == "ok" {
-				svc.updateCachedModulesGauge()
-			}
-		} else {
-			svc.logger.Warn("Metrics storage is nil")
+		svc.metrics.CounterAdd("docs_builder_upload_total", 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve("docs_builder_upload_duration_seconds", dur, map[string]string{"status": status}, nil)
+		if status == "ok" {
+			svc.updateCachedModulesGauge()
 		}
 	}()
 
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
 		status = "fail"
+
 		return fmt.Errorf("clean module files: %w", err)
 	}
 
@@ -195,11 +190,13 @@ func (svc *Service) updateCachedModulesGauge() {
 		svc.logger.Error("updateCachedModulesGauge", log.Err(err))
 		return
 	}
+
 	count := 0
 	for _, d := range dirs {
 		if d.IsDir() {
 			count++
 		}
 	}
+
 	svc.metrics.GaugeSet("docs_builder_cached_modules", float64(count), nil)
 }
