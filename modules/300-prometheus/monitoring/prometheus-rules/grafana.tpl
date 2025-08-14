@@ -145,7 +145,7 @@
       plk_labels_as_annotations: "pod"
       summary: Excessive Grafana restarts detected.
       description: |
-        Grafana has restarted {{ $value }} times in the last hour.
+        Grafana has restarted {{`{{ $value }}`}} times in the last hour.
 
         Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
       
