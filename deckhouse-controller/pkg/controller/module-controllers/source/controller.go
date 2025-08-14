@@ -383,6 +383,16 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// First, get only the digest to check if module has changed - this is much faster than downloading full metadata
 		digestFromRegistry, err := md.GetReleaseDigest(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
+			// Check if this is a release channel not found error
+			if downloader.IsReleaseChannelNotFoundError(err) {
+				r.logger.Debug("release channel not found, skipping module",
+					slog.String("name", moduleName), 
+					slog.String("release_channel", policy.Spec.ReleaseChannel),
+					log.Err(err))
+				// Don't add this module to available modules if release channel doesn't exist
+				continue
+			}
+			
 			r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
 			availableModule.PullError = err.Error()
 			pullErrorsExist = true
@@ -433,8 +443,26 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+				// Check if this is a release channel not found error
+				if downloader.IsReleaseChannelNotFoundError(err) {
+					r.logger.Debug("release channel not found during metadata download, skipping module",
+						slog.String("name", moduleName), 
+						slog.String("release_channel", policy.Spec.ReleaseChannel),
+						log.Err(err))
+					// Don't add this module to available modules if release channel doesn't exist
+					continue
+				}
+				
+				// Provide more specific error messages for registry errors
+				var errorMsg string
+				if downloader.IsVersionNotInRegistryError(err) {
+					errorMsg = fmt.Sprintf("version from release channel '%s' not found in registry", policy.Spec.ReleaseChannel)
+				} else {
+					errorMsg = err.Error()
+				}
+				
 				r.logger.Warn("failed to download module metadata", slog.String("name", moduleName), log.Err(err))
-				availableModule.PullError = err.Error()
+				availableModule.PullError = errorMsg
 				pullErrorsExist = true
 
 				metricLabels := map[string]string{
@@ -527,8 +555,14 @@ func (r *reconciler) handleInactiveModule(ctx context.Context, availableModule v
 	if err == nil {
 		availableModule.Version = meta.ModuleVersion
 		availableModule.Checksum = meta.Checksum
-	} else if availableModule.Version == "" {
-		availableModule.Version = "unknown"
+	} else {
+		// If release channel doesn't exist, don't try to fetch metadata for inactive modules
+		if downloader.IsReleaseChannelNotFoundError(err) {
+			return availableModule
+		}
+		if availableModule.Version == "" {
+			availableModule.Version = "unknown"
+		}
 	}
 
 	return availableModule

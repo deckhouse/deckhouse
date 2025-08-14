@@ -259,7 +259,7 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 
 	digest, err := regCli.Digest(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return "", fmt.Errorf("get release digest: %w", err)
+		return "", classifyReleaseChannelError(err, moduleName, releaseChannel, "get digest")
 	}
 
 	// Cache the result indefinitely
@@ -296,7 +296,7 @@ func (md *ModuleDownloader) fetchImageWithDigestCheck(ctx context.Context, modul
 			md.logger.Warn("Failed to get digest, falling back to full image fetch",
 				slog.String("module", moduleName),
 				slog.String("tag", imageTag),
-				log.Err(err))
+				log.Err(classifyRegistryError(err, moduleName, imageTag, "get digest")))
 		} else if currentDigest == expectedDigest {
 			md.logger.Debug("Digest matches expected, skipping image fetch",
 				slog.String("module", moduleName),
@@ -306,7 +306,11 @@ func (md *ModuleDownloader) fetchImageWithDigestCheck(ctx context.Context, modul
 	}
 
 	// Fetch full image
-	return regCli.Image(ctx, imageTag)
+	img, err := regCli.Image(ctx, imageTag)
+	if err != nil {
+		return nil, classifyRegistryError(err, moduleName, imageTag, "get image")
+	}
+	return img, nil
 }
 
 func (md *ModuleDownloader) getImageDigest(moduleName, moduleVersion string) (string, error) {
@@ -317,7 +321,7 @@ func (md *ModuleDownloader) getImageDigest(moduleName, moduleVersion string) (st
 
 	digest, err := regCli.Digest(context.TODO(), moduleVersion)
 	if err != nil {
-		return "", fmt.Errorf("get image digest: %w", err)
+		return "", classifyRegistryError(err, moduleName, moduleVersion, "get digest")
 	}
 
 	return digest, nil
@@ -516,7 +520,7 @@ func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Cont
 		if err != nil {
 			md.logger.Warn("Failed to get release digest, proceeding with full fetch",
 				slog.String("tag", imageTag),
-				log.Err(err))
+				log.Err(classifyReleaseChannelError(err, "", imageTag, "get digest")))
 		} else if currentDigest == expectedDigest {
 			md.logger.Debug("Release digest unchanged, would use cached metadata if available",
 				slog.String("tag", imageTag),
@@ -529,7 +533,7 @@ func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Cont
 	// Fetch full image for metadata extraction
 	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
-		return nil, fmt.Errorf("fetch image error: %w", err)
+		return nil, classifyReleaseChannelError(err, "", imageTag, "get image")
 	}
 
 	// Verify digest consistency if we had a prior digest check
