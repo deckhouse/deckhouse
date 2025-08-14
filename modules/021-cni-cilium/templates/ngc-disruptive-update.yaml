@@ -22,7 +22,7 @@ spec:
     # See the License for the specific language governing permissions and
     # limitations under the License.
 
-    # cilium-agent image hash: b4d9368c39dd0870380cfc588eb1d1a97755171c7323dc2f95bdd379800e9636
+    # cilium-agent image hash: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
 
     function kubectl_exec() {
       kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
