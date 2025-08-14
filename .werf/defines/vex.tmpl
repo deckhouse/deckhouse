@@ -55,7 +55,7 @@ shell:
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key hashivault://cosign-key \
+      --key hashivault://dh-2025-aug-dev \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
