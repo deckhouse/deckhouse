@@ -52,7 +52,7 @@ spec:
       catalog: {{ $catalog | quote }}
     {{- end }}
     {{- if gt (len $metadata) 0 }}
-      additionalMetadata:
+      metadata:
       {{- range $key, $value := $metadata }}
       - key: {{ $key | quote }}
         value: {{ $value | quote }}
