@@ -1,18 +1,8 @@
-diff --git a/images/nginx/rootfs/build.sh b/images/nginx/rootfs/build.sh
-index e352be10c..c103029b7 100755
---- a/images/nginx/rootfs/build.sh
-+++ b/images/nginx/rootfs/build.sh
-@@ -14,6 +14,9 @@
- # See the License for the specific language governing permissions and
- # limitations under the License.
- 
-+SOURCE_REPO="${SOURCE_REPO}"
-+CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
-+
- set -o errexit
- set -o nounset
- set -o pipefail
-@@ -108,79 +111,10 @@ export OPENTELEMETRY_CPP_VERSION=v1.18.0
+diff --git i/images/nginx/rootfs/build.sh w/images/nginx/rootfs/build.sh
+index e352be1..a304023 100755
+--- i/images/nginx/rootfs/build.sh
++++ w/images/nginx/rootfs/build.sh
+@@ -108,79 +108,10 @@ export OPENTELEMETRY_CPP_VERSION=v1.18.0
  export OPENTELEMETRY_PROTO_VERSION=v1.5.0
  
  export BUILD_PATH=/tmp/build
@@ -93,7 +83,7 @@ index e352be10c..c103029b7 100755
  # apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
  
  mkdir -p /etc/nginx
-@@ -188,90 +122,7 @@ mkdir -p /etc/nginx
+@@ -188,90 +119,7 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
  
@@ -181,11 +171,11 @@ index e352be10c..c103029b7 100755
 -
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
-+git clone -b "controller-v1.12.1" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
++git clone -b "controller-v1.12.1" https://github.com/kubernetes/ingress-nginx-deps.git .
  
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -295,7 +146,7 @@ cd "$BUILD_PATH/opentelemetry-cpp"
+@@ -295,7 +143,7 @@ cd "$BUILD_PATH/opentelemetry-cpp"
  export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
  cmake -B build -G Ninja -Wno-dev \
          -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/" \
@@ -194,63 +184,7 @@ index e352be10c..c103029b7 100755
          -DBUILD_SHARED_LIBS=ON \
          -DBUILD_TESTING="OFF" \
          -DBUILD_W3CTRACECONTEXT_TEST="OFF" \
-@@ -318,15 +169,16 @@ git config --global --add core.compression -1
- 
- # Get Brotli source and deps
- cd "$BUILD_PATH"
--git clone --depth=100 https://github.com/google/ngx_brotli.git
-+git clone --depth=100 "${SOURCE_REPO}/google/ngx_brotli.git"
- cd ngx_brotli
- # https://github.com/google/ngx_brotli/issues/156
- git reset --hard 63ca02abdcf79c9e788d2eedcc388d2335902e52
- git submodule init
-+git submodule set-url deps/brotli "${SOURCE_REPO}/google/brotli.git"
- git submodule update
- 
- cd "$BUILD_PATH"
--git clone --depth=1 https://github.com/ssdeep-project/ssdeep
-+git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
- cd ssdeep/
- 
- ./bootstrap
-@@ -337,10 +189,17 @@ make install
- 
- # build modsecurity library
- cd "$BUILD_PATH"
--git clone -n https://github.com/SpiderLabs/ModSecurity
-+git clone -n "${SOURCE_REPO}/SpiderLabs/ModSecurity"
- cd ModSecurity/
- git checkout $MODSECURITY_LIB_VERSION
- git submodule init
-+git submodule set-url test/test-cases/secrules-language-tests "${SOURCE_REPO}/SpiderLabs/secrules-language-tests"
-+git submodule set-url others/libinjection "${SOURCE_REPO}/libinjection/libinjection.git"
-+git submodule set-url bindings/python "${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git"
-+git submodule set-url others/mbedtls "${SOURCE_REPO}/Mbed-TLS/mbedtls.git"
-+git submodule set-url others/mbedtls/framework "${SOURCE_REPO}/Mbed-TLS/mbedtls-framework"
-+git submodule set-url others/mbedtls/tf-psa-crypto "${SOURCE_REPO}/Mbed-TLS/TF-PSA-Crypto.git"
-+git submodule set-url others/mbedtls/tf-psa-crypto/framework "${SOURCE_REPO}/Mbed-TLS/mbedtls-framework"
- git submodule update
- 
- sh build.sh
-@@ -370,7 +229,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
- # Download owasp modsecurity crs
- cd /etc/nginx/
- 
--git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
-+git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
- mv coreruleset owasp-modsecurity-crs
- cd owasp-modsecurity-crs
- 
-@@ -528,7 +387,7 @@ make install
- export OPENTELEMETRY_CONTRIB_COMMIT=8933841f0a7f8737f61404cf0a64acf6b079c8a5
- cd "$BUILD_PATH"
- 
--git clone https://github.com/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
-+git clone "${SOURCE_REPO}/open-telemetry/opentelemetry-cpp-contrib.git" opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
- 
- cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
- git reset --hard ${OPENTELEMETRY_CONTRIB_COMMIT}
-@@ -537,7 +396,15 @@ export OTEL_TEMP_INSTALL=/tmp/otel
+@@ -537,7 +385,15 @@ export OTEL_TEMP_INSTALL=/tmp/otel
  mkdir -p ${OTEL_TEMP_INSTALL}
  
  cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx
@@ -266,7 +200,7 @@ index e352be10c..c103029b7 100755
  cd build
  cmake -DCMAKE_BUILD_TYPE=Release \
          -G Ninja \
-@@ -618,7 +485,7 @@ writeDirs=( \
+@@ -618,7 +474,7 @@ writeDirs=( \
    /var/log/nginx \
  );
  

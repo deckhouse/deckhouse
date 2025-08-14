@@ -26,14 +26,17 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   setup:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
   # pass env for build
@@ -125,6 +128,9 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -132,7 +138,7 @@ shell:
   - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   - apt-get install -y liblua5.1-devel --download-only
   setup:
-  - export SOURCE_REPO={{ $.SOURCE_REPO }}
+  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
   - rm -rf /src/etc
