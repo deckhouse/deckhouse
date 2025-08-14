@@ -17,9 +17,7 @@ limitations under the License.
 package validation
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -42,13 +40,7 @@ func sourceValidationHandler(cli client.Client) http.Handler {
 			return nil, fmt.Errorf("expect ModuleSource as unstructured, got %T", obj)
 		}
 
-		oldSource := new(v1alpha1.ModuleSource)
-		buf := bytes.NewBuffer(review.OldObjectRaw)
-		if err := json.NewDecoder(buf).Decode(oldSource); err != nil {
-			return nil, fmt.Errorf("parse old source: %w", err)
-		}
-
-		if !oldSource.IsDefault() && source.IsDefault() {
+		if source.IsDefault() {
 			sources := new(v1alpha1.ModuleSourceList)
 			if err := cli.List(context.Background(), sources); err != nil {
 				return nil, fmt.Errorf("list sources: %w", err)
