@@ -258,7 +258,7 @@ func (md *ModuleDownloader) GetReleaseDigest(ctx context.Context, moduleName, re
 
 	digest, err := regCli.Digest(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return "", classifyReleaseChannelError(err, moduleName, releaseChannel, "get digest")
+		return "", ClassifyReleaseChannelError(err, moduleName, releaseChannel, "get digest")
 	}
 
 	// Cache the result indefinitely
@@ -463,7 +463,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, strcase.ToKebab(releaseChannel))
+	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, strcase.ToKebab(releaseChannel), moduleName)
 	if err != nil {
 		return nil, fmt.Errorf("get image info: %w", err)
 	}
@@ -493,7 +493,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, moduleVersion)
+	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, moduleVersion, moduleName)
 	if err != nil {
 		return nil, fmt.Errorf("get image info: %w", err)
 	}
@@ -503,12 +503,12 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 
 // getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
 // return error if version.json not found in metadata
-func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
-	return md.getReleaseImageInfoWithOptimization(ctx, regCli, imageTag, "")
+func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag, moduleName string) (*ReleaseImageInfo, error) {
+	return md.getReleaseImageInfoWithOptimization(ctx, regCli, imageTag, "", moduleName)
 }
 
 // getReleaseImageInfoWithOptimization implements digest-first optimization for release image fetching
-func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Context, regCli cr.Client, imageTag, expectedDigest string) (*ReleaseImageInfo, error) {
+func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Context, regCli cr.Client, imageTag, expectedDigest, moduleName string) (*ReleaseImageInfo, error) {
 	// Optimization: Check digest first if expected digest is provided
 	if expectedDigest != "" {
 		md.logger.Debug("Checking release digest before full fetch",
@@ -519,7 +519,7 @@ func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Cont
 		if err != nil {
 			md.logger.Warn("Failed to get release digest, proceeding with full fetch",
 				slog.String("tag", imageTag),
-				log.Err(classifyReleaseChannelError(err, "", imageTag, "get digest")))
+				log.Err(ClassifyReleaseChannelError(err, moduleName, imageTag, "get digest")))
 		} else if currentDigest == expectedDigest {
 			md.logger.Debug("Release digest unchanged, would use cached metadata if available",
 				slog.String("tag", imageTag),
@@ -532,7 +532,7 @@ func (md *ModuleDownloader) getReleaseImageInfoWithOptimization(ctx context.Cont
 	// Fetch full image for metadata extraction
 	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
-		return nil, classifyReleaseChannelError(err, "", imageTag, "get image")
+		return nil, ClassifyReleaseChannelError(err, moduleName, imageTag, "get image")
 	}
 
 	// Verify digest consistency if we had a prior digest check

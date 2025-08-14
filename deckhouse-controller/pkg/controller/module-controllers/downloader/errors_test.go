@@ -38,7 +38,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "stable",
 			operation:      "get digest",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel 'stable' for module 'test-module' get digest: release channel not found",
+			expectMessage:  "release channel `stable` for module `test-module` get digest: release channel not found",
 		},
 		{
 			name:           "404 error",
@@ -47,7 +47,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "beta",
 			operation:      "get image",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel 'beta' for module 'test-module' get image: release channel not found",
+			expectMessage:  "release channel `beta` for module `test-module` get image: release channel not found",
 		},
 		{
 			name:           "NAME_UNKNOWN error",
@@ -56,7 +56,7 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "alpha",
 			operation:      "get digest",
 			expectType:     ErrReleaseChannelNotFound,
-			expectMessage:  "release channel 'alpha' for module 'test-module' get digest: release channel not found",
+			expectMessage:  "release channel `alpha` for module `test-module` get digest: release channel not found",
 		},
 		{
 			name:           "Other error",
@@ -65,13 +65,13 @@ func TestClassifyReleaseChannelError(t *testing.T) {
 			releaseChannel: "stable",
 			operation:      "get digest",
 			expectType:     nil, // Indicates we expect the original error to be wrapped
-			expectMessage:  "release channel 'stable' for module 'test-module' get digest: connection timeout",
+			expectMessage:  "release channel `stable` for module `test-module` get digest: connection timeout",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := classifyReleaseChannelError(tt.originalError, tt.moduleName, tt.releaseChannel, tt.operation)
+			result := ClassifyReleaseChannelError(tt.originalError, tt.moduleName, tt.releaseChannel, tt.operation)
 
 			if result.Error() != tt.expectMessage {
 				t.Errorf("Expected message %q, got %q", tt.expectMessage, result.Error())
@@ -111,7 +111,7 @@ func TestClassifyRegistryError(t *testing.T) {
 			version:       "v1.0.0",
 			operation:     "get image",
 			expectType:    ErrVersionNotInRegistry,
-			expectMessage: "registry error for module 'test-module' version 'v1.0.0' get image: version not found in registry",
+			expectMessage: "registry error for module `test-module` version `v1.0.0` get image: version not found in registry",
 		},
 		{
 			name:          "404 error",
@@ -120,7 +120,7 @@ func TestClassifyRegistryError(t *testing.T) {
 			version:       "v1.0.0",
 			operation:     "get digest",
 			expectType:    ErrVersionNotInRegistry,
-			expectMessage: "registry error for module 'test-module' version 'v1.0.0' get digest: version not found in registry",
+			expectMessage: "registry error for module `test-module` version `v1.0.0` get digest: version not found in registry",
 		},
 		{
 			name:          "Manifest error",
@@ -129,7 +129,7 @@ func TestClassifyRegistryError(t *testing.T) {
 			version:       "v1.0.0",
 			operation:     "load manifest",
 			expectType:    ErrManifestNotFound,
-			expectMessage: "registry error for module 'test-module' version 'v1.0.0' load manifest: manifest not found",
+			expectMessage: "registry error for module `test-module` version `v1.0.0` load manifest: manifest not found",
 		},
 		{
 			name:          "Other error",
@@ -138,7 +138,7 @@ func TestClassifyRegistryError(t *testing.T) {
 			version:       "v1.0.0",
 			operation:     "get digest",
 			expectType:    nil, // Indicates we expect the original error to be wrapped
-			expectMessage: "registry error for module 'test-module' version 'v1.0.0' get digest: network error",
+			expectMessage: "registry error for module `test-module` version `v1.0.0` get digest: network error",
 		},
 	}
 
@@ -175,7 +175,7 @@ func TestIsReleaseChannelNotFoundError(t *testing.T) {
 	}{
 		{
 			name:     "Release channel not found error",
-			err:      classifyReleaseChannelError(errors.New("not found"), "test", "stable", "get digest"),
+			err:      ClassifyReleaseChannelError(errors.New("not found"), "test", "stable", "get digest"),
 			expected: true,
 		},
 		{
@@ -218,7 +218,7 @@ func TestIsVersionNotInRegistryError(t *testing.T) {
 		},
 		{
 			name:     "Release channel error",
-			err:      classifyReleaseChannelError(errors.New("not found"), "test", "stable", "get digest"),
+			err:      ClassifyReleaseChannelError(errors.New("not found"), "test", "stable", "get digest"),
 			expected: false,
 		},
 		{

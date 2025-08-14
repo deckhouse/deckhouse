@@ -42,7 +42,7 @@ type ReleaseChannelError struct {
 }
 
 func (e *ReleaseChannelError) Error() string {
-	return fmt.Sprintf("release channel '%s' for module '%s' %s: %v",
+	return fmt.Sprintf("release channel `%s` for module `%s` %s: %v",
 		e.ReleaseChannel, e.ModuleName, e.Operation, e.Err)
 }
 
@@ -59,7 +59,7 @@ type RegistryError struct {
 }
 
 func (e *RegistryError) Error() string {
-	return fmt.Sprintf("registry error for module '%s' version '%s' %s: %v",
+	return fmt.Sprintf("registry error for module `%s` version `%s` %s: %v",
 		e.ModuleName, e.Version, e.Operation, e.Err)
 }
 
@@ -121,8 +121,8 @@ func classifyRegistryError(err error, moduleName, version, operation string) err
 	}
 }
 
-// classifyReleaseChannelError analyzes release channel errors and returns appropriate error types
-func classifyReleaseChannelError(err error, moduleName, releaseChannel, operation string) error {
+// ClassifyReleaseChannelError analyzes release channel errors and returns appropriate error types
+func ClassifyReleaseChannelError(err error, moduleName, releaseChannel, operation string) error {
 	if err == nil {
 		return nil
 	}
