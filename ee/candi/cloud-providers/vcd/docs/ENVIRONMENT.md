@@ -19,7 +19,7 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
 {% alert level="warning" %}
-Each VCD **must have an Edge Gateway** configured. If it is not available, the cluster bootstrap is not possible!
+Each VDC (Virtual Data Centers) must have an Edge Gateway configured, otherwise the cluster will not be bootstrapped.
 
 Also note that if two networks are distributed from the same Edge Gateway, the cluster bootstrap may also fail.
 {% endalert %}

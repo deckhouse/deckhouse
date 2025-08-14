@@ -19,7 +19,7 @@ description: "Подготовка окружения VMware Cloud Director дл
 Ресурсы Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter и Catalog должны быть предоставлены вашим поставщиком услуг VMware Cloud Director.
 
 {% alert level="warning" %}
-У каждой VCD **обязательно должен быть настроен Edge Gateway**. При его отсутствии бутстрап кластера невозможен!
+В каждом VDC (Virtual Data Centers) должен быть настроен Edge Gateway, иначе кластер не будет развернут.
 
 Также обратите внимание, что если с одного Edge Gateway раздаются две сети, бутстрап кластера также может завершиться ошибкой.
 {% endalert %}  
