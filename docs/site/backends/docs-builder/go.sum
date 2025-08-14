@@ -98,10 +98,10 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250813131952-213a2bccf904 h1:FimTruJqdke1rZNdLwaA6DNj2V35tGp1cK7ByfpJNKw=
-github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250813131952-213a2bccf904/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
-github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250813131952-213a2bccf904 h1:GQk0oGKUkEq/azQ/pGVrZgM+uy0JW0qiW/Ig2TBg2Dc=
-github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250813131952-213a2bccf904/go.mod h1:N61zCcP85xaeKv7EL6qsC6RSe1RF2ljbCzCwfID74sc=
+github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a h1:An8WnJ2wm42Rr6fbhNusLho6KNfPAYV+nuitsEHNXSE=
+github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250814114239-c4ff4e7470c2 h1:/gP5qRb+SjZUHjddSXDLAH4s4VdTn/avZEskNGNoh3Y=
+github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250814114239-c4ff4e7470c2/go.mod h1:uVM+foGwYlP7aehi41ZtA/iHIq6r0kzAjbBddwV94mo=
 github.com/disintegration/gift v1.2.1 h1:Y005a1X4Z7Uc+0gLpSAsKhWi4qLtsdEcMIbbdvdZ6pc=
 github.com/disintegration/gift v1.2.1/go.mod h1:Jh2i7f7Q2BM7Ezno3PhfezbR1xpUg9dUg3/RlKGr4HI=
 github.com/dlclark/regexp2 v1.11.5 h1:Q/sSnsKerHeCkc/jSTNq1oCm7KiVgUMZRDUoRu0JQZQ=
