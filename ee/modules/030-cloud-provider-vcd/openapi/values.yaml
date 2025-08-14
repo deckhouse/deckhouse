@@ -145,6 +145,9 @@ properties:
                     description: |
                       Custom string key-value pairs to be stored in the Metadata of every master node VM,
                       useful for organizing and categorizing your virtualization inventory.
+
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
+                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
           nodeGroups:
@@ -270,6 +273,9 @@ properties:
                     description: |
                       Custom string key-value pairs to be stored in the Metadata of every node VM,
                       useful for organizing and categorizing your virtualization inventory.
+
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
+                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
           bastion:
@@ -337,6 +343,9 @@ properties:
                     description: |
                       Custom string key-value pairs to be stored in the Metadata of the bastion,
                       useful for organizing and categorizing your virtualization inventory.
+
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
+                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
           sshPublicKey:
@@ -494,7 +503,9 @@ properties:
           metadata:
             type: object
             description: |
-              Custom metadta entries to be stored in the cluster object such as: virtual machines, disks, network, virtual application.
+              Custom metadata entries to be stored in cluster objects such as virtual machines, disks, networks, and virtual applications.
+
+              > **Caution!** Changing the metadata will cause the recreation of CloudEphemeral nodes.
             additionalProperties:
               type: string
       capcdControllerManagerWebhookCert:
