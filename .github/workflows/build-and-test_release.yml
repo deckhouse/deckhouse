@@ -278,7 +278,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -295,9 +294,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -445,7 +444,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -652,7 +651,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -669,9 +667,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -819,7 +817,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1026,7 +1024,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1043,9 +1040,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1193,7 +1190,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1388,7 +1385,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1405,9 +1401,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1555,7 +1551,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1750,7 +1746,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1767,9 +1762,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -1917,7 +1912,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -2112,7 +2107,6 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -2129,9 +2123,9 @@ jobs:
           method: jwt
           jwtGithubAudience: github-access-aud
           secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-      # </template: import_secrets>
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
 
+      # </template: import_secrets>  
       # <template: checkout_full_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
@@ -2279,7 +2273,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
