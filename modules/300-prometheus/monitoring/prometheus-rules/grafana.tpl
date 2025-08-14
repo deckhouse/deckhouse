@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
 - name: d8.grafana.availability
   rules:
   - alert: D8GrafanaPodIsNotReady
@@ -173,3 +174,4 @@
         **This method is no longer supported**.
 
         Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
+{{- end }}
