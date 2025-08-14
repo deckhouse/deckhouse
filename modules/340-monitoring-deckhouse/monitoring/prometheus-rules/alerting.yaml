@@ -139,7 +139,7 @@
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:
@@ -269,7 +269,7 @@
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, requirementsNotMet) (d8_module_release_info{requirementsNotMet="true"})) by (name, moduleName)
+    expr: sum by (name, moduleName) (d8_module_release_info{requirementsNotMet="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:
