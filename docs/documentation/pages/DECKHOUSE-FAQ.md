@@ -1232,14 +1232,15 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 Deckhouse automatically checks cluster nodes for compliance with the conditions for migration to containerd v2:
 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
-* The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+* The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
 
-If a node does not meet one of the requirements, Deckhouse labels the node with `node.deckhouse.io/containerd-v2-unsupported` and prevents changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for that group of nodes. Nodes that do not meet the migration conditions can be viewed with the command: 
+If a node does not meet one of the requirements, Deckhouse labels the node with `node.deckhouse.io/containerd-v2-unsupported` or with `node.deckhouse.io/containerd-config` if a custom containerd configuration is present. When these labels are present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for that group of nodes will be unavailable. Nodes that do not meet the migration conditions can be viewed with the command:
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
+kubectl get node -l node.deckhouse.io/containerd-config
 ```
 
-Additionally, a user can verify if a specific node meets the requirements using the following commands:
+Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
 ```shell
 uname -r | cut -d- -f1
 stat -f -c %T /sys/fs/cgroup
@@ -1254,4 +1255,4 @@ You can migrate to containerd v2 in one of the following ways:
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
-Migrating to containerd v2 clears the `/var/lib/containerd` folder. For containerd, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.
+Migrating to containerd v2 clears the `/var/lib/containerd` directory, so all used images will be downloaded again.
