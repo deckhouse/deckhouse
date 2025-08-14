@@ -32,7 +32,7 @@ import (
 )
 
 func sourceValidationHandler(cli client.Client) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, review *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+	vf := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		source, ok := obj.(*v1alpha1.ModuleSource)
 		if !ok {
 			log.Debug("unexpected type", log.Type("expected", v1alpha1.ModuleSource{}), log.Type("got", obj))
