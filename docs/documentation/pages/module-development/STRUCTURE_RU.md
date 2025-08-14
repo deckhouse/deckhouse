@@ -525,6 +525,10 @@ dependencies:
 
 - `namespace` — *Строка.* Пространство имён, где будут развернуты компоненты модуля.
 - `subsystems` — *Массив строк.* Список подсистем, к которым относится модуль.
+- `accessibility` — *Объект.* Настройки доступности модуля.
+  - `editions` — *Объект.* Настройки работы модуля в редакциях Deckhouse.
+    - `available` — *Булевый.* Определяет доступность модуля в редакции Deckhouse.
+    - `enabledInBundles` — *Массив строк.* Список наборов модулей (bundles), в которых модуль должен быть включен по умолчанию.
 - `descriptions` — *Объект.* Произвольное текстовое описание назначения модуля.
   - `en` — *Строка.* Текстовое описание на английском языке.
   - `ru` — *Строка.* Текстовое описание на русском языке.
@@ -560,6 +564,12 @@ exclusiveGroup: "group"
 subsystems:
   - test
   - test1
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
 descriptions:
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."

@@ -9,10 +9,6 @@ build:
       keepEssentialWerfLabels: true
       removeLabels:
         - /.*/
-gitWorktree:
-  forceShallowClone: true
-cleanup:
-  disableGitHistoryBasedPolicy: {{ env "WERF_DISABLE_META_TAGS" "false" }}
 ---
 {{- $_ := set . "DistroPackagesProxy" (env "DISTRO_PACKAGES_PROXY" "") }}
 {{- $_ := set . "CargoProxy" (env "CARGO_PROXY" "false") }}

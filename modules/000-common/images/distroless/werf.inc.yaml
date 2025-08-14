@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /relocate
@@ -11,7 +11,7 @@ imageSpec:
     user: "64535:64535"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 final: false
 shell:
   beforeInstall:

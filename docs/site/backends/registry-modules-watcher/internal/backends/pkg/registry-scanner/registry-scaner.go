@@ -79,6 +79,7 @@ func (s *registryscanner) SubscribeOnUpdate(updateHandler func([]backends.Docume
 }
 
 func (s *registryscanner) Subscribe(ctx context.Context, scanInterval time.Duration) {
+	// synchronous processing - wait for ready
 	s.processRegistries(ctx)
 	ticker := time.NewTicker(scanInterval)
 

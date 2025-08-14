@@ -244,8 +244,8 @@ func (s *Session) String() string {
 		builder.WriteString(s.host)
 	}
 
-	if s.Port != "" {
-		builder.WriteString(fmt.Sprintf(":%s", s.Port))
+	if s.Port != "" && s.Port != "22" {
+		builder.WriteString(fmt.Sprintf(" -p %s", s.Port))
 	}
 
 	return builder.String()

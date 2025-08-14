@@ -5,9 +5,13 @@ description: ""
 
 ## How to prepare containerd v1?
 
+{% alert level="info" %}
+
 When switching to the `Direct` mode, the containerd v1 service will be restarted.  
 The authorization configuration will be switched to Mirror Auth (this configuration is used by default in `Containerd V2`).  
 After switching back to `Unmanaged`, the updated authorization configuration will remain unchanged.
+
+{% endalert %}
 
 Example directory structure for Mirror Auth configuration:
 

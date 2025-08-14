@@ -1,0 +1,39 @@
+@use "components/common/_variables.scss";
+
+.oss {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-row-gap: 60px;
+    grid-column-gap: 45px;
+
+    &__item {
+        border-radius: 10px;
+        background: #FFFFFF;
+        box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        &-logo {
+            height: 60px;
+            margin-bottom: variables.$spacing-s;
+
+            img {
+                height: 60px;
+            }
+        }
+
+        &-title {
+            margin-bottom: variables.$spacing-s;
+            font-size: variables.$font-size-h2;
+            font-weight: variables.$font-weight-bold;
+        }
+
+        &-license {
+            font-size: variables.$font-size-tiny;
+            opacity: 0.5;
+            margin-top: variables.$spacing-s;
+        }
+    }
+}

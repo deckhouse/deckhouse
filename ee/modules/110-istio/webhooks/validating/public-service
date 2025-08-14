@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+
+# Copyright 2025 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+source /shell_lib.sh
+
+function __config__(){
+  cat <<EOF
+configVersion: v1
+kubernetesValidating:
+- name: d8-istio.public-services.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["v1"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["services"]
+    scope:       "Namespaced"
+EOF
+}
+
+function __main__() {
+  publicServiceLabel=$(context::jq -r '.review.request.object.metadata.labels["federation.istio.deckhouse.io/public-service"]')
+  # service isn't published
+  if [ "$publicServiceLabel" != "" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+    return 0
+  fi
+
+  serviceType=$(context::jq -r '.review.request.object.spec.type')
+  if [ "$serviceType" == "ExternalName" ]; then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"A service of ExternalName type cannot be published in federation."}
+EOF
+    return 0
+  fi
+
+  hasPorts=$(context::jq -r '.review.request.object.spec | has("ports")')
+  if [ "$hasPorts" != "true" ];then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"A service without the '.spec.ports' field cannot be published in federation."}
+EOF
+    return 0
+  fi
+
+  portWithoutName=$(context::jq -r '.review.request.object.spec.ports | map(select(has("name") | not)) | first | "\(.protocol) \(.port)"')
+  if [ "$portWithoutName" != "null null" ];then
+    cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"Port \"$portWithoutName\" of the service has no 'name' field set and cannot be published. Please, define the port name according to the following list of name suffixes supported by Istio: http, http2, https, tcp, tls, grpc, grpc-web."}
+EOF
+    return 0
+  fi
+
+  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":true}
+EOF
+  return 0
+}
+
+hook::run "$@"

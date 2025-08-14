@@ -6,6 +6,10 @@ description: "Configuring Deckhouse for DVP cloud provider operation"
 Deckhouse components interact with DVP resources through the DVP API.
 To configure this connection, create a new user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## Creating a user
 
 Create a new user in the DVP cluster using the following command:

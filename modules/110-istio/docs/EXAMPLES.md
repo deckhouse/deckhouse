@@ -207,7 +207,7 @@ spec:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role/frontend: ''
+    node-role.deckhouse.io/frontend: ""
   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io

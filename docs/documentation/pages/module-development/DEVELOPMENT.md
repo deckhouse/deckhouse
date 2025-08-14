@@ -112,6 +112,34 @@ To update the module without waiting for the next update cycle to begin, you can
 kubectl annotate mpo <name> renew=""
 ```
 
+## Module availability and enabling by default
+
+To assign Deckhouse editions the module should be available in,
+as well as module bundles where it should be enabled by default,
+use the `accessibility` field in `module.yaml`:
+
+```yaml
+name: test
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+```
+
+In this configuration, the module will be available in `ee` (DKP Enterprise Edition)  
+and can be enabled using the ModuleConfig object, and will be enabled by default in the `Default` bundle.
+
+{% alert level="warning" %}
+
+* To use this mechanism, the `module.yaml` file must be included in the release image.
+* A module can still be disabled using ModuleConfig.
+* A module will remain on the last available release if the next release disables it
+  (for example, by setting `available: false` in the corresponding edition).
+
+{% endalert %}
+
 ## Module auto-update logic
 
 ![Module auto-update logic](../../images/module-development/module_update_flow.svg)

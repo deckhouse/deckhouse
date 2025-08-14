@@ -624,27 +624,27 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster on master node:
 
-1. Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-   etcdctl version
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   etcdutl version
    ```
 
-   The result must be a correct output of `etcdctl version` command without errors.
+   The result must be a correct output of `etcdutl version` command without errors.
 
-   Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
+   Alternatively, you can download [etcdutl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
    You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
 1. Stop the etcd.
@@ -662,7 +662,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Clean the etcd directory.
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
 1. Put the etcd backup to `~/etcd-backup.snapshot` file.
@@ -670,8 +670,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Restore the etcd database.
 
    ```shell
-   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
 1. Run etcd. The process may take some time.
@@ -679,6 +678,19 @@ Follow these steps to restore a single-master cluster on master node:
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   To verify that etcd is running, use the command:
+
+   ```shell
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Output example:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
 
 1. Restart the master node.
