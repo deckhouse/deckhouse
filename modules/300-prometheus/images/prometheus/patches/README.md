@@ -17,3 +17,7 @@ Exports gauge metric with the count of successfully sent alerts.
 ### 003-fix-cve.patch
 
 Update dependencies
+
+### 004-hardfix_bug_with_dropped_unknown_samples.patch
+
+Add loading chunk snapshots in remote-write to solve problem with unknown series's samples drop.
