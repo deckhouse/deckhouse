@@ -209,7 +209,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
-  - cp -R /usr/lib64 /chroot/usr/lib64
+  - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - |
@@ -219,6 +219,7 @@ shell:
       /chroot/usr/local/nginx
       /chroot/usr/share
       /chroot/usr/bin
+      /chroot/usr/lib/locale
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
       /chroot/etc/ingress-controller/auth
@@ -320,6 +321,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
+  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -353,15 +355,17 @@ shell:
   - mknod -m 0666 /chroot/dev/ptmx c 5 2
   - mknod -m 0666 /chroot/dev/zero c 1 5
   - mknod -m 0666 /chroot/dev/tty c 5 0
-  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
+  - echo -e "/lib\n/lib64\n/usr/local/lib\n/usr/local/lib64\n/usr/lib64\n/etc/nginx/modules" > /etc/ld.so.conf.d/local.conf
   - ldconfig
 # Create ld.so.cache inside chroot
   - cp -a /etc/ld.so.conf* /chroot/etc/ && ldconfig -r /chroot
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
-# remove owasp-modsecurity-crs/util bash scripts cve
+# remove owasp-modsecurity-crs/util because of bash scripts cve
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+# takes ~1GB
+  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /
