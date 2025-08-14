@@ -158,7 +158,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+          bash ./.github/scripts/send-report.sh
       # </template: send_fail_report>
 
   build_fe:
@@ -1444,7 +1444,7 @@ jobs:
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          ACTIONS_ID_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
@@ -1559,14 +1559,6 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
-            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1675,7 +1667,7 @@ jobs:
       - name: Check dev registry credentials
         id: check_dev_registry
         env:
-          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
@@ -1926,14 +1918,6 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
-            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -2524,7 +2508,7 @@ jobs:
         run: |
           if [[ -n $HOST ]]; then
             echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
           fi
       - name: Login to dev registry
         uses: docker/login-action@v2.1.0
@@ -2804,9 +2788,9 @@ jobs:
         uses: docker/login-action@v2.1.0
         if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
         with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
 
