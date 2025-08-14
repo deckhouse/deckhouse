@@ -34,10 +34,6 @@ git:
     - '**/*'
 import:
 - image: tools/erofs-utils
-  add: /usr/lib/libc.so
-  to: /ld-musl-x86_64.so.1
-  before: setup
-- image: tools/erofs-utils
   add: /
   includePaths:
   - usr/bin/*.erofs
