@@ -92,6 +92,64 @@ properties:
             A CA for accessing the API:
             * If the parameter is not set, Kubernetes CA is used.
             * We recommend using a self-signed certificate (and specify it as masterCA) if an HTTP proxy (that terminates HTTPS traffic) is used for exposing.
+  passwordPolicy:
+    type: object
+    default: null
+    required: ["id"]
+    properties:
+      id:
+        type: string
+        default: "default"
+        description: |
+          Unique policy ID. Currently not used in module logic. Future plans include 
+          the ability to assign different policies to different user groups.
+      complexityLevel:
+        type: string
+        default: "Fair"
+        description: |
+          Sets password complexity requirements
+          Possible values:
+            - None:      No restrictions. Password can be any length starting from 1 character.
+            - Low:       Minimum 8 characters.
+            - Fair:      (Default) Minimum 8 characters, including:
+                        • One uppercase letter
+                        • One lowercase letter
+                        • One digit
+            - Good:      Minimum 8 characters, including:
+                        • One uppercase letter
+                        • One lowercase letter
+                        • One digit
+                        • One special character (!@#$%^&* etc.)
+            - Excellent: Minimum 8 characters, including:
+                        • One uppercase letter
+                        • One lowercase letter
+                        • One digit
+                        • One special character (!@#$%^&* etc.)
+                        • No more than 2 identical characters in a row
+      rotation:
+        type: object
+        required: ["rotationInterval"]
+        description: |
+          Configures password rotation settings
+        properties:
+          interval:
+            type: string
+            description: |
+              Time interval after which the password must be changed
+      lockout:
+        type: object
+        required: ["maxAttempts", "lockDuration"]
+        description: |
+          Configures temporary lockout settings after consecutive failed login attempts
+        properties:
+          maxAttempts:
+            type: integer
+            description: |
+              Threshold of failed login attempts after which the user gets temporarily locked out
+          lockDuration:
+            type: string
+            description: |
+              Duration of temporary lockout
   staticUsers2FA:
     type: object
     default: {}

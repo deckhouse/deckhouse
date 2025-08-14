@@ -19,6 +19,22 @@
     extra:
       # TODO(nabokihms): make it configurable
       lang: en
+  {{- with $context.Values.userAuthn.passwordPolicy }}
+    {{ if . }}
+    passwordPolicy:
+      id: {{ .id | quote }}
+      complexityLevel: {{ .complexityLevel | default "Fair" | quote }}
+      {{- if .rotation }}
+      rotation:
+        interval: {{ .rotation.interval | quote }}
+      {{- end }}
+      {{- if .lockout }}
+      lockout:
+        maxAttempts: {{ .lockout.maxAttempts }}
+        lockDuration: {{ .lockout.lockDuration | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
   {{- with $context.Values.userAuthn.staticUsers2FA }}
     {{ if .enabled }}
   twoFactorAuthn:
