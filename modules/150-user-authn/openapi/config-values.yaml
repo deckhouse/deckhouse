@@ -101,8 +101,9 @@ properties:
         type: string
         default: "default"
         description: |
-          Unique policy ID. Currently not used in module logic. Future plans include 
-          the ability to assign different policies to different user groups.
+          Unique policy ID.
+          
+          Reserved for future use.
       complexityLevel:
         type: string
         default: "Fair"
