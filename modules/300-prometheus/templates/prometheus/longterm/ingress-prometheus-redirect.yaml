@@ -1,8 +1,8 @@
-{{- if and (not .Values.prometheus.internal.grafana.enabled) (has "console" .Values.global.enabledModules) .Values.global.modules.publicDomainTemplate }}
+{{- if and (not .Values.prometheus.internal.grafana.enabled) (has "observability" .Values.global.enabledModules) .Values.global.modules.publicDomainTemplate }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: prometheus-redirect
+  name: prometheus-longterm-redirect
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "grafana-v10")) | nindent 2 }}
   annotations:
@@ -19,7 +19,7 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
     http:
       paths:
-      - path: /prometheus(/|$)(.*)
+      - path: /prometheus/longterm(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
