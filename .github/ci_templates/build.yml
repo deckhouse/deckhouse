@@ -35,7 +35,6 @@ steps:
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
-  {!{ tmpl.Exec "import_secrets" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
@@ -68,7 +67,7 @@ steps:
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-      COSIGN_ACCESS_TOKEN: ${{ steps.secrets.outputs.access_token }}
+      ACTIONS_ID_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}

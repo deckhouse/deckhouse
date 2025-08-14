@@ -14,7 +14,7 @@ config:
       - DECKHOUSE_PRIVATE_REPO
       - COSIGN_LOGIN
       - COSIGN_PASSWORD
-      - COSIGN_ACCESS_TOKEN
+      - ACTIONS_ID_TOKEN
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
@@ -28,7 +28,7 @@ config:
       - DECKHOUSE_PRIVATE_REPO
       - COSIGN_LOGIN
       - COSIGN_PASSWORD
-      - COSIGN_ACCESS_TOKEN
+      - ACTIONS_ID_TOKEN
   stapel:
     mount:
       allowBuildDir: true

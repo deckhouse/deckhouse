@@ -91,7 +91,7 @@ build:
 # cosign  settings
 {{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
-{{- $_ := set . "CosignAccessToken" (env "COSIGN_ACCESS_TOKEN" "test") }}
+{{- $_ := set . "ActionsIDToken" (env "ACTIONS_ID_TOKEN" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
