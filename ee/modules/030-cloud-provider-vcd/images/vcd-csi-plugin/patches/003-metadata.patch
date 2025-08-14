@@ -64,7 +64,7 @@ index fccc62c..127a97f 100644
  		panic(fmt.Errorf("error while setting up driver: [%v]", err))
  	}
 diff --git a/pkg/csi/controller.go b/pkg/csi/controller.go
-index 39e9647..cc19d28 100644
+index 39e9647..9343a92 100644
 --- a/pkg/csi/controller.go
 +++ b/pkg/csi/controller.go
 @@ -55,12 +55,13 @@ type controllerServer struct {
@@ -84,34 +84,38 @@ index 39e9647..cc19d28 100644
  		},
  		VAppName: vAppName,
  	}
-@@ -138,6 +139,16 @@ func (cs *controllerServer) CreateVolume(ctx context.Context,
+@@ -138,6 +139,18 @@ func (cs *controllerServer) CreateVolume(ctx context.Context,
  	}
  	klog.Infof("Successfully created disk [%s] of size [%d]MB", diskName, sizeMB)
  
-+	for _, metadataEntry := range cs.DiskManager.MetadataConfig.Metadata {
-+		typedValue, err := vcdcsiclient.ConvertMetadataType(metadataEntry.Type)
-+		if err != nil {
-+			klog.Errorf("Failed to convert metadata type [%s] for disk [%s]: [%v]", metadataEntry.Type, diskName, err)
-+			continue
-+		}
-+		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(disk.HREF, metadataEntry.Key, metadataEntry.Value, typedValue, metadataEntry.UserAccess, metadataEntry.IsSystem)
++	for key := range cs.DiskManager.MetadataConfig.Metadata {
++		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(
++			disk.HREF,
++			key,
++			cs.DiskManager.MetadataConfig.Metadata[key],
++			types.MetadataStringValue,
++			types.MetadataReadWriteVisibility,
++			false,
++		)
 +	}
 +	klog.Infof("Successfully updated disk [%s] metadata", diskName)
 +
  	attributes := make(map[string]string)
  	attributes[BusTypeParameter] = BusTypesFromValues[disk.BusType]
  	attributes[BusSubTypeParameter] = disk.BusSubType
-@@ -475,6 +486,16 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context,
+@@ -475,6 +488,18 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context,
  	klog.Infof("Using [%s] expansion mode since volume Access Mode is [%s], attached VM count is [%d], and block mode is [%v]",
  		expansionMode.String(), volumeAccessMode.Mode.String(), len(attachedVMs), volumeCapability.GetBlock() != nil)
  
-+	for _, metadataEntry := range cs.DiskManager.MetadataConfig.Metadata {
-+		typedValue, err := vcdcsiclient.ConvertMetadataType(metadataEntry.Type)
-+		if err != nil {
-+			klog.Errorf("Failed to convert metadata type [%s] for disk [%s]: [%v]", metadataEntry.Type, diskName, err)
-+			continue
-+		}
-+		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(disk.HREF, metadataEntry.Key, metadataEntry.Value, typedValue, metadataEntry.UserAccess, metadataEntry.IsSystem)
++	for key := range cs.DiskManager.MetadataConfig.Metadata {
++		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(
++			disk.HREF,
++			key,
++			cs.DiskManager.MetadataConfig.Metadata[key],
++			types.MetadataStringValue,
++			types.MetadataReadWriteVisibility,
++			false,
++		)
 +	}
 +	klog.Infof("Successfully updated disk [%s] metadata", diskName)
 +
@@ -132,7 +136,7 @@ index e8eba3b..7105056 100644
  	if !upgradeRde {
  		klog.Infof("Skipping RDE CSI section upgrade as upgradeRde flag is false")
 diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
-index 292de7c..6ff1a06 100644
+index 292de7c..76e366c 100644
 --- a/pkg/vcdcsiclient/disks.go
 +++ b/pkg/vcdcsiclient/disks.go
 @@ -9,6 +9,8 @@ import (
@@ -144,7 +148,7 @@ index 292de7c..6ff1a06 100644
  	"net/http"
  	"strings"
  	"time"
-@@ -25,16 +27,64 @@ import (
+@@ -25,8 +27,13 @@ import (
  )
  
  type DiskManager struct {
@@ -156,27 +160,11 @@ index 292de7c..6ff1a06 100644
 +}
 +
 +type MetadataConfig struct {
-+	Metadata []*Metadata `yaml:"metadata"`
-+}
-+
-+type Metadata struct {
-+	Key        string `yaml:"key,omitempty"`
-+	Value      string `yaml:"value,omitempty"`
-+	Type       string `yaml:"type,omitempty"`
-+	UserAccess string `yaml:"userAccess,omitempty"`
-+	IsSystem   bool   `yaml:"isSystem,omitempty"`
++	Metadata map[string]string `yaml:"metadata"`
  }
  
-+const (
-+	VCDMetadataTypeString   string = "String"
-+	VCDMetadataTypeNumber   string = "Number"
-+	VCDMetadataTypeBoolean  string = "Boolean"
-+	VCDMetadataTypeDateTime string = "DateTime"
-+)
-+
  const (
- 	VCDBusTypeSCSI           = "6"
- 	VCDBusSubTypeVirtualSCSI = "VirtualSCSI"
+@@ -35,6 +42,19 @@ const (
  	NoRdePrefix              = `NO_RDE_`
  )
  
@@ -191,21 +179,6 @@ index 292de7c..6ff1a06 100644
 +		return nil, fmt.Errorf("unable to decode metadata yaml file: [%v]", err)
 +	}
 +	return config, nil
-+}
-+
-+func ConvertMetadataType(typedValue string) (string, error) {
-+	switch typedValue {
-+	case VCDMetadataTypeString:
-+		return types.MetadataStringValue, nil
-+	case VCDMetadataTypeNumber:
-+		return types.MetadataNumberValue, nil
-+	case VCDMetadataTypeBoolean:
-+		return types.MetadataBooleanValue, nil
-+	case VCDMetadataTypeDateTime:
-+		return types.MetadataDateTimeValue, nil
-+	default:
-+		return "", fmt.Errorf("unsupported type %v", typedValue)
-+	}
 +}
 +
  // Returns a Disk structure as JSON
