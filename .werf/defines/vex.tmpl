@@ -47,10 +47,11 @@ shell:
   - apk add --no-cache curl jq
   install:
   - |
-    VAULT_ADDR=https://seguro.flant.com \
-    TRANSIT_SECRET_ENGINE_PATH=dh-signer \
+    VAULT_ADDR="https://seguro.flant.com" \
+    TRANSIT_SECRET_ENGINE_PATH="dh-signer" \
+    AUTH_ROLE="dh-signer-dev_dh-signer-dev" \
     ACTIONS_ID_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN)" \
-    VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"dh-signer_dh-signer","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
+    VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
     cosign attest \
       --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
