@@ -328,8 +328,8 @@ properties:
         description: |
           The mode for accessing the container registry with Deckhouse images.
 
-          - `Unmanaged` — the default mode. In this mode, the `registry` module does not run an internal registry. Access to the registry is configured manually using the `change-registry` helper script. **Note:** Changing the registry in this mode will cause a full restart of all Deckhouse components.
-          - `Direct` — a mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart.
+          - `Unmanaged` — the default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. In clusters not supported by the `registry` module, configuration is done manually using the `change-registry` helper script. **Important:** changing the registry in Unmanaged mode will result in a full restart of all Deckhouse components.
+          - `Direct` — a mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important:** the first switch to `Direct` mode will result in a full restart of all Deckhouse components.
         enum: [Unmanaged, Direct]
         default: Unmanaged
         x-doc-default: Direct
