@@ -61,6 +61,7 @@
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** ignore ept_rvi_mode and hv_mode [#14882](https://github.com/deckhouse/deckhouse/pull/14882)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** fixed invalid annotation name for lb-algorithm in docs [#14947](https://github.com/deckhouse/deckhouse/pull/14947)
  - **[cni-cilium]** fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled. [#14766](https://github.com/deckhouse/deckhouse/pull/14766)
  - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
@@ -76,6 +77,7 @@
  - **[deckhouse-controller]** Prevented module configuration errors from blocking the entire Deckhouse queue. [#13730](https://github.com/deckhouse/deckhouse/pull/13730)
  - **[dhctl]** Fix false-positive staticinstance ip duplication preflight checks fails. [#14163](https://github.com/deckhouse/deckhouse/pull/14163)
  - **[dhctl]** Added local registry configuration check to installation process. [#13645](https://github.com/deckhouse/deckhouse/pull/13645)
+ - **[docs]** Fix D8KubernetesStaleTokensDetected alert description. [#14913](https://github.com/deckhouse/deckhouse/pull/14913)
  - **[docs]** Correction of KeyCloak documentation in d8-user-authn [#14755](https://github.com/deckhouse/deckhouse/pull/14755)
     Users will know how to configure KeyCloak and dexProvider to get user rights in dashboard and console.
  - **[extended-monitoring]** Fixed CVEs vulnerabilities x509-certificate-exporter. [#13804](https://github.com/deckhouse/deckhouse/pull/13804)
