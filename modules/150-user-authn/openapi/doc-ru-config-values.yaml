@@ -139,3 +139,91 @@ properties:
           * `FromIngressSecret` — извлечь CA или сам сертификат из Secret'а, который используется в Ingress-ресурсе. Если вы используете самоподписанные сертификаты в Ingress-ресурсах — это ваш вариант.
       dexCustomCA:
         description: 'CA, который будет использован в случае, если `dexCAMode` установлен в `Custom`.'
+  resources:
+    description: 'Настройки лимитов и запросов ресурсов для компонентов user-authn.'
+    properties:
+      dex:
+        description: 'Настройки ресурсов для Dex OIDC провайдера.'
+        properties:
+          requests:
+            description: 'Запросы ресурсов для контейнера Dex.'
+            properties:
+              cpu:
+                description: 'Запрос CPU для контейнера Dex.'
+              memory:
+                description: 'Запрос памяти для контейнера Dex.'
+          limits:
+            description: 'Лимиты ресурсов для контейнера Dex.'
+            properties:
+              cpu:
+                description: 'Лимит CPU для контейнера Dex.'
+              memory:
+                description: 'Лимит памяти для контейнера Dex.'
+      kubeconfigGenerator:
+        description: 'Настройки ресурсов для генератора kubeconfig.'
+        properties:
+          requests:
+            description: 'Запросы ресурсов для контейнера генератора kubeconfig.'
+            properties:
+              cpu:
+                description: 'Запрос CPU для контейнера генератора kubeconfig.'
+              memory:
+                description: 'Запрос памяти для контейнера генератора kubeconfig.'
+          limits:
+            description: 'Лимиты ресурсов для контейнера генератора kubeconfig.'
+            properties:
+              cpu:
+                description: 'Лимит CPU для контейнера генератора kubeconfig.'
+              memory:
+                description: 'Лимит памяти для контейнера генератора kubeconfig.'
+      basicAuthProxy:
+        description: 'Настройки ресурсов для basic auth прокси.'
+        properties:
+          requests:
+            description: 'Запросы ресурсов для контейнера basic auth прокси.'
+            properties:
+              cpu:
+                description: 'Запрос CPU для контейнера basic auth прокси.'
+              memory:
+                description: 'Запрос памяти для контейнера basic auth прокси.'
+          limits:
+            description: 'Лимиты ресурсов для контейнера basic auth прокси.'
+            properties:
+              cpu:
+                description: 'Лимит CPU для контейнера basic auth прокси.'
+              memory:
+                description: 'Лимит памяти для контейнера basic auth прокси.'
+      dexAuthenticator:
+        description: 'Настройки ресурсов для Dex authenticator.'
+        properties:
+          requests:
+            description: 'Запросы ресурсов для контейнера Dex authenticator.'
+            properties:
+              cpu:
+                description: 'Запрос CPU для контейнера Dex authenticator.'
+              memory:
+                description: 'Запрос памяти для контейнера Dex authenticator.'
+          limits:
+            description: 'Лимиты ресурсов для контейнера Dex authenticator.'
+            properties:
+              cpu:
+                description: 'Лимит CPU для контейнера Dex authenticator.'
+              memory:
+                description: 'Лимит памяти для контейнера Dex authenticator.'
+      redis:
+        description: 'Настройки ресурсов для контейнера Redis (используется Dex authenticator).'
+        properties:
+          requests:
+            description: 'Запросы ресурсов для контейнера Redis.'
+            properties:
+              cpu:
+                description: 'Запрос CPU для контейнера Redis.'
+              memory:
+                description: 'Запрос памяти для контейнера Redis.'
+          limits:
+            description: 'Лимиты ресурсов для контейнера Redis.'
+            properties:
+              cpu:
+                description: 'Лимит CPU для контейнера Redis.'
+              memory:
+                description: 'Лимит памяти для контейнера Redis.'
