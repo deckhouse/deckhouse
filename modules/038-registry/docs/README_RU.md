@@ -15,7 +15,7 @@ description: ""
 - `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется напрямую к внешнему registry.
   Существует 2 вида режима `Unmanaged`:
   - Конфигурируемый - режим, управляемый с помощью модуля registry. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
-  - Неконфиругируемый (deprecated) - режим используемый по-умолчанию. Параметры конфигурации задаются [при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развернутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry) с помощью `helper change registry` (deprecated).
+  - Неконфигурируемый (deprecated) - режим используемый по-умолчанию. Параметры конфигурации задаются [при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развернутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry) с помощью `helper change registry` (deprecated).
 
 {% alert level="info" %}
 Для работы в режиме `Direct` и `Unmanaged` (конфигурируемый) необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration)

@@ -70,7 +70,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
   metadata:
     name: containerd-additional-config-auth.sh
   spec:
-    # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
+    # The step can be arbitrary, as restarting the containerd service is not required
     weight: 0
     bundles:
       - '*'
@@ -171,7 +171,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
   metadata:
     name: containerd-additional-config-auth.sh
   spec:
-    # Шаг должен выполниться до '032_configure_containerd.sh'
+    # To add a file before the '032_configure_containerd.sh' step
     weight: 0
     bundles:
       - '*'
@@ -307,7 +307,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
   metadata:
     name: containerd-additional-config-auth.sh
   spec:
-    # Для добавления файла перед шагом '032_configure_containerd.sh'
+    # To add a file before the '032_configure_containerd.sh' step
     weight: 31
     bundles:
       - '*'
