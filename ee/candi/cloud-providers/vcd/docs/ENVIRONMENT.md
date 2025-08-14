@@ -158,11 +158,11 @@ This instruction is applicable only for the `Standard` deployment layout.
 
    The first two rules are used for incoming traffic, while the third rule is used for SSH access to the control plane host (without this rule the installation will not be possible).
 
-1. To allow virtual machines to access the internet, configure SNAT rules following the example:
+1. To allow virtual machines to access the Internet, configure SNAT rules following the example:
 
    ![Configuring SNAT rules on the edge gateway, step 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
 
-   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the internet.
+   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the Internet.
 
 ### Configuring a firewall
 
