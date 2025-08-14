@@ -18,6 +18,10 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 
 The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
+{% alert level="warning" %}
+Each VDC (Virtual Data Center) must have an Edge Gateway configured, and the cluster network must be connected to it.
+{% endalert %}
+
 Network (internal network) can be configured either by your VMware Cloud Director service provider or manually by you. If you choose the `WithNAT` placement scheme, the network will be created automatically. The following section describes how to configure the internal network manually.
 
 ### User permissions
@@ -152,11 +156,11 @@ This instruction is applicable only for the `Standard` deployment layout.
 
    The first two rules are used for incoming traffic, while the third rule is used for SSH access to the control plane host (without this rule the installation will not be possible).
 
-1. To allow virtual machines to access the internet, configure SNAT rules following the example:
+1. To allow virtual machines to access the Internet, configure SNAT rules following the example:
 
    ![Configuring SNAT rules on the edge gateway, step 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
 
-   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the internet.
+   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the Internet.
 
 ### Configuring a firewall
 
