@@ -1,0 +1,64 @@
+@use "components/common/_variables.scss";
+
+.list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    &_checked {
+        line-height: 1.5;
+        &::after {
+            content: '';
+            flex: auto;
+        }
+        a {
+            color: variables.$color-alt;
+            &:hover {
+                text-decoration: none;
+            }
+        }
+        & > li {
+            margin-bottom: variables.$spacing-s;
+            position: relative;
+            &::before {
+                content: '';
+                width: 15px;
+                height: 15px;
+                position: absolute;
+                left: -25px;
+                top: 3px;
+                background: url('../images/icons/check.svg');
+                background-size: contain;
+                background-repeat: no-repeat;
+            }
+        }
+    }
+    &_default {
+        li {
+            position: relative;
+            margin-bottom: variables.$spacing-m;
+            font-weight: variables.$font-weight-semibold;
+            &:before {
+                content: '';
+                position: absolute;
+                left: -20px;
+                top: 4px;
+                width: 5px;
+                height: 5px;
+                border: 2px solid #2A5EFF;
+                transform: rotate(-45deg);
+            }
+        }
+    }
+    &_spaced li {
+        margin-bottom: variables.$spacing-l;
+    }
+    &_big li {
+        font-size: variables.$font-size-h3;
+        font-weight: variables.$font-weight-regular;
+        line-height: 1.5;
+        &:before {
+            left: -20px;
+            top: 14px;
+        }
+    }
+}
