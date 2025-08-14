@@ -540,8 +540,9 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 		}
 
 		// Setup mock for GetReleaseDigest call - it calls Digest method
+		// Due to digest-first optimization, multiple digest calls may be made
 		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.
-			DigestMock.Return("sha256:abc123", nil).
+			DigestMock.Optional().Return("sha256:abc123", nil).
 			ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
