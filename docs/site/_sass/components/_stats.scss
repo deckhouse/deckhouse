@@ -1,0 +1,83 @@
+@use "components/common/_variables.scss";
+
+.stats {
+    padding: 150px 0;
+    &__content {
+        box-sizing: border-box;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+    &__info {
+        width: 400px;
+    }
+    &__title {
+        margin: 0 0 variables.$spacing-l 0;
+    }
+    &__text {
+        line-height: 1.5;
+        a {
+            text-decoration: underline;
+            &:hover {
+                text-decoration: none;
+            }
+        }
+    }
+    &__data {
+        margin-left: auto;
+        margin-top: 100px;
+        &-row {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: flex-end;
+            &:not(:last-child) {
+                border-bottom: 2px solid;
+                border-color: inherit;
+                padding-bottom: 25px;
+                margin-bottom: 25px;
+            }
+        }
+        &-item {
+            text-align: right;
+            &:not(:last-child) {
+                margin-right: 75px;
+            }
+            &-num {
+                font-size: 100px;
+                font-weight: variables.$font-weight-bold;
+                line-height: 1;
+            }
+            &-title {
+                font-weight: variables.$font-weight-semibold;
+                margin-bottom: 5px;
+            }
+            &-subtitle {
+                opacity: 0.6;
+                font-size: variables.$font-size-small;
+            }
+        }
+    }
+    &_inverse {
+        color: variables.$color-inverse;
+        background: variables.$color-main;
+        border-color: variables.$color-inverse;
+        a {
+            color: variables.$color-inverse
+        }
+    }
+
+    &_default {
+        color: variables.$color-main;
+        border-color: variables.$color-alt;
+        a {
+            color: variables.$color-alt;
+        }
+    }
+
+    &_default &__data {
+        color: variables.$color-alt;
+    }
+}
