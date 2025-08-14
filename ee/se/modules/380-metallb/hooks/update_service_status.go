@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyServiceFilterForStatusUpdater,
 		},
 	},
-}, dependency.WithExternalDependencies(handleL2LBServices))
+}, handleL2LBServices)
 
 func applyServiceFilterForStatusUpdater(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var service v1.Service
@@ -80,7 +80,7 @@ func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func handleL2LBServices(input *go_hook.HookInput, dc dependency.Container) error {
+func handleL2LBServices(input *go_hook.HookInput) error {
 	namespacedServicesWithIPs := getNamespacedNameOfServicesWithIPs(input.NewSnapshots.Get("l2lb_services"))
 	for namespacedName, ips := range namespacedServicesWithIPs {
 		IPsForStatus := make([]map[string]string, 0, len(ips))
