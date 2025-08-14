@@ -36,6 +36,12 @@ metadata:
     module: parca
     status: superseded
   name: parca-1.26.2
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: foxtrot-suitable
+    uid: ""
   resourceVersion: "1003"
 spec:
   moduleName: parca
