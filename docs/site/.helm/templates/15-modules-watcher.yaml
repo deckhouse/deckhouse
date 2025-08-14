@@ -65,38 +65,6 @@ spec:
                   fieldPath: metadata.namespace
 ---
 {{- if (pluck $.Values.web.env .Values.observability.enable | first | default .Values.observability.enable._default) }}
-{{- if (pluck $.Values.web.env .Values.observability.podMonitor.enable | first | default .Values.observability.podMonitor.enable._default) }}
-apiVersion: monitoring.coreos.com/v1
-kind: PodMonitor
-metadata:
-  name: {{ tpl (pluck $.Values.web.env .Values.observability.podMonitor.nameTemplate | first | default .Values.observability.podMonitor.nameTemplate._default) $ }}
-  namespace: d8-monitoring
-  labels:
-    app: registry-modules-watcher
-    prometheus: main
-spec:
-  jobLabel: app
-  podMetricsEndpoints:
-  - port: http-metrics
-    scheme: http
-    tlsConfig:
-      insecureSkipVerify: true
-    bearerTokenSecret:
-      name: "prometheus-token"
-      key: "token"
-    honorLabels: true
-    relabelings:
-    - targetLabel: tier
-      replacement: cluster
-    - targetLabel: job
-      replacement: "registry-modules-watcher"
-  selector:
-    matchLabels:
-      app: registry-modules-watcher
-  namespaceSelector:
-    matchNames:
-      - {{ .Release.Namespace }}
-{{- else }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -118,7 +86,6 @@ spec:
     port: 9090
     protocol: TCP
     targetPort: 9090
-{{- end }}
 {{- end }}
 ---
 apiVersion: v1

@@ -18,7 +18,7 @@ featureSections:
       - title:
           ru: Поддержка российских ОС на гипервизоре
         editions:
-          ce: not_supported
+          ce: supported
           ee: supported
       - title:
           ru: Режим обслуживания гипервизоров

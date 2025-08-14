@@ -171,6 +171,8 @@ resource "vsphere_virtual_machine" "node" {
       disk,
       vapp,
       firmware,
+      ept_rvi_mode,
+      hv_mode,
     ]
   }
   wait_for_guest_net_routable = false

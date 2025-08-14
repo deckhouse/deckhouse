@@ -1,0 +1,21 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: ignore ept_rvi_mode and hv_mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14882
+docs:
+  features:
+    - summary: Added descriptions of the problem of using Cilium and Elastic together
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14830
+      impact: low
+  fixes:
+    - summary: Fix mentions of ingress-nginx module in docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14844
+ingress-nginx:
+  fixes:
+    - summary: Fix mentions of ingress-nginx module in docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14844
+prometheus:
+  fixes:
+    - summary: Fix mentions of ingress-nginx module in docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14844
+
