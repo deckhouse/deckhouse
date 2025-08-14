@@ -156,6 +156,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
+  labels:
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
 spec:
   clusterIP: None
   selector:
@@ -165,6 +167,10 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 8080
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
 ---
 apiVersion: v1
 kind: Service
