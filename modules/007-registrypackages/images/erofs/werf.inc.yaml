@@ -44,6 +44,5 @@ shell:
   - apk add --no-cache patchelf
   - mkdir -p /opt/deckhouse
   setup:
-  - patchelf --set-interpreter /opt/deckhouse/lib/ld-musl-x86_64.so.1 --set-rpath /opt/deckhouse/lib:$ORIGIN /usr/bin/*.erofs
   - mv /usr/bin/*.erofs /
   - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /ld-musl-x86_64.so.1 /install /uninstall
