@@ -4,7 +4,7 @@
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ $crd.encodedID }}
+  name: {{ $crd.encodedID | quote }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
 id: {{ $crd.id }}
@@ -41,7 +41,7 @@ allowedGroups:
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
-  name: {{ $crd.legacyEncodedID }}
+  name: {{ $crd.legacyEncodedID | quote }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-client")) | nindent 2 }}
 id: {{ $crd.legacyID }}
