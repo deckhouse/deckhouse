@@ -266,9 +266,11 @@ spec:
       - name: tz-config
         hostPath:
           path: /etc/localtime
+          type: FileOrCreate
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
+          type: FileOrCreate
       - name: etc-chrony
         emptyDir: {}
       - name: var-run
