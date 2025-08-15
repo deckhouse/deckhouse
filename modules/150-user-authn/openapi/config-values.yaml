@@ -120,7 +120,7 @@ properties:
 
           - `None`: No character restrictions. Password can be any length starting from 1 character.
           - `Low`: Minimum length of 8 characters.
-          - `Fair` (Default): Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit.
+          - `Fair`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit.
           - `Good`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.).
           - `Excellent`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.). No more than 2 identical characters in a row.
       passwordHistoryLimit:
