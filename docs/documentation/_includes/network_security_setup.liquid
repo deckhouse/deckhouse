@@ -1,13 +1,30 @@
+{% assign lang = page.lang | default: 'en' %}
 {% for group in site.data.deckhouse-ports.groups %}
-## {{ group.description[page.lang] }}
+  <h2>{{ group.description[lang] }}</h2>
 
-{% if page.lang == 'ru' -%}
-| Порт | Протокол | Назначение |
-{%- else %}
-| Port | Protocol | Purpose |
-{%- endif %}
-|---|---|---|
-{%- for destination in group.destinations %}
-| {{ destination.ports }} | {{ destination.protocol }} | {{ destination.description[page.lang] }} |
-{%- endfor %}
+  <table class="deckhouse-ports" markdown="0">
+    <thead>
+      <tr>
+        {% if lang == 'ru' %}
+          <th>Порт</th>
+          <th>Протокол</th>
+          <th>Назначение</th>
+        {% else %}
+          <th>Port</th>
+          <th>Protocol</th>
+          <th>Purpose</th>
+        {% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for destination in group.destinations %}
+        <tr>
+          <td><code>{{ destination.ports }}</code></td>
+          <td>{{ destination.protocol }}</td>
+          <td class="desc">{{ destination.description[lang] | markdownify }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endfor %}
+

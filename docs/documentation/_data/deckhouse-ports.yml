@@ -367,21 +367,77 @@ groups:
     description:
       en: "`monitoring-ping` metrics"
       ru: "Метрики `monitoring-ping`"
-  - ports: "4295-4299"
+  - ports: "4295&#8209;4299"
     protocol: UDP
     description:
-      en: Ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters. The port used depends on the DKP version and, starting from 1.71, on [the DVP nesting level](release-notes.html#network).
-      ru: Порты, используемые Cilium для VXLAN-инкапсуляции межподового трафика в статичных кластерах. Используемый порт зависит от версии DKP и, начиная с 1.71, [от уровня вложенности DVP](release-notes.html#сеть).
-  - ports: "7000-7999"
+      en: |
+        <p>Ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters (cloud clusters are not covered in this description).
+        The port used depends on the DKP version and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):</p>
+        <ul>
+          <li>DKP ≤ 1.63 — <code>8472/UDP</code> is used;</li>
+          <li>DKP 1.64–1.70 — <code>4299/UDP</code> is used; if the <code>virtualization</code> module is enabled, the port changes to <code>4298/UDP</code>;</li>
+          <li>DKP ≥ 1.71 — <code>4298/UDP</code> is used; enabling the <code>virtualization</code> module does <b>not</b> change the port;</li>
+          <li>DKP inside DVP (nested clusters), starting from 1.71 — the port is assigned based on the nesting level:
+            <ul>
+              <li>Level 0 — base DVP deployed on a physical cluster: <code>4298/UDP</code></li>
+              <li>Level 1 — DVP deployed inside another DVP: <code>4297/UDP</code></li>
+              <li>Level 2 — DVP deployed inside a level 1 DVP: <code>4296/UDP</code></li>
+              <li>Level 3 — DVP deployed inside a level 2 DVP: <code>4295/UDP</code></li>
+            </ul>
+          </li>
+        </ul>
+        <p>How to check the current VXLAN port:</p>
+
+        ```bash
+        d8 k -n d8-cni-cilium get cm cilium-config -o yaml | grep tunnel
+        ```
+
+        <p>Example output:</p>
+        
+        ```console
+        routing-mode: tunnel
+        tunnel-port: "4298"
+        tunnel-protocol: vxlan
+        ```
+      ru: |
+        Порты, используемые Cilium для VXLAN-инкапсуляции межподового трафика в статичных кластерах (облачные кластеры в данном описании не рассматриваются).
+         Используемый порт зависит от версии DKP и, начиная с 1.71, от уровня вложенности DVP (DKP внутри DVP, см. подробности ниже):
+         <ul>
+        <li>DKP ≤ 1.63 — используется <code>8472/UDP</code>;</li>
+        <li>DKP 1.64–1.70 — используется <code>4299/UDP</code>, при включении модуля <code>virtualization</code> порт меняется на <code>4298/UDP</code>;</li>
+        <li>DKP ≥ 1.71 — используется <code>4298/UDP</code>, включение модуля <code>virtualization</code> порт не меняет;</li>
+        <li>DKP внутри DVP (вложенные кластеры), начиная с 1.71 — порт назначается по уровню вложенности:
+          <ul>
+            <li>уровень 0 — базовый DVP, развёрнутый на физическом кластере: <code>4298/UDP</code>;</li>
+            <li>уровень 1 — DVP, развёрнутый внутри другого DVP: <code>4297/UDP</code>;</li>
+            <li>уровень 2 — DVP, развёрнутый внутри DVP уровня 1: <code>4296/UDP</code>;</li>
+            <li>уровень 3 — DVP, развёрнутый внутри DVP уровня 2: <code>4295/UDP</code>.</li>
+          </ul>
+        </li>
+        </ul>
+        <p>Как проверить текущий порт VXLAN:</p>
+
+        ```bash
+        d8 k -n d8-cni-cilium get cm cilium-config -o yaml | grep tunnel
+        ```
+
+        <p>Пример вывода команды:</p>
+
+        ```console
+        routing-mode: tunnel
+        tunnel-port: "4298"
+        tunnel-protocol: vxlan
+        ```
+  - ports: "7000&#8209;7999"
     protocol: TCP
     description:
       en: "`sds-replicated-volume` DRBD replication"
       ru: "Репликация DRBD для `sds-replicated-volume`"
-  - ports: "8469, 8472"
+  - ports: "8469,&nbsp;8472"
     protocol: UDP
     description:
-      en: VXLAN for pod-to-pod traffic encapsulation
-      ru: VXLAN для инкапсуляции трафика между подами
+      en: VXLAN encapsulation (legacy, DKP ≤ 1.63)
+      ru: Инкапсуляция VXLAN (устаревшее, DKP ≤ 1.63)
 
 - group: ExternalToMaster
   description:

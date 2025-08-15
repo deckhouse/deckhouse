@@ -94,8 +94,6 @@
       tunnel-protocol: vxlan
       ```
 
-      The port can be explicitly set in the `d8-cni-cilium/cilium-config` ConfigMap (`tunnel-port` key) — the value will remain unchanged until it is modified again.
-
   - Removed:
     - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the virtualization module). Migration now occurs over the Pod network.
 
