@@ -61,6 +61,8 @@ Changes:
 Files:
 
 - pkg/vcdsdk/vapp.go
+- go.mod
+- go.sum
 
 Changes:
 
