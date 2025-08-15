@@ -103,12 +103,12 @@ image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
 from: dev-registry.deckhouse.io/base_images@sha256:279b83872c81e6a85e0bd38e5898021666d083f38dd30301f7fa9caea6d2f505
 final: false
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-musl
-from: dev-registry.deckhouse.io/base_images@sha256:aed20ec34738390c11ade2afcae8021928663f5ad1b7bbad0a1345452d7e8bdf
+image: {{ .ModuleName }}/{{ .ImageName }}-glibc
+from: dev-registry.deckhouse.io/base_images@sha256:34953edc7aa3720413d2cc76eece0c574d53048c8173d87e3056bebe170e10c1
 final: false
 shell:
   install:
-  - cd ./lib64/
+  - cd /lib64/
   - ln -s libc.so.6 libc.musl-x86_64.so.1
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -606,7 +606,7 @@ import:
   - libstdc++.so.6.0.29
   - libgcc_s.so.1
 ### temp
-- image: {{ .ModuleName }}/{{ .ImageName }}-musl
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc
   add: /lib64/libc.musl-x86_64.so.1
   to: /lib64/libc.musl-x86_64.so.1
   before: install
