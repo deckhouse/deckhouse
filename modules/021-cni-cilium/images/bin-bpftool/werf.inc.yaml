@@ -14,6 +14,26 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+from: dev-registry.deckhouse.io/base_images@sha256:49c343f5dd5282984fda0a3384614eff4f67303d7fc4e8289c363e2240a89a1d
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+from: dev-registry.deckhouse.io/base_images@sha256:93e3d8012069b464be495fcc7a9933b544dc516f4728b5bfde2d744c9d63b691
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+from: dev-registry.deckhouse.io/base_images@sha256:9cad3fd10342e557bdb3e15f5957e141900a978ba3ca7d46f71be2ed1644cab6
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:279b83872c81e6a85e0bd38e5898021666d083f38dd30301f7fa9caea6d2f505
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:1c8e801686c9c231e3495bfd84e6077ca387bf6b4f129550750713dec674db6e
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -34,6 +54,176 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  owner: root
+  group: root
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  owner: root
+  group: root
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  owner: root
+  group: root
+  before: install
+- image: tools/elfutils
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
+- image: libs/zlib
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libz.a
+  - libz.so
+  - libz.so.1
+  - libz.so.1.3.1
+- image: libs/libcap
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.71
+- image: libs/zstd
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libzstd.a
+  - libzstd.so
+  - libzstd.so.1
+  - libzstd.so.1.5.6
+- image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libxml2.a
+  - libxml2.la
+  - libxml2.so
+  - libxml2.so.2
+  - libxml2.so.2.13.4
+  - libxml2.so.2.13.8
+- image: libs/libffi
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libffi.a
+  - libffi.la
+  - libffi.so
+  - libffi.so.8
+  - libffi.so.8.1.4
+- image: libs/xz
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so
+  - liblzma.a
+  - liblzma.la
+  - liblzma.so
+  - liblzma.so.5
+  - liblzma.so.5.6.3
+  - liblzma.so.5.8.1
+### place for libedit
+- image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libedit.a
+  - libedit.la
+  - libedit.so
+  - libedit.so.0
+  - libedit.so.0.0.75
+  - libedit.so.3
+### place for ncurses
+- image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcurses.a
+  - libcurses.so
+  - libform.a
+  - libform.so
+  - libformw.a
+  - libformw_g.a
+  - libformw.so
+  - libformw.so.6
+  - libformw.so.6.5
+  - libmenu.a
+  - libmenu.so
+  - libmenuw.a
+  - libmenuw_g.a
+  - libmenuw.so
+  - libmenuw.so.6
+  - libmenuw.so.6.5
+  - libncurses++.a
+  - libncurses.a
+  - libncurses++.so
+  - libncurses.so
+  - libncurses++w.a
+  - libncursesw.a
+  - libncurses++w_g.a
+  - libncursesw_g.a
+  - libncurses++w.so
+  - libncursesw.so
+  - libncurses++w.so.6
+  - libncursesw.so.6
+  - libncurses++w.so.6.5
+  - libncursesw.so.6.5
+  - libpanel.a
+  - libpanel.so
+  - libpanelw.a
+  - libpanelw_g.a
+  - libpanelw.so
+  - libpanelw.so.6
+  - libpanelw.so.6.5
+  - libtic.a
+  - libtic.so
+  - libtinfo.a
+  - libtinfo.so
+  - libtinfo.so.6
+### place for llvm
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /lib64/libLLVM.so.19.1
+  to: /lib64/libLLVM.so.19.1
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  before: install
+### place for gcc
+- image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+  add: /usr/lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libstdc++.so.6
+  - libstdc++.so.6.0.29
+  - libgcc_s.so.1
+### temp
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  add: /lib64/libc.musl-x86_64.so.1
+  to: /lib64/libc.musl-x86_64.so.1
   before: install
 shell:
   install:
