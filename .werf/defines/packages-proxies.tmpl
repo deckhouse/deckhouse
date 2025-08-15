@@ -57,6 +57,7 @@
   {{- if $.DistroPackagesProxy }}
 - yarn config set npmRegistryServer http://{{ $.DistroPackagesProxy }}/repository/npmjs/
 - yarn config set unsafeHttpWhitelist {{ (split ":" $.DistroPackagesProxy)._0 }}
+- yarn config set registry http://{{ $.DistroPackagesProxy }}/repository/yarnpkg/
   {{- end }}
 {{- end }}
 
