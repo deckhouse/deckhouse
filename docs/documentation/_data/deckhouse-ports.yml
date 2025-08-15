@@ -370,8 +370,8 @@ groups:
   - ports: "4295-4299"
     protocol: UDP
     description:
-      en: VXLAN for pod-to-pod traffic encapsulation
-      ru: VXLAN для инкапсуляции трафика между подами
+      en: Ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters. The port used depends on the DKP version and, starting from 1.71, on [the DVP nesting level](release-notes.html#network).
+      ru: Порты, используемые Cilium для VXLAN-инкапсуляции межподового трафика в статичных кластерах. Используемый порт зависит от версии DKP и, начиная с 1.71, [от уровня вложенности DVP](release-notes.html#сеть).
   - ports: "7000-7999"
     protocol: TCP
     description:
