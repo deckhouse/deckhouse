@@ -92,18 +92,19 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		if err == nil {
 			digestChanged, _, err := regCli.DigestChanged(context.TODO(), imageTag, checksum)
 
-			if err != nil {
+			switch {
+			case err != nil:
 				md.logger.Warn("digest check failed for dev image, falling back to full download",
 					slog.String("module", moduleName),
 					slog.String("imageTag", imageTag),
 					slog.String("error", err.Error()))
-			} else if !digestChanged {
+			case !digestChanged:
 				md.logger.Debug("dev image digest unchanged, skipping download",
 					slog.String("module", moduleName),
 					slog.String("imageTag", imageTag),
 					slog.String("digest", checksum))
 				return "", nil, nil // No change, skip download
-			} else {
+			default:
 				md.logger.Debug("dev image digest changed, proceeding with download",
 					slog.String("module", moduleName),
 					slog.String("imageTag", imageTag))
@@ -161,18 +162,19 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 		if err == nil {
 			// Use registry client to check if digest changed
 			digestChanged, _, err := regCli.DigestChanged(ctx, releaseImageTag, lastKnownDigest[0])
-			if err != nil {
+			switch {
+			case err != nil:
 				md.logger.Warn("digest check failed, falling back to full download",
 					slog.String("module", moduleName),
 					slog.String("releaseChannel", releaseChannel),
 					slog.String("error", err.Error()))
-			} else if !digestChanged {
+			case !digestChanged:
 				md.logger.Debug("digest unchanged, skipping metadata download",
 					slog.String("module", moduleName),
 					slog.String("releaseChannel", releaseChannel),
 					slog.String("digest", lastKnownDigest[0]))
 				return nil, nil // No change, skip download
-			} else {
+			default:
 				md.logger.Debug("digest changed, proceeding with metadata download",
 					slog.String("module", moduleName),
 					slog.String("releaseChannel", releaseChannel))

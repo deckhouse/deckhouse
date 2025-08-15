@@ -1022,9 +1022,9 @@ func isVersionGreaterThanTarget(ver, target *semver.Version) bool {
 
 var globalModules = []string{"candi", "deckhouse-controller", "global"}
 
-func (f *DeckhouseReleaseFetcher) generateChangelogForEnabledModules(releaseMetadata *ReleaseMetadata) map[string]interface{} {
+func (f *DeckhouseReleaseFetcher) generateChangelogForEnabledModules(releaseMetadata *ReleaseMetadata) map[string]any {
 	enabledModules := f.moduleManager.GetEnabledModuleNames()
-	enabledModulesChangelog := make(map[string]interface{})
+	enabledModulesChangelog := make(map[string]any)
 
 	for _, enabledModule := range enabledModules {
 		if v, ok := releaseMetadata.Changelog[enabledModule]; ok {
@@ -1056,7 +1056,7 @@ func getLatestDeployedRelease(releases []*v1alpha1.DeckhouseRelease) (int, *v1al
 
 type ReleaseMetadata struct {
 	Version          string                  `json:"version"`
-	Changelog        map[string]interface{}  `json:"-"`
+	Changelog        map[string]any          `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 
 	// TODO: review fields below. it can be useless now
@@ -1097,22 +1097,22 @@ type canarySettings struct {
 }
 
 func buildSuspendAnnotation(suspend bool) []byte {
-	var annotationValue interface{}
+	var annotationValue any
 
 	if suspend {
 		annotationValue = "true"
 	}
 
-	p := map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
+	p := map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
 				v1alpha1.DeckhouseReleaseAnnotationSuspended: annotationValue,
 			},
 		},
 	}
 
 	if !suspend {
-		p["status"] = map[string]interface{}{
+		p["status"] = map[string]any{
 			"phase":   "Pending",
 			"message": "",
 		}
