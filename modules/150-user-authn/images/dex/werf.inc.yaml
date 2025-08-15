@@ -10,6 +10,8 @@ import:
     add: /web
     to: /web
     before: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
