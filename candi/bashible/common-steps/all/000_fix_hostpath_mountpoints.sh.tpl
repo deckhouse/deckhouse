@@ -12,5 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-[ -d /etc/localtime ] && rm -df /etc/localtime
-[ -d /etc/timezone ] && rm -df /etc/timezone
+# /etc/timezone and /etc/localtime should be files (or symbolic links), but specifying a hostPath without a type in the chrony module would create an empty directory. This behaviour was fixed in PR #14920.
+
+if [ -d /etc/localtime ]; then
+    rmdir /etc/localtime
+fi
+
+if [ -d /etc/timezone ]; then
+    rmdir /etc/timezone
+fi
