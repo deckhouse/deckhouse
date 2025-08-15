@@ -1,0 +1,13 @@
+cni-cilium:
+  fixes:
+    - summary: fixed conversion type bug in discovery cni exclusive hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14995
+deckhouse:
+  fixes:
+    - summary: Fix source creating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14989
+node-manager:
+  fixes:
+    - summary: capi rbac fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15012
+
