@@ -1532,16 +1532,31 @@ spec:
 
 ### Как изменить container runtime на containerd v2 на узлах?
 
-Миграцию на containerd v` можно выполнить одним из следующих способов:
+{% alert level="info" %}
+Deckhouse в автоматическом режиме проверяет узлы кластера на соответствие условиям миграции на containerd v2:
+
+* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
+* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-развернуть-кастомный-конфигурационный-файл-containerd)).
+
+При несоответсвии на одно из требований Deckhouse проставляет лейбл `node.deckhouse.io/containerd-v2-unsupported`, или же `node.deckhouse.io/containerd-config` при наличии кастомного конфига containerd. При наличии данных лейблов cмена параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для этой группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команды:
+```shell
+kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
+kubectl get node -l node.deckhouse.io/containerd-config
+```
+
+Так же администратор может проверить конкретный узел на соответветсвие требованиям с помощью команд:
+```shell
+uname -r | cut -d- -f1
+stat -f -c %T /sys/fs/cgroup
+systemctl --version | awk 'NR==1{print $2}'
+modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+ls -l /etc/containerd/conf.d
+```
+{% endalert %}
+
+Миграцию на containerd v2 можно выполнить одним из следующих способов:
 
 * Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 * Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
-{% alert level="info" %}
-Миграция на containerd v2 возможна при выполнении следующих условий:
-
-* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
-* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
-{% endalert %}
-
-При миграции на containerd v2 очищается папка `/var/lib/containerd`. Для containerd используется папка `/etc/containerd/conf.d`. Для containerd v2 используется `/etc/containerd/conf2.d`.
+При миграции на containerd v2 очищается папка `/var/lib/containerd`, поэтому все используемые образы будут скачаны заново.

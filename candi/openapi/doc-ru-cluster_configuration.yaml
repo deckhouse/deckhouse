@@ -64,7 +64,8 @@ apiVersions:
 
           - поддержка `CgroupsV2`;
           - ядро Linux версии `5.8` и новее;
-          - systemd версии `244` и новее.
+          - systemd версии `244` и новее;
+          - поддержка модуля ядра `erofs`.
       kubernetesVersion:
         description: |
           Версия Kubernetes (компонентов control plane кластера).
