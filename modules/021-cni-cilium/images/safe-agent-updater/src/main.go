@@ -30,10 +30,12 @@ import (
 )
 
 const (
-	ciliumNS             = "d8-cni-cilium"
-	generationAnnotation = "safe-agent-updater-daemonset-generation"
-	scanInterval         = 3 * time.Second
-	scanIterations       = 20
+	ciliumNS                     = "d8-cni-cilium"
+	generationAnnotation         = "safe-agent-updater-daemonset-generation"
+	migrationSucceededAnnotation = "network.deckhouse.io/cilium-1-17-migration-succeeded"
+	migrationRequiredAnnotation  = "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required"
+	scanInterval                 = 3 * time.Second
+	scanIterations               = 20
 )
 
 func main() {
@@ -57,19 +59,19 @@ func main() {
 	if !isCurrentAgentPodGenerationDesired {
 		if isMigrationSucceeded(kubeClient, nodeName) {
 			log.Infof("[SafeAgentUpdater] The 1.17-migration-disruptive-update already succeeded")
-			err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "false")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if isCurrentImageEqUpcoming(desiredAgentImageHash, currentAgentImageHash) {
 			log.Infof("[SafeAgentUpdater] The current agent image is the same as in the upcoming update, so the 1.17-migration-disruptive-update is no needed.")
-			err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "false")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if areSTSPodsPresentOnNode(kubeClient, nodeName) {
 			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, and sts pods are present on node, so the 1.17-migration-disruptive-update is needed")
-			err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "true")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "true")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -79,7 +81,7 @@ func main() {
 			}
 		} else {
 			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, but sts pods are not present on node, so the 1.17-migration-disruptive-update is no needed")
-			err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "false")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -92,12 +94,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-succeeded", "")
+		err = setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, "")
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	err = setAnnotationToNode(kubeClient, nodeName, "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required", "false")
+	err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -202,7 +204,7 @@ func isMigrationSucceeded(kubeClient kubernetes.Interface, nodeName string) bool
 		log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v.", nodeName, err)
 		return false
 	}
-	if val, ok := node.Annotations["network.deckhouse.io/cilium-1-17-migration-succeeded"]; ok && val == "" {
+	if val, ok := node.Annotations[migrationSucceededAnnotation]; ok && val == "" {
 		return true
 	}
 	return false
@@ -265,11 +267,11 @@ func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName strin
 			metav1.GetOptions{},
 		)
 		if err != nil {
-			return fmt.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
-		}
-		if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
+			log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
+		} else if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
 			return nil
 		}
+		log.Infof("[SafeAgentUpdater] Waiting until disruption update on node %s was approved", nodeName)
 		time.Sleep(10 * time.Second)
 	}
 }
