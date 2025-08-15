@@ -25,7 +25,7 @@ For details on granting permissions to users and groups, refer to [Role Model](.
 
 ## Create a user
 
-To create a static user, use the [User](../../reference/cr/user.html) resource.
+To create a static user, use the User resource.
 
 Before creating a user, generate a password hash using the following command:
 
@@ -52,7 +52,7 @@ spec:
 
 ## Create a user group
 
-To create a user group, use the [Group](../../reference/cr/group.html) resource.
+To create a user group, use the Group resource.
 
 Example of a manifest for creating a user group:
 
@@ -93,7 +93,7 @@ create a configuration file:
 
 ## Configuration of external providers
 
-To configure an external provider, use the [DexProvider](../../reference/cr/dexprovider.html) resource.
+To configure an external provider, use the DexProvider resource.
 
 ### GitHub
 
@@ -149,14 +149,16 @@ spec:
     - users
 ```
 
+> `groups` in the above example is a list of allowed GitLab group filters specified by their paths and not by names. The user token will contain a set intersection of GitLab groups and groups from this list. If the set is empty, the authorization will be considered unsuccessful. The user token will contain all GitLab groups if the parameter is not set.
+
 To create an application in GitLab, follow the steps below.
 
 For a self-managed GitLab instance:
 
 1. Go to **Admin area** → **Application** → **New application**.
-1. In the **Redirect URI (Callback URL)** field, enter the address:  
+2. In the **Redirect URI (Callback URL)** field, enter the address:  
    `https://dex.<modules.publicDomainTemplate>/callback`.
-1. Select the following scopes:
+3. Select the following scopes:
    - `read_user`
    - `openid`
 
@@ -211,7 +213,7 @@ Example of a manifest for configuring a provider to integrate with Bitbucket:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket

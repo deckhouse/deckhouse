@@ -1,8 +1,7 @@
 name: upmeter
-weight: 500
 stage: General Availability
 subsystems:
   - observability
 namespace: d8-upmeter
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"

@@ -1,5 +1,6 @@
 ---
 title: "Модуль operator-prometheus"
+description: "Установка и управление системой мониторинга в кластере Deckhouse Kubernetes Platform."
 ---
 
 Модуль устанавливает [prometheus operator](https://github.com/coreos/prometheus-operator), который позволяет создавать и автоматизированно управлять инсталляциями [Prometheus](https://prometheus.io/).

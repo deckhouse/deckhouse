@@ -68,3 +68,29 @@ func AskPassword(prompt string) ([]byte, error) {
 
 	return data, nil
 }
+
+func AskBastionPassword() (err error) {
+	if !app.AskBastionPass || app.SSHLegacyMode {
+		return nil
+	}
+
+	fd := int(os.Stdin.Fd())
+
+	var data []byte
+
+	if !terminal.IsTerminal(fd) {
+		data, err = io.ReadAll(os.Stdin)
+	} else {
+		log.InfoF("[bastion] Password: ")
+		data, err = terminal.ReadPassword(fd)
+	}
+
+	log.InfoLn()
+
+	if err != nil {
+		return fmt.Errorf("read password: %v", err)
+	}
+
+	app.SSHBastionPass = string(data)
+	return nil
+}

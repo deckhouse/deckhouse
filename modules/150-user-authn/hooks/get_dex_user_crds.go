@@ -28,6 +28,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -116,19 +119,24 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getDexUsers)
 
 func getDexUsers(input *go_hook.HookInput) error {
-	users := make([]DexUserInternalValues, 0, len(input.Snapshots["users"]))
+	users := make([]DexUserInternalValues, 0, len(input.NewSnapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
 
-	groupsSnap := input.Snapshots["groups"]
-	for _, obj := range groupsSnap {
-		group := obj.(*DexGroup)
-		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
+	groupsSnap := input.NewSnapshots.Get("groups")
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groupsSnap) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
+		}
+
+		err = makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
+		if err != nil {
+			return fmt.Errorf("error while make user groups map for group %s: %v", group.Spec.Name, err)
+		}
 	}
 
-	for _, user := range input.Snapshots["users"] {
-		dexUser, ok := user.(*DexUser)
-		if !ok {
-			return fmt.Errorf("cannot convert user to dex user")
+	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.NewSnapshots.Get("users")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		var groups []string
@@ -205,24 +213,31 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return user, nil
 }
 
-func findGroup(groups []go_hook.FilterResult, groupName string) *DexGroup {
-	for _, obj := range groups {
-		group := obj.(*DexGroup)
+func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groups) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
+		}
+
 		if group.Spec.Name == groupName {
-			return group
+			return &group, err
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumulatedGroupList []string, mapOfUsersToGroups map[string]map[string]bool) {
+func makeUserGroupsMap(groups []pkg.Snapshot, targetGroup string, accumulatedGroupList []string, mapOfUsersToGroups map[string]map[string]bool) error {
 	if len(groups) == 0 {
-		return
+		return nil
 	}
-	group := findGroup(groups, targetGroup)
+	group, err := findGroup(groups, targetGroup)
+	if err != nil {
+		return fmt.Errorf("error while find group %s: %v", targetGroup, err)
+	}
 	if group == nil {
-		return
+		return nil
 	}
+
 	skipAddGroup := false
 	for _, g := range accumulatedGroupList {
 		if g == targetGroup {
@@ -242,7 +257,11 @@ func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumu
 				mapOfUsersToGroups[member.Name][g] = true
 			}
 		case "Group":
-			makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
+			err := makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
+			if err != nil {
+				return fmt.Errorf("error while make user groups map for group %s: %v", member.Name, err)
+			}
 		}
 	}
+	return nil
 }

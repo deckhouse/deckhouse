@@ -1,3 +1,123 @@
+## Версия 1.71
+
+### Обратите внимание
+
+- Prometheus заменён на Deckhouse Prom++. Если вы хотите продолжать использовать Prometheus, **до обновления платформы** явно выключите модуль `prompp` командой `d8 platform module disable prompp`.
+
+- Добавлена поддержка Kubernetes 1.33 и прекращена поддержка Kubernetes 1.28. В будущих релизах DKP поддержка Kubernetes 1.29 будет прекращена. Версия Kubernetes используемая по умолчанию (параметр [`kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/installing/configuration.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`) изменена на [1.31](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/supported_versions.html#kubernetes).
+
+- Обновление кластера до версии Kubernetes 1.31 требует последовательного обновления всех узлов с остановкой нагрузки (drain узла). Управлять настройками применения обновлений узла, требующих остановки нагрузки, можно с помощью секции параметров [`disruptions`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions).
+
+- Вместо встроенных модулей `snapshot-controller` и `static-routing-manager` автоматически будут использоваться модули `snapshot-controlle`r` и `static-routing-manager`, загружаемые из внешнего источника (ModuleSource deckhouse).
+
+- Новая версия Cilium требует, чтобы ядро Linux на узлах было версии 5.8 или новее. Если на каком-либо из узлов кластера установлено ядро версии ниже 5.8, обновление Deckhouse Kubernetes Platform будет заблокировано. При обновлении поды `cilium` будут перезапущены .
+
+- Все компоненты DKP будут перезапущены в процессе обновления.
+
+### Основные изменения
+
+- Добавлена возможность включения обязательного использования двухфакторной аутентификации для статических пользователей. Управляется секцией параметров [`staticUsers2FA`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) модуля `user-authn`.
+
+- Добавлена поддержка GPU на узлах. Доступно управление тремя режимами разделения ресурсов GPU: `Exclusive` (без разделения), `TimeSlicing` (разделение по времени), `MIG` (разделение одного GPU на несколько экземпляров). Для управления режимом разделения ресурсов GPU используется секция параметров [spec.gpu](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) в NodeGroup. Использование GPU на узле возможно после установки NVIDIA Container Toolkit и драйвера GPU.
+
+- При включении модуля (`d8 platform module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
+
+- Улучшена обработка ошибок конфигурации модулей. Теперь ошибки при работе модуля не блокируют работу DKP, а отображаются в статусах объектов Module и ModuleRelease.
+
+- Улучшена поддержка виртуализации:
+  - Добавлен [провайдер интеграции с платформой виртуализации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cloud-provider-dvp/) (Deckhouse Virtualization Platform). Новый провайдер позволяет разворачивать кластеры DKP поверх DVP.
+  - В модуле `cni-cilium` добавлена поддержка вложенной виртуализации на узлах.
+
+- В модуле `node-manager` добавлены новые возможности для повышения надёжности и управляемости узлов:
+  - Добавлена возможность запретить перезапуск узла, если на нем все еще расположены критичные поды (отмеченные лейблом `pod.deckhouse.io/inhibit-node-shutdown`). Это может быть необходимо для обеспечения корректной работы со stateful-нагрузками (например, выполняющих долгую миграцию данных).
+  - Добавлена новая версия API `v1alpha2` ресурса [SSHCredential](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#sshcredentials), в которой параметр [`sudoPasswordEncoded`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#sshcredentials) позволяет задавать пароль `sudo` в формате Base64.
+  - Параметр [`capiEmergencyBrake`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/configuration.html#parameters-capiemergencybrake) позволяет отключить CAPI в экстренной ситуации, предотвращая потенциально разрушительные изменения. Поведение аналогично существующей настройке [`mcmEmergencyBrake`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/configuration.html#parameters-mcmemergencybrake).
+
+- Добавлена проверка подключения к хранилищу образов контейнеров DKP перед установкой.
+
+- Улучшен механизм ротации файлов при использовании кратковременного хранилища логов (модуль `loki`). Добавлен алерт [`LokiInsufficientDiskForRetention`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/alerts.html#loki-lokiinsufficientdiskforretention), предупреждающий о нехватке размера хранилища.
+
+- В документацию добавлена [справка](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/deckhouse-cli/reference/) по командам и параметрам Deckhouse CLI (утилита `d8`).
+
+- При использовании кодирования CEF при сборе логов из [Apache Kafka](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) или [из сокета](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef), появилась возможность настраивать служебные поля формата, такие как Device Product, Device Vendor и Device ID.
+
+- Поле [`passwordHash`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodeuser-v1-spec-passwordhash) в ресурсе NodeUser больше не является обязательным. Это позволяет создавать пользователей без пароля, например, в кластерах с внешними системами аутентификации (например, PAM, LDAP).
+
+- Добавлена поддержка CRI Containerd версии 2, использующей CgroupsV2. В новой версии применяется другой формат конфигурации, а также реализован механизм миграции между Containerd V1 и V2. Изменить тип используемого на узлах CRI можно с помощью параметра [`cri.type`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type), а управлять настройками - с помощью параметра [`cri.containerdV2`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-cri-containerdv2).
+
+### Безопасность
+
+- Возможность [проверки подписей контейнерных образов](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) стала доступна в редакции DKP SE+. Теперь эта возможность доступна в DKP SE+, EE и CSE.
+
+- Модули `log-shipper`, `deckhouse-controller` и `Istio` (версия 1.21) переведены на distroless-сборку. Это повышает безопасность и обеспечивает более прозрачный и контролируемый процесс сборки.
+
+- Добавлены правила аудита для регистрации взаимодействия с containerd. Отслеживается доступ к сокету `/run/containerd/containerd.sock`, изменение директорий `/etc/containerd`, `/var/lib/containerd` и файла `/opt/deckhouse/bin/containerd`.
+
+- Закрыты известные уязвимости в модулях `loki`, `extended-monitoring`, `operator-prometheus`, `prometheus`, `prometheus-metrics-adapter`, `user-authn`, `cloud-provider-zvirt`, `cloud-provider-dynamix`.
+
+### Сеть
+
+- Добавлена поддержка Istio версии 1.25.2. Для этой версии используется оператор Sail вместо Istio Operator, поддержка которого прекращена. Также добавлена поддержка Kiali версии 2.7, без поддержки Ambient Mesh. Версия Istio 1.19 считается устаревшей.
+
+- Добавлена возможность шифрования трафика между узлами и подами с использованием протокола WireGuard (параметр [`encryption.mode`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-encryption-mode)).
+
+- Исправлена логика определения готовности сервиса (ресурс [ServiceWithHealthcheck](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/service-with-healthchecks/cr.html#servicewithhealthchecks)). Ранее поды без IP-адреса (например, находящихся в состоянии `Pending`) могли ошибочно попадать в список балансировки.
+
+- Добавлена поддержка алгоритма балансировки нагрузки least-conn для сервисов. Алгоритм least-conn направляет трафик на бэкенд сервиса с наименьшим числом активных подключений, что повышает производительность приложений с большим количеством соединений (например, WebSocket). Чтобы управлять алгоритмом балансировки, необходимо включить параметр [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) в настройках модуля `cni-cilium`, и использовать на уровне сервиса аннотацию `service.cilium.io/lb-algorithm`, выбрав поддерживаемый алгоритм (random, maglev или least-conn).
+
+- В Cilium 1.17 исправлена ошибка в `cilium-operator`, из-за которой IP-адреса могли не переиспользоваться после удаления `CiliumEndpoint`. Это происходило из-за некорректной очистки фильтра приоритетов, что могло привести к исчерпанию IP-пула в больших кластерах.
+
+- Детализирован [список портов, используемых при сетевом взаимодействии](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
+  - Добавлено и обновлено:
+    - `4287/UDP` — порт WireGuard для шифрования трафика в CNI Cilium.
+    - Вместо портов `4298/UDP`, `4299/UDP` теперь используется диапазон `4295–4299/UDP` — для VXLAN-инкапсуляции трафика между подами.
+  - Удалено:
+    - `49152`, `49153/TCP` — порты использовались для live-миграции виртуальных машин (модуль `virtualization`). Теперь миграция работает через сеть подов.  
+
+### Обновление версий компонентов
+
+Обновлены следующие компоненты DKP:
+
+- `cilium`: 1.17.4
+- `golang.org/x/net`: v0.40.0
+- `etcd`: v3.6.1
+- `terraform-provider-azure`: 3.117.1
+- `Deckhouse CLI`: 0.13.2
+- `Falco`: 0.41.1
+- `falco-ctl`: 0.11.2
+- `gcpaudit`: v0.6.0
+- `Grafana`: 10.4.19
+- `Vertical pod autoscaler`: 1.4.1
+- `dhctl-kube-client`: v1.3.1
+- `cloud-provider-dynamix dynamix-common`: v0.5.0
+- `cloud-provider-dynamix capd-controller-manager`: v0.5.0
+- `cloud-provider-dynamix cloud-controller-manager`: v0.4.0
+- `cloud-provider-dynamix cloud-data-discoverer`: v0.6.0
+- `cloud-provider-huaweicloud huaweicloud-common`: v0.5.0
+- `cloud-provider-huaweicloud caphc-controller-manager`: v0.3.0
+- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.5.0
+- `registry-packages-containerdv2`: 2.1.3
+- `registry-packages-containerdv2-runc`: 1.3.0
+- `cilium`: 1.17.4
+- `cilium envoy-bazel`: 6.5.0
+- `cilium cni-plugins`: 1.7.1
+- `cilium protoc`: 30.2
+- `cilium grpc-go`: 1.5.1
+- `cilium protobuf-go`: 1.36.6
+- `cilium protoc-gen-go-json`: 1.5.0
+- `cilium gops`: 0.3.27
+- `cilium llvm`: 18.1.8
+- `cilium llvm-build-cache`: llvmorg-18.1.8-alt-p11-gcc11-v2-180225
+- `User-authn basic-auth-proxy go`: 1.23.0
+- `Prometheus alerts-reciever go`: 1.23.0
+- `Prometheus memcached_exporter`: 0.15.3
+- `Prometheus mimir`: 2.14.3
+- `Prometheus promxy`: 0.0.93
+- `Extended-monitoring k8s-image-availability-exporter`: 0.13.0
+- `Extended-monitoring x509-certificate-exporter`: 3.19.1
+- `Cilium-hubble hubble-ui`: 0.13.2
+- `Cilium-hubble hubble-ui-frontend-assets`: 0.13.2
+
 ## Версия 1.70
 
 ### Обратите внимание

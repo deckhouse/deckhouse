@@ -1,0 +1,49 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedingresses
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "The allowed ingress"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls that the ingress satisfies the following conditions: 
+        - Does not contain `*` in the hosts field 
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedIngresses
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls the allowed configuration for the Ingress. 
+          properties:
+            blockWildcardDomains:
+              type: boolean
+              description: "Block creation of ingress objects with `*` in DNS domains."
+
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        violation[{"msg": msg, "details": {}}] {
+          ingress_name := input.review.object.metadata.name
+          some i
+          host := input.review.object.spec.rules[i].host
+          contains_wildcard(host)          
+          msg := sprintf("Ingress '%s' contains a wildcard '*' in host '%s', which is not allowed.", [ingress_name, host])
+
+        }
+
+        contains_wildcard(host) {
+          host != ""
+          pattern := `^.*\*.*$`
+          is_wildcard := regex.match(pattern, host)
+          is_wildcard
+        }

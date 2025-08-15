@@ -7,5 +7,5 @@ conversions:
   - del(.modules.resourcesRequests.masterNode)
   - del(.modules.proxy)
 description:
-  ru: "Перенесите `storageClass` в `modules.storageClass`."
-  en: "Move `storageClass` to `modules.storageClass`."
+  ru: "Перенесите `storageClass` в `modules.storageClass`. Удалите параметры `modules.resourcesRequests.everyNode`, `modules.resourcesRequests.masterNode` и `modules.proxy`."
+  en: "Move `storageClass` to `modules.storageClass`. Remove `modules.resourcesRequests.everyNode`, `modules.resourcesRequests.masterNode` and `modules.proxy` parameters."

@@ -38,8 +38,8 @@ d8 k get modules sds-node-configurator -w
 В результате будет выведена информация о модуле `sds-node-configurator`:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator   900      Enabled   deckhouse           Ready
+NAME                    STAGE   SOURCE      PHASE       ENABLED   READY
+sds-node-configurator           deckhouse   Available   True      True
 ```
 
 ### Подключение DRBD
@@ -70,8 +70,8 @@ d8 k get modules sds-replicated-volume -w
 В результате будет выведена информация о модуле `sds-replicated-volume`:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE     STAGE   STATUS
-sds-replicated-volume   915      Enabled   Embedded           Ready
+NAME                    STAGE   SOURCE   PHASE       ENABLED   READY
+sds-replicated-volume                    Available   True      True
 ```
 
 Чтобы проверить, что в пространстве имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:

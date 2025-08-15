@@ -18,6 +18,8 @@
 {{- $python_discovery := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" }}
 {{- tpl ( $python_discovery ) . | nindent 0 }}
 
+check_python
+
 cat - <<EOF | $python_binary
 import ssl
 try:

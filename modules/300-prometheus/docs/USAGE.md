@@ -320,4 +320,64 @@ spec:
                 type: team
 ```
 
+## Example of sending alert by Email
+
+Create a Secret with base64 encoded password for email account as value of `password`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: am-mail-server-pass
+  namespace: d8-monitoring
+data:
+  password: BASE64_ENCODED_PASSWORD_HERE
+```
+
+Change values in `CustomAlertManager` manifest as you need and apply the resource:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: mail
+spec:
+  type: Internal
+  internal:
+    receivers:
+      - name: devnull
+      - name: mail
+        emailConfigs:
+          - to: oncall@example.com
+            from: prom@example.com
+            smarthost: mx.example.com:587
+            authIdentity: prom@example.com
+            authUsername: prom@example.com
+            authPassword:
+              key: password
+              name: am-mail-server-pass
+            # In case you have custom TLS certificates, you can put public part of your CA in a ConfigMap and deploy it in d8-monitoring namespace
+            # tlsConfig:
+            #   insecureSkipVerify: true
+            #   ca:
+            #     configMap:
+            #       key: ca.pem
+            #       name: alertmanager-mail-server-ca
+            sendResolved: true
+            requireTLS: true
+    route:
+      groupBy:
+        - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: devnull
+      repeatInterval: 24h
+      routes:
+        - matchers:
+          - matchType: =~
+            name: severity_level
+            value: "^[1-4]$"
+          receiver: mail
+```
+
 {% endraw %}

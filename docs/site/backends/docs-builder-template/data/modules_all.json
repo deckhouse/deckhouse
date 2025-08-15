@@ -42,6 +42,7 @@
       "se",
       "se-plus",
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
@@ -233,6 +234,7 @@
       "se",
       "se-plus",
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
     "external": "true",

@@ -1,5 +1,6 @@
 ---
 title: "The chrony module"
+description: "Time synchronization on all cluster nodes."
 ---
 
 Provides time synchronization on all cluster nodes using the [chrony](https://chrony.tuxfamily.org/) utility.

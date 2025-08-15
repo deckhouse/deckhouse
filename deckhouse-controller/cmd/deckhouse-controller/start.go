@@ -97,16 +97,25 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 
 		operator.StartAPIServer()
 
-		if os.Getenv("DECKHOUSE_HA") == "true" {
-			logger.Info("Deckhouse starts in HA mode")
-			runHAMode(ctx, operator, logger)
-			return nil
+		versionFile := "/deckhouse/version"
+
+		version := "unknown"
+		content, err := os.ReadFile(versionFile)
+		if err != nil {
+			logger.Warn("cannot get deckhouse version", log.Err(err))
+		} else {
+			version = strings.TrimSuffix(string(content), "\n")
 		}
 
-		if err := run(ctx, operator, logger); err != nil {
-			logger.Error("run", log.Err(err))
-			os.Exit(1)
+		if version == "dev" && os.Getenv("DECKHOUSE_HA") == "false" {
+			if err := run(ctx, operator, logger); err != nil {
+				logger.Error("run", log.Err(err))
+				os.Exit(1)
+			}
 		}
+
+		logger.Info("Deckhouse starts in HA mode")
+		runWithLeaderElection(ctx, operator, logger)
 
 		return nil
 	}
@@ -162,7 +171,7 @@ func entrypoint(logger *log.Logger) error {
 	return nil
 }
 
-func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
+func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) {
 	var identity string
 	podName := os.Getenv("DECKHOUSE_POD")
 	if len(podName) == 0 {
@@ -187,7 +196,7 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 	}
 
-	if err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
+	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: v1.ObjectMeta{
@@ -217,8 +226,9 @@ func runHAMode(ctx context.Context, operator *addonoperator.AddonOperator, logge
 			},
 		},
 		ReleaseOnCancel: true,
-	}); err != nil {
-		operator.Logger.Error("run", log.Err(err))
+	})
+	if err != nil {
+		operator.Logger.Error("run with leader elector", log.Err(err))
 	}
 
 	go func() {
@@ -259,6 +269,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
+
 	operatorStarted = true
 
 	debugserver.RegisterRoutes(operator.DebugServer)

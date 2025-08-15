@@ -1,46 +1,27 @@
-{!{ define "go_generate_template" }!}
-# <template: go_generate_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "werf_install_step"            . | strings.Indent 2 }!}
+{!{ define "check_changelog_template" }!}
+# <template: check_changelog_template>
+check_changelog:
+  name: Check changelog
+  runs-on: ubuntu-latest
+  steps:
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 4 }!}
+    - name: Check for tag
+      run: |
+        if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+          echo "Not a tag push, skipping changelog check."
+          exit 0
+        fi
 
-  - name: Set up Go 1.24
-    uses: actions/setup-go@v5
-    with:
-      go-version: '1.24'
-      cache: false
+        TAG_VERSION="${GITHUB_REF#refs/tags/}"
+        FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
 
-  - name: Run go generate
-    run: |
-      (make generate)
-      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-  - name: Check generated code
-    run: |
-      git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-# </template: go_generate_template>
-{!{ end }!}
-
-{!{ define "workflow_render_template" }!}
-# <template: workflow_render_template>
-runs-on: [self-hosted, regular]
-steps:
-  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
-
-  - name: Render GitHub workflow
-    run: |
-      cd .github
-      ./render-workflows.sh
-
-  - name: Check rendered files
-    run: |
-      git diff --exit-code
-# </template: workflow_render_template>
+        if [ ! -f "$FILE" ]; then
+          echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+          exit 1
+        else
+          echo "✅ Changelog file $FILE found."
+        fi
+# </template: check_changelog_template>
 {!{ end }!}
 
 {!{ define "build_template" }!}
@@ -54,6 +35,7 @@ steps:
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
+  {!{ tmpl.Exec "import_secrets" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
@@ -61,9 +43,26 @@ steps:
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
+  - name: Set up Go 1.24
+    uses: actions/setup-go@v5
+    with:
+      go-version: '1.24'
+      cache: false
+
+  - name: Run go generate
+    run: |
+      (make generate)
+      (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+  - name: Check generated code
+    run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
   - name: Build and push deckhouse images
     id: build
     env:
+{!{- if eq $buildType "dev" }!}
+      WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
+{!{- end }!}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -162,7 +161,7 @@ steps:
       type werf && source $(werf ci-env github --verbose --as-file)
 
       werf build \
-        --parallel=true --parallel-tasks-limit=5 \
+        --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json

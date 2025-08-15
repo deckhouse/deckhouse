@@ -27,7 +27,6 @@ spec:
               required:
                 - numCPUs
                 - memory
-                - mainNetwork
               properties:
                 numCPUs:
                   description: |
@@ -57,6 +56,8 @@ spec:
                 mainNetwork:
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
+
+                    If no value is specified, the value specified in `VsphereClusterConfiguration` will be used.
                   x-doc-examples: ['k8s-msk-178']
                   type: string
                 additionalNetworks:

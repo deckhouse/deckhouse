@@ -141,9 +141,12 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	// check certificate renewal necessity
-	snap := input.Snapshots["secret"]
+	snap := input.NewSnapshots.Get("secret")
 	if len(snap) > 0 {
-		secret := snap[0].(secret)
+		var secret secret
+		if err := snap[0].UnmarshalTo(&secret); err != nil {
+			return fmt.Errorf("failed to unmarshal 'secret' snapshot: %w", err)
+		}
 
 		// if cert is valid more than two days - skip renewal
 		expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)

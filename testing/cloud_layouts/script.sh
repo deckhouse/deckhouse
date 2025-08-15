@@ -276,7 +276,6 @@ function prepare_environment() {
     SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
     echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
   fi
-
   case "$PROVIDER" in
   "Yandex.Cloud")
     # shellcheck disable=SC2016
@@ -319,7 +318,7 @@ function prepare_environment() {
   "OpenStack")
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -328,7 +327,7 @@ function prepare_environment() {
   "vSphere")
     # shellcheck disable=SC2016
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -343,6 +342,7 @@ function prepare_environment() {
         PREFIX="$PREFIX" \
         MASTERS_COUNT="$MASTERS_COUNT" \
         DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
@@ -364,6 +364,7 @@ function prepare_environment() {
         DEV_BRANCH="$DEV_BRANCH" \
         PREFIX="$PREFIX" \
         DECKHOUSE_DOCKERCFG="$LOCAL_DECKHOUSE_DOCKERCFG" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
         IMAGES_REPO=$IMAGES_REPO \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
@@ -437,7 +438,7 @@ function run-test() {
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
     test_requirements || return $?
-    change_deckhouse_image "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}" || return $?
+    change_deckhouse_image "${IMAGES_REPO:-"dev-registry.deckhouse.io/sys/deckhouse-oss"}:${SWITCH_TO_IMAGE_TAG}" || return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
@@ -1290,11 +1291,6 @@ function wait_cluster_ready() {
 
   if [[ $test_failed == "true" ]] ; then
     return 1
-  fi
-
-  if [[ "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "" && "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS" != "0" ]]; then
-    echo "Sleeping $SLEEP_BEFORE_TESTING_CLUSTER_ALERTS seconds before check cluster alerts"
-    sleep "$SLEEP_BEFORE_TESTING_CLUSTER_ALERTS"
   fi
 
   testAlerts=$(cat "$(pwd)/deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_alerts.sh")

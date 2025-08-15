@@ -1760,7 +1760,7 @@ alerts:
         jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
         ```
 
-        If you do not see the necessary logs, [add an additional audit policy](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) to log actions of all service accounts.
+        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
 
         ```yaml
         - level: Metadata
@@ -2354,6 +2354,36 @@ alerts:
       summary: |
         The {{ $labels.node }} Node is not managed by the node-manager module.
       severity: "9"
+      markupFormat: markdown
+    - name: D8NodeLocalDNSCacheDenialEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
+
+        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns denial cache is being frequently evicted.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8NodeLocalDNSCacheSuccessEvictionsHigh
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/cache-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
+
+        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+
+        Affected node: `{{$labels.node}}`
+      summary: |
+        node-local-dns success cache is being frequently evicted.
+      severity: "6"
       markupFormat: markdown
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
@@ -3437,6 +3467,23 @@ alerts:
         Alerting dead man's switch.
       severity: "4"
       markupFormat: default
+    - name: DeckhouseEditionNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+
+        ```bash
+        d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'
+        ```
+
+        Where `DKP_EDITION` is the edition you want to use: `CE`, `BE`, `EE`, `SE`, or `SE-plus`.
+      summary: |
+        Incorrect Deckhouse Kubernetes Platform edition.
+      severity: "6"
+      markupFormat: markdown
     - name: DeckhouseHighMemoryUsage
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -3457,6 +3504,41 @@ alerts:
       summary: |
         Deckhouse memory usage is too high.
       severity: "3"
+      markupFormat: markdown
+    - name: DeckhouseMigratedModuleNotFound
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.module_name }}` specified in DeckhouseRelease was moved to external source and not found in any available ModuleSource registry. DeckhouseRelease will be lock until found module in any available ModuleSource.
+
+        This may indicate:
+        - The module source registry is not properly configured.
+        - The module has not been published to the registry yet.
+        - There is a network issue preventing access to the registry.
+
+        Please check:
+        1. ModuleSource configurations: `kubectl get modulesources`.
+        2. Registry accessibility and credentials.
+        3. Module availability in the configured registries.
+
+        To investigate, run the following commands:
+
+        ```bash
+        # Check ModuleSource status
+        kubectl get modulesources
+
+        # Check available modules in all sources
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+
+        # Check Deckhouse logs for more details
+        kubectl -n d8-system logs -f -l app=deckhouse
+        ```
+      summary: |
+        Migrated module {{ $labels.module_name }} not found in registry.
+      severity: "6"
       markupFormat: markdown
     - name: DeckhouseModuleUpdatingFailedBrokenSequence
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
@@ -4909,6 +4991,60 @@ alerts:
         A new release for module {{ $labels.moduleName }} has been blocked due to unmet requirements.
       severity: "6"
       markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        This module is significantly outdated and may have compatibility issues.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is {{ $labels.versionLag }} or more minor versions behind the latest available release.
+      severity: "5"
+      markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running 2 minor versions behind the latest available release.
+        Updating is recommended to maintain compatibility and access to latest features.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is 2 minor versions behind the latest available release.
+      severity: "7"
+      markupFormat: markdown
+    - name: ModuleReleaseIsOutdated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running 1 minor version behind the latest available release.
+        Consider updating to maintain compatibility and security.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+      summary: |
+        Module {{ $labels.moduleName }} is 1 minor version behind the latest available release.
+      severity: "9"
+      markupFormat: markdown
     - name: ModuleReleaseIsWaitingManualApproval
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -5177,6 +5313,19 @@ alerts:
       summary: |
         Certificate is expiring soon.
       severity: "5"
+      markupFormat: markdown
+    - name: NginxIngressValidationIsDisabled
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        Validation is disabled to reduce load on the master nodes, as it requires additional resources.
+        To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
+        from the `ingressnginxcontroller` resource.
+      summary: |
+        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+      severity: "3"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
@@ -6361,6 +6510,7 @@ modules-having-alerts:
     - monitoring-kubernetes
     - monitoring-kubernetes-control-plane
     - monitoring-ping
+    - node-local-dns
     - node-manager
     - okmeter
     - openvpn

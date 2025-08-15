@@ -405,7 +405,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
-			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency",
 		},
 		{
 			Name:  "DOWNLOADED_MODULES_DIR",
@@ -606,7 +606,7 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		"d8-provider-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-provider-cluster-configuration"},
 	)
 }
 
@@ -619,7 +619,7 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 		"d8-static-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-static-cluster-configuration"},
 	)
 }
 

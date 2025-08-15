@@ -706,6 +706,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
+            en: Container Registry
+            ru: Container Registry
+          moduleName: registry
+          featureStatus: preview
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/registry/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/registry/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/registry/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/registry/faq.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
@@ -950,7 +972,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/metallb/cr.html
-
         - title:
             en: Other modules
             ru: Другие модули
@@ -996,6 +1017,23 @@ entries:
                     ru: Настройки
                   url: /modules/network-gateway/configuration.html
             - title:
+                en: network-policy-engine
+                ru: network-policy-engine
+              moduleName: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/network-policy-engine/configuration.html
+            - title:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
               featureStatus: experimental
@@ -1021,30 +1059,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/service-with-healthchecks/examples.html
-            - title:
-                en: static-routing-manager
-                ru: static-routing-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/static-routing-manager/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/static-routing-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/static-routing-manager/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/static-routing-manager/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -1190,7 +1204,6 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
-              featureStatus: experimental
               folders:
                 - title:
                     en: Description
@@ -1264,8 +1277,8 @@ entries:
                     ru: Настройки
                   url: /modules/prometheus-pushgateway/configuration.html
             - title:
-                en: upmeter
-                ru: upmeter
+                en: Cluster SLA Monitoring
+                ru: Мониторинг SLA кластера
               moduleName: upmeter
               folders:
                 - title:
@@ -1581,23 +1594,6 @@ entries:
                     ru: FAQ
                   url: /modules/cert-manager/faq.html
             - title:
-                en: network-policy-engine
-                ru: network-policy-engine
-              moduleName: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-policy-engine/configuration.html
-            - title:
                 en: operator-trivy
                 ru: operator-trivy
               moduleName: operator-trivy
@@ -1615,6 +1611,10 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/operator-trivy/faq.html
+                - title:
+                    en: "Custom Resources"
+                    ru: "Custom Resources"
+                  url: /modules/operator-trivy/cr.html
     - title:
         en: Storage
         ru: Хранилище

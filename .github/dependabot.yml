@@ -250,6 +250,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/dependency/vsphere"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/registry"
   labels:
   - "type/dependencies"
@@ -737,6 +746,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/pkg/log"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/metrics-storage"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

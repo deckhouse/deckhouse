@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -207,7 +208,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Accessibility, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
@@ -242,7 +243,7 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
 	modules := []string{}
 	for _, module := range l.modules {
-		if module.GetModuleDefenition().ExclusiveGroup == exclusiveGroup {
+		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
 		}
 	}
@@ -294,6 +295,12 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	if err := l.client.List(ctx, modulesList); err != nil {
 		return fmt.Errorf("list all modules: %w", err)
 	}
+
+	moduleConfigs := new(v1alpha1.ModuleConfigList)
+	if err := l.client.List(ctx, moduleConfigs); err != nil {
+		return fmt.Errorf("list module configs: %w", err)
+	}
+
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
 			l.logger.Debug("delete embedded module", slog.String("name", module.Name))
@@ -302,9 +309,21 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			}
 		}
 
-		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			if err := l.client.Status().Update(ctx, &module); err != nil {
+		var found bool
+		for _, config := range moduleConfigs.Items {
+			if config.GetName() == module.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
 		}
@@ -336,10 +355,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
-						Weight:       def.Weight,
-						Stage:        def.Stage,
-						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.Requirements,
+						Weight:        def.Weight,
+						Stage:         def.Stage,
+						Source:        v1alpha1.ModuleSourceEmbedded,
+						Critical:      def.Critical,
+						Requirements:  def.Requirements,
+						Accessibility: def.Accessibility.ToV1Alpha1(),
 					},
 				}
 				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
@@ -357,6 +378,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
+			module.Properties.Critical = def.Critical
+			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())

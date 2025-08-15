@@ -12,7 +12,6 @@ DKP поддерживает следующие зависимости для м
 
 - [зависимость от версии Deckhouse Kubernetes Platform](#зависимость-от-версии-deckhouse-kubernetes-platform);
 - [зависимость от версии Kubernetes](#зависимость-от-версии-kubernetes);
-- [зависимость от статуса установки кластера](#зависимость-от-статуса-установки-кластера).
 - [зависимость от версии других модулей](##зависимость-от-версии-других-модулей).
 
 ### Зависимость от версии Deckhouse Kubernetes Platform
@@ -112,7 +111,7 @@ requirements:
    Пример вывода при несовместимости модуля с новой версией Kubernetes:
 
    ```console
-   root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   root@dev-master-0:~# d8 platform edit cluster-configuration
    ```
 
    Выводимая информация:
@@ -143,24 +142,6 @@ requirements:
    NAME                     PHASE         TRANSITIONTIME   MESSAGE
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
-
-### Зависимость от статуса установки кластера
-
-Эта зависимость указывает, что для запуска модуля требуется кластер, установка и настройка которого были завершены. Зависимость можно установить только для встроенных модулей DKP.
-
-Пример настройки зависимости от статуса установки кластера в файле `module.yaml`:
-
-```yaml
-name: ingress-nginx
-weight: 402
-description: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
-requirements:
-    bootstrapped: true
-```
-
-Проверка выполняется только один раз — при первичном анализе модулей. Если установка и настройка кластера не завершены, модуль не будет включён.
 
 ### Зависимость от версии других модулей
 

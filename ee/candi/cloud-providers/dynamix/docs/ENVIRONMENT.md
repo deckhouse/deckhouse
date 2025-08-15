@@ -16,5 +16,9 @@ Dynamix portal from the cluster can be organized by adding the IP address and do
 This template is located in the `/etc/cloud/templates/` folder. The name of the template depends on the OS.
 
 {% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
+{% alert level="warning" %}
 After adding data to hosts and before creating the template from the virtual machine, you must run the `cloud-init clean` command.
 {% endalert %}

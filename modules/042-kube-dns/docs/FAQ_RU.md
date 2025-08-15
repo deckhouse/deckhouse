@@ -59,7 +59,7 @@ search: DNS, domain, домен, clusterdomain
 1. Поменяйте `clusterDomain` на новый. Для этого выполните команду:
 
    ```bash
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 **Важно!** Если версия вашего Kubernetes 1.20 и выше, контроллеры для работы с API-server гарантированно используют [расширенные токены для ServiceAccount'ов](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection). Это означает, что каждый такой токен содержит дополнительные поля `iss:` и `aud:`, которые включают в себя старый `clusterDomain` (например, `"iss": "https://kubernetes.default.svc.cluster.local"`).

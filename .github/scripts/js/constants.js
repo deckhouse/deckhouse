@@ -63,11 +63,18 @@ const labels = {
   // E2E: autoscaler
   'e2e/use/autoscaler': { type: 'e2e-use', autoscaler: true },
 
+  // E2E: cri
+  'e2e/use/cri/containerd': { type: 'e2e-use', cri: 'containerd' },
+  'e2e/use/cri/containerdv2': { type: 'e2e-use', cri: 'containerdv2' },
+
   // Allow running workflows for external PRs.
   'status/ok-to-test': { type: 'ok-to-test' },
 
   // Deploy documentation and site to test or stage.
   'deploy/web/test': { type: 'deploy-web', env: 'test' },
+  'deploy/web/test2': { type: 'deploy-web', env: 'test2' },
+  'deploy/web/test3': { type: 'deploy-web', env: 'test3' },
+  'deploy/web/test4': { type: 'deploy-web', env: 'test4' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow

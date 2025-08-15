@@ -19,18 +19,10 @@ properties:
             default: {}
             properties:
               cert:
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
               key:
-                type: string
-          admissionWebhookClientCA:
-            type: object
-            default: {}
-            description: |
-              The Certificate Authority (CA) certificate used to sign and validate the ValidatingAdmissionWebhook client certificate
-            properties:
-              cert:
-                type: string
-              key:
+                x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
                 type: string
           resourcesRequests:
             type: object
@@ -233,6 +225,13 @@ properties:
               It is used in the helm templates to generate the address of the container image.
               Almost always, concatinateds with tag from modulesImages.tag
             x-examples: [ "registry.example.com/deckhouse" ]
+          hash:
+            type: string
+            default: ""
+            description: |
+              SHA256 hash of registry configuration (address, path, scheme, CA, dockerConfig).
+              Used to verify that Deckhouse has applied the new registry configuration
+              by comparing with the hash in the pod annotation.
       tags:
         type: object
         default: {}

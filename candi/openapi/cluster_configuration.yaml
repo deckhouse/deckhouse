@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 platform edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
@@ -116,6 +116,12 @@ apiVersions:
 
           If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
+
+          If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
+
+          - Support for `CgroupsV2`.
+          - Linux kernel version `5.8` or newer.
+          - Systemd version `244` or newer.
         enum:
         - "Containerd"
         - "ContainerdV2"

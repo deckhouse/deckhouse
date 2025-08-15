@@ -1,5 +1,5 @@
 name: prometheus
-weight: 300
+stage: "General Availability"
 subsystems:
   - observability
 namespace: d8-monitoring
@@ -10,6 +10,6 @@ descriptions:
     The Prometheus monitoring module
 
 requirements:
-  bootstrapped: true
   modules:
     operator-prometheus: ">= 0.0.0"
+  deckhouse: ">= 1.68"

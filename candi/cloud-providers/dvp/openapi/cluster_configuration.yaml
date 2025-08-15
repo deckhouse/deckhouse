@@ -134,7 +134,7 @@ apiVersions:
             instanceClass:
               type: object
               description: |
-                Configuration of the virtual machine and its disks for the created master node.
+                Configuration for the virtual machine's root disk.
               additionalProperties: false
               required: [virtualMachine, rootDisk, etcdDisk]
               properties:
@@ -160,7 +160,7 @@ apiVersions:
                         coreFraction:
                           type: string
                           default: "100%"
-                          enum: ["5%", "10%", "25%", "50%", "100%"]
+                          pattern: ^100%$|^[1-9][0-9]?%$
                           description: |
                             Guaranteed share of CPU that will be allocated to the virtual machine.
                           example: "100%"
@@ -432,7 +432,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts.](https://deckhouse.io/documentation/v1/modules/030-cloud-provider-dvp/layouts.html)
+            [Read more about possible provider layouts](../cloud-provider-dvp/layouts.html).
           enum: [Standard]
 
         region:
@@ -441,7 +441,7 @@ apiVersions:
             Region name.
 
             To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
-            [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
+            [Read more about topological labels](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
 
             > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:

@@ -89,6 +89,8 @@ module Jekyll
                <span class='sidebar__badge_v2'
                      title="#{ @context.registers[:site].data['i18n']['features']["%s_long" % entry['featureStatus']][lang].gsub(/<\/?[^>]*>/, "").lstrip.sub(/\.$/, '')}">
                    #{case entry['featureStatus']
+                       when "preview"
+                           "Preview"
                        when "experimental"
                            "Exp"
                        when "deprecated"

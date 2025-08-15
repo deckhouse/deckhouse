@@ -70,7 +70,7 @@ func (p *StaticInstancePool) PickStaticInstance(
 		return nil, false, errors.Wrap(err, "failed to create scope")
 	}
 
-	instanceScope, err := scope.NewInstanceScope(newScope, &staticInstance)
+	instanceScope, err := scope.NewInstanceScope(newScope, &staticInstance, ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to create instance scope")
 	}

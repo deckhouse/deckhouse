@@ -37,7 +37,7 @@ bb-is-bundle(){
       case "$VERSION_ID" in 7.9)
         os="rosa" ;;
       esac
-      case "$VERSION" in 12.4|12.5.*|12.6.*)
+      case "$VERSION" in 12.4|12.5.*|12.6|12.6.*)
         os="rosa" ;;
       esac
     ;;

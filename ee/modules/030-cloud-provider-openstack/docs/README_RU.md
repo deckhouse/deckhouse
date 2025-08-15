@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — OpenStack"
+description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью OpenStack."
 ---
 
 Взаимодействие с облачными ресурсами провайдеров на базе [OpenStack](https://www.openstack.org/) осуществляется с помощью модуля `cloud-provider-openstack`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы OpenStack при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).

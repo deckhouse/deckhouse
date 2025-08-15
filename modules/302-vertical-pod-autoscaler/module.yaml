@@ -1,10 +1,9 @@
 name: vertical-pod-autoscaler
-weight: 302
 subsystems:
   - infrastructure
 namespace: kube-system
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"
   modules:
     prometheus: ">= 0.0.0"
     prometheus-metrics-adapter: ">= 0.0.0"

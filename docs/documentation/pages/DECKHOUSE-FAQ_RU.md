@@ -484,6 +484,120 @@ echo "$MYRESULTSTRING"
 
 В результате настройки, образы Deckhouse станут доступны, например, по следующему адресу: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
+### Как сгенерировать самоподписанный сертификат?
+
+При самостоятельной генерации сертификатов важно корректно заполнить все поля запроса на сертификат, чтобы итоговый сертификат был правильно издан и гарантированно проходил валидацию в различных сервисах.  
+
+Важно придерживаться следующих правил:
+
+1. Указывать доменные имена в поле `SAN` (Subject Alternative Name).
+
+   Поле `SAN` является более современным и распространенным методом указания доменных имен, на которые распространяется сертификат.
+   Некоторые сервисы на данный момент уже не рассматривают поле `CN` (Common Name) как источник для доменных имен.
+
+2. Корректно заполнять поля `keyUsage`, `basicConstraints`, `extendedKeyUsage`, а именно:
+   - `basicConstraints = CA:FALSE`  
+
+     Данное поле определяет, относится ли сертификат к конечному пользователю (end-entity certificate) или к центру сертификации (CA certificate). CA-сертификат не может использоваться в качестве сертификата сервиса.
+
+   - `keyUsage = digitalSignature, keyEncipherment`  
+
+     Поле `keyUsage` ограничивает допустимые сценарии использования данного ключа:
+
+     - `digitalSignature` — позволяет использовать ключ для подписи цифровых сообщений и обеспечения целостности соединения.
+     - `keyEncipherment` — позволяет использовать ключ для шифрования других ключей, что необходимо для безопасного обмена данными с помощью TLS (Transport Layer Security).
+
+   - `extendedKeyUsage = serverAuth`  
+
+     Поле `extendedKeyUsage` уточняет дополнительные сценарии использования ключа, которые могут требоваться конкретными протоколами или приложениями:
+
+     - `serverAuth` — указывает, что сертификат предназначен для использования на сервере для аутентификации сервера перед клиентом в процессе установления защищенного соединения.
+
+Также рекомендуется:
+
+1. Издать сертификат на срок не более 1 года (365 дней).
+
+   Срок действия сертификата влияет на его безопасность. Срок в 1 год позволяет обеспечить актуальность криптографических методов и своевременно обновлять сертификаты в случае возникновения угроз.
+   Также некоторые современные браузеры на текущий момент отвергают сертификаты со сроком действия более 1 года.
+
+2. Использовать стойкие криптографические алгоритмы, например, алгоритмы на основе эллиптических кривых (в т.ч. `prime256v1`).
+
+   Алгоритмы на основе эллиптических кривых (ECC) предоставляют высокий уровень безопасности при меньшем размере ключа по сравнению с традиционными методами, такими как RSA. Это делает сертификаты более эффективными по производительности и безопасными в долгосрочной перспективе.
+
+3. Не указывать домены в поле `CN` (Common Name).
+
+   Исторически поле `CN` использовалось для указания основного доменного имени, для которого выдается сертификат. Однако современные стандарты, такие как [RFC 2818](https://datatracker.ietf.org/doc/html/rfc2818), рекомендуют использовать поле `SAN` (Subject Alternative Name) для этой цели.
+   Если сертификат распространяется на несколько доменных имен, указанных в поле `SAN`, то при дополнительном указании одного из доменов в `CN` в некоторых сервисах может возникнуть ошибка валидации при обращении к домену, не указанному в `CN`.
+   Если указывать в `CN` информацию, не относящуюся напрямую к доменным именам (например, идентификатор или имя сервиса), то сертификат также будет распространяться на эти имена, что может быть использовано для вредоносных целей.
+
+#### Пример создания сертификата
+
+Для генерации сертификата воспользуемся утилитой `openssl`.
+
+1. Заполните конфигурационный файл `cert.cnf`:
+
+   ```ini
+   [ req ]
+   default_bits       = 2048
+   default_md         = sha256
+   prompt             = no
+   distinguished_name = dn
+   req_extensions     = req_ext
+
+   [ dn ]
+   C = RU
+   ST = Moscow
+   L = Moscow
+   O = Example Company
+   OU = IT Department
+   # CN = Не указывайте поле CN.
+
+   [ req_ext ]
+   subjectAltName = @alt_names
+
+   [ alt_names ]
+   # Укажите все доменные имена.
+   DNS.1 = example.com
+   DNS.2 = www.example.com
+   DNS.3 = api.example.com
+   # Укажите IP-адреса (если требуется).
+   IP.1 = 192.0.2.1
+   IP.2 = 192.0.4.1
+
+   [ v3_ca ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+
+   [ v3_req ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+   subjectAltName = @alt_names
+
+   # Параметры эллиптических кривых.
+   [ ec_params ]
+   name = prime256v1
+   ```
+
+2. Сгенерируйте ключ на основе эллиптических кривых:
+
+   ```shell
+   openssl ecparam -genkey -name prime256v1 -noout -out ec_private_key.pem
+   ```
+
+3. Создайте запрос на сертификат:
+
+   ```shell
+   openssl req -new -key ec_private_key.pem -out example.csr -config cert.cnf
+   ```
+
+4. Сгенерируйте самоподписанный сертификат:
+
+   ```shell
+   openssl x509 -req -in example.csr -signkey ec_private_key.pem -out example.crt -days 365 -extensions v3_req -extfile cert.cnf
+   ```
+
 ### Ручная загрузка образов Deckhouse Kubernetes Platform, БД сканера уязвимостей и модулей Deckhouse в приватный registry
 
 {% alert level="warning" %}
@@ -619,6 +733,10 @@ echo "$MYRESULTSTRING"
    В ресурсе [InitConfiguration](installing/configuration.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
+
+{% alert level="warning" %}
+При использовании модуля [registry](modules/registry/) смена адреса и параметров registry выполняется в секции [registry](modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [registry](modules/registry/examples.html).
+{% endalert %}
 
 {% alert level="warning" %}
 Использование registry, отличных от `registry.deckhouse.io` и `registry.deckhouse.ru`, доступно только в коммерческих редакциях Deckhouse Kubernetes Platform.
@@ -827,7 +945,7 @@ spec:
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
@@ -853,6 +971,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ```
 
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
+
+{% alert level="warning" %}
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+{% endalert %}
 
 {% alert level="warning" %}
 - Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, используйте соответствующую ей документацию.
@@ -884,6 +1007,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+   >
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
    ```shell
@@ -1030,6 +1155,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CSE?
 
 {% alert level="warning" %}
+При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+{% endalert %}
+
+{% alert level="warning" %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В Deckhouse CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
 - Миграция на Deckhouse CSE возможна только с версии Deckhouse EE 1.58, 1.64 или 1.67.
@@ -1045,7 +1175,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    1. Выполните команду:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 platform edit cluster-configuration
       ```
 
    1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
@@ -1053,6 +1183,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -1337,8 +1469,7 @@ kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Выполните команду:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader \
-     -c deckhouse -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion`.
@@ -1398,3 +1529,19 @@ spec:
 {% alert level="warning" %}
 После применения ресурса настройки GRUB будут обновлены, и узлы кластера начнут последовательную перезагрузку для применения изменений.
 {% endalert %}
+
+### Как изменить container runtime на containerd v2 на узлах?
+
+Миграцию на containerd v` можно выполнить одним из следующих способов:
+
+* Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+* Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
+
+{% alert level="info" %}
+Миграция на containerd v2 возможна при выполнении следующих условий:
+
+* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
+* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+{% endalert %}
+
+При миграции на containerd v2 очищается папка `/var/lib/containerd`. Для containerd используется папка `/etc/containerd/conf.d`. Для containerd v2 используется `/etc/containerd/conf2.d`.

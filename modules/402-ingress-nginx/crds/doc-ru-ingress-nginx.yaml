@@ -61,6 +61,7 @@ spec:
                 validationEnabled:
                   description: |
                     Включить валидацию Ingress-правил.
+                    > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
                 annotationValidationEnabled:
                   description: |
                     Включить валидацию аннотаций Ingress-правил.
@@ -438,6 +439,7 @@ spec:
                 validationEnabled:
                   description: |
                     Включает валидацию Ingress-правил.
+                    > **Внимание.** Включение валидации увеличивает нагрузку на master-узлы кластера.
                 annotationValidationEnabled:
                   description: |
                     Включает валидацию аннотаций Ingress-правил.
@@ -741,7 +743,7 @@ spec:
                     Разрешает использовать символ нижнего подчеркивания в заголовках.
 
                     Вспомогательные ресурсы:
-                    
+
                     - [об использовании нижнего подчеркивания в заголовках](https://nginx.org/en/docs/http/ngx_http_core_module.html#underscores_in_headers);
                     - [почему нужно внимательно включать разрешение для нижних подчеркиваний в заголовках](https://docs.nginx.com/#missing-disappearing-http-headers).
                 minReplicas:

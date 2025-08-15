@@ -241,6 +241,9 @@ properties:
               basicAuthUnsupported: true
               insecureSkipEmailVerified: true
               getUserInfo: true
+              allowedGroups:
+                - only
+                - team
               scopes:
                 - profile
                 - email

@@ -208,7 +208,7 @@ spec:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role/frontend: ''
+    node-role.deckhouse.io/frontend: ""
   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io
@@ -663,6 +663,8 @@ kubectl get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
+
+{% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
 
 ### Автоматическое обновление data plane Istio
 

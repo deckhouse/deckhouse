@@ -147,3 +147,24 @@ func (m *channelMappingEditor) get() ([]Module, error) {
 
 	return modules, nil
 }
+
+func (m *channelMappingEditor) getModulesCount() (int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	path := filepath.Join(m.baseDir, modulesDir, "channels.yaml")
+	f, err := os.Open(path)
+	if err != nil {
+		return -1, fmt.Errorf("open %q: %w", path, err)
+	}
+	defer f.Close()
+
+	var cm = make(map[string]any)
+
+	err = yaml.NewDecoder(f).Decode(&cm)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return -1, fmt.Errorf("decode yaml: %w", err)
+	}
+
+	return len(cm), nil
+}

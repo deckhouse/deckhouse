@@ -46,8 +46,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
-      {{- include "nvidia_node_selector" (tuple . "mig-manager") | nindent 6 }}
-      tolerations:
       - key: mig-reconfigure
         operator: "Equal"
         value: "true"
@@ -55,6 +53,8 @@ spec:
       - key: node.kubernetes.io/unschedulable
         operator: "Exists"
         effect: "NoSchedule"
+      {{- include "nvidia_node_selector" (tuple . "mig-manager") | nindent 6 }}
+      terminationGracePeriodSeconds: 60
       serviceAccountName: nvidia-mig-manager
       automountServiceAccountToken: true
       hostPID: true

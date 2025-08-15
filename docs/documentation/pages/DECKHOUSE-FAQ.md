@@ -481,6 +481,119 @@ Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
 Thus, Deckhouse images will be available at `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
+### How to generate a self-signed certificate?
+
+When generating certificates manually, it is important to fill out all fields of the certificate request correctly to ensure that the final certificate is issued properly and can be validated across various services.  
+
+It is important to follow these guidelines:
+
+1. Specify domain names in the `SAN` (Subject Alternative Name) field.
+
+   The `SAN` field is a more modern and commonly used method for specifying the domain names covered by the certificate.
+   Some services no longer consider the `CN` (Common Name) field as the source for domain names.
+
+2. Correctly fill out the `keyUsage`, `basicConstraints`, `extendedKeyUsage` fields, specifically:
+   - `basicConstraints = CA:FALSE`  
+
+     This field determines whether the certificate is an end-entity certificate or a certification authority (CA) certificate. CA certificates cannot be used as service certificates.
+
+   - `keyUsage = digitalSignature, keyEncipherment`  
+
+     The `keyUsage` field limits the permissible usage scenarios of this key:
+
+     - `digitalSignature`: Allows the key to be used for signing digital messages and ensuring data integrity.
+     - `keyEncipherment`: Allows the key to be used for encrypting other keys, which is necessary for secure data exchange using TLS (Transport Layer Security).
+
+   - `extendedKeyUsage = serverAuth`  
+
+     The `extendedKeyUsage` field specifies additional key usage scenarios required by specific protocols or applications:
+
+     - `serverAuth`: Indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
+
+It is also recommended to:
+
+1. Issue the certificate for no more than 1 year (365 days).
+
+   The validity period of the certificate affects its security. A one-year validity ensures the cryptographic methods remain current and allows for timely certificate updates in case of threats. Furthermore, some modern browsers now reject certificates with a validity period longer than 1 year.
+
+2. Use robust cryptographic algorithms, such as elliptic curve algorithms (including `prime256v1`).
+
+   Elliptic curve algorithms (ECC) provide a high level of security with a smaller key size compared to traditional methods like RSA. This makes the certificates more efficient in terms of performance and secure in the long term.
+
+3. Do not specify domains in the `CN` (Common Name) field.
+  
+   Historically, the `CN` field was used to specify the primary domain name for which the certificate was issued. However, modern standards, such as [RFC 2818](https://datatracker.ietf.org/doc/html/rfc2818), recommend using the `SAN` (Subject Alternative Name) field for this purpose.
+   If the certificate is intended for multiple domain names listed in the `SAN` field, specifying one of the domains additionally in `CN` can cause a validation error in some services when accessing domains not listed in `CN`.
+   If non-domain-related information is specified in `CN` (for example, an identifier or service name), the certificate will also extend to these names, which could be exploited for malicious purposes.
+
+#### Certificate generation example
+
+To generate a certificate, we'll use the `openssl` utility.
+
+1. Fill in the `cert.cnf` configuration file:
+
+   ```ini
+   [ req ]
+   default_bits       = 2048
+   default_md         = sha256
+   prompt             = no
+   distinguished_name = dn
+   req_extensions     = req_ext
+
+   [ dn ]
+   C = GB
+   ST = London
+   L = London
+   O = Example Company
+   OU = IT Department
+   # CN = Do not specify the CN field.
+
+   [ req_ext ]
+   subjectAltName = @alt_names
+
+   [ alt_names ]
+   # Specify all domain names.
+   DNS.1 = example.co.uk
+   DNS.2 = www.example.co.uk
+   DNS.3 = api.example.co.uk
+   # Specify IP addresses (if required).
+   IP.1 = 192.0.2.1
+   IP.2 = 192.0.4.1
+
+   [ v3_ca ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+
+   [ v3_req ]
+   basicConstraints = CA:FALSE
+   keyUsage = digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+   subjectAltName = @alt_names
+
+   # Elliptic curve parameters.
+   [ ec_params ]
+   name = prime256v1
+   ```
+
+2. Generate an elliptic curve key:
+
+   ```shell
+   openssl ecparam -genkey -name prime256v1 -noout -out ec_private_key.pem
+   ```
+
+3. Create a certificate signing request:
+
+   ```shell
+   openssl req -new -key ec_private_key.pem -out example.csr -config cert.cnf
+   ```
+
+4. Generate a self-signed certificate:
+
+   ```shell
+   openssl x509 -req -in example.csr -signkey ec_private_key.pem -out example.crt -days 365 -extensions v3_req -extfile cert.cnf
+   ```
+
 ### Manually uploading Deckhouse Kubernetes Platform, vulnerability scanner DB and Deckhouse modules to private registry
 
 {% alert level="warning" %}
@@ -617,6 +730,10 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    During installation, add your registry address and authorization data to the [InitConfiguration](installing/configuration.html#initconfiguration) resource (the [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo) and [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) parameters; you might refer to [step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Getting started guide as well).
 
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
+
+{% alert level="warning" %}
+When using the [registry](modules/registry/) module, change the address and parameters of the registry in the [registry](modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [registry](modules/registry/examples.html) module documentation.
+{% endalert %}
 
 {% alert level="warning" %}
 Using a registry other than `registry.deckhouse.io` is only available in a commercial edition of Deckhouse Kubernetes Platform.
@@ -825,7 +942,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+d8 platform edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -851,6 +968,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ```
 
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
+
+{% alert level="warning" %}
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+{% endalert %}
 
 {% alert level="warning" %}
 - The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
@@ -880,6 +1002,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
+   > Before creating a resource, refer to the section ["How to add configuration for an additional registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+   >
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
@@ -1023,6 +1147,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
+{% alert level="warning" %}
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+{% endalert %}
+
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
 
 ```shell
@@ -1036,7 +1165,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+   d8 platform edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.
@@ -1096,3 +1225,19 @@ spec:
 {% alert level="warning" %}
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}
+
+### How do I change container runtime to containerd v2 on nodes?
+
+You can migrate to containerd v2 in one of the following ways:
+
+* By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
+* By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
+
+{% alert level="info" %}
+Migration to containerd v2 is possible if the following conditions are met:
+
+* Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
+* The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+{% endalert %}
+
+Migrating to containerd v2 clears the `/var/lib/containerd` folder. For containerd, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.
