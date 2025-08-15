@@ -130,7 +130,7 @@ spec:
               name: deckhouse
       containers:
         - name: deckhouse
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             capabilities:
               drop:
