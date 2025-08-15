@@ -15,7 +15,7 @@
 ---
 image: {{ $imageName }}-vex-artifact
 fromImage: builder/alpine
-final: true
+final: false
 secrets:
 - id: COSIGN_LOGIN
   value: {{ $context.CosignLogin }}
