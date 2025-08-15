@@ -39,9 +39,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
-
-	libmirrorCtx "github.com/deckhouse/deckhouse-cli/pkg/libmirror/contexts"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
@@ -298,108 +295,108 @@ func SetupSSHTunnelToRegistryPackagesProxy(ctx context.Context, sshCl node.SSHCl
 	return tun, nil
 }
 
-func setupSSHTunnelToSystemRegistryDistribution(sshCl *ssh.Client) (*frontend.Tunnel, error) {
-	log.DebugF("Running local ssh tunnel for system registry distribution")
+// func setupSSHTunnelToSystemRegistryDistribution(sshCl *ssh.Client) (*frontend.Tunnel, error) {
+// 	log.DebugF("Running local ssh tunnel for system registry distribution")
 
-	port := "5001"
-	listenAddress := "127.0.0.1"
+// 	port := "5001"
+// 	listenAddress := "127.0.0.1"
 
-	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
-	err := tun.Up()
-	if err != nil {
-		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry distribution: %v", err)
-	}
-	return tun, nil
-}
+// 	tun := sshCl.Tunnel("L", fmt.Sprintf("%s:%s:%s", port, listenAddress, port))
+// 	err := tun.Up()
+// 	if err != nil {
+// 		return tun, fmt.Errorf("failed to setup SSH tunnel to system registry distribution: %v", err)
+// 	}
+// 	return tun, nil
+// }
 
-func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
-	var wg sync.WaitGroup
+// func pushDockerImagesToSystemRegistry(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
+// 	var wg sync.WaitGroup
 
-	ctx, ctxCancel := context.WithCancelCause(ctx)
+// 	ctx, ctxCancel := context.WithCancelCause(ctx)
 
-	log.DebugLn("PushDockerImagesToSystemRegistry: Starting")
+// 	log.DebugLn("PushDockerImagesToSystemRegistry: Starting")
 
-	defer func() {
-		log.DebugLn("PushDockerImagesToSystemRegistry: Stopping")
-		ctxCancel(nil)
+// 	defer func() {
+// 		log.DebugLn("PushDockerImagesToSystemRegistry: Stopping")
+// 		ctxCancel(nil)
 
-		log.DebugLn("PushDockerImagesToSystemRegistry: Waiting for background operations stop")
-		wg.Wait()
+// 		log.DebugLn("PushDockerImagesToSystemRegistry: Waiting for background operations stop")
+// 		wg.Wait()
 
-		log.DebugLn("PushDockerImagesToSystemRegistry: Stopped")
-	}()
+// 		log.DebugLn("PushDockerImagesToSystemRegistry: Stopped")
+// 	}()
 
-	distributionHost := "127.0.0.1:5001"
+// 	distributionHost := "127.0.0.1:5001"
 
-	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		sshClient := wrapper.Client()
+// 	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+// 		sshClient := wrapper.Client()
 
-		if sshClient.Settings.BastionHost == "" {
-			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
-		} else {
-			log.DebugLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
+// 		if sshClient.Settings.BastionHost == "" {
+// 			distributionHost = fmt.Sprintf("%s:5001", sshClient.Settings.Host())
+// 		} else {
+// 			log.DebugLn("PushDockerImagesToSystemRegistry: Creating distribution tunnel")
 
-			// Create distribution tunnel, if BastionHost != ""
-			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
-			if err != nil {
-				return err
-			}
+// 			// Create distribution tunnel, if BastionHost != ""
+// 			distributionTun, err := setupSSHTunnelToSystemRegistryDistribution(sshClient)
+// 			if err != nil {
+// 				return err
+// 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				defer ctxCancel(nil)
+// 			wg.Add(1)
+// 			go func() {
+// 				defer wg.Done()
+// 				defer ctxCancel(nil)
 
-				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
-					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
-				})
+// 				err := frontend.RecreateSshTun(ctx, distributionTun, func() (*frontend.Tunnel, error) {
+// 					return setupSSHTunnelToSystemRegistryDistribution(sshClient)
+// 				})
 
-				if ctx.Err() != nil {
-					// Context was cancelled, skipping error processing
-					return
-				}
+// 				if ctx.Err() != nil {
+// 					// Context was cancelled, skipping error processing
+// 					return
+// 				}
 
-				if err != nil {
-					log.ErrorF("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error())
-					ctxCancel(fmt.Errorf("recreate docker distribution tunnel error: %w", err))
-				}
-			}()
-		}
-	}
+// 				if err != nil {
+// 					log.ErrorF("error re-creating ssh tunnel for remote docker distribution service: %s", err.Error())
+// 					ctxCancel(fmt.Errorf("recreate docker distribution tunnel error: %w", err))
+// 				}
+// 			}()
+// 		}
+// 	}
 
-	if err := context.Cause(ctx); err != nil {
-		return err
-	}
+// 	if err := context.Cause(ctx); err != nil {
+// 		return err
+// 	}
 
-	log.InfoLn("Unpacking and validating images bundle")
-	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(ctx, registryData.ImagesBundlePath)
-	if err != nil {
-		return fmt.Errorf("cannot unpack and validate images bundle: %w", err)
-	}
+// 	log.InfoLn("Unpacking and validating images bundle")
+// 	unpackedBundlePath, err := mirror.UnpackAndValidateImgBundle(ctx, registryData.ImagesBundlePath)
+// 	if err != nil {
+// 		return fmt.Errorf("cannot unpack and validate images bundle: %w", err)
+// 	}
 
-	pushCtx := libmirrorCtx.PushContext{
-		BaseContext: libmirrorCtx.BaseContext{
-			RegistryAuth: authn.FromConfig(authn.AuthConfig{
-				Username: registryData.InternalRegistryPKI.UserRW.Name,
-				Password: registryData.InternalRegistryPKI.UserRW.Password,
-			}),
-			RegistryHost:        distributionHost,
-			RegistryPath:        registryData.RegistryPath,
-			BundlePath:          registryData.ImagesBundlePath,
-			UnpackedImagesPath:  unpackedBundlePath,
-			Insecure:            false,
-			SkipTLSVerification: true,
-			Logger:              &mirror.Logger{},
-		},
-		Parallelism: libmirrorCtx.ParallelismConfig{
-			Blobs:  4,
-			Images: 1,
-		},
-	}
+// 	pushCtx := libmirrorCtx.PushContext{
+// 		BaseContext: libmirrorCtx.BaseContext{
+// 			RegistryAuth: authn.FromConfig(authn.AuthConfig{
+// 				Username: registryData.InternalRegistryPKI.UserRW.Name,
+// 				Password: registryData.InternalRegistryPKI.UserRW.Password,
+// 			}),
+// 			RegistryHost:        distributionHost,
+// 			RegistryPath:        registryData.RegistryPath,
+// 			BundlePath:          registryData.ImagesBundlePath,
+// 			UnpackedImagesPath:  unpackedBundlePath,
+// 			Insecure:            false,
+// 			SkipTLSVerification: true,
+// 			Logger:              &mirror.Logger{},
+// 		},
+// 		Parallelism: libmirrorCtx.ParallelismConfig{
+// 			Blobs:  4,
+// 			Images: 1,
+// 		},
+// 	}
 
-	log.InfoLn("Pushing images to registry")
-	return mirror.Push(ctx, &pushCtx)
-}
+// 	log.InfoLn("Pushing images to registry")
+// 	return mirror.Push(ctx, &pushCtx)
+// }
 
 func removeSystemRegistryLockFile(ctx context.Context, nodeInterface node.Interface) error {
 	isExist, err := isSystemRegistryLockFileExists(ctx, nodeInterface)
@@ -453,7 +450,8 @@ func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, 
 			}
 
 			log.DebugLn("RegistryImagesPusher: Start pushing images")
-			err = pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
+			// TODO: Need to migrate to the new ssh client
+			// err = pushDockerImagesToSystemRegistry(ctx, nodeInterface, registryData)
 			log.DebugLn("RegistryImagesPusher: Done pushing images")
 
 			if err != nil {
