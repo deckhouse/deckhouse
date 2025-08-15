@@ -35,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -42,7 +43,7 @@ import (
 type Params struct {
 	CommanderMode         bool
 	CommanderUUID         uuid.UUID
-	SSHClient             *ssh.Client
+	SSHClient             node.SSHClient
 	OnCheckResult         func(*check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
@@ -227,7 +228,7 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys[0].Key)
+		sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
 		if err != nil {
 			return fmt.Errorf("unable to read ssh private key: %w", err)
 		}

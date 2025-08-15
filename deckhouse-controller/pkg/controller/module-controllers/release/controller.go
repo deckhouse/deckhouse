@@ -710,7 +710,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("process pending release")
 
-	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, logger)
+	checker, err := releaseUpdater.NewModuleReleaseRequirementsChecker(r.exts, releaseUpdater.WithLogger(logger))
 	if err != nil {
 		updateErr := r.updateReleaseStatus(ctx, release, &v1alpha1.ModuleReleaseStatus{
 			Phase:   v1alpha1.ModuleReleasePhasePending,
@@ -1078,6 +1078,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
+		"error":   "",
 	}
 
 	if err = def.Validate(values, logger); err != nil {

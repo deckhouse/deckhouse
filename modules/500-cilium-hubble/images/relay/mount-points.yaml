@@ -1,0 +1,5 @@
+dirs:
+  - /var/run/cilium
+  - /etc/hubble-relay
+  - /.config
+  - /var/lib/hubble-relay/tls

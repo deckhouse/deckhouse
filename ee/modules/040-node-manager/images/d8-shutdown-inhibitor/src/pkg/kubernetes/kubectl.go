@@ -111,7 +111,7 @@ func (k *Kubectl) GetCondition(nodeName, reason string) (*Condition, error) {
 }
 
 func (k *Kubectl) getCondition(nodeName, reason string) ([]byte, error) {
-	jsonPath := fmt.Sprintf(`jsonpath='{.status.conditions[?(@.reason=="%s")]}'`, reason)
+	jsonPath := fmt.Sprintf(`jsonpath={.status.conditions[?(@.reason=="%s")]}`, reason)
 	cmd := k.cmd("get", "node", nodeName, "-o", jsonPath)
 	return cmd.Output()
 }

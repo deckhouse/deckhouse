@@ -21,6 +21,7 @@ function __main__() {
     echo "true" > "$MODULE_ENABLED_RESULT"
   else
     echo "false" > "$MODULE_ENABLED_RESULT"
+    echo "ClusterConfiguration is not set, installing it" > "$MODULE_ENABLED_REASON"
   fi
 }
 

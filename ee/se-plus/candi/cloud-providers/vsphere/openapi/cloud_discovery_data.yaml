@@ -43,3 +43,14 @@ apiVersions:
             datastoreURL:
               type: string
         description: List of datastores
+      internalNetworkNames:
+        description: List of cluster internal network names
+        type: array
+        items:
+          type: string
+      instances:
+        type: object
+        additionalProperties: false
+        properties:
+          mainNetwork:
+            type: string

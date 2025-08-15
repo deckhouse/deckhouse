@@ -25,6 +25,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type k8sNode struct {
@@ -90,11 +92,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setKubeDNSPolicy)
 
 func setKubeDNSPolicy(input *go_hook.HookInput) error {
-	nodes := input.Snapshots["node_roles"]
+	nodes := input.NewSnapshots.Get("node_roles")
 	nodesRolesCounters := make(map[string]int)
 
-	for _, o := range nodes {
-		node := o.(k8sNode)
+	for node, err := range sdkobjectpatch.SnapshotIter[k8sNode](nodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_roles' snapshot: %w", err)
+		}
+
 		nodesRolesCounters[node.Role]++
 	}
 

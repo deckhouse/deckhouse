@@ -64,3 +64,5 @@ linters-settings:
         - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
         - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
         - "properties.internal.properties.discoveryData.properties.apiVersion"
+        - "properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType"
+        - "properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type"

@@ -10,7 +10,7 @@ variable "providerClusterConfiguration" {
 }
 
 variable "nodeIndex" {
-  type = number
+  type    = number
   default = 0
 }
 

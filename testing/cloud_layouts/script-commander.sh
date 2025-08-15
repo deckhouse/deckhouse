@@ -577,6 +577,9 @@ function run-test() {
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
       return 1
+    elif [ "configuration_error" = "$cluster_status" ]; then
+      echo "  Cluster status: $cluster_status"
+      return 1
     else
       echo "  Cluster status: $cluster_status"
     fi

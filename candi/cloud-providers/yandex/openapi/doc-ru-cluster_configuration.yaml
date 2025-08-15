@@ -54,7 +54,7 @@ apiVersions:
                   Размер диска у инстансов. Значение указывается в `ГиБ`.
               diskType:
                 description: |
-                  Тип диска у создаваемых инстансов.
+                  Тип диска у создаваемых инстансов. Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в `ГиБ`.

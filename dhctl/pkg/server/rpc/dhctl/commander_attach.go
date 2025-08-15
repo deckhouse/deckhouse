@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type attachParams struct {
@@ -182,7 +182,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,

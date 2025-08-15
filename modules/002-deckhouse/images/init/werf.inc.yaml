@@ -1,0 +1,5 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/init
+git:
+{{- include "image mount points" . }}

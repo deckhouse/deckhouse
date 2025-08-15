@@ -1,0 +1,56 @@
+@use "components/common/_variables.scss";
+
+.intro {
+    padding: 150px 0;
+    color: variables.$color-main;
+    a {
+        color: variables.$color-alt;
+        text-decoration: underline;
+    }
+    &__content {
+        box-sizing: border-box;
+    }
+    &__row {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: stretch;
+        & > * {
+            width: 40%;
+        }
+    }
+    &__subtitle {
+        margin-top: 0;
+        margin-bottom: variables.$spacing-l;
+    }
+    p {
+        margin: 0 0 variables.$spacing-l 0;
+    }
+    &__product {
+        &:not(:last-child) {
+            margin-bottom: 50px;
+        }
+        &-title {
+            margin-bottom: variables.$spacing-s;
+            padding-bottom: variables.$spacing-s;
+            border-bottom: 2px solid variables.$color-alt;
+        }
+        &-info {
+            line-height: 1.5;
+        }
+        &-extra {
+            margin-top: variables.$spacing-l;
+            opacity: 0.6;
+            font-size: variables.$font-size-small;
+        }
+    }
+    &__logo {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        img {
+            width: 100%;
+        }
+    }
+}

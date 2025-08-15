@@ -47,6 +47,8 @@ import:
     add: /src/k8s-image-availability-exporter
     to: /k8s-image-availability-exporter
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/k8s-image-availability-exporter"]

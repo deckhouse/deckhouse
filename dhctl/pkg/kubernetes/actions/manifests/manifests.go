@@ -606,7 +606,7 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		"d8-provider-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-provider-cluster-configuration"},
 	)
 }
 
@@ -628,7 +628,7 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 		"d8-static-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-static-cluster-configuration"},
 	)
 }
 

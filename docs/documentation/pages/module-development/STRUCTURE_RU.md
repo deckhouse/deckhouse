@@ -525,6 +525,10 @@ dependencies:
 
 - `namespace` — *Строка.* Пространство имён, где будут развернуты компоненты модуля.
 - `subsystems` — *Массив строк.* Список подсистем, к которым относится модуль.
+- `accessibility` — *Объект.* Настройки доступности модуля.
+  - `editions` — *Объект.* Настройки работы модуля в редакциях Deckhouse.
+    - `available` — *Булевый.* Определяет доступность модуля в редакции Deckhouse.
+    - `enabledInBundles` — *Массив строк.* Список наборов модулей (bundles), в которых модуль должен быть включен по умолчанию.
 - `descriptions` — *Объект.* Произвольное текстовое описание назначения модуля.
   - `en` — *Строка.* Текстовое описание на английском языке.
   - `ru` — *Строка.* Текстовое описание на русском языке.
@@ -540,6 +544,7 @@ dependencies:
   - `kubernetes` — *Строка.* Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes).
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
 - `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
 - `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](../../cr.html#module) по шаблону `module.deckhouse.io/<TAG>=""`.
 
   Например, если указать `tags: ["test", "myTag"]`, то объект Module получит лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
@@ -559,6 +564,12 @@ exclusiveGroup: "group"
 subsystems:
   - test
   - test1
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
 descriptions:
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."

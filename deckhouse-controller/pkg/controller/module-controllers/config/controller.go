@@ -39,11 +39,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -64,6 +67,7 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metric.Storage,
 	exts *extenders.ExtendersStack,
@@ -75,6 +79,7 @@ func RegisterController(
 		logger:          logger,
 		handler:         handler,
 		moduleManager:   mm,
+		edition:         edition,
 		metricStorage:   ms,
 		configValidator: configtools.NewValidator(mm),
 		exts:            exts,
@@ -119,6 +124,7 @@ func RegisterController(
 type reconciler struct {
 	init            *sync.WaitGroup
 	client          client.Client
+	edition         *d8edition.Edition
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
 	metricStorage   metric.Storage
@@ -243,6 +249,11 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	metricGroup := fmt.Sprintf(moduleConflictMetricGroup, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
 		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
@@ -298,6 +309,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+	}
+
+	if module.IsExperimental() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
 	}
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -387,6 +402,8 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	metricGroup = fmt.Sprintf(moduleConflictMetricGroup, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -416,7 +433,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// clear downloaded module
-	if !module.IsEmbedded() {
+	if !module.IsEmbedded() && !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
 		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Properties.UpdatePolicy = ""
 			module.Properties.Source = ""
@@ -426,6 +443,16 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 			r.logger.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+	}
+
+	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+
+		return true
+	})
+	if err != nil {
+		r.logger.Error("failed to update module", slog.String("name", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	if err := r.removeFinalizer(ctx, moduleConfig); err != nil {
@@ -497,7 +524,9 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			}
 		}
 
 		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")

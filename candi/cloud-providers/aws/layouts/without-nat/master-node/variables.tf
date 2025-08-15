@@ -50,6 +50,8 @@ locals {
   root_volume_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskSizeGb", 20)
   root_volume_type = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "diskType", "gp2")
   additional_security_groups = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "additionalSecurityGroups", [])
+  ssh_allow_list           = lookup(var.providerClusterConfiguration, "sshAllowList", ["0.0.0.0/0"])
   zones = lookup(var.providerClusterConfiguration.masterNodeGroup, "zones", data.aws_availability_zones.available.names)
   tags = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(var.providerClusterConfiguration.masterNodeGroup, "additionalTags", {}))
+  disable_default_sg       = lookup(var.providerClusterConfiguration, "disableDefaultSecurityGroup", false)
 }

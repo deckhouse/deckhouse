@@ -97,15 +97,15 @@ func setupControllerSettings(
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
-
+	metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
 	rec := &deckhouseReleaseReconciler{
 		client:           cl,
 		deckhouseVersion: testDeckhouseVersion,
 		dc:               dc,
 		logger:           log.NewNop(),
 		moduleManager:    stubModulesManager{},
-		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
+		metricStorage:    metricStorage,
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
 		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
@@ -140,6 +140,8 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 		res = unmarshalRelease[v1alpha1.DeckhouseRelease](obj, t)
 	case "ConfigMap":
 		res = unmarshalRelease[corev1.ConfigMap](obj, t)
+	case "ModuleSource":
+		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
 
 	default:
 		require.Fail(t, "unknown Kind:"+typ.Kind)

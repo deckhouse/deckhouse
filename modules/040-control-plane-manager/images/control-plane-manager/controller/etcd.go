@@ -28,29 +28,34 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
-	etcdPromoteTimeout        = 3 * time.Second
-	NotFoundID         uint64 = 0
-	etcdEndpoint              = "https://127.0.0.1:2379"
+	etcdPromoteTimeout                   = 3 * time.Second
+	apiCallRetryInterval                 = 2 * time.Second
+	apiCallTimeout                       = 30 * time.Second
+	EtcdAdvertiseClientUrlsAnnotationKey = "kubeadm.kubernetes.io/etcd.advertise-client-urls"
+	EtcdComponent                        = "etcd"
+	ControlPlaneTier                     = "control-plane"
+	caCertPath                           = "/etc/kubernetes/pki/etcd/ca.crt"
+	certPath                             = "/etc/kubernetes/pki/etcd/peer.crt"
+	keyPath                              = "/etc/kubernetes/pki/etcd/peer.key"
 )
 
-var etcdBackoff = wait.Backoff{
-	Steps:    10,
-	Duration: 1 * time.Second,
-	Factor:   1.5,
-	Jitter:   0.1,
-}
+var defaultETCDendpoints = []string{"https://127.0.0.1:2379"}
 
-type EtcdClient struct {
+type Etcd struct {
 	client *clientv3.Client
+	wb     wait.Backoff
 }
 
-func (c *EtcdClient) EtcdJoinConverge() error {
-	// kubeadm -v=5 join phase control-plane-join etcd --config /etc/kubernetes/deckhouse/kubeadm/config.yaml
+func EtcdJoinConverge() error {
 	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
@@ -60,70 +65,112 @@ func (c *EtcdClient) EtcdJoinConverge() error {
 	return err
 }
 
-func (c *EtcdClient) CheckIfNodeIsLearner() (uint64, bool, error) {
+func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	resp, err := c.client.MemberList(ctx)
 	if err != nil {
-		return NotFoundID, false, fmt.Errorf("MemberList request failed: %v", err)
+		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", err)
 	}
 
+	var learnerIDs []uint64
 	for _, m := range resp.Members {
-		if m.Name == config.NodeName {
-			log.Infof("[etcd] member: ID=%d Name=%q PeerURLs=%v IsLearner=%v",
-				m.ID, m.Name, m.PeerURLs, m.IsLearner)
-			return m.ID, m.IsLearner, nil
+		if m.IsLearner {
+			log.Infof("[d8][etcd] Found learner member: ID=%d Name=%q PeerURLs=%v", m.ID, m.Name, m.PeerURLs)
+			learnerIDs = append(learnerIDs, m.ID)
 		}
 	}
-	return NotFoundID, false, nil
+	return learnerIDs, nil
 }
 
-func (c *EtcdClient) PromoteMemberIfNeeded() error {
-	memberId, isLearner, err := c.CheckIfNodeIsLearner()
+func (c *Etcd) PromoteLearnersIfNeeded() error {
+	learnerIDs, err := c.findAllLearnerMembers()
 	if err != nil {
-		return err
+		return fmt.Errorf("[d8][etcd] failed to find learner members: %v", err)
 	}
-	if isLearner {
-		return c.MemberPromote(memberId)
+
+	if len(learnerIDs) == 0 {
+		log.Info("[d8][etcd] No learner members found to promote")
+		return nil
+	}
+
+	for _, memberID := range learnerIDs {
+		err := c.MemberPromote(memberID)
+		if err != nil {
+			return fmt.Errorf("[d8][etcd] failed to promote member %s: %v", strconv.FormatUint(memberID, 16), err)
+		}
 	}
 	return nil
 }
 
-func (c *EtcdClient) NewEtcdClient() (*clientv3.Client, error) {
-	caCertPath := "/etc/kubernetes/pki/etcd/ca.crt"
-	certPath := "/etc/kubernetes/pki/etcd/ca.crt"
-	keyPath := "/etc/kubernetes/pki/etcd/ca.key"
+func NewEtcd() (*Etcd, error) {
+	var err error
+	c := &Etcd{}
+	if err != nil {
+		return nil, err
+	}
+	c.client, err = c.newEtcdCli()
+	if err != nil {
+		return nil, err
+	}
+	c.wb = wait.Backoff{
+		Steps:    10,
+		Duration: 1 * time.Second,
+		Factor:   1.5,
+		Jitter:   0,
+	}
+	return c, nil
+}
+
+func noOpUnaryInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return invoker(ctx, method, req, reply, cc, opts...)
+}
+
+func (c *Etcd) newEtcdCli() (*clientv3.Client, error) {
+	endpoints, err := c.getRawEtcdEndpointsFromPodAnnotation(apiCallRetryInterval, apiCallTimeout)
+
+	// fallback
+	if err != nil || len(endpoints) == 0 {
+		log.Err(errors.Wrap(err, "[d8][etcd] cannot get etcd endpoints, fallback to default endpoint"))
+		endpoints = defaultETCDendpoints
+	}
+
+	log.Infof("[d8][etcd] found etcd endpoints: %v", endpoints)
 
 	tlsConfig, err := c.buildTLSConfig(caCertPath, certPath, keyPath)
 	if err != nil {
 		return nil, err
 	}
-	// etcd client with backoff
 	cfg := clientv3.Config{
-		Endpoints:          []string{etcdEndpoint},
+		Endpoints:          endpoints,
 		DialTimeout:        5 * time.Second,
 		TLS:                tlsConfig,
-		MaxUnaryRetries:    10,
+		MaxUnaryRetries:    1,
 		BackoffWaitBetween: 1 * time.Second,
 	}
-	return clientv3.New(cfg)
+
+	client, err := clientv3.New(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
-func (c *EtcdClient) buildTLSConfig(caFile, certFile, keyFile string) (*tls.Config, error) {
+func (c *Etcd) buildTLSConfig(caFile, certFile, keyFile string) (*tls.Config, error) {
 	caCertBytes, err := os.ReadFile(caFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read CA file %q: %v", caFile, err)
+		return nil, fmt.Errorf("[d8][etcd] cannot read CA file %q: %v", caFile, err)
 	}
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
-		return nil, fmt.Errorf("cannot load client cert/key %q, %q: %v", certFile, keyFile, err)
+		return nil, fmt.Errorf("[d8][etcd] cannot load client cert/key %q, %q: %v", certFile, keyFile, err)
 	}
 
 	caPool := x509.NewCertPool()
 	if ok := caPool.AppendCertsFromPEM(caCertBytes); !ok {
-		return nil, fmt.Errorf("failed to parse CA certificate from %s", caFile)
+		return nil, fmt.Errorf("[d8][etcd] failed to parse CA certificate from %s", caFile)
 	}
 
 	return &tls.Config{
@@ -132,30 +179,95 @@ func (c *EtcdClient) buildTLSConfig(caFile, certFile, keyFile string) (*tls.Conf
 	}, nil
 }
 
-// kubeadm function fork
-func (c *EtcdClient) MemberPromote(learnerID uint64) error {
-	log.Infof("[etcd] Promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
-	var err error
+func (c *Etcd) MemberPromote(learnerID uint64) error {
+	log.Infof("[d8][etcd] promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
 	var lastError error
 	attempts := 0
-
-	err = wait.ExponentialBackoff(etcdBackoff, func() (bool, error) {
+	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
 		attempts++
 		ctx, cancel := context.WithTimeout(context.Background(), etcdPromoteTimeout)
 		defer cancel()
 
-		_, err = c.client.MemberPromote(ctx, learnerID)
+		_, err := c.client.MemberPromote(ctx, learnerID)
 		if err == nil {
-			log.Infof("[etcd] The learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts)
+			log.Infof("[d8][etcd] learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts)
 			return true, nil
 		}
-		log.Infof("[etcd] Promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err)
+		log.Infof("[d8][etcd] promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err)
 		lastError = err
 		return false, nil
 	})
-	if err != nil {
-		log.Errorf("[etcd] Failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError)
+
+	if err == wait.ErrWaitTimeout {
+		log.Errorf("[d8][etcd] failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError)
 		return lastError
 	}
-	return nil
+	return err
+}
+
+// getRawEtcdEndpointsFromPodAnnotation returns the list of endpoints as reported on etcd's pod annotations using the given backoff
+// from kubeadm
+func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Duration) ([]string, error) {
+	var etcdEndpoints []string
+	var lastErr error
+
+	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true,
+		func(_ context.Context) (bool, error) {
+			var overallEtcdPodCount int
+			if etcdEndpoints, overallEtcdPodCount, lastErr = c.getRawEtcdEndpointsFromPodAnnotationWithoutRetry(); lastErr != nil {
+				return false, nil
+			}
+			if len(etcdEndpoints) == 0 || overallEtcdPodCount != len(etcdEndpoints) {
+				log.Debugf("[d8][etcd] found a total of %d etcd pods and the following endpoints: %v; retrying",
+					overallEtcdPodCount, etcdEndpoints)
+				return false, nil
+			}
+			return true, nil
+		})
+	if err != nil {
+		const message = "[d8][etcd] could not retrieve the list of etcd endpoints"
+		if lastErr != nil {
+			return []string{}, errors.Wrap(lastErr, message)
+		}
+		return []string{}, errors.Wrap(err, message)
+	}
+	return etcdEndpoints, nil
+}
+
+// getRawEtcdEndpointsFromPodAnnotationWithoutRetry returns the list of etcd endpoints as reported by etcd Pod annotations,
+// along with the number of global etcd pods. This allows for callers to tell the difference between "no endpoints found",
+// and "no endpoints found and pods were listed", so they can skip retrying.
+// from kubeadm
+func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int, error) {
+	log.Debugf("[d8][etcd] retrieving etcd endpoints from %q annotation in etcd Pods", EtcdAdvertiseClientUrlsAnnotationKey)
+	podList, err := config.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(
+		context.TODO(),
+		metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("component=%s,tier=%s", EtcdComponent, ControlPlaneTier),
+		},
+	)
+	if err != nil {
+		return []string{}, 0, err
+	}
+
+	etcdEndpoints := make([]string, 0)
+	for _, pod := range podList.Items {
+		podIsReady := false
+		for _, c := range pod.Status.Conditions {
+			if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+				podIsReady = true
+				break
+			}
+		}
+		if !podIsReady {
+			log.Debugf("[d8][etcd] etcd pod %q is not ready", pod.ObjectMeta.Name)
+		}
+		etcdEndpoint, ok := pod.ObjectMeta.Annotations[EtcdAdvertiseClientUrlsAnnotationKey]
+		if !ok {
+			log.Debugf("[d8][etcd] etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL using the Pod annotation", pod.ObjectMeta.Name, EtcdAdvertiseClientUrlsAnnotationKey)
+			continue
+		}
+		etcdEndpoints = append(etcdEndpoints, etcdEndpoint)
+	}
+	return etcdEndpoints, len(podList.Items), nil
 }

@@ -118,7 +118,7 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       initContainers:
         - name: init-downloaded-modules
-          image: {{ include "helm_lib_module_common_image" (list . "init") }}
+          image: {{ include "helm_lib_module_image" (list . "init") }}
           imagePullPolicy: Always
           command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
@@ -201,7 +201,7 @@ spec:
             - name: HELM_HOST
               value: "127.0.0.1:44434"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
-              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT

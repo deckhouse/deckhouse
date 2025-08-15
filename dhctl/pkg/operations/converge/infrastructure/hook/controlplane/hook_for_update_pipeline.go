@@ -31,7 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -66,14 +66,14 @@ func NewHookForUpdatePipeline(
 				WithExternalIPs(nodeToHostForChecks).
 				WithClusterUUID(clusterUUID).
 				WithSSHCredentials(session.Input{
-					User:        cl.Settings.User,
-					Port:        cl.Settings.Port,
-					BastionHost: cl.Settings.BastionHost,
-					BastionPort: cl.Settings.BastionPort,
-					BastionUser: cl.Settings.BastionUser,
-					ExtraArgs:   cl.Settings.ExtraArgs,
-					BecomePass:  cl.Settings.BecomePass,
-				}, cl.PrivateKeys...))
+					User:        cl.Session().User,
+					Port:        cl.Session().Port,
+					BastionHost: cl.Session().BastionHost,
+					BastionPort: cl.Session().BastionPort,
+					BastionUser: cl.Session().BastionUser,
+					ExtraArgs:   cl.Session().ExtraArgs,
+					BecomePass:  cl.Session().BecomePass,
+				}, cl.PrivateKeys()...))
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
@@ -162,8 +162,8 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 			panic("Node interface is not ssh")
 		}
 
-		cl.Settings.RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
-		cl.Settings.AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
+		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
+		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
 
 	}
 

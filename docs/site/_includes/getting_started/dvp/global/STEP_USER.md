@@ -13,7 +13,7 @@ Create a user to access the cluster web interfaces:
 <li><p>Apply it using the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k create -f user.yml
+sudo -i d8 k create -f $PWD/user.yml
 ```
 </div>
 </li>

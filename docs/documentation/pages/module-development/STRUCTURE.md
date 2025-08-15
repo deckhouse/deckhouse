@@ -525,6 +525,10 @@ Parameters that can be used in `module.yaml`:
 
 - `namespace` — *String.* The namespace where the module components will be deployed.
 - `subsystems` — *Array of strings.* List of subsystems the module belongs to.
+- `accessibility` — *Object.* Module accessibility settings.
+  - `editions` — *Object.* Module operation settings in Deckhouse editions.
+    - `available` — *Boolean.* Defines whether the module is available in a Deckhouse edition.
+    - `enabledInBundles` — *Array of strings.* List of module bundles in which the module should be enabled by default.
 - `descriptions` — *Object.* Arbitrary text description of the module's purpose.
   - `en` — *String.* Description in English.
   - `ru` — *String.* Description in Russian.
@@ -540,6 +544,7 @@ Parameters that can be used in `module.yaml`:
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
 - `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
   For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
@@ -559,6 +564,12 @@ exclusiveGroup: "group"
 subsystems:
   - test
   - test1
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
 descriptions: 
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."

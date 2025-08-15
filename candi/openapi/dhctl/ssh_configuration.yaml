@@ -6,7 +6,9 @@ apiVersions:
     description: |
       General dhctl SSH config.
     additionalProperties: false
-    required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
+    anyOf:
+      - required: [apiVersion, kind, sshUser, sshAgentPrivateKeys]
+      - required: [apiVersion, kind, sshUser, sudoPassword]
     x-examples:
       - apiVersion: dhctl.deckhouse.io/v1
         kind: SSHConfig
@@ -56,7 +58,15 @@ apiVersions:
       sshBastionUser:
         type: string
         description: Username for bastion.
+      sshBastionPassword:
+        type: string
+        description: |
+          A password for the bastion user.
       sudoPassword:
         description: |
           A sudo password for the user.
         type: string
+      legacyMode:
+        description: |
+          Switch to legacy SSH mode
+        type: boolean

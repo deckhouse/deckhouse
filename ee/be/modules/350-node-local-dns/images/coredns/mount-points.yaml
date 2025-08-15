@@ -1,0 +1,4 @@
+dirs:
+- /etc/coredns
+files:
+- /run/xtables.lock

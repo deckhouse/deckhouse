@@ -78,7 +78,7 @@ locals {
     } : tomap({})
   ))
 
-  internalNodeNetworkPrefix = split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1]
+  internalNodeNetworkPrefix = try(split("/", var.providerClusterConfiguration.internalNetworkCIDR)[1], "")
   first_interface_index     = 192
 
   additional_interface_configurations = {
@@ -222,6 +222,8 @@ resource "vsphere_virtual_machine" "master" {
       disk[2], # ignore changes for system_registry_data device
       vapp,
       firmware,
+      ept_rvi_mode,
+      hv_mode,
     ]
   }
 

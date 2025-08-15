@@ -45,9 +45,12 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if _, err = wrapper.Client().Start(); err != nil {
+		if err = wrapper.Client().Start(); err != nil {
 			return fmt.Errorf("unable to start ssh client: %w", err)
 		}
 		if err = WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {

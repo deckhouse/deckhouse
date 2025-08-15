@@ -13,6 +13,7 @@ metadata:
 spec:
   strategies:
     lowNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 20
       targetThresholds:
@@ -30,6 +31,7 @@ metadata:
 spec:
   strategies:
     highNodeUtilization:
+      enabled: true
       thresholds:
         cpu: 50
         memory: 50

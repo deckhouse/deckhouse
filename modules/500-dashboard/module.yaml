@@ -3,3 +3,5 @@ stage: Deprecated
 subsystems:
   - observability
 namespace: d8-dashboard
+requirements:
+  deckhouse: ">= 1.68"
