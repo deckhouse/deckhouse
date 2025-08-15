@@ -1,5 +1,4 @@
-{{- if .Values.prometheus.longtermRetentionDays }}
-{{- if .Values.global.modules.publicDomainTemplate }}
+{{- if and .Values.prometheus.internal.grafana.enabled .Values.global.modules.publicDomainTemplate .Values.prometheus.longtermRetentionDays }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -51,5 +50,4 @@ spec:
             name: prometheus-longterm
             port:
               name: https
-{{- end }}
 {{- end }}
