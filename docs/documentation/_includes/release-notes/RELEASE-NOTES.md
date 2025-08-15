@@ -70,7 +70,7 @@
 - Refined the [list of ports used for networking](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
   - Added and updated:
     - `4287/UDP`: WireGuard port used for CNI Cilium traffic encryption.
-    - `4295–4299/UDP` — ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters (cloud clusters are not covered in this description). The port used depends on the DKP version and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):
+    - `4295–4299/UDP`: Ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters (cloud clusters are not covered in this description). The port used depends on the DKP version and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):
       - DKP ≤ 1.63 — `8472/UDP` is used.
       - DKP 1.64–1.70 — `4299/UDP` is used; if the `virtualization` module is enabled, the port changes to `4298/UDP`.
       - DKP ≥ 1.71 — `4298/UDP` is used; enabling the `virtualization` module does not change the port.
