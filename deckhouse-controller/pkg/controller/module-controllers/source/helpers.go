@@ -183,9 +183,9 @@ func (r *reconciler) getReleaseVersionFromChecksum(ctx context.Context, sourceNa
 	return best, nil
 }
 
-// noNeedToEnsureRelease checks if we can skip ensuring the release:
-// returns true when module is disabled, source is not active, or release is up to date.
-func (r *reconciler) noNeedToEnsureRelease(source *v1alpha1.ModuleSource,
+// needEnsure checks if we need to ensure the release:
+// returns true when module is enabled, source is active, and release needs updating.
+func (r *reconciler) needEnsure(source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
 	digestFromRegistry string,
@@ -196,15 +196,15 @@ func (r *reconciler) noNeedToEnsureRelease(source *v1alpha1.ModuleSource,
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
 
-		return true
+		return false
 	}
 
 	// check the module enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		return true
+		return false
 	}
 
-	return sourceModule.Checksum == digestFromRegistry && releaseExists
+	return !(sourceModule.Checksum == digestFromRegistry && releaseExists)
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {

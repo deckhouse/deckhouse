@@ -420,7 +420,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
 		}
 
-		if r.noNeedToEnsureRelease(source, module, availableModule, digestFromRegistry, version != nil) {
+		if !r.needEnsure(source, module, availableModule, digestFromRegistry, version != nil) {
 			availableModule.Checksum = digestFromRegistry
 			// Try to preserve version information to avoid breaking metrics and API
 			if version != nil {
