@@ -28,13 +28,12 @@
 {{- $context := . -}}
 
 - image: deckhouse-controller-artifact
-  add: /out/deckhouse-controller
-  to: /usr/bin/deckhouse-controller
+  add: /out
+  to: /usr/bin
   after: install
-- image: deckhouse-controller-artifact
-  add: /out/caps-deckhouse-controller
-  to: /usr/bin/caps-deckhouse-controller
-  after: install
+  includePaths:
+  - deckhouse-controller
+  - caps-deckhouse-controller
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq

@@ -78,6 +78,7 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y gcc glibc-core glibc-devel-static
   setup:
   - cd /src/
@@ -154,6 +155,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
+  {{- include "alt packages proxy" . | nindent 2 }}
   # git needs for getting dependencies from our repo
   - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   - apt-get install -y liblua5.1-devel --download-only
