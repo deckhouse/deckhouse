@@ -973,11 +973,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
-При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
-{% endalert %}
-
-{% alert level="warning" %}
 - Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, используйте соответствующую ей документацию.
 - Для коммерческих изданий требуется действующий лицензионный ключ с поддержкой нужного издания. При необходимости можно [запросить временный ключ](https://deckhouse.ru/products/enterprise_edition.html).
 - Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
@@ -986,6 +981,214 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 {% endalert %}
 
 Ниже описаны шаги для переключения кластера с любой редакцию на одну из поддерживаемых: Community Edition, Basic Edition, Standard Edition, Standard Edition+, Enterprise Edition.
+
+#### Как переключиться с помощью модуля Registry?
+
+1. Убедитесь, что кластер был переключен под управление [модулем registry](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если кластер не находится под управлением модуля registry, перейдите к инструкции ниже "Как переключиться без использования модуля Registry?".
+
+1. Подготовьте переменные с токеном лицензии и названием новой редакции:
+
+   > Заполнять переменную `LICENSE_TOKEN` при переключении на редакцию Deckhouse CE не требуется.
+   > Значение переменной `NEW_EDITION` должно быть равно желаемой редакции Deckhouse, например для переключения на редакцию:
+   > - CE, переменная должна быть `ce`;
+   > - BE, переменная должна быть `be`;
+   > - SE, переменная должна быть `se`;
+   > - SE+, переменная должна быть `se-plus`;
+   > - EE, переменная должна быть `ee`.
+
+   ```shell
+   NEW_EDITION=<PUT_YOUR_EDITION_HERE>
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   ```
+
+1. Проверьте, чтобы [очередь Deckhouse](#как-проверить-очередь-заданий-в-deckhouse) была пустой и без ошибок.
+
+1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
+
+   для CE редакции:
+
+   ```shell
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
+
+   для других редакций:
+
+   ```shell
+   kubectl create secret docker-registry $NEW_EDITION-image-pull-secret \
+    --docker-server=registry.deckhouse.ru \
+    --docker-username=license-token \
+    --docker-password=${LICENSE_TOKEN}
+
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   kubectl run $NEW_EDITION-image \
+    --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
+    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
+    --command sleep -- infinity
+   ```
+
+   Как только под перейдёт в статус `Running`, выполните следующие команды:
+
+   ```shell
+   NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
+   ```
+
+1. Убедитесь, что используемые в кластере модули поддерживаются в желаемой редакции.
+
+   Посмотреть список модулей, которые не поддерживаются в новой редакции и будут отключены:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Проверьте полученный список и убедитесь, что функциональность указанных модулей не используется вами в кластере и вы готовы их отключить.
+
+   Отключите неподдерживаемые новой редакцией модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   ```
+
+   Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
+
+1. Удалите созданный секрет и под:
+
+   ```shell
+   kubectl delete pod/$NEW_EDITION-image
+   kubectl delete secret/$NEW_EDITION-image-pull-secret
+   ```
+
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметр в ModuleConfig `deckhouse`. Для подробной настройки ознакомьтесь с конфигурацией модуля [deckhouse](modules/deckhouse/).
+
+   ```yaml
+   ---
+   # Пример для Direct режима
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+           # Для переключения между редакциями необходимо использовать данный режим проверки registry
+           checkMode: Relax
+           # Укажите свой параметр <NEW_EDITION>
+           imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>
+           # Если переключение выполняется на CE редакцию, удалите данный параметр
+           license: <LICENSE_TOKEN>
+   ---
+   # Пример для Unmanaged режима
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+         unmanaged:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+           # Для переключения между редакциями необходимо использовать данный режим проверки
+           checkMode: Relax
+           # Укажите свой параметр <NEW_EDITION>
+           imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>
+           # Если переключение выполняется на CE редакцию, удалите данный параметр
+           license: <LICENSE_TOKEN>
+   ```
+
+1. Дождитесь переключения registry. Для проверки выполнения переключения воспользуйтесь [инструкцией](modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Relax
+         registry.deckhouse.ru: all 1 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. После переключения, удалите из ModuleConfig `deckhouse` параметр `checkMode: Relax`, чтобы переключить на проверку по-умолчанию. Удаление запустит проверку наличия критически важных компонентов в registry.
+
+1. Дождитесь выполнения проверки, для этого воспользуйтесь [инструкцией](modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Default
+         registry.deckhouse.ru: all 155 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. Проверьте, не осталось ли в кластере подов со старым адресом registry, где `<YOUR-PREVIOUS-EDITION>` — название вашей прошлой редакции:
+
+   Для Unmanaged режима:
+
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   Для других режимов, использующих фиксированный адрес.
+   Данная проверка не учитывает внешние модули:
+
+   ```shell
+   # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse
+   IMAGES_DIGESTS=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+
+   # Проверяем, есть ли Pod'ы, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+   # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS
+   kubectl get pods -A -o json |
+   jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
+     .items[]
+     | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
+     | select(.containers != null)
+     | select(
+         .containers[]
+         | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
+         | .image as $img
+         | ($img | split("@") | last) as $digest
+         | ($digest | IN($digests[]) | not)
+       )
+     | .namespace + "\t" + .name
+   ' | sort -u
+   ```
+
+#### Как переключиться без использования модуля Registry?
+
+1. Перед началом, отключите модуль Registry с [помощью инструкции](modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
 
 1. Подготовьте переменные с токеном лицензии и названием новой редакции:
 
@@ -1007,7 +1210,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
-   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
    >
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
@@ -1071,7 +1274,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
 
    ```shell
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
    kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
@@ -1155,11 +1358,6 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### Как переключить Deckhouse EE на CSE?
 
 {% alert level="warning" %}
-При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
-{% endalert %}
-
-{% alert level="warning" %}
 - Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry).
 - В Deckhouse CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
 - Миграция на Deckhouse CSE возможна только с версии Deckhouse EE 1.58, 1.64 или 1.67.
@@ -1170,6 +1368,222 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 {% endalert %}
 
 Для переключения кластера Deckhouse Enterprise Edition на Certified Security Edition выполните следующие действия (все команды выполняются на master-узле кластера от имени пользователя с настроенным контекстом `kubectl` или от имени суперпользователя):
+
+#### Как переключиться с помощью модуля Registry?
+
+1. Убедитесь, что кластер был переключен под управление [модулем registry](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если кластер не находится под управлением модуля registry, перейдите к инструкции ниже "Как переключиться без использования модуля Registry?".
+
+1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого:
+   1. Выполните команду:
+
+      ```shell
+      d8 platform edit cluster-configuration
+      ```
+
+   1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
+   1. Сохраните изменения. Узлы кластера начнут последовательно обновляться.
+   1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
+
+1. Подготовьте переменные с токеном лицензии:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   ```
+
+1. Запустите временный под Deckhouse новой редакции, чтобы получить актуальные дайджесты и список модулей:
+
+   ```shell
+   kubectl create secret docker-registry cse-image-pull-secret \
+    --docker-server=registry-cse.deckhouse.ru \
+    --docker-username=license-token \
+    --docker-password=${LICENSE_TOKEN}
+
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   kubectl run cse-image \
+    --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION \
+    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"cse-image-pull-secret\"}]}}" \
+    --command sleep -- infinity
+   ```
+
+   Как только под перейдёт в статус `Running`, выполните следующие команды:
+
+   ```shell
+   CSE_MODULES=$(kubectl exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   ```
+
+1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.
+
+   Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Проверьте список и убедитесь, что функциональность указанных модулей не задействована вами в кластере, и вы готовы к их отключению.
+
+   Отключите неподдерживаемые в Deckhouse CSE модули:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   В Deckhouse CSE не поддерживается компонент earlyOOM. Отключите его с помощью [настройки](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Дождитесь перехода пода Deckhouse в статус `Ready` и выполнения всех задач в очереди.
+
+   ```shell
+   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Проверьте, что отключенные модули перешли в состояние `Disabled`.
+
+   ```shell
+   kubectl get modules
+   ```
+
+1. Удалите созданный секрет и под:
+
+   ```shell
+   kubectl delete pod/cse-image
+   kubectl delete secret/cse-image-pull-secret
+   ```
+
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметр в ModuleConfig `deckhouse`. Для подробной настройки ознакомьтесь с конфигурацией модуля [deckhouse](modules/deckhouse/).
+
+   ```yaml
+   ---
+   # Пример для Direct режима
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+           # Для переключения между редакциями необходимо использовать данный режим проверки registry
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>
+           license: <LICENSE_TOKEN>
+   ---
+   # Пример для Unmanaged режима
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+         unmanaged:
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
+           # Для переключения между редакциями необходимо использовать данный режим проверки
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Укажите свой параметр <LICENSE_TOKEN>
+           license: <LICENSE_TOKEN>
+   ```
+
+1. Дождитесь переключения registry. Для проверки выполнения переключения воспользуйтесь [инструкцией](modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Relax
+         registry-cse.deckhouse.ru: all 1 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. После переключения, удалите из ModuleConfig `deckhouse` параметр `checkMode: Relax`, чтобы переключить на проверку по-умолчанию. Удаление запустит проверку наличия критически важных компонентов в registry.
+
+1. Дождитесь выполнения проверки, для этого воспользуйтесь [инструкцией](modules/registry/faq.html#как-посмотреть-статус-переключения-режима-registry).
+
+   Пример вывода:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Default
+         registry-cse.deckhouse.ru: all 155 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. Проверьте, не осталось ли в кластере подов с адресом registry для Deckhouse EE:
+
+   Для Unmanaged режима:
+
+   ```shell
+   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   Для других режимов, использующих фиксированный адрес.
+   Данная проверка не учитывает внешние модули:
+
+   ```shell
+   # Получаем список актуальных digest'ов из файла images_digests.json внутри Deckhouse
+   IMAGES_DIGESTS=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+
+   # Проверяем, есть ли Pod'ы, использующие образы Deckhouse по адресу `registry.d8-system.svc:5001/system/deckhouse`
+   # с digest'ом, отсутствующим в списке актуальных digest'ов из IMAGES_DIGESTS
+   kubectl get pods -A -o json |
+   jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
+     .items[]
+     | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
+     | select(.containers != null)
+     | select(
+         .containers[]
+         | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
+         | .image as $img
+         | ($img | split("@") | last) as $digest
+         | ($digest | IN($digests[]) | not)
+       )
+     | .namespace + "\t" + .name
+   ' | sort -u
+   ```
+
+   Если в выводе присутствуют поды модуля chrony, заново включите данный модуль (в Deckhouse CSE этот модуль по умолчанию выключен):
+
+   ```shell
+   kubectl -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+#### Как переключиться без использования модуля Registry?
+
+1. Перед началом, отключите модуль Registry с [помощью инструкции](modules/registry/faq.html#как-мигрировать-обратно-с-модуля-registry).
 
 1. Настройте кластер на использование необходимой версии Kubernetes (см. примечание выше про доступные версии Kubernetes). Для этого:
    1. Выполните команду:
@@ -1184,7 +1598,7 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
 
-   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>

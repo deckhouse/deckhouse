@@ -38,6 +38,55 @@ func TestParams_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Unmanaged: valid without auth",
+			params: Params{
+				Mode:       registry_const.ModeUnmanaged,
+				ImagesRepo: "registry.example.com/namespace/image",
+				Scheme:     "HTTPS",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Unmanaged: valid with auth",
+			params: Params{
+				Mode:       registry_const.ModeUnmanaged,
+				ImagesRepo: "registry.example.com/namespace/image",
+				Scheme:     "HTTPS",
+				UserName:   "username",
+				Password:   "password",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Unmanaged: invalid scheme",
+			params: Params{
+				Mode:       registry_const.ModeUnmanaged,
+				ImagesRepo: "registry.example.com/namespace/image",
+				Scheme:     "FTP",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unmanaged: only username",
+			params: Params{
+				Mode:       registry_const.ModeUnmanaged,
+				ImagesRepo: "registry.example.com/namespace/image",
+				Scheme:     "HTTPS",
+				UserName:   "username",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unmanaged: only password",
+			params: Params{
+				Mode:       registry_const.ModeUnmanaged,
+				ImagesRepo: "registry.example.com/namespace/image",
+				Scheme:     "HTTPS",
+				Password:   "password",
+			},
+			wantErr: true,
+		},
+		{
 			name: "Direct: valid without auth",
 			params: Params{
 				Mode:       registry_const.ModeDirect,
@@ -56,14 +105,6 @@ func TestParams_Validate(t *testing.T) {
 				Password:   "password",
 			},
 			wantErr: false,
-		},
-		{
-			name: "Direct: missing address",
-			params: Params{
-				Mode:   registry_const.ModeDirect,
-				Scheme: "HTTPS",
-			},
-			wantErr: true,
 		},
 		{
 			name: "Direct: invalid scheme",
@@ -91,6 +132,14 @@ func TestParams_Validate(t *testing.T) {
 				ImagesRepo: "registry.example.com/namespace/image",
 				Scheme:     "HTTPS",
 				Password:   "password",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Direct: missing address",
+			params: Params{
+				Mode:   registry_const.ModeDirect,
+				Scheme: "HTTPS",
 			},
 			wantErr: true,
 		},

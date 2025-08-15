@@ -44,6 +44,8 @@ type Params struct {
 	TTL        string
 	Scheme     string
 	CA         *x509.Certificate // optional
+
+	CheckMode registry_const.CheckModeType
 }
 
 type Inputs struct {
@@ -68,16 +70,21 @@ type Values struct {
 }
 
 func (p Params) Validate() error {
-	switch p.Mode {
-	case registry_const.ModeUnmanaged, registry_const.ModeLocal:
+	if p.Mode == registry_const.ModeUnmanaged && p.ImagesRepo == "" {
+		// Skip validation for Unmanaged mode if it's not configurable
 		return nil
-	case registry_const.ModeDirect, registry_const.ModeProxy:
+	}
+
+	switch p.Mode {
+	case registry_const.ModeDirect, registry_const.ModeProxy, registry_const.ModeUnmanaged:
 		return validation.ValidateStruct(&p,
 			validation.Field(&p.ImagesRepo, validation.Required),
 			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),
 			validation.Field(&p.UserName, validation.When(p.Password != "", validation.Required)),
 			validation.Field(&p.Password, validation.When(p.UserName != "", validation.Required)),
 		)
+	case registry_const.ModeLocal:
+		return nil
 	}
-	return fmt.Errorf("Unknown registry mode")
+	return fmt.Errorf("Unknown registry mode: %q", p.Mode)
 }
