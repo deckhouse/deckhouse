@@ -1,0 +1,9 @@
+ci:
+  fixes:
+    - summary: Make Render workflow dependent on receiving PR information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15016
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix fetching VM templates from organization catalogs without direct access to organizastion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14980
+
