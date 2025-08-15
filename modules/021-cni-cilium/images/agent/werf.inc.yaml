@@ -99,6 +99,10 @@ image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
 from: dev-registry.deckhouse.io/base_images@sha256:9cad3fd10342e557bdb3e15f5957e141900a978ba3ca7d46f71be2ed1644cab6
 final: false
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:279b83872c81e6a85e0bd38e5898021666d083f38dd30301f7fa9caea6d2f505
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-musl
 from: dev-registry.deckhouse.io/base_images@sha256:aed20ec34738390c11ade2afcae8021928663f5ad1b7bbad0a1345452d7e8bdf
 final: false
@@ -593,13 +597,13 @@ import:
   to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   before: install
 ### place for gcc
-- image: {{ .ModuleName }}/bpftool-artifact
-  add: /lib64
+- image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+  add: /usr/lib64
   to: /lib64
   before: install
   includePaths:
   - libstdc++.so.6
-  - libstdc++.so.6.0.32
+  - libstdc++.so.6.0.29
   - libgcc_s.so.1
 ### temp
 - image: {{ .ModuleName }}/{{ .ImageName }}-musl
