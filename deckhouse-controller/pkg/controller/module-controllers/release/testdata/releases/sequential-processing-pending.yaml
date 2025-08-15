@@ -32,6 +32,8 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
@@ -62,6 +64,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha
@@ -92,6 +96,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   labels:
     module: upmeter
     modules.deckhouse.io/update-policy: foxtrot-alpha

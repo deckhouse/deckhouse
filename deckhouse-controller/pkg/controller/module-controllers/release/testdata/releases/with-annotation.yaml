@@ -18,6 +18,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     modules.deckhouse.io/apply-now: "true"
     a: b
   finalizers:

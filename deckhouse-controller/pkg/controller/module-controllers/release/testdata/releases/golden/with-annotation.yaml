@@ -27,6 +27,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     a: b
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -54,8 +55,8 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
-  size: 0
+  pullDuration: 307.070601ms
+  size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

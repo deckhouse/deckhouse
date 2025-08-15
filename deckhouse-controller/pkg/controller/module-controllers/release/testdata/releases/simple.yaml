@@ -35,6 +35,8 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   labels:
     module: parca
     modules.deckhouse.io/update-policy: foxtrot-alpha

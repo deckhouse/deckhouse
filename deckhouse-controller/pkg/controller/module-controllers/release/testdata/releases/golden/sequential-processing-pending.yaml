@@ -28,6 +28,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -58,7 +59,7 @@ status:
   approved: false
   message: ""
   phase: Superseded
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -66,6 +67,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -96,7 +98,7 @@ status:
   approved: false
   message: ""
   phase: Superseded
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -104,6 +106,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -134,7 +137,7 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
