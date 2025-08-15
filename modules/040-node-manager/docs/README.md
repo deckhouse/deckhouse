@@ -44,7 +44,7 @@ Nodes are managed through the [NodeGroup](cr.html#nodegroup) resource, and each 
 - a group of monitoring-related nodes;
 - a group of application nodes (the so-called worker nodes), etc.
 
-The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both Static nodes deployed in the cloud and static (bare metal or virtual machine) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
+The nodes belonging to the group have common parameters and are configured automatically according to the group's parameters. Deckhouse scales groups by adding, excluding, and updating their nodes. Both Static nodes deployed in the cloud and static (bare-metal or virtual machine) nodes can be combined into a single group. It paves the way for the hybrid clusters, in which you can scale nodes on physical servers via cloud nodes.
 
 Operations on the [cloud infrastructure](#working-with-nodes-on-supported-cloud-platforms) are performed by means provided by supported cloud providers. If there is no support for the desired cloud platform, you can use its resources as static nodes.
 
