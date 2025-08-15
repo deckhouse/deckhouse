@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -83,6 +84,8 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
+	installer *installer.Installer
+
 	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
@@ -113,22 +116,23 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 // Sync syncs fs and cluster, restores or deletes modules
 func (l *Loader) Sync(ctx context.Context) error {
 	l.clusterUUID = d8utils.GetClusterUUID(ctx, l.client)
+	l.installer = installer.New(l.clusterUUID, l.dependencyContainer, l.logger)
 
 	l.logger.Debug("init module loader")
 
-	l.logger.Debug("restore absent modules from overrides")
-	if err := l.restoreAbsentModulesFromOverrides(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from overrides: %w", err)
+	l.logger.Debug("delete orphan modules")
+	if err := l.deleteOrphanModules(ctx); err != nil {
+		return fmt.Errorf("delete orphan modules: %w", err)
 	}
 
-	l.logger.Debug("restore absent modules from releases")
-	if err := l.restoreAbsentModulesFromReleases(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from releases: %w", err)
+	l.logger.Debug("restore modules by overrides")
+	if err := l.restoreModulesByOverrides(ctx); err != nil {
+		return fmt.Errorf("restore modules by overrides: %w", err)
 	}
 
-	l.logger.Debug("delete modules with absent release")
-	if err := l.deleteModulesWithAbsentRelease(ctx); err != nil {
-		return fmt.Errorf("delete modules with absent releases: %w", err)
+	l.logger.Debug("restore modules by releases")
+	if err := l.restoreModulesByReleases(ctx); err != nil {
+		return fmt.Errorf("restore modules by releases: %w", err)
 	}
 
 	go l.runDeleteStaleModuleReleasesLoop(ctx)
@@ -136,6 +140,11 @@ func (l *Loader) Sync(ctx context.Context) error {
 	l.logger.Debug("module loader initialized")
 
 	return nil
+}
+
+// Installer returns installer instance
+func (l *Loader) Installer() *installer.Installer {
+	return l.installer
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator
