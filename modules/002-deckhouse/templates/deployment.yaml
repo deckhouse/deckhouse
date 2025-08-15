@@ -283,6 +283,8 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /dev/loop-control
+            name: loop-control
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
             name: chroot
@@ -349,6 +351,10 @@ spec:
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
       volumes:
+      - name: loop-control
+        hostPath:
+          path: /dev/loop-control
+          type: CharDevice
       - emptyDir:
           medium: Memory
         name: tmp

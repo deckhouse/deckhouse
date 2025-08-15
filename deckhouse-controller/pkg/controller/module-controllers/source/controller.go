@@ -236,6 +236,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{}, err
 	}
 	if err == nil {
@@ -259,6 +260,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
 
