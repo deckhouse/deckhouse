@@ -89,9 +89,9 @@
       Пример вывода команды:
 
       ```bash
-      #   routing-mode: tunnel
-      #   tunnel-port: "4298"
-      #   tunnel-protocol: vxlan
+      routing-mode: tunnel
+      tunnel-port: "4298"
+      tunnel-protocol: vxlan
       ```
 
       Порт можно явно задать в ConfigMap `d8-cni-cilium/cilium-config` (ключ `tunnel-port`) — значение останется постоянным до следующего изменения.
