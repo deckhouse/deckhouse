@@ -204,7 +204,7 @@ func (r *reconciler) needEnsure(source *v1alpha1.ModuleSource,
 		return false
 	}
 
-	return !(sourceModule.Checksum == digestFromRegistry && releaseExists)
+	return sourceModule.Checksum != digestFromRegistry || !releaseExists
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
