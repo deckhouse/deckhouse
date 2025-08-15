@@ -117,6 +117,50 @@ func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string,
 	return "", nil
 }
 
+// HasDigestChanged checks if the current digest differs from the cached digest for a specific release channel
+// Returns true if digest has changed or if no cached digest exists
+func (c *Cache) HasDigestChanged(registry, module, releaseChannel, currentDigest string) bool {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	r, ok := c.val[registryName(registry)]
+	if !ok {
+		return true // No cache entry means digest has "changed"
+	}
+
+	m, ok := r[moduleName(module)]
+	if !ok {
+		return true // No module entry means digest has "changed"
+	}
+
+	cachedDigest, ok := m.releaseChecksum[releaseChannelName(releaseChannel)]
+	if !ok {
+		return true // No cached digest means digest has "changed"
+	}
+
+	return cachedDigest != currentDigest
+}
+
+// GetCachedDigest returns the cached digest for a specific release channel
+// Returns empty string if not found
+func (c *Cache) GetCachedDigest(registry, module, releaseChannel string) string {
+	c.m.RLock()
+	defer c.m.RUnlock()
+
+	r, ok := c.val[registryName(registry)]
+	if !ok {
+		return ""
+	}
+
+	m, ok := r[moduleName(module)]
+	if !ok {
+		return ""
+	}
+
+	digest, _ := m.releaseChecksum[releaseChannelName(releaseChannel)]
+	return digest
+}
+
 // SyncWithRegistryVersions compares cache with registry versions and returns
 // documentation tasks that need to be performed (create new, delete old).
 //

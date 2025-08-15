@@ -116,7 +116,55 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	client := s.registryClients[registry]
+	
+	// Create a lightweight digest check first using the DigestChanged method
+	imageURL := client.Name() + "/" + module + "/release" + ":" + releaseChannel
+	lastKnownDigest := s.cache.GetCachedDigest(registry, module, releaseChannel)
+	
+	if lastKnownDigest != "" {
+		digestChanged, err := client.DigestChanged(ctx, imageURL, lastKnownDigest)
+		if err == nil {
+			if !digestChanged {
+				s.logger.Debug("digest unchanged, using cached data", 
+					slog.String("registry", registry),
+					slog.String("module", module),
+					slog.String("channel", releaseChannel),
+					slog.String("digest", lastKnownDigest))
+				
+				// Try to get cached data
+				versionData := &internal.VersionData{
+					Registry:       registry,
+					ModuleName:     module,
+					ReleaseChannel: releaseChannel,
+					Checksum:       lastKnownDigest,
+				}
+				
+				version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
+				if version != "" {
+					versionData.Version = version
+					versionData.TarFile = tarFile
+					// We don't need the actual image object since we have cached data
+					return versionData, nil
+				}
+			} else {
+				s.logger.Info("digest changed, will fetch new data", 
+					slog.String("registry", registry),
+					slog.String("module", module),
+					slog.String("channel", releaseChannel),
+					slog.String("old_digest", lastKnownDigest))
+			}
+		} else {
+			s.logger.Debug("failed to check digest with client, fallback to full fetch", 
+				slog.String("registry", registry),
+				slog.String("module", module),
+				slog.String("channel", releaseChannel),
+				log.Err(err))
+		}
+	}
+
+	// Fallback to full image fetch if digest check failed or we don't have cached data
+	releaseImage, err := client.ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get release image: %w", err)
 	}
@@ -166,7 +214,12 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
 	// Before pull
 	timeBeforePull := time.Now()
-	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
+	
+	client := s.registryClients[version.Registry]
+	imageURL := client.Name() + "/" + version.ModuleName + ":" + version.Version
+	s.logger.Debug("extracting tar from image", slog.String("image", imageURL))
+	
+	image, err := client.Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}

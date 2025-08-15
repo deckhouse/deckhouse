@@ -198,6 +198,13 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	client.ImageMock.When(minimock.AnyContext, "parca", "2.3.4").Then(images["parca"]["2.3.4"], nil)
 	client.ImageMock.When(minimock.AnyContext, "parca", "3.3.4").Then(images["parca"]["3.3.4"], nil)
 
+	// Add DigestChanged mock calls that return true to simulate no cached digests (new processing)
+	// Make it optional since it may or may not be called depending on cache state
+	client.DigestChangedMock.Optional().Set(func(ctx context.Context, imageURL string, lastKnownDigest string) (bool, error) {
+		// Always return true (digest changed) to simulate initial processing without cache
+		return true, nil
+	})
+
 	return client
 }
 
@@ -227,6 +234,13 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 
 	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
 	client.ImageMock.When(minimock.AnyContext, "parca", "5.5.5").Then(images["parca"]["5.5.5"], nil)
+
+	// Add DigestChanged mock calls that return true to simulate digest changes (updated images)
+	// Make it optional since it may or may not be called depending on cache state
+	client.DigestChangedMock.Optional().Set(func(ctx context.Context, imageURL string, lastKnownDigest string) (bool, error) {
+		// Always return true (digest changed) to simulate new images
+		return true, nil
+	})
 
 	return client
 }
@@ -258,6 +272,13 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	client.ImageMock.When(minimock.AnyContext, "console", "4.4.5").Then(images["console"]["4.4.5"], nil)
 	client.ImageMock.When(minimock.AnyContext, "parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
 
+	// Add DigestChanged mock calls that return true to simulate no cached digests (new processing)
+	// Make it optional since it may or may not be called depending on cache state
+	client.DigestChangedMock.Optional().Set(func(ctx context.Context, imageURL string, lastKnownDigest string) (bool, error) {
+		// Always return true (digest changed) to simulate initial processing without cache
+		return true, nil
+	})
+
 	return client
 }
 
@@ -287,6 +308,13 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 
 	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(images["console"]["4.4.4"], nil)
 	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(images["parca"]["6.6.6"], nil)
+
+	// Add DigestChanged mock calls that return true to simulate digest changes (updated images)
+	// Make it optional since it may or may not be called depending on cache state
+	client.DigestChangedMock.Optional().Set(func(ctx context.Context, imageURL string, lastKnownDigest string) (bool, error) {
+		// Always return true (digest changed) to simulate new images
+		return true, nil
+	})
 
 	return client
 }

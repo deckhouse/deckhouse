@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -52,12 +53,15 @@ type Client interface {
 	Image(ctx context.Context, tag string) (crv1.Image, error)
 	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
+	DigestChanged(ctx context.Context, tag, currentDigest string) (bool, string, error)
 }
 
 type client struct {
 	registryURL string
 	authConfig  authn.AuthConfig
 	options     *registryOptions
+	digestCache map[string]string
+	cacheMutex  sync.RWMutex
 }
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
@@ -85,6 +89,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	r := &client{
 		registryURL: repo,
 		options:     opts,
+		digestCache: make(map[string]string),
 	}
 
 	if !opts.withoutAuth {
@@ -194,6 +199,83 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	}
 
 	return d.String(), nil
+}
+
+// DigestChanged checks if the image digest has changed using remote.Get for lightweight check
+func (r *client) DigestChanged(ctx context.Context, tag, currentDigest string) (bool, string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "DigestChanged")
+	defer span.End()
+
+	cacheKey := r.registryURL + ":" + tag
+
+	// Check cache first
+	r.cacheMutex.RLock()
+	cachedDigest, found := r.digestCache[cacheKey]
+	r.cacheMutex.RUnlock()
+
+	if found {
+		return cachedDigest != currentDigest, cachedDigest, nil
+	}
+
+	// Cache miss, fetch digest using lightweight remote.Get
+	newDigest, err := r.getDigestRemote(ctx, tag)
+	if err != nil {
+		// Fallback to full image fetch on error
+		fallbackDigest, fallbackErr := r.Digest(ctx, tag)
+		if fallbackErr != nil {
+			return false, "", fmt.Errorf("remote digest check failed and fallback failed: %w (fallback: %v)", err, fallbackErr)
+		}
+		newDigest = fallbackDigest
+	}
+
+	// Cache the result
+	r.cacheMutex.Lock()
+	r.digestCache[cacheKey] = newDigest
+	r.cacheMutex.Unlock()
+
+	return newDigest != currentDigest, newDigest, nil
+}
+
+// getDigestRemote uses remote.Get to fetch only the manifest digest without downloading the full image
+func (r *client) getDigestRemote(ctx context.Context, tag string) (string, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	remoteOpts := make([]remote.Option, 0)
+	remoteOpts = append(remoteOpts, remote.WithUserAgent(r.options.userAgent))
+
+	if !r.options.withoutAuth {
+		remoteOpts = append(remoteOpts, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+
+	if r.options.ca != "" {
+		remoteOpts = append(remoteOpts, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	if r.options.timeout > 0 {
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		defer cancel()
+		remoteOpts = append(remoteOpts, remote.WithContext(ctxWTO))
+	} else {
+		remoteOpts = append(remoteOpts, remote.WithContext(ctx))
+	}
+
+	// Use remote.Get to fetch only the manifest descriptor
+	descriptor, err := remote.Get(ref, remoteOpts...)
+	if err != nil {
+		return "", fmt.Errorf("remote get: %w", err)
+	}
+
+	return descriptor.Digest.String(), nil
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {

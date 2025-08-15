@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -691,9 +692,7 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 			dr.Annotations = make(map[string]string, 2)
 		}
 
-		for k, v := range annotations {
-			dr.Annotations[k] = v
-		}
+		maps.Copy(dr.Annotations, annotations)
 
 		if dr.GetApplyNow() {
 			delete(dr.Annotations, v1alpha1.DeckhouseReleaseAnnotationApplyNow)
@@ -894,33 +893,31 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		opts = utils.GenerateRegistryOptions(rconf, r.logger)
 	}
 
-	regClient, err := r.dc.GetRegistryClient(repo, opts...)
+	registryClient, err := cr.NewClient(repo, opts...)
 	if err != nil {
 		return fmt.Errorf("registry (%s) client init failed: %s", repo, err)
 	}
 
 	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
 
-	repoDigest, err := regClient.Digest(ctx, tag)
+	// Use client for lightweight digest checking
+	digestChanged, _, err := registryClient.DigestChanged(ctx, tag, strings.TrimSpace(imageHash))
 	if err != nil {
 		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
-		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
+		return fmt.Errorf("registry (%s) digest changed check failed: %s", repo, err)
 	}
 
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
-
-	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
+	if !digestChanged {
 		return nil
 	}
 
 	r.logger.Info("New deckhouse image found. Restarting")
 	now := r.dc.GetClock().Now().Format(time.RFC3339)
 
-	annotationsPatch := map[string]interface{}{
-		"spec": map[string]interface{}{
-			"template": map[string]interface{}{
-				"metadata": map[string]interface{}{
+	annotationsPatch := map[string]any{
+		"spec": map[string]any{
+			"template": map[string]any{
+				"metadata": map[string]any{
 					"annotations": map[string]string{
 						"kubectl.kubernetes.io/restartedAt": now,
 					},
