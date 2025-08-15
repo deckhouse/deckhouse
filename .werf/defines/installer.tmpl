@@ -242,6 +242,12 @@
   {{- end }}
 {{- end }}
 
+{{$null := index $context.TF "nulltf" -}}
+- image: {{ $null.artifact }} # null provider
+  add: /{{ $null.artifactBinary }}
+  to: /plugins/registry.opentofu.org/{{ $null.namespace }}/{{ $null.type }}/{{ $null.version }}/linux_amd64/{{ $null.destinationBinary }}
+  before: setup
+
 {{- end }}
 
 
@@ -285,7 +291,6 @@
     {{- break -}}
   {{- end }}
 {{- end }}
-
 {{- end }}
 
 

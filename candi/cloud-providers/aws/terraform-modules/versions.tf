@@ -18,6 +18,10 @@ terraform {
       source = "hashicorp/aws"
       version = "5.83.1"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.4"
+    }
   }
   required_version = ">= 0.13"
 }

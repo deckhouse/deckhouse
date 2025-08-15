@@ -38,6 +38,12 @@ data "openstack_compute_servergroup_v2" "master" {
   name  = var.prefix
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = openstack_compute_instance_v2.master.id
+  }
+}
+
 resource "openstack_compute_instance_v2" "master" {
   name              = join("-", [var.prefix, "master", var.node_index])
   image_name        = data.openstack_images_image_v2.master.name

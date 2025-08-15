@@ -11,3 +11,5 @@ provider "huaweicloud" {
   auth_url    = lookup(var.providerClusterConfiguration.provider, "authURL", "")
   domain_name = lookup(var.providerClusterConfiguration.provider, "domainName", "")
 }
+
+provider "null" {}

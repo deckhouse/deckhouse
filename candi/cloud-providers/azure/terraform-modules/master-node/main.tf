@@ -61,6 +61,12 @@ resource "azurerm_network_interface" "master" {
   tags = local.additional_tags
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = azurerm_linux_virtual_machine.vm.id
+  }
+}
+
 resource "azurerm_linux_virtual_machine" "master" {
   name                = join("-", [local.prefix, "master", var.nodeIndex])
   resource_group_name = data.azurerm_resource_group.kube.name

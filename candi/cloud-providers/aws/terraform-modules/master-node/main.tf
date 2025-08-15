@@ -77,6 +77,13 @@ locals {
   )
   }
 
+
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = aws_instance.master.id
+  }
+}
+
 resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
   instance_type   = var.node_group.instanceClass.instanceType

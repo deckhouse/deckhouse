@@ -17,3 +17,5 @@ provider "aws" {
   secret_key = var.providerClusterConfiguration.provider.providerSecretAccessKey
   region     = var.providerClusterConfiguration.provider.region
 }
+
+provider "null" {}

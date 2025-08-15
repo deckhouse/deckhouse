@@ -9,9 +9,7 @@
       "name": "kubernetes_data",
       "provider_name": "registry.terraform.io/yandex-cloud/yandex",
       "change": {
-        "actions": [
-          "no-op"
-        ],
+        "actions": ["no-op"],
         "before": {
           "created_at": "2021-02-26T09:41:40Z",
           "description": "volume for etcd and kubernetes certs",
@@ -54,7 +52,7 @@
       "name": "master",
       "provider_name": "registry.terraform.io/yandex-cloud/yandex",
       "change": {
-        "actions": ["update"],
+        "actions": ["delete", "create"],
         "before": {
           "allow_stopping_for_update": true,
           "boot_disk": [
@@ -222,56 +220,26 @@
       }
     },
     {
-      "address": "yandex_vpc_address.addr",
+      "address": "null_resource.master_vm_marker",
       "mode": "managed",
-      "type": "yandex_vpc_address",
-      "name": "addr",
-      "provider_name": "registry.terraform.io/yandex-cloud/yandex",
+      "type": "null_resource",
+      "name": "master_vm_marker",
+      "provider_name": "registry.terraform.io/hashicorp/null",
       "change": {
         "actions": ["delete", "create"],
         "before": {
-          "created_at": "2025-08-08T10:24:33Z",
-          "description": "",
-          "external_ipv4_address": [
-            {
-              "address": "158.160.191.107",
-              "ddos_protection_provider": "",
-              "outgoing_smtp_capability": "",
-              "zone_id": "ru-central1-d"
-            }
-          ],
-          "folder_id": "b1g9i25t1r55q86jopf8",
-          "id": "fl8fv4hn9vtgqf0ju1vu",
-          "labels": {},
-          "name": "kube-master",
-          "reserved": true,
-          "timeouts": null,
-          "used": true
+          "id": "3133818792804416154",
+          "triggers": {
+            "instance_id": "fv4tjo7velb1tho5p4rr"
+          },
+          "timeouts": null
         },
         "after": {
-          "description": "",
-          "external_ipv4_address": [
-            {
-              "zone_id": "ru-central1-d"
-            }
-          ],
-          "labels": {},
-          "name": "kube-master",
-          "reserved": true,
           "timeouts": null
         },
         "after_unknown": {
-          "created_at": true,
-          "folder_id": true,
           "id": true,
-          "used": true,
-          "external_ipv4_address": [
-            {
-              "address": true,
-              "ddos_protection_provider": true,
-              "outgoing_smtp_capability": true
-            }
-          ]
+          "triggers": {}
         }
       }
     }

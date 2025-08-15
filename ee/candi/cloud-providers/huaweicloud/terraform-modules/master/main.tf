@@ -15,6 +15,12 @@ data "huaweicloud_compute_servergroups" "master" {
   name  = var.prefix
 }
 
+resource "null_resource" "master_vm_marker" {
+  triggers = {
+    instance_id = huaweicloud_compute_instance.master.id
+  }
+}
+
 resource "huaweicloud_compute_instance" "master" {
   name               = join("-", [var.prefix, "master", var.node_index])
   image_name         = var.image_name

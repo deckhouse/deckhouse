@@ -1,0 +1,44 @@
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "nulltf") }}'
+import:
+- image: terraform-provider-null
+  add: /terraform-provider-null
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "nulltf") }}/{{ (index .TF "nulltf").namespace }}/{{ (index .TF "nulltf").type }}/{{ (index .TF "nulltf").version }}/linux_amd64/terraform-provider-null
+  before: setup
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ .TF.nulltf.version }} $(cat /run/secrets/SOURCE_REPO)/hashicorp/terraform-provider-null.git /src
+  - cd /src
+  - rm -rf .git
+---
+image: terraform-provider-null
+final: false
+fromImage: builder/golang-alpine
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make bash
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - cd /src
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o terraform-provider-null -trimpath -buildvcs=false -ldflags="-s -w -extldflags '-static' -X github.com/hashicorp/terraform-provider-null/version.ProviderVersion={{ .TF.nulltf.version }}" .
+  - mv terraform-provider-null /terraform-provider-null
+  - chmod -R 755 /terraform-provider-null
+  - chown 64535:64535 /terraform-provider-null
