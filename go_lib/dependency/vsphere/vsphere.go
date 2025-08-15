@@ -97,31 +97,31 @@ var (
 )
 
 func NewClient(config *ProviderClusterConfiguration) (Client, error) {
+	c, err := createVsphereClient(config)
+	if err != nil {
+		return nil, err
+	}
+
 	r := &client{
-		config: config,
+		config:     config,
+		client:     c.client,
+		restClient: c.restClient,
 	}
 
 	return r, nil
 }
 
 func (v *client) GetZonesDatastores() (*Output, error) {
-	c, err := createVsphereClient(v.config)
-	if err != nil {
-		return nil, err
-	}
-
 	var (
-		regionTagName         = v.config.Region
-		regionTagCategoryName = v.config.RegionTagCategory
-		zoneTagCategoryName   = v.config.ZoneTagCategory
+		zoneTagCategoryName = v.config.ZoneTagCategory
 	)
 
-	dc, err := getDCByRegion(context.TODO(), c, regionTagName, regionTagCategoryName)
+	dc, err := v.getDCByRegion(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
-	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, zoneTagCategoryName)
+	zonedDataStores, err := v.getDataStoresInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := getZonesInDC(context.TODO(), c, dc, zoneTagCategoryName)
+	zones, err := v.getZonesInDC(context.TODO(), dc, zoneTagCategoryName)
 	if err != nil {
 		return nil, err
 	}
@@ -143,17 +143,9 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 	return &output, nil
 }
 
-// pbmClientFromGovmomiClient creates a new pbm client from given govmomi client.
-// Can we have it in govmomi client as a field similar to tag client?
-// We should not create a new pbm client every time we need it.
-func pbmClientFromGovmomiClient(ctx context.Context, client *govmomi.Client) (*pbm.Client, error) {
-	pc, err := pbm.NewClient(ctx, client.Client)
-	return pc, err
-}
-
 // PolicyIDByName finds a SPBM storage policy by name and returns its ID.
 func (v *client) ListPolicies() ([]StoragePolicy, error) {
-	pc, err := pbmClientFromGovmomiClient(context.TODO(), v.client)
+	pc, err := pbm.NewClient(context.TODO(), v.client.Client)
 	if err != nil {
 		return nil, err
 	}
@@ -220,12 +212,12 @@ func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
 	}, nil
 }
 
-func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagCategoryName string) (*object.Datacenter, error) {
+func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) {
 	var datacenter *object.Datacenter
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
-	regionTag, err := tagsClient.GetTagForCategory(ctx, regionTagName, regionTagCategoryName)
+	regionTag, err := tagsClient.GetTagForCategory(ctx, v.config.Region, v.config.RegionTagCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -242,7 +234,7 @@ func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagC
 		return nil, fmt.Errorf("only one DC should match \"region\" tag, insted matched: %v", dcRefs)
 	}
 
-	finder := find.NewFinder(client.client.Client)
+	finder := find.NewFinder(v.client.Client)
 
 	dcRef, err := finder.ObjectReference(ctx, dcRefs[0].Reference())
 	if err != nil {
@@ -254,8 +246,8 @@ func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagC
 	return datacenter, nil
 }
 
-func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
-	finder := find.NewFinder(client.client.Client, true)
+func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
+	finder := find.NewFinder(v.client.Client, true)
 
 	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
@@ -266,7 +258,7 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 		clusterReferences[i] = clusters[i]
 	}
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
 	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
 	if err != nil {
@@ -310,8 +302,8 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 	return matchingZones, nil
 }
 
-func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Datacenter, zoneTagCategoryName string) ([]ZonedDataStore, error) {
-	finder := find.NewFinder(client.client.Client, true)
+func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datacenter) ([]ZonedDataStore, error) {
+	finder := find.NewFinder(v.client.Client, true)
 
 	datastores, dsNotFoundErr := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
 
@@ -331,7 +323,7 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 	}
 
 	var datastoreMo []mo.Datastore
-	pc := property.DefaultCollector(client.client.Client)
+	pc := property.DefaultCollector(v.client.Client)
 	props := []string{"info", "summary"}
 
 	if len(datastores) > 0 {
@@ -349,9 +341,9 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		datastoreMoByRef[o.Reference()] = o
 	}
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
-	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
+	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
 		return nil, err
 	}
