@@ -88,7 +88,7 @@
 
       Пример вывода команды:
 
-      ```bash
+      ```console
       routing-mode: tunnel
       tunnel-port: "4298"
       tunnel-protocol: vxlan

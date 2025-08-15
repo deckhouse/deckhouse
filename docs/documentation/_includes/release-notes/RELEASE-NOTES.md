@@ -70,7 +70,32 @@
 - Refined the [list of ports used for networking](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
   - Added and updated:
     - `4287/UDP`: WireGuard port used for CNI Cilium traffic encryption.
-    - Instead of `4298/UDP` and `4299/UDP`, the range `4295–4299/UDP` is now used for VXLAN traffic encapsulation between Pods.
+    - `4295–4299/UDP` — ports used by Cilium for VXLAN encapsulation of inter-pod traffic in static clusters (cloud clusters are not covered in this description). The port used depends on the DKP version and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):
+      - DKP ≤ 1.63 — `8472/UDP` is used.
+      - DKP 1.64–1.70 — `4299/UDP` is used; if the `virtualization` module is enabled, the port changes to `4298/UDP`.
+      - DKP ≥ 1.71 — `4298/UDP` is used; enabling the `virtualization` module does not change the port.
+      - DKP inside DVP (nested clusters), starting from 1.71 — the port is assigned based on the nesting level:
+        - Level 0 — base DVP deployed on a physical cluster: `4298/UDP`
+        - Level 1 — DVP deployed inside another DVP: `4297/UDP`
+        - Level 2 — DVP deployed inside a level 1 DVP: `4296/UDP`
+        - Level 3 — DVP deployed inside a level 2 DVP: `4295/UDP`
+
+      How to check the current VXLAN port:
+
+      ```bash
+      d8 k -n d8-cni-cilium get cm cilium-config -o yaml | grep tunnel
+      ```
+
+      Example output:
+
+      ```console
+      routing-mode: tunnel
+      tunnel-port: "4298"
+      tunnel-protocol: vxlan
+      ```
+
+      The port can be explicitly set in the `d8-cni-cilium/cilium-config` ConfigMap (`tunnel-port` key) — the value will remain unchanged until it is modified again.
+
   - Removed:
     - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the virtualization module). Migration now occurs over the Pod network.
 
