@@ -34,6 +34,7 @@ type Client interface {
 	Image(ctx context.Context, moduleName, version string) (v1.Image, error)
 	ListTags(ctx context.Context, moduleName string) ([]string, error)
 	Modules(ctx context.Context) ([]string, error)
+	DigestChanged(ctx context.Context, imageURL, lastKnownDigest string) (bool, error)
 }
 
 type registryscanner struct {

@@ -138,6 +138,46 @@ func (c *client) list(ctx context.Context, url string) ([]string, error) {
 	return remote.List(repo, imageOptions...)
 }
 
+// DigestChanged checks if the digest of an image has changed compared to the last known digest
+func (c *client) DigestChanged(ctx context.Context, imageURL, lastKnownDigest string) (bool, error) {
+	// Get current digest from remote registry
+	currentDigest, err := c.getDigestRemote(ctx, imageURL)
+	if err != nil {
+		return false, fmt.Errorf("get remote digest: %w", err)
+	}
+
+	// Compare with last known digest
+	changed := currentDigest != lastKnownDigest
+
+	return changed, nil
+}
+
+// getDigestRemote uses remote.Get to fetch only the manifest digest without downloading the full image
+func (c *client) getDigestRemote(ctx context.Context, imageURL string) (string, error) {
+	var nameOpts []name.Option
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	remoteOpts := make([]remote.Option, 0)
+	if !c.options.withoutAuth {
+		remoteOpts = append(remoteOpts, remote.WithAuth(authn.FromConfig(c.authConfig)))
+	}
+
+	remoteOpts = append(remoteOpts, metrics.RoundTripOption(c.metricStorage))
+	remoteOpts = append(remoteOpts, remote.WithContext(ctx))
+
+	// Use remote.Get to fetch only the manifest descriptor
+	descriptor, err := remote.Get(ref, remoteOpts...)
+	if err != nil {
+		return "", fmt.Errorf("remote get: %w", err)
+	}
+
+	return descriptor.Digest.String(), nil
+}
+
 // WithDisabledAuth disables the use of authConfig
 func WithDisabledAuth() Option {
 	return func(options *registryOptions) {

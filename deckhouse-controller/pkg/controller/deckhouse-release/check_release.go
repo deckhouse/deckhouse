@@ -130,9 +130,9 @@ func (r *deckhouseReleaseReconciler) checkDeckhouseRelease(ctx context.Context) 
 
 	// client watch only one channel
 	// registry.deckhouse.io/deckhouse/ce/release-channel:$release-channel
-	registryClient, err := r.dc.GetRegistryClient(path.Join(imagesRegistry, "release-channel"), opts...)
+	registryClient, err := cr.NewClient(path.Join(imagesRegistry, "release-channel"), opts...)
 	if err != nil {
-		return fmt.Errorf("get registry client: %w", err)
+		return fmt.Errorf("create registry client: %w", err)
 	}
 
 	cfg := &DeckhouseReleaseFetcherConfig{
@@ -638,6 +638,26 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
+	// Fast digest check first to avoid expensive image fetch if unchanged
+	if previousImageHash != "" {
+		digestChanged, _, err := f.registryClient.DigestChanged(ctx, f.GetReleaseChannel(), previousImageHash)
+		if err != nil {
+			f.logger.Warn("Digest check failed, falling back to full image fetch", log.Err(err))
+		} else if !digestChanged {
+			// Digest hasn't changed, return early with cached info
+			// We can return the same digest hash as the current image info
+			hash, hashErr := registryv1.NewHash(previousImageHash)
+			if hashErr == nil {
+				return &ReleaseImageInfo{
+					Image:  nil, // Image not needed when unchanged
+					Digest: hash,
+				}, ErrImageNotChanged
+			}
+			f.logger.Warn("Failed to parse digest hash", log.Err(hashErr))
+		}
+	}
+
+	// Digest changed or fast check failed, fetch full image
 	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)

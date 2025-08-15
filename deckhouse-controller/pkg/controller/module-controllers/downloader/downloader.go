@@ -86,6 +86,31 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
+	// Use registry client for lightweight digest check if available
+	if checksum != "" {
+		regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+		if err == nil {
+			digestChanged, _, err := regCli.DigestChanged(context.TODO(), imageTag, checksum)
+
+			if err != nil {
+				md.logger.Warn("digest check failed for dev image, falling back to full download",
+					slog.String("module", moduleName),
+					slog.String("imageTag", imageTag),
+					slog.String("error", err.Error()))
+			} else if !digestChanged {
+				md.logger.Debug("dev image digest unchanged, skipping download",
+					slog.String("module", moduleName),
+					slog.String("imageTag", imageTag),
+					slog.String("digest", checksum))
+				return "", nil, nil // No change, skip download
+			} else {
+				md.logger.Debug("dev image digest changed, proceeding with download",
+					slog.String("module", moduleName),
+					slog.String("imageTag", imageTag))
+			}
+		}
+	}
+
 	img, err := md.fetchImage(moduleName, imageTag)
 	if err != nil {
 		return "", nil, err
@@ -97,7 +122,6 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 	}
 
 	if digest.String() == checksum {
-		// module is up-to-date
 		return "", nil, nil
 	}
 
@@ -123,12 +147,38 @@ func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleN
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ModuleDownloadResult, error) {
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string, lastKnownDigest ...string) (*ModuleDownloadResult, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+
+	// Check digest first if available for optimization
+	if len(lastKnownDigest) > 0 && lastKnownDigest[0] != "" {
+		releaseImageTag := strcase.ToKebab(releaseChannel)
+		regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+		if err == nil {
+			// Use registry client to check if digest changed
+			digestChanged, _, err := regCli.DigestChanged(ctx, releaseImageTag, lastKnownDigest[0])
+			if err != nil {
+				md.logger.Warn("digest check failed, falling back to full download",
+					slog.String("module", moduleName),
+					slog.String("releaseChannel", releaseChannel),
+					slog.String("error", err.Error()))
+			} else if !digestChanged {
+				md.logger.Debug("digest unchanged, skipping metadata download",
+					slog.String("module", moduleName),
+					slog.String("releaseChannel", releaseChannel),
+					slog.String("digest", lastKnownDigest[0]))
+				return nil, nil // No change, skip download
+			} else {
+				md.logger.Debug("digest changed, proceeding with metadata download",
+					slog.String("module", moduleName),
+					slog.String("releaseChannel", releaseChannel))
+			}
+		}
+	}
 
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
