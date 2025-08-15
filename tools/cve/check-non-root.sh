@@ -118,7 +118,7 @@ function __main__() {
         continue
       fi
       if [[ $(get_skip_components_images "$IMAGE_NAME") == "skip" ]]; then
-            echo "=============================================="
+            echo "----------------------------------------------"
             echo "🛰 Image: $IMAGE_NAME skipped due to validation exclude"
             continue
       fi
