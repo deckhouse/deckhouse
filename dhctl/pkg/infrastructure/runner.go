@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/stretchr/testify/assert/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -62,8 +63,10 @@ var (
 	ErrInfrastructureApplyAborted = errors.New("Infrastructure apply aborted.")
 )
 
-type ExecutorProvider func(string, log.Logger) Executor
-type StateChecker func([]byte) error
+type (
+	ExecutorProvider func(string, log.Logger) Executor
+	StateChecker     func([]byte) error
+)
 
 type AutoApproveSettings struct {
 	AutoApprove bool
@@ -725,6 +728,7 @@ type Plan map[string]any
 type PlanDestructiveChanges struct {
 	ResourcesDeleted   []ValueChange `json:"resources_deleted,omitempty"`
 	ResourcesRecreated []ValueChange `json:"resourced_recreated,omitempty"`
+	Provider           string        `json:"provider,omitempty"`
 }
 
 type ValueChange struct {
@@ -733,10 +737,34 @@ type ValueChange struct {
 	Type         string      `json:"type,omitempty"`
 }
 
+type TfPlan struct {
+	ResourceChanges []ResourceChange `json:"resource_changes"`
+}
+
+type ResourceChange struct {
+	Change       ChangeOp `json:"change"`
+	Type         string   `json:"type"`
+	Name         string   `json:"name"`
+	ProviderName string   `json:"provider_name,omitempty"`
+}
+
+type ChangeOp struct {
+	Actions []string               `json:"actions"`
+	Before  map[string]interface{} `json:"before,omitempty"`
+	After   map[string]interface{} `json:"after,omitempty"`
+}
+
 func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*PlanDestructiveChanges, error) {
 	var result []byte
+	var providerName string
+	var hasMasterInstanceDestructiveChanges bool
 
-	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+	resTypeMap, err := r.LoadProviderVMTypesFromYAML(config.InfrastructureVersions)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		res, err := r.infraExecutor.Show(ctx, planFile)
 		if err != nil {
 			return 0, err
@@ -745,7 +773,6 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		result = res
 		return 0, nil
 	})
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -754,19 +781,8 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	var changes struct {
-		ResourcesChanges []struct {
-			Change struct {
-				Actions []string               `json:"actions"`
-				Before  map[string]interface{} `json:"before,omitempty"`
-				After   map[string]interface{} `json:"after,omitempty"`
-			} `json:"change"`
-			Type string `json:"type"`
-		} `json:"resource_changes"`
-	}
-
-	err = json.Unmarshal(result, &changes)
-	if err != nil {
+	var plan TfPlan
+	if err := json.Unmarshal(result, &plan); err != nil {
 		return nil, err
 	}
 
@@ -778,8 +794,15 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return destructiveChanges
 	}
 
-	for _, resource := range changes.ResourcesChanges {
+	for _, resource := range plan.ResourceChanges {
 		if hasAction(resource.Change.Actions, "delete") {
+			if providerName == "" && resource.ProviderName != "" {
+				providerName = resource.ProviderName
+			}
+			if !hasMasterInstanceDestructiveChanges {
+				hasMasterInstanceDestructiveChanges = r.isMasterInstanceDestructiveChanged(ctx, resource, resTypeMap)
+			}
+			fmt.Println("hasMasterInstanceDestructiveChanges:", hasMasterInstanceDestructiveChanges)
 			if hasAction(resource.Change.Actions, "create") {
 				// recreate
 				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
@@ -796,7 +819,50 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		}
 	}
 
+	if !hasMasterInstanceDestructiveChanges {
+		return nil, nil
+	}
+
 	return destructiveChanges, nil
+}
+
+func (r *Runner) isMasterInstanceDestructiveChanged(_ context.Context, rc ResourceChange, rm map[string]string) bool {
+	for providerKey, vmType := range rm {
+		// ex: providerKey = "yandex-cloud/yandex"
+		// rc.ProviderName = "registry.terraform.io/yandex-cloud/yandex"
+		if strings.Contains(rc.ProviderName, providerKey) {
+			return rc.Type == vmType
+		}
+	}
+	return false
+}
+
+func (r *Runner) LoadProviderVMTypesFromYAML(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var raw map[string]any
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	resTypeMap := make(map[string]string)
+	for _, v := range raw {
+
+		m, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		ns, _ := m["namespace"].(string)
+		typ, _ := m["type"].(string)
+		vm, _ := m["vmResourceType"].(string)
+		if ns != "" && typ != "" && vm != "" {
+			resTypeMap[ns+"/"+typ] = vm
+		}
+	}
+	return resTypeMap, nil
 }
 
 func hasAction(actions []string, findAction string) bool {
