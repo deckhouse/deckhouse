@@ -724,7 +724,7 @@ This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="info" %}
-Used in containerd v1 when Deckhouse is not managed by the Registry module ([`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when Deckhouse is not managed by the [Registry module](../registry).
 {% endalert %}
 
 The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
@@ -918,7 +918,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the Registry module (for example, in [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [Registry module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  

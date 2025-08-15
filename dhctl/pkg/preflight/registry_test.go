@@ -71,9 +71,11 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -97,9 +99,11 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -122,9 +126,11 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
+		Registry: config.Registry{
+			Data: config.RegistryData{
+				Address: "registry.deckhouse.io",
+				Scheme:  "https",
+			},
 		},
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
@@ -257,21 +263,25 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: config.RegistryData{
-						Address:   "registry.deckhouse.io",
-						Path:      "/deckhouse/ce",
-						Scheme:    "https",
-						CA:        "",
-						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+					Registry: config.Registry{
+						Data: config.RegistryData{
+							Address:   "registry.deckhouse.io",
+							Path:      "/deckhouse/ce",
+							Scheme:    "https",
+							CA:        "",
+							DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+						},
 					},
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: config.RegistryData{
-						Address:   "registry.deckhouse.io",
-						Path:      "/deckhouse/ce",
-						Scheme:    "https",
-						CA:        "",
-						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+					Registry: config.Registry{
+						Data: config.RegistryData{
+							Address:   "registry.deckhouse.io",
+							Path:      "/deckhouse/ce",
+							Scheme:    "https",
+							CA:        "",
+							DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
+						},
 					},
 				},
 			},

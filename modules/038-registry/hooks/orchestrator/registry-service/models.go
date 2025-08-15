@@ -22,5 +22,6 @@ type Mode string
 
 const (
 	ModeDisabled       Mode = ""
+	ModeNodeServices   Mode = "node-services"
 	ModeInClusterProxy Mode = "incluster-proxy"
 )

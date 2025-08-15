@@ -35,10 +35,11 @@ import:
   - mke2fs
   - fsck
   - resize2fs
+  - tune2fs
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all", "mke2fs": "{{ $version }}", "fsck": "{{ $version }}", "resize2fs": "{{ $version }}", "tune2fs": "{{ $version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
