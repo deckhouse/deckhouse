@@ -88,15 +88,15 @@
 # final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:8e85b9364489a8dc665ff38054e29693399f1d609bb1171b46cb474183227f54
+from: dev-registry.deckhouse.io/base_images@sha256:49c343f5dd5282984fda0a3384614eff4f67303d7fc4e8289c363e2240a89a1d
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
-from: dev-registry.deckhouse.io/base_images@sha256:cc004a98d78a0fc52f5d40550a21c3ce6b0d51c383ce497752950ed802c1f10d
+from: dev-registry.deckhouse.io/base_images@sha256:93e3d8012069b464be495fcc7a9933b544dc516f4728b5bfde2d744c9d63b691
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
-from: dev-registry.deckhouse.io/base_images@sha256:beec6cc450129dc8a2428ca41187634302d5025182959f55cd38594c8ea3afd0
+from: dev-registry.deckhouse.io/base_images@sha256:9cad3fd10342e557bdb3e15f5957e141900a978ba3ca7d46f71be2ed1644cab6
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-musl
