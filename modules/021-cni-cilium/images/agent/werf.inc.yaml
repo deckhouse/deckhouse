@@ -108,6 +108,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:34953edc7aa3720413d2cc76eece0
 final: false
 shell:
   install:
+  - apk add --no-cache ln
   - cd /lib64/
   - ln -s libc.so.6 libc.musl-x86_64.so.1
 ---
