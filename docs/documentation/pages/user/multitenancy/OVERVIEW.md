@@ -37,6 +37,13 @@ If sensitive data is present in a user’s private environment,
 it could lead to a data leak and a security model breach.
 {% endalert %}
 
+## Limitations
+
+Projects has several limitations:
+
+- Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
+- Template resources are applied only to a single namespace whose name matches the project name.
+
 ## Creating a project
 
 1. To create a project, create a [Project](cr.html#project) custom resource
