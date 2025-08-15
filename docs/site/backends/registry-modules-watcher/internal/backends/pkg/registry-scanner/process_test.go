@@ -123,6 +123,65 @@ func Test_RegistryScannerProcess(t *testing.T) {
 
 		assertTasksMatch(t, expectedCachedTasks, scanner.cache.GetState())
 	})
+
+	t.Run("verifies cache hit optimization - only ReleaseDigest called", func(t *testing.T) {
+		mc := minimock.NewController(t)
+
+		// Setup initial client with data - only console for simplicity
+		clientOne := NewClientMock(mc)
+		clientOne.NameMock.Return("clientOne")
+		clientOne.ModulesMock.Return([]string{"console"}, nil)
+		clientOne.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
+
+		// First run expectations - cache miss, needs both ReleaseDigest and ReleaseImage
+		clientOne.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)
+		clientOne.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(createMockImage("c1consoleImageFirst", "1.2.3"), nil)
+
+		scanner := &registryscanner{
+			logger:          log.NewNop(),
+			registryClients: map[string]Client{"clientOne": clientOne},
+			cache:           cache.New(metricsstorage.NewMetricStorage("test")),
+		}
+
+		// First run - populates cache
+		scanner.processRegistries(context.Background())
+
+		// Consume the initial tasks state (simulating that they were processed)
+		scanner.cache.GetState()
+
+		// Setup client for second run - same digests (cache hits)
+		clientOneCacheHit := NewClientMock(mc)
+		clientOneCacheHit.NameMock.Return("clientOne")
+		clientOneCacheHit.ModulesMock.Return([]string{"console"}, nil)
+		clientOneCacheHit.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha"}, nil)
+
+		// Only ReleaseDigest should be called (cache hit)
+		clientOneCacheHit.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)
+
+		// ReleaseImage and Image should NOT be called (cache hit optimization)
+		// No expectations set = test will fail if these methods are called
+
+		scanner.registryClients = map[string]Client{"clientOne": clientOneCacheHit}
+
+		// Second run - should use cache (no new tasks)
+		tasks := scanner.processRegistries(context.Background())
+
+		// Should be empty since nothing changed
+		assert.Empty(t, tasks, "No tasks should be generated for cache hits")
+
+		// Cache should still have the original data
+		cachedTasks := scanner.cache.GetState()
+		foundTask := false
+		for _, task := range cachedTasks {
+			if task.Registry == "clientOne" && task.Module == "console" && task.Version == "1.2.3" {
+				foundTask = true
+				assert.Equal(t, []string{"alpha"}, task.ReleaseChannels)
+				assert.Greater(t, len(task.TarFile), 0, "TarFile should not be empty")
+				break
+			}
+		}
+		assert.True(t, foundTask, "Expected cached task should be found")
+	})
 }
 
 func assertTasksMatch(t *testing.T, expected, actual []backends.DocumentationTask) {
@@ -188,15 +247,19 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
+	// ReleaseDigest is always called first for cache check (lightweight operation)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "beta").Then("c1consoleImageSecond", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c1parcaImageFirst", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c1parcaImageSecond", nil)
+
+	// ReleaseImage is called on cache miss (new initial data scenario)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["2.2.3"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["3.3.4"], nil)
 
-	client.ImageMock.When(minimock.AnyContext, "console", "1.2.3").Then(images["console"]["1.2.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "console", "2.2.3").Then(images["console"]["2.2.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "2.3.4").Then(images["parca"]["2.3.4"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "3.3.4").Then(images["parca"]["3.3.4"], nil)
+	// Image calls are now rare (fallback only) - removed as optimized code uses already loaded Image from ReleaseImage
 
 	return client
 }
@@ -220,13 +283,17 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["5.5.5"], nil)
+	// ReleaseDigest is always called first for cache check
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c1consoleImageFirst", nil)      // Cache hit - same digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "beta").Then("c1consoleImageThird", nil)       // Cache miss - new digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c1parcaImageFirst", nil)     // Cache hit - same digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c1parcaImageThird", nil)         // Cache miss - new digest
 
-	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "5.5.5").Then(images["parca"]["5.5.5"], nil)
+	// ReleaseImage is only called for cache misses (changed digests)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)   // Cache miss
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["5.5.5"], nil)     // Cache miss
+
+	// Image calls are now rare (fallback only) - removed as optimized code uses already loaded Image from ReleaseImage
 
 	return client
 }
@@ -249,14 +316,19 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
+	// ReleaseDigest is always called first for cache check (lightweight operation)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c2consoleImageFirst", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "beta").Then("c2consoleImageSecond", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c2parcaImageFirst", nil)
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c2parcaImageFirst", nil)  // Same image for both channels
+
+	// ReleaseImage is called on cache miss (new initial data scenario)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.5"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
 	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["4.5.6"], nil)
 
-	client.ImageMock.When(minimock.AnyContext, "console", "3.4.5").Then(images["console"]["3.4.5"], nil)
-	client.ImageMock.When(minimock.AnyContext, "console", "4.4.5").Then(images["console"]["4.4.5"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
+	// Image calls are now rare (fallback only) - removed as optimized code uses already loaded Image from ReleaseImage
 
 	return client
 }
@@ -280,13 +352,17 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)
+	// ReleaseDigest is always called first for cache check
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "alpha").Then("c2consoleImageFirst", nil)      // Cache hit - same digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "console", "beta").Then("c2consoleImageThird", nil)       // Cache miss - new digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("c2parcaImageFirst", nil)     // Cache hit - same digest
+	client.ReleaseDigestMock.When(minimock.AnyContext, "parca", "stable").Then("c2parcaImageThird", nil)         // Cache miss - new digest
 
-	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(images["console"]["4.4.4"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(images["parca"]["6.6.6"], nil)
+	// ReleaseImage is only called for cache misses (changed digests)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)   // Cache miss
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)     // Cache miss
+
+	// Image calls are now rare (fallback only) - removed as optimized code uses already loaded Image from ReleaseImage
 
 	return client
 }

@@ -340,23 +340,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		availableModule.Policy = policy.Name
 
-		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
-
-		// create or update module
-		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
-		if err != nil {
-			// skip modules that require resync
-			if errors.Is(err, ErrRequireResync) {
-				availableModule.Version = "unknown"
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
-
-			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
-		}
-
-		logger = logger.With(slog.String("source_name", source.Name))
-
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
@@ -370,15 +353,116 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		metricModuleGroup := metricModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+
+		// create or update module
+		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			// skip modules that require resync
+			if errors.Is(err, ErrRequireResync) {
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
+			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
+		}
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
-		logger.Debug("download module meta from release channel")
+		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
+		logger = logger.With(slog.String("source_name", source.Name))
 
+		// Early check if we need to process this module at all
+		if module.Properties.Source != source.Name || !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+			availableModule = r.handleInactiveModule(ctx, availableModule, moduleName, policy.Spec.ReleaseChannel, md)
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		logger.Debug("get module digest from release channel")
+
+		// First, get only the digest to check if module has changed - this is much faster than downloading full metadata
+		digestFromRegistry, err := md.GetReleaseDigest(ctx, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			// Check if this is a release channel not found error
+			if downloader.IsReleaseChannelNotFoundError(err) {
+				r.logger.Debug("release channel not found, skipping module",
+					slog.String("name", moduleName),
+					slog.String("release_channel", policy.Spec.ReleaseChannel),
+					log.Err(err))
+				// Don't add this module to available modules if release channel doesn't exist
+				continue
+			}
+
+			r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
+			availableModule.PullError = err.Error()
+			pullErrorsExist = true
+
+			metricLabels := map[string]string{
+				"module":   moduleName,
+				"version":  availableModule.Version,
+				"registry": source.Spec.Registry.Repo,
+			}
+
+			r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
+
+			// Preserve previously cached version if available to avoid breaking metrics/API
+			if availableModule.Version == "" {
+				availableModule.Version = "unknown"
+			}
+			availableModules = append(availableModules, availableModule)
+
+			continue
+		}
+
+		// check release by getting version from checksum
+		version, err := r.getReleaseVersionFromChecksum(ctx, source.Name, moduleName, digestFromRegistry)
+		if err != nil {
+			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
+		}
+
+		if !r.needEnsure(source, module, availableModule, digestFromRegistry, version != nil) {
+			availableModule.Checksum = digestFromRegistry
+			// Try to preserve version information to avoid breaking metrics and API
+			if version != nil {
+				availableModule.Version = version.String()
+			} else if availableModule.Version == "" {
+				// Only set "unknown" if no previously cached version exists
+				availableModule.Version = "unknown"
+			}
+			// else: Keep the previously cached version from status if available
+			// This prevents metrics and API from receiving "unknown" version
+			// when we skip registry calls for optimization
+
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		logger.Debug("ensure release")
+
+		// Only download full metadata if digest changed or release doesn't exist
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
-				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
-				availableModule.PullError = err.Error()
+				// Check if this is a release channel not found error
+				if downloader.IsReleaseChannelNotFoundError(err) {
+					r.logger.Debug("release channel not found during metadata download, skipping module",
+						slog.String("name", moduleName),
+						slog.String("release_channel", policy.Spec.ReleaseChannel),
+						log.Err(err))
+					// Don't add this module to available modules if release channel doesn't exist
+					continue
+				}
+
+				// Provide more specific error messages for registry errors
+				var errorMsg string
+				if downloader.IsVersionNotInRegistryError(err) {
+					errorMsg = fmt.Sprintf("version from release channel '%s' not found in registry", policy.Spec.ReleaseChannel)
+				} else {
+					errorMsg = err.Error()
+				}
+
+				r.logger.Warn("failed to download module metadata", slog.String("name", moduleName), log.Err(err))
+				availableModule.PullError = errorMsg
 				pullErrorsExist = true
 
 				metricLabels := map[string]string{
@@ -390,49 +474,33 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metricUpdatingModuleIsNotValid, 1, metricLabels)
 			}
 
-			availableModule.Version = "unknown"
+			// Preserve previously cached version if available to avoid breaking metrics/API
+			if availableModule.Version == "" {
+				availableModule.Version = "unknown"
+			}
 			availableModules = append(availableModules, availableModule)
 
 			continue
 		}
 
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+			if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
+				module.Status.Phase = v1alpha1.ModulePhaseDownloading
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
+			}
+
+			return nil
+		})
 		if err != nil {
-			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
+			return fmt.Errorf("update the '%s' module: %w", moduleName, err)
 		}
 
-		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
-			logger.Debug("ensure release")
-
-			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloading
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
-				}
-
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module status: %w", moduleName, err)
-			}
-
-			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-				module.Properties.Source = source.Name
-
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
-			}
-
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
-			if err != nil {
-				logger.Error("fetch module releases", log.Err(err))
-				availableModule.PullError = err.Error()
-				// wipe checksum to trigger meta downloading
-				meta.Checksum = ""
-			}
+		err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+		if err != nil {
+			logger.Error("fetch module releases", log.Err(err))
+			availableModule.PullError = err.Error()
+			// Clear the checksum to indicate a failed fetch; an empty checksum will trigger metadata re-downloading on the next attempt.
+			meta.Checksum = ""
 		}
 
 		availableModule.Checksum = meta.Checksum
@@ -474,6 +542,30 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	}
 
 	return nil
+}
+
+func (r *reconciler) handleInactiveModule(ctx context.Context, availableModule v1alpha1.AvailableModule, moduleName, releaseChannel string, md *downloader.ModuleDownloader) v1alpha1.AvailableModule {
+	// For modules that are not on this source or disabled, we still need to show them in status
+	if availableModule.Version != "" && availableModule.Version != "unknown" {
+		return availableModule
+	}
+
+	// if we don't have a version we should still fetch basic metadata to maintain compatibility with tests and metrics
+	meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
+	if err == nil {
+		availableModule.Version = meta.ModuleVersion
+		availableModule.Checksum = meta.Checksum
+	} else {
+		// If release channel doesn't exist, don't try to fetch metadata for inactive modules
+		if downloader.IsReleaseChannelNotFoundError(err) {
+			return availableModule
+		}
+		if availableModule.Version == "" {
+			availableModule.Version = "unknown"
+		}
+	}
+
+	return availableModule
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {

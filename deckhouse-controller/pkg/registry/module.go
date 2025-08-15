@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
 
@@ -91,11 +92,66 @@ func (svc *moduleReleaseService) ListModuleTags(ctx context.Context, moduleName 
 	return ls, err
 }
 
+// GetModuleRelease with digest-first optimization
 func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
+	// Get registry client
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}
+
+	// Get current digest from registry (lightweight operation)
+	currentDigest, err := regCli.Digest(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
+			err = errors.Join(err, ErrChannelIsNotFound)
+		}
+
+		svc.logger.Warn("Failed to get module digest, falling back to full image download",
+			slog.String("module", moduleName),
+			slog.String("channel", releaseChannel),
+			log.Err(err))
+
+		// Fallback to original behavior if digest call fails
+		return svc.getModuleReleaseFallback(ctx, regCli, moduleName, releaseChannel)
+	}
+
+	// Fetch image and extract metadata
+	img, err := regCli.Image(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		if strings.Contains(err.Error(), string(regTransport.ManifestUnknownErrorCode)) {
+			err = errors.Join(err, ErrChannelIsNotFound)
+		}
+		return nil, fmt.Errorf("fetch image error: %w", err)
+	}
+
+	// Verify digest consistency between calls
+	imageDigest, err := img.Digest()
+	if err == nil && currentDigest != imageDigest.String() {
+		svc.logger.Warn("Module image digest inconsistency between digest and image calls",
+			slog.String("digest_call", currentDigest),
+			slog.String("image_digest", imageDigest.String()),
+			slog.String("module", moduleName),
+			slog.String("channel", releaseChannel))
+	}
+
+	moduleMetadata, err := svc.fetchModuleReleaseMetadata(img)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module release metadata error: %w", err)
+	}
+
+	if moduleMetadata.Version == nil {
+		return nil, fmt.Errorf("module release %q metadata malformed: no version found", moduleName)
+	}
+
+	return moduleMetadata, nil
+}
+
+// getModuleReleaseFallback implements the original behavior when digest optimization fails
+func (svc *moduleReleaseService) getModuleReleaseFallback(ctx context.Context, regCli cr.Client, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
+	svc.logger.Debug("Using fallback module retrieval method",
+		slog.String("module", moduleName),
+		slog.String("channel", releaseChannel))
 
 	img, err := regCli.Image(ctx, strcase.ToKebab(releaseChannel))
 	if err != nil {
