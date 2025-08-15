@@ -7,7 +7,7 @@ description: ""
 
 {% include module-bundle.liquid %}
 
-Для настройки параметров registry используйте секцию [`registry`](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
+Для настройки параметров работы с container registry используйте секцию [`registry`](../deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`.
 
 В секции указываются:
 
