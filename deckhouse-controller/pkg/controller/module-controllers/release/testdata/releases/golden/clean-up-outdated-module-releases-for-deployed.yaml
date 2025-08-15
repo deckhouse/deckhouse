@@ -28,6 +28,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
@@ -60,6 +61,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
@@ -92,6 +94,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   labels:
@@ -124,6 +127,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:

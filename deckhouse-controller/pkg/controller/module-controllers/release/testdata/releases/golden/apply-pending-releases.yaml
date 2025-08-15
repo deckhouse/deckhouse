@@ -24,6 +24,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: "true"
   creationTimestamp: null
   labels:
     module: commander
@@ -47,6 +49,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: "true"
   creationTimestamp: null
   labels:
     module: commander
@@ -71,6 +75,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -92,13 +97,15 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: "true"
   creationTimestamp: null
   labels:
     module: parca
@@ -123,6 +130,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: "true"
     modules.deckhouse.io/isUpdating: "true"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -144,7 +152,7 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---

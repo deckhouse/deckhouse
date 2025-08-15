@@ -1,6 +1,8 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    dryrun: 'true'
   name: parca-1.2.1
   labels:
     module: parca
@@ -24,6 +26,7 @@ metadata:
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
   annotations:
+    dryrun: 'true'
     modules.deckhouse.io/force: "true"
 spec:
   moduleName: parca

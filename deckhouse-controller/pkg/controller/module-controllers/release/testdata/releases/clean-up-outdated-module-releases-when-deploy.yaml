@@ -29,6 +29,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     release.deckhouse.io/notified: "false"
   labels:
     module: echo
@@ -52,6 +53,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     release.deckhouse.io/notified: "false"
   labels:
     module: echo
@@ -75,6 +77,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     release.deckhouse.io/notified: "false"
   labels:
     module: echo
@@ -98,6 +101,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     release.deckhouse.io/notified: "false"
   labels:
     module: echo
@@ -121,6 +125,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    dryrun: 'true'
     release.deckhouse.io/notified: "false"
   labels:
     module: echo
