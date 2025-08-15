@@ -15,6 +15,7 @@ If the infrastructure where Deckhouse Kubernetes Platform (DKP) is running has r
 * Inter-node communication is allowed on the ports shown in the tables on the current page. Note that most ports are in the 4200-4299 range. When new platform components are added, they will be assigned ports from this range (if it is possible).
 
 {% offtopic title="How to check the current VXLAN port..." %}
+
 ```bash
 d8 k -n d8-cni-cilium get cm cilium-config -o yaml | grep tunnel
 ```
@@ -26,6 +27,7 @@ routing-mode: tunnel
 tunnel-port: "4298"
 tunnel-protocol: vxlan
 ```
+
 {%- endofftopic %}
 
 {% alert level="info" %}
