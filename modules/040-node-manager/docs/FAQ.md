@@ -176,13 +176,34 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Can I delete a StaticInstance?
 
-A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
+A StaticInstance that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
+To delete a StaticInstance in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
 
-1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
-1. Wait until the `StaticInstance` status becomes `Pending`.
-1. Delete the `StaticInstance`.
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the StaticInstance.
+
+   Example command for adding a label:
+
+   ```shell
+   d8 k label staticinstance d8cluster-worker node.deckhouse.io/allow-bootstrap=false
+   ```
+
+1. Wait until the StaticInstance status becomes `Pending`.
+
+   To check the status of StaticInstance, use the command:
+
+   ```shell
+   d8 k get staticinstances
+   ```
+
+1. Delete the StaticInstance.
+
+   Example command for deleting StaticInstance:
+
+   ```shell
+   d8 k delete staticinstance d8cluster-worker
+   ```
+
 1. Decrease the `NodeGroup.spec.staticInstances.count` field by 1.
 
 ### How do I change the IP address of a StaticInstance?
