@@ -413,19 +413,6 @@ groups:
           </ul>
         </li>
         </ul>
-        <p>Как проверить текущий порт VXLAN:</p>
-
-        ```bash
-        d8 k -n d8-cni-cilium get cm cilium-config -o yaml | grep tunnel
-        ```
-
-        <p>Пример вывода команды:</p>
-
-        ```console
-        routing-mode: tunnel
-        tunnel-port: "4298"
-        tunnel-protocol: vxlan
-        ```
   - ports: "7000&#8209;7999"
     protocol: TCP
     description:
