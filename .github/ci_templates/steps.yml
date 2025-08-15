@@ -287,25 +287,3 @@
     bash ./.github/scripts/send-report.sh
 # </template: send_fail_report>
 {!{- end -}!}
-
-
-{!{ define "import_secrets" }!}
-# <template: import_secrets>
-- name: Split repository name
-  id: split
-  env:
-    REPO: ${{ github.repository }}
-  run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-- name: Import secrets
-  id: secrets
-  uses: hashicorp/vault-action@v2
-  with:
-    url: https://seguro.flant.com
-    path: github
-    role: "${{ steps.split.outputs.name }}"
-    method: jwt
-    jwtGithubAudience: github-access-aud
-    secrets: |
-      projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
-# </template: import_secrets>
-{!{- end -}!}
