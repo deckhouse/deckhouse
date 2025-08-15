@@ -52,6 +52,29 @@ type Definition struct {
 
 	DisableOptions *v1alpha1.ModuleDisableOptions `json:"disable,omitempty" yaml:"disable,omitempty"`
 	Path           string                         `json:"-" yaml:"-"`
+
+	// Update holds version transition hints that allow skipping step-by-step upgrades.
+	// Example:
+	// update:
+	//   versions:
+	//     - from: 1.67
+	//       to: 1.75
+	//     - from: 1.20
+	//       to: 2.0
+	Update *ModuleUpdate `json:"update,omitempty" yaml:"update,omitempty"`
+}
+
+// ModuleUpdate describes allowed version transitions for a target release version.
+type ModuleUpdate struct {
+	Versions []ModuleUpdateVersion `json:"versions,omitempty" yaml:"versions,omitempty"`
+}
+
+// ModuleUpdateVersion represents a constraint range.
+// "from" and "to" support major.minor or major.minor.patch.
+// "to" should point to the target release version defined by this module.yaml.
+type ModuleUpdateVersion struct {
+	From string `json:"from" yaml:"from"`
+	To   string `json:"to" yaml:"to"`
 }
 
 type ModuleAccessibility struct {

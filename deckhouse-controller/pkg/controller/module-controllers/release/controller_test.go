@@ -500,6 +500,44 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	suite.Run("updateConstraints: skip pending to endpoint", func() {
+		testData := suite.fetchTestFileData("update-constraints-jump.yaml")
+		suite.setupReleaseController(testData)
+
+		// warm-up: allow controller to set update policy labels and prechecks on first pass
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+		require.NoError(suite.T(), err)
+
+		repeatTest(func() {
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+			// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+			require.NoError(suite.T(), err)
+
+			// verify statuses
+			rel := suite.getModuleRelease("demo-1.68.4")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+			rel = suite.getModuleRelease("demo-1.69.10")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+			rel = suite.getModuleRelease("demo-1.70.11")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+			rel = suite.getModuleRelease("demo-1.75.2")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+		})
+	})
+
 	suite.Run("Process pending releases", func() {
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))

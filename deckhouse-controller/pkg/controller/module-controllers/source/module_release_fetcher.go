@@ -483,6 +483,15 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		Changelog:  meta.Changelog,
 	}
 
+	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
+		constraints := make([]v1alpha1.ModuleUpdateConstraint, 0, len(meta.ModuleDefinition.Update.Versions))
+		for _, v := range meta.ModuleDefinition.Update.Versions {
+			// Update constraints from module.yaml into ModuleRelease
+			constraints = append(constraints, v1alpha1.ModuleUpdateConstraint{From: v.From, To: v.To})
+		}
+		release.Spec.UpdateConstraints = &v1alpha1.ModuleUpdateConstraints{Versions: constraints}
+	}
+
 	if err := f.k8sClient.Update(ctx, release); err != nil {
 		return fmt.Errorf("update module release: %w", err)
 	}
