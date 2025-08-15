@@ -675,12 +675,20 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 	}
 
 	// Cleanup
+	nodeServicesReady, err := state.cleanupNodeServices(inputs)
+	if err != nil {
+		return fmt.Errorf("cannot cleanup NodeServices: %w", err)
+	}
 	inClusterProxyReady := state.cleanupInClusterProxy(inputs)
 
 	state.RegistryService = registryservice.ModeDisabled
 
 	state.IngressEnabled = false
 
+	if !nodeServicesReady {
+		state.setReadyCondition(false, inputs)
+		return nil
+	}
 	if !inClusterProxyReady {
 		state.setReadyCondition(false, inputs)
 		return nil
