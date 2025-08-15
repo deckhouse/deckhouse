@@ -114,15 +114,15 @@ properties:
           - "Excellent"
         default: "Fair"
         description: |
-          Password complexity requirements.
+          Password complexity level.
 
-          Possible values:
+          Depending on the complexity level, a password must meet the following minimum requirements:
 
-          - `None`: No character restrictions. Password can be any length starting from 1 character.
-          - `Low`: Minimum length of 8 characters.
-          - `Fair`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit.
-          - `Good`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.).
-          - `Excellent`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.). No more than 2 identical characters in a row.
+          - `None`: 1 character.
+          - `Low`: 8 characters.
+          - `Fair`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit.
+          - `Good`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit, 1 special character (`!@#$%^&*`).
+          - `Excellent`: 8 characters, 1 uppercase letter (`A`–`Z`), 1 lowercase letter (`a`–`z`), 1 digit, 1 special character (`!@#$%^&*`), no more than 2 identical characters in a row.
       passwordHistoryLimit:
         type: integer
         minimum: 0
