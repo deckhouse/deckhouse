@@ -114,57 +114,45 @@ properties:
           - "Excellent"
         default: "Fair"
         description: |
-          Sets password complexity requirements
+          Password complexity requirements.
+
           Possible values:
-            - None:      No restrictions. Password can be any length starting from 1 character.
-            - Low:       Minimum 8 characters.
-            - Fair:      (Default) Minimum 8 characters, including:
-                        • One uppercase letter
-                        • One lowercase letter
-                        • One digit
-            - Good:      Minimum 8 characters, including:
-                        • One uppercase letter
-                        • One lowercase letter
-                        • One digit
-                        • One special character (!@#$%^&* etc.)
-            - Excellent: Minimum 8 characters, including:
-                        • One uppercase letter
-                        • One lowercase letter
-                        • One digit
-                        • One special character (!@#$%^&* etc.)
-                        • No more than 2 identical characters in a row
+
+          - `None`: No character restrictions. Password can be any length starting from 1 character.
+          - `Low`: Minimum length of 8 characters.
+          - `Fair` (Default): Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit.
+          - `Good`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.).
+          - `Excellent`: Minimum length of 8 characters, including: 1 uppercase letter (A–Z), 1 lowercase letter (a–z), 1 digit, 1 special character (`!@#$%^&*`, etc.). No more than 2 identical characters in a row.
       passwordHistoryLimit:
         type: integer
         minimum: 0
         default: 5
         description: |
-          Sets the limit for stored passwords previously used by the user.
-
-          Used to prevent the reuse of old passwords.
+          Number of the user's previous passwords stored in history to prevent their reuse.
       rotation:
         type: object
         required: ["rotationInterval"]
         description: |
-          Configures password rotation settings
+          Password rotation settings.
         properties:
           interval:
             type: string
             description: |
-              Time interval after which the password must be changed
+              Time interval after which the password must be changed. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `5d`.
       lockout:
         type: object
         required: ["maxAttempts", "lockDuration"]
         description: |
-          Configures temporary lockout settings after consecutive failed login attempts
+          Temporary user lockout settings after consecutive failed login attempts.
         properties:
           maxAttempts:
             type: integer
             description: |
-              Threshold of failed login attempts after which the user gets temporarily locked out
+              Number of consecutive failed login attempts after which the user will be temporarily locked out.
           lockDuration:
             type: string
             description: |
-              Duration of temporary lockout
+              Temporary lockout duration. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `5d`.
   staticUsers2FA:
     type: object
     default: {}
