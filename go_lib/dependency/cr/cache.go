@@ -164,9 +164,20 @@ func (c *imageCache) evictOldestImage() {
 }
 
 // shouldCacheTag determines if a tag should be cached based on registry path
-// Caches ALL tags from release directories (path contains "/release")
-// Does NOT cache anything outside release directories
+// Caches ALL tags from:
+// - release directories (path contains "/release")
+// - dev registry (dev-registry.deckhouse.io)
+// Does NOT cache anything else
 func shouldCacheTag(registryURL, tag string) bool {
-	// Must be in a release directory
-	return strings.Contains(registryURL, "/release")
+	// Cache ALL tags from release directories
+	if strings.Contains(registryURL, "/release") {
+		return true
+	}
+	
+	// Cache dev images from dev-registry.deckhouse.io
+	if strings.Contains(registryURL, "dev-registry.deckhouse.io") {
+		return true
+	}
+	
+	return false
 }

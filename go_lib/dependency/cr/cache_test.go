@@ -133,6 +133,30 @@ func TestShouldCacheTag(t *testing.T) {
 			tag:         "v1.2.3",
 			want:        false,
 		},
+		{
+			name:        "cache dev image from dev-registry.deckhouse.io",
+			registryURL: "dev-registry.deckhouse.io/sys/deckhouse-oss",
+			tag:         "v1.49.0",
+			want:        true,
+		},
+		{
+			name:        "cache dev image with main tag",
+			registryURL: "dev-registry.deckhouse.io/sys/deckhouse-oss",
+			tag:         "main",
+			want:        true,
+		},
+		{
+			name:        "cache dev image with custom tag",
+			registryURL: "dev-registry.deckhouse.io/deckhouse/modules",
+			tag:         "feature-branch",
+			want:        true,
+		},
+		{
+			name:        "do not cache non-dev non-release registry",
+			registryURL: "other-registry.example.com/deckhouse",
+			tag:         "v1.0.0",
+			want:        false,
+		},
 	}
 
 	for _, tt := range tests {
