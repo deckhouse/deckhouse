@@ -104,7 +104,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 }
 
 func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
-	shouldCache := isVersionedTag(tag)
+	shouldCache := shouldCacheTag(r.registryURL, tag)
 
 	if shouldCache {
 		// Check if digest is cached
@@ -232,7 +232,7 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
-	shouldCache := isVersionedTag(tag)
+	shouldCache := shouldCacheTag(r.registryURL, tag)
 
 	if shouldCache {
 		// Check if digest is cached

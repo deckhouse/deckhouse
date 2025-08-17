@@ -539,7 +539,7 @@ func TestClient_Digest(t *testing.T) {
 
 	manifest, err := testImage.Manifest()
 	require.NoError(t, err)
-	
+
 	testDigest := manifest.Config.Digest.String()
 
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -621,7 +621,7 @@ func TestClient_ImageExists(t *testing.T) {
 
 	manifest, err := testImage.Manifest()
 	require.NoError(t, err)
-	
+
 	testDigest := manifest.Config.Digest.String()
 
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -677,7 +677,7 @@ func TestClient_ClearCache(t *testing.T) {
 
 	manifest, err := testImage.Manifest()
 	require.NoError(t, err)
-	
+
 	testDigest := manifest.Config.Digest.String()
 
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

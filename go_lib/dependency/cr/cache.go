@@ -17,7 +17,7 @@ limitations under the License.
 package cr
 
 import (
-	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -38,10 +38,10 @@ type cacheEntry struct {
 // imageCache provides thread-safe caching for container registry operations
 // with size limits to prevent memory leaks
 type imageCache struct {
-	mu         sync.RWMutex
-	digests    map[string]*cacheEntry // tag -> digest mapping
-	images     map[string]*cacheEntry // digest -> image mapping
-	maxSize    int
+	mu      sync.RWMutex
+	digests map[string]*cacheEntry // tag -> digest mapping
+	images  map[string]*cacheEntry // digest -> image mapping
+	maxSize int
 }
 
 // newImageCache creates a new image cache instance
@@ -70,12 +70,12 @@ func (c *imageCache) getDigest(tag string) (string, bool) {
 func (c *imageCache) setDigest(tag, digest string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Evict old entries if cache is full
 	if len(c.digests) >= c.maxSize {
 		c.evictOldestDigest()
 	}
-	
+
 	c.digests[tag] = &cacheEntry{
 		value:     digest,
 		timestamp: time.Now(),
@@ -99,12 +99,12 @@ func (c *imageCache) getImage(digest string) (crv1.Image, bool) {
 func (c *imageCache) setImage(digest string, image crv1.Image) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Evict old entries if cache is full
 	if len(c.images) >= c.maxSize {
 		c.evictOldestImage()
 	}
-	
+
 	c.images[digest] = &cacheEntry{
 		value:     image,
 		timestamp: time.Now(),
@@ -125,11 +125,11 @@ func (c *imageCache) evictOldestDigest() {
 	if len(c.digests) == 0 {
 		return
 	}
-	
+
 	var oldestKey string
 	var oldestTime time.Time
 	first := true
-	
+
 	for key, entry := range c.digests {
 		if first || entry.timestamp.Before(oldestTime) {
 			oldestKey = key
@@ -137,7 +137,7 @@ func (c *imageCache) evictOldestDigest() {
 			first = false
 		}
 	}
-	
+
 	delete(c.digests, oldestKey)
 }
 
@@ -147,11 +147,11 @@ func (c *imageCache) evictOldestImage() {
 	if len(c.images) == 0 {
 		return
 	}
-	
+
 	var oldestKey string
 	var oldestTime time.Time
 	first := true
-	
+
 	for key, entry := range c.images {
 		if first || entry.timestamp.Before(oldestTime) {
 			oldestKey = key
@@ -159,15 +159,14 @@ func (c *imageCache) evictOldestImage() {
 			first = false
 		}
 	}
-	
+
 	delete(c.images, oldestKey)
 }
 
-// versionPattern is compiled once for better performance
-var versionPattern = regexp.MustCompile(`^v?\d+\.\d+\.\d+(?:-[\w\.-]+)?(?:\+[\w\.-]+)?$`)
-
-// isVersionedTag checks if tag contains semantic version
-// Returns true for tags like "v1.2.3", "1.0.0", "v2.1.0-alpha", "1.0.0+build.1"
-func isVersionedTag(tag string) bool {
-	return versionPattern.MatchString(tag)
+// shouldCacheTag determines if a tag should be cached based on registry path
+// Caches ALL tags from release directories (path contains "/release")
+// Does NOT cache anything outside release directories
+func shouldCacheTag(registryURL, tag string) bool {
+	// Must be in a release directory
+	return strings.Contains(registryURL, "/release")
 }
