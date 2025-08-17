@@ -141,7 +141,7 @@ properties:
   recursiveSettings:
     type: object
     description: |
-      Parameters of recursive DNS servers, which are used to verify the existence of a DNS record, before initiating the domain ownership verification process using the [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/) method.
+      Parameters for using recursive DNS servers, which are used to check the existence of a DNS record, before initiating the domain ownership verification process using the [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/) method.
     x-examples:
       - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
         useOnlyRecursive: true
