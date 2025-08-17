@@ -1,0 +1,7 @@
+dirs:
+- /host/opt/cni/bin
+- /host/etc/cni/net.d
+- /var/run/istio-cni
+- /host/proc
+- /var/run/ztunnel
+- /host/var/run/netns

@@ -525,10 +525,10 @@ Parameters that can be used in `module.yaml`:
 
 - `namespace` — *String.* The namespace where the module components will be deployed.
 - `subsystems` — *Array of strings.* List of subsystems the module belongs to.
-- `accessability` - *Object* Module accessibility settings.
-  - `editions` - *Object* Editions settings.
-    - `availabe` - *Boolean* Module availability in Deckhouse edition.
-    - `enabledInBundles` - *Array of strings* In which bundles module should be enabled.
+- `accessibility` — *Object.* Module accessibility settings.
+  - `editions` — *Object.* Module operation settings in Deckhouse editions.
+    - `available` — *Boolean.* Defines whether the module is available in a Deckhouse edition.
+    - `enabledInBundles` — *Array of strings.* List of module bundles in which the module should be enabled by default.
 - `descriptions` — *Object.* Arbitrary text description of the module's purpose.
   - `en` — *String.* Description in English.
   - `ru` — *String.* Description in Russian.

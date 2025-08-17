@@ -11,6 +11,10 @@ To use the `cloud-provider` and `machine-controller-manager` modules, you must a
 Make sure that you have access to the desired regions and that you have the necessary quotas.
 {% endalert %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## JSON Policy
 
 First, prepare a JSON file with the configuration of the necessary privileges:

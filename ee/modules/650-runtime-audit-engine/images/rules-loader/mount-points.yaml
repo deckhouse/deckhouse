@@ -1,0 +1,5 @@
+dirs:
+- /validating-certs
+- /etc/falco/rules.d
+- /host/proc
+- /etc/falco

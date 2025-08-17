@@ -48,6 +48,8 @@ import:
     add: /src/loki
     to: /usr/bin/loki
     after: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/loki"]

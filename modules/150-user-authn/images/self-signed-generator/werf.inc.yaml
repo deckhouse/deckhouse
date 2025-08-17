@@ -6,6 +6,8 @@ import:
     add: /src/self-signed-generator
     to: /self-signed-generator
     before: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: [ "/self-signed-generator" ]

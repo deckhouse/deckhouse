@@ -55,6 +55,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
+{{- include "image mount points" . }}
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}

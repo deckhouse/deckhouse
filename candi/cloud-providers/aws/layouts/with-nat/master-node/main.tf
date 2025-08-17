@@ -26,4 +26,6 @@ module "master-node" {
   tags = local.tags
   associate_ssh_accessible_sg = local.bastion_instance != {} ? false : true
   resourceManagementTimeout = var.resourceManagementTimeout
+  disable_default_security_group = local.disable_default_sg
+  ssh_allow_list = local.ssh_allow_list
 }

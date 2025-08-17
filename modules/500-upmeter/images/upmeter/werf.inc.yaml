@@ -65,3 +65,5 @@ import:
   add: /upmeter
   to: /upmeter
   before: setup
+git:  
+{{- include "image mount points" . }}  

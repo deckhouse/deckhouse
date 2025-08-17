@@ -1,0 +1,53 @@
+@use "components/common/_variables.scss";
+
+.modal-window {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    z-index: 1000;
+    color: #5e6697;
+    text-align: center;
+    font-family: 'Noto Sans', sans-serif;
+
+    &__backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1001;
+        background: rgba(0,0,0,0.4);
+    }
+
+    &__wrap {
+        position: relative;
+        width: 467px;
+        padding: 32px 41.2px 38.2px;
+        overflow: auto;
+        z-index: 1002;
+        border-radius: .5em;
+        background: variables.$color-inverse;
+
+        h3 {
+            margin-top: 0;
+        }
+    }
+
+    &__close-btn {
+        position: absolute;
+        top: 9px;
+        right: 13px;
+        color: #ccc;
+        font-size: variables.$spacing-m;
+        text-decoration: none;
+        &:hover {
+            color: #f27474;
+        }
+    }
+}

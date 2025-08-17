@@ -36,6 +36,13 @@ For platform users:
 * **Quick Start**: Developers can request projects created from ready-made templates from administrators, allowing for a quick start to developing a new application.
 * **Isolation**: Each project provides an isolated environment where developers can deploy and test their applications without impacting other projects.
 
+## Limitations
+
+The module works only within the limits below:
+
+- Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
+- Template resources are applied only to a single namespace whose name matches the project name.
+
 ## Internal Logic
 
 ### Creating a project

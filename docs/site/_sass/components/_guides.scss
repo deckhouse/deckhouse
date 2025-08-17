@@ -1,0 +1,55 @@
+@use "components/common/_variables.scss";
+
+div.alert__wrap {
+  display: flex;
+  padding: 0 15px;
+  margin-bottom: 15px;
+  font-size: 16px;
+  line-height: 24px;
+  border-radius: .5em;
+  border: 2px solid;
+
+  & a {
+    color: variables.$color-alt;
+  }
+
+  & p {
+    color: variables.$color-main;
+  }
+
+  & .alert__icon {
+    min-width: 24px;
+    width: 24px;
+    height: 24px;
+    margin-right: 24px;
+    padding: 16px 0;
+  }
+
+  &.hide {
+    display: none;
+  }
+
+  &.info {
+    border-color: variables.$color-alt;
+
+    & .icon--info {
+      fill: variables.$color-alt;
+    }
+  }
+
+  &.warning {
+    border-color: variables.$color-warning;
+
+    & .icon--warning {
+      fill: variables.$color-warning;
+    }
+  }
+
+  &.danger {
+    border-color: variables.$color-danger;
+
+    & .icon--danger {
+      fill: variables.$color-danger;
+    }
+  }
+}

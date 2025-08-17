@@ -21,7 +21,7 @@ shell:
   - rm -r ethtool/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

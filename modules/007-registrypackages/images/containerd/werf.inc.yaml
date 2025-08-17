@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.27" "2.1.3" }}
 {{- $runc_versions := list "1.2.5" "1.3.0" }}
 {{- $containerd2runc := dict "1.7.27" "1.2.5" "2.1.3" "1.3.0" }}
-{{- $containerd_integrity_patches_version := "0" }}
+{{- $containerd_integrity_patches_version := "2" }}
 
 # calculate base image for terraform-auto-exporter and terraform-state-exporteer
 # . is dict with keys:
@@ -13,7 +13,7 @@
 
   {{- if and (eq $context.Env "CSE") $is_v2 -}}
     {{- $namespacesSettings := ($context.Files.Get "/tools/build_includes/integrity-check-namespaces.yaml" | fromYaml) }}
-    {{- if not hasKey $namespacesSettings "namespaces_for_integrity" -}}
+    {{- if not (hasKey $namespacesSettings "namespaces_for_integrity") -}}
       {{- fail "file /tools/build_includes/integrity-check-namespaces.yaml has not key namespaces_for_integrity" -}}
     {{- end }}
 
@@ -172,7 +172,7 @@ shell:
   - git config --global user.email "builder@deckhouse.io"
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
-  - echo "Using next build options:'{{ $additionalBuildOptions }}'"
+  - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
   - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" {{ $additionalBuildOptions }} all
   - mv bin/* /out
   - mv /src/scripts/* /out

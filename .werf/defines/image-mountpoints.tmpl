@@ -1,0 +1,23 @@
+# add mount points from file mount_points.yaml in the build dir
+
+{{- define "image mount points" }}
+  {{- $mountPoints := ($.Files.Get (printf "%smodules/%s-%s/images/%s/mount-points.yaml" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) | fromYaml) }}
+  {{- range $v := $mountPoints.dirs }}
+- add: /tools/mounts/mountdir
+  to: {{ $v }}
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+  {{- end }}
+  {{- range $v := $mountPoints.files }}
+- add: /tools/mounts/mountfile
+  to: {{ $v }}
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
+  {{- end }}
+{{- end }}

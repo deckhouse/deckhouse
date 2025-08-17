@@ -3,7 +3,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-fromCacheVersion: "2025-07-10"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -26,14 +25,17 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
-  setup:
+  install:
   - mkdir -p /src
   - cd /src
-  - git clone --branch v1.2.5 --depth 1 {{ $.SOURCE_REPO }}/yelp/dumb-init.git
-  - git clone --branch 0.5.1 {{ $.SOURCE_REPO }}/starwing/lua-protobuf
-  - git clone --branch 7-3 {{ $.SOURCE_REPO }}/luarocks-sorces/lua-iconv
-  - git clone --branch {{ $controllerBranch }} --depth 1 {{$.SOURCE_REPO}}/kubernetes/ingress-nginx.git
+  - git clone --branch v1.2.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/yelp/dumb-init.git
+  - git clone --branch 0.5.1 $(cat /run/secrets/SOURCE_REPO)/starwing/lua-protobuf
+  - git clone --branch 7-3 $(cat /run/secrets/SOURCE_REPO)/luarocks-sorces/lua-iconv
+  - git clone --branch {{ $controllerBranch }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx.git
   - cd /src/ingress-nginx
   - git apply /patches/*.patch --verbose
   # pass env for build
@@ -56,6 +58,7 @@ import:
   before: install
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y gcc glibc-core glibc-devel-static
   setup:
   - cd /src/
@@ -93,20 +96,20 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   # git needs for getting tag and commit sha for build purposes
   - apk --no-cache add make bash git
   setup:
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOARCH=amd64
   - export PKG="k8s.io/ingress-nginx"
   - cd /src/
-  - go mod edit -go=1.23.6
-  - go mod tidy
   - |
     source /src/.env_pass && \
     echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
@@ -124,13 +127,17 @@ import:
   add: /src/rootfs/etc
   to: /src/etc
   before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
+  {{- include "alt packages proxy" . | nindent 2 }}
   # git needs for getting dependencies from our repo
   - apt-get install -y liblua5.3-devel lua5.3 libaio-devel libaom3 libbrotli-devel libcap-utils libcurl-devel libgrpc++-devel libgrpc++ libre2-devel libre2 libgrpc libgrpc-devel libssl-devel libmaxminddb libmaxminddb-devel libpcre-devel libpcre16 git cmake ninja-build libabseil-cpp-devel build-essential libgrpc-devel libprotobuf-devel grpc-plugins openssl libpcre2-devel libcares-devel
   - apt-get install -y liblua5.1-devel --download-only
   setup:
-  - export SOURCE_REPO={{ $.SOURCE_REPO }}
+  - export SOURCE_REPO=$(cat /run/secrets/SOURCE_REPO)
   - git config --global url."{{ .SOURCE_REPO }}".insteadOf https://github.com
   - cp -R /src/etc/* /etc/
   - rm -rf /src/etc
@@ -181,7 +188,7 @@ shell:
   {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel iptables iptables-nft nfs-utils conntrack-tools glibc-gconv-modules libgrpc++-devel libgrpc++ libbrotli-devel libpcre-devel
   setup:
-  - cp -R /usr/lib64 /chroot/usr/lib64
+  - cp -R /usr/lib64/* /chroot/usr/lib64/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
   - |
@@ -191,6 +198,7 @@ shell:
       /chroot/usr/local/nginx
       /chroot/usr/share
       /chroot/usr/bin
+      /chroot/usr/lib/locale
       /chroot/etc/ingress-controller
       /chroot/etc/ingress-controller/ssl
       /chroot/etc/ingress-controller/auth
@@ -244,6 +252,8 @@ shell:
   - cp -a /usr/local/lib /chroot/usr/local/
   - cp -a /usr/local/share/lua* /chroot/usr/local/share/
   - cp -a /usr/local/lib64 /chroot/usr/local/
+  # override old opentelemtry libs with new ones
+  - cp -a /usr/local/lib64/libopentelemetry* /chroot/lib64/
   - cp -a /usr/local/modsecurity/bin /chroot/usr/local/modsecurity/
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
@@ -292,6 +302,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
+  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
@@ -332,6 +343,10 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
+# remove owasp-modsecurity-crs/util because of bash scripts cve
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  # takes ~1GB
+  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /

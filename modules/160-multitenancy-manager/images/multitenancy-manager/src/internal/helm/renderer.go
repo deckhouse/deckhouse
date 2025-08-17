@@ -18,6 +18,7 @@ package helm
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -31,10 +32,15 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 )
 
+var (
+	ErrNamespaceOverride = errors.New("objects that defined in different namespaces will still be deployed to project namespace")
+)
+
 type postRenderer struct {
 	project  *v1alpha2.Project
 	versions map[string]struct{}
 	logger   logr.Logger
+	warning  error
 }
 
 func newPostRenderer(project *v1alpha2.Project, versions map[string]struct{}, logger logr.Logger) *postRenderer {
@@ -93,7 +99,12 @@ func (r *postRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, erro
 				r.project.AddResource(object, true)
 				core = object
 			}
+
 			continue
+		}
+
+		if len(object.GetNamespace()) > 1 && object.GetNamespace() != r.project.Name {
+			r.warning = ErrNamespaceOverride
 		}
 
 		object.SetNamespace(r.project.Name)

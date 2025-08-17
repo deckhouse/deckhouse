@@ -18,7 +18,11 @@ description: "Configuring VMware Cloud Director for Deckhouse cloud provider ope
 
 The Organization, VirtualDataCenter, StoragePolicy, SizingPolicy, EdgeRouter, and Catalog resources must be provided by your VMware Cloud Director service provider.
 
-Network (internal network) can be configured by your VMware Cloud Director service provider, or you can configure it yourself. The following sections describe how you can configure the internal network.
+{% alert level="warning" %}
+Each VDC (Virtual Data Center) must have an Edge Gateway configured, and the cluster network must be connected to it.
+{% endalert %}
+
+Network (internal network) can be configured either by your VMware Cloud Director service provider or manually by you. If you choose the `WithNAT` placement scheme, the network will be created automatically. The following section describes how to configure the internal network manually.
 
 ### User permissions
 
@@ -29,7 +33,11 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
 ### Adding a network
 
-1. Go to the **Networking** tab and click **NEW**:
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` layout.
+{% endalert %}
+
+1. Go to the "Networking" tab and click "NEW":
 
    ![Adding a network, step 1](../../images/cloud-provider-vcd/network-setup/Screenshot.png)
 
@@ -37,7 +45,7 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
    ![Adding a network, step 2](../../images/cloud-provider-vcd/network-setup/Screenshot2.png)
 
-1. At the **Network type** step, select **Routed**:
+1. At the "Network type" step, select "Routed":
 
    ![Adding a network, step 3](../../images/cloud-provider-vcd/network-setup/Screenshot3.png)
 
@@ -49,7 +57,7 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
    ![Adding a network, step 5](../../images/cloud-provider-vcd/network-setup/Screenshot5.png)
 
-1. Do not add **Static IP Pools** because DHCP will be used:
+1. Do not add "Static IP Pools" because DHCP will be used:
 
    ![Adding a network, step 6](../../images/cloud-provider-vcd/network-setup/Screenshot6.png)
 
@@ -59,21 +67,25 @@ The user accessing the VMware Cloud Director API must have the following permiss
 
 ### Configuring DHCP
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` layout.
+{% endalert %}
+
 To provision nodes dynamically, enable the DHCP server for the internal network.
 
 {% alert level="info" %}
 We recommend allocating the beginning of the network address range to system consumers (control plane, frontend nodes, system nodes) and the rest to the DHCP pool. For example, for a `/24` mask network it would be enough to allocate 20 addresses to system consumers.
 {% endalert %}
 
-1. Click the **Networking** tab and open the network you created:
+1. Click the "Networking" tab and open the network you created:
 
    ![DHCP, step 1](../../images/cloud-provider-vcd/dhcp-setup/Screenshot.png)
 
-1. In the opened window, select **IP Management** -> **DHCP** -> **Activate**:
+1. In the opened window, select "IP Management" → "DHCP" → "Activate":
 
    ![DHCP, step 2](../../images/cloud-provider-vcd/dhcp-setup/Screenshot2.png)
 
-1. In the **General settings** tab, set the parameters as shown in the example:
+1. In the "General settings" tab, set the parameters as shown in the example:
 
    ![DHCP, step 3](../../images/cloud-provider-vcd/dhcp-setup/Screenshot3.png)
 
@@ -87,7 +99,11 @@ We recommend allocating the beginning of the network address range to system con
 
 ### Adding a vApp
 
-1. Switch to the **Data Centers** tab -> **vApps** -> **NEW** -> **New vApp**:
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
+1. Switch to the "Data Centers" tab → "vApps" → "NEW" → "New vApp":
 
    ![Adding a vApp, step 1](../../images/cloud-provider-vcd/application-setup/Screenshot.png)
 
@@ -97,17 +113,21 @@ We recommend allocating the beginning of the network address range to system con
 
 ### Adding a network to the vApp
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
 Once the vApp is created, connect the created internal network to it.
 
-1. Switch to the **Data Centers** tab -> **vApps** and open the target vApp:
+1. Switch to the "Data Centers" tab → "vApps" and open the target vApp:
 
    ![Adding a network to the vApp, step 1](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot.png)
 
-1. Go to the **Networks** tab and click **NEW**:
+1. Go to the "Networks" tab and click "NEW":
 
    ![Adding a network to the vApp, step 2](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot2.png)
 
-1. In the opened window, click the **Direct** type and select the network:
+1. In the opened window, click the "Direct" type and select the network:
 
    ![Adding a network to the vApp, step 3](../../images/cloud-provider-vcd/network-in-vapp-setup/Screenshot3.png)
 
@@ -118,11 +138,15 @@ This address can be created by running MetalLB in L2 mode for dedicated frontend
 
 ### Configuring DNAT/SNAT rules on the edge gateway
 
-1. Navigate to the **Networking** tab -> **Edge Gateways** and open the edge gateway:
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
+1. Navigate to the "Networking" tab → "Edge Gateways" and open the edge gateway:
 
    ![Configuring DNAT rules on the edge gateway, step 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot.png)
 
-1. Switch to the **Services** tab -> **NAT**:
+1. Switch to the "Services" tab → "NAT":
 
    ![Configuring DNAT rules on the edge gateway, step 2](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot2.png)
 
@@ -132,17 +156,21 @@ This address can be created by running MetalLB in L2 mode for dedicated frontend
 
    The first two rules are used for incoming traffic, while the third rule is used for SSH access to the control plane host (without this rule the installation will not be possible).
 
-1. To allow virtual machines to access the internet, configure SNAT rules following the example:
+1. To allow virtual machines to access the Internet, configure SNAT rules following the example:
 
    ![Configuring SNAT rules on the edge gateway, step 1](../../images/cloud-provider-vcd/edge-gateway-setup/Screenshot4.png)
 
-   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the internet.
+   This rule will allow virtual machines from the `192.168.199.0/24` subnet to access the Internet.
 
 ### Configuring a firewall
 
+{% alert level="info" %}
+This instruction is applicable only for the `Standard` deployment layout.
+{% endalert %}
+
 Once DNAT is configured, set up the firewall. Start by configuring the IP sets.
 
-1. Switch to the **Security** tab -> **IP Sets**:
+1. Switch to the "Security" tab → "IP Sets":
 
    ![Configuring the edge gateway firewall, step 1](../../images/cloud-provider-vcd/edge-firewall/Screenshot.png)
 
@@ -166,6 +194,10 @@ The provider is confirmed to work with Ubuntu 22.04-based virtual machine templa
 
 {% include notice_envinronment.liquid %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 The example below uses the OVA file provided by Ubuntu, updated to include two fixes.
 Those fixes are essential for CloudPermanent nodes to be provisioned correctly and to be able to mount CSI-created disks.
 
@@ -175,7 +207,7 @@ Those fixes are essential for CloudPermanent nodes to be provisioned correctly a
 
    ![Setting up the template, step 1](../../images/cloud-provider-vcd/template/Screenshot.png)
 
-1. Switch to the **Libraries** tab -> **Catalogs** -> **Organization Catalog**:
+1. Switch to the "Libraries" tab → "Catalogs" → "Organization Catalog":
 
    ![Setting up the template, step 2](../../images/cloud-provider-vcd/template/Screenshot2.png)
 
@@ -202,8 +234,8 @@ Enter the default password and public key. You will need them to log in to the V
 Follow these steps to be able to connect to the virtual machine:
 
 1. Start the virtual machine.
-2. Wait for the IP address to be set.
-3. _Forward_ port `22` to the virtual machine:
+1. Wait for the IP address to be set.
+1. Forward port `22` to the virtual machine:
 
    ![Setting up the template, step 9](../../images/cloud-provider-vcd/template/Screenshot9.png)
 
@@ -237,7 +269,7 @@ shutdown -P now
 
 ### Setting up the template in VCD
 
-1. Shut down the virtual machine and clear all populated fields in **Guest Properties**:
+1. Shut down the virtual machine and clear all populated fields in "Guest Properties":
 
    ![Setting up the template, Guest Properties 1](../../images/cloud-provider-vcd/template/GuestProperties1.png)
 
@@ -249,7 +281,7 @@ shutdown -P now
 
    ![Setting up the template, step 11](../../images/cloud-provider-vcd/template/Screenshot11.png)
 
-1. In the created template, navigate to the **Metadata** tab and add the following six fields:
+1. In the created template, navigate to the "Metadata" tab and add the following six fields:
 
    * `guestinfo.metadata`
    * `guestinfo.metadata.encoding`

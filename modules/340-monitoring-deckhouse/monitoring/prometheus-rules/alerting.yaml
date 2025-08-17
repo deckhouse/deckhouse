@@ -139,7 +139,7 @@
         ```
 
   - alert: ModuleReleaseIsWaitingManualApproval
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:
@@ -152,6 +152,77 @@
         A new release for module `{{ $labels.moduleName }}` is available but requires manual approval before it can be applied.
 
         To approve the module release, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="1"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is 1 minor version behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running 1 minor version behind the latest available release.
+        Consider updating to maintain compatibility and security.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", releaseQueueDepth="2"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "7"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is 2 minor versions behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running 2 minor versions behind the latest available release.
+        Updating is recommended to maintain compatibility and access to latest features.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
+
+  - alert: ModuleReleaseIsOutdated
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="nil"})
+      and on(name, moduleName) sum by (name, moduleName) (d8_module_release_info{releaseQueueDepth!="1", releaseQueueDepth!="2"})
+    labels:
+      severity_level: "5"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` is {{ $labels.versionLag }} or more minor versions behind the latest available release.
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.versionLag }} or more minor versions behind the latest available release.
+        This module is significantly outdated and may have compatibility issues.
+
+        To approve the module release update, run the following command:
 
         ```bash
         kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
@@ -198,7 +269,7 @@
         ```
 
   - alert: ModuleReleaseIsBlockedByRequirements
-    expr: sum(deckhouse_mm_module_info{enabled="true"} * on(moduleName) group_left(name) sum by (name, moduleName, requirementsNotMet) (d8_module_release_info{requirementsNotMet="true"})) by (name, moduleName)
+    expr: sum by (name, moduleName) (d8_module_release_info{requirementsNotMet="true"} * on(moduleName) group_left sum by (moduleName) (deckhouse_mm_module_info{enabled="true"}))
     labels:
       severity_level: "6"
     annotations:

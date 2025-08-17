@@ -96,7 +96,7 @@ In Deckhouse Kubernetes Platform, you can apply the following algorithms to load
 By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
 
 * Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLoadBalancerAlgorithmsEnabled`](configuration.html#parameters-extralbalgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
-* In the service manifest, specify the `cilium.io/bpf-lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
+* In the service manifest, specify the `service.cilium.io/lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
 
 {% alert level="warning" %}
 This mechanism requires Linux kernel version 5.15 or higher to work correctly.

@@ -1,43 +1,65 @@
-Subject: [PATCH] Add support for searching vAppTemplates in a given org
----
-Index: pkg/vcdsdk/vapp.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+diff --git a/go.mod b/go.mod
+index 30b2a020..30d9ebf6 100644
+--- a/go.mod
++++ b/go.mod
+@@ -13,7 +13,7 @@ require (
+ 	github.com/peterhellberg/link v1.1.0
+ 	github.com/sethvargo/go-password v0.2.0
+ 	github.com/stretchr/testify v1.7.0
+-	github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3
++	github.com/vmware/go-vcloud-director/v2 v2.21.0
+ 	golang.org/x/oauth2 v0.7.0
+ 	gopkg.in/yaml.v2 v2.4.0
+ 	gopkg.in/yaml.v3 v3.0.0
+diff --git a/go.sum b/go.sum
+index 81ccc4ab..84082e69 100644
+--- a/go.sum
++++ b/go.sum
+@@ -435,8 +435,8 @@ github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 h1:uruHq4dN7GR16kFc5fp3d1RIYzJW5onx8Ybykw2YQFA=
+ github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3 h1:VJolXzgomaRPrgzSr0EduuUtJIJEf5RdoLbktZFQqIc=
+-github.com/vmware/go-vcloud-director/v2 v2.14.0-rc.3/go.mod h1:2BS1yw61VN34WI0/nUYoInFvBc3Zcuf84d4ESiAAl68=
++github.com/vmware/go-vcloud-director/v2 v2.21.0 h1:zIONrJpM+Fj+rDyXmsRfMAn1sP5WAP87USL0T9GS4DY=
++github.com/vmware/go-vcloud-director/v2 v2.21.0/go.mod h1:QPxGFgrUcSyzy9IlpwDE4UNT3tsOy2047tJOPEJ4nlw=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 h1:eY9dn8+vbi4tKz5Qo6v2eYzo7kUS51QINcR5jNpbZS8=
+ github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
+ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
---- a/pkg/vcdsdk/vapp.go	(revision afb0bc63f9449b402122f210ae218cde81b80633)
-+++ b/pkg/vcdsdk/vapp.go	(date 1747234304160)
-@@ -531,7 +531,7 @@
+index d5ad922b..e6f6e552 100644
+--- a/pkg/vcdsdk/vapp.go
++++ b/pkg/vcdsdk/vapp.go
+@@ -531,7 +531,7 @@ func (vdc *VdcManager) SetVmExtraConfigKeyValue(vm *govcd.VM, key string, value
  // AddNewMultipleVM will create vmNum VMs in parallel, including recompose VApp of all VMs settings,
  // power on VMs and join the cluster with hardcoded script
  func (vdc *VdcManager) AddNewMultipleVM(vapp *govcd.VApp, vmNamePrefix string, vmNum int,
 -	catalogName string, templateName string, placementPolicyName string, computePolicyName string,
 +	catalogName string, templateName string, templateOrg string, placementPolicyName string, computePolicyName string,
  	storageProfileName string, guestCustScript string, acceptAllEulas bool, powerOn bool) (govcd.Task, error) {
-
+ 
  	klog.V(3).Infof("start adding %d VMs\n", vmNum)
-@@ -541,15 +541,29 @@
+@@ -541,15 +541,29 @@ func (vdc *VdcManager) AddNewMultipleVM(vapp *govcd.VApp, vmNamePrefix string, v
  		return govcd.Task{}, fmt.Errorf("error creating orgManager: [%v]", err)
  	}
-
+ 
 -	catalog, err := orgManager.GetCatalogByName(catalogName)
 -	if err != nil {
 -		return govcd.Task{}, fmt.Errorf("unable to find catalog [%s] in org [%s]: [%v]",
 -			catalogName, vdc.OrgName, err)
 -	}
 +	var vAppTemplateList []*types.QueryResultVappTemplateType
-+
+ 
+-	vAppTemplateList, err := catalog.QueryVappTemplateList()
+-	if err != nil {
+-		return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
 +	if templateOrg == "" {
 +		catalog, err := orgManager.GetCatalogByName(catalogName)
 +		if err != nil {
 +			return govcd.Task{}, fmt.Errorf("unable to find catalog [%s] in org [%s]: [%v]",
 +				catalogName, vdc.OrgName, err)
 +		}
-
--	vAppTemplateList, err := catalog.QueryVappTemplateList()
--	if err != nil {
--		return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
++
 +		vAppTemplateList, err = catalog.QueryVappTemplateList()
 +		if err != nil {
 +			return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
@@ -53,65 +75,65 @@ diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
 +			return govcd.Task{}, fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
 +		}
  	}
-
+ 
  	var queryVAppTemplate *types.QueryResultVappTemplateType
-@@ -808,7 +822,7 @@
+@@ -808,7 +822,7 @@ func (vdc *VdcManager) AddNewMultipleVM(vapp *govcd.VApp, vmNamePrefix string, v
  }
-
+ 
  func (vdc *VdcManager) AddNewTkgVM(vmNamePrefix string, VAppName string, vmNum int,
 -	catalogName string, templateName string, placementPolicyName string, computePolicyName string,
 +	catalogName string, templateName string, templateOrg string, placementPolicyName string, computePolicyName string,
  	storageProfileName string, powerOn bool) error {
-
+ 
  	// In TKG >= 1.6.0, there is a missing file at /etc/cloud/cloud.cfg.d/
-@@ -824,7 +838,7 @@
+@@ -824,7 +838,7 @@ cat > /etc/cloud/cloud.cfg.d/98-cse-vmware-datasource.cfg <<EOF
  datasource_list: [ "VMware" ]
  EOF`
-
+ 
 -	err := vdc.AddNewVM(vmNamePrefix, VAppName, vmNum, catalogName, templateName, placementPolicyName,
 +	err := vdc.AddNewVM(vmNamePrefix, VAppName, vmNum, catalogName, templateName, templateOrg, placementPolicyName,
  		computePolicyName, storageProfileName, guestCustScript, powerOn)
  	if err != nil {
  		return fmt.Errorf("error for adding TKG VM to vApp[%s]: [%v]", VAppName, err)
-@@ -833,7 +847,7 @@
+@@ -833,7 +847,7 @@ EOF`
  }
-
+ 
  func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
 -	catalogName string, templateName string, placementPolicyName string, computePolicyName string,
 +	catalogName string, templateName string, templateOrg string, placementPolicyName string, computePolicyName string,
  	storageProfileName string, guestCustScript string, powerOn bool) error {
-
+ 
  	if vdc.Vdc == nil {
-@@ -846,20 +860,34 @@
+@@ -846,20 +860,34 @@ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
  			VAppName, vdc.VdcName, err)
  	}
-
+ 
 -	orgManager, err := NewOrgManager(vdc.Client, vdc.Client.ClusterOrgName)
 -	if err != nil {
 -		return fmt.Errorf("error creating an orgManager object: [%v]", err)
 -	}
 +	var vAppTemplateList []*types.QueryResultVappTemplateType
-+
-+	if templateOrg == "" {
-+		orgManager, err := NewOrgManager(vdc.Client, vdc.Client.ClusterOrgName)
-+		if err != nil {
-+			return fmt.Errorf("error creating an orgManager object: [%v]", err)
-+		}
-
+ 
 -	catalog, err := orgManager.GetCatalogByName(catalogName)
 -	if err != nil {
 -		return fmt.Errorf("unable to find catalog [%s] in org [%s]: [%v]",
 -			catalogName, vdc.OrgName, err)
 -	}
++	if templateOrg == "" {
++		orgManager, err := NewOrgManager(vdc.Client, vdc.Client.ClusterOrgName)
++		if err != nil {
++			return fmt.Errorf("error creating an orgManager object: [%v]", err)
++		}
+ 
+-	vAppTemplateList, err := catalog.QueryVappTemplateList()
+-	if err != nil {
+-		return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
 +		catalog, err := orgManager.GetCatalogByName(catalogName)
 +		if err != nil {
 +			return fmt.Errorf("unable to find catalog [%s] in org [%s]: [%v]",
 +				catalogName, vdc.OrgName, err)
 +		}
-
--	vAppTemplateList, err := catalog.QueryVappTemplateList()
--	if err != nil {
--		return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
++
 +		vAppTemplateList, err = catalog.QueryVappTemplateList()
 +		if err != nil {
 +			return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
@@ -127,33 +149,52 @@ diff --git a/pkg/vcdsdk/vapp.go b/pkg/vcdsdk/vapp.go
 +			return fmt.Errorf("unable to query templates of catalog [%s]: [%v]", catalogName, err)
 +		}
  	}
-
+ 
  	var queryVAppTemplate *types.QueryResultVappTemplateType
-@@ -893,7 +921,7 @@
+@@ -893,7 +921,7 @@ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
  			queryVAppTemplate.HREF, err)
  	}
-
+ 
 -	_, err = vdc.AddNewMultipleVM(vApp, vmNamePrefix, vmNum, catalogName, templateName, placementPolicyName,
 +	_, err = vdc.AddNewMultipleVM(vApp, vmNamePrefix, vmNum, catalogName, templateName, templateOrg, placementPolicyName,
  		computePolicyName, storageProfileName, guestCustScript, true, powerOn)
  	if err != nil {
  		return fmt.Errorf(
-@@ -904,6 +932,20 @@
+@@ -904,6 +932,39 @@ func (vdc *VdcManager) AddNewVM(vmNamePrefix string, VAppName string, vmNum int,
  	return nil
  }
-
-+func (vdc *VdcManager) getCatalog(catalogName string, orgName string) (*govcd.Catalog, error) {
-+	org, err := vdc.Client.VCDClient.GetAdminOrgByName(orgName)
-+	if err != nil {
-+		return nil, fmt.Errorf("unable to get org [%s]: [%v]", orgName, err)
+ 
++func (vdc *VdcManager) getCatalog(catalogName string, orgName string) (*govcd.AdminCatalog, error) {
++	tenantContext := govcd.TenantContext{}
++	if vdc.Client.VCDClient.Client.IsSysAdmin {
++		org, err := vdc.Client.VCDClient.GetAdminOrgByName(orgName)
++		if err != nil {
++			return nil, fmt.Errorf("[getCatalogFromResource] error retrieving org %s: %s", orgName, err)
++		}
++		tenantContext.OrgId = org.AdminOrg.ID
++		tenantContext.OrgName = orgName
 +	}
-+
-+	catalog, err := org.GetCatalogByNameOrId(catalogName, false)
++	catalogRecords, err := vdc.Client.VCDClient.Client.QueryCatalogRecords(catalogName, tenantContext)
 +	if err != nil {
-+		return nil, fmt.Errorf("unable to get catalog [%s]: [%v]", catalogName, err)
++		return nil, fmt.Errorf("[getCatalogFromResource] error retrieving catalog records for catalog %s: %s", catalogName, err)
 +	}
-+
-+	return catalog, nil
++	var catalogRecord *types.CatalogRecord
++	var orgNames []string
++	for _, cr := range catalogRecords {
++		orgNames = append(orgNames, cr.OrgName)
++		if cr.OrgName == orgName {
++			catalogRecord = cr
++			break
++		}
++	}
++	if catalogRecord == nil {
++		message := fmt.Sprintf("no records found for catalog '%s' in org '%s'", catalogName, orgName)
++		if len(orgNames) > 0 {
++			message = fmt.Sprintf("%s\nThere are catalogs with the same name in other orgs: %v", message, orgNames)
++		}
++		return nil, fmt.Errorf(message)
++	}
++	return vdc.Client.VCDClient.Client.GetAdminCatalogByHref(catalogRecord.HREF)
 +}
 +
  func (vdc *VdcManager) DeleteVM(VAppName, vmName string) error {

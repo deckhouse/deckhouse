@@ -21,6 +21,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -34,7 +35,25 @@ func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 
 	var privateKey interface{}
 
-	privateKey, err = ssh.ParseRawPrivateKey(keyData)
+	if len(passphrase) == 0 {
+		privateKey, err = ssh.ParseRawPrivateKey(keyData)
+	} else {
+		privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+	}
+
+	return privateKey, nil
+}
+
+func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
+	keyData, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading key file %q: %w", keyPath, err)
+	}
+
+	keyData = append(bytes.TrimSpace(keyData), '\n')
+
+	var passphrase []byte
+	_, err = ssh.ParseRawPrivateKey(keyData)
 	if err != nil {
 		var passphraseMissingError *ssh.PassphraseMissingError
 		switch {
@@ -48,14 +67,10 @@ func ParsePrivateSSHKey(keyPath string, passphrase []byte) (any, error) {
 				}
 				passphrase = passphraseFromStdin
 			}
-			privateKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
-			if err != nil {
-				return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
-			}
 		default:
 			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
 		}
 	}
 
-	return privateKey, nil
+	return &session.AgentPrivateKey{Key: keyPath, Passphrase: string(passphrase)}, nil
 }

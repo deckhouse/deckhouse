@@ -10,6 +10,8 @@ import:
     add: /src/local
     to: /local
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/operator-trivy" ]

@@ -27,6 +27,8 @@ import:
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/ovirt-csi-driver"]
@@ -81,7 +83,7 @@ final: false
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-    - apt-get update -y
-    - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get install -y e2fsprogs xfsprogs btrfs-progs nfs-utils parted nvme udev
   install:
     - /binary_replace.sh -i "{{ $csiBinaries }}" -o /relocate

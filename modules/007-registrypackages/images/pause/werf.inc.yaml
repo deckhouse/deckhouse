@@ -19,7 +19,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
   stageDependencies:
     setup:
@@ -34,14 +34,20 @@ dependencies:
   before: setup
   imports:
   - type: ImageDigest
-    targetEnv: PAUSE_IMAGE_DIGEST
+    targetEnv: IMAGE_DIGEST
   - type: ImageRepo
-    targetEnv: PAUSE_IMAGE_REPO
+    targetEnv: IMAGE_REPO
 mount:
 - fromPath: ~/.docker
   to: /root/.docker
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 shell:
   setup:
-  - /crane pull $PAUSE_IMAGE_REPO@$PAUSE_IMAGE_DIGEST /pause.tar
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /pause.tar
+  - mkdir /tmp/pause
+  - tar -xf /pause.tar -C /tmp/pause
+  - cd /tmp/pause
+  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
+  - rm /pause.tar
+  - tar -cvf /pause.tar ./
+  - rm -rf /tmp/pause

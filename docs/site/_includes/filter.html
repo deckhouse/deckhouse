@@ -1,4 +1,5 @@
-<script type="text/javascript" src='/assets/js/filter.js?v={{ "now" | date: "%Y-%m-%d %H:%M:%S" | sha256 }}'></script>
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src='/assets/js/filter.js?v={{ assetHash }}'></script>
 <div class="filter__container">
     {%- if page.lang == "ru" %}
         <h2 class="filter__container--title">Категория</h2>

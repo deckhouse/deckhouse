@@ -1,0 +1,4 @@
+dirs:
+- /var/lib/grafana/data
+- /var/lib/grafana/data/alerting
+- /etc/grafana/dashboards

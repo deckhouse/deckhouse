@@ -5,6 +5,8 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/registry-packages-proxy"]

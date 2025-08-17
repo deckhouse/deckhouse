@@ -7,15 +7,17 @@ import:
   add: /relocate
   to: /
   before: setup
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: common/relocate-artifact
 final: false
 shell:
   beforeInstall:
-  - apt-get update
+  {{- include "alt packages proxy" . | nindent 2 }}
   - apt-get install -y netcat
-  - rm -rf /var/lib/apt/lists/* /var/cache/apt/* && mkdir -p /var/lib/apt/lists/partial /var/cache/apt/archives/partial
+  - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 

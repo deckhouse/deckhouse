@@ -437,7 +437,7 @@ shell:
 {{- $context := . -}}
 
 image: dev/install-standalone
-from: {{ $context.Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 import:
 - image: install-standalone-builder
   add: /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz

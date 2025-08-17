@@ -66,19 +66,19 @@ properties:
     type: string
     x-examples: ["nginx"]
     description: |
-      Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).  
-      Если параметр не указан, то используется `ingressClass` по умолчанию.   
+      Имя `ingressClass` используемого для подтверждения владения доменом методом [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/).
+      Если параметр не указан, то используется `ingressClass` по умолчанию.
 
   recursiveSettings:
     description: |
-      Параметры рекурсивных DNS для самопроверки ACME DNS-01:
+      Параметры использования рекурсивных DNS-серверов, которые применяются для проверки существования записи в DNS, перед запуском процесса подтверждения владения доменом методом [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/).
     x-examples:
       - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
         useOnlyRecursive: true
     properties:
       nameservers:
         description: |
-          Список рекурсивных DNS-серверов (IP:порт или HTTPS-URL), к которым cert-manager будет обращаться.
+          Список рекурсивных DNS-серверов (IP:порт или HTTPS-URL).
       useOnlyRecursive:
         description: |
-          Если значение true, cert-manager ограничивает проверку DNS-01 указанными рекурсивными DNS-серверами.
+          Если значение true, для проверки существования записи в DNS перед запуском процесса подтверждения владения доменом будут использоваться только указанные рекурсивные DNS-серверы.

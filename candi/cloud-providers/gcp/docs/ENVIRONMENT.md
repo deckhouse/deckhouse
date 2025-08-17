@@ -11,6 +11,10 @@ You need to create a service account so that Deckhouse can manage resources in t
 **Note!** The created `service account key` cannot be restored, you can only delete and create a new one.
 {% endalert %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## Setup using Google Cloud Console
 
 Follow this [link](https://console.cloud.google.com/iam-admin/serviceaccounts), select your project and create a new service account or select an existing one.

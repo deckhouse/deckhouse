@@ -1,0 +1,4 @@
+dirs:
+- /host/root
+- /host/textfile
+- /host/textfile-kubelet-eviction-thresholds-exporter

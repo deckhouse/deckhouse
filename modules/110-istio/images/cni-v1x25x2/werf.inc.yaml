@@ -35,6 +35,8 @@ import:
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}

@@ -57,6 +57,12 @@ spec:
 
 <span id="пример-описания-статичной-nodegroup-для-системных-узлов"></span>
 
+Ниже представлен пример манифеста группы системных узлов.
+
+При описании NodeGroup c узлами типа Static в поле `nodeType` укажите значение `Static` и используйте поле [`staticInstances`](./cr.html#nodegroup-v1-spec-staticinstances) для описания параметров настройки машин статических узлов.
+
+При описании NodeGroup c облачными узлами типа CloudEphemeral в поле `nodeType` укажите значение `CloudEphemeral` и используйте поле [`cloudInstances`](./cr.html#nodegroup-v1-spec-cloudinstances) для описания параметров заказа облачных виртуальных машин.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -70,7 +76,23 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
+  # Пример для узлов типа Static
   nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: system
+  # Пример для узлов типа CloudEphemeral
+  # nodeType: CloudEphemeral
+  # cloudInstances:
+  #   classReference:
+  #     kind: YandexInstanceClass
+  #     name: large
+  #   maxPerZone: 2
+  #   minPerZone: 1
+  #   zones:
+  #   - ru-central1-d
 ```
 
 ### Узлы с GPU

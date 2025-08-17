@@ -38,6 +38,8 @@ import:
   add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/cilium-operator"]

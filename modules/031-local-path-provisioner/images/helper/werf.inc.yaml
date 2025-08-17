@@ -25,6 +25,8 @@ import:
    add: /manager
    to: /manager
    after: install
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

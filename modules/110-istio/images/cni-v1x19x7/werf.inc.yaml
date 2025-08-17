@@ -18,6 +18,8 @@ import:
   owner: 1337
   group: 1337
   after: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     env: {"PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/cni/bin"}
