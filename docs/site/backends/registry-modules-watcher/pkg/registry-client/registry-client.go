@@ -81,6 +81,12 @@ func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.I
 	return c.image(ctx, imageURL)
 }
 
+func (c *client) ReleaseDigest(ctx context.Context, moduleName, tag string) (string, error) {
+	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
+
+	return c.digest(ctx, imageURL)
+}
+
 func (c *client) Image(ctx context.Context, moduleName, tag string) (v1.Image, error) {
 	imageURL := c.registryURL + "/" + moduleName + ":" + tag
 
@@ -107,6 +113,30 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 		ref,
 		imageOptions...,
 	)
+}
+
+func (c *client) digest(ctx context.Context, imageURL string) (string, error) {
+	var nameOpts []name.Option
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	remoteOptions := make([]remote.Option, 0)
+	if !c.options.withoutAuth {
+		remoteOptions = append(remoteOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
+	}
+
+	remoteOptions = append(remoteOptions, metrics.RoundTripOption(c.metricStorage))
+	remoteOptions = append(remoteOptions, remote.WithContext(ctx))
+
+	descriptor, err := remote.Get(ref, remoteOptions...)
+	if err != nil {
+		return "", fmt.Errorf("remote get: %w", err)
+	}
+
+	return descriptor.Digest.String(), nil
 }
 
 func (c *client) Modules(ctx context.Context) ([]string, error) {

@@ -86,17 +86,18 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
-	img, err := md.fetchImage(moduleName, imageTag)
+	// Get digest efficiently without downloading the full image
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return "", nil, fmt.Errorf("fetch module error: %v", err)
+	}
+
+	digest, err := regCli.Digest(context.Background(), imageTag)
 	if err != nil {
 		return "", nil, err
 	}
 
-	digest, err := img.Digest()
-	if err != nil {
-		return "", nil, err
-	}
-
-	if digest.String() == checksum {
+	if digest == checksum {
 		// module is up-to-date
 		return "", nil, nil
 	}
@@ -105,7 +106,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
+	return digest, md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
@@ -196,7 +197,7 @@ func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image,
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(context.TODO(), imageTag)
+	return regCli.Image(context.Background(), imageTag)
 }
 
 func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) (*DownloadStatistic, error) {
@@ -217,14 +218,51 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) 
 }
 
 func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersion, moduleVersionPath string) (*DownloadStatistic, error) {
-	// TODO: if module exists on fs - skip this step
+	// Check if module already exists on filesystem
+	if md.isModuleExistsOnFS(moduleVersionPath) {
+		md.logger.Debug("Module already exists on filesystem, skipping download",
+			slog.String("module", moduleName),
+			slog.String("version", moduleVersion),
+			slog.String("path", moduleVersionPath))
 
-	img, err := md.fetchImage(moduleName, moduleVersion)
+		return &DownloadStatistic{
+			Size: 1,
+		}, nil
+	}
+
+	img, err := md.fetchImageWithCache(moduleName, moduleVersion)
 	if err != nil {
 		return nil, err
 	}
 
 	return md.storeModule(moduleVersionPath, img)
+}
+
+// isModuleExistsOnFS checks if module exists on filesystem by verifying essential files
+func (md *ModuleDownloader) isModuleExistsOnFS(moduleVersionPath string) bool {
+	// Check if module.yaml exists (essential file for any module)
+	if _, err := os.Stat(filepath.Join(moduleVersionPath, "module.yaml")); os.IsNotExist(err) {
+		return false
+	}
+
+	// Additional check: verify the directory is not empty
+	entries, err := os.ReadDir(moduleVersionPath)
+	if err != nil || len(entries) == 0 {
+		return false
+	}
+
+	return true
+}
+
+// fetchImageWithCache fetches image using built-in caching for versioned images
+func (md *ModuleDownloader) fetchImageWithCache(moduleName, imageTag string) (crv1.Image, error) {
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module error: %v", err)
+	}
+
+	// Image() method now has built-in caching for versioned images
+	return regCli.Image(context.Background(), imageTag)
 }
 
 func (md *ModuleDownloader) copyModuleToFS(rootPath string, img crv1.Image) (*DownloadStatistic, error) {
@@ -377,15 +415,22 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 // getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
 // return error if version.json not found in metadata
 func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
+	// Get digest efficiently without downloading the full image first
+	digestStr, err := regCli.Digest(ctx, imageTag)
+	if err != nil {
+		return nil, fmt.Errorf("fetch digest error: %w", err)
+	}
+
+	// Parse digest string to v1.Hash
+	digest, err := crv1.NewHash(digestStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse digest error: %w", err)
+	}
+
+	// Now fetch the image for metadata extraction
 	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
-	}
-
-	// fill releaseImageInfo.Digest
-	digest, err := img.Digest()
-	if err != nil {
-		return nil, fmt.Errorf("fetch digest error: %w", err)
 	}
 
 	// fill releaseImageInfo.Metadata

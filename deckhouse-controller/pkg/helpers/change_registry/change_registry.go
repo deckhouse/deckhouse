@@ -333,15 +333,9 @@ func updateImageRepoForContainers(containers []v1.Container, newRepository strin
 }
 
 func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
-	img, err := remote.Image(imageRef, opts...)
-	if err != nil {
-		return err
-	}
-
-	if _, err := img.Digest(); err != nil {
-		return err
-	}
-	return nil
+	// Use remote.Get for efficient image existence check without downloading the image
+	_, err := remote.Get(imageRef, opts...)
+	return err
 }
 
 // checkBearerSupport func checks that registry accepts bearer token authentification.

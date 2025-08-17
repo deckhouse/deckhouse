@@ -11,13 +11,20 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // ClientMock implements Client
 type ClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
+
+	funcClearCache          func()
+	funcClearCacheOrigin    string
+	inspectFuncClearCache   func()
+	afterClearCacheCounter  uint64
+	beforeClearCacheCounter uint64
+	ClearCacheMock          mClientMockClearCache
 
 	funcDigest          func(ctx context.Context, tag string) (s1 string, err error)
 	funcDigestOrigin    string
@@ -26,12 +33,19 @@ type ClientMock struct {
 	beforeDigestCounter uint64
 	DigestMock          mClientMockDigest
 
-	funcImage          func(ctx context.Context, tag string) (i1 v1.Image, err error)
+	funcImage          func(ctx context.Context, tag string) (i1 crv1.Image, err error)
 	funcImageOrigin    string
 	inspectFuncImage   func(ctx context.Context, tag string)
 	afterImageCounter  uint64
 	beforeImageCounter uint64
 	ImageMock          mClientMockImage
+
+	funcImageExists          func(ctx context.Context, tag string) (err error)
+	funcImageExistsOrigin    string
+	inspectFuncImageExists   func(ctx context.Context, tag string)
+	afterImageExistsCounter  uint64
+	beforeImageExistsCounter uint64
+	ImageExistsMock          mClientMockImageExists
 
 	funcListTags          func(ctx context.Context) (sa1 []string, err error)
 	funcListTagsOrigin    string
@@ -49,11 +63,16 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ClearCacheMock = mClientMockClearCache{mock: m}
+
 	m.DigestMock = mClientMockDigest{mock: m}
 	m.DigestMock.callArgs = []*ClientMockDigestParams{}
 
 	m.ImageMock = mClientMockImage{mock: m}
 	m.ImageMock.callArgs = []*ClientMockImageParams{}
+
+	m.ImageExistsMock = mClientMockImageExists{mock: m}
+	m.ImageExistsMock.callArgs = []*ClientMockImageExistsParams{}
 
 	m.ListTagsMock = mClientMockListTags{mock: m}
 	m.ListTagsMock.callArgs = []*ClientMockListTagsParams{}
@@ -61,6 +80,184 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	t.Cleanup(m.MinimockFinish)
 
 	return m
+}
+
+type mClientMockClearCache struct {
+	optional           bool
+	mock               *ClientMock
+	defaultExpectation *ClientMockClearCacheExpectation
+	expectations       []*ClientMockClearCacheExpectation
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// ClientMockClearCacheExpectation specifies expectation struct of the Client.ClearCache
+type ClientMockClearCacheExpectation struct {
+	mock *ClientMock
+
+	returnOrigin string
+	Counter      uint64
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmClearCache *mClientMockClearCache) Optional() *mClientMockClearCache {
+	mmClearCache.optional = true
+	return mmClearCache
+}
+
+// Expect sets up expected params for Client.ClearCache
+func (mmClearCache *mClientMockClearCache) Expect() *mClientMockClearCache {
+	if mmClearCache.mock.funcClearCache != nil {
+		mmClearCache.mock.t.Fatalf("ClientMock.ClearCache mock is already set by Set")
+	}
+
+	if mmClearCache.defaultExpectation == nil {
+		mmClearCache.defaultExpectation = &ClientMockClearCacheExpectation{}
+	}
+
+	return mmClearCache
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.ClearCache
+func (mmClearCache *mClientMockClearCache) Inspect(f func()) *mClientMockClearCache {
+	if mmClearCache.mock.inspectFuncClearCache != nil {
+		mmClearCache.mock.t.Fatalf("Inspect function is already set for ClientMock.ClearCache")
+	}
+
+	mmClearCache.mock.inspectFuncClearCache = f
+
+	return mmClearCache
+}
+
+// Return sets up results that will be returned by Client.ClearCache
+func (mmClearCache *mClientMockClearCache) Return() *ClientMock {
+	if mmClearCache.mock.funcClearCache != nil {
+		mmClearCache.mock.t.Fatalf("ClientMock.ClearCache mock is already set by Set")
+	}
+
+	if mmClearCache.defaultExpectation == nil {
+		mmClearCache.defaultExpectation = &ClientMockClearCacheExpectation{mock: mmClearCache.mock}
+	}
+
+	mmClearCache.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmClearCache.mock
+}
+
+// Set uses given function f to mock the Client.ClearCache method
+func (mmClearCache *mClientMockClearCache) Set(f func()) *ClientMock {
+	if mmClearCache.defaultExpectation != nil {
+		mmClearCache.mock.t.Fatalf("Default expectation is already set for the Client.ClearCache method")
+	}
+
+	if len(mmClearCache.expectations) > 0 {
+		mmClearCache.mock.t.Fatalf("Some expectations are already set for the Client.ClearCache method")
+	}
+
+	mmClearCache.mock.funcClearCache = f
+	mmClearCache.mock.funcClearCacheOrigin = minimock.CallerInfo(1)
+	return mmClearCache.mock
+}
+
+// Times sets number of times Client.ClearCache should be invoked
+func (mmClearCache *mClientMockClearCache) Times(n uint64) *mClientMockClearCache {
+	if n == 0 {
+		mmClearCache.mock.t.Fatalf("Times of ClientMock.ClearCache mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmClearCache.expectedInvocations, n)
+	mmClearCache.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmClearCache
+}
+
+func (mmClearCache *mClientMockClearCache) invocationsDone() bool {
+	if len(mmClearCache.expectations) == 0 && mmClearCache.defaultExpectation == nil && mmClearCache.mock.funcClearCache == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmClearCache.mock.afterClearCacheCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmClearCache.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// ClearCache implements Client
+func (mmClearCache *ClientMock) ClearCache() {
+	mm_atomic.AddUint64(&mmClearCache.beforeClearCacheCounter, 1)
+	defer mm_atomic.AddUint64(&mmClearCache.afterClearCacheCounter, 1)
+
+	mmClearCache.t.Helper()
+
+	if mmClearCache.inspectFuncClearCache != nil {
+		mmClearCache.inspectFuncClearCache()
+	}
+
+	if mmClearCache.ClearCacheMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmClearCache.ClearCacheMock.defaultExpectation.Counter, 1)
+
+		return
+
+	}
+	if mmClearCache.funcClearCache != nil {
+		mmClearCache.funcClearCache()
+		return
+	}
+	mmClearCache.t.Fatalf("Unexpected call to ClientMock.ClearCache.")
+
+}
+
+// ClearCacheAfterCounter returns a count of finished ClientMock.ClearCache invocations
+func (mmClearCache *ClientMock) ClearCacheAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearCache.afterClearCacheCounter)
+}
+
+// ClearCacheBeforeCounter returns a count of ClientMock.ClearCache invocations
+func (mmClearCache *ClientMock) ClearCacheBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmClearCache.beforeClearCacheCounter)
+}
+
+// MinimockClearCacheDone returns true if the count of the ClearCache invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockClearCacheDone() bool {
+	if m.ClearCacheMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.ClearCacheMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.ClearCacheMock.invocationsDone()
+}
+
+// MinimockClearCacheInspect logs each unmet expectation
+func (m *ClientMock) MinimockClearCacheInspect() {
+	for _, e := range m.ClearCacheMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Error("Expected call to ClientMock.ClearCache")
+		}
+	}
+
+	afterClearCacheCounter := mm_atomic.LoadUint64(&m.afterClearCacheCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ClearCacheMock.defaultExpectation != nil && afterClearCacheCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.ClearCache at\n%s", m.ClearCacheMock.defaultExpectation.returnOrigin)
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcClearCache != nil && afterClearCacheCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.ClearCache at\n%s", m.funcClearCacheOrigin)
+	}
+
+	if !m.ClearCacheMock.invocationsDone() && afterClearCacheCounter > 0 {
+		m.t.Errorf("Expected %d calls to ClientMock.ClearCache at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.ClearCacheMock.expectedInvocations), m.ClearCacheMock.expectedInvocationsOrigin, afterClearCacheCounter)
+	}
 }
 
 type mClientMockDigest struct {
@@ -444,7 +641,7 @@ type ClientMockImageParamPtrs struct {
 
 // ClientMockImageResults contains results of the Client.Image
 type ClientMockImageResults struct {
-	i1  v1.Image
+	i1  crv1.Image
 	err error
 }
 
@@ -548,7 +745,7 @@ func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, tag string)
 }
 
 // Return sets up results that will be returned by Client.Image
-func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
+func (mmImage *mClientMockImage) Return(i1 crv1.Image, err error) *ClientMock {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -562,7 +759,7 @@ func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
 }
 
 // Set uses given function f to mock the Client.Image method
-func (mmImage *mClientMockImage) Set(f func(ctx context.Context, tag string) (i1 v1.Image, err error)) *ClientMock {
+func (mmImage *mClientMockImage) Set(f func(ctx context.Context, tag string) (i1 crv1.Image, err error)) *ClientMock {
 	if mmImage.defaultExpectation != nil {
 		mmImage.mock.t.Fatalf("Default expectation is already set for the Client.Image method")
 	}
@@ -593,7 +790,7 @@ func (mmImage *mClientMockImage) When(ctx context.Context, tag string) *ClientMo
 }
 
 // Then sets up Client.Image return parameters for the expectation previously defined by the When method
-func (e *ClientMockImageExpectation) Then(i1 v1.Image, err error) *ClientMock {
+func (e *ClientMockImageExpectation) Then(i1 crv1.Image, err error) *ClientMock {
 	e.results = &ClientMockImageResults{i1, err}
 	return e.mock
 }
@@ -620,7 +817,7 @@ func (mmImage *mClientMockImage) invocationsDone() bool {
 }
 
 // Image implements Client
-func (mmImage *ClientMock) Image(ctx context.Context, tag string) (i1 v1.Image, err error) {
+func (mmImage *ClientMock) Image(ctx context.Context, tag string) (i1 crv1.Image, err error) {
 	mm_atomic.AddUint64(&mmImage.beforeImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmImage.afterImageCounter, 1)
 
@@ -746,6 +943,348 @@ func (m *ClientMock) MinimockImageInspect() {
 	if !m.ImageMock.invocationsDone() && afterImageCounter > 0 {
 		m.t.Errorf("Expected %d calls to ClientMock.Image at\n%s but found %d calls",
 			mm_atomic.LoadUint64(&m.ImageMock.expectedInvocations), m.ImageMock.expectedInvocationsOrigin, afterImageCounter)
+	}
+}
+
+type mClientMockImageExists struct {
+	optional           bool
+	mock               *ClientMock
+	defaultExpectation *ClientMockImageExistsExpectation
+	expectations       []*ClientMockImageExistsExpectation
+
+	callArgs []*ClientMockImageExistsParams
+	mutex    sync.RWMutex
+
+	expectedInvocations       uint64
+	expectedInvocationsOrigin string
+}
+
+// ClientMockImageExistsExpectation specifies expectation struct of the Client.ImageExists
+type ClientMockImageExistsExpectation struct {
+	mock               *ClientMock
+	params             *ClientMockImageExistsParams
+	paramPtrs          *ClientMockImageExistsParamPtrs
+	expectationOrigins ClientMockImageExistsExpectationOrigins
+	results            *ClientMockImageExistsResults
+	returnOrigin       string
+	Counter            uint64
+}
+
+// ClientMockImageExistsParams contains parameters of the Client.ImageExists
+type ClientMockImageExistsParams struct {
+	ctx context.Context
+	tag string
+}
+
+// ClientMockImageExistsParamPtrs contains pointers to parameters of the Client.ImageExists
+type ClientMockImageExistsParamPtrs struct {
+	ctx *context.Context
+	tag *string
+}
+
+// ClientMockImageExistsResults contains results of the Client.ImageExists
+type ClientMockImageExistsResults struct {
+	err error
+}
+
+// ClientMockImageExistsOrigins contains origins of expectations of the Client.ImageExists
+type ClientMockImageExistsExpectationOrigins struct {
+	origin    string
+	originCtx string
+	originTag string
+}
+
+// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
+// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
+// Optional() makes method check to work in '0 or more' mode.
+// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
+// catch the problems when the expected method call is totally skipped during test run.
+func (mmImageExists *mClientMockImageExists) Optional() *mClientMockImageExists {
+	mmImageExists.optional = true
+	return mmImageExists
+}
+
+// Expect sets up expected params for Client.ImageExists
+func (mmImageExists *mClientMockImageExists) Expect(ctx context.Context, tag string) *mClientMockImageExists {
+	if mmImageExists.mock.funcImageExists != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Set")
+	}
+
+	if mmImageExists.defaultExpectation == nil {
+		mmImageExists.defaultExpectation = &ClientMockImageExistsExpectation{}
+	}
+
+	if mmImageExists.defaultExpectation.paramPtrs != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by ExpectParams functions")
+	}
+
+	mmImageExists.defaultExpectation.params = &ClientMockImageExistsParams{ctx, tag}
+	mmImageExists.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
+	for _, e := range mmImageExists.expectations {
+		if minimock.Equal(e.params, mmImageExists.defaultExpectation.params) {
+			mmImageExists.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmImageExists.defaultExpectation.params)
+		}
+	}
+
+	return mmImageExists
+}
+
+// ExpectCtxParam1 sets up expected param ctx for Client.ImageExists
+func (mmImageExists *mClientMockImageExists) ExpectCtxParam1(ctx context.Context) *mClientMockImageExists {
+	if mmImageExists.mock.funcImageExists != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Set")
+	}
+
+	if mmImageExists.defaultExpectation == nil {
+		mmImageExists.defaultExpectation = &ClientMockImageExistsExpectation{}
+	}
+
+	if mmImageExists.defaultExpectation.params != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Expect")
+	}
+
+	if mmImageExists.defaultExpectation.paramPtrs == nil {
+		mmImageExists.defaultExpectation.paramPtrs = &ClientMockImageExistsParamPtrs{}
+	}
+	mmImageExists.defaultExpectation.paramPtrs.ctx = &ctx
+	mmImageExists.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
+
+	return mmImageExists
+}
+
+// ExpectTagParam2 sets up expected param tag for Client.ImageExists
+func (mmImageExists *mClientMockImageExists) ExpectTagParam2(tag string) *mClientMockImageExists {
+	if mmImageExists.mock.funcImageExists != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Set")
+	}
+
+	if mmImageExists.defaultExpectation == nil {
+		mmImageExists.defaultExpectation = &ClientMockImageExistsExpectation{}
+	}
+
+	if mmImageExists.defaultExpectation.params != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Expect")
+	}
+
+	if mmImageExists.defaultExpectation.paramPtrs == nil {
+		mmImageExists.defaultExpectation.paramPtrs = &ClientMockImageExistsParamPtrs{}
+	}
+	mmImageExists.defaultExpectation.paramPtrs.tag = &tag
+	mmImageExists.defaultExpectation.expectationOrigins.originTag = minimock.CallerInfo(1)
+
+	return mmImageExists
+}
+
+// Inspect accepts an inspector function that has same arguments as the Client.ImageExists
+func (mmImageExists *mClientMockImageExists) Inspect(f func(ctx context.Context, tag string)) *mClientMockImageExists {
+	if mmImageExists.mock.inspectFuncImageExists != nil {
+		mmImageExists.mock.t.Fatalf("Inspect function is already set for ClientMock.ImageExists")
+	}
+
+	mmImageExists.mock.inspectFuncImageExists = f
+
+	return mmImageExists
+}
+
+// Return sets up results that will be returned by Client.ImageExists
+func (mmImageExists *mClientMockImageExists) Return(err error) *ClientMock {
+	if mmImageExists.mock.funcImageExists != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Set")
+	}
+
+	if mmImageExists.defaultExpectation == nil {
+		mmImageExists.defaultExpectation = &ClientMockImageExistsExpectation{mock: mmImageExists.mock}
+	}
+	mmImageExists.defaultExpectation.results = &ClientMockImageExistsResults{err}
+	mmImageExists.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
+	return mmImageExists.mock
+}
+
+// Set uses given function f to mock the Client.ImageExists method
+func (mmImageExists *mClientMockImageExists) Set(f func(ctx context.Context, tag string) (err error)) *ClientMock {
+	if mmImageExists.defaultExpectation != nil {
+		mmImageExists.mock.t.Fatalf("Default expectation is already set for the Client.ImageExists method")
+	}
+
+	if len(mmImageExists.expectations) > 0 {
+		mmImageExists.mock.t.Fatalf("Some expectations are already set for the Client.ImageExists method")
+	}
+
+	mmImageExists.mock.funcImageExists = f
+	mmImageExists.mock.funcImageExistsOrigin = minimock.CallerInfo(1)
+	return mmImageExists.mock
+}
+
+// When sets expectation for the Client.ImageExists which will trigger the result defined by the following
+// Then helper
+func (mmImageExists *mClientMockImageExists) When(ctx context.Context, tag string) *ClientMockImageExistsExpectation {
+	if mmImageExists.mock.funcImageExists != nil {
+		mmImageExists.mock.t.Fatalf("ClientMock.ImageExists mock is already set by Set")
+	}
+
+	expectation := &ClientMockImageExistsExpectation{
+		mock:               mmImageExists.mock,
+		params:             &ClientMockImageExistsParams{ctx, tag},
+		expectationOrigins: ClientMockImageExistsExpectationOrigins{origin: minimock.CallerInfo(1)},
+	}
+	mmImageExists.expectations = append(mmImageExists.expectations, expectation)
+	return expectation
+}
+
+// Then sets up Client.ImageExists return parameters for the expectation previously defined by the When method
+func (e *ClientMockImageExistsExpectation) Then(err error) *ClientMock {
+	e.results = &ClientMockImageExistsResults{err}
+	return e.mock
+}
+
+// Times sets number of times Client.ImageExists should be invoked
+func (mmImageExists *mClientMockImageExists) Times(n uint64) *mClientMockImageExists {
+	if n == 0 {
+		mmImageExists.mock.t.Fatalf("Times of ClientMock.ImageExists mock can not be zero")
+	}
+	mm_atomic.StoreUint64(&mmImageExists.expectedInvocations, n)
+	mmImageExists.expectedInvocationsOrigin = minimock.CallerInfo(1)
+	return mmImageExists
+}
+
+func (mmImageExists *mClientMockImageExists) invocationsDone() bool {
+	if len(mmImageExists.expectations) == 0 && mmImageExists.defaultExpectation == nil && mmImageExists.mock.funcImageExists == nil {
+		return true
+	}
+
+	totalInvocations := mm_atomic.LoadUint64(&mmImageExists.mock.afterImageExistsCounter)
+	expectedInvocations := mm_atomic.LoadUint64(&mmImageExists.expectedInvocations)
+
+	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
+}
+
+// ImageExists implements Client
+func (mmImageExists *ClientMock) ImageExists(ctx context.Context, tag string) (err error) {
+	mm_atomic.AddUint64(&mmImageExists.beforeImageExistsCounter, 1)
+	defer mm_atomic.AddUint64(&mmImageExists.afterImageExistsCounter, 1)
+
+	mmImageExists.t.Helper()
+
+	if mmImageExists.inspectFuncImageExists != nil {
+		mmImageExists.inspectFuncImageExists(ctx, tag)
+	}
+
+	mm_params := ClientMockImageExistsParams{ctx, tag}
+
+	// Record call args
+	mmImageExists.ImageExistsMock.mutex.Lock()
+	mmImageExists.ImageExistsMock.callArgs = append(mmImageExists.ImageExistsMock.callArgs, &mm_params)
+	mmImageExists.ImageExistsMock.mutex.Unlock()
+
+	for _, e := range mmImageExists.ImageExistsMock.expectations {
+		if minimock.Equal(*e.params, mm_params) {
+			mm_atomic.AddUint64(&e.Counter, 1)
+			return e.results.err
+		}
+	}
+
+	if mmImageExists.ImageExistsMock.defaultExpectation != nil {
+		mm_atomic.AddUint64(&mmImageExists.ImageExistsMock.defaultExpectation.Counter, 1)
+		mm_want := mmImageExists.ImageExistsMock.defaultExpectation.params
+		mm_want_ptrs := mmImageExists.ImageExistsMock.defaultExpectation.paramPtrs
+
+		mm_got := ClientMockImageExistsParams{ctx, tag}
+
+		if mm_want_ptrs != nil {
+
+			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
+				mmImageExists.t.Errorf("ClientMock.ImageExists got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmImageExists.ImageExistsMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
+			}
+
+			if mm_want_ptrs.tag != nil && !minimock.Equal(*mm_want_ptrs.tag, mm_got.tag) {
+				mmImageExists.t.Errorf("ClientMock.ImageExists got unexpected parameter tag, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmImageExists.ImageExistsMock.defaultExpectation.expectationOrigins.originTag, *mm_want_ptrs.tag, mm_got.tag, minimock.Diff(*mm_want_ptrs.tag, mm_got.tag))
+			}
+
+		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
+			mmImageExists.t.Errorf("ClientMock.ImageExists got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+				mmImageExists.ImageExistsMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
+		}
+
+		mm_results := mmImageExists.ImageExistsMock.defaultExpectation.results
+		if mm_results == nil {
+			mmImageExists.t.Fatal("No results are set for the ClientMock.ImageExists")
+		}
+		return (*mm_results).err
+	}
+	if mmImageExists.funcImageExists != nil {
+		return mmImageExists.funcImageExists(ctx, tag)
+	}
+	mmImageExists.t.Fatalf("Unexpected call to ClientMock.ImageExists. %v %v", ctx, tag)
+	return
+}
+
+// ImageExistsAfterCounter returns a count of finished ClientMock.ImageExists invocations
+func (mmImageExists *ClientMock) ImageExistsAfterCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmImageExists.afterImageExistsCounter)
+}
+
+// ImageExistsBeforeCounter returns a count of ClientMock.ImageExists invocations
+func (mmImageExists *ClientMock) ImageExistsBeforeCounter() uint64 {
+	return mm_atomic.LoadUint64(&mmImageExists.beforeImageExistsCounter)
+}
+
+// Calls returns a list of arguments used in each call to ClientMock.ImageExists.
+// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
+func (mmImageExists *mClientMockImageExists) Calls() []*ClientMockImageExistsParams {
+	mmImageExists.mutex.RLock()
+
+	argCopy := make([]*ClientMockImageExistsParams, len(mmImageExists.callArgs))
+	copy(argCopy, mmImageExists.callArgs)
+
+	mmImageExists.mutex.RUnlock()
+
+	return argCopy
+}
+
+// MinimockImageExistsDone returns true if the count of the ImageExists invocations corresponds
+// the number of defined expectations
+func (m *ClientMock) MinimockImageExistsDone() bool {
+	if m.ImageExistsMock.optional {
+		// Optional methods provide '0 or more' call count restriction.
+		return true
+	}
+
+	for _, e := range m.ImageExistsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			return false
+		}
+	}
+
+	return m.ImageExistsMock.invocationsDone()
+}
+
+// MinimockImageExistsInspect logs each unmet expectation
+func (m *ClientMock) MinimockImageExistsInspect() {
+	for _, e := range m.ImageExistsMock.expectations {
+		if mm_atomic.LoadUint64(&e.Counter) < 1 {
+			m.t.Errorf("Expected call to ClientMock.ImageExists at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
+		}
+	}
+
+	afterImageExistsCounter := mm_atomic.LoadUint64(&m.afterImageExistsCounter)
+	// if default expectation was set then invocations count should be greater than zero
+	if m.ImageExistsMock.defaultExpectation != nil && afterImageExistsCounter < 1 {
+		if m.ImageExistsMock.defaultExpectation.params == nil {
+			m.t.Errorf("Expected call to ClientMock.ImageExists at\n%s", m.ImageExistsMock.defaultExpectation.returnOrigin)
+		} else {
+			m.t.Errorf("Expected call to ClientMock.ImageExists at\n%s with params: %#v", m.ImageExistsMock.defaultExpectation.expectationOrigins.origin, *m.ImageExistsMock.defaultExpectation.params)
+		}
+	}
+	// if func was set then invocations count should be greater than zero
+	if m.funcImageExists != nil && afterImageExistsCounter < 1 {
+		m.t.Errorf("Expected call to ClientMock.ImageExists at\n%s", m.funcImageExistsOrigin)
+	}
+
+	if !m.ImageExistsMock.invocationsDone() && afterImageExistsCounter > 0 {
+		m.t.Errorf("Expected %d calls to ClientMock.ImageExists at\n%s but found %d calls",
+			mm_atomic.LoadUint64(&m.ImageExistsMock.expectedInvocations), m.ImageExistsMock.expectedInvocationsOrigin, afterImageExistsCounter)
 	}
 }
 
@@ -1065,9 +1604,13 @@ func (m *ClientMock) MinimockListTagsInspect() {
 func (m *ClientMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
+			m.MinimockClearCacheInspect()
+
 			m.MinimockDigestInspect()
 
 			m.MinimockImageInspect()
+
+			m.MinimockImageExistsInspect()
 
 			m.MinimockListTagsInspect()
 		}
@@ -1093,7 +1636,9 @@ func (m *ClientMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ClientMock) minimockDone() bool {
 	done := true
 	return done &&
+		m.MinimockClearCacheDone() &&
 		m.MinimockDigestDone() &&
 		m.MinimockImageDone() &&
+		m.MinimockImageExistsDone() &&
 		m.MinimockListTagsDone()
 }

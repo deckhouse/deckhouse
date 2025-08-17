@@ -86,12 +86,15 @@ func main() {
 			log.Fatal(err)
 		}
 
-		remoteImage, err := remote.Image(remoteRef)
+		// Get digest efficiently without downloading the full image
+		descriptor, err := remote.Get(remoteRef)
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		digest, err := remoteImage.Digest()
+		digest := descriptor.Digest
+		
+		// Now fetch the image for processing
+		remoteImage, err := remote.Image(remoteRef)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,15 +108,12 @@ func main() {
 			log.Fatal(err)
 		}
 
-		resultImage, err := remote.Image(newRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+		// Get result digest efficiently without downloading the full image
+		resultDescriptor, err := remote.Get(newRef, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		resultDigest, err := resultImage.Digest()
-		if err != nil {
-			log.Fatal(err)
-		}
+		resultDigest := resultDescriptor.Digest
 
 		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDigest)
 	}

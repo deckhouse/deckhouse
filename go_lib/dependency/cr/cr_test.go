@@ -531,3 +531,194 @@ M/XWbYyHPEEhBR6l1lqRYLNQbGQDJph8aK4AZcxz
 		assert.Error(t, err)
 	})
 }
+
+func TestClient_Digest(t *testing.T) {
+	// Create a test HTTP server that acts as a registry
+	testImage, err := random.Image(1024, 1)
+	assert.NoError(t, err)
+
+	manifest, err := testImage.Manifest()
+	require.NoError(t, err)
+	
+	testDigest := manifest.Config.Digest.String()
+
+	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/":
+			w.WriteHeader(http.StatusOK)
+		case "/v2/test/repo/manifests/v1.0.0":
+			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			w.Header().Set("Docker-Content-Digest", testDigest)
+			w.WriteHeader(http.StatusOK)
+			json, err := json.Marshal(manifest)
+			require.NoError(t, err)
+			_, err = w.Write(json)
+			require.NoError(t, err)
+		case "/v2/test/repo/manifests/latest":
+			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			w.Header().Set("Docker-Content-Digest", testDigest)
+			w.WriteHeader(http.StatusOK)
+			json, err := json.Marshal(manifest)
+			require.NoError(t, err)
+			_, err = w.Write(json)
+			require.NoError(t, err)
+		case "/v2/test/repo/manifests/notfound":
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer registryServer.Close()
+
+	registryHost := registryServer.URL[7:] // remove "http://"
+	testAuth := `{"auths":{"` + registryHost + `":{"username":"testuser","password":"testpass"}}}`
+	testAuthBase64 := base64.StdEncoding.EncodeToString([]byte(testAuth))
+
+	t.Run("get digest for versioned tag", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		digest, err := client.Digest(context.Background(), "v1.0.0")
+		assert.NoError(t, err)
+		assert.NotEmpty(t, digest)
+
+		// Second call should use cache
+		digest2, err := client.Digest(context.Background(), "v1.0.0")
+		assert.NoError(t, err)
+		assert.Equal(t, digest, digest2)
+	})
+
+	t.Run("get digest for non-versioned tag", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		digest, err := client.Digest(context.Background(), "latest")
+		assert.NoError(t, err)
+		assert.NotEmpty(t, digest)
+	})
+
+	t.Run("digest not found", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		_, err = client.Digest(context.Background(), "notfound")
+		assert.Error(t, err)
+	})
+}
+
+func TestClient_ImageExists(t *testing.T) {
+	testImage, err := random.Image(1024, 1)
+	assert.NoError(t, err)
+
+	manifest, err := testImage.Manifest()
+	require.NoError(t, err)
+	
+	testDigest := manifest.Config.Digest.String()
+
+	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/":
+			w.WriteHeader(http.StatusOK)
+		case "/v2/test/repo/manifests/v1.0.0":
+			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			w.Header().Set("Docker-Content-Digest", testDigest)
+			w.WriteHeader(http.StatusOK)
+			json, err := json.Marshal(manifest)
+			require.NoError(t, err)
+			_, err = w.Write(json)
+			require.NoError(t, err)
+		case "/v2/test/repo/manifests/notfound":
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer registryServer.Close()
+
+	registryHost := registryServer.URL[7:] // remove "http://"
+	testAuth := `{"auths":{"` + registryHost + `":{"username":"testuser","password":"testpass"}}}`
+	testAuthBase64 := base64.StdEncoding.EncodeToString([]byte(testAuth))
+
+	t.Run("image exists", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		err = client.ImageExists(context.Background(), "v1.0.0")
+		assert.NoError(t, err)
+	})
+
+	t.Run("image does not exist", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		err = client.ImageExists(context.Background(), "notfound")
+		assert.Error(t, err)
+	})
+}
+
+func TestClient_ClearCache(t *testing.T) {
+	testImage, err := random.Image(1024, 1)
+	assert.NoError(t, err)
+
+	manifest, err := testImage.Manifest()
+	require.NoError(t, err)
+	
+	testDigest := manifest.Config.Digest.String()
+
+	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/":
+			w.WriteHeader(http.StatusOK)
+		case "/v2/test/repo/manifests/v1.0.0":
+			w.Header().Set("Content-Type", "application/vnd.docker.distribution.manifest.v2+json")
+			w.Header().Set("Docker-Content-Digest", testDigest)
+			w.WriteHeader(http.StatusOK)
+			json, err := json.Marshal(manifest)
+			require.NoError(t, err)
+			_, err = w.Write(json)
+			require.NoError(t, err)
+		default:
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+	defer registryServer.Close()
+
+	registryHost := registryServer.URL[7:] // remove "http://"
+	testAuth := `{"auths":{"` + registryHost + `":{"username":"testuser","password":"testpass"}}}`
+	testAuthBase64 := base64.StdEncoding.EncodeToString([]byte(testAuth))
+
+	t.Run("cache is cleared", func(t *testing.T) {
+		client, err := NewClient(registryHost+"/test/repo",
+			WithInsecureSchema(true),
+			WithAuth(testAuthBase64))
+
+		require.NoError(t, err)
+
+		// Get digest to populate cache
+		digest1, err := client.Digest(context.Background(), "v1.0.0")
+		assert.NoError(t, err)
+
+		// Clear cache
+		client.ClearCache()
+
+		// Should fetch again from registry
+		digest2, err := client.Digest(context.Background(), "v1.0.0")
+		assert.NoError(t, err)
+		assert.Equal(t, digest1, digest2)
+	})
+}

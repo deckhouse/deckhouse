@@ -116,12 +116,8 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
-	if err != nil {
-		return nil, fmt.Errorf("get release image: %w", err)
-	}
-
-	releaseDigest, err := releaseImage.Digest()
+	// Get digest efficiently without downloading the full image first
+	releaseDigestStr, err := s.registryClients[registry].ReleaseDigest(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get digest: %w", err)
 	}
@@ -130,10 +126,10 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Registry:       registry,
 		ModuleName:     module,
 		ReleaseChannel: releaseChannel,
-		Checksum:       releaseDigest.String(),
+		Checksum:       releaseDigestStr,
 		Version:        "",
 		TarFile:        make([]byte, 0),
-		Image:          releaseImage,
+		Image:          nil, // Will be set later if needed
 	}
 
 	// Search across all channels by checksum
@@ -144,6 +140,13 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 
 		return versionData, nil
 	}
+
+	// Now load the image for version extraction and processing
+	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	if err != nil {
+		return nil, fmt.Errorf("get release image: %w", err)
+	}
+	versionData.Image = releaseImage
 
 	// Extract version from image
 	version, err = getVersionFromImage(versionData.Image)

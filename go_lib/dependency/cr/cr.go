@@ -52,12 +52,15 @@ type Client interface {
 	Image(ctx context.Context, tag string) (crv1.Image, error)
 	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
+	ClearCache()
+	ImageExists(ctx context.Context, tag string) error
 }
 
 type client struct {
 	registryURL string
 	authConfig  authn.AuthConfig
 	options     *registryOptions
+	cache       *imageCache
 }
 
 // NewClient creates container registry client using `repo` as prefix for tags passed to methods. If insecure flag is set to true, then no cert validation is performed.
@@ -85,6 +88,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	r := &client{
 		registryURL: repo,
 		options:     opts,
+		cache:       newImageCache(),
 	}
 
 	if !opts.withoutAuth {
@@ -100,6 +104,51 @@ func NewClient(repo string, options ...Option) (Client, error) {
 }
 
 func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
+	shouldCache := isVersionedTag(tag)
+
+	if shouldCache {
+		// Check if digest is cached
+		if cachedDigest, found := r.cache.getDigest(tag); found {
+			// Check if image is cached by digest
+			if cachedImage, found := r.cache.getImage(cachedDigest); found {
+				return cachedImage, nil
+			}
+		}
+	}
+
+	// Get current digest from registry using remote.Get (efficient)
+	currentDigest, err := r.getRemoteDigest(ctx, tag)
+	if err != nil {
+		return nil, fmt.Errorf("get remote digest: %w", err)
+	}
+
+	if shouldCache {
+		// Check if digest changed and we have the image cached
+		if cachedDigest, found := r.cache.getDigest(tag); found && cachedDigest == currentDigest {
+			if cachedImage, found := r.cache.getImage(currentDigest); found {
+				return cachedImage, nil
+			}
+		}
+		// Update digest cache even if image is not cached yet
+		r.cache.setDigest(tag, currentDigest)
+	}
+
+	// Download the image using the original logic
+	image, err := r.fetchImage(ctx, tag)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+
+	if shouldCache {
+		// Cache the image by digest
+		r.cache.setImage(currentDigest, image)
+	}
+
+	return image, nil
+}
+
+// fetchImage contains the original Image() implementation
+func (r *client) fetchImage(ctx context.Context, tag string) (crv1.Image, error) {
 	imageURL := r.registryURL + ":" + tag
 
 	var nameOpts []name.Option
@@ -183,17 +232,27 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
-	image, err := r.Image(ctx, tag)
-	if err != nil {
-		return "", fmt.Errorf("image: %w", err)
+	shouldCache := isVersionedTag(tag)
+
+	if shouldCache {
+		// Check if digest is cached
+		if cachedDigest, found := r.cache.getDigest(tag); found {
+			return cachedDigest, nil
+		}
 	}
 
-	d, err := image.Digest()
+	// Get digest from registry using remote.Get (efficient)
+	digest, err := r.getRemoteDigest(ctx, tag)
 	if err != nil {
-		return "", fmt.Errorf("extract digest: %w", err)
+		return "", fmt.Errorf("get remote digest: %w", err)
 	}
 
-	return d.String(), nil
+	if shouldCache {
+		// Cache the digest
+		r.cache.setDigest(tag, digest)
+	}
+
+	return digest, nil
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
@@ -313,6 +372,57 @@ func parse(rawURL string) (*url.URL, error) {
 		return url.ParseRequestURI(rawURL)
 	}
 	return url.Parse("//" + rawURL)
+}
+
+// getRemoteDigest efficiently gets image digest using remote.Get without downloading the image
+func (r *client) getRemoteDigest(ctx context.Context, tag string) (string, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	remoteOptions := make([]remote.Option, 0)
+	remoteOptions = append(remoteOptions, remote.WithUserAgent(r.options.userAgent))
+	if !r.options.withoutAuth {
+		remoteOptions = append(remoteOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+
+	if r.options.ca != "" {
+		remoteOptions = append(remoteOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	if r.options.timeout > 0 {
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		defer cancel()
+		remoteOptions = append(remoteOptions, remote.WithContext(ctxWTO))
+	} else {
+		remoteOptions = append(remoteOptions, remote.WithContext(ctx))
+	}
+
+	descriptor, err := remote.Get(ref, remoteOptions...)
+	if err != nil {
+		return "", fmt.Errorf("remote get: %w", err)
+	}
+
+	return descriptor.Digest.String(), nil
+}
+
+// ClearCache clears all cached data
+func (r *client) ClearCache() {
+	r.cache.clear()
+}
+
+// ImageExists efficiently checks if an image exists in the registry without downloading it
+func (r *client) ImageExists(ctx context.Context, tag string) error {
+	_, err := r.getRemoteDigest(ctx, tag)
+	return err
 }
 
 // Extract flattens the image to a single layer and returns ReadCloser for fetching the content
