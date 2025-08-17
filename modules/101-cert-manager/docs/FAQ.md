@@ -62,7 +62,7 @@ The list of all possible `ClusterIssuer`s that can be created is available in th
 
 Using third-party DNS providers is implemented via the `webhook` method.  
 
-When cert-manager makes an `ACME` `DNS01` call, it sends a request to the webhook server, which then performs the necessary operations to update the DNS record.  
+When cert-manager makes an `ACME` `DNS-01` call, it sends a request to the webhook server, which then performs the necessary operations to update the DNS record.  
 When using this method, you need to place a service that will process the hook and create a TXT record in the DNS provider.  
 
 As an example, let's consider using the `Yandex Cloud DNS` service.
