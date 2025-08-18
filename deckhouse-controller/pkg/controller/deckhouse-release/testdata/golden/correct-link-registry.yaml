@@ -28,7 +28,7 @@ approved: false
 kind: DeckhouseRelease
 metadata:
   annotations:
-    release.deckhouse.io/change-cause: check release (step-by-step)
+    release.deckhouse.io/change-cause: check release (from deployed)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -36,51 +36,7 @@ metadata:
   resourceVersion: "1"
 spec:
   changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.16.0
-  requirements:
-    kubernetes: '>= 1.27'
   version: v1.16.0
-status:
-  approved: false
-  message: ""
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/change-cause: check release (step-by-step)
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  name: v1.17.0
-  resourceVersion: "1"
-spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.17.0
-  requirements:
-    kubernetes: '>= 1.27'
-  version: v1.17.0
-status:
-  approved: false
-  message: ""
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/change-cause: check release (step-by-step)
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  name: v1.18.0
-  resourceVersion: "1"
-spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.18.0
-  requirements:
-    kubernetes: '>= 1.27'
-  version: v1.18.0
 status:
   approved: false
   message: ""

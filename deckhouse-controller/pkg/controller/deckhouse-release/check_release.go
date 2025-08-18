@@ -638,21 +638,27 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
+	// First, get the digest to check if image has changed
+	imageDigestString, err := f.registryClient.Digest(ctx, f.GetReleaseChannel())
+	if err != nil {
+		return nil, fmt.Errorf("get image digest from channel '%s': %w", f.GetReleaseChannel(), err)
+	}
+
+	// Check if image has changed
+	if previousImageHash == imageDigestString {
+		return nil, ErrImageNotChanged
+	}
+
+	// Image has changed, get the full image for metadata processing
 	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
 	}
 
+	// Parse the digest string to registryv1.Hash
 	imageDigest, err := image.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("get image digest: %w", err)
-	}
-
-	if previousImageHash == imageDigest.String() {
-		return &ReleaseImageInfo{
-			Image:  image,
-			Digest: imageDigest,
-		}, ErrImageNotChanged
+		return nil, fmt.Errorf("parse image digest: %w", err)
 	}
 
 	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
