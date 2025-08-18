@@ -287,7 +287,7 @@ spec:
               "includeNullMetadata": true,
               "instant": false,
               "interval": "",
-              "legendFormat": "total-{{pod}}",
+              "legendFormat": "total-{{`{{pod}}`}}",
               "range": true,
               "refId": "A",
               "useBackend": false
@@ -304,7 +304,7 @@ spec:
               "hide": false,
               "includeNullMetadata": true,
               "instant": false,
-              "legendFormat": "new-{{pod}}",
+              "legendFormat": "new-{{`{{pod}}`}}",
               "range": true,
               "refId": "B",
               "useBackend": false
@@ -749,7 +749,7 @@ spec:
               "hide": false,
               "includeNullMetadata": true,
               "instant": false,
-              "legendFormat": "0.95-{{pod}}",
+              "legendFormat": "0.95-{{`{{pod}}`}}",
               "range": true,
               "refId": "A",
               "useBackend": false
@@ -768,7 +768,7 @@ spec:
               "hide": false,
               "includeNullMetadata": true,
               "instant": false,
-              "legendFormat": "0.99-{{pod}}",
+              "legendFormat": "0.99-{{`{{pod}}`}}",
               "range": true,
               "refId": "C",
               "useBackend": false
@@ -979,7 +979,7 @@ spec:
               "fullMetaSearch": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.99-{{pod}}",
+              "legendFormat": "0.99-{{`{{pod}}`}}",
               "range": true,
               "refId": "A",
               "useBackend": false
@@ -996,7 +996,7 @@ spec:
               "hide": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.95-{{pod}}",
+              "legendFormat": "0.95-{{`{{pod}}`}}",
               "range": true,
               "refId": "B",
               "useBackend": false
@@ -1192,7 +1192,7 @@ spec:
               "fullMetaSearch": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.99-{{pod}}",
+              "legendFormat": "0.99-{{`{{pod}}`}}",
               "range": true,
               "refId": "A",
               "useBackend": false
@@ -1209,7 +1209,7 @@ spec:
               "hide": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.95-{{pod}}",
+              "legendFormat": "0.95-{{`{{pod}}`}}",
               "range": true,
               "refId": "B",
               "useBackend": false
@@ -1405,7 +1405,7 @@ spec:
               "fullMetaSearch": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.99-{{pod}}",
+              "legendFormat": "0.99-{{`{{pod}}`}}",
               "range": true,
               "refId": "A",
               "useBackend": false
@@ -1422,7 +1422,7 @@ spec:
               "hide": false,
               "includeNullMetadata": false,
               "instant": false,
-              "legendFormat": "0.95-{{pod}}",
+              "legendFormat": "0.95-{{`{{pod}}`}}",
               "range": true,
               "refId": "B",
               "useBackend": false
