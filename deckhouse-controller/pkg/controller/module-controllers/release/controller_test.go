@@ -538,6 +538,37 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	suite.Run("updateConstraints: deployed is above from", func() {
+		// same as previous, but without 1.67 deployed baseline; start from 1.68.x
+		testData := suite.fetchTestFileData("from-to-deployed-above-from.yaml")
+		suite.setupReleaseController(testData)
+
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+		require.NoError(suite.T(), err)
+		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+		require.NoError(suite.T(), err)
+
+		repeatTest(func() {
+			// deployed is 1.68.4, pendings: 1.69.10, 1.70.11, 1.75.2
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+			require.NoError(suite.T(), err)
+
+			// verify
+			rel := suite.getModuleRelease("demo-1.69.10")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+			rel = suite.getModuleRelease("demo-1.70.11")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+			rel = suite.getModuleRelease("demo-1.75.2")
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+		})
+	})
+
 	suite.Run("Process pending releases", func() {
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
