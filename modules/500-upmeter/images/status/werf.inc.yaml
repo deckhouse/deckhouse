@@ -26,6 +26,7 @@ shell:
   - apk add --no-cache python3 vips make build-base
   install:
   - cd /src
+  {{- include "node packages proxy" . | nindent 2 }}
   - npm ci
   - npm run build
   - chown -R 64535:64535 /src/dist
@@ -37,6 +38,8 @@ import:
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
