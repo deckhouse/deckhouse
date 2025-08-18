@@ -450,9 +450,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			})
 			if err != nil {
 				logger.Error("failed to update module before fetch, skipping", slog.String("name", moduleName), log.Err(err))
-				availableModule.ProcessError = err.Error()
+				availableModule.Error = err.Error()
 				availableModule.Version = "unknown"
-				processErrorsExist = true
+				errorsExist = true
 				availableModules = append(availableModules, availableModule)
 				continue
 			}
