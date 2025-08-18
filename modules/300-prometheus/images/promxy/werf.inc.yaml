@@ -39,6 +39,8 @@ import:
     add: /src/promxy
     to: /app/promxy
     after: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: ["/app/promxy"]

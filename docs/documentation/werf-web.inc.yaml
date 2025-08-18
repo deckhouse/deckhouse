@@ -19,6 +19,8 @@ imageSpec:
     entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ else }}
 fromImage: common/nginx-static
+git:
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
@@ -134,9 +136,6 @@ shell:
         cat <<"EOD" > /srv/jekyll-data/site/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
-        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
-        EOD
 {{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
@@ -203,6 +202,11 @@ git:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if ne .ModuleName "docs" }}
+- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
+  to: /srv/jekyll-data/site/_includes/footer.html
+  stageDependencies:
+    setup:
+    - '**/*'
 - add: /{{ .ModulePath }}
   to: /comparison
   owner: jekyll

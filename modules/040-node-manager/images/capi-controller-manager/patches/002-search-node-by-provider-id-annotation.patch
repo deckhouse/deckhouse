@@ -1,37 +1,8 @@
-Subject: [PATCH] Add support for searching nodes using the `node.deckhouse.io/provider-id` annotation
----
-Index: internal/controllers/machine/machine_controller_noderef.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/internal/controllers/machine/machine_controller_noderef.go b/internal/controllers/machine/machine_controller_noderef.go
---- a/internal/controllers/machine/machine_controller_noderef.go	(revision 6dbd0ecc76f0b1996d351d5bef8730f4768bf4f8)
-+++ b/internal/controllers/machine/machine_controller_noderef.go	(date 1743591323436)
-@@ -236,6 +236,14 @@
- 			}
- 
- 			for _, node := range nl.Items {
-+				if node.Spec.ProviderID == "static://" {
-+					providerID := node.Annotations["node.deckhouse.io/provider-id"]
-+
-+					if providerID != "" {
-+						node.Spec.ProviderID = providerID
-+					}
-+				}
-+
- 				if providerID == node.Spec.ProviderID {
- 					return &node, nil
- 				}
-Index: api/v1beta1/index/node.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/api/v1beta1/index/node.go b/api/v1beta1/index/node.go
---- a/api/v1beta1/index/node.go	(revision 6dbd0ecc76f0b1996d351d5bef8730f4768bf4f8)
-+++ b/api/v1beta1/index/node.go	(date 1743591323428)
-@@ -40,5 +40,13 @@
+index 64fa4af29..f8e6d2439 100644
+--- a/api/v1beta1/index/node.go
++++ b/api/v1beta1/index/node.go
+@@ -40,5 +40,13 @@ func NodeByProviderID(o client.Object) []string {
  		return nil
  	}
  
@@ -45,3 +16,22 @@ diff --git a/api/v1beta1/index/node.go b/api/v1beta1/index/node.go
 +
  	return []string{node.Spec.ProviderID}
  }
+diff --git a/internal/controllers/machine/machine_controller_noderef.go b/internal/controllers/machine/machine_controller_noderef.go
+index 5a74b717c..40fe10fb0 100644
+--- a/internal/controllers/machine/machine_controller_noderef.go
++++ b/internal/controllers/machine/machine_controller_noderef.go
+@@ -233,6 +233,14 @@ func (r *Reconciler) getNode(ctx context.Context, c client.Reader, providerID st
+ 		}
+ 
+ 		for _, node := range nl.Items {
++				if node.Spec.ProviderID == "static://" {
++					providerID := node.Annotations["node.deckhouse.io/provider-id"]
++
++					if providerID != "" {
++						node.Spec.ProviderID = providerID
++					}
++				}
++
+ 			if providerID == node.Spec.ProviderID {
+ 				return &node, nil
+ 			}

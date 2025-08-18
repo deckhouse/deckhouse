@@ -119,10 +119,10 @@ shell:
   - apk add --no-cache make bash rsync
 {{- end }}
   install:
-  - export GO_VERSION=${GOLANG_VERSION} GOWORK=off
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GO_VERSION=${GOLANG_VERSION} GOWORK=off
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - go mod vendor
   - |
   {{- include "image-build.build" (set $ "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"`) | indent 4 }}
   - rm -rf vendor
