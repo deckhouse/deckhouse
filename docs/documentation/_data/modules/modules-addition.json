@@ -243,6 +243,17 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
+  "pod-reloader": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
+  },
   "sds-local-volume": {
     "editions": [
       "ce",
