@@ -21,7 +21,7 @@
       lang: en
   {{- with $context.Values.userAuthn.passwordPolicy }}
     {{ if . }}
-    passwordPolicy:
+  passwordPolicy:
       id: local
       complexityLevel: {{ .complexityLevel | quote }}
       passwordHistoryLimit: {{ .passwordHistoryLimit }}
