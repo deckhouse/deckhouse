@@ -52,7 +52,7 @@ apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdm
 kind: ValidatingAdmissionPolicyBinding
 metadata:
   name: {{ $passwordPolicyName }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "deckhouse")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 spec:
   policyName: {{ $passwordPolicyName }}
   validationActions: [Deny]
