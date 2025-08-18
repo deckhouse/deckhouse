@@ -95,7 +95,6 @@ properties:
   passwordPolicy:
     type: object
     default: null
-    required: ["id"]
     properties:
       complexityLevel:
         type: string
