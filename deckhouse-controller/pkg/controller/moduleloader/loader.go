@@ -213,7 +213,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// ensure settings
-	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, def.Path); err != nil {
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
 	}
 
@@ -403,13 +403,13 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, modulePath string) error {
 	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-	if err := settings.SetVersion(rawConfig); err != nil {
+	if err := settings.SetVersion(rawConfig, modulePath); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
 	}
 
