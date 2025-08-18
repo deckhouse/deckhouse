@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -53,6 +54,55 @@ const (
 	tracerName = "downloader"
 )
 
+// ReleaseImageInfoCache provides thread-safe caching for ReleaseImageInfo
+type releaseImageInfoCache struct {
+	cache map[string]*cacheEntry
+	mutex sync.RWMutex
+}
+
+type cacheEntry struct {
+	info *ReleaseImageInfo
+}
+
+// newReleaseImageInfoCache creates a new cache
+func newReleaseImageInfoCache() *releaseImageInfoCache {
+	return &releaseImageInfoCache{
+		cache: make(map[string]*cacheEntry),
+		mutex: sync.RWMutex{},
+	}
+}
+
+// Get retrieves ReleaseImageInfo from cache if it exists
+func (c *releaseImageInfoCache) Get(digest string) (*ReleaseImageInfo, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	entry, exists := c.cache[digest]
+	if !exists {
+		return nil, false
+	}
+
+	return entry.info, true
+}
+
+// Set stores ReleaseImageInfo in cache
+func (c *releaseImageInfoCache) Set(digest string, info *ReleaseImageInfo) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.cache[digest] = &cacheEntry{
+		info: info,
+	}
+}
+
+// Clear removes all entries from cache
+func (c *releaseImageInfoCache) Clear() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.cache = make(map[string]*cacheEntry)
+}
+
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
@@ -60,6 +110,9 @@ type ModuleDownloader struct {
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
 	logger          *log.Logger
+
+	// Cache for ReleaseImageInfo to avoid repeated downloads
+	releaseInfoCache *releaseImageInfoCache
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
@@ -69,6 +122,7 @@ func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, m
 		ms:                   ms,
 		registryOptions:      registryOptions,
 		logger:               logger,
+		releaseInfoCache:     newReleaseImageInfoCache(),
 	}
 }
 
@@ -377,15 +431,40 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 // getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
 // return error if version.json not found in metadata
 func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
+	// First, get digest from registry without downloading the full image
+	digestStr, err := regCli.Digest(ctx, imageTag)
+	if err != nil {
+		return nil, fmt.Errorf("fetch digest error: %w", err)
+	}
+
+	// Check cache first
+	if cachedInfo, found := md.releaseInfoCache.Get(digestStr); found {
+		md.logger.Debug("release image info found in cache",
+			slog.String("digest", digestStr),
+			slog.String("image_tag", imageTag),
+		)
+		return cachedInfo, nil
+	}
+
+	md.logger.Debug("release image info not found in cache, downloading full image",
+		slog.String("digest", digestStr),
+		slog.String("image_tag", imageTag),
+	)
+
+	// If not in cache, download the full image
 	img, err := regCli.Image(ctx, imageTag)
 	if err != nil {
 		return nil, fmt.Errorf("fetch image error: %w", err)
 	}
 
-	// fill releaseImageInfo.Digest
-	digest, err := img.Digest()
+	// Verify digest matches
+	imgDigest, err := img.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("fetch digest error: %w", err)
+		return nil, fmt.Errorf("fetch image digest error: %w", err)
+	}
+
+	if imgDigest.String() != digestStr {
+		return nil, fmt.Errorf("digest mismatch: expected %s, got %s", digestStr, imgDigest.String())
 	}
 
 	// fill releaseImageInfo.Metadata
@@ -399,9 +478,17 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 
 	releaseImageInfo := &ReleaseImageInfo{
 		Image:    img,
-		Digest:   digest,
+		Digest:   imgDigest,
 		Metadata: &moduleMetadata,
 	}
+
+	// Store in cache for future use
+	md.releaseInfoCache.Set(digestStr, releaseImageInfo)
+
+	md.logger.Debug("release image info stored in cache",
+		slog.String("digest", digestStr),
+		slog.String("image_tag", imageTag),
+	)
 
 	return releaseImageInfo, nil
 }
