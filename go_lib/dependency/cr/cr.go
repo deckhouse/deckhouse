@@ -112,28 +112,7 @@ func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
 		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
-	imageOptions := make([]remote.Option, 0)
-	imageOptions = append(imageOptions, remote.WithUserAgent(r.options.userAgent))
-	if !r.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
-	}
-
-	if r.options.ca != "" {
-		imageOptions = append(imageOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
-	}
-
-	if r.options.timeout > 0 {
-		// add default timeout to prevent endless request on a huge image
-		// Warning!: don't use cancel() in the defer func here. Otherwise *v1.Image outside this function would be inaccessible due to cancelled context, while reading layers, for example.
-		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		_ = cancel
-
-		imageOptions = append(imageOptions, remote.WithContext(ctxWTO))
-	} else {
-		imageOptions = append(imageOptions, remote.WithContext(ctx))
-	}
-
-	image, err := remote.Image(ref, imageOptions...)
+	image, err := remote.Image(ref, r.getRemoteOptions(ctx)...)
 	if err != nil {
 		return nil, fmt.Errorf("image: %w", err)
 	}
@@ -150,31 +129,12 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 		nameOpts = append(nameOpts, name.Insecure)
 	}
 
-	listOptions := make([]remote.Option, 0)
-	if !r.options.withoutAuth {
-		listOptions = append(listOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
-	}
-	if r.options.ca != "" {
-		listOptions = append(listOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
-	}
-
 	repo, err := name.NewRepository(r.registryURL, nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing repo %q: %w", r.registryURL, err)
 	}
 
-	if r.options.timeout > 0 {
-		// add default timeout to prevent endless request on a huge amount of tags
-		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
-		// here we can use cancel because we return the []strings, not []*v1.Image
-		defer cancel()
-
-		listOptions = append(listOptions, remote.WithContext(ctxWTO))
-	} else {
-		listOptions = append(listOptions, remote.WithContext(ctx))
-	}
-
-	list, err := remote.List(repo, listOptions...)
+	list, err := remote.List(repo, r.getRemoteOptions(ctx)...)
 	if err != nil {
 		return nil, fmt.Errorf("list: %w", err)
 	}
@@ -183,17 +143,50 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
-	image, err := r.Image(ctx, tag)
-	if err != nil {
-		return "", fmt.Errorf("image: %w", err)
+	imageURL := r.registryURL + ":" + tag
+
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
 	}
 
-	d, err := image.Digest()
+	ref, err := name.ParseReference(imageURL, nameOpts...)
 	if err != nil {
-		return "", fmt.Errorf("extract digest: %w", err)
+		return "", fmt.Errorf("parse reference: %w", err)
 	}
 
-	return d.String(), nil
+	// Use remote.Get instead of remote.Image for better performance
+	// This only fetches the manifest, not the entire image
+	desc, err := remote.Get(ref, r.getRemoteOptions(ctx)...)
+	if err != nil {
+		return "", fmt.Errorf("get manifest: %w", err)
+	}
+
+	return desc.Digest.String(), nil
+}
+
+// getRemoteOptions returns remote options for registry operations
+func (r *client) getRemoteOptions(ctx context.Context) []remote.Option {
+	options := make([]remote.Option, 0)
+	options = append(options, remote.WithUserAgent(r.options.userAgent))
+
+	if !r.options.withoutAuth {
+		options = append(options, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+
+	if r.options.ca != "" {
+		options = append(options, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	if r.options.timeout > 0 {
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		_ = cancel
+		options = append(options, remote.WithContext(ctxWTO))
+	} else {
+		options = append(options, remote.WithContext(ctx))
+	}
+
+	return options
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {

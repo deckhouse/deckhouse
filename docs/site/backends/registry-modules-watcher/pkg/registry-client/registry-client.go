@@ -87,6 +87,59 @@ func (c *client) Image(ctx context.Context, moduleName, tag string) (v1.Image, e
 	return c.image(ctx, imageURL)
 }
 
+// Digest returns the digest of an image without downloading the full image
+func (c *client) Digest(ctx context.Context, moduleName, tag string) (string, error) {
+	imageURL := c.registryURL + "/" + moduleName + ":" + tag
+
+	var nameOpts []name.Option
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	// Use remote.Get for better performance - only fetches manifest
+	desc, err := remote.Get(ref, c.getRemoteOptions(ctx)...)
+	if err != nil {
+		return "", fmt.Errorf("get manifest: %w", err)
+	}
+
+	return desc.Digest.String(), nil
+}
+
+// ReleaseImageDigest returns the digest of a release image without downloading the full image
+func (c *client) ReleaseImageDigest(ctx context.Context, moduleName, tag string) (string, error) {
+	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
+
+	var nameOpts []name.Option
+
+	ref, err := name.ParseReference(imageURL, nameOpts...)
+	if err != nil {
+		return "", fmt.Errorf("parse reference: %w", err)
+	}
+
+	// Use remote.Get for better performance - only fetches manifest
+	desc, err := remote.Get(ref, c.getRemoteOptions(ctx)...)
+	if err != nil {
+		return "", fmt.Errorf("get manifest: %w", err)
+	}
+
+	return desc.Digest.String(), nil
+}
+
+// getRemoteOptions returns remote options for registry operations
+func (c *client) getRemoteOptions(ctx context.Context) []remote.Option {
+	imageOptions := make([]remote.Option, 0)
+	if !c.options.withoutAuth {
+		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
+	}
+
+	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage)) // calculate metrics
+	imageOptions = append(imageOptions, remote.WithContext(ctx))
+
+	return imageOptions
+}
+
 func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 	var nameOpts []name.Option
 
@@ -95,17 +148,9 @@ func (c *client) image(ctx context.Context, imageURL string) (v1.Image, error) {
 		return nil, fmt.Errorf("parse reference: %w", err)
 	}
 
-	imageOptions := make([]remote.Option, 0)
-	if !c.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
-	}
-
-	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage)) // calculace metrics
-	imageOptions = append(imageOptions, remote.WithContext(ctx))
-
 	return remote.Image(
 		ref,
-		imageOptions...,
+		c.getRemoteOptions(ctx)...,
 	)
 }
 
@@ -122,20 +167,12 @@ func (c *client) ListTags(ctx context.Context, moduleName string) ([]string, err
 func (c *client) list(ctx context.Context, url string) ([]string, error) {
 	var nameOpts []name.Option
 
-	imageOptions := make([]remote.Option, 0)
-	if !c.options.withoutAuth {
-		imageOptions = append(imageOptions, remote.WithAuth(authn.FromConfig(c.authConfig)))
-	}
-
-	imageOptions = append(imageOptions, metrics.RoundTripOption(c.metricStorage))
-	imageOptions = append(imageOptions, remote.WithContext(ctx))
-
 	repo, err := name.NewRepository(url, nameOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("parsing repo %q: %w", url, err)
 	}
 
-	return remote.List(repo, imageOptions...)
+	return remote.List(repo, c.getRemoteOptions(ctx)...)
 }
 
 // WithDisabledAuth disables the use of authConfig

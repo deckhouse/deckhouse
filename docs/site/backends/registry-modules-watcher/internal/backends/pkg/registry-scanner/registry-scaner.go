@@ -34,6 +34,10 @@ type Client interface {
 	Image(ctx context.Context, moduleName, version string) (v1.Image, error)
 	ListTags(ctx context.Context, moduleName string) ([]string, error)
 	Modules(ctx context.Context) ([]string, error)
+
+	// Digest methods for optimized operations
+	Digest(ctx context.Context, moduleName, version string) (string, error)
+	ReleaseImageDigest(ctx context.Context, moduleName, releaseChannel string) (string, error)
 }
 
 type registryscanner struct {
