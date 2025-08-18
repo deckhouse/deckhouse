@@ -22,7 +22,7 @@
   {{- with $context.Values.userAuthn.passwordPolicy }}
     {{ if . }}
     passwordPolicy:
-      id: {{ .id | quote }}
+      id: local
       complexityLevel: {{ .complexityLevel | quote }}
       passwordHistoryLimit: {{ .passwordHistoryLimit }}
       {{- if .rotation }}
