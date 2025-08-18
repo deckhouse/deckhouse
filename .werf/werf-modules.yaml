@@ -64,6 +64,7 @@
       {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
       {{- $_ := set $ctx "CosignVaultAdress" $Root.CosignVaultAdress }}
       {{- $_ := set $ctx "CosignVaultToken" $Root.CosignVaultToken }}
+      {{- $_ := set $ctx "CosignVaultKey" $Root.CosignVaultKey }}
       {{- $_ := set $ctx "CosignTransitSecret" $Root.CosignTransitSecret }}
 
       {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}

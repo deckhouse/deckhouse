@@ -93,6 +93,7 @@ build:
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
 {{- $_ := set . "CosignVaultAdress" "https://seguro.flant.com" }}
 {{- $_ := set . "CosignVaultToken" (env "COSIGN_VAULT_TOKEN" "test")  }}
+{{- $_ := set . "CosignVaultKey" "dh-2025-aug-dev" }}
 {{- $_ := set . "CosignTransitSecret" "dh-signer-dev" }}
 {{- $_ := set . "ActionsIDTokenRequestToken" (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "test") }}
 {{- $_ := set . "ActionsIDTokenRequestURL" (env "ACTIONS_ID_TOKEN_REQUEST_URL" "test") }}
