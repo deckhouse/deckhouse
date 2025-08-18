@@ -19,10 +19,14 @@ final: false
 secrets:
 - id: COSIGN_LOGIN
   value: {{ $context.CosignLogin }}
-- id: VAULT_ADDR
-  value: {{ $context.VaultAdress }}
 - id: COSIGN_PASSWORD
   value: {{ $context.CosignPassword }}
+- id: COSIGN_VAULT_ADDR
+  value: {{ $context.CosignVaultAdress }}
+- id: COSIGN_VAULT_TOKEN
+  value: {{ $context.CosignVaultToken }}
+- id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+  value: {{ $context.CosignTransitSecret }}
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
   value: {{ $context.ActionsIDTokenRequestToken }}
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
@@ -52,8 +56,8 @@ shell:
   - apk add --no-cache curl jq
   install:
   - |
-    VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)" \
-    TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev" \
+    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDR)" \
+    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
     AUTH_ROLE="dh-signer-dev_dh-signer-dev" \
     ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer $(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" "$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)&audience=github-access-aud" )) \
     VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \

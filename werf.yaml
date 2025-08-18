@@ -91,11 +91,11 @@ build:
 # cosign  settings
 {{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
-{{- $_ := set . "CosignKey" (env "COSIGN_KEY" (b64enc "test")) }}
-
-# registry auth
-{{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
-{{- $_ := set . "RegistryPassword" (env "REGISTRY_PASSWORD" "test") }}
+{{- $_ := set . "CosignVaultAdress" "https://seguro.flant.com" }}
+{{- $_ := set . "CosignVaultToken" (env "COSIGN_VAULT_TOKEN" "test")  }}
+{{- $_ := set . "CosignTransitSecret" "dh-signer-dev" }}
+{{- $_ := set . "ActionsIDTokenRequestToken" (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "test") }}
+{{- $_ := set . "ActionsIDTokenRequestURL" (env "ACTIONS_ID_TOKEN_REQUEST_URL" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
