@@ -38,21 +38,21 @@ func TestLoadConversions(t *testing.T) {
 	}{
 		{
 			name:        "user-authn module with conversions",
-			modulePath:  filepath.Join("./testdata/modules/user-authn"),
+			modulePath:  "./testdata/modules/user-authn",
 			expectError: false,
 			expectEmpty: false,
 			expectCount: 1, // v2.yaml should have 1 conversion
 		},
 		{
 			name:        "istio module with multiple conversions",
-			modulePath:  filepath.Join("./testdata/modules/istio"),
+			modulePath:  "./testdata/modules/istio",
 			expectError: false,
 			expectEmpty: false,
 			expectCount: 3, // v2.yaml + v3.yaml should have 3 conversions total
 		},
 		{
 			name:        "module without conversions",
-			modulePath:  filepath.Join("./testdata/modules/simple-module"),
+			modulePath:  "./testdata/modules/simple-module",
 			expectError: false,
 			expectEmpty: true,
 			expectCount: 0,
@@ -119,7 +119,7 @@ func TestSetVersionWithConversions(t *testing.T) {
 	}{
 		{
 			name:       "user-authn with conversions",
-			modulePath: filepath.Join("./testdata/modules/user-authn"),
+			modulePath: "./testdata/modules/user-authn",
 			configYAML: `x-config-version: 2
 type: object
 properties:
@@ -129,7 +129,7 @@ properties:
 		},
 		{
 			name:       "module without conversions",
-			modulePath: filepath.Join("./testdata/modules/simple-module"),
+			modulePath: "./testdata/modules/simple-module",
 			configYAML: `x-config-version: 1
 type: object`,
 			expectConversions: false,
