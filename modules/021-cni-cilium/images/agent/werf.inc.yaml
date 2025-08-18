@@ -100,7 +100,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:9cad3fd10342e557bdb3e15f5957e
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
-from: dev-registry.deckhouse.io/base_images@sha256:279b83872c81e6a85e0bd38e5898021666d083f38dd30301f7fa9caea6d2f505
+from: dev-registry.deckhouse.io/base_images@sha256:673f6eded580c79bfd3a4a51f05dddd8708c93be1ba3005aaa5327c6d0e7b7c9
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
@@ -282,7 +282,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-15.1"
+fromCacheVersion: "2025-08-18.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -606,8 +606,8 @@ import:
   add: /lib64/libc.musl-x86_64.so.1
   to: /lib64/libc.musl-x86_64.so.1
   before: install
-# git:
-# {{- include "image mount points" . }}
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     env:
