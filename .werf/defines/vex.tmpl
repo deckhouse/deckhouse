@@ -48,7 +48,7 @@ dependencies:
     targetEnv: IMAGE_REPO
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" $context | nindent 2 }}
   - apk add --no-cache curl jq
   install:
   - |
