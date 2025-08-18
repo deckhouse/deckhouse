@@ -141,6 +141,7 @@ steps:
         # Set cosign auth values
         export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
         export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+        AUTH_ROLE="dh-signer_dh-signer"
         export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
         export COSIGN_VAULT_KEY="dh-2025-aug-dev"
         export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
@@ -163,6 +164,11 @@ steps:
         export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
         # Set cosign auth values
+        export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
+        export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+        export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+        AUTH_ROLE="dh-signer-dev_dh-signer-dev"
         export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
         export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
         export COSIGN_VAULT_KEY="dh-2025-aug-dev"
@@ -177,6 +183,7 @@ steps:
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       fi
+
       # Set cosign auth values
       export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
       ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
