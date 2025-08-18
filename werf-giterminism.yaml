@@ -14,9 +14,8 @@ config:
       - DECKHOUSE_PRIVATE_REPO
       - COSIGN_LOGIN
       - COSIGN_PASSWORD
-      - COSIGN_KEY
-      - REGISTRY_USER
-      - REGISTRY_PASSWORD
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
+      - ACTIONS_ID_TOKEN_REQUEST_URL
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
@@ -31,9 +30,12 @@ config:
       - REGISTRY_PASSWORD
       - COSIGN_LOGIN
       - COSIGN_PASSWORD
-      - COSIGN_KEY
+      - VAULT_ADDR
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
+      - ACTIONS_ID_TOKEN_REQUEST_URL
   stapel:
     mount:
       allowBuildDir: true
       allowFromPaths:
         - ~/go-pkg-cache
+        - ~/.docker
