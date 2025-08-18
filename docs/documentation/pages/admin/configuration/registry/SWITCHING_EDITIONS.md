@@ -1,197 +1,7 @@
 ---
 title: "Switching editions"
-permalink: en/admin/editions.html
+permalink: en/admin/configuration/registry/switching-editions.html
 ---
-
-## Switching DKP from EE to CE
-
-{% alert level="warning" %}
-This instruction assumes the use of the public container registry: `registry.deckhouse.ru`.  
-Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of Deckhouse Kubernetes Platform.
-
-Cloud clusters on OpenStack and VMware vSphere are not supported in DKP CE.
-{% endalert %}
-
-To switch from Deckhouse Enterprise Edition to Community Edition, follow these steps  
-(all commands should be executed on a master node either as a user with a configured `kubectl` context or with superuser privileges):
-
-1. To retrieve the current image digests and module list, create a temporary DKP CE pod using the following command:
-
-   ```shell
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
-   ```
-
-   This will run the image of the latest installed DKP version in the cluster.
-
-   To determine the currently installed version, use:
-
-   ```shell
-   d8 k get deckhousereleases | grep Deployed
-   ```
-
-1. Once the pod enters the `Running` state, execute the following commands:
-
-   Retrieve the `CE_REGISTRY_PACKAGE_PROXY` value:
-
-   ```shell
-   CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
-   ```
-
-   Pull the DKP CE image using the obtained digest:
-
-   ```shell
-   crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
-   ```
-
-   Example output:
-
-   ```console
-   Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
-   ```
-
-   Retrieve the list of `CE_MODULES`:
-
-   ```shell
-   CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-   ```
-
-   Check the result:
-
-   ```shell
-   echo $CE_MODULES
-   ```
-
-   Example output:
-
-   ```console
-   common priority-class deckhouse external-module-manager registrypackages ...
-   ```
-
-   Retrieve the list of currently enabled embedded modules:
-
-   ```shell
-   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
-   ```
-
-   Verify the result:
-
-   ```shell
-   echo $USED_MODULES
-   ```
-
-   Example output:
-
-   ```console
-   admission-policy-engine cert-manager chrony ...
-   ```
-
-   Determine which modules will be disabled after switching to CE:
-
-   ```shell
-   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
-   ```
-
-   Verify the result:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE
-   ```
-
-   Example output:
-
-   ```console
-   node-local-dns registry-packages-proxy
-   ```
-
-   > If `registry-packages-proxy` appears in `$MODULES_WILL_DISABLE`, it must be manually re-enabled. Otherwise, the cluster will not be able to switch to DKP CE images. Instructions for re-enabling it are provided in Step 8.
-
-1. Make sure that the modules currently used in the cluster are supported in DKP CE.
-
-   To display the list of modules that are **not supported** and will be disabled:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE
-   ```
-
-   Review the list carefully and make sure that the functionality provided by these modules is not critical for your cluster, and that you are ready to disable them.
-
-   To disable unsupported modules:
-
-   ```shell
-   echo $MODULES_WILL_DISABLE |
-     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
-   ```
-
-   Example output:
-
-   ```console
-   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
-   Module node-local-dns disabled
-   ```
-
-1. Update the DKP registry access secret by running the following command:
-
-   ```bash
-   kubectl -n d8-system create secret generic deckhouse-registry \
-     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
-     --from-literal="address"=registry.deckhouse.ru \
-     --from-literal="path"=/deckhouse/ce \
-     --from-literal="scheme"=https \
-     --type=kubernetes.io/dockerconfigjson \
-     --dry-run='client' \
-     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
-   ```
-
-1. Apply the `webhook-handler` image:
-
-  ```shell
-  HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
-  kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
-  ```
-
-1. Apply the DKP CE image:
-
-   ```shell
-   DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
-   DECKHOUSE_INIT_CONTAINER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
-   ```
-
-1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
-If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
-
-   Check the status of the DKP pod:
-
-   ```shell
-   d8 k -n d8-system get po -l app=deckhouse
-   ```
-
-   Check the DKP task queue:
-
-   ```shell
-   d8 platform queue list
-   ```
-
-1. Check if any pods in the cluster are still using the DKP EE registry address:
-
-   ```shell
-   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
-      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
-   ```
-
-   If the `registry-packages-proxy` module was previously disabled, re-enable it:
-
-   ```shell
-   d8 platform module enable registry-packages-proxy
-   ```
-
-1. Delete the temporary DKP CE pod:
-
-   ```shell
-   d8 k delete pod ce-image
-   ```
 
 ## Switching DKP from CE to EE
 
@@ -384,6 +194,196 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
 
    ```shell
    d8 k delete ngc del-temp-config.sh
+   ```
+
+## Switching DKP from EE to CE
+
+{% alert level="warning" %}
+This instruction assumes the use of the public container registry: `registry.deckhouse.ru`.  
+Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of Deckhouse Kubernetes Platform.
+
+Cloud clusters on OpenStack and VMware vSphere are not supported in DKP CE.
+{% endalert %}
+
+To switch from Deckhouse Enterprise Edition to Community Edition, follow these steps  
+(all commands should be executed on a master node either as a user with a configured `kubectl` context or with superuser privileges):
+
+1. To retrieve the current image digests and module list, create a temporary DKP CE pod using the following command:
+
+   ```shell
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl run ce-image --image=registry.deckhouse.ru/deckhouse/ce/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
+
+   This will run the image of the latest installed DKP version in the cluster.
+
+   To determine the currently installed version, use:
+
+   ```shell
+   d8 k get deckhousereleases | grep Deployed
+   ```
+
+1. Once the pod enters the `Running` state, execute the following commands:
+
+   Retrieve the `CE_REGISTRY_PACKAGE_PROXY` value:
+
+   ```shell
+   CE_REGISTRY_PACKAGE_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".registryPackagesProxy.registryPackagesProxy")
+   ```
+
+   Pull the DKP CE image using the obtained digest:
+
+   ```shell
+   crictl pull registry.deckhouse.ru/deckhouse/ce@$CE_REGISTRY_PACKAGE_PROXY
+   ```
+
+   Example output:
+
+   ```console
+   Image is up to date for sha256:8127efa0f903a7194d6fb7b810839279b9934b200c2af5fc416660857bfb7832
+   ```
+
+   Retrieve the list of `CE_MODULES`:
+
+   ```shell
+   CE_MODULES=$(kubectl exec ce-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   ```
+
+   Check the result:
+
+   ```shell
+   echo $CE_MODULES
+   ```
+
+   Example output:
+
+   ```console
+   common priority-class deckhouse external-module-manager registrypackages ...
+   ```
+
+   Retrieve the list of currently enabled embedded modules:
+
+   ```shell
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   ```
+
+   Verify the result:
+
+   ```shell
+   echo $USED_MODULES
+   ```
+
+   Example output:
+
+   ```console
+   admission-policy-engine cert-manager chrony ...
+   ```
+
+   Determine which modules will be disabled after switching to CE:
+
+   ```shell
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CE_MODULES | tr ' ' '\n'))
+   ```
+
+   Verify the result:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   Example output:
+
+   ```console
+   node-local-dns registry-packages-proxy
+   ```
+
+   > If `registry-packages-proxy` appears in `$MODULES_WILL_DISABLE`, it must be manually re-enabled. Otherwise, the cluster will not be able to switch to DKP CE images. Instructions for re-enabling it are provided in Step 8.
+
+1. Make sure that the modules currently used in the cluster are supported in DKP CE.
+
+   To display the list of modules that are **not supported** and will be disabled:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   Review the list carefully and make sure that the functionality provided by these modules is not critical for your cluster, and that you are ready to disable them.
+
+   To disable unsupported modules:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE |
+     tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   ```
+
+   Example output:
+
+   ```console
+   Defaulted container "deckhouse" out of: deckhouse, kube-rbac-proxy, init-external-modules (init)
+   Module node-local-dns disabled
+   ```
+
+1. Update the DKP registry access secret by running the following command:
+
+   ```bash
+   kubectl -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry.deckhouse.ru\": {}}}" \
+     --from-literal="address"=registry.deckhouse.ru \
+     --from-literal="path"=/deckhouse/ce \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- kubectl replace -f -
+   ```
+
+1. Apply the `webhook-handler` image:
+
+   ```shell
+   HANDLER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".deckhouse.webhookHandler")
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/webhook-handler handler=registry.deckhouse.ru/deckhouse/ce@$HANDLER
+   ```
+
+1. Apply the DKP CE image:
+
+   ```shell
+   DECKHOUSE_KUBE_RBAC_PROXY=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   DECKHOUSE_INIT_CONTAINER=$(kubectl exec ce-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
+   kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
+   ```
+
+1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
+If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
+
+   Check the status of the DKP pod:
+
+   ```shell
+   d8 k -n d8-system get po -l app=deckhouse
+   ```
+
+   Check the DKP task queue:
+
+   ```shell
+   d8 platform queue list
+   ```
+
+1. Check if any pods in the cluster are still using the DKP EE registry address:
+
+   ```shell
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+      | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   If the `registry-packages-proxy` module was previously disabled, re-enable it:
+
+   ```shell
+   d8 platform module enable registry-packages-proxy
+   ```
+
+1. Delete the temporary DKP CE pod:
+
+   ```shell
+   d8 k delete pod ce-image
    ```
 
 ## Switching DKP from EE to SE
