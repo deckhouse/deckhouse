@@ -25,17 +25,18 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  deletionTimestamp: "2025-08-20T11:52:26Z"
   finalizers:
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
     source: test-source
     status: superseded
-  name: demo-1.68.4
-  resourceVersion: "1002"
+  name: demo-1.67.0
+  resourceVersion: "1003"
 spec:
   moduleName: demo
-  version: 1.68.4
+  version: 1.67.0
   weight: 900
 status:
   approved: true
@@ -54,11 +55,11 @@ metadata:
     modules.deckhouse.io/update-policy: ""
     source: test-source
     status: skipped
-  name: demo-1.69.10
+  name: demo-1.68.0
   resourceVersion: "1003"
 spec:
   moduleName: demo
-  version: 1.69.10
+  version: 1.68.0
   weight: 900
 status:
   approved: true
@@ -77,11 +78,34 @@ metadata:
     modules.deckhouse.io/update-policy: ""
     source: test-source
     status: skipped
-  name: demo-1.70.11
+  name: demo-1.69.0
   resourceVersion: "1003"
 spec:
   moduleName: demo
-  version: 1.70.11
+  version: 1.69.0
+  weight: 900
+status:
+  approved: true
+  message: skipped by update constraints
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: ""
+    source: test-source
+    status: skipped
+  name: demo-1.70.0
+  resourceVersion: "1003"
+spec:
+  moduleName: demo
+  version: 1.70.0
   weight: 900
 status:
   approved: true
@@ -105,15 +129,15 @@ metadata:
     modules.deckhouse.io/update-policy: ""
     source: test-source
     status: deployed
-  name: demo-1.75.2
+  name: demo-1.71.0
   resourceVersion: "1004"
 spec:
   moduleName: demo
   updateConstraints:
     versions:
     - from: "1.67"
-      to: "1.75"
-  version: 1.75.2
+      to: "1.71"
+  version: 1.71.0
   weight: 900
 status:
   approved: true

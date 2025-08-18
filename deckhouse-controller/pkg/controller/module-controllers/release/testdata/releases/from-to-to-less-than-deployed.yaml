@@ -1,13 +1,13 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  name: demo-1.68.4
+  name: demo-1.76.0
   labels:
     module: demo
     source: test-source
 spec:
   moduleName: demo
-  version: 1.68.4
+  version: 1.76.0
   weight: 900
 status:
   approved: true
@@ -84,5 +84,6 @@ metadata:
   name: demo
 status:
   phase: Ready
+
 
 

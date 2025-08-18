@@ -25,22 +25,46 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
+  deletionTimestamp: "2025-08-20T11:44:13Z"
   finalizers:
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
     source: test-source
     status: superseded
+  name: demo-1.67.5
+  resourceVersion: "1004"
+spec:
+  moduleName: demo
+  version: 1.67.5
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: ""
+    source: test-source
+    status: skipped
   name: demo-1.68.4
-  resourceVersion: "1002"
+  resourceVersion: "1003"
 spec:
   moduleName: demo
   version: 1.68.4
   weight: 900
 status:
   approved: true
-  message: ""
-  phase: Superseded
+  message: skipped by update constraints
+  phase: Skipped
   pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"

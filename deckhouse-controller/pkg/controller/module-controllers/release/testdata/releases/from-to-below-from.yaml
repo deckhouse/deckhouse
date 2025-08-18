@@ -1,6 +1,22 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  name: demo-1.66.0
+  labels:
+    module: demo
+    source: test-source
+spec:
+  moduleName: demo
+  version: 1.66.0
+  weight: 900
+status:
+  approved: true
+  phase: Deployed
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
   name: demo-1.68.4
   labels:
     module: demo
@@ -11,8 +27,7 @@ spec:
   weight: 900
 status:
   approved: true
-  phase: Deployed
-  transitionTime: "2021-12-08T08:34:01Z"
+  phase: Pending
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -24,21 +39,6 @@ metadata:
 spec:
   moduleName: demo
   version: 1.69.10
-  weight: 900
-status:
-  approved: true
-  phase: Pending
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  name: demo-1.70.11
-  labels:
-    module: demo
-    source: test-source
-spec:
-  moduleName: demo
-  version: 1.70.11
   weight: 900
 status:
   approved: true
@@ -84,5 +84,6 @@ metadata:
   name: demo
 status:
   phase: Ready
+
 
 

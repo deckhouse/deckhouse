@@ -3,10 +3,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   creationTimestamp: null
-  finalizers:
-  - modules.deckhouse.io/release-exists
   name: test-source
-  resourceVersion: "1000"
+  resourceVersion: "999"
 spec:
   registry:
     ca: ""
@@ -25,12 +23,31 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
-  finalizers:
-  - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
     source: test-source
-    status: superseded
+  name: demo-1.66.0
+  resourceVersion: "999"
+spec:
+  moduleName: demo
+  version: 1.66.0
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: ""
+    source: test-source
   name: demo-1.68.4
   resourceVersion: "1002"
 spec:
@@ -39,11 +56,11 @@ spec:
   weight: 900
 status:
   approved: true
-  message: ""
-  phase: Superseded
+  message: minor version is greater than deployed 1.66.0 by one
+  phase: Pending
   pullDuration: 0s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -53,20 +70,19 @@ metadata:
     module: demo
     modules.deckhouse.io/update-policy: ""
     source: test-source
-    status: skipped
   name: demo-1.69.10
-  resourceVersion: "1003"
+  resourceVersion: "1002"
 spec:
   moduleName: demo
   version: 1.69.10
   weight: 900
 status:
   approved: true
-  message: skipped by update constraints
-  phase: Skipped
+  message: awaiting for v1.68.4 release to be deployed
+  phase: Pending
   pullDuration: 0s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -76,37 +92,8 @@ metadata:
     module: demo
     modules.deckhouse.io/update-policy: ""
     source: test-source
-    status: skipped
-  name: demo-1.70.11
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  version: 1.70.11
-  weight: 900
-status:
-  approved: true
-  message: skipped by update constraints
-  phase: Skipped
-  pullDuration: 0s
-  size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    modules.deckhouse.io/isUpdating: "false"
-    modules.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  finalizers:
-  - modules.deckhouse.io/exist-on-fs
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: ""
-    source: test-source
-    status: deployed
   name: demo-1.75.2
-  resourceVersion: "1004"
+  resourceVersion: "1002"
 spec:
   moduleName: demo
   updateConstraints:
@@ -117,9 +104,9 @@ spec:
   weight: 900
 status:
   approved: true
-  message: ""
-  phase: Deployed
-  pullDuration: 9m15s
+  message: awaiting for v1.68.4 release to be deployed
+  phase: Pending
+  pullDuration: 0s
   size: 0
   transitionTime: null
 ---
@@ -128,12 +115,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "1000"
+  resourceVersion: "999"
 properties: {}
 status:
-  conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: LastReleaseDeployed
   phase: Ready

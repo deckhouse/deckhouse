@@ -120,10 +120,10 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
-		got := singleDocToManifests(gotB)
+		got := normalizeManifests(singleDocToManifests(gotB))
 		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
+		exp := normalizeManifests(singleDocToManifests(expB))
 		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
 		for i := range got {
 			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
@@ -500,75 +500,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
-	suite.Run("updateConstraints: skip pending to endpoint", func() {
-		testData := suite.fetchTestFileData("update-constraints-jump.yaml")
-		suite.setupReleaseController(testData)
-
-		// warm-up: allow controller to set update policy labels and prechecks on first pass
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
-		require.NoError(suite.T(), err)
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-		require.NoError(suite.T(), err)
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
-		require.NoError(suite.T(), err)
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-		require.NoError(suite.T(), err)
-
-		repeatTest(func() {
-			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
-			// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-			require.NoError(suite.T(), err)
-
-			// verify statuses
-			rel := suite.getModuleRelease("demo-1.68.4")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
-			rel = suite.getModuleRelease("demo-1.69.10")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
-			rel = suite.getModuleRelease("demo-1.70.11")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
-			rel = suite.getModuleRelease("demo-1.75.2")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
-		})
-	})
-
-	suite.Run("updateConstraints: deployed is above from", func() {
-		// same as previous, but without 1.67 deployed baseline; start from 1.68.x
-		testData := suite.fetchTestFileData("from-to-deployed-above-from.yaml")
-		suite.setupReleaseController(testData)
-
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-		require.NoError(suite.T(), err)
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
-		require.NoError(suite.T(), err)
-		_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-		require.NoError(suite.T(), err)
-
-		repeatTest(func() {
-			// deployed is 1.68.4, pendings: 1.69.10, 1.70.11, 1.75.2
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
-			require.NoError(suite.T(), err)
-			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
-			require.NoError(suite.T(), err)
-
-			// verify
-			rel := suite.getModuleRelease("demo-1.69.10")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
-			rel = suite.getModuleRelease("demo-1.70.11")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
-			rel = suite.getModuleRelease("demo-1.75.2")
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
-		})
-	})
-
 	suite.Run("Process pending releases", func() {
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
@@ -623,6 +554,171 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				mr = suite.getModuleRelease("parca-2.0.0")
 				_, err = suite.ctr.handleRelease(ctx, mr)
 				require.NoError(suite.T(), err)
+			})
+		})
+	})
+
+	// Module Release Skip Feature (from to)
+	suite.Run("Module Release Skip Feature (from to)", func() {
+		// 1) Sequential - should skip intermediate versions when constraint allows jump
+		suite.Run("Sequential", func() {
+			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0, 1.71.0 (with constraint from 1.67 to 1.71)
+			testData := suite.fetchTestFileData("from-to-sequential.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.71.0"))
+				require.NoError(suite.T(), err)
+
+				// verify intermediate versions are skipped
+				rel := suite.getModuleRelease("demo-1.67.0")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.68.0")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.69.0")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.70.0")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.71.0")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+			})
+		})
+
+		// 2) Jump through n versions
+		suite.Run("Jump through n versions", func() {
+			testData := suite.fetchTestFileData("from-to-jump.yaml")
+			suite.setupReleaseController(testData)
+
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+			require.NoError(suite.T(), err)
+
+			repeatTest(func() {
+				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+				// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+
+				// verify statuses
+				rel := suite.getModuleRelease("demo-1.67.5")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.68.4")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.69.10")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.70.11")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.75.2")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+
+			})
+		})
+
+		// 3) Jump when deployed is above 'from'
+		suite.Run("Jump when deployed is above 'from'", func() {
+			testData := suite.fetchTestFileData("from-to-deployed-above-from.yaml")
+			suite.setupReleaseController(testData)
+
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+			require.NoError(suite.T(), err)
+
+			repeatTest(func() {
+				// deployed is 1.68.4, pendings: 1.69.10, 1.70.11, 1.75.2
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+
+				// verify
+				rel := suite.getModuleRelease("demo-1.68.4")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.69.10")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.70.11")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSkipped, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.75.2")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+			})
+		})
+
+		// 4) No jump when deployed is below 'from'
+		suite.Run("No jump when deployed is below 'from'", func() {
+			testData := suite.fetchTestFileData("from-to-below-from.yaml")
+			suite.setupReleaseController(testData)
+
+			// warm-up
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+			require.NoError(suite.T(), err)
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+			require.NoError(suite.T(), err)
+
+			repeatTest(func() {
+				// deployed is 1.66.0 which is below 'from'; no jumping allowed
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+				require.NoError(suite.T(), err)
+				rel := suite.getModuleRelease("demo-1.68.4")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.75.2")
+				require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, rel.Status.Phase)
+			})
+		})
+
+		// 5) No backward jump if 'to' is less than deployed
+		suite.Run("No backward jump if 'to' is less than deployed", func() {
+			testData := suite.fetchTestFileData("from-to-to-less-than-deployed.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 1.76.0, constraints endpoint is lower than deployed, ensure we do not deploy any lower pending
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+
+				// verify none of them is Deployed and no backward jump
+				rel := suite.getModuleRelease("demo-1.69.10")
+				require.NotEqual(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.70.11")
+				require.NotEqual(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
+				rel = suite.getModuleRelease("demo-1.75.2")
+				require.NotEqual(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, rel.Status.Phase)
 			})
 		})
 	})
@@ -935,6 +1031,35 @@ func singleDocToManifests(doc []byte) []string {
 	}
 
 	return result
+}
+
+// normalizeManifests strips non-deterministic fields before comparison
+func normalizeManifests(docs []string) []string {
+	result := make([]string, 0, len(docs))
+	for _, d := range docs {
+		result = append(result, stripDeletionTimestamp(d))
+	}
+
+	return result
+}
+
+func stripDeletionTimestamp(y string) string {
+	// Best-effort: if unmarshal fails, return as-is
+	var obj map[string]any
+	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
+		return y
+	}
+
+	if meta, ok := obj["metadata"].(map[string]any); ok {
+		delete(meta, "deletionTimestamp")
+	}
+
+	b, err := yaml.Marshal(obj)
+	if err != nil {
+		return y
+	}
+
+	return string(b)
 }
 
 func TestValidateModule(t *testing.T) {
