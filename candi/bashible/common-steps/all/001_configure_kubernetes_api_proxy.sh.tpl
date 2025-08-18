@@ -57,3 +57,8 @@ EOF
 if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
   cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
 fi
+
+chown -R 0:64535 /etc/kubernetes/kubernetes-api-proxy
+chmod g+s /etc/kubernetes/kubernetes-api-proxy
+chmod 750 /etc/kubernetes/kubernetes-api-proxy
+chmod 640 /etc/kubernetes/kubernetes-api-proxy/*

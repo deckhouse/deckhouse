@@ -4,31 +4,52 @@ final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    env: { "PATH": "/root:/" }
+    workingDir: "/home/terraform"
     entrypoint: ["/dhctl"]
+    env: { "PATH": "/:", "HOME": "/home/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
+  owner: 64535
+  group: 64535
   before: setup
 - image: terraform
   add: /terraform/terraform
-  to: /root/terraform
+  to:  /terraform
+  owner: 64535
+  group: 64535
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+  add: /relocate
+  to: /
   before: setup
 git:
 - add: /{{ .ModulePath }}
+  owner: 64535
+  group: 64535
   to: /deckhouse
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+---
+{{- $binaries := "/bin/cp" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+fromImage: common/relocate-artifact
+final: false
+shell:
+ setup:
+   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
 fromImage: common/distroless
 imageSpec:
   config:
-    env: { "PATH": "/root:/" }
+    workingDir: "/home/terraform"
     entrypoint: ["/dhctl"]
+    env: { "PATH": "/:", "HOME": "/home/terraform"}
 import:
 - image: dhctl # from main werf.yaml
   add: /dhctl/bin/dhctl
@@ -36,11 +57,15 @@ import:
   before: setup
 - image: opentofu
   add: /opentofu/opentofu
-  to: /root/opentofu
+  to:  /opentofu
+  owner: 64535
+  group: 64535
   before: setup
-- image: opentofu
+- image: opentofu # just backwards compatibility
   add: /opentofu/opentofu
-  to: /root/terraform
+  to:  /terraform
+  owner: 64535
+  group: 64535
   before: setup
 git:
 - add: /{{ .ModulePath }}
@@ -103,7 +128,8 @@ shell:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
-  - chmod 755 /terraform/terraform
+  - chown -R 64535:64535 /terraform
+  - chmod -R 755 /terraform
 ---
 # use artifact for one place import for base and install images
 image: opentofu
@@ -129,4 +155,5 @@ shell:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X github.com/opentofu/opentofu/version.dev=no" -o /opentofu/opentofu ./cmd/tofu
-  - chmod 755 /opentofu/opentofu
+  - chown -R 64535:64535 /opentofu
+  - chmod -R 755 /opentofu
