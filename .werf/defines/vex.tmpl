@@ -19,6 +19,8 @@ final: false
 secrets:
 - id: COSIGN_LOGIN
   value: {{ $context.CosignLogin }}
+- id: VAULT_ADDR
+  value: {{ $context.VaultAdress }}
 - id: COSIGN_PASSWORD
   value: {{ $context.CosignPassword }}
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
@@ -46,10 +48,11 @@ dependencies:
     targetEnv: IMAGE_REPO
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache curl jq
   install:
   - |
-    VAULT_ADDR="https://seguro.flant.com" \
+    VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)" \
     TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev" \
     AUTH_ROLE="dh-signer-dev_dh-signer-dev" \
     ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer $(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" "$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)&audience=github-access-aud" )) \

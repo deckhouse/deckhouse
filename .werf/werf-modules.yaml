@@ -59,11 +59,15 @@
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
+
       {{- $_ := set $ctx "CosignLogin" $Root.CosignLogin }}
       {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
       {{- $_ := set $ctx "CosignKey" $Root.CosignKey }}
       {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}
       {{- $_ := set $ctx "RegistryPassword" $Root.RegistryPassword }}
+      {{- $_ := set $ctx "VaultAdress" $Root.VaultAdress }}
+      {{- $_ := set $ctx "ActionsIDTokenRequestToken" $Root.ActionsIDTokenRequestToken }}
+      {{- $_ := set $ctx "ActionsIDTokenRequestURL" $Root.ActionsIDTokenRequestURL }}
 
       {{- $_ := set $ctx "ProjectName" (list $ctx.ModuleName $ctx.ImageName | join "/") }}
       {{- $_ := set $ctx "SVACE_ENABLED" $Root.SVACE_ENABLED }}
