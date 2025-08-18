@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type Controller struct {
@@ -161,17 +163,16 @@ func setDefaultEmptyObjectOnCondition(key string, obj map[string]interface{}, co
 }
 
 func setInternalValues(input *go_hook.HookInput) error {
-	controllersFilterResult := input.Snapshots["controller"]
+	controllersFilterResult := input.NewSnapshots.Get("controller")
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	input.MetricsCollector.Expire("")
 
 	controllers := make([]Controller, 0, len(controllersFilterResult))
 
-	for _, c := range controllersFilterResult {
-		if c == nil {
-			continue
+	for controller, err := range sdkobjectpatch.SnapshotIter[Controller](controllersFilterResult) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshots: %w", err)
 		}
-		controller := c.(Controller)
 
 		version, found, err := unstructured.NestedString(controller.Spec, "controllerVersion")
 		if err != nil {

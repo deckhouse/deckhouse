@@ -17,6 +17,8 @@ limitations under the License.
 package composer
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
@@ -25,6 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type Composer struct {
@@ -32,9 +36,9 @@ type Composer struct {
 	Dest   []v1alpha1.ClusterLogDestination
 }
 
-func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) *Composer {
-	sourceSnap := input.Snapshots["cluster_log_source"]
-	namespacedSourceSnap := input.Snapshots["namespaced_log_source"]
+func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) (*Composer, error) {
+	sourceSnap := input.NewSnapshots.Get("cluster_log_source")
+	namespacedSourceSnap := input.NewSnapshots.Get("namespaced_log_source")
 
 	res := &Composer{
 		Source: make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
@@ -46,19 +50,25 @@ func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDesti
 		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}
 
-	for _, s := range sourceSnap {
-		src := s.(v1alpha1.ClusterLoggingConfig)
+	for s, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLoggingConfig](sourceSnap) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over 'cluster_log_source' snapshots: %w", err)
+		}
+		src := s
 		res.Source = append(res.Source, src)
 		customResourceMetric(input, "ClusterLoggingConfig", src.Name, src.Namespace, src.Spec.Type)
 	}
 
-	for _, ns := range namespacedSourceSnap {
-		src := ns.(v1alpha1.PodLoggingConfig)
+	for ns, err := range sdkobjectpatch.SnapshotIter[v1alpha1.PodLoggingConfig](namespacedSourceSnap) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over 'namespaced_log_source' snapshots: %w", err)
+		}
+		src := ns
 		res.Source = append(res.Source, v1alpha1.NamespacedToCluster(src))
 		customResourceMetric(input, "PodLoggingConfig", src.Name, src.Namespace, v1alpha1.SourceKubernetesPods)
 	}
 
-	return res
+	return res, nil
 }
 
 func customResourceMetric(input *go_hook.HookInput, kind, name, namespace, _type string) {
