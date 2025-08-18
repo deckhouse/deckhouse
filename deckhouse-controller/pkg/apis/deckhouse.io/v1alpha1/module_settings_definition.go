@@ -153,7 +153,7 @@ func loadConversions(modulePath string) ([]string, error) {
 	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
 
 	var allConversions []string
-	var versionNumbers []int
+	versionNumbers := make([]int, 0, len(files))
 
 	// Process each version file
 	for _, file := range files {
