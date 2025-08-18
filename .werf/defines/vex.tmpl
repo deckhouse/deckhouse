@@ -25,6 +25,8 @@ secrets:
   value: {{ $context.CosignVaultAdress }}
 - id: COSIGN_VAULT_TOKEN
   value: {{ $context.CosignVaultToken }}
+- id: COSIGN_VAULT_KEY
+  value: {{ $context.CosignVaultKey }}
 - id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
   value: {{ $context.CosignTransitSecret }}
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
@@ -66,7 +68,7 @@ shell:
       --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
-      --key hashivault://dh-2025-aug-dev \
+      --key hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY) \
       --tlog-upload=false \
       -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
