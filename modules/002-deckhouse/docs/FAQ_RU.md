@@ -50,28 +50,58 @@ title: "Модуль deckhouse: FAQ"
 
 Данные, которые будут собраны:
 
-* состояние очереди Deckhouse;
+##### Deckhouse:
+* Состояние очереди Deckhouse;
 * Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
-* список включенных модулей;
-* список модулей в режиме `maintenance`;
-* `events` из всех пространств имен;
-* манифесты controller'ов и подов из всех пространств имен Deckhouse;
-* все объекты `nodegroups`;
-* все объекты `nodes`;
-* все объекты `machines`;
-* все объекты `instances`;
-* все объекты `staticinstances`;
-* данные о текущей версии пода deckhouse;
-* все объекты `deckhousereleases`;
-* логи Deckhouse;
-* логи machine controller manager;
-* логи cloud controller manager;
-* логи cluster autoscaler;
-* логи Vertical Pod Autoscaler admission controller;
-* логи Vertical Pod Autoscaler recommender;
-* логи Vertical Pod Autoscaler updater;
-* логи Prometheus;
-* все горящие уведомления в Prometheus.
+* Данные о текущей версии пода deckhouse;
+* Все объекты `DeckhouseRelease`;
+* Логи подов Deckhouse;
+* Манифесты controller'ов и подов из всех пространств имен Deckhouse;
+
+##### Объекты кластера:
+* Все объекты `NodeGroup`;
+* Все объекты `NodeGroupConfiguration`;
+* Все объекты `Node`;
+* Все объекты `Machine`;
+* Все объекты `Instance`;
+* Все объекты `StaticInstance`;
+* Все объекты `MachineDeployment`;
+* Все объекты `ClusterAuthorizationRule`;
+* Все объекты `AuthorizationRule`;
+* Все объекты `ModuleConfig`;
+* `Events` из всех пространств имен;
+
+##### Модули и их состояния:
+* Список включенных модулей;
+* Список объектов `ModuleSource` в кластере;
+* Список объектов `ModulePullOverride` в кластере;
+* Список модулей в режиме `maintenance`;
+
+##### Логи и манифесты контроллеров:
+* Логи machine controller manager;
+* Логи cloud controller manager;
+* Логи csi controller;
+* Логи cluster autoscaler;
+* Логи Vertical Pod Autoscaler admission controller;
+* Логи Vertical Pod Autoscaler recommender;
+* Логи Vertical Pod Autoscaler updater;
+* YAML-файлы capi controller manager;
+* YAML-файлы caps controller manager;
+* YAML-файлы machine controller manager;
+
+##### Мониторинг и алерты:
+* Логи Prometheus;
+* Все горящие уведомления в Prometheus;
+* Список всех не поднятых подов, кроме тех, что в состояниях Completed и Evicted;
+
+##### Сеть:
+* Все объекты из Namespace `d8-istio`;
+* Все Custom Resources istio;
+* Envoy config istio;
+* Логи istio;
+* Логи istio ingressgateway;
+* Логи istio users;
+* Состояние связи Cilium - `cilium health status`;
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
 

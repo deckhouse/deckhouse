@@ -84,6 +84,16 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", "kubectl get modules -o json | jq '.items[]'"},
 		},
 		{
+			File: "deckhouse-module-sources.json",
+			Cmd:  "bash",
+			Args: []string{"-c", "kubectl get modulesources -o json | jq '.items[]'"},
+		},
+		{
+			File: "deckhouse-module-pull-overrides.json",
+			Cmd:  "bash",
+			Args: []string{"-c", "kubectl get modulepulloverrides -o json | jq '.items[]'"},
+		},
+		{
 			File: "deckhouse-maintenance-modules.txt",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get moduleconfig -ojson | jq -r '.items[] | select(.spec.maintenance == "NoResourceReconciliation") | .metadata.name'`},
@@ -102,6 +112,11 @@ func createTarball() *bytes.Buffer {
 			File: "node-groups.json",
 			Cmd:  "kubectl",
 			Args: []string{"get", "nodegroups", "-A", "-o", "json"},
+		},
+		{
+			File: "node-group-configuration.json",
+			Cmd:  "kubectl",
+			Args: []string{"get", "nodegroupconfiguration", "-A", "-o", "json"},
 		},
 		{
 			File: "nodes.json",
@@ -124,6 +139,16 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"get", "staticinstances.deckhouse.io", "-o", "json"},
 		},
 		{
+			File: "cloud-machine-deployment.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-cloud-instance-manager get machinedeployments.machine.sapcloud.io -o json | jq '.items[]'"' | bash`},
+		},
+		{
+			File: "static-machine-deployment.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", "kubectl -n d8-cloud-instance-manager get machinedeployments.cluster.x-k8s.io -o json --ignore-not-found | jq '.items[]'"},
+		},
+		{
 			File: "deckhouse-version.json",
 			Cmd:  "bash",
 			Args: []string{"-c", "jq -s add <(kubectl -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {\"core.deckhouse.io/edition\",\"core.deckhouse.io/version\"}') <(kubectl -n d8-system get deployment deckhouse -o json | jq -r '.spec.template.spec.containers[] | select(.name == \"deckhouse\") | {image}')"},
@@ -136,7 +161,22 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "deckhouse-logs.json",
 			Cmd:  "kubectl",
-			Args: []string{"logs", "deploy/deckhouse", "--tail", "3000"},
+			Args: []string{"-n", "d8-system", "logs", "-l", "app=deckhouse", "--tail", "3000"},
+		},
+		{
+			File: "capi-controller-manager.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-cloud-instance-manager", "get", "pods", "-l", "app=capi-controller-manager", "-o", "json", "--ignore-not-found=true"},
+		},
+		{
+			File: "caps-controller-manager.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "d8-cloud-instance-manager", "get", "pods", "-l", "app=caps-controller-manager", "-o", "json", "--ignore-not-found=true"},
+		},
+		{
+			File: "machine-controller-manager.json",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager -o json | jq '.items[]'"' | bash`},
 		},
 		{
 			File: "mcm-logs.txt",
@@ -149,9 +189,14 @@ func createTarball() *bytes.Buffer {
 			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-"+.metadata.name+" logs -l app=cloud-controller-manager --tail=3000"' | bash`},
 		},
 		{
+			File: "csi-controller-logs.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and (.metadata.name | test("^cloud-provider"))) | "kubectl -n d8-"+.metadata.name+" logs -l app=csi-controller --tail=3000"' | bash`},
+		},
+		{
 			File: "cluster-autoscaler-logs.txt",
 			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail=3000", "-c", "cluster-autoscaler", "--ignore-errors=true"},
+			Args: []string{"-n", "d8-cloud-instance-manager", "logs", "-l", "app=cluster-autoscaler", "--tail=5000", "-c", "cluster-autoscaler", "--ignore-errors=true"},
 		},
 		{
 			File: "vpa-admission-controller-logs.txt",
@@ -186,7 +231,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "cluster-authorization-rules.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "clusterauthorizationrules", "-o", "json"},
+			Args: []string{"get", "clusterauthorizationrules", "-A", "-o", "json"},
 		},
 		{
 			File: "authorization-rules.json",
@@ -227,6 +272,11 @@ func createTarball() *bytes.Buffer {
 			File: "d8-istio-users-logs.txt",
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get pods --all-namespaces -o jsonpath='{range .items[?(@.metadata.annotations.istio\.io/rev)]}{.metadata.namespace}{" "}{.metadata.name}{" "}{.spec.containers[*].name}{"\n"}{end}' | awk '/istio-proxy/ {print $0}' | shuf -n 1 | while read namespace pod_name containers; do echo "Collecting logs from istio-proxy in Pod $pod_name (Namespace: $namespace)"; kubectl logs "$pod_name" -n "$namespace" -c istio-proxy; done`},
+		},
+		{
+			File: "cilium-health-status.txt",
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl -n d8-cni-cilium exec -it $(kubectl -n d8-cni-cilium get pod -o name | grep agent | head -n 1) -c cilium-agent -- cilium-health status`},
 		},
 	}
 
