@@ -125,18 +125,18 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "machines.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "machines.machine.sapcloud.io", "-A", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get machines.machine.sapcloud.io -A -o json | jq '.items[]'`},
 		},
 		{
 			File: "instances.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "instances.deckhouse.io", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get instances.deckhouse.io -o json | jq '.items[]'`},
 		},
 		{
 			File: "staticinstances.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "staticinstances.deckhouse.io", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get staticinstances.deckhouse.io -o json | jq '.items[]'`},
 		},
 		{
 			File: "cloud-machine-deployment.txt",
@@ -236,7 +236,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "authorization-rules.json",
 			Cmd:  "kubectl",
-			Args: []string{"get", "authorizationrules", "-o", "json"},
+			Args: []string{"get", "authorizationrules.deckhouse.io", "-A", "-o", "json"},
 		},
 		{
 			File: "module-configs.json",
@@ -245,8 +245,8 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "d8-istio-resources.json",
-			Cmd:  "kubectl",
-			Args: []string{"-n", "d8-istio", "get", "all", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl -n d8-istio get all -o json | jq '.items[]'`},
 		},
 		{
 			File: "d8-istio-custom-resources.json",
