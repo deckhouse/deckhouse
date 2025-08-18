@@ -286,6 +286,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("source with pull error", func() {
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879", nil)
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
@@ -533,6 +534,9 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
 
+		// Return digest that matches FakeImage.Digest() String() format
+		moduleVersionsMock.DigestMock.Optional().Return("sha256:", nil)
+
 		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
@@ -580,6 +584,9 @@ accessibility:
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
+
+	// Align top-level digest to match FakeImage Digest format
+	dc.CRClient.DigestMock.Return("sha256:", nil)
 
 	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
 		ManifestStub: manifestStub,

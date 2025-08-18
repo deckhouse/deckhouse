@@ -18,9 +18,10 @@ spec:
 status:
   message: Some errors occurred. Inspect status for details
   modules:
-  - checksum: 'sha256:'
-    name: enabledmodule
-    version: v1.2.3
+  - name: enabledmodule
+    pullError: 'get image info: digest mismatch: expected sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879,
+      got sha256:'
+    version: unknown
   - name: errormodule
     policy: test-alpha
     pullError: |-
@@ -30,34 +31,3 @@ status:
   modulesCount: 2
   phase: Active
   syncTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  annotations:
-    modules.deckhouse.io/apply-now: "true"
-    modules.deckhouse.io/change-cause: check release (no releases in cluster)
-  creationTimestamp: null
-  labels:
-    module: enabledmodule
-    modules.deckhouse.io/update-policy: ""
-    release-checksum: 1beb143dffb1b662137094e7faea1e17
-    source: test-source-1
-  name: enabledmodule-v1.2.3
-  ownerReferences:
-  - apiVersion: deckhouse.io/v1alpha1
-    controller: true
-    kind: ModuleSource
-    name: test-source-1
-    uid: ""
-  resourceVersion: "1"
-spec:
-  moduleName: enabledmodule
-  version: 1.2.3
-  weight: 900
-status:
-  approved: false
-  message: ""
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
