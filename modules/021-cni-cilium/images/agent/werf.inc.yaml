@@ -282,7 +282,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-18.1"
+fromCacheVersion: "2025-08-18.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -436,19 +436,19 @@ import:
   before: install
   add: /usr/lib/libmnl.so.0
   to: /usr/lib/libmnl.so.0
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
   owner: root
   group: root
   before: install
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
   owner: root
   group: root
   before: install
-- image: libs/glibc-v2.41
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   owner: root
@@ -612,7 +612,7 @@ imageSpec:
   config:
     env:
       INITSYSTEM: "SYSTEMD"
-      # LD_LIBRARY_PATH: "/lib:/usr/lib"
+      LD_LIBRARY_PATH: "/lib:/usr/lib"
       HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
       HUBBLE_COMPAT: "legacy-json-output"
       LANG: "C.UTF-8"
