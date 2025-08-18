@@ -428,14 +428,14 @@ import:
   - tipc
   - ctstat
   - rtstat
-- image: tools/ipset
-  before: install
-  add: /lib/ld-musl-x86_64.so.1
-  to: /lib/ld-musl-x86_64.so.1
-- image: tools/ipset
-  before: install
-  add: /usr/lib/libmnl.so.0
-  to: /usr/lib/libmnl.so.0
+# - image: tools/ipset
+#   before: install
+#   add: /lib/ld-musl-x86_64.so.1
+#   to: /lib/ld-musl-x86_64.so.1
+# - image: tools/ipset
+#   before: install
+#   add: /usr/lib/libmnl.so.0
+#   to: /usr/lib/libmnl.so.0
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
