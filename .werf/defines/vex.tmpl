@@ -35,7 +35,7 @@ import:
   to: /usr/bin/cosign
   before: install
 git:
-- add: /{{ $knownVulnPath }}
+- add: {{ $knownVulnPath }}
   to: /known_vulnerabilities.vex
   stageDependencies:
     setup:
