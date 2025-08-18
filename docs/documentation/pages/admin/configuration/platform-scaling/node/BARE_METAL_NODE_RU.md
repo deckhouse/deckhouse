@@ -273,7 +273,28 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 
-1. Добавьте метку `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+
+   Пример команды для добавления лейбла:
+
+   ```shell
+   d8 k label staticinstance d8cluster-worker node.deckhouse.io/allow-bootstrap=false
+   ```
+
 1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+
+   Для проверки статуса StaticInstance используйте команду:
+
+   ```shell
+   d8 k get staticinstances
+   ```
+
 1. Удалите StaticInstance.
+
+   Пример команды для удаления StaticInstance:
+
+   ```shell
+   d8 k delete staticinstance d8cluster-worker
+   ```
+
 1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.

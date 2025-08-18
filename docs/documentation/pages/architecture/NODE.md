@@ -18,7 +18,7 @@ In Deckhouse, nodes are divided into the following types:
 
 Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DKP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
 
-Hybrid groups are also supported, where a single NodeGroup can include both cloud and static nodes. For example, the main load may be handled by bare-metal servers, while cloud instances are used as scalable additions during peak loads.
+Hybrid groups are also supported, where a single NodeGroup can include both Static nodes deployed in the cloud and static (bare-metal or virtual machine) nodes. For example, the main load may be handled by bare-metal servers, while cloud instances are used as scalable additions during peak loads.
 
 ## Automatic deployment, configuration, and update of Kubernetes nodes
 
