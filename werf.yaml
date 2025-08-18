@@ -91,6 +91,7 @@ build:
 # cosign  settings
 {{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
+{{- $_ := set . "VaultAdress" "https://seguro.flant.com" }}
 {{- $_ := set . "ActionsIDTokenRequestToken" (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "test") }}
 {{- $_ := set . "ActionsIDTokenRequestURL" (env "ACTIONS_ID_TOKEN_REQUEST_URL" "test") }}
 ---
