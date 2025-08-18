@@ -241,10 +241,15 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
+fromCacheVersion: 300
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
+  before: install
+- image: common/pause
+  add: /pause
+  to: /opt/pause
   before: install
 git:
 {{- include "image mount points" . }}
@@ -259,5 +264,6 @@ imageSpec:
       LANGUAGE: "C.UTF-8"
       LC_ALL: "C.UTF-8"
       PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      ololo: "ururu"
     workingDir: "/home/cilium"
     cmd: ["/usr/bin/cilium-dbg"]
