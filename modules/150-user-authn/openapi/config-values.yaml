@@ -97,13 +97,6 @@ properties:
     default: null
     required: ["id"]
     properties:
-      id:
-        type: string
-        default: "default"
-        description: |
-          Unique policy ID.
-          
-          Reserved for future use.
       complexityLevel:
         type: string
         enum:
