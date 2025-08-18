@@ -13,3 +13,7 @@ Update klog to klog/v2 in other files
 ### 005-add-vcdmachine-spec-template-org.patch
 
 Add TemplateOrg field to VCDMachine spec
+
+### 006-add-metadata.patch
+
+Add metadata field for VM
