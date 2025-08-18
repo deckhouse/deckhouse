@@ -34,7 +34,7 @@ Changes:
 
 - Update dependencies
 
-## 003-metadata.patch
+## 004-metadata.patch
 
 Files:
 
