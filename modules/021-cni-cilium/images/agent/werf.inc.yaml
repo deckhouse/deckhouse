@@ -88,15 +88,15 @@
 # final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:49c343f5dd5282984fda0a3384614eff4f67303d7fc4e8289c363e2240a89a1d
+from: dev-registry.deckhouse.io/base_images@sha256:1f20b5f0fa2cae3e2922896715633dba7ab56f59648161adc7e50ece1d8dde27
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
-from: dev-registry.deckhouse.io/base_images@sha256:93e3d8012069b464be495fcc7a9933b544dc516f4728b5bfde2d744c9d63b691
+from: dev-registry.deckhouse.io/base_images@sha256:366190a5c1a71890f3e06cb9216195c373027042585ad730da53f53bb2b1c365
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
-from: dev-registry.deckhouse.io/base_images@sha256:9cad3fd10342e557bdb3e15f5957e141900a978ba3ca7d46f71be2ed1644cab6
+from: dev-registry.deckhouse.io/base_images@sha256:8f2fad728d98a8b880cb8998624ea748956afc3254f7f4b83262b0ce5c9c2a95
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
@@ -104,7 +104,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:673f6eded580c79bfd3a4a51f05dd
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
-from: dev-registry.deckhouse.io/base_images@sha256:1c8e801686c9c231e3495bfd84e6077ca387bf6b4f129550750713dec674db6e
+from: dev-registry.deckhouse.io/base_images@sha256:c7e62123b3be02df6dd81ba4c42a9b709cf0488c046aa2b09794fc0fd86f9445
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
