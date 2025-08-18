@@ -205,7 +205,9 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case scriptextender.Name:
 		reason = v1alpha1.ModuleReasonEnabledScriptExtender
 		message = v1alpha1.ModuleMessageEnabledScriptExtender
-
+		if txt := basicModule.GetEnabledScriptReason(); txt != nil && *txt != "" {
+			message += ": " + *txt
+		}
 	case d7sversionextender.Name:
 		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
 		_, errMsg := r.exts.DeckhouseVersion.Filter(module.Name, map[string]string{})

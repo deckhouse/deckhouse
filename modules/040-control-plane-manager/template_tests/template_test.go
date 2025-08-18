@@ -69,6 +69,30 @@ type ClusterConfigurationV3 struct {
 	APIServer  APIServer `yaml:"apiServer"`
 }
 
+type PrefixedClaimOrExpression struct {
+	Claim  string  `yaml:"claim"`
+	Prefix *string `yaml:"prefix"`
+
+	Expression string `yaml:"expression,omitempty"`
+}
+
+type AuthenticationConfigurationV1beta1 struct {
+	APIVersion string `yaml:"apiVersion"`
+	Kind       string `yaml:"kind"`
+	JWT        []struct {
+		Issuer struct {
+			URL                  string   `yaml:"url"`
+			DiscoveryURL         string   `yaml:"discoveryURL"`
+			CertificateAuthority string   `yaml:"certificateAuthority"`
+			Audiences            []string `yaml:"audiences"`
+		} `yaml:"issuer"`
+		ClaimMappings struct {
+			Username PrefixedClaimOrExpression `yaml:"username"`
+			Groups   PrefixedClaimOrExpression `yaml:"groups"`
+		} `yaml:"claimMappings"`
+	} `yaml:"jwt"`
+}
+
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
 	const globalValues = `
   clusterConfiguration:
@@ -101,9 +125,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 `
 	const moduleValues = `
   internal:
-    admissionWebhookClientCertificateData:
-      cert: mock-cert
-      key: mock-key
     effectiveKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
@@ -117,9 +138,6 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const moduleValuesOnlyIssuer = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -131,9 +149,6 @@ apiserver:
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -149,9 +164,6 @@ apiserver:
 
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -166,9 +178,6 @@ apiserver:
 
 	const moduleValuesCombo = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -185,9 +194,6 @@ apiserver:
 
 	const moduleValuesSuperCombo = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -206,9 +212,6 @@ apiserver:
 
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -226,9 +229,6 @@ apiserver:
 `
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -246,9 +246,6 @@ apiserver:
 
 	const emptyApiserverConfig = `
 internal:
-  admissionWebhookClientCertificateData:
-    cert: mock-cert
-    key: mock-key
   effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
@@ -256,6 +253,62 @@ internal:
   rolloutEpoch: 1857
 `
 
+	const apiServerWithOidcFull = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn:
+    oidcIssuerURL: https://dex.example.com
+    oidcCA: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+`
+	const apiServerWithOidcFullKube129 = `
+internal:
+  effectiveKubernetesVersion: "1.29"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn:
+    oidcIssuerURL: https://dex.example.com
+    oidcCA: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+`
+	const apiServerWithOidcIssuerOnly = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn:
+    oidcIssuerURL: https://dex.example.com
+`
+
+	const apiServerWithOidcEmpty = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit: {}
+apiserver:
+  authn: {}
+`
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
@@ -672,6 +725,80 @@ resources:
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Cronjob", "kube-system", "d8-etcd-backup-039d00b17e10d07f52111429fc7d82e2c")
 				Expect(s.Exists()).To(BeTrue())
+			})
+		})
+		Context("apiserver oidc settings are set fully", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcFull)
+				f.HelmRender()
+			})
+			It("for issuer[0] should bet set discoveryURL, URL and certificateAuthority", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
+				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
+				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
+				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+			})
+		})
+		Context("apiserver oidc settings are set fully and kubernetes 1.29", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcFullKube129)
+				f.HelmRender()
+			})
+			It("for issuer[0] should bet set discoveryURL, URL and certificateAuthority", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1alpha1"))
+				Expect(config.JWT[0].Issuer.DiscoveryURL).Should(BeEmpty())
+				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
+				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+			})
+		})
+		Context("apiserver oidc settings are set partially", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcIssuerOnly)
+				f.HelmRender()
+			})
+			It("for issuer[0] should bet set only discoveryURL and URL", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
+				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
+				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
+				Expect(config.JWT[0].Issuer.CertificateAuthority).Should(BeEmpty())
+			})
+		})
+		Context("apiserver oidc settings are empty", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcEmpty)
+				f.HelmRender()
+			})
+			It("extra-file-authentication-config.yaml should not be created", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(authConfig).Should(BeEmpty())
 			})
 		})
 	})

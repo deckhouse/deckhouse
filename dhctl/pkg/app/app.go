@@ -36,9 +36,9 @@ const (
 )
 
 var (
-	deckhouseDir             = "/deckhouse"
-	VersionFile              = deckhouseDir + "/version"
-	EditionFile              = deckhouseDir + "/edition"
+	deckhouseDir = "/deckhouse"
+	VersionFile  = deckhouseDir + "/version"
+	EditionFile  = deckhouseDir + "/edition"
 )
 
 var TmpDirName = filepath.Join(os.TempDir(), "dhctl")

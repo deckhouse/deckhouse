@@ -67,6 +67,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)

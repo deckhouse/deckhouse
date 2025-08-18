@@ -12,6 +12,8 @@ import:
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/trivy" ]
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact

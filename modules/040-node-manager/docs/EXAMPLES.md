@@ -57,6 +57,12 @@ You can also use a method that [adds static nodes using the Cluster API Provider
 
 <span id='an-example-of-the-static-nodegroup-for-system-nodes-configuration'></span>
 
+Below is an example of a system node group manifest.
+
+When describing a NodeGroup with Static nodes, specify the value `Static` in the `nodeType` field and use the [`staticInstances`](./cr.html#nodegroup-v1-spec-staticinstances) field to describe the parameters for provisioning static machines to the cluster.
+
+When describing a NodeGroup with CloudEphemeral type cloud nodes, specify the value `CloudEphemeral` in the `nodeType` field and use the [`cloudInstances`](./cr.html#nodegroup-v1-spec-cloudinstances) field to describe the parameters for provisioning the cloud-based VMs.
+
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -70,8 +76,133 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
+  # Example for Static nodes
   nodeType: Static
+  staticInstances:
+    count: 2
+    labelSelector:
+      matchLabels:
+        role: system
+  # Example for CloudEphemeral nodes
+  # nodeType: CloudEphemeral
+  # cloudInstances:
+  #   classReference:
+  #     kind: YandexInstanceClass
+  #     name: large
+  #   maxPerZone: 2
+  #   minPerZone: 1
+  #   zones:
+  #   - ru-central1-d
 ```
+
+### Nodes with GPU
+
+{% alert level="info" %}
+GPU-node management is available in the Enterprise edition only.
+{% endalert %}
+
+GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two ways to install the driver:
+
+1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
+1. **Automation via `NodeGroupConfiguration`** (see the
+   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
+
+After the driver is detected and the NodeGroup includes the `spec.gpu` section,
+`node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
+Plugin**, **DCGM Exporter**, and, if required, **MIG Manager**.
+
+{% alert level="info" %}
+GPU nodes are usually tainted (e.g. `node-role=gpu:NoSchedule`) so that
+regular workloads don’t land there by accident. A workload that needs a GPU just adds the matching `tolerations`
+and `nodeSelector`.
+{% endalert %}
+
+See the full field reference in the
+[NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+Below are examples of NodeGroup manifests for typical GPU operating modes (Exclusive,
+TimeSlicing, MIG).
+
+#### Exclusive mode (one Pod — one GPU)
+
+Each Pod gets an entire physical GPU; the cluster exposes the `nvidia.com/gpu` resource.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: gpu-exclusive
+spec:
+  nodeType: Static
+  gpu:
+    sharing: Exclusive
+  nodeTemplate:
+    labels:
+      node-role/gpu: ""
+    taints:
+    - key: node-role
+      value: gpu
+      effect: NoSchedule
+```
+
+#### Time-slicing (4 partitions)
+
+The GPU is time-sliced: up to four Pods can share one card sequentially.
+Suitable for experiments, CI, and light inference workloads.
+
+Pods still request the `nvidia.com/gpu` resource.
+
+```yaml
+spec:
+  gpu:
+    sharing: TimeSlicing
+    timeSlicing:
+      partitionCount: 4
+```
+
+#### MIG (`all-1g.5gb` profile)
+
+A hardware-partitioned GPU (A100, A30, etc.) is split into independent
+instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
+
+For a complete list of supported GPUs and their profiles, see the
+[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles).
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: all-1g.5gb
+```
+
+#### Smoke-test Job (CUDA **vectoradd**)
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cuda-vectoradd
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        node-role/gpu: ""
+      tolerations:
+      - key: node-role
+        value: gpu
+        effect: NoSchedule
+      containers:
+      - name: cuda-vectoradd
+        image: nvcr.io/nvidia/k8s/cuda-sample:vectoradd-cuda11.7.1-ubuntu20.04
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+```
+
+This Job runs NVIDIA’s **vectoradd** CUDA sample.
+If the Pod finishes with `Succeeded`, the GPU is present and configured correctly.
 
 ## Adding a static node to a cluster
 
@@ -508,165 +639,6 @@ spec:
       ca-file-updated      
 ```
 
-### Adding a certificate to the OS and containerd
-
-{% alert level="warning" %}
-Example is given for Ubuntu OS.  
-The method of adding certificates to the store may differ depending on the OS.  
-
-Change the [bundles](cr.html#nodegroupconfiguration-v1alpha1-spec-bundles) parameter to adapt the script to a different OS.
-{% endalert %}
-
-{% alert level="info" %}
-The example of `NodeGroupConfiguration` uses functions of the script [032_configure_containerd.sh](./#features-of-writing-scripts).
-{% endalert %}
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: add-custom-ca-containerd..sh
-spec:
-  weight: 31
-  nodeGroups:
-  - '*'  
-  bundles:
-  - 'ubuntu-lts'
-  content: |-
-    REGISTRY_URL=private.registry.example
-    CERT_FILE_NAME=${REGISTRY_URL}
-    CERTS_FOLDER="/usr/local/share/ca-certificates"
-    CERT_CONTENT=$(cat <<EOF
-    -----BEGIN CERTIFICATE-----
-    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
-    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
-    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
-    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
-    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
-    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
-    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
-    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
-    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
-    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
-    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
-    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
-    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
-    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
-    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
-    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
-    -----END CERTIFICATE-----
-    EOF
-    )
-    CONFIG_CONTENT=$(cat <<EOF
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
-    EOF
-    )
-    
-    mkdir -p /etc/containerd/conf.d
-
-    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
-
-    CERT_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
-    CONFIG_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
-
-    # bb-event           - Creating subscription for event function. More information: http://www.bashbooster.net/#event
-    ## ca-file-updated   - Event name
-    ## update-certs      - The function name that the event will call
-    
-    bb-event-on "ca-file-updated" "update-certs"
-    
-    update-certs() {          # Function with commands for adding a certificate to the store
-      update-ca-certificates  # Restarting the containerd service is not required as this is done automatically in the script 032_configure_containerd.sh
-    }
-
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
-    ##  ca-file-updated                           - Name of event that will be called if the file changes.
-
-    bb-sync-file \
-      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
-      ${CERT_TMP_FILE} \
-      ca-file-updated   
-      
-    bb-sync-file \
-      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
-      ${CONFIG_TMP_FILE} 
-```
-
 ### Adding the ability to download images from insecure container registry to containerd
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-registry.sh
-spec:
-  bundles:
-    - '*'
-  content: |
-    REGISTRY_URL=private.registry.example
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".registry]
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
-              endpoint = ["http://${REGISTRY_URL}"]
-          [plugins."io.containerd.grpc.v1.cri".registry.configs]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
-            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-              insecure_skip_verify = true
-    EOF
-  nodeGroups:
-    - "*"
-  weight: 31
-```
-
-Define the following parameters in the `NodeGroupConfiguration` resource:
-
-* `REGISTRY_URL: <ADDITIONAL_REGISTRY_URL>`. Insecure container registry address, for example `REGISTRY_URL=private.registry.example`;
-* `auth: <BASE64>`. Base64-encoded auth credentials of the insecure container registry.
-
-Use the following `auth` if anonymous access to images is allowed in the insecure container registry:
-
-```json
-{"auths": { "<ADDITIONAL_REGISTRY>": {}}}
-```
-
-`auth` must be Base64-encoded.
-
-Use the following `auth` if authentication is required to access images in the insecure container registry:
-
-```json
-{"auths": { "<ADDITIONAL_REGISTRY>": {"username":"<ADDITIONAL_USERNAME>","password":"<ADDITIONAL_PASSWORD>","auth":"<AUTH_BASE64>"}}}
-```
-
-* `<ADDITIONAL_USERNAME>` — auth username for `<ADDITIONAL_REGISTRY>`.
-* `<ADDITIONAL_PASSWORD>` — auth password for `<ADDITIONAL_REGISTRY>`.
-* `<ADDITIONAL_REGISTRY>` — registry address: `<HOSTNAME>[:PORT]`.
-* `<AUTH_BASE64>` — Base64-encoded `<ADDITIONAL_USERNAME>:<ADDITIONAL_PASSWORD>` auth string.
-
-`auth` must be Base64-encoded.
-
-You can use the following script to generate `auth`:
-
-```shell
-declare MYUSER='<ADDITIONAL_USERNAME>'
-declare MYPASSWORD='<ADDITIONAL_PASSWORD>'
-declare MYREGISTRY='<ADDITIONAL_REGISTRY>'
-
-MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
-MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
-
-echo "$MYRESULTSTRING"
-```
+The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the section  ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).

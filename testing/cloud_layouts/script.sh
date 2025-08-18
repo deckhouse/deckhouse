@@ -767,7 +767,7 @@ mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
 d8 --version
 # pull
-d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+d8 mirror pull d8 --no-modules --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD

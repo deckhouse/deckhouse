@@ -23,14 +23,17 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
-	"registry-modules-watcher/internal"
-	"registry-modules-watcher/internal/backends"
 	"strings"
+	"time"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/module-sdk/pkg/dependency/cr"
+
+	"registry-modules-watcher/internal"
+	"registry-modules-watcher/internal/backends"
+	"registry-modules-watcher/internal/metrics"
 )
 
 // Constants for directory structure
@@ -133,27 +136,25 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Image:          releaseImage,
 	}
 
-	// Check if we already have this release in cache
-	releaseChecksum, ok := s.cache.GetReleaseChecksum(versionData)
-	if ok && releaseChecksum == versionData.Checksum {
-		version, tarFile, ok := s.cache.GetReleaseVersionData(versionData)
-		if ok {
-			versionData.Version = version
-			versionData.TarFile = tarFile
+	// Search across all channels by checksum
+	version, tarFile := s.cache.GetGetReleaseVersionData(versionData)
+	if version != "" {
+		versionData.Version = version
+		versionData.TarFile = tarFile
 
-			return versionData, nil
-		}
+		return versionData, nil
 	}
 
 	// Extract version from image
-	version, err := getVersionFromImage(versionData.Image)
+	version, err = getVersionFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
+
 	versionData.Version = version
 
 	// Extract tar file
-	tarFile, err := s.extractTar(ctx, versionData)
+	tarFile, err = s.extractTar(ctx, versionData)
 	if err != nil {
 		return nil, fmt.Errorf("extract tar: %w", err)
 	}
@@ -163,15 +164,22 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
+	// Before pull
+	timeBeforePull := time.Now()
 	image, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 	if err != nil {
 		return nil, fmt.Errorf("get image: %w", err)
 	}
 
+	// Pull and untar
 	tarFile, err := s.extractDocumentation(image)
 	if err != nil {
 		return nil, fmt.Errorf("extract documentation: %w", err)
 	}
+
+	// Calculate pull time metrics
+	pullTime := time.Since(timeBeforePull).Seconds()
+	s.ms.HistogramObserve(metrics.RegistryPullSecondsMetric, pullTime, nil, nil)
 
 	return tarFile, nil
 }

@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: {{ .Images.BASE_NODE_23_ALPINE }}
+fromImage: builder/node-alpine-23.10
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -26,6 +26,7 @@ shell:
   - apk add --no-cache python3 vips make build-base
   install:
   - cd /src
+  {{- include "node packages proxy" . | nindent 2 }}
   - npm ci
   - npm run build
   - chown -R 64535:64535 /src/dist
@@ -37,6 +38,8 @@ import:
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]

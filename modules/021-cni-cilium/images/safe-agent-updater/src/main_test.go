@@ -258,7 +258,7 @@ func TestCheckAgentPodGeneration(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
-			_, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(fakeClientset, test.nodeName)
+			_, _, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(fakeClientset, test.nodeName)
 			podRestartNeeded := !isCurrentAgentPodGenerationDesired
 
 			switch test.expectSuccess {
@@ -512,6 +512,340 @@ func TestWaitUntilNewPodCreatedAndBecomeReady(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
 			err := waitUntilNewPodCreatedAndBecomeReady(fakeClientset, test.nodeName, test.scanIterations)
+
+			switch test.expectSuccess {
+			case false:
+				if err == nil {
+					t.Fatalf("expected error but received none")
+				} else {
+					t.Logf("expected error and got it: %v", err)
+				}
+			case true:
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// new
+func TestIsMigrationSucceeded(t *testing.T) {
+	testCases := []struct {
+		name         string
+		nodeName     string
+		k8sObjects   []runtime.Object
+		expectResult bool
+	}{
+		{
+			name:         "Node_does_not_exist",
+			nodeName:     testNodeName,
+			k8sObjects:   []runtime.Object{},
+			expectResult: false,
+		},
+		{
+			name:     "Node_exists_but_migration_annotation_missing",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+				},
+			},
+			expectResult: false,
+		},
+		{
+			name:     "Node_and_migration_annotation_exists",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+						Annotations: map[string]string{
+							migrationSucceededAnnotation: "",
+						},
+					},
+				},
+			},
+			expectResult: true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			receivedResult := isMigrationSucceeded(fakeClientset, test.nodeName)
+
+			switch test.expectResult {
+			case false:
+				if receivedResult {
+					t.Fatalf("expected false but received true")
+				} else {
+					t.Logf("expected false and got it: %v", receivedResult)
+				}
+			case true:
+				if !receivedResult {
+					t.Fatalf("unexpected success: %v", receivedResult)
+				}
+			}
+		})
+	}
+}
+
+func TestAreSTSPodsPresentOnNode(t *testing.T) {
+	testCases := []struct {
+		name         string
+		nodeName     string
+		k8sObjects   []runtime.Object
+		expectResult bool
+	}{
+		{
+			name:         "No_one_pods_present",
+			nodeName:     testNodeName,
+			k8sObjects:   []runtime.Object{},
+			expectResult: false,
+		},
+		{
+			name:     "Pods_present_but_no_one_sts",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod-1",
+						Namespace: "test-ns-1",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "test-deployment-1",
+							},
+						},
+					},
+				},
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod-2",
+						Namespace: "test-ns-2",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "DaemonSet",
+								Name:       "test-daemonset-2",
+							},
+						},
+					},
+				},
+			},
+			expectResult: false,
+		},
+		{
+			name:     "STS_pods_present",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod-1",
+						Namespace: "test-ns-1",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "test-deployment-1",
+							},
+						},
+					},
+				},
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod-2",
+						Namespace: "test-ns-2",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "DaemonSet",
+								Name:       "test-daemonset-2",
+							},
+						},
+					},
+				},
+				&v1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-pod-3",
+						Namespace: "test-ns-3",
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "apps/v1",
+								Kind:       "StatefulSet",
+								Name:       "test-sts-3",
+							},
+						},
+					},
+				},
+			},
+			expectResult: true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			receivedResult := areSTSPodsPresentOnNode(fakeClientset, test.nodeName)
+
+			switch test.expectResult {
+			case false:
+				if receivedResult {
+					t.Fatalf("expected false but received true")
+				} else {
+					t.Logf("expected false and got it: %v", receivedResult)
+				}
+			case true:
+				if !receivedResult {
+					t.Fatalf("unexpected success: %v", receivedResult)
+				}
+			}
+		})
+	}
+}
+
+func TestSetAnnotationToNode(t *testing.T) {
+	testCases := []struct {
+		name            string
+		nodeName        string
+		annotationKey   string
+		annotationValue string
+		k8sObjects      []runtime.Object
+		expectResult    bool
+		expectSuccess   bool
+	}{
+		{
+			name:            "Node_does_not_exist",
+			nodeName:        testNodeName,
+			annotationKey:   "test-annotation1",
+			annotationValue: "test-value1",
+			k8sObjects:      []runtime.Object{},
+			expectResult:    false,
+			expectSuccess:   false,
+		},
+		{
+			name:            "Node_exist_and_annotations_empty",
+			nodeName:        testNodeName,
+			annotationKey:   "test-annotation2",
+			annotationValue: "test-value2",
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+				},
+			},
+			expectResult:  true,
+			expectSuccess: true,
+		},
+		{
+			name:            "Node_exist_and_has_some_different_annotations",
+			nodeName:        testNodeName,
+			annotationKey:   "test-annotation3",
+			annotationValue: "test-value3",
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+				},
+			},
+			expectResult:  true,
+			expectSuccess: true,
+		},
+		{
+			name:            "Node_exist_and_has_same_annotations_with_different_value",
+			nodeName:        testNodeName,
+			annotationKey:   "test-annotation4",
+			annotationValue: "test-value4",
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+				},
+			},
+			expectResult:  true,
+			expectSuccess: true,
+		},
+		{
+			name:            "Node_exist_and_has_same_annotations_with_same_value",
+			nodeName:        testNodeName,
+			annotationKey:   "test-annotation5",
+			annotationValue: "test-value5",
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+					},
+				},
+			},
+			expectResult:  true,
+			expectSuccess: true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			receivedResult := false
+			err := setAnnotationToNode(fakeClientset, test.nodeName, test.annotationKey, test.annotationValue)
+			if err == nil {
+				node, _ := fakeClientset.CoreV1().Nodes().Get(
+					context.TODO(),
+					test.nodeName,
+					metav1.GetOptions{},
+				)
+				if node.Annotations[test.annotationKey] == test.annotationValue {
+					receivedResult = true
+				}
+			}
+			switch test.expectSuccess {
+			case false:
+				if err == nil {
+					t.Fatalf("expected error but received none")
+				} else {
+					t.Logf("expected error and got it: %v", err)
+				}
+			case true:
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				} else if test.expectResult != receivedResult {
+					t.Fatalf("expected node was annotated but it is not")
+				}
+			}
+		})
+	}
+}
+
+func TestWaitUntilDisruptionApproved(t *testing.T) {
+	testCases := []struct {
+		name          string
+		nodeName      string
+		k8sObjects    []runtime.Object
+		expectSuccess bool
+	}{
+		{
+			name:     "Node_exists_and_have_disruption_approved_annotation",
+			nodeName: testNodeName,
+			k8sObjects: []runtime.Object{
+				&v1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testNodeName,
+						Annotations: map[string]string{
+							"update.node.deckhouse.io/disruption-approved": "",
+						},
+					},
+				},
+			},
+			expectSuccess: true,
+		},
+	}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			fakeClientset := fake.NewSimpleClientset(test.k8sObjects...)
+			err := waitUntilDisruptionApproved(fakeClientset, test.nodeName)
 
 			switch test.expectSuccess {
 			case false:

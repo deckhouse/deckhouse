@@ -1007,6 +1007,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+   >
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
    ```shell
@@ -1181,6 +1183,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `kubectl get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.
 
 1. Подготовьте переменные с токеном лицензии и создайте NodeGroupConfiguration для переходной авторизации в `registry-cse.deckhouse.ru`:
+
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
    ```shell
    LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
@@ -1526,18 +1530,18 @@ spec:
 После применения ресурса настройки GRUB будут обновлены, и узлы кластера начнут последовательную перезагрузку для применения изменений.
 {% endalert %}
 
-### Как изменить container runtime на ContainerdV2 на узлах?
+### Как изменить container runtime на containerd v2 на узлах?
 
-Миграцию на `ContainerdV2` можно выполнить одним из следующих способов:
+Миграцию на containerd v` можно выполнить одним из следующих способов:
 
 * Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 * Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
 {% alert level="info" %}
-Миграция на `ContainerdV2` возможна при выполнении следующих условий:
+Миграция на containerd v2 возможна при выполнении следующих условий:
 
 * Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
 * На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 {% endalert %}
 
-При миграции на `ContainerdV2` очищается папка `/var/lib/containerd`. Для `Containerd` используется папка `/etc/containerd/conf.d`. Для `ContainerdV2` используется `/etc/containerd/conf2.d`.
+При миграции на containerd v2 очищается папка `/var/lib/containerd`. Для containerd используется папка `/etc/containerd/conf.d`. Для containerd v2 используется `/etc/containerd/conf2.d`.

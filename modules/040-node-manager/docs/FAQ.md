@@ -176,13 +176,34 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Can I delete a StaticInstance?
 
-A `StaticInstance` that is in the `Pending` state can be deleted with no adverse effects.
+A StaticInstance that is in the `Pending` state can be deleted with no adverse effects.
 
-To delete a `StaticInstance` in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
+To delete a StaticInstance in any state other than `Pending` (`Running`, `Cleaning`, `Bootstrapping`), you need to:
 
-1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the `StaticInstance`.
-1. Wait until the `StaticInstance` status becomes `Pending`.
-1. Delete the `StaticInstance`.
+1. Add the label `"node.deckhouse.io/allow-bootstrap": "false"` to the StaticInstance.
+
+   Example command for adding a label:
+
+   ```shell
+   d8 k label staticinstance d8cluster-worker node.deckhouse.io/allow-bootstrap=false
+   ```
+
+1. Wait until the StaticInstance status becomes `Pending`.
+
+   To check the status of StaticInstance, use the command:
+
+   ```shell
+   d8 k get staticinstances
+   ```
+
+1. Delete the StaticInstance.
+
+   Example command for deleting StaticInstance:
+
+   ```shell
+   d8 k delete staticinstance d8cluster-worker
+   ```
+
 1. Decrease the `NodeGroup.spec.staticInstances.count` field by 1.
 
 ### How do I change the IP address of a StaticInstance?
@@ -640,231 +661,6 @@ When adding a node to the cluster, the labels specified in the files will be aut
 Please note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}
 
-## How to use containerd with Nvidia GPU support?
-
-Create NodeGroup for GPU-nodes.
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  chaos:
-    mode: Disabled
-  disruptions:
-    approvalMode: Automatic
-  nodeType: CloudStatic
-```
-
-Create NodeGroupConfiguration for containerd configuration of NodeGroup `gpu`:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-config.sh
-spec:
-  bundles:
-  - '*'
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          default_runtime_name = "nvidia"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-                privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"
-                  SystemdCgroup = false
-    EOF
-  nodeGroups:
-  - gpu
-  weight: 31
-```
-
-Create NodeGroupConfiguration for Nvidia drivers setup on NodeGroup `gpu`.
-
-### Ubuntu
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - ubuntu-lts
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    fi
-    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place 
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-### Centos
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - centos
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    fi
-    bb-dnf-install nvidia-container-toolkit nvidia-driver
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-Bootstrap and reboot node.
-
-### How to check if it was successful?
-
-Deploy the Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: nvidia-cuda-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: nvidia-cuda-test
-          image: nvidia/cuda:11.6.2-base-ubuntu20.04
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - nvidia-smi
-```
-
-And check the logs:
-
-```shell
-$ kubectl logs job/nvidia-cuda-test
-Tue Jan 24 11:36:18 2023
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:8B:00.0 Off |                    0 |
-| N/A   45C    P0    25W /  70W |      0MiB / 15360MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-```
-
-Deploy the Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gpu-operator-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: gpu-operator-test
-          image: nvidia/samples:vectoradd-cuda10.2
-          imagePullPolicy: "IfNotPresent"
-```
-
-And check the logs:
-
-```shell
-$ kubectl logs job/gpu-operator-test
-[Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
-Test PASSED
-Done
-```
-
 ## How to deploy custom containerd configuration?
 
 {% alert level="info" %}
@@ -872,7 +668,7 @@ The example of `NodeGroupConfiguration` uses functions of the script [032_config
 {% endalert %}
 
 {% alert level="danger" %}
-Adding custom settings causes a restart of the `containerd` service.
+Adding custom settings causes a restart of the containerd service.
 {% endalert %}
 
 Bashible on nodes merges main Deckhouse containerd config with configs from `/etc/containerd/conf.d/*.toml`.
@@ -916,23 +712,85 @@ spec:
   weight: 31
 ```
 
-### How to add additional registry auth?
+### How to add configuration for an additional registry?
+
+Containerd supports two methods for registry configuration: the **old** method and the **new** method.
+
+To check for the presence of the **old** configuration method, run the following commands on the cluster nodes:  
+
+```bash
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+
+# Example output:
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+# [plugins."io.containerd.grpc.v1.cri".registry.configs]
+#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+```
+
+To check for the presence of the **new** configuration method, run the following command on the cluster nodes:
+
+```bash
+cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+
+# Example output:
+# config_path = "/etc/containerd/registry.d"
+```
+
+#### Old Method
 
 {% alert level="warning" %}
-If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
+This containerd configuration format is deprecated.
 {% endalert %}
 
-Deploy `NodeGroupConfiguration` script:
+{% alert level="info" %}
+Used in containerd v1 when Deckhouse is not managed by the Registry module ([`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+{% endalert %}
+
+The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
+
+Adding custom configuration is carried out through the `toml merge` mechanism. Configuration files from the `/etc/containerd/conf.d` directory are merged with the main file `/etc/containerd/config.toml`. The merge takes place during the execution of the `032_configure_containerd.sh` script, so the corresponding files must be added in advance.
+
+Example configuration file for the `/etc/containerd/conf.d/` directory:
+
+```toml
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+          endpoint = ["https://${REGISTRY_URL}"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+          auth = "${BASE_64_AUTH}"
+          username = "${USERNAME}"
+          password = "${PASSWORD}"
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+          ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
+          insecure_skip_verify = true
+```
+
+{% alert level="danger" %}
+Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
+{% endalert %}
+
+##### How to add additional registry auth (old method)?
+
+Example of adding authorization to a additional registry when using the **old** configuration method:
 
 ```yaml
----
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: containerd-additional-config.sh
+  name: containerd-additional-config-auth.sh
 spec:
+  # To add a file before the '032_configure_containerd.sh' step
+  weight: 31
   bundles:
     - '*'
+  nodeGroups:
+    - "*"
   content: |
     # Copyright 2023 Flant JSC
     #
@@ -956,41 +814,35 @@ spec:
       [plugins."io.containerd.grpc.v1.cri"]
         [plugins."io.containerd.grpc.v1.cri".registry]
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-              endpoint = ["https://registry-1.docker.io"]
             [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
               endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+              username = "username"
+              password = "password"
+              # OR
+              auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
-  nodeGroups:
-    - "*"
-  weight: 31
 ```
 
-### How to configure a certificate for an additional registry?
+##### How to configure a certificate for an additional registry (old method)?
 
-{% alert level="warning" %}
-If the `registry` module is used, follow the [example from the registry module documentation](/products/kubernetes-platform/documentation/v1/modules/registry/faq.html) to configure authorization.
-{% endalert %}
-
-{% alert level="info" %}
-In addition to containerd, the certificate can be [simultaneously added](examples.html#adding-a-certificate-to-the-os-and-containerd) into the OS.
-{% endalert %}
-
-Example of the `NodeGroupConfiguration` resource for configuring a certificate for an additional registry:
+Example of configuring a certificate for an additional registry when using the **old** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: configure-cert-containerd.sh
+  name: containerd-additional-config-tls.sh
 spec:
+  # To add a file before the '032_configure_containerd.sh' step
+  weight: 31
   bundles:
-  - '*'
-  content: |-
-    # Copyright 2024 Flant JSC
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
     #
     # Licensed under the Apache License, Version 2.0 (the "License");
     # you may not use this file except in compliance with the License.
@@ -1003,66 +855,279 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-
+    
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
     CERTS_FOLDER="/var/lib/containerd/certs/"
-    CERT_CONTENT=$(cat <<"EOF"
-    -----BEGIN CERTIFICATE-----
-    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
-    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
-    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
-    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
-    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
-    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
-    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
-    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
-    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
-    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
-    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
-    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
-    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
-    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
-    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
-    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
-    -----END CERTIFICATE-----
-    EOF
-    )
 
-    CONFIG_CONTENT=$(cat <<EOF
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
-    EOF
-    )
 
     mkdir -p ${CERTS_FOLDER}
+    bb-sync-file "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
     mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+```
 
-    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+{% alert level="info" %}
+In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
+{% endalert %}
 
-    CERT_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
-    CONFIG_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+##### How to add TLS skip verify (old method)?
 
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
+Example of adding TLS skip verify when using the **old** configuration method:
 
-    bb-sync-file \
-      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
-      ${CERT_TMP_FILE} 
-
-    bb-sync-file \
-      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
-      ${CONFIG_TMP_FILE} 
-  nodeGroups:
-  - '*'  
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # To add a file before the '032_configure_containerd.sh' step
   weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              insecure_skip_verify = true
+    EOF
+```
+
+After applying the configuration file, verify access to the registry from the nodes using the command:
+
+```bash
+# Via the CRI interface
+crictl pull private.registry.example/image/repo:tag
+```
+
+#### New Method
+
+{% alert level="info" %}
+Used in containerd v2.
+
+Used in containerd v1 when managed through the Registry module (for example, in [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+{% endalert %}
+
+The configuration is defined in the `/etc/containerd/registry.d` directory.  
+Configuration is specified by creating subdirectories named after the registry address:
+
+```bash
+/etc/containerd/registry.d
+├── private.registry.example:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
+```
+
+Example contents of the `hosts.toml` file:
+
+```toml
+[host]
+  # Mirror 1
+  [host."https://${REGISTRY_URL_1}"]
+    capabilities = ["pull", "resolve"]
+    ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
+
+    [host."https://${REGISTRY_URL_1}".auth]
+      username = "${USERNAME}"
+      password = "${PASSWORD}"
+
+  # Mirror 2
+  [host."http://${REGISTRY_URL_2}"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+```
+
+{% alert level="info" %}
+Configuration changes do not cause the containerd service to restart.
+{% endalert %}
+
+##### How to add additional registry auth (new method)?
+
+Example of adding authorization to a additional registry when using the **new** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-auth.sh
+spec:
+  # The step can be arbitrary, as restarting the containerd service is not required
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        [host."https://${REGISTRY_URL}".auth]
+          username = "username"
+          password = "password"
+    EOF
+```
+
+##### How to configure a certificate for an additional registry (new method)?
+
+Example of configuring a certificate for an additional registry when using the **new** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-tls.sh
+spec:
+  # The step can be arbitrary, as restarting the containerd service is not required
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
+    EOF
+```
+
+{% alert level="info" %}
+In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
+{% endalert %}
+
+##### How to add TLS skip verify (new method)?
+
+Example of adding TLS skip verify when using the **new** configuration method:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # The step can be arbitrary, as restarting the containerd service is not required
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        skip_verify = true
+    EOF
+```
+
+After applying the configuration file, check access to the registry from the nodes using the following commands:
+
+```bash
+# Via the CRI interface
+crictl pull private.registry.example/image/repo:tag
+
+# Via ctr with the configuration directory specified
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+
+# Via ctr for an HTTP registry
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
 ## How to use NodeGroup's priority feature
@@ -1233,3 +1298,370 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 ## When is a node reboot required?
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
+
+## How do I work with GPU nodes?
+
+{% alert level="info" %}
+GPU-node management is available in Enterprise Edition only.
+{% endalert %}
+
+### Step-by-step procedure for adding a GPU node to the cluster
+
+Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, the `node-manager` module **automatically**:
+
+- configures containerd with `default_runtime = "nvidia"`;
+- applies the required system settings (including fixes for the NVIDIA Container Toolkit);
+- deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
+
+{% alert level="info" %}
+Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
+
+Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
+{% endalert %}
+
+To add a GPU node to the cluster, perform the following steps:
+
+1. Create a NodeGroup for GPU nodes.
+
+   An example with **TimeSlicing** enabled (`partitionCount: 4`) and typical taint/label:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: gpu
+   spec:
+     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure
+     gpu:
+       sharing: TimeSlicing
+       timeSlicing:
+         partitionCount: 4
+     nodeTemplate:
+       labels:
+         node-role/gpu: ""
+       taints:
+       - key: node-role
+         value: gpu
+         effect: NoSchedule
+   ```
+
+   > If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
+
+   Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+1. Install the NVIDIA driver and nvidia-container-toolkit.
+
+   Install the NVIDIA driver and NVIDIA Container Toolkit on the nodes—either manually or via a NodeGroupConfiguration.
+   Below are NodeGroupConfiguration examples for the gpu NodeGroup
+
+   **Ubuntu**
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - ubuntu-lts
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+
+       if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+         curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/   sources.list.d/nvidia-container-toolkit.list
+       fi
+       bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
+
+   **CentOS**
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - centos
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+
+       if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+       fi
+       bb-dnf-install nvidia-container-toolkit nvidia-driver
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
+
+   After these configurations are applied, perform bootstrap and **reboot** the nodes so that settings are applied and the drivers get installed.
+
+1. Verify installation on the node using the command:
+
+   ```bash
+   nvidia-smi
+   ```
+
+   **Expected healthy output (example):**
+
+   ```console
+   root@k8s-dvp-w1-gpu:~# nvidia-smi
+   Tue Aug  5 07:08:48 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   32C    P0              35W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
+
+1. Verify infrastructure components in the cluster
+
+   NVIDIA Pods in `d8-nvidia-gpu`:
+
+   ```bash
+   kubectl -n d8-nvidia-gpu get pod
+   ```
+
+   **Expected healthy output (example):**
+
+   ```console
+   NAME                                  READY   STATUS    RESTARTS   AGE
+   gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
+   nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
+   nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
+   nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
+   ```
+
+   NFD Pods in `d8-cloud-instance-manager`:
+
+   ```bash
+   kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   ```
+
+   **Expected healthy output (example):**
+
+   ```console
+   NAME                                             READY   STATUS      RESTARTS       AGE
+   node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
+   node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
+   node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
+   ```
+
+   Resource exposure on the node:
+
+   ```bash
+   kubectl describe node <node-name>
+   ```
+
+   **Output snippet (example):**
+
+   ```console
+   Capacity:
+     cpu:                40
+     memory:             263566308Ki
+     nvidia.com/gpu:     4
+   Allocatable:
+     cpu:                39930m
+     memory:             262648294441
+     nvidia.com/gpu:     4
+   ```
+
+1. Run functional tests
+
+   **Option A. Invoke `nvidia-smi` from inside a container.**
+
+   Create a Job:
+
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: nvidia-cuda-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: nvidia-cuda-test
+             image: nvidia/cuda:11.6.2-base-ubuntu20.04
+             imagePullPolicy: "IfNotPresent"
+             command:
+               - nvidia-smi
+   ```
+
+   Check the logs using the command:
+
+   ```bash
+   kubectl logs job/nvidia-cuda-test
+   ```
+
+   Output example:
+
+   ```console
+   Tue Aug  5 07:48:02 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+   |        ID   ID                                                             Usage      |
+   |=======================================================================================|
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
+
+   **Option B. CUDA sample (vectoradd).**
+
+   Create a Job:
+
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: gpu-operator-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: gpu-operator-test
+             image: nvidia/samples:vectoradd-cuda10.2
+             imagePullPolicy: "IfNotPresent"
+   ```
+
+   Check the logs using the command::
+
+   ```bash
+   kubectl logs job/gpu-operator-test
+   ```
+
+   Output example:
+
+   ```console
+   [Vector addition of 50000 elements]
+   Copy input data from the host memory to the CUDA device
+   CUDA kernel launch with 196 blocks of 256 threads
+   Copy output data from the CUDA device to the host memory
+   Test PASSED
+   Done
+   ```
+
+## How to monitor GPUs?
+
+Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metrics are scraped by Prometheus and available in Grafana.
+
+## Which GPU modes are supported?
+
+- **Exclusive** — the node exposes the `nvidia.com/gpu` resource; each Pod receives an entire GPU.
+- **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
+- **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
+
+See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
+
+## How to view available MIG profiles in the cluster?
+
+<span id="how-to-view-available-mig-profiles"></span>
+
+Pre-defined profiles are stored in the **`mig-parted-config`** ConfigMap inside the **`d8-nvidia-gpu`** namespace and can be viewed with the command:
+
+```bash
+kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+```
+
+The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
+Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
+
+## MIG profile does not activate — what to check?
+
+1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
+1. **NodeGroup configuration:**
+
+   ```yaml
+   gpu:
+     sharing: MIG
+     mig:
+       partedConfig: all-1g.5gb
+   ```
+
+1. Wait until `nvidia-mig-manager` completes the **drain** of the node and reconfigures the GPU.
+
+   **This process can take several minutes.**
+
+   While it is running, the node is tainted with `mig-reconfigure`. When the operation succeeds, that taint is removed.
+
+1. Track the progress via the `nvidia.com/mig.config.state` label on the node:
+
+   `pending`, `rebooting`, `success` (or `error` if something goes wrong).
+
+1. If `nvidia.com/mig-*` resources are still missing, check:
+
+   ```bash
+   kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
+   nvidia-smi -L
+   ```
+
+## Are AMD or Intel GPUs supported?
+
+At this time, Deckhouse Kubernetes Platform automatically configures **NVIDIA GPUs only**. Support for **AMD (ROCm)** and **Intel GPUs** is being worked on and is planned for future releases.

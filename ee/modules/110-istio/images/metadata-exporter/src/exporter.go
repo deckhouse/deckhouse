@@ -291,7 +291,7 @@ func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeLi
 		nodesWithPods[pod.Spec.NodeName] = struct{}{}
 	}
 
-	var gateways []IngressGateway
+	gateways := make([]IngressGateway, 0)
 	for _, node := range nodes.Items {
 		if _, exists := nodesWithPods[node.Name]; !exists {
 			continue
@@ -345,7 +345,7 @@ func extractIngressGatewaysFromCM(cm *v1.ConfigMap) ([]IngressGateway, error) {
 		return nil, fmt.Errorf("ConfigMap does not contain ingressgateways-array.json")
 	}
 
-	var gateways []IngressGateway
+	gateways := make([]IngressGateway, 0)
 	if err := json.Unmarshal([]byte(data), &gateways); err != nil {
 		return nil, fmt.Errorf("failed to parse ingressGatewaysArray: %w", err)
 	}
@@ -383,7 +383,6 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		ingressGateways = append(ingressGateways, ingressGatewaysConfigmap...)
 		return ingressGateways, nil
 	}
-
 
 	switch inlet {
 
@@ -439,7 +438,7 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 func (exp *Exporter) GetPublicServices() ([]PublicServices, error) {
 	services := exp.publicServiceInformer.GetStore().List()
 	clusterDomain := exp.clusterDomain
-	var result []PublicServices
+	result := make([]PublicServices, 0, len(services))
 
 	for _, svc := range services {
 		svc := svc.(*v1.Service)

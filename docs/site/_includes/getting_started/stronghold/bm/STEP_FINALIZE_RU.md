@@ -124,7 +124,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 {% snippetcut %}
 ```bash
 sudo -i d8 k -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: SSHCredentials
 metadata:
   name: caps
@@ -175,7 +175,7 @@ pdpl-user -i 63 caps
 # Укажите IP-адрес узла, который необходимо подключить к кластеру.
 export NODE=<NODE-IP-ADDRESS>
 sudo -i d8 k -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: StaticInstance
 metadata:
   name: d8cluster-worker
@@ -241,7 +241,7 @@ kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k create -f ingress-nginx-controller.yml
+sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 {% endsnippetcut %}
 
@@ -271,7 +271,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```shell
-sudo -i d8 k create -f user.yml
+sudo -i d8 k create -f $PWD/user.yml
 ```
 {% endsnippetcut %}
 </li>

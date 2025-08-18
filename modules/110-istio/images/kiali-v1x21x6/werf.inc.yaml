@@ -15,6 +15,8 @@ import:
   add: /src/kiali/frontend/build
   to: /opt/kiali/console
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     user: "1000"
@@ -58,7 +60,13 @@ import:
   before: setup
 shell:
   setup:
-  {{- include "node packages proxy" . | nindent 2 }}
   - cd /src/kiali/frontend
-  - yarn install --frozen-lockfile
+  {{- if .DistroPackagesProxy }}
+  - yarn config set disable-self-update-check true
+  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
+  {{- end }}
+  - yarn install --frozen-lockfile --network-timeout 300000
   - yarn run build
+  - rm -rf node_modules .npmrc /root/.cache /usr/local/share/.cache

@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/storage"
+	promdto "github.com/prometheus/client_model/go"
 )
 
 var _ Storage = (*MetricStorage)(nil)
@@ -49,7 +50,8 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	groupedVault *storage.GroupedVault
+	groupedVault   *storage.GroupedVault
+	collectorFuncs []CollectorFunc
 
 	registry   *prometheus.Registry
 	gatherer   prometheus.Gatherer
@@ -106,8 +108,9 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
 		Prefix: prefix,
 
-		gatherer:   prometheus.DefaultGatherer,
-		registerer: prometheus.DefaultRegisterer,
+		gatherer:       prometheus.DefaultGatherer,
+		registerer:     prometheus.DefaultRegisterer,
+		collectorFuncs: make([]CollectorFunc, 0, 1),
 
 		logger: log.NewLogger().Named("metrics-storage"),
 	}
@@ -170,7 +173,7 @@ func (m *MetricStorage) CounterAdd(metric string, value float64, labels map[stri
 		return
 	}
 
-	m.groupedVault.GaugeAdd(emptyUniqueGroup, metric, value, labels)
+	m.groupedVault.CounterAdd(emptyUniqueGroup, metric, value, labels)
 }
 
 func (m *MetricStorage) GaugeSet(metric string, value float64, labels map[string]string) {
@@ -372,6 +375,12 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 
 // Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
+func (m *MetricStorage) AddCollectorFunc(fn CollectorFunc) {
+	m.collectorFuncs = append(m.collectorFuncs, fn)
+}
+
+// Collector returns collector of MetricStorage
+// it can be useful to collect metrics in external registerer
 func (m *MetricStorage) Collector() prometheus.Collector {
 	if m.registry != nil {
 		return m.registry
@@ -384,19 +393,18 @@ func (m *MetricStorage) Collector() prometheus.Collector {
 // returns default prometheus handler if MetricStorage created without Registry options
 func (m *MetricStorage) Handler() http.Handler {
 	if m.registry == nil {
-		return promhttp.Handler()
+		// use default handler from promhttp with custom gatherer and registerer
+		return promhttp.InstrumentMetricHandler(
+			m.registerer, promhttp.HandlerFor(m, promhttp.HandlerOpts{}),
+		)
 	}
 
-	return promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{
+	return promhttp.HandlerFor(m, promhttp.HandlerOpts{
 		Registry: m.registry,
 	})
 }
 
 func (m *MetricStorage) Describe(ch chan<- *prometheus.Desc) {
-	if m.groupedVault != nil {
-		m.groupedVault.Collector().Describe(ch)
-	}
-
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Describe(ch)
 	}
@@ -406,8 +414,20 @@ func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
 	if m.groupedVault != nil {
 		m.groupedVault.Collector().Collect(ch)
 	}
+}
 
-	if m.groupedVault != nil {
-		m.groupedVault.Collector().Collect(ch)
+// Gather returns result of default registry gather
+// prepared for gather
+func (m *MetricStorage) Gather() ([]*promdto.MetricFamily, error) {
+	var gatherer = prometheus.DefaultGatherer
+
+	for _, fn := range m.collectorFuncs {
+		fn(m)
 	}
+
+	if m.registry != nil {
+		gatherer = m.gatherer
+	}
+
+	return gatherer.Gather()
 }

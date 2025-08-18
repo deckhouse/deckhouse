@@ -48,6 +48,8 @@ import:
     add: /src/mimir
     to: /bin/mimir
     after: setup
+git:    
+{{- include "image mount points" . }}    
 imageSpec:
   config:
     entrypoint: ["/bin/mimir"]
