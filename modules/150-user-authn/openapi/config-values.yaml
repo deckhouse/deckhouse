@@ -130,7 +130,7 @@ properties:
           interval:
             type: string
             minLength: 2
-            pattern: "^(?:[1-9]+h)?(?:[1-9]+m)?(?:[1-9]+s)?$"
+            pattern: "^(?:(?:[1-9]|[1-9][0-9])h)?(?:(?:[1-9]|[1-9][0-9])m)?(?:(?:[1-9]|[1-9][0-9])s)?$"
             description: |
               Time interval after which the password must be changed. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
       lockout:
@@ -146,7 +146,7 @@ properties:
           lockDuration:
             type: string
             minLength: 2
-            pattern: "^(?:[1-9]+h)?(?:[1-9]+m)?(?:[1-9]+s)?$"
+            pattern: "^(?:(?:[1-9]|[1-9][0-9])h)?(?:(?:[1-9]|[1-9][0-9])m)?(?:(?:[1-9]|[1-9][0-9])s)?$"
             description: |
               Temporary lockout duration. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
   staticUsers2FA:
