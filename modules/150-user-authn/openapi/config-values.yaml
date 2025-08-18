@@ -131,7 +131,7 @@ properties:
           Number of the user's previous passwords stored in history to prevent their reuse.
       rotation:
         type: object
-        required: ["rotationInterval"]
+        required: ["interval"]
         description: |
           Password rotation settings.
         properties:
