@@ -65,11 +65,6 @@ properties:
     type: object
     default: null
     properties:
-      id:
-        description: |
-          Уникальный ID политики.
-          
-          Зарезервировано для использования в будущем.
       complexityLevel:
         description: |
           Уровень сложности пароля.
