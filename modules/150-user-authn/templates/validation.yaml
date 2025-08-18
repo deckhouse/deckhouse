@@ -27,8 +27,7 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
-{{- with .Values.userAuthn.passwordPolicy }}
-{{ if . }}
+{{- if .Values.userAuthn.passwordPolicy }}
 {{- $passwordPolicyName := "user-password-immutable.deckhouse.io" }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
@@ -56,6 +55,5 @@ metadata:
 spec:
   policyName: {{ $passwordPolicyName }}
   validationActions: [Deny]
-{{- end }}
 {{- end }}
 {{- end }}
