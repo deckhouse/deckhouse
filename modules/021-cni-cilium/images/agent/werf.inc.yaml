@@ -612,7 +612,7 @@ imageSpec:
   config:
     env:
       INITSYSTEM: "SYSTEMD"
-      LD_LIBRARY_PATH: "/lib:/usr/lib"
+      # LD_LIBRARY_PATH: "/lib:/usr/lib"
       HUBBLE_SERVER: "unix:///var/run/cilium/hubble.sock"
       HUBBLE_COMPAT: "legacy-json-output"
       LANG: "C.UTF-8"
