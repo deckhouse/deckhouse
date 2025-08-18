@@ -5,6 +5,10 @@ permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization
 
 ## Resource preparation
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 To manage resources in VCD using the "Deckhouse Kubernetes Platform", the following resources must be configured in the system:
 
 * Organization

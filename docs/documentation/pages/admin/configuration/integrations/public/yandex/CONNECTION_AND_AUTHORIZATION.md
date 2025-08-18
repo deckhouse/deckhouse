@@ -15,6 +15,10 @@ The steps below guide you through setting up the connection.
 
 ## Preparing the environment
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 The `cloud-init` package must be installed on virtual machines (VM).
 After a VM is started, the following services associated with this package must be running:
 

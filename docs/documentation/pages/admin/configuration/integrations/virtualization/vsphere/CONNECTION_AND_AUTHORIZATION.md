@@ -48,6 +48,10 @@ To create a VM template (`Template`), it is recommended to use a ready-made clou
 If you plan to use a domestic OS distribution, contact the OS vendor to obtain the image/OVA file.
 {% endalert %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ### VM image requirements
 
 DKP uses `cloud-init` to configure the VM after it starts. The following packages must be installed in the image:

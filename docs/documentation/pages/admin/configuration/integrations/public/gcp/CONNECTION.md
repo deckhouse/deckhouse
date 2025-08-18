@@ -5,6 +5,10 @@ permalink: en/admin/integrations/public/gcp/сonnection-and-authorization.html
 
 To manage Google Cloud resources using Deckhouse Kubernetes Platform, you need to create a Service Account.
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## Creating a service account
 
 You can find detailed instructions on how to create a service account in the [official Google Cloud documentation](https://cloud.google.com/iam/docs/service-accounts).
