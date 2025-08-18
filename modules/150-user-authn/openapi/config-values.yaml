@@ -129,8 +129,10 @@ properties:
         properties:
           interval:
             type: string
+            minLength: 2
+            pattern: "^(?:[1-9]+h)?(?:[1-9]+m)?(?:[1-9]+s)?$"
             description: |
-              Time interval after which the password must be changed. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `5d`.
+              Time interval after which the password must be changed. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
       lockout:
         type: object
         required: ["maxAttempts", "lockDuration"]
@@ -143,8 +145,10 @@ properties:
               Number of consecutive failed login attempts after which the user will be temporarily locked out.
           lockDuration:
             type: string
+            minLength: 2
+            pattern: "^(?:[1-9]+h)?(?:[1-9]+m)?(?:[1-9]+s)?$"
             description: |
-              Temporary lockout duration. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `5d`.
+              Temporary lockout duration. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
   staticUsers2FA:
     type: object
     default: {}
