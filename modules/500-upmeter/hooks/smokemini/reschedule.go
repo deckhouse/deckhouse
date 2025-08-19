@@ -19,6 +19,7 @@ package smokemini
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -216,16 +217,18 @@ func getK8sDefaultStorageClass(rs []sdkpkg.Snapshot) (string, error) {
 }
 
 func parseAllowedDisruption(rs []sdkpkg.Snapshot) (bool, error) {
-	allowances, err := snapshot.ParseBoolSlice(rs)
-	if err != nil {
-		return false, err
-	}
-
-	if len(allowances) == 0 {
+	if len(rs) == 0 {
 		// No PDB means any disruption allowed. Smoke-mini PDB could have been deleted on purpose.
 		return true, nil
 	}
-	return allowances[0], nil
+
+	var allowances bool
+	err := rs[0].UnmarshalTo(&allowances)
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal allowed disruption: %w", err)
+	}
+
+	return allowances, nil
 }
 
 func getSmokeMiniImage(values sdkpkg.PatchableValuesCollector) string {

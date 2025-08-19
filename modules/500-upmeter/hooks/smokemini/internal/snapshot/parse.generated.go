@@ -16,7 +16,7 @@ limitations under the License.
 
 // DO NOT EDIT
 // This file was generated automatically with
-// 	go run gen_parse.go -type Node,StatefulSet,Pod,StorageClass,PodPhase,PvcTermination
+// 	go run gen_parse.go -types Node,StatefulSet,Pod,StorageClass,PodPhase,PvcTermination
 //
 // It is used to cast slices of snapshot types. See file types.go
 
@@ -32,23 +32,12 @@ import (
 // ParseNodeSlice parses Node slice from snapshots
 func ParseNodeSlice(rs []sdkpkg.Snapshot) ([]Node, error) {
 	ret := make([]Node, len(rs))
-	for node, err := range sdkobjectpatch.SnapshotIter[Node](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[Node](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse node: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Node: %w", err)	
 		}
-		ret = append(ret, node)
-	}
-	return ret, nil
-}
-
-// ParseBoolSlice parses bool slice from snapshots
-func ParseBoolSlice(rs []sdkpkg.Snapshot) ([]bool, error) {
-	ret := make([]bool, len(rs))
-	for bool, err := range sdkobjectpatch.SnapshotIter[bool](rs) {
-		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse bool: %w", err)
-		}
-		ret = append(ret, bool)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
@@ -56,11 +45,12 @@ func ParseBoolSlice(rs []sdkpkg.Snapshot) ([]bool, error) {
 // ParseStatefulSetSlice parses StatefulSet slice from snapshots
 func ParseStatefulSetSlice(rs []sdkpkg.Snapshot) ([]StatefulSet, error) {
 	ret := make([]StatefulSet, len(rs))
-	for statefulSet, err := range sdkobjectpatch.SnapshotIter[StatefulSet](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[StatefulSet](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse statefulset: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StatefulSet: %w", err)	
 		}
-		ret = append(ret, statefulSet)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
@@ -68,11 +58,12 @@ func ParseStatefulSetSlice(rs []sdkpkg.Snapshot) ([]StatefulSet, error) {
 // ParsePodSlice parses Pod slice from snapshots
 func ParsePodSlice(rs []sdkpkg.Snapshot) ([]Pod, error) {
 	ret := make([]Pod, len(rs))
-	for pod, err := range sdkobjectpatch.SnapshotIter[Pod](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[Pod](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse pod: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Pod: %w", err)	
 		}
-		ret = append(ret, pod)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
@@ -80,11 +71,12 @@ func ParsePodSlice(rs []sdkpkg.Snapshot) ([]Pod, error) {
 // ParseStorageClassSlice parses StorageClass slice from snapshots
 func ParseStorageClassSlice(rs []sdkpkg.Snapshot) ([]StorageClass, error) {
 	ret := make([]StorageClass, len(rs))
-	for storageClass, err := range sdkobjectpatch.SnapshotIter[StorageClass](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[StorageClass](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse storageclass: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StorageClass: %w", err)	
 		}
-		ret = append(ret, storageClass)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
@@ -92,11 +84,12 @@ func ParseStorageClassSlice(rs []sdkpkg.Snapshot) ([]StorageClass, error) {
 // ParsePodPhaseSlice parses PodPhase slice from snapshots
 func ParsePodPhaseSlice(rs []sdkpkg.Snapshot) ([]PodPhase, error) {
 	ret := make([]PodPhase, len(rs))
-	for podPhase, err := range sdkobjectpatch.SnapshotIter[PodPhase](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[PodPhase](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse podphase: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PodPhase: %w", err)	
 		}
-		ret = append(ret, podPhase)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
@@ -104,11 +97,12 @@ func ParsePodPhaseSlice(rs []sdkpkg.Snapshot) ([]PodPhase, error) {
 // ParsePvcTerminationSlice parses PvcTermination slice from snapshots
 func ParsePvcTerminationSlice(rs []sdkpkg.Snapshot) ([]PvcTermination, error) {
 	ret := make([]PvcTermination, len(rs))
-	for pvcTermination, err := range sdkobjectpatch.SnapshotIter[PvcTermination](rs) {
+	for snap, err := range sdkobjectpatch.SnapshotIter[PvcTermination](rs) {
 		if err != nil {
-			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse pvctermination: %w", err)
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PvcTermination: %w", err)	
 		}
-		ret = append(ret, pvcTermination)
+			
+		ret = append(ret, snap)
 	}
 	return ret, nil
 }
