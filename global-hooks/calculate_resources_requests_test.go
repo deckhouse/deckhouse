@@ -132,7 +132,7 @@ var _ = Describe("Global hooks :: calculate_resources_requests", func() {
 
 	})
 
-	Context("absDiff", func() {
+	Context("absDifff", func() {
 		It("Correct calc", func() {
 			Expect(absDiff(2, 1)).To(Equal(int64(1)))
 			Expect(absDiff(1, 2)).To(Equal(int64(1)))
