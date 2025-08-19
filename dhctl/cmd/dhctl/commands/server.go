@@ -15,12 +15,6 @@
 package commands
 
 import (
-	"fmt"
-	"net/http"
-	_ "net/http/pprof"
-	"os"
-	"runtime"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -33,16 +27,6 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		runtime.SetMutexProfileFraction(5)
-
-		go func() {
-			fmt.Println("booting on localhost:7550")
-			err := http.ListenAndServe(":7550", nil)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-			}
-		}()
-
 		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
 	})
 	return cmd
