@@ -519,7 +519,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
@@ -865,7 +868,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
@@ -1211,7 +1217,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
@@ -1545,7 +1554,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
@@ -1879,7 +1891,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
@@ -2213,7 +2228,10 @@ jobs:
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
-          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          export COSIGN_VAULT_TOKEN=$(cat <<EOF
+          curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"${AUTH_ROLE}","jwt":"${ACTIONS_ID_TOKEN}"}'
+          EOF
+          )
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
