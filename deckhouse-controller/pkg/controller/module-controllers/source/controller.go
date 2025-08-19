@@ -162,7 +162,7 @@ type reconciler struct {
 	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
-	
+
 	// Global cache for module release image information
 	releaseInfoCache *downloader.ReleaseImageInfoCache
 }

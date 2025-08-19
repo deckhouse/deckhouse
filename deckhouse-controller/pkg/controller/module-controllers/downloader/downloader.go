@@ -129,7 +129,7 @@ func NewModuleDownloaderWithCache(dc dependency.Container, downloadedModulesDir 
 	if cache == nil {
 		cache = newReleaseImageInfoCache()
 	}
-	
+
 	return &ModuleDownloader{
 		dc:                   dc,
 		downloadedModulesDir: downloadedModulesDir,

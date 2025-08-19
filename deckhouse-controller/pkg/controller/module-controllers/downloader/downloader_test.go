@@ -131,18 +131,18 @@ func TestModuleDownloaderWithSharedCache(t *testing.T) {
 	// Test that multiple ModuleDownloader instances can share the same cache
 	ms := &v1alpha1.ModuleSource{}
 	sharedCache := NewReleaseImageInfoCache()
-	
+
 	downloader1 := NewModuleDownloaderWithCache(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
 	downloader2 := NewModuleDownloaderWithCache(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
-	
+
 	if downloader1.releaseInfoCache != sharedCache {
 		t.Error("Expected downloader1 to use shared cache")
 	}
-	
+
 	if downloader2.releaseInfoCache != sharedCache {
 		t.Error("Expected downloader2 to use shared cache")
 	}
-	
+
 	// Verify both downloaders share the same cache instance
 	if downloader1.releaseInfoCache != downloader2.releaseInfoCache {
 		t.Error("Expected both downloaders to share the same cache instance")
