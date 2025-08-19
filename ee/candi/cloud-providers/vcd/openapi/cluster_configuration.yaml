@@ -500,7 +500,7 @@ apiVersions:
         metadata:
           type: object
           description: |
-            Custom metadata entries to be stored in cluster objects such as virtual machines, disks, networks, and virtual applications.
+            Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
 
             Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the `CloudEphemeral` type.
             This means that if you need to remove metadata entirely, you will have to do it manually.
