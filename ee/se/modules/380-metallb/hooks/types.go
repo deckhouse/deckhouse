@@ -45,6 +45,12 @@ type ServiceInfo struct {
 	Conditions                []metav1.Condition              `json:"conditions,omitempty"`
 }
 
+type ServiceUpdaterInfo struct {
+	Name       string             `json:"name,omitempty"`
+	Namespace  string             `json:"namespace,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
 type L2LBServiceStatusInfo struct {
 	Name              string `json:"name,omitempty"`
 	Namespace         string `json:"namespace,omitempty"`
