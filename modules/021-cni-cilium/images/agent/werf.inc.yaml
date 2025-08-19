@@ -282,7 +282,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-18.2"
+fromCacheVersion: "2025-08-19.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -599,12 +599,16 @@ import:
   before: install
   includePaths:
   - libstdc++.so.6
-  - libstdc++.so.6.0.29
+  - libstdc++.so.6.0.30
   - libgcc_s.so.1
 ### temp
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libc.musl-x86_64.so.1
   to: /lib64/libc.musl-x86_64.so.1
+  before: install
+- image: libs/xz
+  add: /usr/lib/libc.so
+  to: /lib/x86_64-linux-gnu/libc.so
   before: install
 git:
 {{- include "image mount points" . }}
