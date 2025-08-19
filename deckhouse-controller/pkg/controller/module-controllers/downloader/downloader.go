@@ -55,7 +55,7 @@ const (
 )
 
 // ReleaseImageInfoCache provides thread-safe caching for ReleaseImageInfo
-type releaseImageInfoCache struct {
+type ReleaseImageInfoCache struct {
 	cache map[string]*cacheEntry
 	mutex sync.RWMutex
 }
@@ -64,16 +64,21 @@ type cacheEntry struct {
 	info *ReleaseImageInfo
 }
 
-// newReleaseImageInfoCache creates a new cache
-func newReleaseImageInfoCache() *releaseImageInfoCache {
-	return &releaseImageInfoCache{
+// NewReleaseImageInfoCache creates a new cache
+func NewReleaseImageInfoCache() *ReleaseImageInfoCache {
+	return &ReleaseImageInfoCache{
 		cache: make(map[string]*cacheEntry),
 		mutex: sync.RWMutex{},
 	}
 }
 
+// newReleaseImageInfoCache creates a new cache (internal function for backward compatibility)
+func newReleaseImageInfoCache() *ReleaseImageInfoCache {
+	return NewReleaseImageInfoCache()
+}
+
 // Get retrieves ReleaseImageInfo from cache if it exists
-func (c *releaseImageInfoCache) Get(digest string) (*ReleaseImageInfo, bool) {
+func (c *ReleaseImageInfoCache) Get(digest string) (*ReleaseImageInfo, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
@@ -86,7 +91,7 @@ func (c *releaseImageInfoCache) Get(digest string) (*ReleaseImageInfo, bool) {
 }
 
 // Set stores ReleaseImageInfo in cache
-func (c *releaseImageInfoCache) Set(digest string, info *ReleaseImageInfo) {
+func (c *ReleaseImageInfoCache) Set(digest string, info *ReleaseImageInfo) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -96,7 +101,7 @@ func (c *releaseImageInfoCache) Set(digest string, info *ReleaseImageInfo) {
 }
 
 // Clear removes all entries from cache
-func (c *releaseImageInfoCache) Clear() {
+func (c *ReleaseImageInfoCache) Clear() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -112,17 +117,26 @@ type ModuleDownloader struct {
 	logger          *log.Logger
 
 	// Cache for ReleaseImageInfo to avoid repeated downloads
-	releaseInfoCache *releaseImageInfoCache
+	releaseInfoCache *ReleaseImageInfoCache
 }
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
+	return NewModuleDownloaderWithCache(dc, downloadedModulesDir, ms, logger, registryOptions, nil)
+}
+
+func NewModuleDownloaderWithCache(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option, cache *ReleaseImageInfoCache) *ModuleDownloader {
+	// If no cache provided, create a new one (for backward compatibility)
+	if cache == nil {
+		cache = newReleaseImageInfoCache()
+	}
+	
 	return &ModuleDownloader{
 		dc:                   dc,
 		downloadedModulesDir: downloadedModulesDir,
 		ms:                   ms,
 		registryOptions:      registryOptions,
 		logger:               logger,
-		releaseInfoCache:     newReleaseImageInfoCache(),
+		releaseInfoCache:     cache,
 	}
 }
 
