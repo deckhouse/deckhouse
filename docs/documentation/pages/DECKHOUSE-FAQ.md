@@ -1235,12 +1235,14 @@ Deckhouse automatically checks cluster nodes for compliance with the conditions 
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
 
 If a node does not meet one of the requirements, Deckhouse labels the node with `node.deckhouse.io/containerd-v2-unsupported` or with `node.deckhouse.io/containerd-config` if a custom containerd configuration is present. When these labels are present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for that group of nodes will be unavailable. Nodes that do not meet the migration conditions can be viewed with the command:
+
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
 kubectl get node -l node.deckhouse.io/containerd-config
 ```
 
 Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
+
 ```shell
 uname -r | cut -d- -f1
 stat -f -c %T /sys/fs/cgroup
@@ -1248,6 +1250,7 @@ systemctl --version | awk 'NR==1{print $2}'
 modprobe -qn erofs && echo "TRUE" || echo "FALSE"
 ls -l /etc/containerd/conf.d
 ```
+
 {% endalert %}
 
 You can migrate to containerd v2 in one of the following ways:
@@ -1258,6 +1261,7 @@ You can migrate to containerd v2 in one of the following ways:
 After changing parameter values to `ContainerdV2`, Deckhouse will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
 
 Example:
+
 ```shell
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
