@@ -1559,4 +1559,11 @@ ls -l /etc/containerd/conf.d
 * Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 * Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
-При миграции на containerd v2 очищается папка `/var/lib/containerd`, поэтому все используемые образы будут скачаны заново.
+После изменений значений параметров на `ContainerdV2` Deckhouse начнет поочерёдное обновление узлов. Если в группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`, то для обновления **каждого** узла в такой группе на узел нужно будет установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
+
+Пример:
+```shell
+kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+Во время миграции будет выполнен drain узла, очищена папка `/var/lib/containerd`, что приведет к повторному скачиванию образов подов, а так же будет выполнена перезагрузка.

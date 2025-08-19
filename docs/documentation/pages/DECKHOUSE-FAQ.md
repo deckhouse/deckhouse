@@ -1255,4 +1255,11 @@ You can migrate to containerd v2 in one of the following ways:
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
-Migrating to containerd v2 clears the `/var/lib/containerd` directory, so all used images will be downloaded again.
+After changing parameter values to `ContainerdV2`, Deckhouse will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
+
+Example:
+```shell
+kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+During the migration, the node will be drained, the `/var/lib/containerd` directory will be cleared, which will lead to re-downloading the pod images, and a reboot will be performed.
