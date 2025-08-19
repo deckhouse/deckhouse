@@ -188,7 +188,10 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	var kubernetesVersion string
 	kubernetesVersionSnapshots := input.NewSnapshots.Get("kubernetesVersion")
 	if len(kubernetesVersionSnapshots) > 0 {
-		kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
+		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
+		}
 	}
 
 	if kubernetesVersion == "Automatic" {
