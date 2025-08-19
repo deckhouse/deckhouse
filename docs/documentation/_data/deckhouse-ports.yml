@@ -370,23 +370,23 @@ groups:
   - ports: "4295, 4296"
     protocol: UDP
     description:
-      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port `4297`)  
+      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port `4297`)
       ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации (см. описание для порта `4297`)
   - ports: "4297"
     protocol: UDP
     description:
-      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in the case of nested virtualization. This occurs in DKP with the `virtualization` module enabled, when DKP is deployed inside virtual machines that are also created with the `virtualization` module enabled  
+      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in the case of nested virtualization. This occurs in DKP with the `virtualization` module enabled, when DKP is deployed inside virtual machines that are also created with the `virtualization` module enabled
       ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в случае вложенной виртуализации. Это происходит в DKP с включенным модулем `virtualization`, когда DKP развернут внутри виртуальных машин, также созданных с включенным модулем `virtualization`
   - ports: "4298"
     protocol: UDP
     description:
-      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP initialized with version 1.71+  
-      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP, который был инициализирован при версии 1.71+          
+      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP v1.71 and above during the initial cluster installation. When updating a DKP cluster from a version below 1.71, the port used remains `4299`
+      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP версии 1.71 и выше при первичной установке кластера. При обновлении кластера DKP с версии ниже 1.71 используемый порт остается `4299`
   - ports: "4299"
     protocol: UDP
     description:
-      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.64–1.70. When the `virtualization` module is enabled, the port changes to `4298`  
-      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.64–1.70. При включении модуля `virtualization` порт меняется на `4298`       
+      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.64–1.70. When the `virtualization` module is enabled, the port changes to `4298`
+      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.64–1.70. При включении модуля `virtualization` порт меняется на `4298`
   - ports: "7000&#8209;7999"
     protocol: TCP
     description:
