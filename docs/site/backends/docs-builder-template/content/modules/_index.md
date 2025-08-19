@@ -22,3 +22,13 @@ commander                    deckhouse   Available    False     False
 ```
 
 This section provides information on Deckhouse modules that can be plugged in from the module source. The modules have undergone preliminary compatibility testing and are approved for use in conjunction with Deckhouse.
+
+```mermaid
+graph TD
+    A[There] --> B[Here]
+    A --> C[Undecided]
+    B --> A
+    B --> C
+    C --> A
+    C --> B
+```
