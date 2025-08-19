@@ -14,6 +14,14 @@ import:
   add: /app/_site
   to: /app
   before: setup
+- image: pdf-file-builder
+  add: /app/_site/ru/deckhouse-admin-guide.pdf
+  to: /app/ru/deckhouse-admin-guide.pdf
+  before: setup
+- image: pdf-file-builder
+  add: /app/_site/en/deckhouse-admin-guide.pdf
+  to: /app/en/deckhouse-admin-guide.pdf
+  before: setup
 imageSpec:
   config:
     entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
@@ -36,6 +44,59 @@ imageSpec:
   config:
     entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
+---
+image: pdf-file-builder
+from: surnet/alpine-wkhtmltopdf:3.16.2-0.12.6-full
+shell:
+  setup:
+  - |
+        echo "$(wkhtmltopdf --version)"
+        echo "Generating RU PDF..."
+        cd /app/_site/ru
+        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform. [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Страница [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide.pdf"
+        echo "Generating EN PDF..."
+        cd /app/_site/en
+        wkhtmltopdf --enable-local-file-access --encoding utf-8 -d 2400 -g --image-dpi 1200 --disable-external-links --image-quality 100 --margin-bottom 12mm --margin-top 12mm --minimum-font-size 10 --header-left "Deckhouse Kubernetes Platform. [subsection]" --header-font-size 8 --header-spacing 3 --header-line --footer-right "Page [page]" --footer-font-size 8 --footer-spacing 3 --footer-line --load-media-error-handling ignore toc --toc-header-text 'Deckhouse Kubernetes Platform' --toc-text-size-shrink 1 "deckhouse-admin-guide.html" "deckhouse-admin-guide.pdf"
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site
+  to: /app/_site
+  before: setup
+---
+image: pdf-page-builder
+from: {{ .Images.BASE_JEKYLL }}
+final: false
+shell:
+  setup:
+  - |
+        echo "Generate PDF pages..."
+        cd /srv/jekyll-data/site
+        bash ./prepare_for_pdf.sh
+git:
+  - add: /docs/documentation
+    to: /srv/jekyll-data/site/documentation
+    stageDependencies:
+      setup:
+        - "*"
+  - add: /modules
+    to: /srv/jekyll-data/site/modules
+    stageDependencies:
+      setup:
+        - "**/*.md"
+        - "**/*.yaml"
+        - "**/*.yml"
+  - add: /ee
+    to: /srv/jekyll-data/site/ee
+    stageDependencies:
+      setup:
+        - "**/*.md"
+        - "**/*.yaml"
+        - "**/*.yml"
+  - add: /tools/docs/pdf/prepare_for_pdf.sh
+    to: /srv/jekyll-data/site/prepare_for_pdf.sh
+    stageDependencies:
+      setup:
+        - "*"
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}/static
 from: {{ .Images.BASE_JEKYLL }}
@@ -164,6 +225,19 @@ shell:
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
 {{ end }}
+import:
+- image: pdf-page-builder
+  add: /srv/jekyll-data/site/ADMIN_GUIDE_RU.md
+  to: /srv/jekyll-data/documentation/pages/ADMIN_GUIDE_RU.md
+  owner: jekyll
+  group: jekyll
+  before: setup
+- image: pdf-page-builder
+  add: /srv/jekyll-data/site/ADMIN_GUIDE.md
+  to: /srv/jekyll-data/documentation/pages/ADMIN_GUIDE.md
+  owner: jekyll
+  group: jekyll
+  before: setup
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
