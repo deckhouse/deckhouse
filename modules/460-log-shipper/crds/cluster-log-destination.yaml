@@ -954,6 +954,22 @@ spec:
                               - .second
                         ```
 
+                      - `ReplaceValue`: Replaces sensitive data patterns with specified replacement strings in the specified label.
+                            
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceValue
+                          replaceValue:
+                            label: .message
+                            patterns:
+                              - source: 'password=\w+'
+                                target: 'password=***'
+                              - source: 'token:\s*[\w\-]+'
+                                target: 'token: ***'
+                        ```
+
                   items:
                     type: object
                     oneOf:
@@ -981,10 +997,18 @@ spec:
                         required:
                           - dropLabels
                           - action
+                      - properties:
+                          replaceValue: {}
+                          action:
+                            enum:
+                              - ReplaceValue
+                        required:
+                          - replaceValue
+                          - action
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "ReplaceValue"]
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
@@ -1087,6 +1111,33 @@ spec:
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                      replaceValue:
+                        type: object
+                        description: "Replaces sensitive data patterns with specified replacement strings in the specified label."
+                        required:
+                          - label
+                          - patterns
+                        properties:
+                          label:
+                            type: string
+                            pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                            description: "Label in which to perform the replacement."
+                          patterns:
+                            type: array
+                            description: "List of patterns to search for and their replacements."
+                            minItems: 1
+                            items:
+                              type: object
+                              required:
+                                - source
+                                - target
+                              properties:
+                                source:
+                                  type: string
+                                  description: "Regular expression pattern to search for in the label."
+                                target:
+                                  type: string
+                                  description: "String to replace all matches of the source pattern."
                 buffer:
                   type: object
                   oneOf:

@@ -31,6 +31,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 			return nil, err
 		}
 	}
+
 	switch dest.Spec.Type {
 	case v1alpha1.DestElasticsearch, v1alpha1.DestLogstash:
 		transforms = append(transforms, DeDotTransform())

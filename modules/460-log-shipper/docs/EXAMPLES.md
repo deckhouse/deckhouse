@@ -767,7 +767,7 @@ spec:
   transformations:
   - action: ParseMessage
     parseMessage:
-      sourseFormat: JSON
+      sourceFormat: JSON
   - action: ParseMessage
     parseMessage:
       sourceFormat: Klog
@@ -794,7 +794,7 @@ Transformed result:
   }
 }
 {... "message": {
-  "level" : "{ "severity": "info" }",
+  "level" : "{ \"severity\": \"info\" }",
   "msg" : "fetching.module.release"
   }
 }
@@ -1016,5 +1016,250 @@ spec:
 ```
 
 More detailed description of the parameters is available in the [ClusterLogDestination](cr.html#clusterlogdestination) resource.
+
+## Log Data Sanitization with ReplaceValue
+
+The `ReplaceValue` transformation allows you to replace sensitive data in logs using regular expressions. This is crucial for maintaining data security and compliance when storing and analyzing logs.
+
+> To apply the `ReplaceValue` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+> If `ReplaceValue` is applied to a string `message` field, the transformation should be executed before `ParseMessage`.
+
+### Basic password and token masking
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: web-app-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        app: web-application
+  destinationRefs:
+  - secure-loki-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: secure-loki-destination
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  transformations:
+  # Works with both string messages and structured logs after parsing
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
+      patterns:
+        - source: 'password["\s]*[:=]["\s]*[A-Za-z0-9!@#$%^&*()_+=-]+'
+          target: 'password="***"'
+        - source: 'token["\s]*[:=]["\s]*[\w\-\.]+'
+          target: 'token="***"'
+        - pattern: 'api_key["\s]*[:=]["\s]*[\w\-]+'
+          replacement: 'api_key="***"'
+```
+
+> **Note**: ReplaceValue works with both string fields and structured objects/arrays. If you apply `ParseMessage` first, the replacement will recursively search through all string values in the parsed object structure.
+
+### Advanced sensitive data masking for financial applications
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: payment-service-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          environment: production
+    labelSelector:
+      matchLabels:
+        service: payment-gateway
+  destinationRefs:
+  - compliant-log-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: compliant-log-storage
+spec:
+  type: Elasticsearch
+  elasticsearch:
+    endpoint: http://elasticsearch.logging:9200
+    index: secure-logs-%F
+  transformations:
+  # Parse JSON logs first
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+      json:
+        depth: 3
+  # Mask sensitive financial data
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
+      patterns:
+        # Credit card numbers (various formats)
+        - source: '\b(?:\d[ -]*?){13,16}\b'
+          target: '****-****-****-****'
+        # CVV codes
+        - source: 'cvv["\s]*[:=]["\s]*\d{3,4}'
+          target: 'cvv="***"'
+        # Bank account numbers
+        - source: 'account["\s]*[:=]["\s]*\d{8,17}'
+          target: 'account="***MASKED***"'
+        # Social Security Numbers
+        - source: '\b\d{3}-\d{2}-\d{4}\b'
+          target: '***-**-****'
+        # JWT tokens
+        - source: 'eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+'
+          target: 'JWT_TOKEN_HIDDEN'
+        # Email addresses in sensitive contexts
+        - source: 'email["\s]*[:=]["\s]*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+          target: 'email="user@domain.masked"'
+  # Remove debug fields
+  - action: DropLabels
+    dropLabels:
+      labels:
+        - .debug_info
+        - .internal_metadata
+```
+
+### Multi-step transformation pipeline for audit logs
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: audit-logs
+spec:
+  type: File
+  file:
+    include:
+    - /var/log/audit/audit.log
+    - /var/log/app-audit/*.log
+  destinationRefs:
+  - secure-audit-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: secure-audit-destination
+spec:
+  type: Kafka
+  kafka:
+    bootstrapServers:
+    - kafka-cluster.monitoring:9092
+    topic: audit-logs-secure
+    encoding:
+      codec: JSON
+  transformations:
+  # First, parse different log formats
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+      string:
+        targetField: raw_message
+  # Then sanitize sensitive data
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
+      patterns:
+        # Authentication tokens in audit logs
+        - source: 'Bearer [A-Za-z0-9._\-]+'
+          target: 'Bearer ***'
+        # Session IDs
+        - source: 'session["\s]*[:=]["\s]*[A-Za-z0-9]{16,64}'
+          target: 'session="***SESSION_ID***"'
+        # IP addresses (if privacy required)
+        - source: '\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
+          target: 'XXX.XXX.XXX.XXX'
+        # User IDs in sensitive contexts
+        - source: 'user_id["\s]*[:=]["\s]*\d+'
+          target: 'user_id="***"'
+        # Database connection strings
+        - source: 'postgresql://[^@]+@[^/]+/\w+'
+          target: 'postgresql://***:***@***/**'
+        - source: 'mysql://[^@]+@[^/]+/\w+'
+          target: 'mysql://***:***@***/**'
+  # Clean up and standardize labels
+  - action: ReplaceKeys
+    replaceKeys:
+      source: "."
+      target: "_"
+      labels:
+        - .pod_labels
+  - action: DropLabels
+    dropLabels:
+      labels:
+        - .temporary_fields
+        - .debug_data
+```
+
+### Container environment variable sanitization
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: application-startup-logs
+spec:
+  type: KubernetesPods
+  kubernetesPods:
+    labelSelector:
+      matchLabels:
+        component: microservice
+  destinationRefs:
+  - sanitized-loki-destination
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: sanitized-loki-destination
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+  transformations:
+  - action: ReplaceValue
+    replaceValue:
+      label: .message
+      patterns:
+        # Environment variables with secrets
+        - source: 'DATABASE_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'DATABASE_PASSWORD="***"'
+        - source: 'API_SECRET["\s]*[:=]["\s]*[^\s"]+'
+          target: 'API_SECRET="***"'
+        - source: 'PRIVATE_KEY["\s]*[:=]["\s]*[^\s"]+'
+          target: 'PRIVATE_KEY="***"'
+        - source: 'REDIS_PASSWORD["\s]*[:=]["\s]*[^\s"]+'
+          target: 'REDIS_PASSWORD="***"'
+        # Connection strings
+        - source: 'postgres://[^:]+:[^@]+@[^/]+/[^\s"]+'
+          target: 'postgres://***:***@***/**'
+        - source: 'redis://[^:]+:[^@]+@[^/]+[^\s"]*'
+          target: 'redis://***:***@***/**'
+        # File paths with potential sensitive info
+        - source: '/etc/ssl/private/[^\s"]+'
+          target: '/etc/ssl/private/***'
+        - source: '/opt/app/secrets/[^\s"]+'
+          target: '/opt/app/secrets/***'
+```
 
 {% endraw %}
