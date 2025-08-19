@@ -1,6 +1,6 @@
 {{- $providerClusterConfiguration := .Values.cloudProviderVcd.internal.providerClusterConfiguration | required "internal.providerClusterConfiguration is required" }}
 {{- $metadata := dict -}}
-{{- $_ := set $metadata "metadata" ($providerClusterConfiguration.metadata | default list) }}
+{{- $_ := set $metadata "metadata" ($providerClusterConfiguration.metadata | default dict) }}
 ---
 apiVersion: v1
 kind: Secret
