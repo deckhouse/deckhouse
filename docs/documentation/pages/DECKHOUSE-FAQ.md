@@ -1229,12 +1229,14 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 ### How do I change container runtime to containerd v2 on nodes?
 
 {% alert level="info" %}
-Deckhouse automatically checks cluster nodes for compliance with the conditions for migration to containerd v2:
+Deckhouse Kubernetes Platform automatically checks cluster nodes for compliance with the conditions for migration to containerd v2:
 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
 
-If a node does not meet one of the requirements, Deckhouse labels the node with `node.deckhouse.io/containerd-v2-unsupported` or with `node.deckhouse.io/containerd-config` if a custom containerd configuration is present. When these labels are present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for that group of nodes will be unavailable. Nodes that do not meet the migration conditions can be viewed with the command:
+If any of the requirements described in the [general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config` is added to it.
+ 
+If one of these labels is present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
 
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
@@ -1258,7 +1260,7 @@ You can migrate to containerd v2 in one of the following ways:
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
-After changing parameter values to `ContainerdV2`, Deckhouse will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
+After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
 
 Example:
 
@@ -1266,4 +1268,8 @@ Example:
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings. Note that under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings. 
+
+{% alert level="info" %}
+Under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+{% endalert %}
