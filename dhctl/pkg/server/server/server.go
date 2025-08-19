@@ -113,7 +113,9 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 	go func() {
 		<-ctx.Done()
 
+		log.Info("wait fot grpc server graceful stop")
 		s.GracefulStop()
+		log.Info("grpc server gracefully stopped")
 	}()
 
 	if err = s.Serve(listener); err != nil {
@@ -123,6 +125,8 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 
 	// wait for all dhctl instances to complete
 	dhctlProxy.Wait()
+
+	log.Info("wait done")
 
 	return nil
 }
