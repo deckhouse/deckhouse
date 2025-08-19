@@ -306,7 +306,7 @@ properties:
                 controllerLogLevel:
                   type: string
                   description: "Defines the verbosity level for the ingress controller logs."
-                controllerNginxProfilingEnabled:
+                nginxProfilingEnabled:
                   type: boolean
                   default: false
                   description: |

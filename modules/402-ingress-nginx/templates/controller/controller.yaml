@@ -131,7 +131,7 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
-{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         container.apparmor.security.beta.kubernetes.io/controller: unconfined
 {{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
@@ -171,7 +171,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         securityContext:
           runAsNonRoot: false
           runAsUser: 0
@@ -195,7 +195,7 @@ spec:
         - name: LUA_USE_GEOIP2
           value: "true"
         {{- end }}
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: PROFILING
           value: "true"
         {{- end }}
@@ -343,7 +343,7 @@ spec:
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: valgrind
           mountPath: /chroot/var/log/valgrind
           readOnly: false
@@ -432,7 +432,7 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
-{{- if and (eq $controllerVersion "1.10") $crd.spec.controllerNginxProfilingEnabled }}
+{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
       - name: valgrind
         hostPath:
           path: /var/log/valgrind
