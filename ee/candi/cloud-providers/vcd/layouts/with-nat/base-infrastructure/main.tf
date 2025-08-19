@@ -8,6 +8,12 @@ locals {
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
   bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
   metadata                                 = contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}
+  vapp_metadata = merge(
+    local.metadata,
+    {
+      "CapvcdInfraId" = format("NO_RDE_%s", var.clusterUUID)
+    }
+  )
   bastion_metadata = merge(
     (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),
     (contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "additionalMetadata") ? var.providerClusterConfiguration.bastion.instanceClass.additionalMetadata : {}),
@@ -31,7 +37,7 @@ module "vapp" {
   source       = "../../../terraform-modules/vapp"
   organization = var.providerClusterConfiguration.organization
   vapp_name    = var.providerClusterConfiguration.virtualApplicationName
-  metadata     = local.metadata
+  metadata     = local.vapp_metadata
 }
 
 resource "vcd_vapp_org_network" "vapp_network" {
