@@ -901,7 +901,7 @@ spec:
               },
               "disableTextWrap": false,
               "editorMode": "code",
-              "expr": "sum by(pod)(registry_modules_watcher_sender_timeout_requests_total{namespace=\"$namespace\"})",
+              "expr": "sum by(pod)(increase(registry_modules_watcher_sender_timeout_requests_total{namespace=\"$namespace\"}[$__rate_interval]))",
               "fullMetaSearch": false,
               "hide": false,
               "includeNullMetadata": true,
