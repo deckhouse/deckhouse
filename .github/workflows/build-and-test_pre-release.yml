@@ -382,8 +382,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -398,8 +398,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"
@@ -719,8 +719,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -735,8 +735,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"
@@ -1056,8 +1056,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1072,8 +1072,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"
@@ -1393,8 +1393,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1409,8 +1409,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"
@@ -1730,8 +1730,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1746,8 +1746,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"
@@ -2067,8 +2067,8 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -2083,8 +2083,8 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
             export COSIGN_VAULT_KEY="dh-2025-aug-dev"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
             AUTH_ROLE="dh-signer-dev_dh-signer-dev"

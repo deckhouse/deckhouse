@@ -60,8 +60,8 @@
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
       # cosign
-      {{- $_ := set $ctx "CosignLogin" $Root.CosignLogin }}
-      {{- $_ := set $ctx "CosignPassword" $Root.CosignPassword }}
+      {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}
+      {{- $_ := set $ctx "RegistryPassword" $Root.RegistryPassword }}
       {{- $_ := set $ctx "CosignVaultAdress" $Root.CosignVaultAdress }}
       {{- $_ := set $ctx "CosignVaultToken" $Root.CosignVaultToken }}
       {{- $_ := set $ctx "CosignVaultKey" $Root.CosignVaultKey }}

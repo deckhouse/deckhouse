@@ -37,13 +37,17 @@ dependencies:
     targetEnv: IMAGE_DIGEST
   - type: ImageRepo
     targetEnv: IMAGE_REPO
-mount:
-- fromPath: ~/.docker
-  to: /root/.docker
+secrets:
+- id: REGISTRY_USER
+  value: {{ $context.RegistryUser }}
+- id: REGISTRY_PASSWORD
+  value: {{ $context.RegistryPassword }}
 shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
   - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /kubernetes-api-proxy.tar
+  - rm -f ~/.docker/config.json
   - mkdir /tmp/kubernetes-api-proxy
   - tar -xf /kubernetes-api-proxy.tar -C /tmp/kubernetes-api-proxy
   - cd /tmp/kubernetes-api-proxy

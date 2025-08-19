@@ -12,8 +12,8 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
-      - COSIGN_LOGIN
-      - COSIGN_PASSWORD
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
       - COSIGN_VAULT_ADRESS
       - COSIGN_VAULT_TOKEN
       - COSIGN_VAULT_KEY
@@ -29,8 +29,8 @@ config:
       - CLOUD_PROVIDERS_SOURCE_REPO
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
-      - COSIGN_LOGIN
-      - COSIGN_PASSWORD
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
       - COSIGN_VAULT_ADRESS
       - COSIGN_VAULT_TOKEN
       - COSIGN_VAULT_KEY
@@ -40,4 +40,3 @@ config:
       allowBuildDir: true
       allowFromPaths:
         - ~/go-pkg-cache
-        - ~/.docker

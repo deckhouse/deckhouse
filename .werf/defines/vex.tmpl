@@ -17,10 +17,10 @@ image: {{ $imageName }}-vex-artifact
 fromImage: builder/alpine
 final: false
 secrets:
-- id: COSIGN_LOGIN
-  value: {{ $context.CosignLogin }}
-- id: COSIGN_PASSWORD
-  value: {{ $context.CosignPassword }}
+- id: REGISTRY_USER
+  value: {{ $context.RegistryUser }}
+- id: REGISTRY_PASSWORD
+  value: {{ $context.RegistryPassword }}
 - id: COSIGN_VAULT_ADRESS
   value: {{ $context.CosignVaultAdress }}
 - id: COSIGN_VAULT_TOKEN
@@ -58,8 +58,8 @@ shell:
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
     VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN)" \
     cosign attest \
-      --registry-username="$(cat /run/secrets/COSIGN_LOGIN)" \
-      --registry-password="$(cat /run/secrets/COSIGN_PASSWORD)" \
+      --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
+      --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
       --predicate /known_vulnerabilities.vex \
       --type openvex \
       --key hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY) \
