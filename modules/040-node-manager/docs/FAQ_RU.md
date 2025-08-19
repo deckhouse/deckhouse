@@ -281,7 +281,7 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
    ```shell
    d8 k drain <node> 
-   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data=true 
    d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
    d8 k delete node <node>
    ```

@@ -10,7 +10,7 @@ To delete a cluster, several steps need to be followed:
    1.1. Remove the node from the Kubernetes cluster:
 
    ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data=true
    d8 k delete node <node>
    ```
 
