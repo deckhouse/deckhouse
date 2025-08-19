@@ -1640,8 +1640,11 @@ spec:
       },
       "timepicker": {},
       "timezone": "browser",
+{{- if eq $.Values.web.env "web-production" }}
+      "title": "registry-modules-watcher stats",
+{{- else }}
       "title": "registry-modules-watcher stats {{ .Release.Namespace }}",
-      "uid": "cetoeos672n0ge",
+{{- end }}
       "version": 2,
       "weekStart": ""
     }
