@@ -247,7 +247,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
+   kubectl drain <node> --ignore-daemonsets --delete-emptydir-data=true
    kubectl delete node <node>
    ```
 

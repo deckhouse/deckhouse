@@ -238,7 +238,7 @@ Evict resources from the node and remove the node from LINSTOR/DRBD using the [i
 1. Delete the node from the Kubernetes cluster:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
+   kubectl drain <node> --ignore-daemonsets --delete-emptydir-data=true
    kubectl delete node <node>
    ```
 

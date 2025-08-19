@@ -11,7 +11,7 @@ lang: ru
    1.1. Удалите узел из кластера Kubernetes:
 
      ```shell
-     d8 k drain <node> --ignore-daemonsets --delete-local-data
+     d8 k drain <node> --ignore-daemonsets --delete-emptydir-data=true
      d8 k delete node <node>
      ```
 
