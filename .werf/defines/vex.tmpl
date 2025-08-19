@@ -15,7 +15,7 @@
 ---
 image: {{ $imageName }}-vex-artifact
 fromImage: builder/alpine
-final: false
+final: true
 secrets:
 - id: REGISTRY_USER
   value: {{ $context.RegistryUser }}
