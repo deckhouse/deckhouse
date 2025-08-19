@@ -127,7 +127,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderTimeoutRequestsTotalMetric))
-	_, err = ms.RegisterCounter(SenderTimeoutRequestsTotalMetric, []string{"backend"}, options.WithHelp("Number of the sender requests timed out"))
+	_, err = ms.RegisterCounter(SenderTimeoutRequestsTotalMetric, []string{}, options.WithHelp("Number of the sender requests timed out"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderTimeoutRequestsTotalMetric, err)
 	}

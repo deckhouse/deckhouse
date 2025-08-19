@@ -124,7 +124,7 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 		if version.Task == backends.TaskDelete {
 			err := s.delete(ctx, backend, version)
 			if err != nil && errors.Is(err, ErrRequestTimedOut) {
-				s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, map[string]string{"backend": backend})
+				s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, nil)
 				s.logger.Error("backend delete processing stopped", slog.String("backend", backend), log.Err(err))
 				return
 			}
@@ -138,7 +138,7 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 		s.logger.Info("sender upload", slog.String("backend", backend))
 		err := s.upload(ctx, backend, version)
 		if err != nil && errors.Is(err, ErrRequestTimedOut) {
-			s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, map[string]string{"backend": backend})
+			s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, nil)
 			s.logger.Error("backend upload processing stopped", slog.String("backend", backend), log.Err(err))
 			return
 		}
@@ -149,7 +149,7 @@ func (s *Sender) processBackend(ctx context.Context, backend string, versions []
 
 	err := s.build(ctx, backend)
 	if err != nil && errors.Is(err, ErrRequestTimedOut) {
-		s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, map[string]string{"backend": backend})
+		s.ms.CounterAdd(metrics.SenderTimeoutRequestsTotalMetric, 1.0, nil)
 		s.logger.Error("backend build processing stopped", slog.String("backend", backend), log.Err(err))
 		return
 	}
