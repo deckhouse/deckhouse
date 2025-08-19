@@ -15,15 +15,7 @@
 package moduleloader
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
 	"testing"
-
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
@@ -75,7 +67,8 @@ func TestLoadConversions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conversions, err := loadConversions(tt.modulePath)
+			loader := &Loader{}
+			conversions, err := loader.loadConversions(tt.modulePath)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -138,9 +131,17 @@ type: object`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			loader := &Loader{}
 			settings := &v1alpha1.ModuleSettingsDefinition{}
 
-			err := settings.SetVersion([]byte(tt.configYAML), tt.modulePath)
+			// Load conversions using the loader
+			conversions, err := loader.loadConversions(tt.modulePath)
+			if err != nil {
+				t.Errorf("Unexpected error loading conversions: %v", err)
+				return
+			}
+
+			err = settings.SetVersion([]byte(tt.configYAML), conversions)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
@@ -172,81 +173,3 @@ type: object`,
 	}
 }
 
-// LoadConversions loads all conversion rules from the module's conversions directory
-func loadConversions(modulePath string) ([]string, error) {
-	if modulePath == "" {
-		return nil, nil
-	}
-
-	conversionsDir := filepath.Join(modulePath, "openapi", "conversions")
-
-	// Check if conversions directory exists
-	if _, err := os.Stat(conversionsDir); os.IsNotExist(err) {
-		return nil, nil // No conversions directory, return empty slice
-	} else if err != nil {
-		return nil, fmt.Errorf("check conversions directory: %w", err)
-	}
-
-	// Read all files from conversions directory
-	files, err := os.ReadDir(conversionsDir)
-	if err != nil {
-		return nil, fmt.Errorf("read conversions directory: %w", err)
-	}
-
-	// Regex to match version files like v1.yaml, v2.yaml, etc.
-	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
-
-	var allConversions []string
-	versionNumbers := make([]int, 0, len(files))
-
-	// Process each version file
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-
-		matches := versionFileRe.FindStringSubmatch(file.Name())
-		if matches == nil {
-			continue // Skip non-version files
-		}
-
-		versionNum, err := strconv.Atoi(matches[1])
-		if err != nil {
-			continue // Skip files with invalid version numbers
-		}
-
-		versionNumbers = append(versionNumbers, versionNum)
-
-		// Read and parse the conversion file
-		filePath := filepath.Join(conversionsDir, file.Name())
-		conversions, err := readConversionFile(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
-		}
-
-		allConversions = append(allConversions, conversions...)
-	}
-
-	// Sort version numbers to ensure consistent ordering
-	sort.Ints(versionNumbers)
-
-	return allConversions, nil
-}
-
-// readConversionFile reads a single conversion file and extracts the conversions array
-func readConversionFile(filePath string) ([]string, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	var parsed struct {
-		Conversions []string `yaml:"conversions"`
-	}
-
-	if err := yaml.Unmarshal(data, &parsed); err != nil {
-		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
-	}
-
-	return parsed.Conversions, nil
-}

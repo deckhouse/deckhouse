@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -409,7 +410,13 @@ func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawCon
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-	if err := settings.SetVersion(rawConfig, modulePath); err != nil {
+	// Load conversions from module path
+	conversions, err := l.loadConversions(modulePath)
+	if err != nil {
+		return fmt.Errorf("load conversions: %w", err)
+	}
+
+	if err := settings.SetVersion(rawConfig, conversions); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
 	}
 
@@ -590,4 +597,83 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 		return defaultValue
 	}
 	return uint32(val)
+}
+
+// loadConversions loads all conversion rules from the module's conversions directory
+func (l *Loader) loadConversions(modulePath string) ([]string, error) {
+	if modulePath == "" {
+		return nil, nil
+	}
+
+	conversionsDir := filepath.Join(modulePath, "openapi", "conversions")
+
+	// Check if conversions directory exists
+	if _, err := os.Stat(conversionsDir); os.IsNotExist(err) {
+		return nil, nil // No conversions directory, return empty slice
+	} else if err != nil {
+		return nil, fmt.Errorf("check conversions directory: %w", err)
+	}
+
+	// Read all files from conversions directory
+	files, err := os.ReadDir(conversionsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read conversions directory: %w", err)
+	}
+
+	// Regex to match version files like v1.yaml, v2.yaml, etc.
+	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
+
+	var allConversions []string
+	versionNumbers := make([]int, 0, len(files))
+
+	// Process each version file
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		matches := versionFileRe.FindStringSubmatch(file.Name())
+		if matches == nil {
+			continue // Skip non-version files
+		}
+
+		versionNum, err := strconv.Atoi(matches[1])
+		if err != nil {
+			continue // Skip files with invalid version numbers
+		}
+
+		versionNumbers = append(versionNumbers, versionNum)
+
+		// Read and parse the conversion file
+		filePath := filepath.Join(conversionsDir, file.Name())
+		conversions, err := l.readConversionFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
+		}
+
+		allConversions = append(allConversions, conversions...)
+	}
+
+	// Sort version numbers to ensure consistent ordering
+	sort.Ints(versionNumbers)
+
+	return allConversions, nil
+}
+
+// readConversionFile reads a single conversion file and extracts the conversions array
+func (l *Loader) readConversionFile(filePath string) ([]string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsed struct {
+		Conversions []string `yaml:"conversions"`
+	}
+
+	if err := yaml.Unmarshal(data, &parsed); err != nil {
+		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
+	}
+
+	return parsed.Conversions, nil
 }
