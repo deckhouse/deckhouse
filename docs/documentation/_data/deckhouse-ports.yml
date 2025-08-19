@@ -367,7 +367,7 @@ groups:
     description:
       en: "`monitoring-ping` metrics"
       ru: "Метрики `monitoring-ping`"
-  - ports: "4296, 4295"
+  - ports: "4295, 4296"
     protocol: UDP
     description:
       en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port `4297`)  
