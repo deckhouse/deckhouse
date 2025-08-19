@@ -439,14 +439,14 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 
 	// Check cache first
 	if cachedInfo, found := md.releaseInfoCache.Get(digestStr); found {
-		md.logger.Debug("release image info found in cache",
+		md.logger.Info("release image info found in cache",
 			slog.String("digest", digestStr),
 			slog.String("image_tag", imageTag),
 		)
 		return cachedInfo, nil
 	}
 
-	md.logger.Debug("release image info not found in cache, downloading full image",
+	md.logger.Info("release image info not found in cache, downloading full image",
 		slog.String("digest", digestStr),
 		slog.String("image_tag", imageTag),
 	)
