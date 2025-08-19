@@ -1642,11 +1642,13 @@ spec:
       "timezone": "browser",
 {{- if eq $.Values.web.env "web-production" }}
       "title": "registry-modules-watcher stats",
+      "version": 2,
+      "uid": "cetoeos672n0ge",
 {{- else }}
       "title": "registry-modules-watcher stats {{ .Release.Namespace }}",
-{{- end }}
       "version": 2,
       "uid": "{{ randAlphaNum 14 }}",
+{{- end }}
       "weekStart": ""
     }
 {{- end }}
