@@ -127,7 +127,11 @@ func reschedule(input *go_hook.HookInput) error {
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values
-	statefulSets := snapshot.ParseStatefulSetSlice(input.Snapshots["statefulsets"])
+	statefulSets, err := snapshot.ParseStatefulSetSlice(input.NewSnapshots.Get("statefulsets"))
+	if err != nil {
+		return err
+	}
+
 	state, err := parseState(input.Values.Get(statePath))
 	if err != nil {
 		return err
@@ -138,22 +142,39 @@ func reschedule(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var (
-		// Parse inputs
-		storageClass = getSmokeMiniStorageClass(input.Values, input.Snapshots["default_sc"])
-		image        = getSmokeMiniImage(input.Values)
+	// Parse inputs
+	storageClass, err := getSmokeMiniStorageClass(input.Values, input.NewSnapshots.Get("default_sc"))
+	if err != nil {
+		return err
+	}
 
-		nodes             = snapshot.ParseNodeSlice(input.Snapshots["nodes"])
-		pods              = snapshot.ParsePodSlice(input.Snapshots["pods"])
-		pvcs              = snapshot.ParsePvcTerminationSlice(input.Snapshots["pvc"])
-		disruptionAllowed = parseAllowedDisruption(input.Snapshots["pdb"])
+	image := getSmokeMiniImage(input.Values)
 
-		// Construct
-		stsSelector  = scheduler.NewStatefulSetSelector(nodes, storageClass, pvcs, pods, disruptionAllowed)
-		nodeSelector = scheduler.NewNodeSelector(state)
-		kubeCleaner  = scheduler.NewCleaner(input.PatchCollector, logger, pods)
-		sched        = scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
-	)
+	nodes, err := snapshot.ParseNodeSlice(input.NewSnapshots.Get("nodes"))
+	if err != nil {
+		return err
+	}
+
+	pods, err := snapshot.ParsePodSlice(input.NewSnapshots.Get("pods"))
+	if err != nil {
+		return err
+	}
+
+	pvcs, err := snapshot.ParsePvcTerminationSlice(input.NewSnapshots.Get("pvc"))
+	if err != nil {
+		return err
+	}
+
+	disruptionAllowed, err := parseAllowedDisruption(input.NewSnapshots.Get("pdb"))
+	if err != nil {
+		return err
+	}
+
+	// Construct
+	stsSelector := scheduler.NewStatefulSetSelector(nodes, storageClass, pvcs, pods, disruptionAllowed)
+	nodeSelector := scheduler.NewNodeSelector(state)
+	kubeCleaner := scheduler.NewCleaner(input.PatchCollector, logger, pods)
+	sched := scheduler.New(stsSelector, nodeSelector, kubeCleaner, image, storageClass)
 
 	// Do the job
 	x, newSts, err := sched.Schedule(state, nodes)
@@ -181,32 +202,30 @@ func parseState(stateValues gjson.Result) (scheduler.State, error) {
 	return state, nil
 }
 
-func getK8sDefaultStorageClass(rs []go_hook.FilterResult) string {
-	parsed := snapshot.ParseStorageClassSlice(rs)
+func getK8sDefaultStorageClass(rs []sdkpkg.Snapshot) (string, error) {
+	parsed, err := snapshot.ParseStorageClassSlice(rs)
+	if err != nil {
+		return "", err
+	}
 	for _, sc := range parsed {
 		if sc.Default {
-			return sc.Name
+			return sc.Name, nil
 		}
 	}
-	return ""
+	return "", nil
 }
 
-func parseAllowedDisruption(rs []go_hook.FilterResult) bool {
-	allowances := parseBoolSnapshot(rs)
+func parseAllowedDisruption(rs []sdkpkg.Snapshot) (bool, error) {
+	allowances, err := snapshot.ParseBoolSlice(rs)
+	if err != nil {
+		return false, err
+	}
+
 	if len(allowances) == 0 {
 		// No PDB means any disruption allowed. Smoke-mini PDB could have been deleted on purpose.
-		return true
+		return true, nil
 	}
-	return allowances[0]
-}
-
-// parseBoolSnapshot parses bool from snapshots
-func parseBoolSnapshot(rs []go_hook.FilterResult) []bool {
-	ret := make([]bool, len(rs))
-	for i, r := range rs {
-		ret[i] = r.(bool)
-	}
-	return ret
+	return allowances[0], nil
 }
 
 func getSmokeMiniImage(values sdkpkg.PatchableValuesCollector) string {
@@ -217,13 +236,15 @@ func getSmokeMiniImage(values sdkpkg.PatchableValuesCollector) string {
 	return registry + "@" + digest
 }
 
-func getSmokeMiniStorageClass(values sdkpkg.PatchableValuesCollector, storageClassSnap []go_hook.FilterResult) string {
-	var (
-		k8s = getK8sDefaultStorageClass(storageClassSnap)
-		d8  = values.Get("global.modules.storageClass").String()
-		sm  = values.Get("upmeter.smokeMini.storageClass").String()
-	)
-	return firstNonEmpty(sm, d8, k8s, snapshot.DefaultStorageClass)
+func getSmokeMiniStorageClass(values sdkpkg.PatchableValuesCollector, storageClassSnap []sdkpkg.Snapshot) (string, error) {
+	k8s, err := getK8sDefaultStorageClass(storageClassSnap)
+	if err != nil {
+		return "", err
+	}
+
+	d8 := values.Get("global.modules.storageClass").String()
+	sm := values.Get("upmeter.smokeMini.storageClass").String()
+	return firstNonEmpty(sm, d8, k8s, snapshot.DefaultStorageClass), nil
 }
 
 // firstNonEmpty returns first non-empty string. Returns empty string if no strings passed, or all
