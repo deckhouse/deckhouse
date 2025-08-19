@@ -264,16 +264,16 @@ apiVersions:
                       type: string
                       description: An IP address with a CIDR prefix.
                       pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
-                additionalMetadata:
-                  type: object
-                  description: |
-                    Custom string key-value pairs to be stored in the Metadata of every node VM,
-                    useful for organizing and categorizing your virtualization inventory.
+                  additionalMetadata:
+                    type: object
+                    description: |
+                      Custom string key-value pairs to be stored in the Metadata of every node VM,
+                      useful for organizing and categorizing your virtualization inventory.
 
-                    The properties in this field will be merged with the existing metadata stored in the `metadata` field
-                    at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
-                  additionalProperties:
-                    type: string
+                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
+                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                    additionalProperties:
+                      type: string
         bastion:
           type: object
           additionalProperties: false
