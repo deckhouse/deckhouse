@@ -1266,4 +1266,4 @@ Example:
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-During the migration, the node will be drained, the `/var/lib/containerd` directory will be cleared, which will lead to re-downloading the pod images, and a reboot will be performed.
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings. Note that under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.

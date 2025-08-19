@@ -1570,4 +1570,4 @@ ls -l /etc/containerd/conf.d
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-Во время миграции будет выполнен drain узла, очищена папка `/var/lib/containerd`, что приведет к повторному скачиванию образов подов, а так же будет выполнена перезагрузка.
+Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval). Учтите, что при определенных условиях процесс может не произойти, как описано в документации настройки. Папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
