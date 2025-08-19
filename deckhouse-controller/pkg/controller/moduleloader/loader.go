@@ -213,8 +213,13 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
+	// load conversions for settings
+	conversions, err := l.loadConversions(def.Path)
+	if err != nil {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
 	// ensure settings
-	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, def.Path); err != nil {
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
 	}
 
@@ -404,17 +409,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, modulePath string) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []string) error {
 	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-	// Load conversions from module path
-	conversions, err := l.loadConversions(modulePath)
-	if err != nil {
-		return fmt.Errorf("load conversions: %w", err)
-	}
 
 	if err := settings.SetVersion(rawConfig, conversions); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
