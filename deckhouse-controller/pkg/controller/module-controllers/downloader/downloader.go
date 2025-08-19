@@ -202,6 +202,11 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
+	md.logger.Info("🔵 REGISTRY REQUEST: Starting download metadata from release channel",
+		slog.String("module", moduleName),
+		slog.String("releaseChannel", releaseChannel),
+	)
+
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
 		return nil, err
@@ -215,12 +220,24 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 		FromReleaseChannel: true,
 	}
 
+	md.logger.Info("🔵 REGISTRY REQUEST: Completed download metadata from release channel",
+		slog.String("module", moduleName),
+		slog.String("version", res.ModuleVersion),
+		slog.String("checksum", res.Checksum),
+		slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
+	)
+
 	return res, nil
 }
 
 // DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
+	md.logger.Info("🔴 REGISTRY REQUEST: Starting download image info by specific version",
+		slog.String("module", moduleName),
+		slog.String("version", moduleVersion),
+	)
+
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module release: %w", err)
@@ -234,6 +251,12 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 	}
 	if releaseImageInfo.Metadata.ModuleDefinition != nil {
 		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition
+		md.logger.Info("🔴 REGISTRY REQUEST: Completed download image info by specific version (from metadata)",
+			slog.String("module", moduleName),
+			slog.String("version", moduleVersion),
+			slog.String("checksum", res.Checksum),
+			slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
+		)
 		return res, nil
 	}
 
@@ -247,6 +270,13 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
 	res.ModuleDefinition = def
+
+	md.logger.Info("🔴 REGISTRY REQUEST: Completed download image info by specific version (from image)",
+		slog.String("module", moduleName),
+		slog.String("version", moduleVersion),
+		slog.String("checksum", res.Checksum),
+		slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
+	)
 
 	return res, nil
 }
