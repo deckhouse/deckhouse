@@ -146,6 +146,10 @@ type ModuleDownloadResult struct {
 
 	ModuleDefinition *moduletypes.Definition
 	Changelog        map[string]any
+
+	// FromReleaseChannel indicates that this result was obtained from a release channel
+	// and contains complete metadata, avoiding the need for additional registry requests
+	FromReleaseChannel bool
 }
 
 // DownloadDevImageTag downloads image tag and store it in the .../<moduleName>/dev fs path
@@ -204,10 +208,11 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	}
 
 	res := &ModuleDownloadResult{
-		Checksum:         releaseImageInfo.Digest.String(),
-		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
-		Changelog:        releaseImageInfo.Metadata.Changelog,
-		ModuleDefinition: releaseImageInfo.Metadata.ModuleDefinition,
+		Checksum:           releaseImageInfo.Digest.String(),
+		ModuleVersion:      "v" + releaseImageInfo.Metadata.Version.String(),
+		Changelog:          releaseImageInfo.Metadata.Changelog,
+		ModuleDefinition:   releaseImageInfo.Metadata.ModuleDefinition,
+		FromReleaseChannel: true,
 	}
 
 	return res, nil
@@ -222,9 +227,10 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 	}
 
 	res := &ModuleDownloadResult{
-		Checksum:      releaseImageInfo.Digest.String(),
-		ModuleVersion: moduleVersion,
-		Changelog:     releaseImageInfo.Metadata.Changelog,
+		Checksum:           releaseImageInfo.Digest.String(),
+		ModuleVersion:      moduleVersion,
+		Changelog:          releaseImageInfo.Metadata.Changelog,
+		FromReleaseChannel: false, // This is for specific version, not from release channel
 	}
 	if releaseImageInfo.Metadata.ModuleDefinition != nil {
 		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition

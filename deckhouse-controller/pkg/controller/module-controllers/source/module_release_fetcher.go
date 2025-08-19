@@ -172,12 +172,15 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
-	if err != nil {
-		return fmt.Errorf("download module definition: %w", err)
-	}
+	// Only download image info if not already obtained from release channel
+	if !f.targetReleaseMeta.FromReleaseChannel {
+		imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
+		if err != nil {
+			return fmt.Errorf("download module definition: %w", err)
+		}
 
-	f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
+		f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
+	}
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
