@@ -380,8 +380,8 @@ groups:
   - ports: "4298"
     protocol: UDP
     description:
-      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.71+  
-      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.71+          
+      en: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP initialized with version 1.71+  
+      ru: Используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP, который был инициализирован при версии 1.71+          
   - ports: "4299"
     protocol: UDP
     description:
