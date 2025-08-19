@@ -1,12 +1,16 @@
 {%- assign moduleName = page['module-kebab-name'] %}
 
-{%- if site.data.schemas[moduleName]['conversions'].size > 0 %}
+{%- if site.data.schemas.modules[moduleName]['conversions'].size > 0 %}
 
-{%- assign moduleConversions = site.data.schemas[moduleName]['conversions'] | sort %}
+{%- assign moduleConversions = site.data.schemas.modules[moduleName]['conversions'] | sort %}
 
 ## {{ site.data.i18n.common.conversions[page.lang] }}
 
+{% if moduleName == "global" %}
+{{ site.data.i18n.common.conversion_global_action_message[page.lang] }}:
+{% else %}
 {{ site.data.i18n.common.conversion_action_message[page.lang] }}:
+{% endif %}
 
 <div markdown="0">
 <ul>
