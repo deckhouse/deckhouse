@@ -27,6 +27,17 @@ internalNetworkCIDRs:
 - 192.168.199.0/24
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    ca: ""
+    dockerCfg: '${DECKHOUSE_DOCKERCFG}'
+    repo: '${IMAGES_REPO}/modules'
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: cni-cilium
