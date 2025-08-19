@@ -561,7 +561,7 @@ spec:
 Начиная с релиза Deckhouse Kubernetes Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)

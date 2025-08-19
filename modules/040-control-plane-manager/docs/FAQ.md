@@ -581,7 +581,7 @@ CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. 
 Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
