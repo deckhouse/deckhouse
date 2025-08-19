@@ -116,4 +116,3 @@ func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte, conversions []st
 	s.Spec.Versions = append(s.Spec.Versions, version)
 	return nil
 }
-
