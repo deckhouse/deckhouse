@@ -22,9 +22,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/301-prometheus-metrics-adapter/hooks/internal"
-
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/modules/301-prometheus-metrics-adapter/hooks/internal"
 )
 
 const customMetricAPIVersion = "deckhouse.io/v1beta1"

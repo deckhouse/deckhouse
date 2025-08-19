@@ -26,8 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/module-sdk/pkg"
+
+	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
 // This hook populates internal values with object names that are used for

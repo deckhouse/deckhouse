@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
-
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
