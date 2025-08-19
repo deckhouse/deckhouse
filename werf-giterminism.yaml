@@ -12,8 +12,8 @@ config:
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
-      - COSIGN_LOGIN
-      - COSIGN_PASSWORD
+      - REGISTRY_USER
+      - REGISTRY_PASSWORD
       - COSIGN_VAULT_ADRESS
       - COSIGN_VAULT_TOKEN
       - COSIGN_VAULT_KEY
@@ -21,6 +21,7 @@ config:
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
+    allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowValueIds:
       - SOURCE_REPO
