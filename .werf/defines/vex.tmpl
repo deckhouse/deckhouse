@@ -15,7 +15,7 @@
 ---
 image: {{ $imageName }}-vex-artifact
 fromImage: builder/alpine
-final: true
+final: false
 secrets:
 - id: REGISTRY_USER
   value: {{ $context.RegistryUser }}
@@ -56,7 +56,7 @@ shell:
   - |
     VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
     TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
-    VAULT_TOKEN="$(cat /run/secrets/COSIGN_VAULT_TOKEN)" \
+    VAULT_TOKEN="$(eval "$(cat /run/secrets/COSIGN_VAULT_TOKEN)" | jq -r '.auth.client_token')" \
     cosign attest \
       --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
       --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
