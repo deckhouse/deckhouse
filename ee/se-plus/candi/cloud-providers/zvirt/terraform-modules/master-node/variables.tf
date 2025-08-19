@@ -24,6 +24,11 @@ variable "resourceManagementTimeout" {
   default = "10m"
 }
 
+variable "registryDataDeviceEnable" {
+  type = bool
+  default = false
+}
+
 locals {
   resource_name_prefix = var.clusterConfiguration.cloud.prefix
   vnic_profile_id = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "vnicProfileID", [])
@@ -38,6 +43,7 @@ locals {
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
   master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)*1024*1024*1024
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 10)*1024*1024*1024
+  master_system_registry_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "systemRegistryDiskSizeGb", 100)*1024*1024*1024
 
   master_cloud_init_script = yamlencode(merge({
     "hostname": local.master_node_name,

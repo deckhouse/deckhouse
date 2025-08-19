@@ -34,6 +34,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "registryDataDeviceEnable" {
+  type = bool
+  default = false
+}
+
 variable "network_types" {
   type = map(any)
   default = {
@@ -48,18 +53,19 @@ variable "resourceManagementTimeout" {
 }
 
 locals {
-  prefix                = var.clusterConfiguration.cloud.prefix
-  mng                   = var.providerClusterConfiguration.masterNodeGroup
-  master_instance_class = var.providerClusterConfiguration.masterNodeGroup.instanceClass
-  platform              = lookup(local.master_instance_class, "platform", "standard-v2")
-  cores                 = local.master_instance_class.cores
-  memory                = local.master_instance_class.memory / 1024
-  disk_size_gb          = lookup(local.master_instance_class, "diskSizeGB", 50)
-  disk_type             = lookup(local.master_instance_class, "diskType", "network-ssd")
-  etcd_disk_size_gb     = local.master_instance_class.etcdDiskSizeGb
-  image_id              = local.master_instance_class.imageID
-  ssh_public_key        = var.providerClusterConfiguration.sshPublicKey
-  node_network_cidr     = var.providerClusterConfiguration.nodeNetworkCIDR
+  prefix                       = var.clusterConfiguration.cloud.prefix
+  mng                          = var.providerClusterConfiguration.masterNodeGroup
+  master_instance_class        = var.providerClusterConfiguration.masterNodeGroup.instanceClass
+  platform                     = lookup(local.master_instance_class, "platform", "standard-v2")
+  cores                        = local.master_instance_class.cores
+  memory                       = local.master_instance_class.memory / 1024
+  disk_size_gb                 = lookup(local.master_instance_class, "diskSizeGB", 50)
+  disk_type                    = lookup(local.master_instance_class, "diskType", "network-ssd")
+  etcd_disk_size_gb            = local.master_instance_class.etcdDiskSizeGb
+  system_registry_disk_size_gb = local.master_instance_class.systemRegistryDiskSizeGb
+  image_id                     = local.master_instance_class.imageID
+  ssh_public_key               = var.providerClusterConfiguration.sshPublicKey
+  node_network_cidr            = var.providerClusterConfiguration.nodeNetworkCIDR
 
   external_ip_addresses         = lookup(local.master_instance_class, "externalIPAddresses", [])
   external_subnet_ids           = lookup(local.master_instance_class, "externalSubnetIDs", [])

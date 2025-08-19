@@ -34,7 +34,7 @@ import (
 // ConvergeDeckhouseConfiguration – reconciles deckhouse in-cluster configmaps and secrets.
 // This function used in commander-mode, which stores primary configuration in the storage outside of cluster,
 // and periodically reconciles configuration inside cluster to match configuration stored outside of cluster.
-func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID, commanderUUID uuid.UUID, clusterConfig []byte, providerClusterConfig []byte) error {
+func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, clusterUUID, commanderUUID uuid.UUID, clusterConfig []byte, providerClusterConfig, providerSecondaryDevicesConfig []byte) error {
 	tasks := []actions.ManifestTask{
 		{
 			Name:     `Secret "d8-cluster-configuration"`,
@@ -70,6 +70,18 @@ func ConvergeDeckhouseConfiguration(ctx context.Context, kubeCl *client.Kubernet
 					data,
 					metav1.PatchOptions{},
 				)
+				return err
+			},
+		},
+		{
+			Name:     `Secret "d8-provider-secondary-devices-configuration"`,
+			Manifest: func() interface{} { return manifests.SecretWithProviderSecondaryDevicesConfig(providerSecondaryDevicesConfig) },
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		},

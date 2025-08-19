@@ -57,3 +57,112 @@ func TestCPUCoresCountDetection(t *testing.T) {
 		})
 	}
 }
+
+// TestParseDiskSizeInfo tests the parseDiskSizeInfo function
+func TestParseDiskSizeInfo(t *testing.T) {
+	tests := []struct {
+		name        string
+		diskInfo    string
+		expected    map[string]int64
+		expectedErr assert.ErrorAssertionFunc
+	}{
+		{
+			name: "Basic case",
+			diskInfo: `
+123M /a
+1234M /
+12345M /a/b
+123456M /b/c
+`,
+			expected: map[string]int64{
+				"/a":   123,
+				"/":    1234,
+				"/b/c": 123456,
+				"/a/b": 12345,
+			},
+			expectedErr: assert.NoError,
+		},
+		{
+			name:        "Empty input",
+			diskInfo:    "",
+			expected:    map[string]int64{},
+			expectedErr: assert.NoError,
+		},
+		{
+			name:        "Invalid format",
+			diskInfo:    "Invalid line format",
+			expected:    map[string]int64{},
+			expectedErr: assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := parseDiskSizeInfo([]byte(tt.diskInfo))
+			tt.expectedErr(t, err)
+			if err == nil {
+				for path, size := range tt.expected {
+					assert.Equal(t, size, actual[path])
+				}
+				for path, size := range actual {
+					assert.Equal(t, tt.expected[path], size)
+				}
+			}
+		})
+	}
+}
+
+// TestGetRelationFolderByDisk tests the getRelationFolderByDisk function
+func TestGetRelationFolderByDisk(t *testing.T) {
+	tests := []struct {
+		name        string
+		disks       []string
+		folders     []string
+		expected    map[string][]string
+		expectedErr assert.ErrorAssertionFunc
+	}{
+		{
+			name:    "Basic case",
+			disks:   []string{"/", "/a", "/b", "/a/b", "/b/a"},
+			folders: []string{"/", "/a", "/b", "/a/b", "/b/a", "/d", "/d/d", "/d/a", "/b/b/b", "/b/a/b", "/a/a/a", "/a/b/a"},
+			expected: map[string][]string{
+				"/":    {"/", "/d", "/d/d", "/d/a"},
+				"/a":   {"/a", "/a/a/a"},
+				"/b":   {"/b", "/b/b/b"},
+				"/a/b": {"/a/b", "/a/b/a"},
+				"/b/a": {"/b/a", "/b/a/b"},
+			},
+			expectedErr: assert.NoError,
+		},
+		{
+			name:        "Empty input",
+			disks:       []string{},
+			folders:     []string{},
+			expected:    nil,
+			expectedErr: assert.NoError,
+		},
+		{
+			name:        "Unknown folder",
+			disks:       []string{},
+			folders:     []string{"/unknown/temp"},
+			expected:    nil,
+			expectedErr: assert.Error,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := getRelationFoldersByDisk(tt.disks, tt.folders)
+			tt.expectedErr(t, err)
+
+			if err == nil {
+				for disk, folderList := range tt.expected {
+					assert.ElementsMatch(t, folderList, actual[disk])
+				}
+				for disk, folderList := range actual {
+					assert.ElementsMatch(t, tt.expected[disk], folderList)
+				}
+			}
+		})
+	}
+}

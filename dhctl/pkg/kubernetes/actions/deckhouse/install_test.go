@@ -80,7 +80,9 @@ func TestDeckhouseInstall(t *testing.T) {
 			"With docker cfg",
 			func() error {
 				_, err := CreateDeckhouseManifests(ctx, fakeClient, &config.DeckhouseInstaller{
-					Registry: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
+					Registry: config.Registry{
+						Data: config.RegistryData{DockerCfg: "YW55dGhpbmc="},
+					},
 				}, func() error {
 					return nil
 				})
