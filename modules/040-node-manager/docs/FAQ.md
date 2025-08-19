@@ -716,6 +716,7 @@ spec:
 
 Containerd supports two methods for registry configuration: the **old** method and the **new** method.
 To check for the presence of the **old** configuration method, run the following commands on the cluster nodes:
+
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
@@ -725,7 +726,9 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 # [plugins."io.containerd.grpc.v1.cri".registry.configs]
 #   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
+
 To check for the presence of the **new** configuration method, run the following command on the cluster nodes:
+
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 # Example output:
@@ -733,6 +736,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 ```
 
 #### Old Method
+
 {% alert level="warning" %}
 This containerd configuration format is deprecated.
 {% endalert %}
@@ -740,6 +744,7 @@ This containerd configuration format is deprecated.
 The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
 Adding custom configuration is carried out through the `toml merge` mechanism. Configuration files from the `/etc/containerd/conf.d` directory are merged with the main file `/etc/containerd/config.toml`. The merge takes place during the execution of the `032_configure_containerd.sh` script, so the corresponding files must be added in advance.
 Example configuration file for the `/etc/containerd/conf.d/` directory:
+
 ```toml
 [plugins]
   [plugins."io.containerd.grpc.v1.cri"]
@@ -756,6 +761,7 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
           ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
           insecure_skip_verify = true
 ```
+
 {% alert level="danger" %}
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
