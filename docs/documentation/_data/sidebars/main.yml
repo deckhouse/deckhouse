@@ -966,6 +966,10 @@ entries:
                 en: Container image vulnerability scanning
                 ru: Сканирование контейнерных образов на уязвимости
               url: /user/security/scanning.html
+            - title:
+                en: Using TLS certificates
+                ru: Использование TLS-сертификатов
+              url: /user/security/tls.html
         - title:
             en: Interfaces
             ru: Интерфейсы
@@ -1037,10 +1041,6 @@ entries:
             en: Logging settings
             ru: Настройки логирования
           url: /user/logging.html
-        - title:
-            en: Using TLS certificates
-            ru: Использование TLS-сертификатов
-          url: /user/tls.html
         - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения

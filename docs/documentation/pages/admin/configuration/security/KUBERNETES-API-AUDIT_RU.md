@@ -4,11 +4,11 @@ permalink: ru/admin/configuration/security/events/kubernetes-api-audit.html
 lang: ru
 ---
 
-Процедура аудита ([Kubernetes Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/))
+Процедура аудита ([Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/))
 позволяет отслеживать обращения к API-серверу и анализировать события, происходящие в кластере.
 Аудит может быть полезен для отладки неожиданных сценариев поведения, а также для соблюдения требований безопасности.
 
-Kubernetes поддерживает настройку аудита через механизм [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy),
+Kubernetes поддерживает настройку аудита через механизм [Audit policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy),
 который позволяет задавать правила логирования интересующих операций.
 Результаты аудита по умолчанию записываются в лог-файл `/var/log/kube-audit/audit.log`.
 
@@ -65,7 +65,7 @@ spec:
      name: audit-policy
      namespace: kube-system
    data:
-     audit-policy.yaml: <base64>
+     audit-policy.yaml: <Base64>
    ```
 
    Пример содержимого файла `audit-policy.yaml` с минимальной рабочей конфигурацией:
@@ -142,5 +142,5 @@ spec:
 
 В этом случае лог будет доступен в stdout контейнера `kube-apiserver`.
 
-Далее, используя [встроенный механизм логирования в DKP](../../../logging/delivery.html),
+Далее, используя [встроенный механизм логирования в DKP](../../../configuration/logging/delivery.html),
 вы можете настроить сбор и отправку логов в собственную систему безопасности.

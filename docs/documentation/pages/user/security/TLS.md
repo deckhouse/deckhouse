@@ -1,6 +1,6 @@
 ---
 title: Using TLS certificates
-permalink: en/user/tls.html
+permalink: en/user/security/tls.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates,
@@ -14,7 +14,7 @@ This page covers the following aspects of certificate usage in DKP:
 
 {% alert level="info" %}
 For a general overview of certificate management in DKP, the list of supported issuers, and setup recommendations,
-refer to [Certificate management](../admin/configuration/security/certificates.html).
+refer to [Certificate management](../../admin/configuration/security/certificates.html).
 {% endalert %}
 
 ## Working with certificates
@@ -67,7 +67,7 @@ To request a `letsencrypt` certificate, follow these steps:
 If you see a `CAA record does not match issuer` error during certificate issuance, check the DNS records for the domain.
 To use `letsencrypt`, your domain must have the following CAA record: `issue "letsencrypt.org"`.
 
-For mode details on CAA records, refer to [Let’s Encrypt documentation](https://letsencrypt.org/docs/caa/).
+For mode details on CAA records, refer to [Let's Encrypt documentation](https://letsencrypt.org/docs/caa/).
 {% endalert %}
 
 #### Requesting a wildcard certificate using DNS in Cloudflare
