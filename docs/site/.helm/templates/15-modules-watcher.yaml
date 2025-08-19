@@ -1646,6 +1646,7 @@ spec:
       "title": "registry-modules-watcher stats {{ .Release.Namespace }}",
 {{- end }}
       "version": 2,
+      "uid": "{{ randAlphaNum 14 }}",
       "weekStart": ""
     }
 {{- end }}
