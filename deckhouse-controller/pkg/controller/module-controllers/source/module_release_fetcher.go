@@ -291,11 +291,21 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		ensureErr := func() error {
 			logger.Debug("ensure module release", slog.String("version", ver.String()))
 
-			m, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
-			if err != nil {
-				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
+			var m *downloader.ModuleDownloadResult
+			var err error
 
-				return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
+			// Check if this is the target version that was already obtained from release channel
+			if f.targetReleaseMeta.FromReleaseChannel && "v"+ver.String() == f.targetReleaseMeta.ModuleVersion {
+				// Use the already downloaded metadata instead of making another request
+				m = f.targetReleaseMeta
+			} else {
+				// Download metadata for intermediate versions or when not from release channel
+				m, err = f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
+				if err != nil {
+					f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
+
+					return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
+				}
 			}
 
 			err = f.ensureModuleRelease(ctx, m, "step-by-step")
