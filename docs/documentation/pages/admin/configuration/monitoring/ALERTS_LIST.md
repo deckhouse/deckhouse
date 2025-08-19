@@ -1,6 +1,6 @@
 ---
-title: "The list of alerts"
-permalink: en/admin/configuration/monitoring/alert-settings.html
+title: "The list of preset alerts"
+permalink: en/admin/configuration/monitoring/alerts-list.html
 ---
 
 The page displays a list of all alerts of monitoring in the Deckhouse Kubernetes Platform.

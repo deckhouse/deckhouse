@@ -8,107 +8,20 @@ Deckhouse предоставляет встроенное решение для 
 
 Хранилище разворачивается в кластере и интегрируется с системой сбора логов.
 После настройки ресурсов [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination)
-логи автоматически поступают из всех указанных источников.
+логи автоматически поступают со всех системных компонентов.
 Настроенное хранилище добавляется в Grafana в качестве источника данных для визуализации и анализа.
 
+Сбор логов с пользовательских приложений настраивается отдельно.
+
 Параметры кратковременного хранилища задаются в настройках модуля [`loki`](/modules/loki/configuration.html).
-Вы можете в том числе настроить размер диска и срок хранения, задать используемый StorageClass и ресурсы.
+В том числе возможно настроить размер диска и срок хранения, задать используемый StorageClass и ресурсы.
 
 {% alert level="warning" %}
 Кратковременное хранилище на базе Grafana Loki не поддерживает работу в режиме высокой доступности.
 Для долговременного хранения важных логов используйте внешнее хранилище.
 {% endalert %}
 
-## Настройка кратковременного хранилища
-
-Ниже приведён вариант конфигурации Deckhouse,
-при котором логи из всех подов указанного пространства имён отправляются в хранилище на базе Loki.
-При этом в настройках модуля `loki` указан StorageClass и определены размер диска для хранения логов и период хранения.
-
-Для настройки выполните следующие шаги:
-
-1. Включите модуль [`loki`](/modules/loki/configuration.html).
-   Для этого используйте следующий манифест с настройками по умолчанию:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: loki
-   spec:
-     settings:
-       storageClass: ceph-csi-rbd
-       diskSizeGigabytes: 30
-       retentionPeriodHours: 168
-     enabled: true
-     version: 1
-   ```
-
-   Модуль можно также активировать и настроить из веб-интерфейса Deckhouse.
-   Для этого убедитесь, что у вас установлен [модуль `console`](/modules/console/),
-   откройте веб-интерфейс Deckhouse и, выбрав `loki` в разделе **Модули**, включите его с помощью переключателя.
-
-1. Создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.
-   Данный ресурс позволяет вам настроить сбор логов с подов в определенном пространстве имён и с определенным лейблом,
-   гибко настраивать парсинг многострочных логов и задавать другие правила.
-
-   В этом примере указывается, что нужно собирать логи из подов в пространстве имён `development`
-   и отправлять их в кратковременное хранилище на базе Loki:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ClusterLoggingConfig
-   metadata:
-     name: development-logs
-   spec:
-     type: KubernetesPods
-     kubernetesPods:
-       namespaceSelector:
-         matchNames:
-           - development
-     destinationRefs:
-       - loki-storage
-   ```
-
-1. Создайте ресурс [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination),
-   который описывает параметры отправки логов в хранилище.
-   Данный ресурс позволяет вам указать одно или несколько хранилищ и описать параметры подключения, буферизации и дополнительные лейблы, которые будут применяться к логам перед отправкой.
-
-   В этом примере в качестве принимающего хранилища указано кратковременное хранилище на базе Loki:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ClusterLogDestination
-   metadata:
-     name: loki-storage
-   spec:
-     type: Loki
-     loki:
-       endpoint: http://loki.loki:3100
-   ```
-
-## Интеграция с Grafana
-
-Чтобы работать c Grafana, встроенной в Deckhouse, добавьте ресурс [GrafanaAdditionalDatasource](/modules/prometheus/cr.html#grafanaadditionaldatasource).
-
-Пример конфигурации:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: GrafanaAdditionalDatasource
-metadata:
-  name: loki
-spec:
-  access: Proxy
-  basicAuth: false
-  jsonData:
-    maxLines: 5000
-    timeInterval: 30s
-  type: loki
-  url: http://loki.loki:3100
-```
-
-### Grafana Cloud
+## Интеграция с Grafana Cloud
 
 Чтобы настроить работу Deckhouse с платформой Grafana Cloud, выполните следующие шаги:
 
@@ -138,7 +51,7 @@ spec:
      type: Loki
    ```
 
-### Переход с Grafana Promtail
+## Переход с Grafana Promtail
 
 Для миграции с Promtail отредактируйте URL-адрес Loki, убрав из него путь `/loki/api/v1/push`.
 

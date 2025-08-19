@@ -1,6 +1,6 @@
 ---
-title: Настройка алертов
-permalink: ru/admin/configuration/monitoring/alerts.html
+title: "Настройка интеграций"
+permalink: ru/admin/configuration/monitoring/alerts-integrations.html
 lang: ru
 ---
 
