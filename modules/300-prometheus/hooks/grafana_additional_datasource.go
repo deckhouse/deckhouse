@@ -70,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func grafanaDatasourcesHandler(input *go_hook.HookInput) error {
 	gad, err := sdkobjectpatch.UnmarshalToStruct[GrafanaAdditionalDatasource](input.NewSnapshots, "grafana_additional_datasources")
 	if err != nil {
-		return fmt.Errorf("failed to get grafana_additional_datasources: %w", err)
+		return fmt.Errorf("failed to unmarshal 'grafana_additional_datasources' snapshots: %w", err)
 	}
 
 	if len(gad) == 0 {

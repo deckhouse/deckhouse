@@ -63,7 +63,7 @@ func remoteWriteHandler(input *go_hook.HookInput) error {
 	var prw []RemoteWrite
 	prw, err := sdkobjectpatch.UnmarshalToStruct[RemoteWrite](input.NewSnapshots, "prometheusremotewrite")
 	if err != nil {
-		return fmt.Errorf("failed to get prometheusremotewrite: %w", err)
+		return fmt.Errorf("failed to unmarshal 'prometheusremotewrite' snapshot: %w", err)
 	}
 
 	if len(prw) == 0 {

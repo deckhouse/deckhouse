@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -63,7 +65,7 @@ func unlabelNodes(input *go_hook.HookInput) error {
 	snapshot := input.NewSnapshots.Get("nodes")
 	for labeledNodeRaw, err := range sdkobjectpatch.SnapshotIter[NodeWithLabel](snapshot) {
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
 		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
