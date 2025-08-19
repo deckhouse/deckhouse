@@ -116,7 +116,7 @@ kind: GrafanaDashboardDefinition
 metadata:
   labels:
     prometheus.deckhouse.io/grafana-dashboard: ""
-{{- if $.Values.web.env "web-production" }}
+{{- if eq $.Values.web.env "web-production" }}
   name: registry-modules-watcher
 {{- else }}
   name: registry-modules-watcher-{{ .Release.Namespace }} 
