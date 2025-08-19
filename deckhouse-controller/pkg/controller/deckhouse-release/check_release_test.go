@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
@@ -36,10 +35,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
@@ -732,52 +729,4 @@ func TestKebabCase(t *testing.T) {
 
 		assert.Equal(t, result, kebabed)
 	}
-}
-
-func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags []string) *dependency.MockedContainer {
-	var manifestStub = func() (*v1.Manifest, error) {
-		return &v1.Manifest{
-			Layers: []v1.Descriptor{},
-		}, nil
-	}
-	deckhouseVersionsMock := cr.NewClientMock(t)
-
-	dc := dependency.NewMockedContainer()
-
-	dc.CRClientMap = map[string]cr.Client{}
-
-	deckhouseVersionsMock = deckhouseVersionsMock.ListTagsMock.Return(tags, nil)
-
-	dc.CRClientMap["my.registry.com/deckhouse/release-channel"] = deckhouseVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (v1.Image, error) {
-		_, err := semver.NewVersion(imageTag)
-		if err != nil {
-			imageTag = versionInChannel
-		}
-
-		moduleYaml := `
-name: deckhouse
-weight: 2
-stage: "General Availability"
-requirements:
-  kubernetes: ">= 1.27"
-`
-
-		return &fake.FakeImage{
-			ManifestStub: manifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{
-					&utils.FakeLayer{},
-					&utils.FakeLayer{FilesContent: map[string]string{
-						"version.json": `{"version": "` + imageTag + `"}`,
-						"module.yaml":  moduleYaml,
-					}},
-				}, nil
-			},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.Hash{Algorithm: "sha256"}, nil
-			},
-		}, nil
-	})
-
-	return dc
 }
