@@ -268,16 +268,16 @@ properties:
                         type: string
                         description: An IP address with a CIDR prefix.
                         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
-                  additionalMetadata:
-                    type: object
-                    description: |
-                      Custom string key-value pairs to be stored in the Metadata of every node VM,
-                      useful for organizing and categorizing your virtualization inventory.
+                    additionalMetadata:
+                      type: object
+                      description: |
+                        Custom string key-value pairs to be stored in the Metadata of every node VM,
+                        useful for organizing and categorizing your virtualization inventory.
 
-                      The properties in this field will be merged with the existing metadata stored in the `metadata` field
-                      at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
-                    additionalProperties:
-                      type: string
+                        The properties in this field will be merged with the existing metadata stored in the `metadata` field
+                        at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+                      additionalProperties:
+                        type: string
           bastion:
             type: object
             additionalProperties: false
@@ -504,6 +504,9 @@ properties:
             type: object
             description: |
               Custom metadata entries to be stored in cluster objects such as virtual machines, disks, networks, and virtual applications.
+
+              Clearing the `metadata` and `additionalMetadata` fields, if they contain any keys, will result in all metadata no longer being tracked except for nodes of the `CloudEphemeral` type.
+              This means that if you need to remove metadata entirely, you will have to do it manually.
 
               > **Caution!** Changing the metadata will cause the recreation of CloudEphemeral nodes.
             additionalProperties:
