@@ -405,7 +405,7 @@ groups:
     protocol: UDP
     description:
       en: VXLAN encapsulation (legacy, for DKP clusters was firstly installed before 1.63)
-      ru: VXLAN инкапсуляция (устаревшее, для кластеров DKP, установленных до версии 1.63).
+      ru: VXLAN инкапсуляция (устаревшее, для кластеров DKP, установленных до версии 1.63)
 
 - group: ExternalToMaster
   description:
