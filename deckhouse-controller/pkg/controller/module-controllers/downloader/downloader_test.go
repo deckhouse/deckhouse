@@ -132,8 +132,8 @@ func TestModuleDownloaderWithSharedCache(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 	sharedCache := NewReleaseImageInfoCache()
 
-	downloader1 := NewModuleDownloaderWithCache(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
-	downloader2 := NewModuleDownloaderWithCache(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
+	downloader1 := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
+	downloader2 := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
 
 	if downloader1.releaseInfoCache != sharedCache {
 		t.Error("Expected downloader1 to use shared cache")

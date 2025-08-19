@@ -120,14 +120,14 @@ type ModuleDownloader struct {
 	releaseInfoCache *ReleaseImageInfoCache
 }
 
-func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
-	return NewModuleDownloaderWithCache(dc, downloadedModulesDir, ms, logger, registryOptions, nil)
-}
-
-func NewModuleDownloaderWithCache(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option, cache *ReleaseImageInfoCache) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option, cache ...*ReleaseImageInfoCache) *ModuleDownloader {
+	var releaseInfoCache *ReleaseImageInfoCache
+	
 	// If no cache provided, create a new one (for backward compatibility)
-	if cache == nil {
-		cache = newReleaseImageInfoCache()
+	if len(cache) == 0 || cache[0] == nil {
+		releaseInfoCache = newReleaseImageInfoCache()
+	} else {
+		releaseInfoCache = cache[0]
 	}
 
 	return &ModuleDownloader{
@@ -136,7 +136,7 @@ func NewModuleDownloaderWithCache(dc dependency.Container, downloadedModulesDir 
 		ms:                   ms,
 		registryOptions:      registryOptions,
 		logger:               logger,
-		releaseInfoCache:     cache,
+		releaseInfoCache:     releaseInfoCache,
 	}
 }
 
