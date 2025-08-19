@@ -418,6 +418,9 @@ jobs:
     name: Render workflow
 
     # <template: workflow_render_template>
+    needs:
+      - discover
+      - pull_request_info
     runs-on: [self-hosted, regular]
     steps:
 

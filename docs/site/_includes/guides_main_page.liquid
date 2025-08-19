@@ -1,4 +1,5 @@
-<script type="text/javascript" src='/assets/js/tile.js?v={{ "now" | date: "%Y-%m-%d %H:%M:%S" | sha256 }}'></script>
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type="text/javascript" src='/assets/js/tile.js?v={{ assetHash }}'></script>
 
 <p class="tile__descr">{{ site.data.i18n.common['guides_description'][page.lang] }}</p>
 

@@ -27,8 +27,6 @@ cleanup:
       branch: main
     imagesPerReference:
       last: 10
-gitWorktree:
-  forceShallowClone: true
 ---
 # Files.Get prefix
 {{- $_ := set . "prefix" "" }}
@@ -36,10 +34,11 @@ gitWorktree:
 # Base Images
 {{- include "parse_base_images_map" . }}
 ---
+
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 image: site-external-artifacts
 fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 final: false
 shell:
   install:
@@ -179,7 +178,7 @@ image: web-backend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 shell:
   install:
   - apk add --no-cache curl jq
@@ -205,7 +204,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
   - apk add --no-cache nginx
@@ -258,7 +257,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 imageSpec:
   config:
     workingDir: "/app"

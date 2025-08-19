@@ -5,7 +5,8 @@ toc: false
 lang: ru
 ---
 
-<link href='../assets/css/releases.css?v={{ 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<link href='../assets/css/releases.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 {%- assign releases = site.data.releases.channels | sort: "stability" -%}
 

@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if ne .ModuleName "docs" }}
 fromImage: common/distroless
 {{ else }}
-from: {{ .Images.BASE_SCRATCH }}
+fromImage: builder/scratch
 {{ end }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
@@ -22,12 +22,14 @@ git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo
 {{ if ne .ModuleName "docs" }}
+{{- include "image mount points" . | nindent 2 }}
     excludePaths:
     - config/production/
     - data/dkp/embedded_modules.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo/config/production/hugo.yaml
 {{ end }}
+
 ---
 image: d8-docs-artifacts
 from: {{ .Images.BASE_ALPINE }}

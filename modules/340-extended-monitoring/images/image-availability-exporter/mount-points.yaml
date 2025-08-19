@@ -1,0 +1,4 @@
+dirs:
+- /.docker
+- /deckhouse-registry-root-ca
+- /registry-root-ca
