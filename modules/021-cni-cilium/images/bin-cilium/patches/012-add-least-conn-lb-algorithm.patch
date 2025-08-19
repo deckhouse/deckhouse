@@ -117,7 +117,7 @@ index 9a6fee3035..8769cce01a 100644
 +
 +#define LEAST_CONN_MAX_ENTRIES 65536
 +/* the limit was selected due to verifier restriction on executing instructions */
-+#define LEAST_CONN_FOREACH_MAX_ENTRIES 100
++#define LEAST_CONN_FOREACH_MAX_ENTRIES 200
 +#define LEAST_CONN_THRESHOLD 5
 +
 +struct {
