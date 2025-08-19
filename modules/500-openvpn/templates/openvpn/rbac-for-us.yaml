@@ -40,3 +40,32 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: openvpn
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openvpn:controller-clean-service
+  namespace: d8-openvpn
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["delete", "get"]
+    resourceNames:
+      - {{ .Chart.Name }}-external
+      - {{ .Chart.Name }}-external-udp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openvpn:controller-clean-service
+  namespace: d8-openvpn
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: openvpn
+    namespace: d8-openvpn
+roleRef:
+  kind: Role
+  name: openvpn:controller-clean-service
+  apiGroup: rbac.authorization.k8s.io
