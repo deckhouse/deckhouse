@@ -5,6 +5,10 @@ permalink: en/admin/integrations/public/amazon/amazon-authorization.html
 
 ## Requirements
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 Before you begin, you must prepare the cloud environment
 and provide access to AWS resources for Deckhouse Kubernetes Platform (DKP) components that interact with the AWS API.
 

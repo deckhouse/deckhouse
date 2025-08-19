@@ -5,6 +5,10 @@ permalink: en/admin/integrations/private/huaweicloud/huawei-authorization.html
 
 ## Requirements
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 To ensure proper operation of Deckhouse Kubernetes Platform (DKP) with Huawei Cloud, make sure of the following:
 
 - The `cloud-init` package is installed on the virtual machines.

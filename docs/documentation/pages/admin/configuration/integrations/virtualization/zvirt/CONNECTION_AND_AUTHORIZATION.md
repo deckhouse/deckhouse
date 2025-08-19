@@ -17,6 +17,10 @@ The zVirt cloud provider is in experimental status.
 API and behavior may change in future versions.
 {% endalert %}
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## Preparing a cloud image
 
 1. Go to **zVirt** → **Storage** → **Disks**.

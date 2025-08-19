@@ -6,6 +6,10 @@ lang: ru
 
 Для управления ресурсами в Google Cloud с помощью Deckhouse Kubernetes Platform необходимо создать Service Account.
 
+{% alert level="warning" %}
+Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
+{% endalert %}
+
 ## Создание Service Account
 
 Подробную инструкцию по созданию Service Account можно найти [в документации провайдера](https://cloud.google.com/iam/docs/service-accounts).

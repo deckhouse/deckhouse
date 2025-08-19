@@ -5,6 +5,10 @@ permalink: en/admin/integrations/virtualization/dvp/dvp-authorization.html
 
 To interact with DVP resources, Deckhouse Kubernetes Platform components use the DVP API. To configure access, create a user (ServiceAccount), assign the necessary permissions, and generate a kubeconfig.
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 ## Creating a user
 
 Create a new user in the DVP cluster using the following command:

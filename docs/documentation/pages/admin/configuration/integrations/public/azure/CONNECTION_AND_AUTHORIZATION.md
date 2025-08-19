@@ -5,6 +5,10 @@ permalink: en/admin/integrations/public/azure/azure-authorization.html
 
 ## Requirements
 
+{% alert level="warning" %}
+The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
+{% endalert %}
+
 To ensure Deckhouse Kubernetes Platform (DKP) works correctly with Microsoft Azure, the following conditions must be met:
 
 - The selected region must support Availability Zones.
