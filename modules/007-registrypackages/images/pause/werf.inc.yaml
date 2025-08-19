@@ -39,9 +39,9 @@ dependencies:
     targetEnv: IMAGE_REPO
 secrets:
 - id: REGISTRY_USER
-  value: {{ $context.RegistryUser }}
+  value: {{ .RegistryUser }}
 - id: REGISTRY_PASSWORD
-  value: {{ $context.RegistryPassword }}
+  value: {{ .RegistryPassword }}
 shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
