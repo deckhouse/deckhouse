@@ -54,6 +54,19 @@ var cloudProviderToProviderKind = map[string]string{
 	"DVP":         "DVPClusterConfiguration",
 }
 
+var cloudProviderToProviderInstanceClassKind = map[string]string{
+	"OpenStack":   "OpenStackInstanceClass",
+	"AWS":         "AWSInstanceClass",
+	"GCP":         "GCPInstanceClass",
+	"Yandex":      "YandexInstanceClass",
+	"vSphere":     "VsphereInstanceClass",
+	"Azure":       "AzureInstanceClass",
+	"VCD":         "VCDInstanceClass",
+	"Zvirt":       "ZvirtInstanceClass",
+	"Huaweicloud": "HuaweiCloudInstanceClass",
+	"Dynamix":     "DynamixInstanceClass",
+}
+
 var cloudProviderSpecificClusterPrefix = map[string]interface{}{
 	"OpenStack":   regexp.MustCompile(".+"),
 	"AWS":         regexp.MustCompile(".+"),
@@ -545,6 +558,109 @@ func ValidateClusterSettingsChanges(
 			})
 			continue
 		}
+	}
+
+	return errs.ErrorOrNil()
+}
+
+// ValidateProviderSpecificInstanceClass parses and validates cluster InstanceClass
+// It requires one doc with kind in
+// [
+// "OpenStackInstanceClass",
+// "AWSInstanceClass",
+// "GCPInstanceClass",
+// "YandexInstanceClass",
+// "VsphereInstanceClass",
+// "AzureInstanceClass",
+// "VCDInstanceClass",
+// "ZvirtInstanceClass",
+// "HuaweiCloudInstanceClass",
+// "DynamixInstanceClass",
+// ]
+func ValidateProviderSpecificInstanceClass(
+	providerSpecificInstanceClass string,
+	clusterConfig ClusterConfig,
+	schemaStore *SchemaStore,
+	opts ...ValidateOption,
+) error {
+	options := applyOptions(opts...)
+	if !options.commanderMode {
+		panic("ValidateProviderSpecificInstanceClass operation currently supported only in commander mode")
+	}
+
+	if clusterConfig.ClusterType == "Static" {
+		return nil
+	}
+
+	docs := input.YAMLSplitRegexp.Split(strings.TrimSpace(providerSpecificInstanceClass), -1)
+	errs := &ValidationError{}
+	var clusterConfigDocsCount int
+
+	providerKind, ok := cloudProviderToProviderInstanceClassKind[clusterConfig.Cloud.Provider]
+	if !ok {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Sprintf(
+				"unknown cloud provider '%s', check if 'InstanceClass' is valid",
+				clusterConfig.Cloud.Provider,
+			)},
+		})
+	}
+
+	for i, doc := range docs {
+		if doc == "" {
+			continue
+		}
+
+		docData := []byte(doc)
+
+		obj := unstructured.Unstructured{}
+		err := yaml.Unmarshal(docData, &obj)
+		if err != nil {
+			errs.Append(ErrKindInvalidYAML, Error{
+				Index:    ptr.To(i),
+				Messages: []string{fmt.Errorf("unmarshal: %w", err).Error()},
+			})
+			continue
+		}
+
+		gvk := obj.GroupVersionKind()
+		index := SchemaIndex{
+			Kind:    gvk.Kind,
+			Version: gvk.GroupVersion().String(),
+		}
+
+		var errMessages []string
+
+		err = schemaStore.ValidateWithIndex(&index, &docData, opts...)
+		if err != nil {
+			errMessages = append(errMessages, err.Error())
+		}
+
+		if providerKind != "" {
+			switch index.Kind {
+			case providerKind:
+				clusterConfigDocsCount++
+			default:
+				errMessages = append(errMessages, fmt.Errorf("unknown kind, expected %q", providerKind).Error())
+			}
+		}
+
+		if len(errMessages) != 0 {
+			errs.Append(ErrKindValidationFailed, Error{
+				Index:    ptr.To(i),
+				Group:    gvk.Group,
+				Version:  gvk.Version,
+				Kind:     gvk.Kind,
+				Name:     obj.GetName(),
+				Messages: errMessages,
+			})
+		}
+	}
+
+	if providerKind != "" && clusterConfigDocsCount > 1 {
+		errs.Append(ErrKindValidationFailed, Error{
+			Messages: []string{fmt.Errorf("no more than one %q required", providerKind).Error()},
+		})
 	}
 
 	return errs.ErrorOrNil()
