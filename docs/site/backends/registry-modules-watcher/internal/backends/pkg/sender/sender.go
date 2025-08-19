@@ -233,6 +233,9 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 
 	s.logger.Info("upload archive", slog.String("url", url))
 
+	s.logger.Info("debug sleep", slog.String("backend", backend), slog.String("url", url))
+	time.Sleep(20 * time.Second)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(version.TarFile))
 	if err != nil {
 		return fmt.Errorf("client: could not create request: %s", err)

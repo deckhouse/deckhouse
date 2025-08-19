@@ -5,7 +5,8 @@ priorityClassName:
 
 observability:
   enable:
-    _default: false
+    _default: true
+    # _default: false
     web-production: true
     web-stage: true
 
