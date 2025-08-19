@@ -68,7 +68,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"kube-system"},
 				},
 			},
-			FilterFunc: applyCniConfigFilter,
+			FilterFunc:                   applyCniConfigFilter,
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
 		},
 		{
 			Name:       "deckhouse_mc",
