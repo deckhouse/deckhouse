@@ -91,10 +91,10 @@ build:
 # cosign  settings
 {{- $_ := set . "CosignLogin" (env "COSIGN_LOGIN" "test") }}
 {{- $_ := set . "CosignPassword" (env "COSIGN_PASSWORD" "test") }}
-{{- $_ := set . "CosignVaultAdress"  (env "COSIGN_VAULT_ADRESS" "https://seguro.flant.com") }}
+{{- $_ := set . "CosignVaultAdress"  (env "COSIGN_VAULT_ADRESS" "https://example.com") }}
 {{- $_ := set . "CosignVaultToken" (env "COSIGN_VAULT_TOKEN" "test")  }}
-{{- $_ := set . "CosignVaultKey" (env "COSIGN_VAULT_KEY" "dh-2025-aug-dev") }}
-{{- $_ := set . "CosignTransitSecret" (env "COSIGN_TRANSIT_SECRET_ENGINE_PATH" "dh-signer-dev") }}
+{{- $_ := set . "CosignVaultKey" (env "COSIGN_VAULT_KEY" "test") }}
+{{- $_ := set . "CosignTransitSecret" (env "COSIGN_TRANSIT_SECRET_ENGINE_PATH" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
