@@ -374,23 +374,19 @@ groups:
         <p>Ports used by Cilium for VXLAN encapsulation of inter-pod traffic.
         The port used depends on the DKP version it was **firstly installed** (after upgrading DKP, the port doesn't change) and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):</p>
         <ul>
-          <li><code>4299/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.64–1.70. When the <code>virtualization</code> module is enabled, the port changes to <code>4298/UDP</code>;</li>
-          <li><code>4298/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.71+;</li>
-          <li><code>4297/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in the case of nested virtualization. This occurs in DKP with the <code>virtualization</code> module enabled, when DKP is deployed inside virtual machines that are also created with the <code>virtualization</code> module enabled;</li>
-          <li><code>4296/UDP</code>, <code>4295/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port <code>4297/UDP</code>).</li>
-            </ul>
-          </li>
+        <li><code>4299/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.64–1.70. When the <code>virtualization</code> module is enabled, the port changes to <code>4298/UDP</code>;</li>
+        <li><code>4298/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.71+;</li>
+        <li><code>4297/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in the case of nested virtualization. This occurs in DKP with the <code>virtualization</code> module enabled, when DKP is deployed inside virtual machines that are also created with the <code>virtualization</code> module enabled;</li>
+        <li><code>4296/UDP</code>, <code>4295/UDP</code> — used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port <code>4297/UDP</code>).</li>
         </ul>
       ru: |
         <p>Порты, используемые Cilium для VXLAN инкапсуляции трафика между подами.
         Используемый порт зависит от версии DKP, в которой был **первоначально установлен** сам DKP (после обновления DKP порт не изменяется), а начиная с версии 1.71 — от уровня вложенности DVP (DKP внутри DVP, см. подробности ниже):</p>
         <ul>
-          <li><code>4299/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.64–1.70. При включении модуля <code>virtualization</code> порт меняется на <code>4298/UDP</code>;</li>
-          <li><code>4298/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.71+;</li>
-          <li><code>4297/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в случае вложенной виртуализации. Это происходит в DKP с включенным модулем <code>virtualization</code>, когда DKP развернут внутри виртуальных машин, также созданных с включенным модулем <code>virtualization</code></li>
-          <li><code>4296/UDP</code>, <code>4295/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации (см. описание для порта <code>4297/UDP</code>).</li>
-          </ul>
-        </li>
+        <li><code>4299/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.64–1.70. При включении модуля <code>virtualization</code> порт меняется на <code>4298/UDP</code>;</li>
+        <li><code>4298/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в DKP 1.71+;</li>
+        <li><code>4297/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами в случае вложенной виртуализации. Это происходит в DKP с включенным модулем <code>virtualization</code>, когда DKP развернут внутри виртуальных машин, также созданных с включенным модулем <code>virtualization</code>;</li>
+        <li><code>4296/UDP</code>, <code>4295/UDP</code> — используется Cilium для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации (см. описание для порта <code>4297/UDP</code>).</li>
         </ul>
   - ports: "7000&#8209;7999"
     protocol: TCP
