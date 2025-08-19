@@ -263,5 +263,5 @@
         Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
         This may increase memory consumption, slow down request processing, and the process may run as root.
         It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
-        To disable profiling, set `controllerNginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+        To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
 

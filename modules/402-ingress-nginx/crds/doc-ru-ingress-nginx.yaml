@@ -788,7 +788,7 @@ spec:
                     - "журналы на уровне трассировки с подробным пошаговым контекстом."
                   description: |
                     Определяет уровень логирования для журналов Ingress-контроллера.
-                controllerNginxProfilingEnabled:
+                nginxProfilingEnabled:
                   type: boolean
                   description: |
                     Включает профилирование NGINX с помощью Valgrind.

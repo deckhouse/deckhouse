@@ -1259,7 +1259,7 @@ spec:
                     - "Extended information about changes in system state."
                     - "Verbose debugging output, potentially very noisy."
                     - "Trace-level logs with detailed step-by-step context."
-                controllerNginxProfilingEnabled:
+                nginxProfilingEnabled:
                   type: boolean
                   description: |
                     Enables NGINX profiling using Valgrind.
@@ -1310,8 +1310,8 @@ spec:
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
-                - message: .spec.controllerNginxProfilingEnabled experimental option available only in version 1.10
-                  rule: "!has(self.controllerNginxProfilingEnabled) || !self.controllerNginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
+                - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
+                  rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
