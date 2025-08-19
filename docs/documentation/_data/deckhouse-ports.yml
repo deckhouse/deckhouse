@@ -372,7 +372,7 @@ groups:
     description:
       en: |
         <p>Ports used by Cilium for VXLAN encapsulation of inter-pod traffic.
-        The port used depends on the DKP version it was *firstly* installed (after upgrading DKP, the port doesn't change) and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):</p>
+        The port used depends on the DKP version it was **firstly installed** (after upgrading DKP, the port doesn't change) and, starting from 1.71, on the DVP nesting level (DKP inside DVP, see details below):</p>
         <ul>
           <li>DKP 1.64–1.70 — <code>4299/UDP</code> is used; if the <code>virtualization</code> module is enabled, the port changes to <code>4298/UDP</code>;</li>
           <li>DKP ≥ 1.71 — <code>4298/UDP</code> is used; enabling the <code>virtualization</code> module does <b>not</b> change the port;</li>
@@ -384,17 +384,15 @@ groups:
           </li>
         </ul>
       ru: |
-        Порты, используемые Cilium для VXLAN-инкапсуляции межподового трафика в статичных кластерах (облачные кластеры в данном описании не рассматриваются).
-         Используемый порт зависит от версии DKP и, начиная с 1.71, от уровня вложенности DVP (DKP внутри DVP, см. подробности ниже):
-         <ul>
-        <li>DKP 1.64–1.70 — используется <code>4299/UDP</code>, при включении модуля <code>virtualization</code> порт меняется на <code>4298/UDP</code>;</li>
-        <li>DKP ≥ 1.71 — используется <code>4298/UDP</code>, включение модуля <code>virtualization</code> порт не меняет;</li>
-        <li>DKP внутри DVP (вложенные кластеры), начиная с 1.71 — порт назначается по уровню вложенности:
-          <ul>
+        <p>Порты, используемые Cilium для VXLAN инкапсуляции трафика между подами.
+        Используемый порт зависит от версии DKP, в которой был **первоначально установлен** сам DKP (после обновления DKP порт не изменяется), а начиная с версии 1.71 — от уровня вложенности DVP (DKP внутри DVP, см. подробности ниже):</p>
+        <ul>
+          <li>DKP 1.64–1.70 — используется <code>4299/UDP</code>, при включении модуля <code>virtualization</code> порт меняется на <code>4298/UDP</code>;</li>
+          <li>DKP ≥ 1.71 — используется <code>4298/UDP</code>, включение модуля <code>virtualization</code> порт не меняет;</li>
+          <li>DKP внутри DVP (вложенные кластеры), начиная с 1.71 — порт назначается по уровню вложенности:
+            <ul>
             <li>уровень 0 — базовый DVP, развёрнутый на физическом кластере: <code>4298/UDP</code>;</li>
-            <li>уровень 1 — DVP, развёрнутый внутри другого DVP: <code>4297/UDP</code>;</li>
-            <li>уровень 2 — DVP, развёрнутый внутри DVP уровня 1: <code>4296/UDP</code>;</li>
-            <li>уровень 3 — DVP, развёрнутый внутри DVP уровня 2: <code>4295/UDP</code>.</li>
+            <li>уровень 1 — DVP, развёрнутый внутри другого DVP: <code>4297/UDP</code>.</li>
           </ul>
         </li>
         </ul>
@@ -407,7 +405,7 @@ groups:
     protocol: UDP
     description:
       en: VXLAN encapsulation (legacy, for DKP clusters was firstly installed before 1.63)
-      ru: Инкапсуляция VXLAN (устаревшее, DKP ≤ 1.63)
+      ru: VXLAN инкапсуляция (устаревшее, для кластеров DKP, установленных до версии 1.63).
 
 - group: ExternalToMaster
   description:
