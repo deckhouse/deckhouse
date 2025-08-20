@@ -51,93 +51,102 @@ We always appreciate helping users with debugging complex issues. Please follow 
 Data that will be collected:
 
 <table>
+  <thead>
     <tr>
-        <th>Category</th>
-        <th>Collected Data</th>
+      <th>Category</th>
+      <th>Collected data</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Deckhouse</strong></td>
+      <td>
+        <ul>
+          <li>Deckhouse queue state</li>
+          <li>Deckhouse values (except for <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code>)</li>
+          <li>Current version of the <code>deckhouse</code> Pod</li>
+          <li>All DeckhouseRelease objects</li>
+          <li>Logs of Deckhouse Pods</li>
+          <li>Manifests of controllers and Pods from all Deckhouse namespaces</li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Deckhouse</td>
-        <td>
-            <ul>
-                <li>Deckhouse queue state</li>
-                <li>Deckhouse values. Except <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code> values</li>
-                <li>Current deckhouse pod version data</li>
-                <li>All <code>DeckhouseRelease</code> objects</li>
-                <li>Deckhouse pod logs</li>
-                <li>Controller and pod manifests from all Deckhouse namespaces</li>
-            </ul>
-        </td>
+      <td><strong>Cluster objects</strong></td>
+      <td>
+        All objects of the following resources:
+        <ul>
+          <li>NodeGroup</li>
+          <li>NodeGroupConfiguration</li>
+          <li>Node</li>
+          <li>Machine</li>
+          <li>Instance</li>
+          <li>StaticInstance</li>
+          <li>MachineDeployment</li>
+          <li>ClusterAuthorizationRule</li>
+          <li>AuthorizationRule</li>
+          <li>ModuleConfig</li>
+        </ul>
+        As well as Events from all namespaces
+      </td>
     </tr>
     <tr>
-        <td>Cluster objects</td>
-        <td>
-            <ul>
-                <li>All <code>NodeGroup</code> objects</li>
-                <li>All <code>NodeGroupConfiguration</code> objects</li>
-                <li>All <code>Node</code> objects</li>
-                <li>All <code>Machine</code> objects</li>
-                <li>All <code>Instance</code> objects</li>
-                <li>All <code>StaticInstance</code> objects</li>
-                <li>All <code>MachineDeployment</code> objects</li>
-                <li>All <code>ClusterAuthorizationRule</code> objects</li>
-                <li>All <code>AuthorizationRule</code> objects</li>
-                <li>All <code>ModuleConfig</code> objects</li>
-                <li><code>Events</code> from all namespaces</li>
-            </ul>
-        </td>
+      <td><strong>Modules and their states</strong></td>
+      <td>
+        <ul>
+          <li>List of enabled modules</li>
+          <li>List of ModuleSource objects in the cluster</li>
+          <li>List of ModulePullOverride objects in the cluster</li>
+          <li>List of modules in <code>maintenance</code> mode</li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Modules and their states</td>
-        <td>
-            <ul>
-                <li>List of enabled modules</li>
-                <li>List of <code>ModuleSource</code> objects in the cluster</li>
-                <li>List of <code>ModulePullOverride</code> objects in the cluster</li>
-                <li>List of modules in <code>maintenance</code> mode</li>
-            </ul>
-        </td>
+      <td><strong>Controller logs and manifests</strong></td>
+      <td>
+        Logs of the following components:
+        <ul>
+          <li><code>machine-controller-manager</code></li>
+          <li><code>cloud-controller-manager</code></li>
+          <li><code>csi-controller</code></li>
+          <li><code>cluster-autoscaler</code></li>
+          <li>Vertical Pod Autoscaler admission controller</li>
+          <li>Vertical Pod Autoscaler recommender</li>
+          <li>Vertical Pod Autoscaler updater</li>
+        </ul>
+        YAML manifests of the following controllers:
+        <ul>
+          <li><code>capi-controller-manager</code></li>
+          <li><code>caps-controller-manager</code></li>
+          <li><code>machine-controller-manager</code></li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Controller logs and manifests</td>
-        <td>
-            <ul>
-                <li>Machine controller manager logs</li>
-                <li>Cloud controller manager logs</li>
-                <li>Csi controller logs</li>
-                <li>Cluster autoscaler logs</li>
-                <li>Vertical Pod Autoscaler admission controller logs</li>
-                <li>Vertical Pod Autoscaler recommender logs</li>
-                <li>Vertical Pod Autoscaler updater logs</li>
-                <li>Capi controller manager YAML files</li>
-                <li>Caps controller manager YAML files</li>
-                <li>Machine controller manager YAML files</li>
-            </ul>
-        </td>
+      <td><strong>Monitoring and alerts</strong></td>
+      <td>
+        <ul>
+          <li>Prometheus logs</li>
+          <li>All active alerts in Prometheus</li>
+          <li>List of all Pods not in the <code>Running</code> state, except those in <code>Completed</code> or <code>Evicted</code> states</li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Monitoring and alerts</td>
-        <td>
-            <ul>
-                <li>Prometheus logs</li>
-                <li>All burning notifications in Prometheus</li>
-                <li>List of all unbooted pods, except those in Completed and Evicted states</li>
-            </ul>
-        </td>
+      <td><strong>Network</strong></td>
+      <td>
+        <ul>
+          <li>All objects from the <code>d8-istio</code> namespace</li>
+          <li>All <code>istio</code> custom resources</li>
+          <li>Envoy configuration for <code>istio</code></li>
+          <li>Logs of <code>istio</code></li>
+          <li>Logs of the <code>istio</code> ingressgateway</li>
+          <li>Logs of the <code>istio</code> users</li>
+          <li>Cilium connection status (<code>cilium health status</code>)</li>
+        </ul>
+      </td>
     </tr>
-    <tr>
-        <td>Network</td>
-        <td>
-            <ul>
-                <li>All objects from Namespace <code>d8-istio</code></li>
-                <li>All Custom Resources istio</li>
-                <li>Envoy config istio</li>
-                <li>Logs istio</li>
-                <li>Logs istio ingressgateway</li>
-                <li>Logs istio users</li>
-                <li>Cilium connection status - <code>cilium health status</code></li>
-            </ul>
-        </td>
-    </tr>
+  </tbody>
 </table>
 
 ## How to debug pod problems with ephemeral containers?

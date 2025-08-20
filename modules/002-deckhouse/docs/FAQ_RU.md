@@ -51,93 +51,102 @@ title: "Модуль deckhouse: FAQ"
 Данные, которые будут собраны:
 
 <table>
+  <thead>
     <tr>
-        <th>Категория</th>
-        <th>Собираемые данные</th>
+      <th>Категория</th>
+      <th>Собираемые данные</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Deckhouse</strong></td>
+      <td>
+        <ul>
+          <li>Состояние очереди Deckhouse</li>
+          <li>Deckhouse values (за исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>)</li>
+          <li>Данные о текущей версии пода <code>deckhouse</code></li>
+          <li>Все объекты DeckhouseRelease</li>
+          <li>Логи подов Deckhouse</li>
+          <li>Манифесты контроллеров и подов из всех пространств имен Deckhouse</li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Deckhouse</td>
-        <td>
-            <ul>
-                <li>Состояние очереди Deckhouse</li>
-                <li>Deckhouse values. За исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code></li>
-                <li>Данные о текущей версии пода deckhouse</li>
-                <li>Все объекты <code>DeckhouseRelease</code></li>
-                <li>Логи подов Deckhouse</li>
-                <li>Манифесты controller'ов и подов из всех пространств имен Deckhouse</li>
-            </ul>
-        </td>
+      <td><strong>Объекты кластера</strong></td>
+      <td>
+        Все объекты следующих ресурсов:
+        <ul>
+          <li>NodeGroup</li>
+          <li>NodeGroupConfiguration</li>
+          <li>Node</li>
+          <li>Machine</li>
+          <li>Instance</li>
+          <li>StaticInstance</li>
+          <li>MachineDeployment</li>
+          <li>ClusterAuthorizationRule</li>
+          <li>AuthorizationRule</li>
+          <li>ModuleConfig</li>
+        </ul>
+        А также Events из всех пространств имен
+      </td>
     </tr>
     <tr>
-        <td>Объекты кластера</td>
-        <td>
-            <ul>
-                <li>Все объекты <code>NodeGroup</code></li>
-                <li>Все объекты <code>NodeGroupConfiguration</code></li>
-                <li>Все объекты <code>Node</code></li>
-                <li>Все объекты <code>Machine</code></li>
-                <li>Все объекты <code>Instance</code></li>
-                <li>Все объекты <code>StaticInstance</code></li>
-                <li>Все объекты <code>MachineDeployment</code></li>
-                <li>Все объекты <code>ClusterAuthorizationRule</code></li>
-                <li>Все объекты <code>AuthorizationRule</code></li>
-                <li>Все объекты <code>ModuleConfig</code></li>
-                <li><code>Events</code> из всех пространств имен</li>
-            </ul>
-        </td>
+      <td><strong>Модули и их состояния</strong></td>
+      <td>
+        <ul>
+          <li>Список включенных модулей</li>
+          <li>Список объектов ModuleSource в кластере</li>
+          <li>Список объектов ModulePullOverride в кластере</li>
+          <li>Список модулей в режиме <code>maintenance</code></li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Модули и их состояния</td>
-        <td>
-            <ul>
-                <li>Список включенных модулей</li>
-                <li>Список объектов <code>ModuleSource</code> в кластере</li>
-                <li>Список объектов <code>ModulePullOverride</code> в кластере</li>
-                <li>Список модулей в режиме <code>maintenance</code></li>
-            </ul>
-        </td>
+      <td><strong>Логи и манифесты контроллеров</strong></td>
+      <td>
+        Логи следующих компонентов:
+        <ul>
+          <li><code>machine-controller-manager</code></li>
+          <li><code>cloud-controller-manager</code></li>
+          <li><code>csi-controller</code></li>
+          <li><code>cluster-autoscaler</code></li>
+          <li>Vertical Pod Autoscaler admission controller</li>
+          <li>Vertical Pod Autoscaler recommender</li>
+          <li>Vertical Pod Autoscaler updater</li>
+        </ul>
+        YAML-файлы следующих контроллеров:
+        <ul>
+          <li><code>capi-controller-manager</code></li>
+          <li><code>caps-controller-manager</code></li>
+          <li><code>machine-controller-manager</code></li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Логи и манифесты контроллеров</td>
-        <td>
-            <ul>
-                <li>Логи machine controller manager</li>
-                <li>Логи cloud controller manager</li>
-                <li>Логи csi controller</li>
-                <li>Логи cluster autoscaler</li>
-                <li>Логи Vertical Pod Autoscaler admission controller</li>
-                <li>Логи Vertical Pod Autoscaler recommender</li>
-                <li>Логи Vertical Pod Autoscaler updater</li>
-                <li>YAML-файлы capi controller manager</li>
-                <li>YAML-файлы caps controller manager</li>
-                <li>YAML-файлы machine controller manager</li>
-            </ul>
-        </td>
+      <td><strong>Мониторинг и алерты</strong></td>
+      <td>
+        <ul>
+          <li>Логи Prometheus</li>
+          <li>Все горящие уведомления в Prometheus</li>
+          <li>Список всех подов, которые не находятся в состоянии <code>Running</code>, кроме подов в состояниях <code>Completed</code> и <code>Evicted</code></li>
+        </ul>
+      </td>
     </tr>
     <tr>
-        <td>Мониторинг и алерты</td>
-        <td>
-            <ul>
-                <li>Логи Prometheus</li>
-                <li>Все горящие уведомления в Prometheus</li>
-                <li>Список всех не поднятых подов, кроме тех, что в состояниях Completed и Evicted</li>
-            </ul>
-        </td>
+      <td><strong>Сеть</strong></td>
+      <td>
+        <ul>
+          <li>Все объекты из пространства имен <code>d8-istio</code></li>
+          <li>Все кастомные ресурсы <code>istio</code></li>
+          <li>Конфигурация Envoy для <code>istio</code></li>
+          <li>Логи <code>istio</code></li>
+          <li>Логи <code>istio</code> ingress gateway</li>
+          <li>Логи <code>istio</code> users</li>
+          <li>Состояние соединения Cilium (<code>cilium health status</code>)</li>
+        </ul>
+      </td>
     </tr>
-    <tr>
-        <td>Сеть</td>
-        <td>
-            <ul>
-                <li>Все объекты из Namespace <code>d8-istio</code></li>
-                <li>Все Custom Resources istio</li>
-                <li>Envoy config istio</li>
-                <li>Логи istio</li>
-                <li>Логи istio ingressgateway</li>
-                <li>Логи istio users</li>
-                <li>Состояние связи Cilium - <code>cilium health status</code></li>
-            </ul>
-        </td>
-    </tr>
+  </tbody>
 </table>
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
