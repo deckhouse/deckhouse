@@ -239,31 +239,4 @@ import:
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---
-# Build scanner, which fetch modules documentation from list of specified registries
-image: registry-modules-watcher-artifact
-fromImage: builder/golang-alpine
-shell:
-  install:
-  - cd /go/src/app
-  - go mod download
-  setup:
-  - cd /go/src/app
-  - go build -ldflags "-w -s" -v -o /go/src/app/registry-modules-watcher /go/src/app/cmd/
-git:
-  - add: /docs/site/backends/registry-modules-watcher
-    to: /go/src/app
-    stageDependencies:
-      install: 'go.mod'
-      setup: '**/*'
----
-image: registry-modules-watcher
-fromImage: builder/alpine-3.20
-imageSpec:
-  config:
-    workingDir: "/app"
-import:
-  - image: registry-modules-watcher-artifact
-    add: /go/src/app/registry-modules-watcher
-    to: /app/registry-modules-watcher
-    before: setup
----
+{{ tpl (.Files.Get "werf-modules-watcher.yaml") $ }}
