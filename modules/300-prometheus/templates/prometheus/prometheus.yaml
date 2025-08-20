@@ -82,7 +82,7 @@ spec:
   retention: {{ .Values.prometheus.retentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusMain.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
-  image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
   version: v2.53.2
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
