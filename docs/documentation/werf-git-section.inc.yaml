@@ -1,3 +1,4 @@
+# werf git section for documentation build
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
   owner: jekyll

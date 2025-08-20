@@ -102,7 +102,7 @@ shell:
         echo '[] Converting editions structure...'
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
         # Syncing file from the documentation to the main site...
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
@@ -127,7 +127,7 @@ shell:
         echo '[] Generating static files of the documentation part...'
         cd ..
         mkdir -m 777 -p /app/_site/
-{{ if eq .ModuleName "docs" }}
+{{ if eq .ModuleName "website-docs" }}
         {{- if eq .Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
         {{- else }}
@@ -154,7 +154,7 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-{{ if eq .ModuleName "docs" }}
+{{ if eq .ModuleName "website-docs" }}
     - site/_config.yml
     - site/_includes/head.html
     - site/Gemfile
@@ -171,7 +171,7 @@ git:
     - '**/.helm'
     - documentation/pages/internal
     - documentation/config
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
     - site/pages/*.html
     - site/_includes/footer.html
     - site/_data/topnav.*
@@ -185,7 +185,7 @@ git:
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
 - add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
   to: /srv/jekyll-data/site/_includes/footer.html
   stageDependencies:

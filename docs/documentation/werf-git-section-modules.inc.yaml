@@ -1,3 +1,4 @@
+# werf git section for modules build
 - add: /modules
   to: /src/modules
   owner: jekyll

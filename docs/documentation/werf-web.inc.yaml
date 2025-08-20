@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if eq .ModuleName "docs" }}
+{{ if eq .ModuleName "website-docs" }}
 fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
