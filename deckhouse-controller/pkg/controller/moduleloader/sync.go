@@ -172,7 +172,8 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if mpo.Status.Weight == 0 {
 			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
+			globalCache := downloader.GetGlobalReleaseImageInfoCache()
+			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts, globalCache)
 
 			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
@@ -421,7 +422,8 @@ func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVers
 	if err != nil || !info.IsDir() {
 		l.logger.Info("downloading the module from the registry", slog.String("name", moduleName), slog.String("version", moduleVersion))
 		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.logger)
-		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options)
+		globalCache := downloader.GetGlobalReleaseImageInfoCache()
+		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options, globalCache)
 
 		if mpo {
 			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")

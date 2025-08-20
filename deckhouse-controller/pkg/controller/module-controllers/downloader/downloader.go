@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -56,8 +57,10 @@ const (
 
 // ReleaseImageInfoCache provides thread-safe caching for ReleaseImageInfo
 type ReleaseImageInfoCache struct {
-	cache map[string]*cacheEntry
-	mutex sync.RWMutex
+	cache     map[string]*cacheEntry
+	mutex     sync.RWMutex
+	hitCount  int64
+	missCount int64
 }
 
 type cacheEntry struct {
@@ -84,9 +87,11 @@ func (c *ReleaseImageInfoCache) Get(digest string) (*ReleaseImageInfo, bool) {
 
 	entry, exists := c.cache[digest]
 	if !exists {
+		atomic.AddInt64(&c.missCount, 1)
 		return nil, false
 	}
 
+	atomic.AddInt64(&c.hitCount, 1)
 	return entry.info, true
 }
 
@@ -106,6 +111,30 @@ func (c *ReleaseImageInfoCache) Clear() {
 	defer c.mutex.Unlock()
 
 	c.cache = make(map[string]*cacheEntry)
+	atomic.StoreInt64(&c.hitCount, 0)
+	atomic.StoreInt64(&c.missCount, 0)
+}
+
+// Stats returns cache statistics
+func (c *ReleaseImageInfoCache) Stats() (hits, misses int64, size int) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	hits = atomic.LoadInt64(&c.hitCount)
+	misses = atomic.LoadInt64(&c.missCount)
+	size = len(c.cache)
+	return
+}
+
+// GetHitRate returns cache hit rate as percentage
+func (c *ReleaseImageInfoCache) GetHitRate() float64 {
+	hits := atomic.LoadInt64(&c.hitCount)
+	misses := atomic.LoadInt64(&c.missCount)
+	total := hits + misses
+	if total == 0 {
+		return 0.0
+	}
+	return float64(hits) / float64(total) * 100.0
 }
 
 type ModuleDownloader struct {
@@ -205,6 +234,8 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	md.logger.Info("🔵 REGISTRY REQUEST: Starting download metadata from release channel",
 		slog.String("module", moduleName),
 		slog.String("releaseChannel", releaseChannel),
+		slog.String("registry_operation", "GET_RELEASE_CHANNEL"),
+		slog.String("controller", "source"),
 	)
 
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
@@ -236,6 +267,8 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 	md.logger.Info("🔴 REGISTRY REQUEST: Starting download image info by specific version",
 		slog.String("module", moduleName),
 		slog.String("version", moduleVersion),
+		slog.String("registry_operation", "GET_VERSION_SPECIFIC"),
+		slog.String("controller", "release/override/moduleloader"),
 	)
 
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
@@ -489,16 +522,29 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 
 	// Check cache first
 	if cachedInfo, found := md.releaseInfoCache.Get(digestStr); found {
-		md.logger.Info("release image info found in cache",
+		hits, misses, size := md.releaseInfoCache.Stats()
+		hitRate := md.releaseInfoCache.GetHitRate()
+		md.logger.Info("🟢 CACHE HIT: Release image info found in cache",
 			slog.String("digest", digestStr),
 			slog.String("image_tag", imageTag),
+			slog.Int64("cache_hits", hits),
+			slog.Int64("cache_misses", misses),
+			slog.Int("cache_size", size),
+			slog.Float64("hit_rate", hitRate),
 		)
 		return cachedInfo, nil
 	}
 
-	md.logger.Info("release image info not found in cache, downloading full image",
+	hits, misses, size := md.releaseInfoCache.Stats()
+	hitRate := md.releaseInfoCache.GetHitRate()
+	md.logger.Info("🔴 CACHE MISS: Release image info not found in cache, downloading full image",
 		slog.String("digest", digestStr),
 		slog.String("image_tag", imageTag),
+		slog.Int64("cache_hits", hits),
+		slog.Int64("cache_misses", misses),
+		slog.Int("cache_size", size),
+		slog.Float64("hit_rate", hitRate),
+		slog.String("registry_operation", "IMAGE_DOWNLOAD"),
 	)
 
 	// If not in cache, download the full image
@@ -535,8 +581,15 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 	// Store in cache for future use
 	md.releaseInfoCache.Set(digestStr, releaseImageInfo)
 
-	md.logger.Debug("release image info stored in cache",
+	hits, misses, size = md.releaseInfoCache.Stats()
+	hitRate = md.releaseInfoCache.GetHitRate()
+	md.logger.Info("💾 CACHE STORE: Release image info stored in cache",
 		slog.String("digest", digestStr),
+		slog.String("image_tag", imageTag),
+		slog.Int64("cache_hits", hits),
+		slog.Int64("cache_misses", misses),
+		slog.Int("cache_size", size),
+		slog.Float64("hit_rate", hitRate),
 		slog.String("image_tag", imageTag),
 	)
 
