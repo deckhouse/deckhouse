@@ -47,3 +47,8 @@ spec:
                         description: Settings schema for the given module version.
                         # Preserve the contents of the embedded CRD validation schema
                         x-kubernetes-preserve-unknown-fields: true
+                      conversions:
+                        type: array
+                        description: List of conversion rules for this version.
+                        items:
+                          type: string
