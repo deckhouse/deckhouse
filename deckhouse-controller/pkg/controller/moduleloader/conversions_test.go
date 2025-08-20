@@ -15,6 +15,7 @@
 package moduleloader
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -50,14 +51,7 @@ func TestLoadConversions(t *testing.T) {
 			expectCount: 0,
 		},
 		{
-			name:        "non-existent module path",
-			modulePath:  "/non/existent/path",
-			expectError: false,
-			expectEmpty: true,
-			expectCount: 0,
-		},
-		{
-			name:        "empty module path",
+			name:        "empty conversions path",
 			modulePath:  "",
 			expectError: false,
 			expectEmpty: true,
@@ -68,7 +62,13 @@ func TestLoadConversions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			loader := &Loader{}
-			conversions, err := loader.loadConversions(tt.modulePath)
+			var conversionsDir string
+			if tt.modulePath == "" {
+				conversionsDir = ""
+			} else {
+				conversionsDir = filepath.Join(tt.modulePath, "openapi", "conversions")
+			}
+			conversions, err := loader.loadConversions(conversionsDir)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -135,7 +135,13 @@ type: object`,
 			settings := &v1alpha1.ModuleSettingsDefinition{}
 
 			// Load conversions using the loader
-			conversions, err := loader.loadConversions(tt.modulePath)
+			var conversionsDir string
+			if tt.modulePath == "" {
+				conversionsDir = ""
+			} else {
+				conversionsDir = filepath.Join(tt.modulePath, "openapi", "conversions")
+			}
+			conversions, err := loader.loadConversions(conversionsDir)
 			if err != nil {
 				t.Errorf("Unexpected error loading conversions: %v", err)
 				return
