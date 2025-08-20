@@ -42,3 +42,5 @@ shell:
   - make -j "$(getconf _NPROCESSORS_ONLN)"
   - strip bpftool
   - cp -a bpftool /usr/local/bin
+  - echo "==================================DEBUG==============================="
+  - ls -la /lib64/libcap.so*
