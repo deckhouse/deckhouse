@@ -197,7 +197,7 @@
         1. To drain the Node and grant the update approval, run the following command:
 
            ```shell
-           kubectl drain {{ $labels.node }} --delete-emptydir-data=true --ignore-daemonsets=true --force=true &&
+           d8 k drain {{ $labels.node }} --delete-emptydir-data=true --ignore-daemonsets=true --force=true &&
              kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
            ```
         
