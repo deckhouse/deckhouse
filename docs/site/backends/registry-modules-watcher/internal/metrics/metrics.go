@@ -42,6 +42,7 @@ const (
 	SenderDeleteRequestsCountMetric       = "{PREFIX}_sender_delete_requests_count"
 	SenderDeleteRequestsSecondsMetric     = "{PREFIX}_sender_delete_requests_seconds"
 	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_no_module_yaml"
+	SenderTimeoutRequestsTotalMetric      = "{PREFIX}_sender_timeout_requests_total"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -130,6 +131,12 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	_, err = ms.RegisterGauge(RegistryScannerNoModuleYamlMetric, []string{"module"}, options.WithHelp("Modules without module.yaml in release image"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryScannerNoModuleYamlMetric, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", SenderTimeoutRequestsTotalMetric))
+	_, err = ms.RegisterCounter(SenderTimeoutRequestsTotalMetric, []string{}, options.WithHelp("Number of the sender requests timed out"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", SenderTimeoutRequestsTotalMetric, err)
 	}
 
 	return nil
