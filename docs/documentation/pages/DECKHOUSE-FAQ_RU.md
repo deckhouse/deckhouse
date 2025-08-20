@@ -998,6 +998,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Создайте ресурс `NodeGroupConfiguration` для переходной авторизации в `registry.deckhouse.ru`:
 
+   > Перед созданием ресурса ознакомьтесь с разделом [«Как добавить конфигурацию для дополнительного registry»](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry).
+   >
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 
    ```shell
