@@ -151,7 +151,10 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
 	if !imageMeta.ModuleDefinitionFound {
+		s.logger.Warn("module.yaml not found", slog.String("module", module), slog.String("channel", releaseChannel))
 		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+	} else {
+		s.logger.Debug("module.yaml found", slog.String("module", module), slog.String("channel", releaseChannel))
 	}
 
 	versionData.Version = imageMeta.Version
