@@ -116,14 +116,14 @@ func (c *ReleaseImageInfoCache) Clear() {
 }
 
 // Stats returns cache statistics
-func (c *ReleaseImageInfoCache) Stats() (hits, misses int64, size int) {
+func (c *ReleaseImageInfoCache) Stats() (int64, int64, int) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	hits = atomic.LoadInt64(&c.hitCount)
-	misses = atomic.LoadInt64(&c.missCount)
-	size = len(c.cache)
-	return
+	hits := atomic.LoadInt64(&c.hitCount)
+	misses := atomic.LoadInt64(&c.missCount)
+	size := len(c.cache)
+	return hits, misses, size
 }
 
 // GetHitRate returns cache hit rate as percentage

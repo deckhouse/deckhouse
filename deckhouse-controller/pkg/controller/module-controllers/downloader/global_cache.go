@@ -31,14 +31,15 @@ var (
 // the cache isolation problem where each controller creates its own cache.
 //
 // TTL is not implemented here because:
-// 1. Cache lifetime equals controller process lifetime 
+// 1. Cache lifetime equals controller process lifetime
 // 2. On controller restart, cache is automatically cleared
 // 3. Module metadata doesn't change during controller runtime
 // 4. TTL would add unnecessary complexity and performance overhead
 //
 // Usage example:
-//   globalCache := GetGlobalReleaseImageInfoCache()
-//   md := NewModuleDownloader(..., globalCache)
+//
+//	globalCache := GetGlobalReleaseImageInfoCache()
+//	md := NewModuleDownloader(..., globalCache)
 func GetGlobalReleaseImageInfoCache() *ReleaseImageInfoCache {
 	globalCacheOnce.Do(func() {
 		globalCacheInstance = NewReleaseImageInfoCache()
