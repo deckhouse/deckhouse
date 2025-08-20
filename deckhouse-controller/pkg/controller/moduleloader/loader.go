@@ -199,18 +199,19 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 
 	// load conversions
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	var conversions []string
 	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
+		
+		// load conversions for settings
+		conversions, err = l.loadConversions(conversionsDir)
+		if err != nil {
+			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
 	} else if !os.IsNotExist(err) {
-		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-	}
-
-	// load conversions for settings
-	conversions, err := l.loadConversions(conversionsDir)
-	if err != nil {
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
