@@ -57,7 +57,7 @@ shell:
     jq '.copyright | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty copyright array!") else . end ' /tmp/menus.json > /data/copyright.json
 {{- end }}
 ---
-image: web-static
+image: web-frontend-artifact
 from: {{ .Images.BASE_JEKYLL }}
 final: false
 shell:
@@ -81,6 +81,7 @@ shell:
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
 git:
+# Common files used for building site and documentation (plugins, assets, etc.)
 - add: /docs/documentation
   to: /srv/jekyll-data/site
   owner: jekyll
@@ -88,7 +89,6 @@ git:
   includePaths:
   - _assets/js/lunr*.js
   - _assets/js/search.js
-  - assets/js/pdf.worker.min.js
   - _data/rbac/
   - _includes/rbac/
   - _plugins/jekyll_asset_pipeline.rb
@@ -155,7 +155,7 @@ import:
     before: setup
 {{- end }}
 ---
-image: web-backend-srv
+image: web-router-artifact
 fromImage: builder/golang-alpine
 final: false
 shell:
@@ -174,7 +174,7 @@ git:
       install: 'go.mod'
       setup: '**/*'
 ---
-image: web-backend
+image: web-router
 imageSpec:
   config:
     workingDir: "/app"
@@ -183,11 +183,11 @@ shell:
   install:
   - apk add --no-cache curl jq
 import:
-  - image: web-backend-srv
+  - image: web-router-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
-  - image: web-static
+  - image: web-frontend-artifact
     add: /app/_site
     to: /app/root
     before: setup
@@ -198,7 +198,7 @@ import:
 {{- $_ := set $context "ModuleName" "docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "BuildModules" true }}
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-static.inc.yaml" .ModulePath)) $context }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-modules-static.inc.yaml" .ModulePath)) $context }}
 ---
 image: web-frontend
 imageSpec:
@@ -222,7 +222,7 @@ import:
   add: /app/_site/ru/modules
   to: /app/ru/embedded-modules
   before: setup
-- image: web-static
+- image: web-frontend-artifact
   add: /app/_site
   to: /app
   before: setup
