@@ -44,7 +44,7 @@
 # from bpftool-artifact
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }} #### problem with dynamic link
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }} #### problem with dynamic link
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
