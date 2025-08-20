@@ -1516,16 +1516,48 @@ spec:
 
 ### Как изменить container runtime на containerd v2 на узлах?
 
+{% alert level="info" %}
+Deckhouse Kubernetes Platform в автоматическом режиме проверяет узлы кластера на соответствие условиям миграции на containerd v2:
+
+* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
+* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-развернуть-кастомный-конфигурационный-файл-containerd)).
+
+При несоответствии одному из требований, описанных [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri), Deckhouse Kubernetes Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config`.
+
+При наличии одного из этих лейблов cмена параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
+
+```shell
+kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
+kubectl get node -l node.deckhouse.io/containerd-config
+```
+
+Также администратор может проверить конкретный узел на соответствие требованиям с помощью команд:
+
+```shell
+uname -r | cut -d- -f1
+stat -f -c %T /sys/fs/cgroup
+systemctl --version | awk 'NR==1{print $2}'
+modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+ls -l /etc/containerd/conf.d
+```
+
+{% endalert %}
+
 Миграцию на containerd v2 можно выполнить одним из следующих способов:
 
 * Указав значение containerd v2 для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 * Указав значение containerd v2 для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
+После изменения значений параметров на `ContainerdV2` Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов. Если в группе узлов, установлен параметр [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`, то для обновления **каждого** узла в такой группе на узел нужно будет установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
+
+Пример:
+
+```shell
+kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).
+
 {% alert level="info" %}
-Миграция на containerd v2 возможна при выполнении следующих условий:
-
-* Узлы соответствуют требованиям, описанным [в общих параметрах кластера](./installing/configuration.html#clusterconfiguration-defaultcri).
-* На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](./modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+При определенных условиях процесс может не произойти, как описано в документации настройки. Папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
 {% endalert %}
-
-При миграции на containerd v2 очищается папка `/var/lib/containerd`. Для `Containerd` используется папка `/etc/containerd/conf.d`. Для containerd v2 используется `/etc/containerd/conf2.d`.
