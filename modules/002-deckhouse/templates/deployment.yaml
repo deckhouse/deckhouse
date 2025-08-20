@@ -1,11 +1,6 @@
 {{- define "deckhouse_resources" }}
-{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
-cpu: 100m
-memory: 300Mi
-{{- else }}
 cpu: 150m
-memory: 600Mi
-{{- end }}
+memory: 500Mi
 {{- end }}
 
 {{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
