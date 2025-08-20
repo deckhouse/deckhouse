@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -199,7 +198,8 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load conversions
-	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
@@ -208,16 +208,17 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 	}
 
+	// load conversions for settings
+	conversions, err := l.loadConversions(conversionsDir)
+	if err != nil {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+
 	// load constraints
 	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Accessibility, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
-	// load conversions for settings
-	conversions, err := l.loadConversions(def.Path)
-	if err != nil {
-		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
-	}
 	// ensure settings
 	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
@@ -415,7 +416,6 @@ func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawCon
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-
 	if err := settings.SetVersion(rawConfig, conversions); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
 	}
@@ -600,18 +600,9 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 }
 
 // loadConversions loads all conversion rules from the module's conversions directory
-func (l *Loader) loadConversions(modulePath string) ([]string, error) {
-	if modulePath == "" {
+func (l *Loader) loadConversions(conversionsDir string) ([]string, error) {
+	if conversionsDir == "" {
 		return nil, nil
-	}
-
-	conversionsDir := filepath.Join(modulePath, "openapi", "conversions")
-
-	// Check if conversions directory exists
-	if _, err := os.Stat(conversionsDir); os.IsNotExist(err) {
-		return nil, nil // No conversions directory, return empty slice
-	} else if err != nil {
-		return nil, fmt.Errorf("check conversions directory: %w", err)
 	}
 
 	// Read all files from conversions directory
@@ -624,7 +615,6 @@ func (l *Loader) loadConversions(modulePath string) ([]string, error) {
 	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
 
 	var allConversions []string
-	versionNumbers := make([]int, 0, len(files))
 
 	// Process each version file
 	for _, file := range files {
@@ -637,13 +627,6 @@ func (l *Loader) loadConversions(modulePath string) ([]string, error) {
 			continue // Skip non-version files
 		}
 
-		versionNum, err := strconv.Atoi(matches[1])
-		if err != nil {
-			continue // Skip files with invalid version numbers
-		}
-
-		versionNumbers = append(versionNumbers, versionNum)
-
 		// Read and parse the conversion file
 		filePath := filepath.Join(conversionsDir, file.Name())
 		conversions, err := l.readConversionFile(filePath)
@@ -653,9 +636,6 @@ func (l *Loader) loadConversions(modulePath string) ([]string, error) {
 
 		allConversions = append(allConversions, conversions...)
 	}
-
-	// Sort version numbers to ensure consistent ordering
-	sort.Ints(versionNumbers)
 
 	return allConversions, nil
 }
