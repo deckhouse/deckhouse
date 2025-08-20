@@ -1213,9 +1213,6 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 
 ### How do I change container runtime to containerd v2 on nodes?
 
-<<<<<<< HEAD
-You can migrate to `containerd v2` in one of the following ways:
-=======
 {% alert level="info" %}
 Deckhouse Kubernetes Platform automatically checks cluster nodes for compliance with the conditions for migration to containerd v2:
 
@@ -1244,7 +1241,6 @@ ls -l /etc/containerd/conf.d
 {% endalert %}
 
 You can migrate to containerd v2 in one of the following ways:
->>>>>>> a0fd6ff62a ([docs] Add new requirement and commands to meet containerdv2 requirements (#14959))
 
 * By specifying the value containerd v2 for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value containerd v2 for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
@@ -1262,8 +1258,3 @@ During migration, a drain will be executed according to the [spec.disruptions.au
 {% alert level="info" %}
 Under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
-<<<<<<< HEAD
-
-Migrating to containerd v2 clears the `/var/lib/containerd` folder. For `Containerd`, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.
-=======
->>>>>>> a0fd6ff62a ([docs] Add new requirement and commands to meet containerdv2 requirements (#14959))

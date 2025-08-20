@@ -1516,8 +1516,6 @@ spec:
 
 ### Как изменить container runtime на containerd v2 на узлах?
 
-<<<<<<< HEAD
-=======
 {% alert level="info" %}
 Deckhouse Kubernetes Platform в автоматическом режиме проверяет узлы кластера на соответствие условиям миграции на containerd v2:
 
@@ -1545,7 +1543,6 @@ ls -l /etc/containerd/conf.d
 
 {% endalert %}
 
->>>>>>> a0fd6ff62a ([docs] Add new requirement and commands to meet containerdv2 requirements (#14959))
 Миграцию на containerd v2 можно выполнить одним из следующих способов:
 
 * Указав значение containerd v2 для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
@@ -1564,8 +1561,3 @@ kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 {% alert level="info" %}
 При определенных условиях процесс может не произойти, как описано в документации настройки. Папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
 {% endalert %}
-<<<<<<< HEAD
-
-При миграции на containerd v2 очищается папка `/var/lib/containerd`. Для `Containerd` используется папка `/etc/containerd/conf.d`. Для containerd v2 используется `/etc/containerd/conf2.d`.
-=======
->>>>>>> a0fd6ff62a ([docs] Add new requirement and commands to meet containerdv2 requirements (#14959))
