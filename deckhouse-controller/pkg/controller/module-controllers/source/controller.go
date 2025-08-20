@@ -93,7 +93,7 @@ func RegisterController(
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
-		releaseInfoCache:     downloader.NewReleaseImageInfoCache(),
+		releaseInfoCache:     downloader.GetGlobalReleaseImageInfoCache(),
 	}
 
 	r.init.Add(1)
