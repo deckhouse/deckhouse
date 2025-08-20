@@ -187,7 +187,7 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	if module.ConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleManager) {
+	if module.ConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		enabledByBundle := false
 		if meta.ModuleDefinition != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
@@ -200,9 +200,7 @@ func (r *reconciler) needToEnsureRelease(
 		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
 			return false
 		}
-	}
-
-	if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+	} else if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		return false
 	}
 
