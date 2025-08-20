@@ -88,23 +88,27 @@
 # final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
-from: dev-registry.deckhouse.io/base_images@sha256:1f20b5f0fa2cae3e2922896715633dba7ab56f59648161adc7e50ece1d8dde27
+from: dev-registry.deckhouse.io/base_images@sha256:106be29ab8231a46bbfdc8d72770e5d4b92bb45d91d54d742e80749177be3475
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
-from: dev-registry.deckhouse.io/base_images@sha256:366190a5c1a71890f3e06cb9216195c373027042585ad730da53f53bb2b1c365
+from: dev-registry.deckhouse.io/base_images@sha256:20c1dd7aebbc4bc2cc0d4ae946603fbeed96b4f97d05d483d146a19d2eda74d0
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
-from: dev-registry.deckhouse.io/base_images@sha256:8f2fad728d98a8b880cb8998624ea748956afc3254f7f4b83262b0ce5c9c2a95
+from: dev-registry.deckhouse.io/base_images@sha256:fec7cb451967921b62d920c57d98884c8f6c4e08a08da86e44906c1610cbbc2f
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
-from: dev-registry.deckhouse.io/base_images@sha256:673f6eded580c79bfd3a4a51f05dddd8708c93be1ba3005aaa5327c6d0e7b7c9
+from: dev-registry.deckhouse.io/base_images@sha256:52ba2f8aaad0b3ca4e3da3741a902530a8cbe4da5eeddeb9c607ce720a482de1
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
-from: dev-registry.deckhouse.io/base_images@sha256:c7e62123b3be02df6dd81ba4c42a9b709cf0488c046aa2b09794fc0fd86f9445
+from: dev-registry.deckhouse.io/base_images@sha256:cb2a32a0d87adf744a7938a6d7c8ca1b21a36f73a25fb154c28a5b4d9e4b6ab4
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
+from: dev-registry.deckhouse.io/base_images@sha256:2f576877bb81260901b155a7ad1709f4f9b23dee2a72ed3e8242fffbbdc070de
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -472,7 +476,7 @@ import:
   - libz.so
   - libz.so.1
   - libz.so.1.3.1
-- image: libs/libcap
+- image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
   add: /usr/lib
   to: /lib64
   before: install
@@ -480,7 +484,7 @@ import:
   - libcap.a
   - libcap.so
   - libcap.so.2
-  - libcap.so.2.71
+  - libcap.so.2.69
 - image: libs/zstd
   add: /usr/lib
   to: /lib64
