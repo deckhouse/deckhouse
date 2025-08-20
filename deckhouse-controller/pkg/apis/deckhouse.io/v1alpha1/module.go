@@ -259,6 +259,16 @@ func (m *Module) ConditionStatus(condName string) bool {
 	return false
 }
 
+func (m *Module) ConditionUnknown(condName string) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionUnknown
+		}
+	}
+
+	return false
+}
+
 type ConditionOption func(opts *ConditionSettings)
 
 func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {

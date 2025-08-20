@@ -187,20 +187,22 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		return false
+	if module.ConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleManager) {
+		enabledByBundle := false
+		if meta.ModuleDefinition != nil {
+			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
+		}
+
+		if !enabledByBundle {
+			return false
+		}
+
+		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
+			return false
+		}
 	}
 
-	enabledByBundle := false
-	if meta.ModuleDefinition != nil {
-		enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
-	}
-
-	if !enabledByBundle {
-		return false
-	}
-
-	if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
+	if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		return false
 	}
 
