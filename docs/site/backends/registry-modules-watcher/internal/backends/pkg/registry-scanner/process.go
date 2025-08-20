@@ -146,13 +146,15 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// Extract version from image
-	versionAndModuleDefition, err := getVersionFromImage(versionData.Image)
+	imageMeta, err := getMetadataFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
-	version = versionAndModuleDefition.version
+	if !imageMeta.ModuleDefinitionFound {
+		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+	}
 
-	versionData.Version = version
+	versionData.Version = imageMeta.Version
 
 	// Extract tar file
 	tarFile, err = s.extractTar(ctx, versionData)
@@ -162,6 +164,11 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	versionData.TarFile = tarFile
 
 	return versionData, nil
+}
+
+type ImageMetadata struct {
+	Version               string
+	ModuleDefinitionFound bool
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
@@ -268,40 +275,21 @@ func isDocumentationFile(filename string) bool {
 	return false
 }
 
-// Definition of module.yaml file struct
-type ModuleDefinition struct {
-	Name           string   `json:"name" yaml:"name"`
-	Critical       bool     `json:"critical,omitempty" yaml:"critical,omitempty"`
-	Weight         uint32   `json:"weight,omitempty" yaml:"weight,omitempty"`
-	Tags           []string `json:"tags,omitempty" yaml:"tags,omitempty"`
-	Subsystems     []string `json:"subsystems,omitempty" yaml:"subsystems,omitempty"`
-	Namespace      string   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Stage          string   `json:"stage,omitempty" yaml:"stage,omitempty"`
-	ExclusiveGroup string   `json:"exclusiveGroup,omitempty" yaml:"exclusiveGroup,omitempty"`
-
-	Path string `json:"-" yaml:"-"`
-}
-
-type versionAndModuleYaml struct {
-	version    string
-	moduleYaml ModuleDefinition
-}
-
-func getVersionFromImage(releaseImage crv1.Image) (*versionAndModuleYaml, error) {
+func getMetadataFromImage(releaseImage crv1.Image) (*ImageMetadata, error) {
 	readCloser, err := cr.Extract(releaseImage)
 	if err != nil {
 		return nil, fmt.Errorf("extract image: %w", err)
 	}
 	defer readCloser.Close()
 
-	result := &versionAndModuleYaml{}
+	metadata := &ImageMetadata{}
 
 	tarReader := tar.NewReader(readCloser)
 	for {
 		hdr, err := tarReader.Next()
 		if err == io.EOF {
 			// end of archive
-			return result, nil
+			return metadata, nil
 		}
 		if err != nil {
 			return nil, fmt.Errorf("tar reader next: %w", err)
@@ -312,28 +300,18 @@ func getVersionFromImage(releaseImage crv1.Image) (*versionAndModuleYaml, error)
 
 		switch hdr.Name {
 		case versionFileName:
-			version, err := parseVersionFromTarFile(tarReader)
+			metadata.Version, err = parseVersionFromTarFile(tarReader)
 			if err != nil {
 				return nil, err
 			}
-			result.version = version
 		case "module.yaml":
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
 				return nil, fmt.Errorf("copy module.yaml file content: %w", err)
 			}
-
-			var moduleYaml ModuleDefinition
-
-			if err := json.Unmarshal(buf.Bytes(), &moduleYaml); err != nil {
-				return nil, fmt.Errorf("unmarshal module.yaml data: %w", err)
+			if len(buf.Bytes()) > 0 {
+				metadata.ModuleDefinitionFound = true
 			}
-
-			if moduleYaml.Name == "" {
-				return nil, fmt.Errorf("module.yaml name field is empty")
-			}
-
-			result.moduleYaml = moduleYaml
 		}
 	}
 }

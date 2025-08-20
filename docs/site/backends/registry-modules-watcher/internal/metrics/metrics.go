@@ -41,6 +41,7 @@ const (
 	SenderBuildRequestsSecondsMetric      = "{PREFIX}_sender_build_requests_seconds"
 	SenderDeleteRequestsCountMetric       = "{PREFIX}_sender_delete_requests_count"
 	SenderDeleteRequestsSecondsMetric     = "{PREFIX}_sender_delete_requests_seconds"
+	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_no_module_yaml"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -123,6 +124,12 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	_, err = ms.RegisterHistogram(SenderDeleteRequestsSecondsMetric, []string{"status_code"}, defaultSecondsBuckets, options.WithHelp("Sender delete request time in seconds"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", SenderDeleteRequestsSecondsMetric, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryScannerNoModuleYamlMetric))
+	_, err = ms.RegisterGauge(RegistryScannerNoModuleYamlMetric, []string{"module"}, options.WithHelp("Modules without module.yaml in release image"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryScannerNoModuleYamlMetric, err)
 	}
 
 	return nil
