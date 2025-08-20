@@ -98,7 +98,7 @@ func TestReleaseImageInfoCache(t *testing.T) {
 	cache := NewReleaseImageInfoCache()
 
 	// Test setting and getting
-	info1 := &ReleaseImageInfo{}
+	info1 := &LightweightReleaseInfo{}
 	cache.Set("digest1", info1)
 
 	if cached, found := cache.Get("digest1"); !found {
@@ -108,8 +108,8 @@ func TestReleaseImageInfoCache(t *testing.T) {
 	}
 
 	// Test cache growth without size limit
-	info2 := &ReleaseImageInfo{}
-	info3 := &ReleaseImageInfo{}
+	info2 := &LightweightReleaseInfo{}
+	info3 := &LightweightReleaseInfo{}
 
 	cache.Set("digest2", info2)
 	cache.Set("digest3", info3)
