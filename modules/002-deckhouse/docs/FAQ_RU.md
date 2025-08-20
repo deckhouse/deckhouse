@@ -50,58 +50,95 @@ title: "Модуль deckhouse: FAQ"
 
 Данные, которые будут собраны:
 
-##### Deckhouse:
-* Состояние очереди Deckhouse;
-* Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
-* Данные о текущей версии пода deckhouse;
-* Все объекты `DeckhouseRelease`;
-* Логи подов Deckhouse;
-* Манифесты controller'ов и подов из всех пространств имен Deckhouse;
-
-##### Объекты кластера:
-* Все объекты `NodeGroup`;
-* Все объекты `NodeGroupConfiguration`;
-* Все объекты `Node`;
-* Все объекты `Machine`;
-* Все объекты `Instance`;
-* Все объекты `StaticInstance`;
-* Все объекты `MachineDeployment`;
-* Все объекты `ClusterAuthorizationRule`;
-* Все объекты `AuthorizationRule`;
-* Все объекты `ModuleConfig`;
-* `Events` из всех пространств имен;
-
-##### Модули и их состояния:
-* Список включенных модулей;
-* Список объектов `ModuleSource` в кластере;
-* Список объектов `ModulePullOverride` в кластере;
-* Список модулей в режиме `maintenance`;
-
-##### Логи и манифесты контроллеров:
-* Логи machine controller manager;
-* Логи cloud controller manager;
-* Логи csi controller;
-* Логи cluster autoscaler;
-* Логи Vertical Pod Autoscaler admission controller;
-* Логи Vertical Pod Autoscaler recommender;
-* Логи Vertical Pod Autoscaler updater;
-* YAML-файлы capi controller manager;
-* YAML-файлы caps controller manager;
-* YAML-файлы machine controller manager;
-
-##### Мониторинг и алерты:
-* Логи Prometheus;
-* Все горящие уведомления в Prometheus;
-* Список всех не поднятых подов, кроме тех, что в состояниях Completed и Evicted;
-
-##### Сеть:
-* Все объекты из Namespace `d8-istio`;
-* Все Custom Resources istio;
-* Envoy config istio;
-* Логи istio;
-* Логи istio ingressgateway;
-* Логи istio users;
-* Состояние связи Cilium - `cilium health status`;
+<table>
+    <tr>
+        <th>Категория</th>
+        <th>Собираемые данные</th>
+    </tr>
+    <tr>
+        <td>Deckhouse</td>
+        <td>
+            <ul>
+                <li>Состояние очереди Deckhouse</li>
+                <li>Deckhouse values. За исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code></li>
+                <li>Данные о текущей версии пода deckhouse</li>
+                <li>Все объекты <code>DeckhouseRelease</code></li>
+                <li>Логи подов Deckhouse</li>
+                <li>Манифесты controller'ов и подов из всех пространств имен Deckhouse</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Объекты кластера</td>
+        <td>
+            <ul>
+                <li>Все объекты <code>NodeGroup</code></li>
+                <li>Все объекты <code>NodeGroupConfiguration</code></li>
+                <li>Все объекты <code>Node</code></li>
+                <li>Все объекты <code>Machine</code></li>
+                <li>Все объекты <code>Instance</code></li>
+                <li>Все объекты <code>StaticInstance</code></li>
+                <li>Все объекты <code>MachineDeployment</code></li>
+                <li>Все объекты <code>ClusterAuthorizationRule</code></li>
+                <li>Все объекты <code>AuthorizationRule</code></li>
+                <li>Все объекты <code>ModuleConfig</code></li>
+                <li><code>Events</code> из всех пространств имен</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Модули и их состояния</td>
+        <td>
+            <ul>
+                <li>Список включенных модулей</li>
+                <li>Список объектов <code>ModuleSource</code> в кластере</li>
+                <li>Список объектов <code>ModulePullOverride</code> в кластере</li>
+                <li>Список модулей в режиме <code>maintenance</code></li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Логи и манифесты контроллеров</td>
+        <td>
+            <ul>
+                <li>Логи machine controller manager</li>
+                <li>Логи cloud controller manager</li>
+                <li>Логи csi controller</li>
+                <li>Логи cluster autoscaler</li>
+                <li>Логи Vertical Pod Autoscaler admission controller</li>
+                <li>Логи Vertical Pod Autoscaler recommender</li>
+                <li>Логи Vertical Pod Autoscaler updater</li>
+                <li>YAML-файлы capi controller manager</li>
+                <li>YAML-файлы caps controller manager</li>
+                <li>YAML-файлы machine controller manager</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Мониторинг и алерты</td>
+        <td>
+            <ul>
+                <li>Логи Prometheus</li>
+                <li>Все горящие уведомления в Prometheus</li>
+                <li>Список всех не поднятых подов, кроме тех, что в состояниях Completed и Evicted</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Сеть</td>
+        <td>
+            <ul>
+                <li>Все объекты из Namespace <code>d8-istio</code></li>
+                <li>Все Custom Resources istio</li>
+                <li>Envoy config istio</li>
+                <li>Логи istio</li>
+                <li>Логи istio ingressgateway</li>
+                <li>Логи istio users</li>
+                <li>Состояние связи Cilium - <code>cilium health status</code></li>
+            </ul>
+        </td>
+    </tr>
+</table>
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
 

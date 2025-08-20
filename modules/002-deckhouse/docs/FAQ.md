@@ -50,58 +50,95 @@ We always appreciate helping users with debugging complex issues. Please follow 
 
 Data that will be collected:
 
-##### Deckhouse:
-* Deckhouse queue state;
-* Deckhouse values. Except `kubeRBACProxyCA` and `registry.dockercfg` values;
-* Current deckhouse pod version data;
-* All `DeckhouseRelease` objects;
-* Deckhouse pod logs;
-* Controller and pod manifests from all Deckhouse namespaces;
-
-##### Cluster objects:
-* All `NodeGroup` objects;
-* All `NodeGroupConfiguration` objects;
-* All `Node` objects;
-* All `Machine` objects;
-* All `Instance` objects;
-* All `StaticInstance` objects;
-* All `MachineDeployment` objects;
-* All `ClusterAuthorizationRule` objects;
-* All `AuthorizationRule` objects;
-* All `ModuleConfig` objects;
-* `Events` from all namespaces;
-
-##### Modules and their states:
-* List of enabled modules;
-* List of `ModuleSource` objects in the cluster;
-* List of `ModulePullOverride` objects in the cluster;
-* List of modules in `maintenance` mode;
-
-##### Controller logs and manifests:
-* Machine controller manager logs;
-* Cloud controller manager logs;
-* Csi controller logs;
-* Cluster autoscaler logs;
-* Vertical Pod Autoscaler admission controller logs;
-* Vertical Pod Autoscaler recommender logs;
-* Vertical Pod Autoscaler updater logs;
-* Capi controller manager YAML files;
-* Caps controller manager YAML files;
-* Machine controller manager YAML files;
-
-##### Monitoring and alerts:
-* Prometheus logs;
-* All burning notifications in Prometheus;
-* List of all unbooted pods, except those in Completed and Evicted states;
-
-##### Network:
-* All objects from Namespace `d8-istio`;
-* All Custom Resources istio;
-* Envoy config istio;
-* Logs istio;
-* Logs istio ingressgateway;
-* Logs istio users;
-* Cilium connection status - `cilium health status`;
+<table>
+    <tr>
+        <th>Category</th>
+        <th>Collected Data</th>
+    </tr>
+    <tr>
+        <td>Deckhouse</td>
+        <td>
+            <ul>
+                <li>Deckhouse queue state</li>
+                <li>Deckhouse values. Except <code>kubeRBACProxyCA</code> and <code>registry.dockercfg</code> values</li>
+                <li>Current deckhouse pod version data</li>
+                <li>All <code>DeckhouseRelease</code> objects</li>
+                <li>Deckhouse pod logs</li>
+                <li>Controller and pod manifests from all Deckhouse namespaces</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Cluster objects</td>
+        <td>
+            <ul>
+                <li>All <code>NodeGroup</code> objects</li>
+                <li>All <code>NodeGroupConfiguration</code> objects</li>
+                <li>All <code>Node</code> objects</li>
+                <li>All <code>Machine</code> objects</li>
+                <li>All <code>Instance</code> objects</li>
+                <li>All <code>StaticInstance</code> objects</li>
+                <li>All <code>MachineDeployment</code> objects</li>
+                <li>All <code>ClusterAuthorizationRule</code> objects</li>
+                <li>All <code>AuthorizationRule</code> objects</li>
+                <li>All <code>ModuleConfig</code> objects</li>
+                <li><code>Events</code> from all namespaces</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Modules and their states</td>
+        <td>
+            <ul>
+                <li>List of enabled modules</li>
+                <li>List of <code>ModuleSource</code> objects in the cluster</li>
+                <li>List of <code>ModulePullOverride</code> objects in the cluster</li>
+                <li>List of modules in <code>maintenance</code> mode</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Controller logs and manifests</td>
+        <td>
+            <ul>
+                <li>Machine controller manager logs</li>
+                <li>Cloud controller manager logs</li>
+                <li>Csi controller logs</li>
+                <li>Cluster autoscaler logs</li>
+                <li>Vertical Pod Autoscaler admission controller logs</li>
+                <li>Vertical Pod Autoscaler recommender logs</li>
+                <li>Vertical Pod Autoscaler updater logs</li>
+                <li>Capi controller manager YAML files</li>
+                <li>Caps controller manager YAML files</li>
+                <li>Machine controller manager YAML files</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Monitoring and alerts</td>
+        <td>
+            <ul>
+                <li>Prometheus logs</li>
+                <li>All burning notifications in Prometheus</li>
+                <li>List of all unbooted pods, except those in Completed and Evicted states</li>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>Network</td>
+        <td>
+            <ul>
+                <li>All objects from Namespace <code>d8-istio</code></li>
+                <li>All Custom Resources istio</li>
+                <li>Envoy config istio</li>
+                <li>Logs istio</li>
+                <li>Logs istio ingressgateway</li>
+                <li>Logs istio users</li>
+                <li>Cilium connection status - <code>cilium health status</code></li>
+            </ul>
+        </td>
+    </tr>
+</table>
 
 ## How to debug pod problems with ephemeral containers?
 
