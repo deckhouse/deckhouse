@@ -6,15 +6,17 @@ properties:
     type: object
     default: {}
     properties:
-      providerClusterConfiguration:
-        type: object
-        additionalProperties: false
-        description: |
-          Describes the configuration of a cloud cluster in DVP.
+      cniSecretData:
+        type: string
+    providerClusterConfiguration:
+      type: object
+      additionalProperties: false
+      description: |
+        Describes the configuration of a cloud cluster in DVP.
 
-          Used by the cloud provider if a cluster's control plane is hosted in the cloud.
+        Used by the cloud provider if a cluster's control plane is hosted in the cloud.
 
-          Run the following command to change the configuration in a running cluster:
+        Run the following command to change the configuration in a running cluster:
 
           ```shell
           kubectl -n d8-system exec -ti deploy/deckhouse -- deckhouse-controller edit provider-cluster-configuration
