@@ -1,0 +1,30 @@
+{{- define "prompp_context" -}}
+{{- $values := deepCopy .Values | merge dict }}
+{{- $_ := set $values.global.modulesImages.registry "base" (printf "%s/modules/prompp" .Values.global.modulesImages.registry.base) }}
+{{- $ctx := dict "Chart" (dict "Name" "prompp") "Values" $values }}
+{{- $ctx | toYaml }}
+{{- end }}
+
+{{- define "prometheus_init_containers" -}}
+{{- if hasKey .Values.global.modulesImages.digests "prompp" }}
+  initContainers:
+  - name: prompptool
+    image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompptool") }}
+    command:
+    - /bin/prompptool
+    - "--working-dir=/prometheus"
+    - "--verbose"
+    {{- if (.Values.global.enabledModules | has "prompp") }}
+    - "walvanilla"
+    {{- else }}
+    - "walpp"
+    {{- end }}
+    volumeMounts:
+    - name: prometheus-main-db
+      mountPath: /prometheus
+      subPath: prometheus-db
+    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- end }}
