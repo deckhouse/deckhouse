@@ -41,8 +41,10 @@ cleanup:
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
 ---
-{{ tpl (.Files.Get "werf-modules-watcher.yaml") $ }}
+{{ tpl (.Files.Get "werf-modules-watcher.inc.yaml") $ }}
 ---
-{{ tpl (.Files.Get "werf-web-router.yaml") $ }}
+{{ tpl (.Files.Get "werf-web-router.inc.yaml") $ }}
 ---
-{{ tpl (.Files.Get "werf-web-frontend.yaml") $ }}
+{{ tpl (.Files.Get "werf-web-frontend.inc.yaml") $ }}
+--
+{{ tpl (.Files.Get "werf-modules-library.inc.yaml") $ }}

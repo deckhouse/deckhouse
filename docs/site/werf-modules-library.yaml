@@ -1,2 +1,0 @@
-# Build scanner, which fetch modules documentation from list of specified registries
-image: modules-library
