@@ -230,13 +230,13 @@ func createTarball() *bytes.Buffer {
 		},
 		{
 			File: "cluster-authorization-rules.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "clusterauthorizationrules", "-A", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get clusterauthorizationrules.deckhouse.io -A -o json | jq '.items[]'`},
 		},
 		{
 			File: "authorization-rules.json",
-			Cmd:  "kubectl",
-			Args: []string{"get", "authorizationrules.deckhouse.io", "-A", "-o", "json"},
+			Cmd:  "bash",
+			Args: []string{"-c", `kubectl get authorizationrules.deckhouse.io -A -o json | jq '.items[]'`},
 		},
 		{
 			File: "module-configs.json",
@@ -276,7 +276,7 @@ func createTarball() *bytes.Buffer {
 		{
 			File: "cilium-health-status.txt",
 			Cmd:  "bash",
-			Args: []string{"-c", `kubectl -n d8-cni-cilium exec -it $(kubectl -n d8-cni-cilium get pod -o name | grep agent | head -n 1) -c cilium-agent -- cilium-health status`},
+			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and .metadata.name == "cni-cilium") | "kubectl -n d8-cni-cilium exec -it $(kubectl -n d8-cni-cilium get pod -o name | grep agent | head -n 1) -c cilium-agent -- cilium-health status"' | bash`},
 		},
 	}
 
