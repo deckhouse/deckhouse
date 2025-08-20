@@ -1,1 +1,42 @@
-image: modules-library
+# Nginx for serving modules library
+image: {{ .ModuleName }}/modules-library-web
+imageSpec:
+  config:
+    workingDir: "/app"
+fromImage: builder/alpine-3.20
+shell:
+  beforeSetup:
+  - apk add --no-cache nginx
+  setup:
+  - |
+      cat <<"EOD" > /etc/nginx/nginx.conf
+      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      EOD
+#import:
+#- image: {{ .ModuleName }}/{{ .ImageName }}/static
+#  add: /app/_site/en/modules
+#  to: /app/en/embedded-modules
+#  before: setup
+#  owner: nginx
+#  group: nginx
+#- image: {{ .ModuleName }}/{{ .ImageName }}/static
+#  add: /app/_site/ru/modules
+#  to: /app/ru/embedded-modules
+#  before: setup
+#  owner: nginx
+#  group: nginx
+---
+# Image, containing static files of all the embedded modules for loading into the storage
+image: {{ .ModuleName }}/modules-embeded/static
+{{ if eq .ModuleName "documentation" }}
+fromImage: common/distroless
+{{ else }}
+fromImage: base/distroless
+{{ end }}
+import:
+- image: {{ .ModuleName }}/modules-embeded/static-artifact
+  add: /app/_site/
+  to: /modules-embedded
+  before: setup
+---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) $ }}

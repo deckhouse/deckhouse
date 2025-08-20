@@ -35,16 +35,17 @@ cleanup:
 {{- include "parse_base_images_map" . }}
 ---
 {{- $context := . }}
-{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "builder" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{- $_ := set $context "GOPROXY" "https://proxy.golang.org/" }}
 {{ tpl (.Files.Get "werf-docs-builder.inc.yaml") $context }}
+---
+{{ tpl (.Files.Get "werf-modules-library.inc.yaml") $context }}
 ---
 {{ tpl (.Files.Get "werf-modules-watcher.inc.yaml") $ }}
 ---
 {{ tpl (.Files.Get "werf-web-router.inc.yaml") $ }}
 ---
 {{ tpl (.Files.Get "werf-web-frontend.inc.yaml") $ }}
---
-{{ tpl (.Files.Get "werf-modules-library.inc.yaml") $ }}
+---

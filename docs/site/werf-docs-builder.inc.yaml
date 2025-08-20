@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if ne .ModuleName "website-docs" }}
+{{ if eq .ModuleName "documentation" }}
 fromImage: common/distroless
 {{ else }}
 fromImage: builder/scratch
