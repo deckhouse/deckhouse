@@ -125,12 +125,12 @@ spec:
     - name: prometheus-main-db
       mountPath: /prometheus
       subPath: prometheus-db
-      securityContext:
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-          - ALL
-        readOnlyRootFilesystem: true
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
     resources:
       requests:
         {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
