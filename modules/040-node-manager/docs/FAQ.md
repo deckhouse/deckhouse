@@ -1345,7 +1345,7 @@ To add a GPU node to the cluster, perform the following steps:
          effect: NoSchedule
    ```
 
-   > If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
+   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` by path `.spec.settings.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
 
    Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 

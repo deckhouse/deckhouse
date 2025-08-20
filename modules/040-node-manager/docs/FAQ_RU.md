@@ -1357,7 +1357,7 @@ metadata:
          effect: NoSchedule
    ```
 
-   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.   customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` по пути `.spec.settings.modules.placement.customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
    Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 
