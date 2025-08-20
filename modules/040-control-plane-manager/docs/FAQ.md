@@ -746,6 +746,12 @@ In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#how-to-manual
 
 Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
 
+1. Set the correct access permissions for the backup file:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Set full path for snapshot file and for the tool into environmental variables:
 
    ```shell
@@ -770,10 +776,11 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore

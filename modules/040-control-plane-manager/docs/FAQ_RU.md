@@ -728,6 +728,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Данные действия выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
 
+1. Установите корректные права доступа для файла с резервной копией:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Установите полный путь до `snapshot` и до утилиты в переменных окружения:
 
    ```shell
@@ -753,10 +759,11 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
