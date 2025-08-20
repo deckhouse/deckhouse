@@ -18,3 +18,5 @@ spec:
                         description: Версия настроек модуля.
                       schema:
                         description: Схема настроек для данной версии модуля.
+                      conversions:
+                        description: Список правил конверсий для данной версии.
