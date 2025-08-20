@@ -328,7 +328,7 @@ To clean up a node for adding to another cluster, follow these steps:
 1. Remove the node from the Kubernetes cluster:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-emptydir-data=true
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data=true
    kubectl delete node <node>
    ```
 
