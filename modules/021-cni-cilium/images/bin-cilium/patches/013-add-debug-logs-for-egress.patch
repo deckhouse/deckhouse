@@ -1,18 +1,33 @@
-From 865d11495cf32f0717cb0283108d3a9432ea32dc Mon Sep 17 00:00:00 2001
+From 3aa26c5b63ab9967e3caa46c64a0426af2fcc1b9 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 20 Aug 2025 14:29:48 +0300
 Subject: [PATCH] add debug logs for egress
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
- pkg/egressgateway/manager.go | 10 ++++++++++
- 1 file changed, 10 insertions(+)
+ pkg/egressgateway/manager.go | 13 +++++++++++++
+ pkg/egressgateway/policy.go  |  4 +++-
+ 2 files changed, 16 insertions(+), 1 deletion(-)
 
 diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
-index 971d84e3e7..da49cdc9da 100644
+index 971d84e3e7..a9774cbfa3 100644
 --- a/pkg/egressgateway/manager.go
 +++ b/pkg/egressgateway/manager.go
-@@ -722,7 +722,9 @@ func (manager *Manager) removeUnusedEgressRules() {
+@@ -655,10 +655,13 @@ func (manager *Manager) addMissingEgressRules() {
+ 			gatewayIP = ExcludedCIDRIPv4
+ 		}
+ 
++		fmt.Printf("DEBUG addEgressRule before Match %v, %v\n", gwc.egressIP, gatewayIP)
+ 		if policyPresent && policyVal.Match(gwc.egressIP, gatewayIP) {
++			fmt.Printf("DEBUG addEgressRule NOT Matched %v, %v\n", gwc.egressIP, gatewayIP)
+ 			return
+ 		}
+ 
++		fmt.Printf("DEBUG addEgressRule Matched %v, %v\n", gwc.egressIP, gatewayIP)
+ 		logger := log.WithFields(logrus.Fields{
+ 			logfields.SourceIP:        endpointIP,
+ 			logfields.DestinationCIDR: dstCIDR.String(),
+@@ -722,7 +725,9 @@ func (manager *Manager) removeUnusedEgressRules() {
  // Whenever it encounters an error, it will just log it and move to the next
  // item, in order to reconcile as many states as possible.
  func (manager *Manager) reconcileLocked() {
@@ -22,7 +37,7 @@ index 971d84e3e7..da49cdc9da 100644
  		return
  	}
  
-@@ -731,13 +733,19 @@ func (manager *Manager) reconcileLocked() {
+@@ -731,13 +736,19 @@ func (manager *Manager) reconcileLocked() {
  	// we don't know which k8s events/resources were received during the
  	// initial k8s sync
  	case manager.eventBitmapIsSet(eventUpdateEndpoint, eventDeleteEndpoint, eventUpdateNode, eventDeleteNode, eventK8sSyncDone):
@@ -42,7 +57,7 @@ index 971d84e3e7..da49cdc9da 100644
  		manager.regenerateGatewayConfigs()
  
  		// Sysctl updates are handled by a reconciler, with the initial update attempting to wait some time
-@@ -757,7 +765,9 @@ func (manager *Manager) reconcileLocked() {
+@@ -757,7 +768,9 @@ func (manager *Manager) reconcileLocked() {
  
  	// The order of the next 2 function calls matters, as by first adding missing policies and
  	// only then removing obsolete ones we make sure there will be no connectivity disruption
@@ -52,6 +67,24 @@ index 971d84e3e7..da49cdc9da 100644
  	manager.removeUnusedEgressRules()
  
  	// clear the events bitmap
+diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
+index 36e8e871ad..1f582952d2 100644
+--- a/pkg/egressgateway/policy.go
++++ b/pkg/egressgateway/policy.go
+@@ -201,10 +201,12 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
+ // with a boolean value indicating if the CIDR belongs to the excluded ones and
+ // the gatewayConfig of the receiver policy
+ func (config *PolicyConfig) forEachEndpointAndCIDR(f func(netip.Addr, netip.Prefix, bool, *gatewayConfig)) {
+-
++	fmt.Printf("DEBUG forEachEndpointAndCIDR START\n")
+ 	for _, endpoint := range config.matchedEndpoints {
++		fmt.Printf("DEBUG forEachEndpointAndCIDR endpoint %v\n", endpoint.nodeIP)
+ 		for _, endpointIP := range endpoint.ips {
+ 			isExcludedCIDR := false
++			fmt.Printf("DEBUG forEachEndpointAndCIDR endpointIP %v\n", endpointIP)
+ 			for _, dstCIDR := range config.dstCIDRs {
+ 				f(endpointIP, dstCIDR, isExcludedCIDR, &config.gatewayConfig)
+ 			}
 -- 
 2.34.1
 
