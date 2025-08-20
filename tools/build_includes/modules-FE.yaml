@@ -189,18 +189,8 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/modules/040-node-manager/templates/templates
-  to: /deckhouse/modules/040-node-manager/templates/templates
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
   to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/040-node-manager/monitoring/prometheus-rules
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules
   stageDependencies:
     install:
         - '**/*'
