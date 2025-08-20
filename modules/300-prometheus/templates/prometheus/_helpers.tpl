@@ -6,6 +6,8 @@
 {{- end }}
 
 {{- define "prometheus_init_containers" -}}
+{{- $ctx := index . 0 }}
+{{- $volume := index . 1 }}
 {{- if hasKey .Values.global.modulesImages.digests "prompp" }}
   initContainers:
   - name: prompptool
@@ -20,7 +22,7 @@
     - "walpp"
     {{- end }}
     volumeMounts:
-    - name: prometheus-main-db
+    - name: {{ $volume }}
       mountPath: /prometheus
       subPath: prometheus-db
     {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}

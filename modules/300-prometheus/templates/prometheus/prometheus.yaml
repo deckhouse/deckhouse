@@ -101,7 +101,7 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  {{- include "prometheus_init_containers" . | nindent 2 }}
+  {{- include "prometheus_init_containers" (list . "prometheus-main-db") | nindent 2 }}
   containers:
   - name: prometheus
     startupProbe:
