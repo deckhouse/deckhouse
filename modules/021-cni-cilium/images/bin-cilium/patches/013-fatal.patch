@@ -1,13 +1,14 @@
 diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
-index 59e81f5bd1..98791af572 100644
+index 59e81f5bd1..96fba3d7ed 100644
 --- a/pkg/endpoint/bpf.go
 +++ b/pkg/endpoint/bpf.go
-@@ -566,7 +566,7 @@ func (e *Endpoint) realizeBPFState(regenContext *regenerationContext) (err error
+@@ -566,6 +566,9 @@ func (e *Endpoint) realizeBPFState(regenContext *regenerationContext) (err error
  		templateHash, err := e.owner.Orchestrator().ReloadDatapath(datapathRegenCtxt.completionCtx, datapathRegenCtxt.epInfoCache, &stats.datapathRealization)
  		if err != nil {
  			if !errors.Is(err, context.Canceled) {
--				e.getLogger().WithError(err).Error("Error while reloading endpoint BPF program")
-+				e.getLogger().WithError(err).Fatal("Error while reloading endpoint BPF program")
++				if strings.Contains(err.Error(), "BPF program is too large") {
++					e.getLogger().WithError(err).Fatal("Error while reloading endpoint BPF program, which was caused by the program being too large. We recommend upgrading your kernel to version 6.8 or a later version, as this version optimizes the calculation of complexity and the verification of BPF programs.")
++				}
+ 				e.getLogger().WithError(err).Error("Error while reloading endpoint BPF program")
  			}
  			return err
- 		}
