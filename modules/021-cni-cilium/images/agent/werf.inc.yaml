@@ -286,20 +286,16 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-20.1"
+fromCacheVersion: "2025-08-20.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
   before: install
-  owner: root
-  group: root
 - image: tools/coreutils
   before: install
   add: /
   to: /
-  owner: root
-  group: root
   includePaths:
   - usr/bin/env
   - usr/bin/ls
@@ -308,19 +304,13 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: install
-  owner: root
-  group: root
 - image: tools/bash
   before: install
   add: /usr/bin/bash
-  owner: root
-  group: root
 - image: tools/coreutils
   before: install
   add: /
   to: /
-  owner: root
-  group: root
   includePaths:
   - usr/bin/basename
   - usr/bin/cat
@@ -344,55 +334,37 @@ import:
 - image: tools/findutils
   before: install
   add: /usr/bin/find
-  owner: root
-  group: root
 - image: tools/gawk
   before: install
   add: /
   to: /
-  owner: root
-  group: root
   includePaths:
   - usr/bin/awk
   - usr/bin/gawk
 - image: tools/grep
   before: install
   add: /usr/bin/grep
-  owner: root
-  group: root
 - image: tools/sed
   before: install
   add: /usr/bin/sed
-  owner: root
-  group: root
 - image: tools/tar
   before: install
   add: /usr/bin/tar
-  owner: root
-  group: root
 - image: tools/util-linux
   before: install
   add: /usr/bin/nsenter
-  owner: root
-  group: root
 - image: tools/util-linux
   before: install
   add: /bin/mount
   to: /usr/bin/mount
-  owner: root
-  group: root
 - image: tools/ipset
   before: install
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
-  owner: root
-  group: root
 - image: tools/kmod
   before: install
   add: /bin/
   to: /usr/bin/
-  owner: root
-  group: root
   includePaths:
   - kmod
   - lsmod
@@ -400,8 +372,6 @@ import:
   before: install
   add: /bin/
   to: /usr/sbin/
-  owner: root
-  group: root
   includePaths:
   - depmod
   - insmod
@@ -413,8 +383,6 @@ import:
   before: install
   add: /sbin/
   to: /usr/sbin/
-  owner: root
-  group: root
   includePaths:
   - dcb
   - devlink
@@ -443,20 +411,14 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
-  owner: root
-  group: root
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libc.so.6
   to: /lib64/libc.so.6
-  owner: root
-  group: root
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
-  owner: root
-  group: root
   before: install
 - image: tools/elfutils
   add: /usr/lib
