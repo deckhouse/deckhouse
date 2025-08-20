@@ -2941,7 +2941,7 @@
             {
               "datasource": {
                 "type": "prometheus",
-                "uid": "P0D6E4079E36703EB"
+                "uid": "$ds_prometheus"
               },
               "editorMode": "code",
               "expr": "sum by (task_id) (d8_telemetry_deckhouse_tasks_queue_compaction_reached{task_id!=\"\"})",
