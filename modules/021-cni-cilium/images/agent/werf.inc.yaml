@@ -286,7 +286,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-20.4"
+fromCacheVersion: "2025-08-20.5"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
