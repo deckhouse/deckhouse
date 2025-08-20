@@ -9,24 +9,24 @@
 {{- $ctx := index . 0 }}
 {{- $volume := index . 1 }}
 {{- if hasKey .Values.global.modulesImages.digests "prompp" }}
-  initContainers:
-  - name: prompptool
-    image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompptool") }}
-    command:
-    - /bin/prompptool
-    - "--working-dir=/prometheus"
-    - "--verbose"
-    {{- if (.Values.global.enabledModules | has "prompp") }}
-    - "walvanilla"
-    {{- else }}
-    - "walpp"
-    {{- end }}
-    volumeMounts:
-    - name: {{ $volume }}
-      mountPath: /prometheus
-      subPath: prometheus-db
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
-    resources:
-      requests:
-        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+initContainers:
+- name: prompptool
+  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompptool") }}
+  command:
+  - /bin/prompptool
+  - "--working-dir=/prometheus"
+  - "--verbose"
+  {{- if (.Values.global.enabledModules | has "prompp") }}
+  - "walvanilla"
+  {{- else }}
+  - "walpp"
+  {{- end }}
+  volumeMounts:
+  - name: {{ $volume }}
+    mountPath: /prometheus
+    subPath: prometheus-db
+  {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 2 }}
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 6 }}
 {{- end }}
