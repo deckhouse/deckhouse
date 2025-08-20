@@ -158,18 +158,14 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger.Debug("uninstall module")
 
-	shouldClear := false
-
 	// clear module dir
 	defer func() {
-		if shouldClear {
-			// /deckhouse/downloaded/<module>
-			imagesPath := filepath.Join(i.downloaded, module)
+		// /deckhouse/downloaded/<module>
+		imagesPath := filepath.Join(i.downloaded, module)
 
-			logger.Info("delete module dir", slog.String("path", imagesPath))
-			if err := os.RemoveAll(imagesPath); err != nil {
-				logger.Warn("failed to remove downloaded images", slog.String("path", imagesPath))
-			}
+		logger.Info("delete module dir", slog.String("path", imagesPath))
+		if err := os.RemoveAll(imagesPath); err != nil {
+			logger.Warn("failed to remove downloaded images", slog.String("path", imagesPath))
 		}
 
 		logger.Debug("module uninstalled")
@@ -179,7 +175,6 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 	mountPath := filepath.Join(i.mount, module)
 	if _, err := os.Stat(mountPath); err != nil {
 		if os.IsNotExist(err) {
-			shouldClear = true
 			return nil
 		}
 
@@ -199,8 +194,6 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 	if err := erofs.CloseMapper(ctx, module); err != nil {
 		return fmt.Errorf("close device mapper: %w", err)
 	}
-
-	shouldClear = true
 
 	return nil
 }

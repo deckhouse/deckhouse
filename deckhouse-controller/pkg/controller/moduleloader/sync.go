@@ -316,11 +316,12 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 
 	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err != nil && apierrors.IsNotFound(err) {
-			l.logger.Warn("module has neither release nor override, purge it from fs", slog.String("name", module))
-			if err = l.installer.Uninstall(ctx, module); err != nil {
-				return fmt.Errorf("uninstall the '%s' module: %w", module, err)
-			}
+		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
+			continue
+		}
+
+		if err = l.installer.Uninstall(ctx, module); err != nil {
+			return fmt.Errorf("uninstall the '%s' module: %w", module, err)
 		}
 	}
 
