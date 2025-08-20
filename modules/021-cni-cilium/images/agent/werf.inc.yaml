@@ -31,7 +31,7 @@
 # shell-scripts dependencies
 {{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
 # clang dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
+# {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
 {{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
 {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
@@ -286,7 +286,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-20.2"
+fromCacheVersion: "2025-08-20.3"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
