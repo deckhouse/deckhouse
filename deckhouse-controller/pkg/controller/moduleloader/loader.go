@@ -205,7 +205,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
-		
+
 		// load conversions for settings
 		conversions, err = l.loadConversions(conversionsDir)
 		if err != nil {

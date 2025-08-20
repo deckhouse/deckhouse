@@ -15,6 +15,7 @@
 package moduleloader
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -135,19 +136,22 @@ type: object`,
 			settings := &v1alpha1.ModuleSettingsDefinition{}
 
 			// Load conversions using the loader
-			var conversionsDir string
-			if tt.modulePath == "" {
-				conversionsDir = ""
-			} else {
-				conversionsDir = filepath.Join(tt.modulePath, "openapi", "conversions")
-			}
-			conversions, err := loader.loadConversions(conversionsDir)
-			if err != nil {
-				t.Errorf("Unexpected error loading conversions: %v", err)
+			var conversions []string
+			conversionsDir := filepath.Join(tt.modulePath, "openapi", "conversions")
+			// Check if conversions directory exists (like in processModuleDefinition)
+			if _, err := os.Stat(conversionsDir); err == nil {
+				conversions, err = loader.loadConversions(conversionsDir)
+				if err != nil {
+					t.Errorf("Unexpected error loading conversions: %v", err)
+					return
+				}
+			} else if !os.IsNotExist(err) {
+				t.Errorf("Unexpected error checking conversions directory: %v", err)
 				return
 			}
+			// If directory doesn't exist, conversions remains empty slice (nil)
 
-			err = settings.SetVersion([]byte(tt.configYAML), conversions)
+			err := settings.SetVersion([]byte(tt.configYAML), conversions)
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 				return
