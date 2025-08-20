@@ -187,20 +187,21 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	// check the module enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		enabledByBundle := false
-		if meta.ModuleDefinition != nil {
-			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
-		}
+		return false
+	}
 
-		if !enabledByBundle {
-			return false
-		}
+	enabledByBundle := false
+	if meta.ModuleDefinition != nil {
+		enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
+	}
 
-		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
-			return false
-		}
+	if !enabledByBundle {
+		return false
+	}
+
+	if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
+		return false
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists
