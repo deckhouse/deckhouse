@@ -208,7 +208,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: router
             port:
               name: http
       - path: /downloads/deckhouse-cli
@@ -229,14 +229,14 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: router
             port:
               name: http
       - path: /products/kubernetes-platform/documentation/v1
         pathType: Prefix
         backend:
           service:
-            name: backend
+            name: router
             port:
               name: http
       - path: /products/code/documentation/
