@@ -391,24 +391,40 @@ properties:
             enum: [VsphereCloudDiscoveryData]
           vmFolderPath:
             type: string
+            minLength: 1
           resourcePoolPath:
             type: string
+          instances:
+            type: object
+            additionalProperties: false
+            properties:
+              mainNetwork:
+                type: string
           zones:
             type: array
             items:
               type: string
-      vsphereDiscoveryData:
-        type: object
-        additionalProperties: false
-        required: [datacenter]
-        x-examples:
-          - datacenter: test
-        properties:
           datacenter:
             type: string
-          zones:
+          datastores:
             type: array
             items:
-              type: string
+              type: object
+              required: [name]
+              properties:
+                zones:
+                  type: array
+                  items:
+                    type: string
+                path:
+                  type: string
+                name:
+                  type: string
+                  minLength: 1
+                datastoreType:
+                  type: string
+                datastoreURL:
+                  type: string
+            description: List of datastores
       cniSecretData:
         type: string

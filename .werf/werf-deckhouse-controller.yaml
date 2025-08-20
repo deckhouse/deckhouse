@@ -37,9 +37,14 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
   - mkdir /deckhouse /out
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache openssh-client
+  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   setup:
   - |
     CI_COMMIT_TAG="{{- env "CI_COMMIT_TAG" "" }}"
@@ -52,7 +57,12 @@ shell:
           CI_COMMIT_TAG="v${version}.0"
       else
           # for dev branches - create release as next prerelease version. Get the latest branch and increment the minor version
-          latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --sort='version:refname' --refs --heads https://github.com/deckhouse/deckhouse.git 'refs/heads/release-[0-9]\.[0-9]?' | tail --lines=1 | cut --delimiter='/' --fields=3 | sed 's/release-/v/').0
+          {{- if .DistroPackagesProxy }}
+          export DOMAIN=git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):
+          {{- else }}
+          export DOMAIN=https://github.com/
+          {{- end }}
+          latest_tag=$(git -c 'versionsort.suffix=-' ls-remote --exit-code --sort='version:refname' --refs --heads ${DOMAIN}deckhouse/deckhouse.git 'refs/heads/release-[0-9]\.[0-9]?' | tail --lines=1 | cut --delimiter='/' --fields=3 | sed 's/release-/v/').0
           IFS='.' read -r -a version_parts <<< "$latest_tag"
           major=${version_parts[0]}
           minor=${version_parts[1]}
@@ -65,11 +75,12 @@ shell:
       export CI_COMMIT_TAG
     fi
   - cd /deckhouse
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   # Generate hooks imports for particular edition
   - go generate ./tools/register.go
   # Go modules depend on `register-go-hooks.go` file, hence we cannot split downloading dependencies and building
   # into separate phases.
-  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  - go mod download
   - cd /deckhouse/deckhouse-controller
   - D8_VERSION=${CI_COMMIT_TAG} DEFAULT_KUBERNETES_VERSION={{ .defaultKubernetesVersion }} ./go-build.sh
   - mv deckhouse-controller /out

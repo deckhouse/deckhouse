@@ -34,6 +34,16 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
+- add: /go_lib/dependency/vsphere
+  to: /src/go_lib/dependency/vsphere
+  excludePaths:
+    - "**/*.md"
+    - "**/*.yaml"
+  stageDependencies:
+    install:
+      - go.mod
+      - go.sum
+      - "**/*.go"
 - add: /pkg/log
   to: /src/pkg/log
   excludePaths:
@@ -48,6 +58,7 @@ shell:
   install:
   - cd /src
   - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/dependency/vsphere# /src/go_lib/dependency/vsphere#g' go.mod
   - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

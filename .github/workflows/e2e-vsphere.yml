@@ -57,7 +57,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.42.0"
+  WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -66,8 +66,11 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
+  WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
+  WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   # </template: werf_envs>
 
 # Note: no concurrency section for e2e workflows.
@@ -590,9 +593,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -702,9 +703,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1112,9 +1111,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1224,9 +1221,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1634,9 +1629,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -1746,9 +1739,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2156,9 +2147,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2268,9 +2257,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2678,9 +2665,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -2790,9 +2775,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3200,9 +3183,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3312,9 +3293,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3722,9 +3701,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -3834,9 +3811,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4244,9 +4219,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4356,9 +4329,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4766,9 +4737,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -4878,9 +4847,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5288,9 +5255,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5400,9 +5365,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5810,9 +5773,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -5922,9 +5883,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6332,9 +6291,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6444,9 +6401,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6854,9 +6809,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -6966,9 +6919,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -7376,9 +7327,7 @@ jobs:
             -e USER_RUNNER_ID=${user_runner_id} \
             -e CIS_ENABLED=${CIS_ENABLED} \
             -e TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \
@@ -7488,9 +7437,7 @@ jobs:
             -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
             -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
             -e USER_RUNNER_ID=${user_runner_id} \
-            -e FLANT_REGISTRY_HOST=${{ secrets.FLANT_REGISTRY_HOST }} \
-            -e FLANT_REGISTRY_USER=${{ secrets.FLANT_REGISTRY_USER }} \
-            -e FLANT_REGISTRY_PASSWORD=${{ secrets.FLANT_REGISTRY_PASSWORD }} \
+            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
             -v $(pwd)/testing:/deckhouse/testing \
             -v $(pwd)/release.yaml:/deckhouse/release.yaml \
             -v ${TMP_DIR_PATH}:/tmp \

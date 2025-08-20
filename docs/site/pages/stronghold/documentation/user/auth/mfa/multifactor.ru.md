@@ -26,8 +26,7 @@ Stronghold может осуществлять двухфакторную аут
 
 ### Запуск LDAP Adapter в Kubernetes
 
-Для запуска воспользуйтесь образом [trublast/multifactor-ldap-adapter](https://hub.docker.com/r/trublast/multifactor-ldap-adapter/tags)
-и следующим манифестом:
+Для запуска воспользуйтесь образом `multifactor-ldap-adapter:3.0.7` и следующим манифестом:
 
 ```yaml
 ---
@@ -46,7 +45,7 @@ spec:
         app: ldap-adapter
     spec:
       containers:
-      - image: trublast/multifactor-ldap-adapter:3.0.7
+      - image: registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7
         name: ldap-adapter
         volumeMounts:
         - mountPath: /opt/multifactor/ldap/multifactor-ldap-adapter.dll.config
@@ -95,6 +94,10 @@ data:
 ```
 
 В конфигурации укажите адрес своего LDAP-сервера и значения `multifactor-nas-identifier` и `multifactor-shared-secret` из панели управления MULTIFACTOR.
+
+Доступные образы:
+- на базе Ubuntu 24.04 `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7`
+- на базе Alpine 3.22 `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7-alpine`
 
 ## Настройка Stronghold
 

@@ -42,12 +42,15 @@ type Collector interface {
 	HistogramObserve(metric string, value float64, labels map[string]string, buckets []float64)
 }
 
+type CollectorFunc func(s Storage)
+
 type Storage interface {
 	Registerer
 	Collector
 
 	ApplyOperation(op operation.MetricOperation, commonLabels map[string]string) error
 	ApplyBatchOperations(ops []operation.MetricOperation, labels map[string]string) error
+	AddCollectorFunc(fn CollectorFunc)
 
 	Grouped() GroupedStorage
 	Collector() prometheus.Collector

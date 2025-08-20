@@ -11,15 +11,8 @@ secrets:
 - id: DECKHOUSE_PRIVATE_REPO
   value: {{ .DECKHOUSE_PRIVATE_REPO }}
 args:
-  BASE_ALPINE: {{ .Images.BASE_ALPINE }}
-  BASE_GOLANG_23_ALPINE: {{ .Images.BASE_GOLANG_23_ALPINE }}
-  BASE_GOLANG_23_BULLSEYE: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
-  BASE_GOLANG_23_BOOKWORM: {{ .Images.BASE_GOLANG_23_BOOKWORM }}
   BASE_NODE_16_ALPINE: {{ .Images.BASE_NODE_16_ALPINE }}
   BASE_NODE_20_ALPINE: {{ .Images.BASE_NODE_20_ALPINE }}
-  BASE_NODE_23_ALPINE: {{ .Images.BASE_NODE_23_ALPINE }}
-  BASE_JEKYLL: {{ .Images.BASE_JEKYLL }}
-  BASE_SCRATCH: {{ .Images.BASE_SCRATCH }}
 
   # Only needed for ingress-nginx controller 1.9. Should be removed soon
   BASE_ALT_DEV: {{ .Images.BASE_ALT_DEV }}
@@ -54,7 +47,7 @@ dependencies:
 {{- $context := . -}}
 
 image: images-digests
-from: {{ $context.Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 dependencies:
 
 {{- range $imageDigest := $context.ModulesImagesDigestList }}

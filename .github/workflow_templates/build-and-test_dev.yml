@@ -33,6 +33,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
@@ -51,7 +55,7 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ee')
+    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -62,7 +66,7 @@ jobs:
 
   build_se:
     name: Build SE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se')
+    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -73,7 +77,7 @@ jobs:
 
   build_se_plus:
     name: Build SE-plus
-    if: contains(github.event.pull_request.labels.*.name, 'edition/se-plus')
+    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -84,7 +88,7 @@ jobs:
 
   build_be:
     name: Build BE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/be')
+    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -95,7 +99,7 @@ jobs:
 
   build_ce:
     name: Build CE
-    if: contains(github.event.pull_request.labels.*.name, 'edition/ce')
+    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
     needs:
       - git_info
       - pull_request_info
@@ -111,7 +115,7 @@ jobs:
     needs:
       - build_fe
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: ${{ github.event.repository.name }}
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}

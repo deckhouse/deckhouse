@@ -12,6 +12,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,7 +22,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue: "/modules/metallb/service-update",
+	Queue: "/modules/metallb/discovery",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "l2lb_services",
@@ -29,8 +30,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "SDNInternalL2LBService",
 			FilterFunc: applyL2LBServiceFilter,
 		},
+		{
+			Name:       "services",
+			ApiVersion: "v1",
+			Kind:       "Service",
+			FilterFunc: applyServiceFilterForStatusUpdater,
+		},
 	},
 }, handleL2LBServices)
+
+func applyServiceFilterForStatusUpdater(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var service v1.Service
+	err := sdk.FromUnstructured(obj, &service)
+	if err != nil {
+		return nil, err
+	}
+
+	if service.Spec.Type != v1.ServiceTypeLoadBalancer {
+		// we only need service of LoadBalancer type
+		return nil, nil
+	}
+
+	return ServiceUpdaterInfo{
+		Name:       service.GetName(),
+		Namespace:  service.GetNamespace(),
+		Conditions: service.Status.Conditions,
+	}, nil
+}
 
 func applyL2LBServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var l2LBService SDNInternalL2LBService
@@ -65,25 +91,39 @@ func handleL2LBServices(input *go_hook.HookInput) error {
 			assignedIPs++
 			IPsForStatus = append(IPsForStatus, map[string]string{"ip": ip})
 		}
+
+		var service *ServiceUpdaterInfo
+		for svc, err := range sdkobjectpatch.SnapshotIter[ServiceUpdaterInfo](input.NewSnapshots.Get("services")) {
+			if err != nil {
+				continue
+			}
+			if namespacedName.Name == svc.Name && namespacedName.Namespace == svc.Namespace {
+				service = &svc
+				break
+			}
+		}
+		if service == nil {
+			return nil
+		}
+
 		conditionStatus := metav1.ConditionFalse
 		reason := "NotAllIPsAssigned"
 		if totalIPs == assignedIPs {
 			conditionStatus = metav1.ConditionTrue
 			reason = "AllIPsAssigned"
 		}
+		conditions := updateCondition(service.Conditions, metav1.Condition{
+			Status:  conditionStatus,
+			Type:    "AllPublicIPsAssigned",
+			Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
+			Reason:  reason,
+		})
 		patch := map[string]any{
 			"status": map[string]any{
 				"loadBalancer": map[string]any{
 					"ingress": IPsForStatus,
 				},
-				"conditions": []metav1.Condition{
-					{
-						Status:  conditionStatus,
-						Type:    "AllPublicIPsAssigned",
-						Message: fmt.Sprintf("%d of %d public IPs were assigned", assignedIPs, totalIPs),
-						Reason:  reason,
-					},
-				},
+				"conditions": conditions,
 			},
 		}
 
@@ -119,4 +159,14 @@ func getNamespacedNameOfServicesWithIPs(snapshots []sdkpkg.Snapshot) map[types.N
 	}
 
 	return result
+}
+
+func updateCondition(conditions []metav1.Condition, newCondition metav1.Condition) []metav1.Condition {
+	for i, condition := range conditions {
+		if condition.Type == newCondition.Type {
+			conditions[i] = newCondition
+			return conditions
+		}
+	}
+	return append(conditions, newCondition)
 }

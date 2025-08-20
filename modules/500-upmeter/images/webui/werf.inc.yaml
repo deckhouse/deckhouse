@@ -14,7 +14,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-from: node:14-alpine3.12@sha256:426384fb33a11d27dbbdc545f39bb8daacd3e7db7c60b52cd6bc0597e0045b8d
+from: {{ .Images.BASE_NODE_14_ALPINE }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
@@ -37,6 +37,8 @@ import:
   add: /src/dist
   to: /opt/nginx-static/html
   before: setup
+git:  
+{{- include "image mount points" . }}  
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]

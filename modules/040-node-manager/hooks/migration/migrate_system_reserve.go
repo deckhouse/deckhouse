@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -102,14 +105,17 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func systemReserve(input *go_hook.HookInput) error {
-	if cmSnapshotNew := input.Snapshots["cmNew"]; len(cmSnapshotNew) > 0 {
+	if cmSnapshotNew := input.NewSnapshots.Get("cmNew"); len(cmSnapshotNew) > 0 {
 		log.Debug("System reserved Nodes are already migrated, skipping...")
 		return nil
 	}
 
-	ngsSnapshot := input.Snapshots["ngs"]
-	for _, ngRaw := range ngsSnapshot {
-		ng := ngRaw.(*NodeGroup)
+	ngsSnapshot := input.NewSnapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[NodeGroup](ngsSnapshot) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshot: %w", err)
+		}
+
 		skipMigration := ng.ResourceReservationMode != ""
 		input.Logger.Info("Migration requirements", slog.String("node_group_name", ng.Name), slog.String("kubelet_resource_reservation_mode", ng.ResourceReservationMode), slog.Bool("skip_migration", skipMigration))
 		if skipMigration {
@@ -137,7 +143,7 @@ func systemReserve(input *go_hook.HookInput) error {
 		},
 	})
 
-	if cmSnapshot := input.Snapshots["cm"]; len(cmSnapshot) > 0 {
+	if cmSnapshot := input.NewSnapshots.Get("cm"); len(cmSnapshot) > 0 {
 		log.Debug("Delete old migration configmap", slog.String("configmap", "(d8-system/"+systemReserveMigrationCM+")"))
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
 	}

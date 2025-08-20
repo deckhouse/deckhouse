@@ -18,13 +18,17 @@ source /deckhouse/shell_lib.sh
 
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
-  if kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
-    if kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then
-      echo "true" > "$MODULE_ENABLED_RESULT"
-      return
-    fi
+
+  if ! kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+    echo "secret 'kube-system/d8-provider-cluster-configuration' is not present" > "$MODULE_ENABLED_REASON"
+
+  elif ! kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then
+    echo "false" > "$MODULE_ENABLED_RESULT"
+    echo "secret 'd8-system/d8-cluster-terraform-state' is not present" > "$MODULE_ENABLED_REASON"
+  else
+    echo "true" > "$MODULE_ENABLED_RESULT"
   fi
-  echo "false" > "$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"

@@ -78,12 +78,10 @@ func generateCA(input *go_hook.HookInput) error {
 			istioCA.Root = istioCA.Cert
 		}
 	} else {
-		certs := input.Snapshots["secret_ca"]
+		certs := input.NewSnapshots.Get("secret_ca")
 		if len(certs) == 1 {
-			var ok bool
-			istioCA, ok = certs[0].(lib.IstioCA)
-			if !ok {
-				return fmt.Errorf("cannot convert certificate to certificate authority")
+			if err := certs[0].UnmarshalTo(&istioCA); err != nil {
+				return fmt.Errorf("cannot convert certificate to certificate authority: failed to unmarshal 'secret_ca' snapshot: %w", err)
 			}
 		} else {
 			selfSignedCA, err := certificate.GenerateCA(input.Logger, "d8-istio", certificate.WithGroups("d8-istio"), certificate.WithKeyRequest(&csr.KeyRequest{

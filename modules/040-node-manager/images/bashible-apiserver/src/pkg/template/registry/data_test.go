@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"testing"
 
-	validation "github.com/go-ozzo/ozzo-validation"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
 func TestRegistryDataValidate(t *testing.T) {

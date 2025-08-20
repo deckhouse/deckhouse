@@ -3,6 +3,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+  annotations:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-mutating-webhook-configuration
 webhooks:
@@ -217,7 +218,6 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  annotations:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   name: capi-validating-webhook-configuration
 webhooks:
@@ -266,6 +266,29 @@ webhooks:
           - UPDATE
         resources:
           - machinedeployments
+    sideEffects: None
+  - admissionReviewVersions:
+      - v1
+      - v1beta1
+    clientConfig:
+      caBundle: {{ .Values.nodeManager.internal.capiControllerManagerWebhookCert.ca | b64enc }}
+      service:
+        name: capi-webhook-service
+        namespace: d8-cloud-instance-manager
+        path: /validate-cluster-x-k8s-io-v1beta1-machinedrainrule
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: validation.machinedrainrule.cluster.x-k8s.io
+    rules:
+      - apiGroups:
+          - cluster.x-k8s.io
+        apiVersions:
+          - v1beta1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - machinedrainrules
     sideEffects: None
   - admissionReviewVersions:
       - v1
@@ -461,7 +484,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /validate-ipam-cluster-x-k8s-io-v1alpha1-ipaddress
+        path: /validate-ipam-cluster-x-k8s-io-v1beta1-ipaddress
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: validation.ipaddress.ipam.cluster.x-k8s.io
@@ -469,7 +492,7 @@ webhooks:
       - apiGroups:
           - ipam.cluster.x-k8s.io
         apiVersions:
-          - v1alpha1
+          - v1beta1
         operations:
           - CREATE
           - UPDATE
@@ -485,7 +508,7 @@ webhooks:
       service:
         name: capi-webhook-service
         namespace: d8-cloud-instance-manager
-        path: /validate-ipam-cluster-x-k8s-io-v1alpha1-ipaddressclaim
+        path: /validate-ipam-cluster-x-k8s-io-v1beta1-ipaddressclaim
     failurePolicy: Fail
     matchPolicy: Equivalent
     name: validation.ipaddressclaim.ipam.cluster.x-k8s.io
@@ -493,7 +516,7 @@ webhooks:
       - apiGroups:
           - ipam.cluster.x-k8s.io
         apiVersions:
-          - v1alpha1
+          - v1beta1
         operations:
           - CREATE
           - UPDATE
@@ -502,3 +525,4 @@ webhooks:
           - ipaddressclaims
     sideEffects: None
 {{- end }}
+

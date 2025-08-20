@@ -13,6 +13,39 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
+const (
+	serviceManifest = `
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: nginx
+  annotations:
+    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+spec:
+  ports:
+  - port: 7473
+    protocol: TCP
+    targetPort: 7473
+  selector:
+    app: nginx
+  type: LoadBalancer
+  loadBalancerClass: my-lb-class
+status:
+  conditions:
+  - message: l2-default
+    reason: LoadBalancerClassBound
+    status: "True"
+    type: network.deckhouse.io/load-balancer-class
+  - lastTransitionTime: null
+    message: 1 of 1 public IPs were assigned
+    reason: AllIPsAssigned
+    status: "True"
+    type: AllPublicIPsAssigned
+`
+)
+
 var _ = Describe("Metallb :: hooks :: update_service_status ::", func() {
 	f := HookExecutionConfigInit(`{"l2LoadBalancer":{"internal": {"l2lbservices": [{}]}}}`, "")
 	f.RegisterCRD("internal.network.deckhouse.io", "v1alpha1", "SDNInternalL2LBService", true)
@@ -31,23 +64,6 @@ var _ = Describe("Metallb :: hooks :: update_service_status ::", func() {
 	Context("Cluster with 1 service and 2 L2LBServices", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  namespace: nginx
-  annotations:
-    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-spec:
-  ports:
-  - port: 7473
-    protocol: TCP
-    targetPort: 7473
-  selector:
-    app: nginx
-  type: LoadBalancer
-  loadBalancerClass: my-lb-class
 ---
 apiVersion: internal.network.deckhouse.io/v1alpha1
 kind: SDNInternalL2LBService
@@ -76,7 +92,7 @@ status:
   loadBalancer:
     ingress:
     - ip: 10.0.0.2
-`))
+` + serviceManifest))
 			f.RunHook()
 		})
 
@@ -87,6 +103,12 @@ status:
 			svc := f.KubernetesResource("Service", "nginx", "nginx")
 			Expect(svc.Field("status").String()).To(MatchJSON(`{
 "conditions": [
+	{
+		"message": "l2-default",
+		"reason": "LoadBalancerClassBound",
+		"status": "True",
+		"type": "network.deckhouse.io/load-balancer-class"
+    },
 	{
 		"message": "2 of 2 public IPs were assigned",
 		"reason": "AllIPsAssigned",
@@ -111,23 +133,6 @@ status:
 	Context("Cluster with 1 service and 3 L2LBServices (one is not ready)", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx
-  namespace: nginx
-  annotations:
-    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-spec:
-  ports:
-  - port: 7473
-    protocol: TCP
-    targetPort: 7473
-  selector:
-    app: nginx
-  type: LoadBalancer
-  loadBalancerClass: my-lb-class
 ---
 apiVersion: internal.network.deckhouse.io/v1alpha1
 kind: SDNInternalL2LBService
@@ -166,7 +171,7 @@ spec:
   serviceRef:
     name: nginx
     namespace: nginx
-`))
+` + serviceManifest))
 			f.RunHook()
 		})
 
@@ -178,6 +183,12 @@ spec:
 			Expect(svc.Field("status").String()).To(MatchJSON(`
 {
 	"conditions": [
+		{
+			"message": "l2-default",
+			"reason": "LoadBalancerClassBound",
+			"status": "True",
+			"type": "network.deckhouse.io/load-balancer-class"
+        },
 		{
 			"message": "2 of 3 public IPs were assigned",
 			"reason": "NotAllIPsAssigned",
@@ -196,6 +207,33 @@ spec:
 		]
 	}
 }`))
+		})
+	})
+	Context("Cluster without service and 1 L2LBServices", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: internal.network.deckhouse.io/v1alpha1
+kind: SDNInternalL2LBService
+metadata:
+  name: nginx-0
+  namespace: nginx
+spec:
+  serviceRef:
+    name: nginx
+    namespace: nginx
+status:
+  loadBalancer:
+    ingress:
+    - ip: 10.0.0.1
+`))
+			f.RunHook()
+		})
+
+		It("Should execute successfully without applying patches when service is missing", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("Service", "nginx/nginx").Exists()).To(BeFalse())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
 		})
 	})
 })

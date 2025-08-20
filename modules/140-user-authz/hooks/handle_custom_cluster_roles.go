@@ -17,9 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
@@ -69,7 +74,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, customClusterRolesHandler)
 
 func customClusterRolesHandler(input *go_hook.HookInput) error {
-	input.Values.Set("userAuthz.internal.customClusterRoles", snapshotsToInternalValuesCustomClusterRoles(input.Snapshots[customClusterRoleSnapshots]))
+	customClusterRoles, err := snapshotsToInternalValuesCustomClusterRoles(input.NewSnapshots.Get(customClusterRoleSnapshots))
+	if err != nil {
+		return fmt.Errorf("failed to convert custom cluster roles snapshots: %w", err)
+	}
+
+	input.Values.Set("userAuthz.internal.customClusterRoles", customClusterRoles)
 	return nil
 }
 
@@ -82,7 +92,7 @@ type internalValuesCustomClusterRoles struct {
 	ClusterAdmin   []string `json:"clusterAdmin"`
 }
 
-func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResult) internalValuesCustomClusterRoles {
+func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (internalValuesCustomClusterRoles, error) {
 	var (
 		userRoleNames           = set.New()
 		privilegedUserRoleNames = set.New()
@@ -92,11 +102,11 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResul
 		clusterAdminRoleNames   = set.New()
 	)
 
-	for _, snapshot := range snapshots {
-		if snapshot == nil {
-			continue
+	for customRole, err := range sdkobjectpatch.SnapshotIter[customClusterRole](snapshots) {
+		if err != nil {
+			return internalValuesCustomClusterRoles{}, fmt.Errorf("failed to iterate over '%s' snapshot: %w", customClusterRoleSnapshots, err)
 		}
-		customRole := snapshot.(*customClusterRole)
+
 		switch customRole.Role {
 		case accessLevelUser:
 			userRoleNames.Add(customRole.Name)
@@ -127,5 +137,5 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []go_hook.FilterResul
 		ClusterAdmin:   clusterAdminRoleNames.Slice(),
 	}
 
-	return values
+	return values, nil
 }

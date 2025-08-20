@@ -127,9 +127,6 @@ function prepare_environment() {
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
-  FLANT_AUTH_B64=$(echo -n "$FLANT_REGISTRY_USER:$FLANT_REGISTRY_PASSWORD" | base64 -w0)
-  FLANT_CONFIG_JSON="{\"auths\":{\"$FLANT_REGISTRY_HOST\":{\"username\":\"$FLANT_REGISTRY_USER\",\"password\":\"$FLANT_REGISTRY_PASSWORD\",\"auth\":\"$FLANT_AUTH_B64\"}}}"
-  FLANT_DOCKERCFG_B64=$(echo "$FLANT_CONFIG_JSON" | base64 -w0)
   case "$PROVIDER" in
   "Yandex.Cloud")
     CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
@@ -149,7 +146,7 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -166,13 +163,13 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="22cb1387-f57c-463d-a43d-b5f0f506272a"
+    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -184,7 +181,7 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -204,7 +201,7 @@ function prepare_environment() {
       \"sshPrivateKey\": \"${SSH_KEY}\",
       \"sshUser\": \"${ssh_user}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
-      \"flantDockercfg\": \"${FLANT_DOCKERCFG_B64}\"
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"
     ;;
 
@@ -578,6 +575,9 @@ function run-test() {
       echo "Bootstrap completed, starting to deploy additional components"
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
+      echo "  Cluster status: $cluster_status"
+      return 1
+    elif [ "configuration_error" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
       return 1
     else

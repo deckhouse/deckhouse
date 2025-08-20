@@ -22,6 +22,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type DexProvider map[string]interface{}
@@ -52,8 +54,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, getDexProviders)
 
 func getDexProviders(input *go_hook.HookInput) error {
-	providers, ok := input.Snapshots["providers"]
-	if !ok {
+	providers, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.NewSnapshots, "providers")
+
+	if err != nil {
 		input.Values.Set("userAuthn.internal.providers", []interface{}{})
 		return nil
 	}

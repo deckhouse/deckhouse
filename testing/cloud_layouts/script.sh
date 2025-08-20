@@ -276,9 +276,6 @@ function prepare_environment() {
     SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
     echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
   fi
-  FLANT_AUTH_B64=$(echo -n "$FLANT_REGISTRY_USER:$FLANT_REGISTRY_PASSWORD" | base64 -w0)
-  FLANT_CONFIG_JSON="{\"auths\":{\"$FLANT_REGISTRY_HOST\":{\"username\":\"$FLANT_REGISTRY_USER\",\"password\":\"$FLANT_REGISTRY_PASSWORD\",\"auth\":\"$FLANT_AUTH_B64\"}}}"
-  FLANT_DOCKERCFG_B64=$(echo "$FLANT_CONFIG_JSON" | base64 -w0)
   case "$PROVIDER" in
   "Yandex.Cloud")
     # shellcheck disable=SC2016
@@ -321,7 +318,7 @@ function prepare_environment() {
   "OpenStack")
     # shellcheck disable=SC2016
     env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FLANT_DOCKERCFG="$FLANT_DOCKERCFG_B64" MASTERS_COUNT="$MASTERS_COUNT" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -330,7 +327,7 @@ function prepare_environment() {
   "vSphere")
     # shellcheck disable=SC2016
     env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FLANT_DOCKERCFG="$FLANT_DOCKERCFG_B64" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
+        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     ssh_user="redos"
@@ -345,7 +342,7 @@ function prepare_environment() {
         PREFIX="$PREFIX" \
         MASTERS_COUNT="$MASTERS_COUNT" \
         DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        FLANT_DOCKERCFG="$FLANT_DOCKERCFG_B64" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
@@ -367,7 +364,7 @@ function prepare_environment() {
         DEV_BRANCH="$DEV_BRANCH" \
         PREFIX="$PREFIX" \
         DECKHOUSE_DOCKERCFG="$LOCAL_DECKHOUSE_DOCKERCFG" \
-        FLANT_DOCKERCFG="$FLANT_DOCKERCFG_B64" \
+        FOX_DOCKERCFG="$FOX_DOCKERCFG" \
         IMAGES_REPO=$IMAGES_REPO \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
@@ -770,7 +767,7 @@ mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
 d8 --version
 # pull
-d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
+d8 mirror pull d8 --no-modules --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
   --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD

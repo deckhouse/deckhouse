@@ -36,6 +36,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -104,8 +106,10 @@ func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) er
 		return err
 	}
 
-	for _, obj := range input.Snapshots["pods"] {
-		pod := obj.(PodFilter)
+	for pod, err := range sdkobjectpatch.SnapshotIter[PodFilter](input.NewSnapshots.Get("pods")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'pods' snapshot: %v", err)
+		}
 
 		if !pod.PrometheusContainerReady {
 			continue

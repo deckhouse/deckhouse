@@ -1,0 +1,98 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/module-exists
+  name: test-source-1
+  resourceVersion: "1001"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+  - checksum: 'sha256:'
+    name: bundlenabledmodule
+    version: v1.2.3
+  - checksum: 'sha256:'
+    name: enabledmodule
+    version: v1.2.3
+  - checksum: 'sha256:'
+    name: notthissourcemodule
+    version: v1.2.3
+  modulesCount: 3
+  phase: Active
+  syncTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/change-cause: check release (no releases in cluster)
+  creationTimestamp: null
+  labels:
+    module: bundlenabledmodule
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: bundlenabledmodule-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: bundlenabledmodule
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/change-cause: check release (no releases in cluster)
+  creationTimestamp: null
+  labels:
+    module: enabledmodule
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: enabledmodule-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: enabledmodule
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

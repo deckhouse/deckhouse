@@ -97,6 +97,7 @@ func enablePrompp(input *go_hook.HookInput) error {
 		},
 		"spec": map[string]any{
 			"enabled": true,
+			"source":  "deckhouse",
 		},
 	}}
 

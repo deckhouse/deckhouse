@@ -5,8 +5,8 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
-        en: Platform overview
-        ru: О платформе
+        en: Product overview
+        ru: О продукте
       folders:
         - title:
             en: Editions
@@ -218,7 +218,7 @@ entries:
             ru: Основные понятия
           folders:
             - title:
-                en: Аутентификация
+                en: Authentication
                 ru: Аутентификация
               url: /stronghold/documentation/user/concepts/auth.html
             - title:
@@ -345,6 +345,10 @@ entries:
                 en: Kubernets Secrets engine
                 ru: Механизм секретов Kubernetes
               url: /stronghold/documentation/user/secrets-engines/kubernetes.html
+            - title:
+                en: LDAP Secrets engine
+                ru: Механизм секретов LDAP
+              url: /stronghold/documentation/user/secrets-engines/ldap.html
             - title:
                 en: Identity Secrets engine
                 ru: Механизм секретов Identity

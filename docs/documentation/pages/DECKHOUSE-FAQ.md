@@ -732,6 +732,10 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
+When using the [registry](modules/registry/) module, change the address and parameters of the registry in the [registry](modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [registry](modules/registry/examples.html) module documentation.
+{% endalert %}
+
+{% alert level="warning" %}
 Using a registry other than `registry.deckhouse.io` is only available in a commercial edition of Deckhouse Kubernetes Platform.
 {% endalert %}
 
@@ -966,6 +970,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
 
 {% alert level="warning" %}
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+{% endalert %}
+
+{% alert level="warning" %}
 - The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
 - For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](https://deckhouse.ru/products/enterprise_edition.html).
 - The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](#how-do-i-configure-deckhouse-to-use-a-third-party-registry).
@@ -993,6 +1002,8 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
+   > Before creating a resource, refer to the section ["How to add configuration for an additional registry"](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+   >
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
@@ -1136,6 +1147,11 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
 
+{% alert level="warning" %}
+When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
+To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+{% endalert %}
+
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
 
 ```shell
@@ -1210,18 +1226,18 @@ spec:
 After applying the resource, the GRUB settings will be updated and the cluster nodes will begin a sequential reboot to apply the changes.
 {% endalert %}
 
-### How do I change container runtime to ContainerdV2 on nodes?
+### How do I change container runtime to containerd v2 on nodes?
 
-You can migrate to `ContainerdV2` in one of the following ways:
+You can migrate to containerd v2 in one of the following ways:
 
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
 {% alert level="info" %}
-Migration to `ContainerdV2` is possible if the following conditions are met:
+Migration to containerd v2 is possible if the following conditions are met:
 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
 {% endalert %}
 
-Migrating to `ContainerdV2` clears the `/var/lib/containerd` folder. For `Containerd`, the `/etc/containerd/conf.d` folder is used. For `ContainerdV2`, `/etc/containerd/conf2.d` is used.
+Migrating to containerd v2 clears the `/var/lib/containerd` folder. For containerd, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.

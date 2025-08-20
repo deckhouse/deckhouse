@@ -37,8 +37,8 @@ d8 k get modules sds-node-configurator -w
 В результате будет выведена информация о модуле `sds-node-configurator`:
 
 ```console
-NAME                    WEIGHT   STATE     SOURCE      STAGE   STATUS
-sds-node-configurator   900      Enabled   deckhouse           Ready
+NAME                    STAGE   SOURCE      PHASE       ENABLED   READY
+sds-node-configurator           deckhouse   Available   True      True
 ```
 
 Затем, чтобы включить модуль `sds-local-volume` с настройками по умолчанию, выполните команду:
@@ -65,8 +65,8 @@ d8 k get modules sds-local-volume -w
 В результате будет выведена информация о модуле `sds-local-volume`:
 
 ```console
-NAME               WEIGHT   STATE     SOURCE     STAGE   STATUS
-sds-local-volume   920      Enabled   Embedded           Ready
+NAME               STAGE   SOURCE      PHASE       ENABLED   READY
+sds-local-volume           deckhouse   Available   True      True
 ```
 
 Чтобы проверить, что в пространстве имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed`, и запущены на всех узлах, где планируется использовать ресурсы LVM, можно использовать команды:

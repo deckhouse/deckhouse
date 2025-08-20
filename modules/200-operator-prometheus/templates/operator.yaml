@@ -70,6 +70,16 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "prometheusOperator") }}
         name: prometheus-operator
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8443
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -84,9 +94,20 @@ spec:
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         ports:
         - containerPort: 8443
           name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
@@ -94,6 +115,8 @@ spec:
               fieldPath: status.podIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
+            excludePaths:
+            - /healthz
             upstreams:
             - upstream: http://127.0.0.1:8080/
               path: /

@@ -4,8 +4,6 @@ permalink: ru/code/documentation/admin/configuration/group.html
 lang: ru
 ---
 
-## Создание группы для пользователей
-
 1. Войдите как администратор:
    - Перейдите в вашу инсталляцию Deckhouse Code по публичному URL-адресу.
    - Используйте учётные данные администратора.

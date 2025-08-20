@@ -33,6 +33,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
@@ -278,3 +282,24 @@ jobs:
             echo "No released versions exist. Skipping."
           fi
       {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
+
+  compare_internal_modules:
+    name: Compare internal modules
+    needs:
+      - build_fe
+      - build_ee
+      - build_ce
+      - build_be
+      - build_se
+      - build_se_plus
+    if: ${{ always() && needs.build_fe.result == 'success' }}
+    runs-on: regular
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+      {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Get artifacts
+        uses: {!{ index (ds "actions") "actions/download-artifact" }!}
+      - name: Compare modules
+        run: python .github/scripts/python/compare_internal_modules.py

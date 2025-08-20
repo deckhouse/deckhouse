@@ -13,7 +13,7 @@
 <li><p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```shell
-sudo -i d8 k create -f user.yml
+sudo -i d8 k create -f $PWD/user.yml
 ```
 </div>
 </li>

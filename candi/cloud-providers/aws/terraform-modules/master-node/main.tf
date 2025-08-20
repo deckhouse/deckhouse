@@ -59,16 +59,23 @@ resource "aws_volume_attachment" "kubernetes_data" {
 }
 
 data "aws_security_group" "ssh-accessible" {
+  count = (!var.disable_default_security_group || length(var.ssh_allow_list) > 0) && var.associate_ssh_accessible_sg ? 1 : 0
   name = "${var.prefix}-ssh-accessible"
 }
 
 data "aws_security_group" "node" {
+  count = var.disable_default_security_group ? 0 : 1
   name = "${var.prefix}-node"
 }
 
 locals {
-  base_security_groups = var.associate_ssh_accessible_sg == true ? [data.aws_security_group.node.id, data.aws_security_group.ssh-accessible.id] : [data.aws_security_group.node.id]
-}
+  base_security_groups = concat(
+    var.disable_default_security_group ? [] : [data.aws_security_group.node[0].id],
+    (!var.disable_default_security_group || length(var.ssh_allow_list) > 0) && var.associate_ssh_accessible_sg
+      ? [data.aws_security_group.ssh-accessible[0].id]
+      : []
+  )
+  }
 
 resource "aws_instance" "master" {
   ami             = var.node_group.instanceClass.ami
@@ -107,7 +114,8 @@ resource "aws_instance" "master" {
       user_data_replace_on_change,
       ebs_optimized,
       #TODO: remove ignore after we enable automatic converge for master nodes
-      volume_tags
+      volume_tags,
+      root_block_device[0].tags_all
     ]
   }
 

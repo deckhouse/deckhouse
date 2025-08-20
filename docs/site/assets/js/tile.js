@@ -20,39 +20,3 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 })
-
-document.addEventListener('DOMContentLoaded', function () {
-  const items = document.querySelectorAll('.button-tile');
-  const button = document.querySelector('.tile__pagination');
-  const itemsPerPage = 12;
-  let count = 0;
-
-  function hideAllItems() {
-    items.forEach(item => item.style.display = 'none');
-  }
-
-  function showItems() {
-    const end = Math.min(count + itemsPerPage, items.length);
-
-    for(let i = 0; i < end; i++) {
-        items[i].style.display = 'flex';
-    }
-
-    count = end;
-
-    if(count >= items.length) {
-        button.style.display = 'none';
-    }
-  }
-
-  if(items.length < itemsPerPage) {
-    button.style.display = 'none';
-  }
-
-  hideAllItems()
-  showItems();
-
-  button.addEventListener('click', () => {
-    showItems();
-  });
-})

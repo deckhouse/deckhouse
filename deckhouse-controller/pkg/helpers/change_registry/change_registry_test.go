@@ -31,6 +31,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestUpdateDeployContainersImagesToNewRepo(t *testing.T) {
@@ -423,6 +427,111 @@ func Test_getCAContent(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("getCAContent() = %v, want %v", got, tt.want)
 				return
+			}
+		})
+	}
+}
+
+func Test_checkRegistryModuleMode(t *testing.T) {
+	const expectedErr = "registry is currently managed by the \"registry\" module. This command may be used only in 'Unmanaged' registry mode."
+
+	tests := []struct {
+		name      string
+		secret    *v1.Secret
+		expectErr bool
+	}{
+		{
+			name:      "Secret not found, should pass",
+			secret:    nil,
+			expectErr: false,
+		},
+		{
+			name: "Mode Unmanaged, target Unmanaged, should pass",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data: map[string][]byte{
+					"mode":        []byte(registry_const.ModeUnmanaged),
+					"target_mode": []byte(registry_const.ModeUnmanaged),
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "Mode empty, target empty, should pass",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data:       map[string][]byte{},
+			},
+			expectErr: false,
+		},
+		{
+			name: "Mode Unmanaged, target empty, should pass",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data:       map[string][]byte{"mode": []byte(registry_const.ModeUnmanaged)},
+			},
+			expectErr: false,
+		},
+		{
+			name: "Mode Direct, should be blocked",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data:       map[string][]byte{"mode": []byte(registry_const.ModeDirect)},
+			},
+			expectErr: true,
+		},
+		{
+			name: "Mode Proxy, should be blocked",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data:       map[string][]byte{"mode": []byte(registry_const.ModeProxy)},
+			},
+			expectErr: true,
+		},
+		{
+			name: "Transitioning to Direct, should be blocked",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data: map[string][]byte{
+					"mode":        []byte(registry_const.ModeUnmanaged),
+					"target_mode": []byte(registry_const.ModeDirect),
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "Transitioning to Proxy, should be blocked",
+			secret: &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
+				Data: map[string][]byte{
+					"mode":        []byte(registry_const.ModeUnmanaged),
+					"target_mode": []byte(registry_const.ModeProxy),
+				},
+			},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kubeCl := kclient.NewFakeKubernetesClient()
+			if tt.secret != nil {
+				_, err := kubeCl.CoreV1().Secrets(d8SystemNS).Create(context.Background(), tt.secret, metav1.CreateOptions{})
+				if err != nil {
+					t.Fatalf("Failed to create fake secret: %v", err)
+				}
+			}
+
+			err := checkRegistryModuleMode(context.Background(), kubeCl)
+
+			if tt.expectErr {
+				if err == nil {
+					t.Errorf("expected an error, but got nil")
+				} else if err.Error() != expectedErr {
+					t.Errorf("expected error message to be '%s', but got '%s'", expectedErr, err.Error())
+				}
+			} else if err != nil {
+				t.Errorf("did not expect an error, but got: %v", err)
 			}
 		})
 	}

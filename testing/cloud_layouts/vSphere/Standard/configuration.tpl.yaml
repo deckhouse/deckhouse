@@ -227,4 +227,4 @@ metadata:
   name: flant-regcred
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: '${FLANT_DOCKERCFG}'
+  .dockerconfigjson: '${FOX_DOCKERCFG}'

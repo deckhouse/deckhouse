@@ -48,6 +48,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
   detect_editions:
@@ -108,10 +112,13 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
+{!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 2 }!}
+
   build_fe:
     name: Build FE
     needs:
       - git_info
+      - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -183,7 +190,7 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
           project_group: ${{ github.event.repository.name }}
           ci_commit_ref_name: ${{ github.ref_name }}

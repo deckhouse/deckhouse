@@ -216,7 +216,7 @@ Example of a manifest for configuring a provider to integrate with Bitbucket:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket

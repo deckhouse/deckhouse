@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"sync"
 	"time"
 
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
@@ -23,7 +24,9 @@ type PodObserver struct {
 	WallBroadcastInterval time.Duration
 	PodMatchers           []kubernetes.PodMatcher
 	ShutdownSignalCh      <-chan struct{}
+	StartCordonCh         chan<- struct{}
 	StopInhibitorsCh      chan<- struct{}
+	stopOnce             sync.Once
 }
 
 func (p *PodObserver) Name() string {
@@ -41,7 +44,7 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 	select {
 	case <-ctx.Done():
 		fmt.Printf("podObserver(s1): stop on context cancel\n")
-	case <-ctx.Done():
+		return
 	case <-p.ShutdownSignalCh:
 		fmt.Printf("podObserver(s1): catch prepare shutdown signal, start pods checker\n")
 	}
@@ -72,6 +75,11 @@ func (p *PodObserver) Run(ctx context.Context, errCh chan error) {
 				close(p.StopInhibitorsCh)
 				return
 			}
+
+			p.stopOnce.Do(func() {
+				fmt.Printf("podObserver(s2): %d pods are still running, triggering node cordon\n", len(matchedPods))
+				close(p.StartCordonCh)
+			})
 			fmt.Printf("podObserver(s2): %d pods are still running\n", len(matchedPods))
 
 			err = nodecondition.GracefulShutdownPostpone().SetPodsArePresent(p.NodeName)

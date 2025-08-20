@@ -17,13 +17,13 @@ package preflight
 import (
 	"context"
 	"fmt"
-	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"gopkg.in/yaml.v3"
 )
 
 func (pc *Checker) CheckStaticInstancesIPDuplication(_ context.Context) error {
-	documents := strings.Split(pc.metaConfig.ResourcesYAML, "---")
+	documents := input.YAMLSplitRegexp.Split(pc.metaConfig.ResourcesYAML, -1)
 	instances := make(map[string]string)
 	for _, doc := range documents {
 		var result map[string]interface{}
