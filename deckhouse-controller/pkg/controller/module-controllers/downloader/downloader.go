@@ -122,7 +122,7 @@ type ModuleDownloader struct {
 
 func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option, cache ...*ReleaseImageInfoCache) *ModuleDownloader {
 	var releaseInfoCache *ReleaseImageInfoCache
-	
+
 	// If no cache provided, create a new one (for backward compatibility)
 	if len(cache) == 0 || cache[0] == nil {
 		releaseInfoCache = newReleaseImageInfoCache()
