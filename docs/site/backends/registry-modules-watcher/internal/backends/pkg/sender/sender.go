@@ -246,6 +246,8 @@ func (s *Sender) upload(ctx context.Context, backend string, version backends.Do
 		// before request
 		timeBeforeRequest := time.Now()
 
+		time.Sleep(10 * time.Second) // test debug
+
 		// request
 		resp, err := s.client.Do(req)
 		if err != nil {
