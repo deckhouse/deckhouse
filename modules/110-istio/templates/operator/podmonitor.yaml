@@ -1,6 +1,7 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $fullVersion := get $versionInfo "fullVersion" }}
     {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -18,14 +19,18 @@ spec:
     matchNames:
     - d8-{{ $.Chart.Name }}
   podMetricsEndpoints:
+    {{- if or (hasPrefix "1.21" $fullVersion) (hasPrefix "1.19" $fullVersion) }}
   - port: http-metrics
     scheme: http
-    #scheme: https # TODO https://github.com/deckhouse/deckhouse/issues/1487
-    #bearerTokenSecret:
-    #  name: "prometheus-token"
-    #  key: "token"
-    #tlsConfig:
-    #  insecureSkipVerify: true
+    {{- else}}
+  - port: https-metrics
+    scheme: https
+  - bearerTokenSecret:
+      key: token
+      name: prometheus-token
+    tlsConfig:
+      insecureSkipVerify: true
+    {{- end }}
     relabelings:
     - targetLabel: job
       replacement: istio-operator
