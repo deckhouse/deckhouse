@@ -71,28 +71,35 @@ discovery: {}
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-
 	stateEndpoints := func(ips []string) string {
+
 		var ipsStr string
+		var epAddresses []string
+
 		for _, ip := range ips {
-			ipsStr = fmt.Sprintf("%s\n  - ip: %s", ipsStr, ip)
+			adr := fmt.Sprintf(`- addresses:
+  - %s
+  conditions:
+    ready: true`, ip)
+			epAddresses = append(epAddresses, adr)
 		}
+		ipsStr = strings.Join(epAddresses, "\n")
 		return fmt.Sprintf(`
 ---
-apiVersion: v1
-kind: Endpoints
+kind: EndpointSlice
 metadata:
   labels:
-    endpointslice.kubernetes.io/skip-mirror: "true"
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
-- addresses: %s
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
-
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
+%s
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `, ipsStr)
 	}
 
@@ -267,20 +274,24 @@ subsets:
 
 		state := `
 ---
-apiVersion: v1
-kind: Endpoints
+kind: EndpointSlice
 metadata:
   labels:
-    endpointslice.kubernetes.io/skip-mirror: "true"
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
+  uid: bb5cb645-117f-4a0f-ba51-c8ac22660c53
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
 - addresses:
-  - ip: 192.168.128.190
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+  - 192.168.128.190
+  conditions:
+    ready: true
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 ---
 apiVersion: v1
 kind: Service
