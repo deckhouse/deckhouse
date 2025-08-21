@@ -1,4 +1,4 @@
-From 3aa26c5b63ab9967e3caa46c64a0426af2fcc1b9 Mon Sep 17 00:00:00 2001
+From 127476e551a6fd1353347bb0e11b9ca4ba86ec99 Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 20 Aug 2025 14:29:48 +0300
 Subject: [PATCH] add debug logs for egress
@@ -6,8 +6,8 @@ Subject: [PATCH] add debug logs for egress
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
  pkg/egressgateway/manager.go | 13 +++++++++++++
- pkg/egressgateway/policy.go  |  4 +++-
- 2 files changed, 16 insertions(+), 1 deletion(-)
+ pkg/egressgateway/policy.go  | 13 +++++++++++--
+ 2 files changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
 index 971d84e3e7..a9774cbfa3 100644
@@ -68,10 +68,52 @@ index 971d84e3e7..a9774cbfa3 100644
  
  	// clear the events bitmap
 diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
-index 36e8e871ad..1f582952d2 100644
+index 36e8e871ad..6f9a171dc3 100644
 --- a/pkg/egressgateway/policy.go
 +++ b/pkg/egressgateway/policy.go
-@@ -201,10 +201,12 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
+@@ -102,6 +102,7 @@ func (config *PolicyConfig) updateMatchedEndpointIDs(epDataStore map[endpointID]
+ 	config.matchedEndpoints = make(map[endpointID]*endpointMetadata)
+ 	for _, endpoint := range epDataStore {
+ 		if config.matchesEndpointLabels(endpoint) && config.matchesNodeLabels(nodesAddresses2Labels[endpoint.nodeIP]) {
++			fmt.Printf("DEBUG updateMatchedEndpointIDs endpoint_id: %v\n", endpoint.id)
+ 			config.matchedEndpoints[endpoint.id] = endpoint
+ 		}
+ 	}
+@@ -120,17 +121,21 @@ func (config *PolicyConfig) regenerateGatewayConfig(manager *Manager) {
+ 	policyGwc := config.policyGwConfig
+ 
+ 	for _, node := range manager.nodes {
++		fmt.Printf("DEBUG regenerateGatewayConfig node %v\n", node.Name)
+ 		if !policyGwc.selectsNodeAsGateway(node) {
++			fmt.Printf("DEBUG regenerateGatewayConfig continue %v\n", node.Name)
+ 			continue
+ 		}
+ 
+ 		addr, ok := netipx.FromStdIP(node.GetK8sNodeIP())
+ 		if !ok {
++			fmt.Printf("DEBUG regenerateGatewayConfig continue 222 %v\n", node.Name)
+ 			continue
+ 		}
+ 		gwc.gatewayIP = addr
+ 
+ 		if node.IsLocal() {
++			fmt.Printf("DEBUG regenerateGatewayConfig IsLocal %v\n", node.Name)
+ 			err := gwc.deriveFromPolicyGatewayConfig(policyGwc)
+ 			if err != nil {
+ 				logger := log.WithFields(logrus.Fields{
+@@ -139,9 +144,10 @@ func (config *PolicyConfig) regenerateGatewayConfig(manager *Manager) {
+ 					logfields.EgressIP:                      policyGwc.egressIP,
+ 				})
+ 				logger.WithError(err).Error("Failed to derive policy gateway configuration")
++				fmt.Printf("DEBUG regenerateGatewayConfig IsLocal Failed %v\n", node.Name)
+ 			}
+ 		}
+-
++		fmt.Printf("DEBUG regenerateGatewayConfig DONE %v\n", node.Name)
+ 		break
+ 	}
+ 
+@@ -201,10 +207,12 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
  // with a boolean value indicating if the CIDR belongs to the excluded ones and
  // the gatewayConfig of the receiver policy
  func (config *PolicyConfig) forEachEndpointAndCIDR(f func(netip.Addr, netip.Prefix, bool, *gatewayConfig)) {
@@ -85,6 +127,14 @@ index 36e8e871ad..1f582952d2 100644
  			for _, dstCIDR := range config.dstCIDRs {
  				f(endpointIP, dstCIDR, isExcludedCIDR, &config.gatewayConfig)
  			}
+@@ -283,6 +291,7 @@ func ParseCEGP(cegp *v2.CiliumEgressGatewayPolicy) (*PolicyConfig, error) {
+ 			nodeSelectorList = append(
+ 				nodeSelectorList,
+ 				api.NewESFromK8sLabelSelector("", egressRule.NodeSelector))
++			fmt.Printf("DEBUG ParseCEGP nodeSelectorList: %v\n", nodeSelectorList)
+ 		}
+ 		if egressRule.NamespaceSelector != nil {
+ 			prefixedNsSelector := egressRule.NamespaceSelector
 -- 
 2.34.1
 
