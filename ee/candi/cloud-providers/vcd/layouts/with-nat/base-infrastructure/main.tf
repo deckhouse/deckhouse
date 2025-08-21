@@ -6,8 +6,9 @@ locals {
   external_network_name                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkName : null
   external_network_type                    = contains(keys(var.providerClusterConfiguration.edgeGateway), "NSX-V") ? var.providerClusterConfiguration.edgeGateway.NSX-V.externalNetworkType : null
   internal_network_dhcp_pool_start_address = contains(keys(var.providerClusterConfiguration), "internalNetworkDHCPPoolStartAddress") ? var.providerClusterConfiguration.internalNetworkDHCPPoolStartAddress : 30
-  bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
   metadata                                 = contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}
+  bastion_ip_address                       = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "mainNetworkIPAddress") ? var.providerClusterConfiguration.bastion.ipAddress : null
+  bastion_placement_policy                 = contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "placementPolicy") ? var.providerClusterConfiguration.bastion.instanceClass.placementPolicy : ""
   bastion_metadata = merge(
     (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),
     (contains(keys(var.providerClusterConfiguration.bastion.instanceClass), "additionalMetadata") ? var.providerClusterConfiguration.bastion.instanceClass.additionalMetadata : {}),
@@ -48,7 +49,7 @@ module "bastion" {
   prefix            = var.clusterConfiguration.cloud.prefix
   vapp_name         = module.vapp.name
   network_name      = vcd_vapp_org_network.vapp_network.org_network_name
-  ip_address        = var.providerClusterConfiguration.bastion.instanceClass.mainNetworkIPAddress
+  ip_address        = local.bastion_ip_address
   template          = var.providerClusterConfiguration.bastion.instanceClass.template
   ssh_public_key    = var.providerClusterConfiguration.sshPublicKey
   placement_policy  = local.bastion_placement_policy
