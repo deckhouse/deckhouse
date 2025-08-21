@@ -231,7 +231,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 		}
 
 		if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency %q not meet the version constraint: %s", parentModule, err.Error()))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency %q not meet version constraint: %s", parentModule, err.Error()))
 		}
 	}
 
@@ -243,7 +243,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 	// check if the new module's version breaks current constraints
 	for dependentModule, r := range e.modules {
 		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" dependency \"%s\" does not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" dependency \"%s\" not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
 		}
 	}
 
