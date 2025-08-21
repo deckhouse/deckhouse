@@ -33,8 +33,8 @@
 # clang dependencies
 # {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
-{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
-{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
+# {{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
+# {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
 # for debug
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
@@ -109,6 +109,10 @@ final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
 from: dev-registry.deckhouse.io/base_images@sha256:2f576877bb81260901b155a7ad1709f4f9b23dee2a72ed3e8242fffbbdc070de
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
+from: dev-registry.deckhouse.io/base_images@sha256:632a7374bf29fa4ad19d80803e8a149c20030952e97bc22bb7db040752fb9df2
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -286,7 +290,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-21.1"
+fromCacheVersion: "2025-08-21.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -404,18 +408,14 @@ import:
   - tipc
   - ctstat
   - rtstat
-- image: tools/util-linux
+- image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
   before: install
   add: /usr/share/bash-completion
   to: /usr/share/bash-completion
-# - image: tools/ipset
-#   before: install
-#   add: /lib/ld-musl-x86_64.so.1
-#   to: /lib/ld-musl-x86_64.so.1
-# - image: tools/ipset
-#   before: install
-#   add: /usr/lib/libmnl.so.0
-#   to: /usr/lib/libmnl.so.0
+- image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
+  before: install
+  add: /etc/profile.d/bash_completion.sh
+  to: /etc/bashrc.d/bash_completion.sh
 - image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
