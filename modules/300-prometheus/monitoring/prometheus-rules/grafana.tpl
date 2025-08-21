@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
 - name: d8.grafana.availability
   rules:
   - alert: D8GrafanaPodIsNotReady
@@ -144,7 +145,7 @@
       plk_labels_as_annotations: "pod"
       summary: Excessive Grafana restarts detected.
       description: |
-        Grafana has restarted {{ $value }} times in the last hour.
+        Grafana has restarted {{`{{ $value }}`}} times in the last hour.
 
         Frequent restarts indicate a problem. Grafana is expected to run continuously without interruption.
       
@@ -173,3 +174,4 @@
         **This method is no longer supported**.
 
         Migrate to using the custom [GrafanaDashboardDefinition resource](https://github.com/deckhouse/deckhouse/blob/main/modules/300-prometheus/docs/internal/GRAFANA_DASHBOARD_DEVELOPMENT.md) instead.
+{{- end }}
