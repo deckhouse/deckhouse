@@ -51,4 +51,21 @@ spec:
                         type: array
                         description: List of conversion rules for this version.
                         items:
-                          type: string
+                          type: object
+                          description: A single conversion rule with expressions and descriptions.
+                          properties:
+                            expr:
+                              type: array
+                              description: Array of jq expressions to transform settings.
+                              items:
+                                type: string
+                            descriptions:
+                              type: object
+                              description: Localized descriptions of the conversion.
+                              properties:
+                                ru:
+                                  type: string
+                                  description: Russian description of the conversion.
+                                en:
+                                  type: string
+                                  description: English description of the conversion.
