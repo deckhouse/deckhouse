@@ -25,7 +25,7 @@ spec:
     {{- else}}
   - port: https-metrics
     scheme: https
-  - bearerTokenSecret:
+    bearerTokenSecret:
       key: token
       name: prometheus-token
     tlsConfig:
