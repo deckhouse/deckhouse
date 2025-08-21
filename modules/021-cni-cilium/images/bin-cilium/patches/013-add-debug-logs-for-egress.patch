@@ -1,14 +1,45 @@
-From 127476e551a6fd1353347bb0e11b9ca4ba86ec99 Mon Sep 17 00:00:00 2001
+From 69ea4ef53e4d0b634d24f0d5448cf8c3ebfe3eee Mon Sep 17 00:00:00 2001
 From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date: Wed, 20 Aug 2025 14:29:48 +0300
 Subject: [PATCH] add debug logs for egress
 
 Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 ---
+ operator/watchers/node.go    |  4 ++++
  pkg/egressgateway/manager.go | 13 +++++++++++++
  pkg/egressgateway/policy.go  | 13 +++++++++++--
- 2 files changed, 24 insertions(+), 2 deletions(-)
+ 3 files changed, 28 insertions(+), 2 deletions(-)
 
+diff --git a/operator/watchers/node.go b/operator/watchers/node.go
+index a7ab5dd1c3..f77ea8b06c 100644
+--- a/operator/watchers/node.go
++++ b/operator/watchers/node.go
+@@ -47,10 +47,12 @@ type nodeGetter struct{}
+ // The return structure should only be used for read purposes and should never
+ // be written into it.
+ func (nodeGetter) GetK8sSlimNode(nodeName string) (*slim_corev1.Node, error) {
++	fmt.Printf("DEBUG GetK8sSlimNode nodeName %v\n", nodeName)
+ 	nodeInterface, exists, err := slimNodeStore.GetByKey(nodeName)
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	fmt.Printf("DEBUG GetK8sSlimNode nodeInterface %v\n", nodeInterface.(*slim_corev1.Node))
+ 	if !exists {
+ 		return nil, k8sErrors.NewNotFound(schema.GroupResource{
+ 			Group:    "core",
+@@ -82,10 +84,12 @@ func nodesInit(wg *sync.WaitGroup, slimClient slimclientset.Interface, stopCh <-
+ 			0,
+ 			cache.ResourceEventHandlerFuncs{
+ 				AddFunc: func(obj interface{}) {
++					fmt.Printf("DEBUG nodesInit AddFunc %v\n", obj)
+ 					key, _ := queueKeyFunc(obj)
+ 					nodeQueue.Add(key)
+ 				},
+ 				UpdateFunc: func(_, newObj interface{}) {
++					fmt.Printf("DEBUG nodesInit UpdateFunc %v\n", newObj)
+ 					key, _ := queueKeyFunc(newObj)
+ 					nodeQueue.Add(key)
+ 				},
 diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
 index 971d84e3e7..a9774cbfa3 100644
 --- a/pkg/egressgateway/manager.go
