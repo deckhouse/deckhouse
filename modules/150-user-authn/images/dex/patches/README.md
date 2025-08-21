@@ -44,7 +44,7 @@ for local user accounts. The following features are added:
 3. Password reuse prevention
 4. Account lockout after failed attempts
 
-### 008-password-policy-chore
+### 008-password-policy-chore.patch
 
 This adds functionality to configure password policy duration fields with `day` units, such as: `1d`, `30d12h`, etc.
 This patch also includes refactored password complexity checks - making them much simpler.
