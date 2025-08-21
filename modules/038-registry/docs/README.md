@@ -27,11 +27,11 @@ Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The clu
 The module works under the following conditions:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](../../installing/configuration.html##clusterconfiguration-defaultcri) configuration.
-- The cluster is fully managed by DKP. Module will not work in Managed Kubernetes clusters.
+- The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
 
 ### Mode switching restrictions
 
-The restrictions on mode switching are as follows:
+Mode switching restrictions are as follows:
 
 - Switching to `Direct` mode is possible if there are no user registry configurations on the nodes. For more details, see the [Registry Module: FAQ](./faq.html) section.
 - Switching to `Unmanaged` mode is only available from `Direct` mode.
