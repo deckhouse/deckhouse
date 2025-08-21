@@ -40,7 +40,7 @@ git:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -60,7 +60,9 @@ shell:
   setup:
   - cd /src
   - go test ./... -v
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go`) | indent 6 }}
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy
 mount:

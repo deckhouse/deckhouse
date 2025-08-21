@@ -1,7 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-dir-manager
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -15,7 +15,9 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /manager main.go
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -o /manager main.go`) | indent 6 }}
   - chmod 0777 /manager
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}

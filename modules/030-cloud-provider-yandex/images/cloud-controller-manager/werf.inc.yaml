@@ -25,7 +25,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
@@ -42,6 +42,8 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /src
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -o yandex-cloud-controller-manager cmd/yandex-cloud-controller-manager/main.go`) | indent 6 }}
     - chown 64535:64535 /src/yandex-cloud-controller-manager
     - chmod 0755 /src/yandex-cloud-controller-manager

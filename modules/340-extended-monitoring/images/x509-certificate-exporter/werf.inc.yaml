@@ -11,7 +11,7 @@ shell:
     - rm -r /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -27,7 +27,8 @@ shell:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-    - go build -v -tags netgo,osusergo -o x509-certificate-exporter ./cmd/x509-certificate-exporter
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -v -tags netgo,osusergo -o x509-certificate-exporter ./cmd/x509-certificate-exporter`) | indent 6 }}
     - chown -R 64535:64535 /src/x509-certificate-exporter
     - chmod 0700 /src/x509-certificate-exporter
 ---

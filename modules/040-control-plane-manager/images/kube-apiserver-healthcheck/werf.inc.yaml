@@ -15,7 +15,7 @@ imageSpec:
     entrypoint: ["/usr/local/bin/kube-apiserver-healthcheck"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -30,7 +30,9 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o kube-apiserver-healthcheck main.go
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -o kube-apiserver-healthcheck main.go`) | indent 6 }}
   - chown 64535:64535 kube-apiserver-healthcheck
   - chmod 0700 kube-apiserver-healthcheck
 ---

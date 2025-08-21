@@ -46,7 +46,7 @@ shell:
   - chmod +x /opt/chrony-static/sbin/chronyd
 ---
 image: {{ .ModuleName }}/build-entrypoint-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -61,7 +61,9 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-extldflags "-static" -s -w' -o /entrypoint main.go
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags='-extldflags "-static" -s -w' -o /entrypoint main.go`) | indent 6 }}
   - chown -R 64535:64535 /entrypoint
   - chmod +x /entrypoint
 ---

@@ -54,7 +54,7 @@ shell:
   - cp ./ethtool /ethtool
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -69,7 +69,8 @@ shell:
   - export "GOOS=linux"
   - export "GOARCH=amd64"
   - cd /src
-  - go build -o /tmp/vxlan-offloading-fixer main.go
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -o /tmp/vxlan-offloading-fixer main.go`) | indent 6 }}
   - chown 64535:64535 /tmp/vxlan-offloading-fixer
   - chmod 0755 /tmp/vxlan-offloading-fixer
 ---

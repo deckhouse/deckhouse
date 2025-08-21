@@ -32,7 +32,7 @@ shell:
 ---
 image: terraform-provider-azure
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -50,6 +50,8 @@ shell:
   install:
     - cd /src
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform-provider-azurerm .
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform-provider-azurerm .`) | indent 6 }}
     - chmod -R 755 /terraform-provider-azurerm
     - chown 64535:64535 /terraform-provider-azurerm

@@ -31,7 +31,7 @@ git:
         - "**/*"
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -51,7 +51,8 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION}
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - cd /src
-    - make build
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `make build`) | indent 6 }}
     - mv bin/events_exporter /events_exporter
     - chown 64535:64535 /events_exporter
     - chmod 700 /events_exporter

@@ -67,7 +67,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -85,7 +85,9 @@ shell:
   setup:
   - cd /src
   - mkdir -p bin
-  - CGO_ENABLED=0 go build -ldflags "-extldflags=static -X main.version={{ $value.csi.gcp }}" -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/
+  - export CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-extldflags=static -X main.version={{ $value.csi.gcp }}" -o bin/gce-pd-csi-driver ./cmd/gce-pd-csi-driver/`) | indent 6 }}
   {{- end }}
 {{- end }}
 ---

@@ -78,7 +78,7 @@ git:
     - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-src-artifact
@@ -94,6 +94,7 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags '-s -w' -o url-exec-prober main.go
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o url-exec-prober main.go`) | indent 6 }}
     - chown 64535:64535 url-exec-prober
     - chmod 0700 url-exec-prober

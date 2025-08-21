@@ -48,7 +48,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -69,7 +69,8 @@ shell:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go mod vendor
-  - make build
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make build`) | indent 6 }}
   - cp bin/csi-node-driver-registrar /csi-node-driver-registrar
   - chown 64535:64535 /csi-node-driver-registrar
   - chmod 0755 /csi-node-driver-registrar

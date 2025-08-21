@@ -47,7 +47,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -64,7 +64,8 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager`) | indent 6 }}
   - chown 64535:64535 /src/bin/azure-cloud-controller-manager
   - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}

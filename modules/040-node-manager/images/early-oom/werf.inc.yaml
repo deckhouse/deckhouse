@@ -7,7 +7,7 @@ git:
   to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -22,7 +22,9 @@ secrets:
 shell:
   install:
   - cd /src
-  - GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o psi-monitor psi-monitor.go
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-w -s" -o psi-monitor psi-monitor.go`) | indent 6 }}
   - chown 64535:64535 psi-monitor
   - chmod 0700 psi-monitor
 ---

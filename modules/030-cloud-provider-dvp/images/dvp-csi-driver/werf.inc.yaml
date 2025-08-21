@@ -61,7 +61,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 - fromPath: ~/go-pkg-cache
   to: /go/pkg
@@ -75,7 +75,9 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
   - go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=${VERSION}" -o /dvp-csi-driver cmd/dvp-csi-driver/main.go
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w -X main.version=${VERSION}" -o /dvp-csi-driver cmd/dvp-csi-driver/main.go`) | indent 6 }}
   - chown 64535:64535 /dvp-csi-driver
   - chmod 0755 /dvp-csi-driver
 ---
