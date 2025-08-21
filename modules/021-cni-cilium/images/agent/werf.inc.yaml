@@ -27,9 +27,9 @@
 #####################################################################
 {{ $binariesFromALT := "" }}
 # from base install script
-{{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
+# {{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
+# {{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
 # clang dependencies
 # {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
 # bash-completion
@@ -286,7 +286,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-20.5"
+fromCacheVersion: "2025-08-21.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -306,7 +306,11 @@ import:
   before: install
 - image: tools/bash
   before: install
-  add: /usr/bin/bash
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - bash
+  - sh
 - image: tools/coreutils
   before: install
   add: /
@@ -400,6 +404,10 @@ import:
   - tipc
   - ctstat
   - rtstat
+- image: tools/util-linux
+  before: install
+  add: /usr/share/bash-completion
+  to: /usr/share/bash-completion
 # - image: tools/ipset
 #   before: install
 #   add: /lib/ld-musl-x86_64.so.1
