@@ -329,6 +329,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// clear process error
 		availableModule.Error = ""
+		availableModule.PullError = ""
 
 		// clear overridden
 		availableModule.Overridden = false
