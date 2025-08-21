@@ -128,7 +128,7 @@ spec:
                     Additional disks for the virtual machine.
                   items:
                     type: object
-                    required: ["size, storageClass"]
+                    required: ["size", "storageClass"]
                     properties:
                       size:
                         type: string
