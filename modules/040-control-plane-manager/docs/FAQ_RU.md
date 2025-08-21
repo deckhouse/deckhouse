@@ -767,7 +767,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
-         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска
+         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
          # resources:
          #   requests:
          #     ephemeral-storage: "200Mi"
@@ -791,7 +791,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        volumes:
        - name: etcddir
          emptyDir: {}
-         # Используйте фрагмент ниже вместо emptyDir: {}, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска
+         # Используйте фрагмент ниже вместо emptyDir: {}, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
          # emptyDir:
          #  sizeLimit: 500Mi
        - name: etcd-snapshot
