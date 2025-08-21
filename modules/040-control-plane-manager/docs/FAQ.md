@@ -784,6 +784,12 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -802,6 +808,9 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        volumes:
        - name: etcddir
          emptyDir: {}
+         # Use the snippet below instead of emptyDir: {} to set limits for the container if the node's resources are insufficient to run it
+         # emptyDir:
+         #  sizeLimit: 500Mi
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT
