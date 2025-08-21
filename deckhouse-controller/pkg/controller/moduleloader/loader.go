@@ -199,7 +199,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 
 	// load conversions
 	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
-	var conversions []string
+	var conversions []v1alpha1.ModuleSettingsConversion
 	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
@@ -411,7 +411,7 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []string) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
 	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
@@ -601,7 +601,7 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 }
 
 // loadConversions loads all conversion rules from the module's conversions directory
-func (l *Loader) loadConversions(conversionsDir string) ([]string, error) {
+func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettingsConversion, error) {
 	if conversionsDir == "" {
 		return nil, nil
 	}
@@ -615,7 +615,7 @@ func (l *Loader) loadConversions(conversionsDir string) ([]string, error) {
 	// Regex to match version files like v1.yaml, v2.yaml, etc.
 	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
 
-	var allConversions []string
+	var allConversions []v1alpha1.ModuleSettingsConversion
 
 	// Process each version file
 	for _, file := range files {
@@ -630,31 +630,37 @@ func (l *Loader) loadConversions(conversionsDir string) ([]string, error) {
 
 		// Read and parse the conversion file
 		filePath := filepath.Join(conversionsDir, file.Name())
-		conversions, err := l.readConversionFile(filePath)
+		conversion, err := l.readConversionFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
 		}
 
-		allConversions = append(allConversions, conversions...)
+		if conversion != nil {
+			allConversions = append(allConversions, *conversion)
+		}
 	}
 
 	return allConversions, nil
 }
 
-// readConversionFile reads a single conversion file and extracts the conversions array
-func (l *Loader) readConversionFile(filePath string) ([]string, error) {
+// readConversionFile reads a single conversion file and extracts conversions and description
+func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
 	var parsed struct {
-		Conversions []string `yaml:"conversions"`
+		Conversions []string                                       `yaml:"conversions"`
+		Description *v1alpha1.ModuleSettingsConversionDescriptions `yaml:"description"`
 	}
 
 	if err := yaml.Unmarshal(data, &parsed); err != nil {
 		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
 	}
 
-	return parsed.Conversions, nil
+	return &v1alpha1.ModuleSettingsConversion{
+		Expr:         parsed.Conversions,
+		Descriptions: parsed.Description,
+	}, nil
 }

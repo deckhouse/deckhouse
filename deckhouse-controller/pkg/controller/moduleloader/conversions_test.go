@@ -35,14 +35,14 @@ func TestLoadConversions(t *testing.T) {
 			modulePath:  "./testdata/modules/user-authn",
 			expectError: false,
 			expectEmpty: false,
-			expectCount: 1, // v2.yaml should have 1 conversion
+			expectCount: 1, // v2.yaml should have 1 conversion object
 		},
 		{
 			name:        "istio module with multiple conversions",
 			modulePath:  "./testdata/modules/istio",
 			expectError: false,
 			expectEmpty: false,
-			expectCount: 3, // v2.yaml + v3.yaml should have 3 conversions total
+			expectCount: 2, // v2.yaml + v3.yaml should have 2 conversion objects
 		},
 		{
 			name:        "module without conversions",
@@ -98,7 +98,11 @@ func TestLoadConversions(t *testing.T) {
 			// Log the conversions for debugging
 			t.Logf("Module: %s, Conversions count: %d", tt.name, len(conversions))
 			for i, conversion := range conversions {
-				t.Logf("  Conversion %d: %s", i+1, conversion)
+				t.Logf("  Conversion %d:", i+1)
+				t.Logf("    Expressions (%d): %v", len(conversion.Expr), conversion.Expr)
+				if conversion.Descriptions != nil {
+					t.Logf("    Descriptions: RU=%q, EN=%q", conversion.Descriptions.Ru, conversion.Descriptions.En)
+				}
 			}
 		})
 	}
@@ -136,7 +140,7 @@ type: object`,
 			settings := &v1alpha1.ModuleSettingsDefinition{}
 
 			// Load conversions using the loader
-			var conversions []string
+			var conversions []v1alpha1.ModuleSettingsConversion
 			conversionsDir := filepath.Join(tt.modulePath, "openapi", "conversions")
 			// Check if conversions directory exists (like in processModuleDefinition)
 			if _, err := os.Stat(conversionsDir); err == nil {
@@ -177,7 +181,11 @@ type: object`,
 			t.Logf("Module: %s, Version: %s, Conversions count: %d",
 				tt.name, version.Name, len(version.Conversions))
 			for i, conversion := range version.Conversions {
-				t.Logf("  Conversion %d: %s", i+1, conversion)
+				t.Logf("  Conversion %d:", i+1)
+				t.Logf("    Expressions (%d): %v", len(conversion.Expr), conversion.Expr)
+				if conversion.Descriptions != nil {
+					t.Logf("    Descriptions: RU=%q, EN=%q", conversion.Descriptions.Ru, conversion.Descriptions.En)
+				}
 			}
 		})
 	}
