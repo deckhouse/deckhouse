@@ -650,17 +650,18 @@ func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsCo
 		return nil, err
 	}
 
-	var parsed struct {
+	// Parse YAML directly into a temporary struct
+	var fileContent struct {
 		Conversions []string                                       `yaml:"conversions"`
 		Description *v1alpha1.ModuleSettingsConversionDescriptions `yaml:"description"`
 	}
 
-	if err := yaml.Unmarshal(data, &parsed); err != nil {
+	if err := yaml.Unmarshal(data, &fileContent); err != nil { //nolint:musttag
 		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
 	}
 
 	return &v1alpha1.ModuleSettingsConversion{
-		Expr:         parsed.Conversions,
-		Descriptions: parsed.Description,
+		Expr:         fileContent.Conversions,
+		Descriptions: fileContent.Description,
 	}, nil
 }
