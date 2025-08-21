@@ -85,9 +85,9 @@ func (c *Cache) GetState() []backends.DocumentationTask {
 	return RemapFromMapToVersions(c.val, backends.TaskCreate)
 }
 
-// GetGetReleaseVersionData searches for cached version data by checksum across all release channels
+// GetReleaseVersionData searches for cached version data by checksum across all release channels
 // Returns version, tarFile if found, empty values otherwise
-func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string, []byte) {
+func (c *Cache) GetReleaseVersionData(version *internal.VersionData) (string, []byte) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 
@@ -102,13 +102,16 @@ func (c *Cache) GetGetReleaseVersionData(version *internal.VersionData) (string,
 	}
 
 	// Search across all release channels for matching checksum
-	for channelName, checksum := range m.releaseChecksum {
+	for _, checksum := range m.releaseChecksum {
 		if checksum == version.Checksum {
-			// Found matching checksum, now find the version that contains this channel
+			// Found matching checksum, now find any version that has this checksum
+			// Since checksum represents the content, we need to find the version with this exact content
 			for ver, verData := range m.versions {
-				// Check if this version contains the channel with matching checksum
-				if _, hasChannel := verData.releaseChannels[string(channelName)]; hasChannel {
-					return string(ver), verData.tarFile
+				// Check if any of the channels in this version has the matching checksum
+				for channel := range verData.releaseChannels {
+					if channelChecksum, exists := m.releaseChecksum[releaseChannelName(channel)]; exists && channelChecksum == version.Checksum {
+						return string(ver), verData.tarFile
+					}
 				}
 			}
 		}

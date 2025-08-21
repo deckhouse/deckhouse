@@ -25,6 +25,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -32,7 +33,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 )
@@ -143,13 +143,13 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 	return nil
 }
 
-func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, checksum string) (bool, error) {
+func (r *reconciler) getReleaseVersionFromChecksum(ctx context.Context, sourceName, moduleName, checksum string) (*semver.Version, error) {
 	// image digest has 64 symbols, while label can have maximum 63 symbols, so make md5 sum here
 	checksum = fmt.Sprintf("%x", md5.Sum([]byte(checksum)))
 
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	if err := r.client.List(ctx, moduleReleases, client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: moduleName, v1alpha1.ModuleReleaseLabelReleaseChecksum: checksum}); err != nil {
-		return false, fmt.Errorf("list module releases: %w", err)
+		return nil, fmt.Errorf("list module releases: %w", err)
 	}
 	if len(moduleReleases.Items) == 0 {
 		r.logger.Debug(
@@ -158,7 +158,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 			slog.String("name", moduleName),
 			slog.String("source_name", sourceName),
 		)
-		return false, nil
+		return nil, nil
 	}
 
 	r.logger.Debug(
@@ -167,16 +167,28 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		slog.String("name", moduleName),
 		slog.String("source_name", sourceName),
 	)
-	return true, nil
+
+	// If multiple releases match the checksum, choose the highest semantic version.
+	best := moduleReleases.Items[0].GetVersion()
+	for i := 1; i < len(moduleReleases.Items); i++ {
+		v := moduleReleases.Items[i].GetVersion()
+		// Guard against nil versions just in case
+		if v == nil {
+			continue
+		}
+		if best == nil || v.GreaterThan(best) {
+			best = v
+		}
+	}
+	return best, nil
 }
 
-// needToEnsureRelease checks that the module enabled, the source is the active source,
-// release exists, and checksum not changed.
-func (r *reconciler) needToEnsureRelease(
-	source *v1alpha1.ModuleSource,
+// needEnsure checks if we need to ensure the release:
+// returns true when module is enabled, source is active, and release needs updating.
+func (r *reconciler) needEnsure(source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
-	meta *downloader.ModuleDownloadResult,
+	digestFromRegistry string,
 	releaseExists bool) bool {
 	// check the active source
 	if module.Properties.Source != "" && module.Properties.Source != source.Name {
@@ -189,21 +201,10 @@ func (r *reconciler) needToEnsureRelease(
 
 	// check the module enabled
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		enabledByBundle := false
-		if meta.ModuleDefinition != nil {
-			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
-		}
-
-		if !enabledByBundle {
-			return false
-		}
-
-		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
-			return false
-		}
+		return false
 	}
 
-	return sourceModule.Checksum != meta.Checksum || !releaseExists
+	return sourceModule.Checksum != digestFromRegistry || !releaseExists
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
