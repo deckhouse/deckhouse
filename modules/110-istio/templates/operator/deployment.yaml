@@ -109,9 +109,14 @@ spec:
   {{- end }}
 
         ports:
+        {{- if or (hasPrefix "1.21" $fullVersion) (hasPrefix "1.19" $fullVersion) }}
         - containerPort: 8383
           name: http-metrics
-          protocol: TCP
+        {{- else}}
+        - containerPort: 8443
+          name: https-metrics
+        {{- end }}
+        protocol: TCP
         env:
           - name: WATCH_NAMESPACE
             value: d8-{{ $.Chart.Name }}
