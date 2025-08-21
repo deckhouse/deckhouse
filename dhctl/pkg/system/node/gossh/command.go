@@ -46,7 +46,6 @@ type SSHCommand struct {
 
 	SSHArgs []string
 
-	pipesMutex     sync.Mutex
 	stdoutPipeFile io.Reader
 	stderrPipeFile io.Reader
 	StdoutSplitter bufio.SplitFunc
@@ -84,6 +83,7 @@ type SSHCommand struct {
 	ctx       context.Context
 	Cancel    func() error
 	ctxResult <-chan error
+	wg        sync.WaitGroup
 }
 
 func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
@@ -298,7 +298,6 @@ func (c *SSHCommand) Run(ctx context.Context) error {
 
 	// <-c.waitCh
 
-	c.closePipes()
 	c.Stop()
 
 	return c.WaitError()
@@ -438,7 +437,7 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	}
 
 	err = c.Start()
-	time.Sleep(150 * time.Millisecond) // instead of thread sync
+	c.wg.Wait()
 	return c.out.Bytes(), c.err.Bytes(), err
 }
 
@@ -487,7 +486,7 @@ func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 	c.combined = &co
 
 	err = c.Start()
-	time.Sleep(150 * time.Millisecond) // instead of thread sync
+	c.wg.Wait()
 	return c.combined.b.Bytes(), err
 }
 
@@ -597,6 +596,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// - Copy to os.Stdout if live output is enabled
 	// - Copy to buffer if capture is enabled
 	// - Copy to pipe if StdoutHandler is set
+	c.wg.Add(2)
 	go func() {
 		c.readFromStreams(c.stdoutPipeFile, stdoutHandlerWritePipe, false)
 	}()
@@ -660,6 +660,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 
 func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer, isError bool) {
 	defer log.DebugLn("stop readFromStreams")
+	defer c.wg.Done()
 
 	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
 		log.DebugLn("pipe is nil")
@@ -755,30 +756,6 @@ func (c *SSHCommand) ConsumeLines(r io.Reader, fn func(l string)) {
 	}
 }
 
-func (c *SSHCommand) closePipes() {
-	log.DebugLn("Starting close piped")
-	defer log.DebugLn("Stop close piped")
-
-	c.pipesMutex.Lock()
-	defer c.pipesMutex.Unlock()
-
-	// if c.stdoutPipeFile != nil {
-	// 	err := c.stdoutPipeFile.Close()
-	// 	if err != nil {
-	// 		log.DebugF("Cannot close stdout pipe: %v\n", err)
-	// 	}
-	// 	c.stdoutPipeFile = nil
-	// }
-
-	// if c.stderrPipeFile != nil {
-	// 	err := c.stderrPipeFile.Close()
-	// 	if err != nil {
-	// 		log.DebugF("Cannot close stderr pipe: %v\n", err)
-	// 	}
-	// 	c.stderrPipeFile = nil
-	// }
-}
-
 func (c *SSHCommand) Stop() {
 	if c.stop {
 		log.DebugF("Stop '%s': already stopped\n", c.cmd)
@@ -799,7 +776,6 @@ func (c *SSHCommand) Stop() {
 		close(c.stopCh)
 	}
 	log.DebugF("Stopped '%s' \n", c.cmd)
-	c.closePipes()
 	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
 	c.session.Signal(ssh.SIGINT)
 	log.DebugF("Signal sent\n")
