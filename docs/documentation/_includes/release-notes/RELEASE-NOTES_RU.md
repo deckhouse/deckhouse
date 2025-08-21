@@ -32,6 +32,10 @@
 
 Обновлены следующие компоненты DKP:
 
+- Kubernetes Control Plane: 1.30.14, 1.31.11, 1.32.7, 1.33.3
+- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.6.0
+- `node-manager capi-controller-manager`: 1.10.4
+
 ## Версия 1.71
 
 ### Обратите внимание
