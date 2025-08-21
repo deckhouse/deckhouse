@@ -4,7 +4,7 @@
 
 - В процессе обновления будут перезапущены все компоненты DKP.
 
-- Теперь, чтобы использовать [экспериментальные модули](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/module-development/versioning/#%D0%B6%D0%B8%D0%B7%D0%BD%D0%B5%D0%BD%D0%BD%D1%8B%D0%B9-%D1%86%D0%B8%D0%BA%D0%BB-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8F) в кластере, необходимо явно дать разрешение (параметр [allowExperimentalModules](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules)). По умолчанию использование экспериментальных модулей отключено. Уже включенные перед обновлением DKP экспериментальные модули отключены не будут. В случае ручного отключения включенного при обновлении DKP экспериментального модуля, для возможности его повторного включения необходимо дать разрешение на использование экспериментальных модулей.
+- Теперь, чтобы использовать [экспериментальные модули](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/module-development/versioning/#жизненный-цикл-модуля) в кластере, необходимо явно дать разрешение (параметр [allowExperimentalModules](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules)). По умолчанию использование экспериментальных модулей отключено. Уже включенные перед обновлением DKP экспериментальные модули отключены не будут. В случае ручного отключения включенного при обновлении DKP экспериментального модуля, для возможности его повторного включения необходимо дать разрешение на использование экспериментальных модулей.
 
 ### Основные изменения
 
@@ -20,7 +20,7 @@
 
 ### Безопасность
 
-- К [событиям аудита](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/control-plane-manager/#%D0%B0%D1%83%D0%B4%D0%B8%D1%82) (Kubernetes audit log) добавлены поля `user-authn.deckhouse.io/name` и `user-authn.deckhouse.io/preferred_username` для вывода информации о claim пользователя от OIDC-провайдера. Это улучшает контроль и отладку процессов аутентификации.
+- К [событиям аудита](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/control-plane-manager/#аудит) (Kubernetes audit log) добавлены поля `user-authn.deckhouse.io/name` и `user-authn.deckhouse.io/preferred_username` для вывода информации о claim пользователя от OIDC-провайдера. Это улучшает контроль и отладку процессов аутентификации.
 
 - Версии Kubernetes 1.30–1.33 обновлены до последних патч-версий.
 
