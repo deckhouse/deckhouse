@@ -30,7 +30,7 @@
 {{ $gccVersion := "12.1.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 fromCacheVersion: "2025-08-20.02"
 final: false
 git:
@@ -93,10 +93,12 @@ shell:
   - git submodule set-url others/libinjection "$(cat /run/secrets/SOURCE_REPO)/libinjection/libinjection.git"
   - git submodule set-url bindings/python "$(cat /run/secrets/SOURCE_REPO)/SpiderLabs/ModSecurity-Python-bindings.git"
   - git submodule set-url others/mbedtls "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls.git"
-  - git submodule set-url others/mbedtls/framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
-  - git submodule set-url others/mbedtls/tf-psa-crypto "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/TF-PSA-Crypto.git"
-  - git submodule set-url others/mbedtls/tf-psa-crypto/framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
-  - git submodule update
+  - git submodule update others/mbedtls
+  - cd others/mbedtls
+  - git submodule init
+  - git submodule set-url framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
+  - cd ../..
+  - git submodule update --recursive
   #
   - cd /src/nginx-deps
   - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
@@ -119,8 +121,6 @@ shell:
   - rm -rf /src/ModSecurity/bindings/python/.git
   - rm -rf /src/ModSecurity/others/mbedtls/.git
   - rm -rf /src/ModSecurity/others/mbedtls/framework/.git
-  - rm -rf /src/ModSecurity/others/mbedtls/tf-psa-crypto/.git
-  - rm -rf /src/ModSecurity/others/mbedtls/tf-psa-crypto/framework.git
   - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/.git
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
@@ -789,16 +789,16 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv-{{ $luaIconvVersion }}
   add: /
   to: /chroot/usr/local
-  owner: "64535"
-  group: "64535"
+  # owner: "64535"
+  # group: "64535"
   includePaths:
   - lib/lua/5.1/iconv.so
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf-{{ $luaProtobufVersion }}
   add: /
   to: /chroot/usr/local
-  owner: "64535"
-  group: "64535"
+  # owner: "64535"
+  # group: "64535"
   includePaths:
   - lib/lua/5.1/pb.so
   - share/lua/5.1/protoc.lua
@@ -826,8 +826,8 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /chroot
-  owner: "64535"
-  group: "64535"
+  # owner: "64535"
+  # group: "64535"
   includePaths:
   - usr/lib/libc.so
   - lib/ld-musl-x86_64.so.1
@@ -995,7 +995,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 # fromImage: builder/alpine-3.21 # FIXME replace!
-fromImage: common/distroless
+fromImage: base/distroless
 fromCacheVersion: "2025-08-20.02"
 mount:
 - from: build_dir
