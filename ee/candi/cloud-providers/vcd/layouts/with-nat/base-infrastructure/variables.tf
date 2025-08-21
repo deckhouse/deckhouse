@@ -8,7 +8,3 @@ variable "providerClusterConfiguration" {
 variable "clusterConfiguration" {
   type = any
 }
-
-variable "clusterUUID" {
-  type = string
-}
