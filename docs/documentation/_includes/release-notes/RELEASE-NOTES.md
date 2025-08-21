@@ -70,11 +70,13 @@
 - Refined the [list of ports used for networking](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
   - Added and updated:
     - `4287/UDP`: WireGuard port used for CNI Cilium traffic encryption.
-    - `4295–4299/UDP`: Ports used by Cilium for VXLAN encapsulation of inter-pod traffic. The port used depends on the **initially installed** DKP version (after updating DKP, the port does not change), and starting from version 1.71, it depends on the DVP nesting level (DKP inside DVP, see details below):
-      - `4299/UDP`: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.64–1.70. When the `virtualization` module is enabled, the port changes to `4298/UDP`.
-      - `4298/UDP`: Used by Cilium for VXLAN encapsulation of inter-pod traffic in DKP 1.71+.
-      - `4297/UDP`: Used by Cilium for VXLAN encapsulation of inter-pod traffic in the case of nested virtualization. This occurs in DKP with the `virtualization` module enabled, when DKP is deployed inside virtual machines that are also created with the `virtualization` module enabled.
-      - `4296/UDP`, `4295/UDP`: Used by Cilium for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization (see description for port `4297/UDP`).
+    - `4295-4297/UDP`: Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DKP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DKP with the `virtualization` module enabled.
+    - `4298/UDP`: Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`).
+    - `4299/UDP`: Port **for clusters deployed on DKP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the port used unless the `virtualization` module is enabled.
+    - `8469/UDP`: Port **for clusters deployed on DKP version 1.63 and below with the `virtualization` module enabled prior to DKP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port
+    - `8472/UDP`: Port **for clusters deployed on DKP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port if the `virtualization` module is not enabled. **Note** that in such clusters, enabling the `virtualization` module on DKP before version 1.70 changes the port:
+      - Enabling the `virtualization` module on DKP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DKP updates
+      - Enabling the `virtualization` module on DKP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DKP updates
   - Removed:
     - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the `virtualization` module). Migration now occurs over the Pod network.
 
