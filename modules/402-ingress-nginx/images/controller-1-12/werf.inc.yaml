@@ -125,7 +125,7 @@ shell:
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.24
 fromCacheVersion: "2025-08-20.02"
 final: false
 import:
@@ -266,7 +266,7 @@ from: dev-registry.deckhouse.io/base_images@sha256:52ba2f8aaad0b3ca4e3da3741a902
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: builder/alpine
+fromImage: builder/alpine-3.21
 fromCacheVersion: "2025-08-20.02"
 final: false
 import:
@@ -763,7 +763,7 @@ shell:
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: builder/alpine
+fromImage: builder/alpine-3.21
 fromCacheVersion: "2025-08-20.02"
 final: false
 mount:
@@ -994,7 +994,7 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine # FIXME replace!
+# fromImage: builder/alpine-3.21 # FIXME replace!
 fromImage: common/distroless
 fromCacheVersion: "2025-08-20.02"
 mount:
