@@ -28,7 +28,7 @@ spec:
     bearerTokenSecret:
       key: token
       name: prometheus-token
-    tlsConfig:
+    tlsConfig: # TODO https://github.com/deckhouse/deckhouse/issues/1487
       insecureSkipVerify: true
     {{- end }}
     relabelings:
