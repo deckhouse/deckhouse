@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if eq .ModuleName "docs" }}
+{{ if eq .ModuleName "website-docs" }}
 fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
@@ -37,4 +37,4 @@ imageSpec:
     entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ end }}
 ---
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
