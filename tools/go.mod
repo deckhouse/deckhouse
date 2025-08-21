@@ -200,6 +200,9 @@ replace (
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
+	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ../go_lib/dependency/vsphere
+    github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
 )
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0

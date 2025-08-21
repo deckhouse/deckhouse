@@ -201,7 +201,7 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
 lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
-	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
+	@bin/werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
 
 ##@ Generate
 
@@ -217,7 +217,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	curl https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl ${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
@@ -237,19 +237,19 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 ##@ Documentation
 
 .PHONY: docs
-docs: ## Run containers with the documentation.
+docs: bin/werf ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	cd docs/documentation/; bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	cd docs/site/; bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-dev
-docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
+docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	cd docs/documentation/; bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	cd docs/site/; bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
@@ -300,26 +300,24 @@ bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	@if ! command -v werf >/dev/null 2>&1; then \
+	@if ! command -v bin/trdl >/dev/null 2>&1; then \
 		curl -sSfL https://tuf.trdl.dev/targets/releases/0.7.0/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
 		chmod +x bin/trdl; \
 	fi
 
 bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	@if ! command -v werf >/dev/null 2>&1; then \
-		bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'; \
-		if command -v bin/werf >/dev/null 2>&1; then \
-			trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
+		@bash -c 'bin/trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2';
+		@if command -v bin/werf >/dev/null 2>&1; then \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
 		else \
-			trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
 			ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 2 alpha | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
-		fi; \
-	fi
+		fi;
 
 bin/gh: bin ## Install gh cli.
-	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
-	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
-	rm bin/gh.zip
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
+	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
+	rm bin/gh.tar.gz
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
@@ -389,9 +387,9 @@ set-build-envs:
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
-build: set-build-envs ## Build Deckhouse images.
+build: bin/werf set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	bin/werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.
