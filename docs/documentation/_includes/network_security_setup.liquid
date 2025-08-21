@@ -19,7 +19,7 @@
     <tbody>
       {% for destination in group.destinations %}
         <tr>
-          <td><code>{{ destination.ports }}</code></td>
+          <td>{% if destination.ports.size > 0 %}<code>{{ destination.ports }}</code>{% else %}—{% endif %}</td>
           <td>{{ destination.protocol }}</td>
           <td class="desc">{{ destination.description[lang] | markdownify }}</td>
         </tr>
