@@ -65,13 +65,13 @@ send_report() {
     -F "verified=true" \
     -F "scan_type=Trivy Scan" \
     -F "close_old_findings=true" \
-    -F "do_not_reactivate=true" \
+    -F "do_not_reactivate=false" \
     -F "push_to_jira=false" \
     -F "file=@${2}" \
-    -F "product_type_name=Deckhouse images" \
+    -F "product_type_name=DKP" \
     -F "product_name=Deckhouse" \
     -F "scan_date=${date_iso}" \
-    -F "engagement_name=${1}: Deckhouse Images" \
+    -F "engagement_name=${1}" \
     -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
     -F "group_by=component_name+component_version" \
     -F "deduplication_on_engagement=false" \
