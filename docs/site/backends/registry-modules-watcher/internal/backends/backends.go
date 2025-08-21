@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"sync"
-	"sync/atomic"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -59,7 +58,6 @@ type BackendManager struct {
 
 	mu           sync.RWMutex
 	backendAddrs map[string]struct{} // list of backend IP addresses
-	newBackends  atomic.Uint32       // needed to calculate metrics
 
 	logger *log.Logger
 	ms     *metricstorage.MetricStorage
@@ -75,17 +73,7 @@ func New(scanner RegistryScanner, sender Sender, logger *log.Logger, ms *metrics
 		ms:           ms,
 	}
 
-	bm.newBackends.Store(0)
-
 	scanner.SubscribeOnUpdate(bm.handleUpdate)
-
-	// function that will be triggered on metrics handler
-	ms.AddCollectorFunc(func(s metricstorage.Storage) {
-		newBackends := bm.newBackends.Load()
-		s.GaugeSet(metrics.RegistryWatcherNewBackendsTotalMetric, float64(newBackends), nil)
-		// Reset metric between collects
-		bm.newBackends.Store(0)
-	})
 
 	return bm
 }
@@ -108,7 +96,8 @@ func (bm *BackendManager) Add(ctx context.Context, backend string) {
 
 	bm.sender.Send(ctx, map[string]struct{}{backend: {}}, state)
 
-	bm.newBackends.Add(1)
+	// set new backends metric
+	bm.ms.CounterAdd(metrics.RegistryWatcherNewBackendsTotalMetric, 1.0, nil)
 }
 
 // Delete removes a backend endpoint from the managed list
