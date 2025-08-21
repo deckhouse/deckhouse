@@ -43,6 +43,11 @@ var (
 
 const versionFileName = "version.json"
 
+type ImageMetadata struct {
+	Version               string
+	ModuleDefinitionFound bool
+}
+
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
 
@@ -150,11 +155,12 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
+	s.logger.Debug("module.yaml state",
+		slog.String("module", module),
+		slog.String("channel", releaseChannel),
+		slog.Bool("found", imageMeta.ModuleDefinitionFound))
 	if !imageMeta.ModuleDefinitionFound {
-		s.logger.Warn("module.yaml not found", slog.String("module", module), slog.String("channel", releaseChannel))
 		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
-	} else {
-		s.logger.Debug("module.yaml found", slog.String("module", module), slog.String("channel", releaseChannel))
 	}
 
 	versionData.Version = imageMeta.Version
@@ -167,11 +173,6 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	versionData.TarFile = tarFile
 
 	return versionData, nil
-}
-
-type ImageMetadata struct {
-	Version               string
-	ModuleDefinitionFound bool
 }
 
 func (s *registryscanner) extractTar(ctx context.Context, version *internal.VersionData) ([]byte, error) {
@@ -310,7 +311,7 @@ func getMetadataFromImage(releaseImage crv1.Image) (*ImageMetadata, error) {
 		case "module.yaml":
 			buf := bytes.NewBuffer(nil)
 			if _, err := io.Copy(buf, tarReader); err != nil {
-				return nil, fmt.Errorf("copy module.yaml file content: %w", err)
+				continue // ignore error
 			}
 			if len(buf.Bytes()) > 0 {
 				metadata.ModuleDefinitionFound = true
