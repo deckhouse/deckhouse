@@ -5,15 +5,9 @@
   <table class="deckhouse-ports" markdown="0">
     <thead>
       <tr>
-        {% if lang == 'ru' %}
-          <th>Порт</th>
-          <th>Протокол</th>
-          <th>Назначение</th>
-        {% else %}
-          <th>Port</th>
-          <th>Protocol</th>
-          <th>Purpose</th>
-        {% endif %}
+          <th>{{ site.data.i18n.common['port'][page.lang] | capitalize }}</th>
+          <th>{{ site.data.i18n.common['protocol'][page.lang] | capitalize }}</th>
+          <th>{{ site.data.i18n.common['purpose'][page.lang] | capitalize }}</th>
       </tr>
     </thead>
     <tbody>
