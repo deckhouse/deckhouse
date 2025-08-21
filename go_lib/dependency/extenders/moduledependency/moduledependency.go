@@ -197,7 +197,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 	req, err := e.createModuleRequirement(moduleName, value)
 	if err != nil {
-		validateErr = multierror.Append(validateErr, fmt.Errorf("could not validate the \"%s\" module dependencies: %s", moduleName, err.Error()))
+		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to validate module dependencies: %s", err.Error()))
 		return validateErr
 	}
 
@@ -226,24 +226,24 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 		parsedParentVersion, err := parseParentVersion(parentVersion)
 		if err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency \"%s\" has unparsable version", parentModule))
 			continue
 		}
 
-		if err := req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the %q module dependency %q does not meet the version constraint: %s", moduleName, parentModule, err.Error()))
+		if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency %q not meet the version constraint: %s", parentModule, err.Error()))
 		}
 	}
 
 	sanitizedVersion, err := removePrereleaseAndMetadata(version)
 	if err != nil {
-		validateErr = multierror.Append(validateErr, fmt.Errorf("couldn't get the \"%s\" module version without prerelease and metadata info: %s", moduleName, err.Error()))
+		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to get module version without prerelease and metadata info: %s", err.Error()))
 	}
 
 	// check if the new module's version breaks current constraints
 	for dependentModule, r := range e.modules {
 		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" dependency \"%s\" does not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
 		}
 	}
 
