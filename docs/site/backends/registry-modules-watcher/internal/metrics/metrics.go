@@ -86,7 +86,7 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	}
 
 	logger.Info("register metric", slog.String("metric", RegistryWatcherNewBackendsTotalMetric))
-	_, err = ms.RegisterCounter(RegistryWatcherNewBackendsTotalMetric, []string{}, options.WithHelp("Count of new watcher backends"))
+	_, err = ms.RegisterGauge(RegistryWatcherNewBackendsTotalMetric, []string{}, options.WithHelp("Count of new watcher backends"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryWatcherNewBackendsTotalMetric, err)
 	}

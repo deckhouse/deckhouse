@@ -177,7 +177,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum by(pod)(increase(registry_modules_watcher_registry_watcher_new_backends_total{namespace=\"$namespace\"}[$__rate_interval]))",
+          "expr": "registry_modules_watcher_registry_watcher_new_backends_total{namespace=\"$namespace\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
