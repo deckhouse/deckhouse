@@ -16,7 +16,7 @@
 
 - You can now enable logging of all DNS queries (the [enableLogs](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/node-local-dns/configuration.html#parameters-enablelogs) parameter of the `node-local-dns` module).
 
-- In the `cloud-provider-vcd` module, a new [WithNAT layout](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-vcd/layouts.html#withnat) has been added for cluster deployment. It automatically configures NAT and, if necessary, firewall rules for accessing nodes through a bastion host. It also supports both `NSX-T` and `NSX-V`. This makes it possible to deploy a cluster in VMware Cloud Director without pre-configuring the environment (unlike the `Standard` placement scheme).
+- In the `cloud-provider-vcd` module, a new [WithNAT layout](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-vcd/layouts.html#withnat) has been added for cluster deployment. It automatically configures NAT and, if necessary, firewall rules for accessing nodes through a bastion host. It also supports both `NSX-T` and `NSX-V`. This makes it possible to deploy a cluster in VMware Cloud Director without pre-configuring the environment (unlike the `Standard` layout).
 
 ### Security
 
