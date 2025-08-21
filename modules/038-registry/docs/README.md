@@ -14,16 +14,28 @@ The module can operate in the following modes:
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
 - `Unmanaged` — operation without using an internal registry. Access within the cluster is performed via an address that can be [set during the cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a deployed cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry).
 
-## Module usage restrictions
+## Restrictions and features of using the module
 
-The `registry` module has the following restrictions and usage features:
+The `registry` module has a number of limitations and features related to installation, operating conditions, and mode switching.
 
-- The module only works when using CRI containerd or containerd v2 on Deckhouse Kubernetes Platform (DKP) cluster nodes. To configure CRI, refer to the [`ClusterConfiguration`](../../installing/configuration.html##clusterconfiguration-defaultcri).
-- The module can only be used in clusters that are fully managed by DKP. It will not work in Managed Kubernetes clusters.
-- Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The cluster is deployed with settings for `Unmanaged` mode. An already running cluster can be switched to `Direct` mode.
-- Switching to `Direct` mode is only possible if CRI containerd or containerd v2 is used on the cluster nodes and if there are no custom registry configurations on the nodes. For more details, see the [Registry module: FAQ](./faq.html) section.
+### Cluster installation limitations
+
+Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The cluster is deployed with settings for `Unmanaged` mode.
+
+### Operating conditions restrictions
+
+The module works under the following conditions:
+
+- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](../../installing/configuration.html##clusterconfiguration-defaultcri) configuration.
+- The cluster is fully managed by DKP. Module will not work in Managed Kubernetes clusters.
+
+### Mode switching restrictions
+
+The restrictions on mode switching are as follows:
+
+- Switching to `Direct` mode is possible if there are no user registry configurations on the nodes. For more details, see the [Registry Module: FAQ](./faq.html) section.
 - Switching to `Unmanaged` mode is only available from `Direct` mode.
-- Changing registry settings is not supported in `Unmanaged` mode. To change registry settings, you need to switch to `Direct` mode, make the necessary changes, and then switch back to `Unmanaged` mode.
+- In `Unmanaged` mode, changing registry settings is not supported. To change settings, you need to switch to `Direct` mode, make the necessary changes, and then switch back to `Unmanaged` mode.
 
 ## Direct Mode Architecture
 
