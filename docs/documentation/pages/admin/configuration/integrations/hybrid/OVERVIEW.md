@@ -9,6 +9,11 @@ Currently, integration is supported with [OpenStack](../public/openstack/connect
 A hybrid cluster is a Kubernetes cluster that combines bare-metal nodes with nodes running on vSphere or OpenStack.
 To create such a cluster, an L2 network must be available between all nodes.
 
+{% alert level="info" %}
+The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+To do this, use the [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
+{% endalert %}
+
 ## Hybrid cluster with vSphere
 
 Follow these steps:
