@@ -55,7 +55,7 @@ func RegisterAdmissionHandlers(
 	settings *helpers.DeckhouseSettingsContainer,
 	exts *extenders.ExtendersStack,
 ) {
-	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings))
+	reg.RegisterHandler("/validate/v1alpha1/module-configs", moduleConfigValidationHandler(cli, storage, metricStorage, mm, validator, settings, exts))
 	reg.RegisterHandler("/validate/v1alpha1/modules", moduleValidationHandler())
 	reg.RegisterHandler("/validate/v1/configuration-secret", clusterConfigurationHandler(mm, cli, schemaStore))
 	reg.RegisterHandler("/validate/v1/provider-configuration-secret", providerConfigurationHandler(schemaStore))
