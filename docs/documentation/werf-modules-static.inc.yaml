@@ -108,6 +108,12 @@ shell:
         cd ..
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "documentation" }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
+
+        echo '[] Generating static files of the main part...'
+        cd /srv/jekyll-data/site/
+        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
+
         cp -Rf /app/_site/site/assets /app/_site/documentation/
         cp -Rf /app/_site/site/images /app/_site/documentation/
         cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
@@ -115,18 +121,12 @@ shell:
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
-
+{{ else }}
         {{- if eq .Mode "development" }}
         JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
         {{- else }}
         JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
         {{- end }}
-{{ else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
-
-        echo '[] Generating static files of the main part...'
-        cd /srv/jekyll-data/site/
-        JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
 {{ end }}
 git:
 - add: /{{ .ModulePath }}docs
@@ -149,7 +149,7 @@ git:
     - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
-    - documentation/pages/internal
+    - documentation/pages
     - documentation/config
 {{ if eq .ModuleName "documentation" }}
     - site/pages/*.html
