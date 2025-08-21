@@ -296,8 +296,6 @@ func (c *SSHCommand) Run(ctx context.Context) error {
 		return err
 	}
 
-	// <-c.waitCh
-
 	c.Stop()
 
 	return c.WaitError()
@@ -532,7 +530,6 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		return
 	}
 
-	// var stdoutReadPipe io.Reader
 	var stdoutHandlerWritePipe *os.File
 	var stdoutHandlerReadPipe *os.File
 	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
@@ -683,8 +680,6 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			continue
 		}
 
-		// log.DebugF("read: %s\n", string(buf))
-
 		m := 0
 		if !matchersDone {
 			for _, matcher := range c.Matchers {
@@ -715,12 +710,10 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			os.Stdout.Write(buf[m:n])
 		}
 		if c.out != nil && !isError {
-			// log.DebugF("write to out: %s\n", string(buf[:n]))
 			c.out.Write(buf[:n])
 		}
 
 		if c.err != nil && isError {
-			// log.DebugF("write to err: %s\n", string(buf[:n]))
 			c.err.Write(buf[:n])
 		}
 
