@@ -134,7 +134,7 @@ kind: GrafanaDashboardDefinition
 metadata:
   labels:
     prometheus.deckhouse.io/grafana-dashboard: ""
-  name: registry-modules-watcher-telemetry-no-module-yaml
+  name: modules-validation
 spec:
   folder: Custom
   definition: |
