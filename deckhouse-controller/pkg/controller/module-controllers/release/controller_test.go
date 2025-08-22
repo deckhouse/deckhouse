@@ -686,7 +686,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-several-update-specs-must-choose-constrainted-release.yaml")
 			suite.setupReleaseController(testData)
 
-			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
 			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, constrainted release must be chosen
 			repeatTest(func() {
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
@@ -705,8 +705,27 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("from-to-several-update-specs-different-release.yaml")
 			suite.setupReleaseController(testData)
 
-			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
-			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, no release can be processed
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
+			// constraints allow jump from 1.67.x -> 1.70.x no release can be processed
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 8) Update specis not for constrainted release
+		suite.Run("Different from constrainted release is approved and matches constraint", func() {
+			testData := suite.fetchTestFileData("from-to-update-spec-not-for-constrainted-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
+			// constraints allow jump from 1.67.x -> 1.69.x no release can be processed
 			repeatTest(func() {
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
 				require.NoError(suite.T(), err)

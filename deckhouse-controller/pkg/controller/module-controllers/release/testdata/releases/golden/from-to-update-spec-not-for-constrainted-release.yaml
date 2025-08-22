@@ -24,10 +24,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    modules.deckhouse.io/approved: "true"
-    modules.deckhouse.io/isUpdating: "true"
-    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -36,17 +32,43 @@ metadata:
     modules.deckhouse.io/update-policy: demo
     source: test-source
     status: superseded
-  name: demo-1.66.23
-  resourceVersion: "1004"
+  name: demo-1.67.0
+  resourceVersion: "1002"
 spec:
   moduleName: demo
-  version: 1.66.23
+  version: 1.67.0
   weight: 900
 status:
   approved: true
   message: ""
   phase: Superseded
-  pullDuration: 9m15s
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: skipped
+  name: demo-1.68.0
+  resourceVersion: "1005"
+spec:
+  moduleName: demo
+  version: 1.68.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -65,11 +87,11 @@ metadata:
     modules.deckhouse.io/update-policy: demo
     source: test-source
     status: deployed
-  name: demo-1.67.5
+  name: demo-1.69.0
   resourceVersion: "1003"
 spec:
   moduleName: demo
-  version: 1.67.5
+  version: 1.69.0
   weight: 900
 status:
   approved: true
@@ -77,7 +99,7 @@ status:
   phase: Deployed
   pullDuration: 9m15s
   size: 0
-  transitionTime: "2021-12-08T08:34:01Z"
+  transitionTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -90,41 +112,19 @@ metadata:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
-  name: demo-1.68.3
+  name: demo-1.70.0
   resourceVersion: "1004"
-spec:
-  moduleName: demo
-  version: 1.68.3
-  weight: 900
-status:
-  approved: false
-  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
-  phase: Pending
-  pullDuration: 0s
-  size: 0
-  transitionTime: "2021-12-08T08:34:01Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: demo
-    source: test-source
-  name: demo-1.75.2
-  resourceVersion: "1003"
 spec:
   moduleName: demo
   update:
     versions:
-    - from: "1.66"
-      to: "1.68"
-  version: 1.75.2
+    - from: "1.67"
+      to: "1.69"
+  version: 1.70.0
   weight: 900
 status:
   approved: false
-  message: awaiting for v1.68.3 release to be deployed
+  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
   phase: Pending
   pullDuration: 0s
   size: 0
@@ -135,14 +135,14 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "1004"
+  resourceVersion: "1006"
 properties: {}
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'ModuleRelease could not be applied, release postponed: see details in
-      the module release v1.68.3'
+      the module release v1.70.0'
     reason: ReleaseDeployTimeCheck
     status: "False"
     type: LastReleaseDeployed

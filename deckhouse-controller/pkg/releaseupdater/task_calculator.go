@@ -458,9 +458,22 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 
 			bestIdxVersion := releases[bestIdx].GetVersion()
 
-			if bestIdxVersion.Patch() < rv.Patch() ||
-				bestIdxVersion.Minor() < rv.Minor() ||
-				bestIdxVersion.Major() < rv.Major() {
+			if bestIdxVersion.Major() < toVer.Major() {
+				bestIdx = idx
+
+				continue
+			}
+
+			if bestIdxVersion.Major() == toVer.Major() &&
+				bestIdxVersion.Minor() < toVer.Minor() {
+				bestIdx = idx
+
+				continue
+			}
+
+			if bestIdxVersion.Major() == toVer.Major() &&
+				bestIdxVersion.Minor() == toVer.Minor() &&
+				bestIdxVersion.Patch() < rv.Patch() {
 				bestIdx = idx
 			}
 		}
