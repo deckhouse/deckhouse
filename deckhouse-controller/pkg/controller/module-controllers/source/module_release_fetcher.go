@@ -458,8 +458,13 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			Spec: v1alpha1.ModuleReleaseSpec{
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  meta.Changelog,
+				Weight: func() uint32 {
+					if meta.ModuleDefinition != nil {
+						return meta.ModuleDefinition.Weight
+					}
+					return 900 // default weight
+				}(),
+				Changelog: meta.Changelog,
 			},
 		}
 
@@ -512,8 +517,13 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  meta.Changelog,
+		Weight: func() uint32 {
+			if meta.ModuleDefinition != nil {
+				return meta.ModuleDefinition.Weight
+			}
+			return 900 // default weight
+		}(),
+		Changelog: meta.Changelog,
 	}
 
 	if err := f.k8sClient.Update(ctx, release); err != nil {
