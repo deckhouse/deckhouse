@@ -75,42 +75,74 @@ func (c *client) Name() string {
 	return c.registryURL
 }
 
-func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string) (v1.Image, error) {
+func (c *client) ReleaseImage(ctx context.Context, moduleName, tag string, opts ...registryscanner.FetchOptions) (*registryscanner.ImageResult, error) {
 	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
 
-	return c.image(ctx, imageURL)
-}
-
-func (c *client) Image(ctx context.Context, moduleName, tag string) (v1.Image, error) {
-	imageURL := c.registryURL + "/" + moduleName + ":" + tag
-
-	return c.image(ctx, imageURL)
-}
-
-// Digest returns the digest of an image without downloading the full image
-func (c *client) Digest(ctx context.Context, moduleName, tag string) (string, error) {
-	imageURL := c.registryURL + "/" + moduleName + ":" + tag
-
-	var nameOpts []name.Option
-
-	ref, err := name.ParseReference(imageURL, nameOpts...)
-	if err != nil {
-		return "", fmt.Errorf("parse reference: %w", err)
+	// Check if digest-only fetch is requested
+	if len(opts) > 0 && opts[0].DigestOnly {
+		digest, err := c.getDigest(ctx, imageURL)
+		if err != nil {
+			return nil, err
+		}
+		return &registryscanner.ImageResult{
+			Image:  nil,
+			Digest: digest,
+		}, nil
 	}
 
-	// Use remote.Get for better performance - only fetches manifest
-	desc, err := remote.Get(ref, c.getRemoteOptions(ctx)...)
+	// Fetch full image
+	image, err := c.image(ctx, imageURL)
 	if err != nil {
-		return "", fmt.Errorf("get manifest: %w", err)
+		return nil, err
 	}
 
-	return desc.Digest.String(), nil
+	// Get digest for full image fetch
+	digest, err := image.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	return &registryscanner.ImageResult{
+		Image:  image,
+		Digest: digest.String(),
+	}, nil
 }
 
-// ReleaseImageDigest returns the digest of a release image without downloading the full image
-func (c *client) ReleaseImageDigest(ctx context.Context, moduleName, tag string) (string, error) {
-	imageURL := c.registryURL + "/" + moduleName + "/release" + ":" + tag
+func (c *client) Image(ctx context.Context, moduleName, tag string, opts ...registryscanner.FetchOptions) (*registryscanner.ImageResult, error) {
+	imageURL := c.registryURL + "/" + moduleName + ":" + tag
 
+	// Check if digest-only fetch is requested
+	if len(opts) > 0 && opts[0].DigestOnly {
+		digest, err := c.getDigest(ctx, imageURL)
+		if err != nil {
+			return nil, err
+		}
+		return &registryscanner.ImageResult{
+			Image:  nil,
+			Digest: digest,
+		}, nil
+	}
+
+	// Fetch full image
+	image, err := c.image(ctx, imageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get digest for full image fetch
+	digest, err := image.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	return &registryscanner.ImageResult{
+		Image:  image,
+		Digest: digest.String(),
+	}, nil
+}
+
+// getDigest returns the digest of an image without downloading the full image
+func (c *client) getDigest(ctx context.Context, imageURL string) (string, error) {
 	var nameOpts []name.Option
 
 	ref, err := name.ParseReference(imageURL, nameOpts...)

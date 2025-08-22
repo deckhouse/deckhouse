@@ -28,16 +28,23 @@ import (
 	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 )
 
+// FetchOptions configures how resources should be fetched
+type FetchOptions struct {
+	DigestOnly bool
+}
+
+// ImageResult contains the result of image fetching operations
+type ImageResult struct {
+	Image  v1.Image
+	Digest string
+}
+
 type Client interface {
 	Name() string
-	ReleaseImage(ctx context.Context, moduleName, releaseChannel string) (v1.Image, error)
-	Image(ctx context.Context, moduleName, version string) (v1.Image, error)
+	ReleaseImage(ctx context.Context, moduleName, releaseChannel string, opts ...FetchOptions) (*ImageResult, error)
+	Image(ctx context.Context, moduleName, version string, opts ...FetchOptions) (*ImageResult, error)
 	ListTags(ctx context.Context, moduleName string) ([]string, error)
 	Modules(ctx context.Context) ([]string, error)
-
-	// Digest methods for optimized operations
-	Digest(ctx context.Context, moduleName, version string) (string, error)
-	ReleaseImageDigest(ctx context.Context, moduleName, releaseChannel string) (string, error)
 }
 
 type registryscanner struct {

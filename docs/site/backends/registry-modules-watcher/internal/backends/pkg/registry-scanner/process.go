@@ -116,8 +116,8 @@ func (s *registryscanner) processReleaseChannels(ctx context.Context, registry, 
 }
 
 func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, module, releaseChannel string) (*internal.VersionData, error) {
-	// Use ReleaseImageDigest for better performance - only fetches manifest
-	releaseDigest, err := s.registryClients[registry].ReleaseImageDigest(ctx, module, releaseChannel)
+	// Use DigestOnly option for better performance - only fetches manifest
+	result, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel, FetchOptions{DigestOnly: true})
 	if err != nil {
 		return nil, fmt.Errorf("get release image digest: %w", err)
 	}
@@ -126,7 +126,7 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		Registry:       registry,
 		ModuleName:     module,
 		ReleaseChannel: releaseChannel,
-		Checksum:       releaseDigest,
+		Checksum:       result.Digest,
 		Version:        "",
 		TarFile:        make([]byte, 0),
 		Image:          nil, // Will be fetched only if needed
@@ -142,11 +142,11 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 	}
 
 	// Only fetch the full image if we need to extract version or tar file
-	releaseImage, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
+	fullResult, err := s.registryClients[registry].ReleaseImage(ctx, module, releaseChannel)
 	if err != nil {
 		return nil, fmt.Errorf("get release image: %w", err)
 	}
-	versionData.Image = releaseImage
+	versionData.Image = fullResult.Image
 
 	// Extract version from image
 	version, err = getVersionFromImage(versionData.Image)
@@ -178,10 +178,11 @@ func (s *registryscanner) extractTar(ctx context.Context, version *internal.Vers
 		image = version.Image
 	} else {
 		// Otherwise, fetch the image
-		image, err = s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
+		result, err := s.registryClients[version.Registry].Image(ctx, version.ModuleName, version.Version)
 		if err != nil {
 			return nil, fmt.Errorf("get image: %w", err)
 		}
+		image = result.Image
 	}
 
 	// Pull and untar

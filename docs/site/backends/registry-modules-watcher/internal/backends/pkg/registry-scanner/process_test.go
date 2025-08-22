@@ -188,23 +188,59 @@ func setupCompleteClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["2.2.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["3.3.4"], nil)
+	// ReleaseImage calls with DigestOnly=true (first call)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil, // No image needed for digest-only calls
+		Digest: "digest-c1consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1consoleImageSecond",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1parcaImageSecond",
+	}, nil)
+	// ReleaseImage calls without options (second call for full image)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(&ImageResult{
+		Image:  images["console"]["1.2.3"],
+		Digest: "digest-c1consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(&ImageResult{
+		Image:  images["console"]["2.2.3"],
+		Digest: "digest-c1consoleImageSecond",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(&ImageResult{
+		Image:  images["parca"]["2.3.4"],
+		Digest: "digest-c1parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(&ImageResult{
+		Image:  images["parca"]["3.3.4"],
+		Digest: "digest-c1parcaImageSecond",
+	}, nil)
 	client.ReleaseImageMock.Optional()
 
-	client.ImageMock.When(minimock.AnyContext, "console", "1.2.3").Then(images["console"]["1.2.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "console", "2.2.3").Then(images["console"]["2.2.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "2.3.4").Then(images["parca"]["2.3.4"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "3.3.4").Then(images["parca"]["3.3.4"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "1.2.3").Then(&ImageResult{
+		Image:  images["console"]["1.2.3"],
+		Digest: "digest-c1consoleImageFirst",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "2.2.3").Then(&ImageResult{
+		Image:  images["console"]["2.2.3"],
+		Digest: "digest-c1consoleImageSecond",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "2.3.4").Then(&ImageResult{
+		Image:  images["parca"]["2.3.4"],
+		Digest: "digest-c1parcaImageFirst",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "3.3.4").Then(&ImageResult{
+		Image:  images["parca"]["3.3.4"],
+		Digest: "digest-c1parcaImageSecond",
+	}, nil)
 	client.ImageMock.Optional()
-
-	// Add ReleaseImageDigest method mocks
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("digest-c1consoleImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("digest-c1consoleImageSecond", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("digest-c1parcaImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("digest-c1parcaImageSecond", nil)
 
 	return client
 }
@@ -228,21 +264,51 @@ func setupNewImagesClientOne(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["1.2.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["3.3.3"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["2.3.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["5.5.5"], nil)
+	// ReleaseImage calls with DigestOnly=true (first call)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil, // No image needed for digest-only calls
+		Digest: "digest-c1consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1consoleImageThird",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c1parcaImageThird",
+	}, nil)
+	// ReleaseImage calls without options (second call for full image)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(&ImageResult{
+		Image:  images["console"]["1.2.3"],
+		Digest: "digest-c1consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(&ImageResult{
+		Image:  images["console"]["3.3.3"],
+		Digest: "digest-c1consoleImageThird",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(&ImageResult{
+		Image:  images["parca"]["2.3.4"],
+		Digest: "digest-c1parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(&ImageResult{
+		Image:  images["parca"]["5.5.5"],
+		Digest: "digest-c1parcaImageThird",
+	}, nil)
 	client.ReleaseImageMock.Optional()
 
-	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(images["console"]["3.3.3"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "5.5.5").Then(images["parca"]["5.5.5"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "3.3.3").Then(&ImageResult{
+		Image:  images["console"]["3.3.3"],
+		Digest: "digest-c1consoleImageThird",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "5.5.5").Then(&ImageResult{
+		Image:  images["parca"]["5.5.5"],
+		Digest: "digest-c1parcaImageThird",
+	}, nil)
 	client.ImageMock.Optional()
-
-	// Add ReleaseImageDigest method mocks
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("digest-c1consoleImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("digest-c1consoleImageThird", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("digest-c1parcaImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("digest-c1parcaImageThird", nil)
 
 	return client
 }
@@ -265,22 +331,55 @@ func setupCompleteClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.5"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["4.5.6"], nil)
+	// ReleaseImage calls with DigestOnly=true (first call)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil, // No image needed for digest-only calls
+		Digest: "digest-c2consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2consoleImageSecond",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
+	// ReleaseImage calls without options (second call for full image)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(&ImageResult{
+		Image:  images["console"]["3.4.5"],
+		Digest: "digest-c2consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(&ImageResult{
+		Image:  images["console"]["4.4.5"],
+		Digest: "digest-c2consoleImageSecond",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(&ImageResult{
+		Image:  images["parca"]["4.5.6"],
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(&ImageResult{
+		Image:  images["parca"]["4.5.6"],
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
 	client.ReleaseImageMock.Optional()
 
-	client.ImageMock.When(minimock.AnyContext, "console", "3.4.5").Then(images["console"]["3.4.5"], nil)
-	client.ImageMock.When(minimock.AnyContext, "console", "4.4.5").Then(images["console"]["4.4.5"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "4.5.6").Then(images["parca"]["4.5.6"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "3.4.5").Then(&ImageResult{
+		Image:  images["console"]["3.4.5"],
+		Digest: "digest-c2consoleImageFirst",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "4.4.5").Then(&ImageResult{
+		Image:  images["console"]["4.4.5"],
+		Digest: "digest-c2consoleImageSecond",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "4.5.6").Then(&ImageResult{
+		Image:  images["parca"]["4.5.6"],
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
 	client.ImageMock.Optional()
-
-	// Add ReleaseImageDigest method mocks
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("digest-c2consoleImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("digest-c2consoleImageSecond", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("digest-c2parcaImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("digest-c2parcaImageFirst", nil)
 
 	return client
 }
@@ -304,21 +403,51 @@ func setupNewImagesClientTwo(mc *minimock.Controller) Client {
 	client.ListTagsMock.When(minimock.AnyContext, "console").Then([]string{"alpha", "beta"}, nil)
 	client.ListTagsMock.When(minimock.AnyContext, "parca").Then([]string{"rock-solid", "stable"}, nil)
 
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(images["console"]["3.4.5"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(images["console"]["4.4.4"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(images["parca"]["4.5.6"], nil)
-	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(images["parca"]["6.6.6"], nil)
+	// ReleaseImage calls with DigestOnly=true (first call)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil, // No image needed for digest-only calls
+		Digest: "digest-c2consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2consoleImageThird",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable", FetchOptions{DigestOnly: true}).Then(&ImageResult{
+		Image:  nil,
+		Digest: "digest-c2parcaImageThird",
+	}, nil)
+	// ReleaseImage calls without options (second call for full image)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "alpha").Then(&ImageResult{
+		Image:  images["console"]["3.4.5"],
+		Digest: "digest-c2consoleImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "console", "beta").Then(&ImageResult{
+		Image:  images["console"]["4.4.4"],
+		Digest: "digest-c2consoleImageThird",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "rock-solid").Then(&ImageResult{
+		Image:  images["parca"]["4.5.6"],
+		Digest: "digest-c2parcaImageFirst",
+	}, nil)
+	client.ReleaseImageMock.When(minimock.AnyContext, "parca", "stable").Then(&ImageResult{
+		Image:  images["parca"]["6.6.6"],
+		Digest: "digest-c2parcaImageThird",
+	}, nil)
 	client.ReleaseImageMock.Optional()
 
-	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(images["console"]["4.4.4"], nil)
-	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(images["parca"]["6.6.6"], nil)
+	client.ImageMock.When(minimock.AnyContext, "console", "4.4.4").Then(&ImageResult{
+		Image:  images["console"]["4.4.4"],
+		Digest: "digest-c2consoleImageThird",
+	}, nil)
+	client.ImageMock.When(minimock.AnyContext, "parca", "6.6.6").Then(&ImageResult{
+		Image:  images["parca"]["6.6.6"],
+		Digest: "digest-c2parcaImageThird",
+	}, nil)
 	client.ImageMock.Optional()
-
-	// Add ReleaseImageDigest method mocks
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "alpha").Then("digest-c2consoleImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "console", "beta").Then("digest-c2consoleImageThird", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "rock-solid").Then("digest-c2parcaImageFirst", nil)
-	client.ReleaseImageDigestMock.When(minimock.AnyContext, "parca", "stable").Then("digest-c2parcaImageThird", nil)
 
 	return client
 }
