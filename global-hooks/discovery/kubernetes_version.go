@@ -311,9 +311,6 @@ func k8sVersions(input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
-	if endpoints == nil {
-		return nil
-	}
 
 	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
 	// cluster IP, yet Deckhouse requests each endpoint separately. Certificate check will fail in this case.
