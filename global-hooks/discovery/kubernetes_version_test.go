@@ -176,6 +176,10 @@ ports:
 		Expect(f.ValuesGet("global.discovery.kubernetesVersions").Exists()).To(BeFalse())
 	}
 
+	assertErrorVersionNotFound := func() {
+		Expect(f.GoHookError.Error()).Should(ContainSubstring(`k8s versions not found`))
+	}
+
 	assertNoFile := func() {
 		_, err := os.ReadFile(kubeVersionFileName)
 		Expect(os.IsNotExist(err)).To(BeTrue())
@@ -201,8 +205,8 @@ ports:
 			f.RunHook()
 		})
 
-		It("Hook must run successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		It("Witout endpoints hook should return error", func() {
+			assertErrorVersionNotFound()
 		})
 
 		for _, s := range apiServerPods {
@@ -660,14 +664,14 @@ status:
 					f.RunHook()
 				})
 
-				It("does not change k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				It("without endpoints hook should return error and does not change k8s version into values", func() {
 					assertValues(k8sVer, initVers)
+					assertErrorVersionNotFound()
 				})
 
 				It("does not change k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+					assertErrorVersionNotFound()
 				})
 			})
 
@@ -681,14 +685,14 @@ status:
 					f.RunHook()
 				})
 
-				It("does not change k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				It("without endpoints hook should return error and does not change k8s version into values", func() {
 					assertValues(k8sVer, initVers)
+					assertErrorVersionNotFound()
 				})
 
 				It("does not change k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+					assertErrorVersionNotFound()
 				})
 			})
 		})
@@ -706,13 +710,13 @@ status:
 				})
 
 				It("does not change k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertValues(k8sVer, initVers)
+					assertErrorVersionNotFound()
 				})
 
 				It("does not change k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+					assertErrorVersionNotFound()
 				})
 			})
 		}
@@ -735,14 +739,14 @@ status:
 					f.RunHook()
 				})
 
-				It("does not set k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				It("without endpoints hook should return error and does not change k8s version into values", func() {
 					assertNoValues()
+					assertErrorVersionNotFound()
 				})
 
 				It("does not write k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertNoFile()
+					assertErrorVersionNotFound()
 				})
 			})
 		})
