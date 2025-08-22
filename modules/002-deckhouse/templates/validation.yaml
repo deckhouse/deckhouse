@@ -93,7 +93,11 @@ spec:
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
   validations:
-    - expression: '!(object.metadata.name.startsWith("d8ms-"))'
+    - expression: |
+        !(
+          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-")) ||
+          (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8ms-"))
+        )
       messageExpression: "'Creating, updating and deleting objects with an managed services prefix is forbidden'"
       reason: Forbidden
   auditAnnotations:
