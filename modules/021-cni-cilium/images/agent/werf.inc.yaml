@@ -1,3 +1,4 @@
+
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -9,41 +10,41 @@
 ---
 # #####################################################################
 # List of binary files used by agent
-# from base install script
-## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-{{ $binariesFromALT := "/etc/localtime" }}
+{{ $binariesFromBaseImages := "" }}
 # shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
-# kmod and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
-# iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/ctstat /usr/sbin/rtstat" }}
-# ipset and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
-# clang dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
-# bash-completion
-{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep /usr/bin/sed" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/nsenter /bin/mount" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/head" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/wc" }}
 # groups
-{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/groups" }}
 # for prepull
-{{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/true" }}
 # for cilium-cli sysdump
-{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/tar /usr/bin/stat /usr/bin/tail /usr/bin/timeout" }}
+# for debug and usability
+{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/curl /usr/bin/env /usr/bin/ls /usr/bin/sleep" }}
+#####################################################################
+{{ $binariesFromALT := "" }}
+# from base install script
+# {{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
+# shell-scripts dependencies
+# {{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
+# clang dependencies
+# {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
+# bash-completion
+# {{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
+# {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
 # for debug
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
+{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }} #### problem with dynamic link
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -63,8 +64,56 @@
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
+# ipset and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ipset" }} ### test
+# kmod and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }} ### test
+# iproute2 and dependencies
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }} ### test
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ctstat /usr/sbin/rtstat" }} ### test
 # #####################################################################
 # Binaries artifact for distroless agent (based on Ubuntu)
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-ipset-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:bc71f74c63af58a952c6ea0cf627af3cea353e80cd8ff80816124fd4746b7257
+# final: false
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-kmod-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:21954c21efadd332e4eebeff0598071db052a73c76214c64e5adb7a416d8b4cc
+# final: false
+# ---
+# image: {{ .ModuleName }}/{{ .ImageName }}-iproute2-dev
+# from: dev-registry.deckhouse.io/base_images@sha256:902371c68da93ce687861437a6b777f59f56cb12139fca93e5d26b1c6d0c7cef
+# final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+from: dev-registry.deckhouse.io/base_images@sha256:106be29ab8231a46bbfdc8d72770e5d4b92bb45d91d54d742e80749177be3475
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+from: dev-registry.deckhouse.io/base_images@sha256:20c1dd7aebbc4bc2cc0d4ae946603fbeed96b4f97d05d483d146a19d2eda74d0
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+from: dev-registry.deckhouse.io/base_images@sha256:fec7cb451967921b62d920c57d98884c8f6c4e08a08da86e44906c1610cbbc2f
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:52ba2f8aaad0b3ca4e3da3741a902530a8cbe4da5eeddeb9c607ce720a482de1
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+from: dev-registry.deckhouse.io/base_images@sha256:cb2a32a0d87adf744a7938a6d7c8ca1b21a36f73a25fb154c28a5b4d9e4b6ab4
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
+from: dev-registry.deckhouse.io/base_images@sha256:2f576877bb81260901b155a7ad1709f4f9b23dee2a72ed3e8242fffbbdc070de
+final: false
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
+from: dev-registry.deckhouse.io/base_images@sha256:632a7374bf29fa4ad19d80803e8a149c20030952e97bc22bb7db040752fb9df2
+final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -241,10 +290,299 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
+fromCacheVersion: "2025-08-21.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
+  before: install
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/env
+  - usr/bin/ls
+  - usr/bin/sleep
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: install
+- image: tools/bash
+  before: install
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - bash
+  - sh
+- image: tools/coreutils
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/basename
+  - usr/bin/cat
+  - usr/bin/cp
+  - usr/bin/coreutils
+  - usr/bin/cut
+  - usr/bin/echo
+  - usr/bin/groups
+  - usr/bin/head
+  - usr/bin/ln
+  - usr/bin/mkdir
+  - usr/bin/mv
+  - usr/bin/od
+  - usr/bin/printf
+  - usr/bin/rm
+  - usr/bin/stat
+  - usr/bin/tail
+  - usr/bin/timeout
+  - usr/bin/true
+  - usr/bin/wc
+- image: tools/findutils
+  before: install
+  add: /usr/bin/find
+- image: tools/gawk
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+- image: tools/grep
+  before: install
+  add: /usr/bin/grep
+- image: tools/sed
+  before: install
+  add: /usr/bin/sed
+- image: tools/tar
+  before: install
+  add: /usr/bin/tar
+- image: tools/util-linux
+  before: install
+  add: /usr/bin/nsenter
+- image: tools/util-linux
+  before: install
+  add: /bin/mount
+  to: /usr/bin/mount
+- image: tools/ipset
+  before: install
+  add: /usr/sbin/ipset
+  to: /usr/sbin/ipset
+- image: tools/kmod
+  before: install
+  add: /bin/
+  to: /usr/bin/
+  includePaths:
+  - kmod
+  - lsmod
+- image: tools/kmod
+  before: install
+  add: /bin/
+  to: /usr/sbin/
+  includePaths:
+  - depmod
+  - insmod
+  - lsmod
+  - modinfo
+  - modprobe
+  - rmmod
+- image: tools/iproute2
+  before: install
+  add: /sbin/
+  to: /usr/sbin/
+  includePaths:
+  - dcb
+  - devlink
+  - ip
+  - rdma
+  - rtmon
+  - tc
+  - vdpa
+  - bridge
+  - genl
+  - lnstat
+  - nstat
+  - rtacct
+  - ss
+  - tipc
+  - ctstat
+  - rtstat
+- image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
+  before: install
+  add: /usr/share/bash-completion
+  to: /usr/share/bash-completion
+- image: {{ .ModuleName }}/{{ .ImageName }}-bash-completion-dev
+  before: install
+  add: /etc/profile.d/bash_completion.sh
+  to: /etc/bashrc.d/bash_completion.sh
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
+- image: tools/elfutils
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
+- image: libs/zlib
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libz.a
+  - libz.so
+  - libz.so.1
+  - libz.so.1.3.1
+- image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.69
+- image: libs/zstd
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libzstd.a
+  - libzstd.so
+  - libzstd.so.1
+  - libzstd.so.1.5.6
+- image: {{ .ModuleName }}/{{ .ImageName }}-libxml2-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libxml2.a
+  - libxml2.la
+  - libxml2.so
+  - libxml2.so.2
+  - libxml2.so.2.13.4
+  - libxml2.so.2.13.8
+- image: libs/libffi
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libffi.a
+  - libffi.la
+  - libffi.so
+  - libffi.so.8
+  - libffi.so.8.1.4
+- image: libs/xz
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so
+  - liblzma.a
+  - liblzma.la
+  - liblzma.so
+  - liblzma.so.5
+  - liblzma.so.5.6.3
+  - liblzma.so.5.8.1
+### place for libedit
+- image: {{ .ModuleName }}/{{ .ImageName }}-libedit-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libedit.a
+  - libedit.la
+  - libedit.so
+  - libedit.so.0
+  - libedit.so.0.0.75
+  - libedit.so.3
+### place for ncurses
+- image: {{ .ModuleName }}/{{ .ImageName }}-ncurses-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcurses.a
+  - libcurses.so
+  - libform.a
+  - libform.so
+  - libformw.a
+  - libformw_g.a
+  - libformw.so
+  - libformw.so.6
+  - libformw.so.6.5
+  - libmenu.a
+  - libmenu.so
+  - libmenuw.a
+  - libmenuw_g.a
+  - libmenuw.so
+  - libmenuw.so.6
+  - libmenuw.so.6.5
+  - libncurses++.a
+  - libncurses.a
+  - libncurses++.so
+  - libncurses.so
+  - libncurses++w.a
+  - libncursesw.a
+  - libncurses++w_g.a
+  - libncursesw_g.a
+  - libncurses++w.so
+  - libncursesw.so
+  - libncurses++w.so.6
+  - libncursesw.so.6
+  - libncurses++w.so.6.5
+  - libncursesw.so.6.5
+  - libpanel.a
+  - libpanel.so
+  - libpanelw.a
+  - libpanelw_g.a
+  - libpanelw.so
+  - libpanelw.so.6
+  - libpanelw.so.6.5
+  - libtic.a
+  - libtic.so
+  - libtinfo.a
+  - libtinfo.so
+  - libtinfo.so.6
+### place for llvm
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /lib64/libLLVM.so.19.1
+  to: /lib64/libLLVM.so.19.1
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  before: install
+### place for gcc
+- image: {{ .ModuleName }}/{{ .ImageName }}-gcc-dev
+  add: /usr/lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libstdc++.so.6
+  - libstdc++.so.6.0.30
+  - libgcc_s.so.1
+### temp
+- image: {{ .ModuleName }}/{{ .ImageName }}-glibc-dev
+  add: /lib64/libc.musl-x86_64.so.1
+  to: /lib64/libc.musl-x86_64.so.1
+  before: install
+- image: libs/xz
+  add: /usr/lib/libc.so
+  to: /lib/x86_64-linux-gnu/libc.so
   before: install
 git:
 {{- include "image mount points" . }}

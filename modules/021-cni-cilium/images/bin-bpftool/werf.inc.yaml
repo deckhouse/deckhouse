@@ -14,6 +14,10 @@
 # Corresponding commit is 063fa0d879d9560b85b6134c48ece08e672fa057 (https://github.com/cilium/image-tools/tree/063fa0d879d9560b85b6134c48ece08e672fa057)
 # #####################################################################
 ---
+image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
+from: dev-registry.deckhouse.io/base_images@sha256:2f576877bb81260901b155a7ad1709f4f9b23dee2a72ed3e8242fffbbdc070de
+final: false
+---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
@@ -35,6 +39,15 @@ import:
   add: /src
   to: /src
   before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-libcap69-dev
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.69
 shell:
   install:
   - export GCC_VERSION=11
