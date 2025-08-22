@@ -11,7 +11,6 @@ import (
 	mm_time "time"
 
 	"github.com/gojuno/minimock/v3"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // ClientMock implements Client
@@ -19,16 +18,9 @@ type ClientMock struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcDigest          func(ctx context.Context, moduleName string, version string) (s1 string, err error)
-	funcDigestOrigin    string
-	inspectFuncDigest   func(ctx context.Context, moduleName string, version string)
-	afterDigestCounter  uint64
-	beforeDigestCounter uint64
-	DigestMock          mClientMockDigest
-
-	funcImage          func(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error)
+	funcImage          func(ctx context.Context, moduleName string, version string, opts ...FetchOptions) (ip1 *ImageResult, err error)
 	funcImageOrigin    string
-	inspectFuncImage   func(ctx context.Context, moduleName string, version string)
+	inspectFuncImage   func(ctx context.Context, moduleName string, version string, opts ...FetchOptions)
 	afterImageCounter  uint64
 	beforeImageCounter uint64
 	ImageMock          mClientMockImage
@@ -54,19 +46,12 @@ type ClientMock struct {
 	beforeNameCounter uint64
 	NameMock          mClientMockName
 
-	funcReleaseImage          func(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error)
+	funcReleaseImage          func(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions) (ip1 *ImageResult, err error)
 	funcReleaseImageOrigin    string
-	inspectFuncReleaseImage   func(ctx context.Context, moduleName string, releaseChannel string)
+	inspectFuncReleaseImage   func(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions)
 	afterReleaseImageCounter  uint64
 	beforeReleaseImageCounter uint64
 	ReleaseImageMock          mClientMockReleaseImage
-
-	funcReleaseImageDigest          func(ctx context.Context, moduleName string, releaseChannel string) (s1 string, err error)
-	funcReleaseImageDigestOrigin    string
-	inspectFuncReleaseImageDigest   func(ctx context.Context, moduleName string, releaseChannel string)
-	afterReleaseImageDigestCounter  uint64
-	beforeReleaseImageDigestCounter uint64
-	ReleaseImageDigestMock          mClientMockReleaseImageDigest
 }
 
 // NewClientMock returns a mock for Client
@@ -76,9 +61,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	if controller, ok := t.(minimock.MockController); ok {
 		controller.RegisterMocker(m)
 	}
-
-	m.DigestMock = mClientMockDigest{mock: m}
-	m.DigestMock.callArgs = []*ClientMockDigestParams{}
 
 	m.ImageMock = mClientMockImage{mock: m}
 	m.ImageMock.callArgs = []*ClientMockImageParams{}
@@ -94,386 +76,9 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.ReleaseImageMock = mClientMockReleaseImage{mock: m}
 	m.ReleaseImageMock.callArgs = []*ClientMockReleaseImageParams{}
 
-	m.ReleaseImageDigestMock = mClientMockReleaseImageDigest{mock: m}
-	m.ReleaseImageDigestMock.callArgs = []*ClientMockReleaseImageDigestParams{}
-
 	t.Cleanup(m.MinimockFinish)
 
 	return m
-}
-
-type mClientMockDigest struct {
-	optional           bool
-	mock               *ClientMock
-	defaultExpectation *ClientMockDigestExpectation
-	expectations       []*ClientMockDigestExpectation
-
-	callArgs []*ClientMockDigestParams
-	mutex    sync.RWMutex
-
-	expectedInvocations       uint64
-	expectedInvocationsOrigin string
-}
-
-// ClientMockDigestExpectation specifies expectation struct of the Client.Digest
-type ClientMockDigestExpectation struct {
-	mock               *ClientMock
-	params             *ClientMockDigestParams
-	paramPtrs          *ClientMockDigestParamPtrs
-	expectationOrigins ClientMockDigestExpectationOrigins
-	results            *ClientMockDigestResults
-	returnOrigin       string
-	Counter            uint64
-}
-
-// ClientMockDigestParams contains parameters of the Client.Digest
-type ClientMockDigestParams struct {
-	ctx        context.Context
-	moduleName string
-	version    string
-}
-
-// ClientMockDigestParamPtrs contains pointers to parameters of the Client.Digest
-type ClientMockDigestParamPtrs struct {
-	ctx        *context.Context
-	moduleName *string
-	version    *string
-}
-
-// ClientMockDigestResults contains results of the Client.Digest
-type ClientMockDigestResults struct {
-	s1  string
-	err error
-}
-
-// ClientMockDigestOrigins contains origins of expectations of the Client.Digest
-type ClientMockDigestExpectationOrigins struct {
-	origin           string
-	originCtx        string
-	originModuleName string
-	originVersion    string
-}
-
-// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
-// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
-// Optional() makes method check to work in '0 or more' mode.
-// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
-// catch the problems when the expected method call is totally skipped during test run.
-func (mmDigest *mClientMockDigest) Optional() *mClientMockDigest {
-	mmDigest.optional = true
-	return mmDigest
-}
-
-// Expect sets up expected params for Client.Digest
-func (mmDigest *mClientMockDigest) Expect(ctx context.Context, moduleName string, version string) *mClientMockDigest {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	if mmDigest.defaultExpectation == nil {
-		mmDigest.defaultExpectation = &ClientMockDigestExpectation{}
-	}
-
-	if mmDigest.defaultExpectation.paramPtrs != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by ExpectParams functions")
-	}
-
-	mmDigest.defaultExpectation.params = &ClientMockDigestParams{ctx, moduleName, version}
-	mmDigest.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
-	for _, e := range mmDigest.expectations {
-		if minimock.Equal(e.params, mmDigest.defaultExpectation.params) {
-			mmDigest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmDigest.defaultExpectation.params)
-		}
-	}
-
-	return mmDigest
-}
-
-// ExpectCtxParam1 sets up expected param ctx for Client.Digest
-func (mmDigest *mClientMockDigest) ExpectCtxParam1(ctx context.Context) *mClientMockDigest {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	if mmDigest.defaultExpectation == nil {
-		mmDigest.defaultExpectation = &ClientMockDigestExpectation{}
-	}
-
-	if mmDigest.defaultExpectation.params != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Expect")
-	}
-
-	if mmDigest.defaultExpectation.paramPtrs == nil {
-		mmDigest.defaultExpectation.paramPtrs = &ClientMockDigestParamPtrs{}
-	}
-	mmDigest.defaultExpectation.paramPtrs.ctx = &ctx
-	mmDigest.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
-
-	return mmDigest
-}
-
-// ExpectModuleNameParam2 sets up expected param moduleName for Client.Digest
-func (mmDigest *mClientMockDigest) ExpectModuleNameParam2(moduleName string) *mClientMockDigest {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	if mmDigest.defaultExpectation == nil {
-		mmDigest.defaultExpectation = &ClientMockDigestExpectation{}
-	}
-
-	if mmDigest.defaultExpectation.params != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Expect")
-	}
-
-	if mmDigest.defaultExpectation.paramPtrs == nil {
-		mmDigest.defaultExpectation.paramPtrs = &ClientMockDigestParamPtrs{}
-	}
-	mmDigest.defaultExpectation.paramPtrs.moduleName = &moduleName
-	mmDigest.defaultExpectation.expectationOrigins.originModuleName = minimock.CallerInfo(1)
-
-	return mmDigest
-}
-
-// ExpectVersionParam3 sets up expected param version for Client.Digest
-func (mmDigest *mClientMockDigest) ExpectVersionParam3(version string) *mClientMockDigest {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	if mmDigest.defaultExpectation == nil {
-		mmDigest.defaultExpectation = &ClientMockDigestExpectation{}
-	}
-
-	if mmDigest.defaultExpectation.params != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Expect")
-	}
-
-	if mmDigest.defaultExpectation.paramPtrs == nil {
-		mmDigest.defaultExpectation.paramPtrs = &ClientMockDigestParamPtrs{}
-	}
-	mmDigest.defaultExpectation.paramPtrs.version = &version
-	mmDigest.defaultExpectation.expectationOrigins.originVersion = minimock.CallerInfo(1)
-
-	return mmDigest
-}
-
-// Inspect accepts an inspector function that has same arguments as the Client.Digest
-func (mmDigest *mClientMockDigest) Inspect(f func(ctx context.Context, moduleName string, version string)) *mClientMockDigest {
-	if mmDigest.mock.inspectFuncDigest != nil {
-		mmDigest.mock.t.Fatalf("Inspect function is already set for ClientMock.Digest")
-	}
-
-	mmDigest.mock.inspectFuncDigest = f
-
-	return mmDigest
-}
-
-// Return sets up results that will be returned by Client.Digest
-func (mmDigest *mClientMockDigest) Return(s1 string, err error) *ClientMock {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	if mmDigest.defaultExpectation == nil {
-		mmDigest.defaultExpectation = &ClientMockDigestExpectation{mock: mmDigest.mock}
-	}
-	mmDigest.defaultExpectation.results = &ClientMockDigestResults{s1, err}
-	mmDigest.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
-	return mmDigest.mock
-}
-
-// Set uses given function f to mock the Client.Digest method
-func (mmDigest *mClientMockDigest) Set(f func(ctx context.Context, moduleName string, version string) (s1 string, err error)) *ClientMock {
-	if mmDigest.defaultExpectation != nil {
-		mmDigest.mock.t.Fatalf("Default expectation is already set for the Client.Digest method")
-	}
-
-	if len(mmDigest.expectations) > 0 {
-		mmDigest.mock.t.Fatalf("Some expectations are already set for the Client.Digest method")
-	}
-
-	mmDigest.mock.funcDigest = f
-	mmDigest.mock.funcDigestOrigin = minimock.CallerInfo(1)
-	return mmDigest.mock
-}
-
-// When sets expectation for the Client.Digest which will trigger the result defined by the following
-// Then helper
-func (mmDigest *mClientMockDigest) When(ctx context.Context, moduleName string, version string) *ClientMockDigestExpectation {
-	if mmDigest.mock.funcDigest != nil {
-		mmDigest.mock.t.Fatalf("ClientMock.Digest mock is already set by Set")
-	}
-
-	expectation := &ClientMockDigestExpectation{
-		mock:               mmDigest.mock,
-		params:             &ClientMockDigestParams{ctx, moduleName, version},
-		expectationOrigins: ClientMockDigestExpectationOrigins{origin: minimock.CallerInfo(1)},
-	}
-	mmDigest.expectations = append(mmDigest.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Client.Digest return parameters for the expectation previously defined by the When method
-func (e *ClientMockDigestExpectation) Then(s1 string, err error) *ClientMock {
-	e.results = &ClientMockDigestResults{s1, err}
-	return e.mock
-}
-
-// Times sets number of times Client.Digest should be invoked
-func (mmDigest *mClientMockDigest) Times(n uint64) *mClientMockDigest {
-	if n == 0 {
-		mmDigest.mock.t.Fatalf("Times of ClientMock.Digest mock can not be zero")
-	}
-	mm_atomic.StoreUint64(&mmDigest.expectedInvocations, n)
-	mmDigest.expectedInvocationsOrigin = minimock.CallerInfo(1)
-	return mmDigest
-}
-
-func (mmDigest *mClientMockDigest) invocationsDone() bool {
-	if len(mmDigest.expectations) == 0 && mmDigest.defaultExpectation == nil && mmDigest.mock.funcDigest == nil {
-		return true
-	}
-
-	totalInvocations := mm_atomic.LoadUint64(&mmDigest.mock.afterDigestCounter)
-	expectedInvocations := mm_atomic.LoadUint64(&mmDigest.expectedInvocations)
-
-	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
-}
-
-// Digest implements Client
-func (mmDigest *ClientMock) Digest(ctx context.Context, moduleName string, version string) (s1 string, err error) {
-	mm_atomic.AddUint64(&mmDigest.beforeDigestCounter, 1)
-	defer mm_atomic.AddUint64(&mmDigest.afterDigestCounter, 1)
-
-	mmDigest.t.Helper()
-
-	if mmDigest.inspectFuncDigest != nil {
-		mmDigest.inspectFuncDigest(ctx, moduleName, version)
-	}
-
-	mm_params := ClientMockDigestParams{ctx, moduleName, version}
-
-	// Record call args
-	mmDigest.DigestMock.mutex.Lock()
-	mmDigest.DigestMock.callArgs = append(mmDigest.DigestMock.callArgs, &mm_params)
-	mmDigest.DigestMock.mutex.Unlock()
-
-	for _, e := range mmDigest.DigestMock.expectations {
-		if minimock.Equal(*e.params, mm_params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.s1, e.results.err
-		}
-	}
-
-	if mmDigest.DigestMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmDigest.DigestMock.defaultExpectation.Counter, 1)
-		mm_want := mmDigest.DigestMock.defaultExpectation.params
-		mm_want_ptrs := mmDigest.DigestMock.defaultExpectation.paramPtrs
-
-		mm_got := ClientMockDigestParams{ctx, moduleName, version}
-
-		if mm_want_ptrs != nil {
-
-			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
-				mmDigest.t.Errorf("ClientMock.Digest got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmDigest.DigestMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
-			}
-
-			if mm_want_ptrs.moduleName != nil && !minimock.Equal(*mm_want_ptrs.moduleName, mm_got.moduleName) {
-				mmDigest.t.Errorf("ClientMock.Digest got unexpected parameter moduleName, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmDigest.DigestMock.defaultExpectation.expectationOrigins.originModuleName, *mm_want_ptrs.moduleName, mm_got.moduleName, minimock.Diff(*mm_want_ptrs.moduleName, mm_got.moduleName))
-			}
-
-			if mm_want_ptrs.version != nil && !minimock.Equal(*mm_want_ptrs.version, mm_got.version) {
-				mmDigest.t.Errorf("ClientMock.Digest got unexpected parameter version, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmDigest.DigestMock.defaultExpectation.expectationOrigins.originVersion, *mm_want_ptrs.version, mm_got.version, minimock.Diff(*mm_want_ptrs.version, mm_got.version))
-			}
-
-		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
-			mmDigest.t.Errorf("ClientMock.Digest got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-				mmDigest.DigestMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
-		}
-
-		mm_results := mmDigest.DigestMock.defaultExpectation.results
-		if mm_results == nil {
-			mmDigest.t.Fatal("No results are set for the ClientMock.Digest")
-		}
-		return (*mm_results).s1, (*mm_results).err
-	}
-	if mmDigest.funcDigest != nil {
-		return mmDigest.funcDigest(ctx, moduleName, version)
-	}
-	mmDigest.t.Fatalf("Unexpected call to ClientMock.Digest. %v %v %v", ctx, moduleName, version)
-	return
-}
-
-// DigestAfterCounter returns a count of finished ClientMock.Digest invocations
-func (mmDigest *ClientMock) DigestAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDigest.afterDigestCounter)
-}
-
-// DigestBeforeCounter returns a count of ClientMock.Digest invocations
-func (mmDigest *ClientMock) DigestBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmDigest.beforeDigestCounter)
-}
-
-// Calls returns a list of arguments used in each call to ClientMock.Digest.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmDigest *mClientMockDigest) Calls() []*ClientMockDigestParams {
-	mmDigest.mutex.RLock()
-
-	argCopy := make([]*ClientMockDigestParams, len(mmDigest.callArgs))
-	copy(argCopy, mmDigest.callArgs)
-
-	mmDigest.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockDigestDone returns true if the count of the Digest invocations corresponds
-// the number of defined expectations
-func (m *ClientMock) MinimockDigestDone() bool {
-	if m.DigestMock.optional {
-		// Optional methods provide '0 or more' call count restriction.
-		return true
-	}
-
-	for _, e := range m.DigestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	return m.DigestMock.invocationsDone()
-}
-
-// MinimockDigestInspect logs each unmet expectation
-func (m *ClientMock) MinimockDigestInspect() {
-	for _, e := range m.DigestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ClientMock.Digest at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
-		}
-	}
-
-	afterDigestCounter := mm_atomic.LoadUint64(&m.afterDigestCounter)
-	// if default expectation was set then invocations count should be greater than zero
-	if m.DigestMock.defaultExpectation != nil && afterDigestCounter < 1 {
-		if m.DigestMock.defaultExpectation.params == nil {
-			m.t.Errorf("Expected call to ClientMock.Digest at\n%s", m.DigestMock.defaultExpectation.returnOrigin)
-		} else {
-			m.t.Errorf("Expected call to ClientMock.Digest at\n%s with params: %#v", m.DigestMock.defaultExpectation.expectationOrigins.origin, *m.DigestMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcDigest != nil && afterDigestCounter < 1 {
-		m.t.Errorf("Expected call to ClientMock.Digest at\n%s", m.funcDigestOrigin)
-	}
-
-	if !m.DigestMock.invocationsDone() && afterDigestCounter > 0 {
-		m.t.Errorf("Expected %d calls to ClientMock.Digest at\n%s but found %d calls",
-			mm_atomic.LoadUint64(&m.DigestMock.expectedInvocations), m.DigestMock.expectedInvocationsOrigin, afterDigestCounter)
-	}
 }
 
 type mClientMockImage struct {
@@ -505,6 +110,7 @@ type ClientMockImageParams struct {
 	ctx        context.Context
 	moduleName string
 	version    string
+	opts       []FetchOptions
 }
 
 // ClientMockImageParamPtrs contains pointers to parameters of the Client.Image
@@ -512,11 +118,12 @@ type ClientMockImageParamPtrs struct {
 	ctx        *context.Context
 	moduleName *string
 	version    *string
+	opts       *[]FetchOptions
 }
 
 // ClientMockImageResults contains results of the Client.Image
 type ClientMockImageResults struct {
-	i1  v1.Image
+	ip1 *ImageResult
 	err error
 }
 
@@ -526,6 +133,7 @@ type ClientMockImageExpectationOrigins struct {
 	originCtx        string
 	originModuleName string
 	originVersion    string
+	originOpts       string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -539,7 +147,7 @@ func (mmImage *mClientMockImage) Optional() *mClientMockImage {
 }
 
 // Expect sets up expected params for Client.Image
-func (mmImage *mClientMockImage) Expect(ctx context.Context, moduleName string, version string) *mClientMockImage {
+func (mmImage *mClientMockImage) Expect(ctx context.Context, moduleName string, version string, opts ...FetchOptions) *mClientMockImage {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -552,7 +160,7 @@ func (mmImage *mClientMockImage) Expect(ctx context.Context, moduleName string, 
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by ExpectParams functions")
 	}
 
-	mmImage.defaultExpectation.params = &ClientMockImageParams{ctx, moduleName, version}
+	mmImage.defaultExpectation.params = &ClientMockImageParams{ctx, moduleName, version, opts}
 	mmImage.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmImage.expectations {
 		if minimock.Equal(e.params, mmImage.defaultExpectation.params) {
@@ -632,8 +240,31 @@ func (mmImage *mClientMockImage) ExpectVersionParam3(version string) *mClientMoc
 	return mmImage
 }
 
+// ExpectOptsParam4 sets up expected param opts for Client.Image
+func (mmImage *mClientMockImage) ExpectOptsParam4(opts ...FetchOptions) *mClientMockImage {
+	if mmImage.mock.funcImage != nil {
+		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
+	}
+
+	if mmImage.defaultExpectation == nil {
+		mmImage.defaultExpectation = &ClientMockImageExpectation{}
+	}
+
+	if mmImage.defaultExpectation.params != nil {
+		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Expect")
+	}
+
+	if mmImage.defaultExpectation.paramPtrs == nil {
+		mmImage.defaultExpectation.paramPtrs = &ClientMockImageParamPtrs{}
+	}
+	mmImage.defaultExpectation.paramPtrs.opts = &opts
+	mmImage.defaultExpectation.expectationOrigins.originOpts = minimock.CallerInfo(1)
+
+	return mmImage
+}
+
 // Inspect accepts an inspector function that has same arguments as the Client.Image
-func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, moduleName string, version string)) *mClientMockImage {
+func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, moduleName string, version string, opts ...FetchOptions)) *mClientMockImage {
 	if mmImage.mock.inspectFuncImage != nil {
 		mmImage.mock.t.Fatalf("Inspect function is already set for ClientMock.Image")
 	}
@@ -644,7 +275,7 @@ func (mmImage *mClientMockImage) Inspect(f func(ctx context.Context, moduleName 
 }
 
 // Return sets up results that will be returned by Client.Image
-func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
+func (mmImage *mClientMockImage) Return(ip1 *ImageResult, err error) *ClientMock {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
@@ -652,13 +283,13 @@ func (mmImage *mClientMockImage) Return(i1 v1.Image, err error) *ClientMock {
 	if mmImage.defaultExpectation == nil {
 		mmImage.defaultExpectation = &ClientMockImageExpectation{mock: mmImage.mock}
 	}
-	mmImage.defaultExpectation.results = &ClientMockImageResults{i1, err}
+	mmImage.defaultExpectation.results = &ClientMockImageResults{ip1, err}
 	mmImage.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
 	return mmImage.mock
 }
 
 // Set uses given function f to mock the Client.Image method
-func (mmImage *mClientMockImage) Set(f func(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error)) *ClientMock {
+func (mmImage *mClientMockImage) Set(f func(ctx context.Context, moduleName string, version string, opts ...FetchOptions) (ip1 *ImageResult, err error)) *ClientMock {
 	if mmImage.defaultExpectation != nil {
 		mmImage.mock.t.Fatalf("Default expectation is already set for the Client.Image method")
 	}
@@ -674,14 +305,14 @@ func (mmImage *mClientMockImage) Set(f func(ctx context.Context, moduleName stri
 
 // When sets expectation for the Client.Image which will trigger the result defined by the following
 // Then helper
-func (mmImage *mClientMockImage) When(ctx context.Context, moduleName string, version string) *ClientMockImageExpectation {
+func (mmImage *mClientMockImage) When(ctx context.Context, moduleName string, version string, opts ...FetchOptions) *ClientMockImageExpectation {
 	if mmImage.mock.funcImage != nil {
 		mmImage.mock.t.Fatalf("ClientMock.Image mock is already set by Set")
 	}
 
 	expectation := &ClientMockImageExpectation{
 		mock:               mmImage.mock,
-		params:             &ClientMockImageParams{ctx, moduleName, version},
+		params:             &ClientMockImageParams{ctx, moduleName, version, opts},
 		expectationOrigins: ClientMockImageExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmImage.expectations = append(mmImage.expectations, expectation)
@@ -689,8 +320,8 @@ func (mmImage *mClientMockImage) When(ctx context.Context, moduleName string, ve
 }
 
 // Then sets up Client.Image return parameters for the expectation previously defined by the When method
-func (e *ClientMockImageExpectation) Then(i1 v1.Image, err error) *ClientMock {
-	e.results = &ClientMockImageResults{i1, err}
+func (e *ClientMockImageExpectation) Then(ip1 *ImageResult, err error) *ClientMock {
+	e.results = &ClientMockImageResults{ip1, err}
 	return e.mock
 }
 
@@ -716,17 +347,17 @@ func (mmImage *mClientMockImage) invocationsDone() bool {
 }
 
 // Image implements Client
-func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version string) (i1 v1.Image, err error) {
+func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version string, opts ...FetchOptions) (ip1 *ImageResult, err error) {
 	mm_atomic.AddUint64(&mmImage.beforeImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmImage.afterImageCounter, 1)
 
 	mmImage.t.Helper()
 
 	if mmImage.inspectFuncImage != nil {
-		mmImage.inspectFuncImage(ctx, moduleName, version)
+		mmImage.inspectFuncImage(ctx, moduleName, version, opts...)
 	}
 
-	mm_params := ClientMockImageParams{ctx, moduleName, version}
+	mm_params := ClientMockImageParams{ctx, moduleName, version, opts}
 
 	// Record call args
 	mmImage.ImageMock.mutex.Lock()
@@ -736,7 +367,7 @@ func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version
 	for _, e := range mmImage.ImageMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.i1, e.results.err
+			return e.results.ip1, e.results.err
 		}
 	}
 
@@ -745,7 +376,7 @@ func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version
 		mm_want := mmImage.ImageMock.defaultExpectation.params
 		mm_want_ptrs := mmImage.ImageMock.defaultExpectation.paramPtrs
 
-		mm_got := ClientMockImageParams{ctx, moduleName, version}
+		mm_got := ClientMockImageParams{ctx, moduleName, version, opts}
 
 		if mm_want_ptrs != nil {
 
@@ -764,6 +395,11 @@ func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version
 					mmImage.ImageMock.defaultExpectation.expectationOrigins.originVersion, *mm_want_ptrs.version, mm_got.version, minimock.Diff(*mm_want_ptrs.version, mm_got.version))
 			}
 
+			if mm_want_ptrs.opts != nil && !minimock.Equal(*mm_want_ptrs.opts, mm_got.opts) {
+				mmImage.t.Errorf("ClientMock.Image got unexpected parameter opts, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmImage.ImageMock.defaultExpectation.expectationOrigins.originOpts, *mm_want_ptrs.opts, mm_got.opts, minimock.Diff(*mm_want_ptrs.opts, mm_got.opts))
+			}
+
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmImage.t.Errorf("ClientMock.Image got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
 				mmImage.ImageMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
@@ -773,12 +409,12 @@ func (mmImage *ClientMock) Image(ctx context.Context, moduleName string, version
 		if mm_results == nil {
 			mmImage.t.Fatal("No results are set for the ClientMock.Image")
 		}
-		return (*mm_results).i1, (*mm_results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmImage.funcImage != nil {
-		return mmImage.funcImage(ctx, moduleName, version)
+		return mmImage.funcImage(ctx, moduleName, version, opts...)
 	}
-	mmImage.t.Fatalf("Unexpected call to ClientMock.Image. %v %v %v", ctx, moduleName, version)
+	mmImage.t.Fatalf("Unexpected call to ClientMock.Image. %v %v %v %v", ctx, moduleName, version, opts)
 	return
 }
 
@@ -1720,6 +1356,7 @@ type ClientMockReleaseImageParams struct {
 	ctx            context.Context
 	moduleName     string
 	releaseChannel string
+	opts           []FetchOptions
 }
 
 // ClientMockReleaseImageParamPtrs contains pointers to parameters of the Client.ReleaseImage
@@ -1727,11 +1364,12 @@ type ClientMockReleaseImageParamPtrs struct {
 	ctx            *context.Context
 	moduleName     *string
 	releaseChannel *string
+	opts           *[]FetchOptions
 }
 
 // ClientMockReleaseImageResults contains results of the Client.ReleaseImage
 type ClientMockReleaseImageResults struct {
-	i1  v1.Image
+	ip1 *ImageResult
 	err error
 }
 
@@ -1741,6 +1379,7 @@ type ClientMockReleaseImageExpectationOrigins struct {
 	originCtx            string
 	originModuleName     string
 	originReleaseChannel string
+	originOpts           string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -1754,7 +1393,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Optional() *mClientMockReleaseIma
 }
 
 // Expect sets up expected params for Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) Expect(ctx context.Context, moduleName string, releaseChannel string) *mClientMockReleaseImage {
+func (mmReleaseImage *mClientMockReleaseImage) Expect(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
@@ -1767,7 +1406,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Expect(ctx context.Context, modul
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by ExpectParams functions")
 	}
 
-	mmReleaseImage.defaultExpectation.params = &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
+	mmReleaseImage.defaultExpectation.params = &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel, opts}
 	mmReleaseImage.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmReleaseImage.expectations {
 		if minimock.Equal(e.params, mmReleaseImage.defaultExpectation.params) {
@@ -1847,8 +1486,31 @@ func (mmReleaseImage *mClientMockReleaseImage) ExpectReleaseChannelParam3(releas
 	return mmReleaseImage
 }
 
+// ExpectOptsParam4 sets up expected param opts for Client.ReleaseImage
+func (mmReleaseImage *mClientMockReleaseImage) ExpectOptsParam4(opts ...FetchOptions) *mClientMockReleaseImage {
+	if mmReleaseImage.mock.funcReleaseImage != nil {
+		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
+	}
+
+	if mmReleaseImage.defaultExpectation == nil {
+		mmReleaseImage.defaultExpectation = &ClientMockReleaseImageExpectation{}
+	}
+
+	if mmReleaseImage.defaultExpectation.params != nil {
+		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Expect")
+	}
+
+	if mmReleaseImage.defaultExpectation.paramPtrs == nil {
+		mmReleaseImage.defaultExpectation.paramPtrs = &ClientMockReleaseImageParamPtrs{}
+	}
+	mmReleaseImage.defaultExpectation.paramPtrs.opts = &opts
+	mmReleaseImage.defaultExpectation.expectationOrigins.originOpts = minimock.CallerInfo(1)
+
+	return mmReleaseImage
+}
+
 // Inspect accepts an inspector function that has same arguments as the Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) Inspect(f func(ctx context.Context, moduleName string, releaseChannel string)) *mClientMockReleaseImage {
+func (mmReleaseImage *mClientMockReleaseImage) Inspect(f func(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions)) *mClientMockReleaseImage {
 	if mmReleaseImage.mock.inspectFuncReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("Inspect function is already set for ClientMock.ReleaseImage")
 	}
@@ -1859,7 +1521,7 @@ func (mmReleaseImage *mClientMockReleaseImage) Inspect(f func(ctx context.Contex
 }
 
 // Return sets up results that will be returned by Client.ReleaseImage
-func (mmReleaseImage *mClientMockReleaseImage) Return(i1 v1.Image, err error) *ClientMock {
+func (mmReleaseImage *mClientMockReleaseImage) Return(ip1 *ImageResult, err error) *ClientMock {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
@@ -1867,13 +1529,13 @@ func (mmReleaseImage *mClientMockReleaseImage) Return(i1 v1.Image, err error) *C
 	if mmReleaseImage.defaultExpectation == nil {
 		mmReleaseImage.defaultExpectation = &ClientMockReleaseImageExpectation{mock: mmReleaseImage.mock}
 	}
-	mmReleaseImage.defaultExpectation.results = &ClientMockReleaseImageResults{i1, err}
+	mmReleaseImage.defaultExpectation.results = &ClientMockReleaseImageResults{ip1, err}
 	mmReleaseImage.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
 	return mmReleaseImage.mock
 }
 
 // Set uses given function f to mock the Client.ReleaseImage method
-func (mmReleaseImage *mClientMockReleaseImage) Set(f func(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error)) *ClientMock {
+func (mmReleaseImage *mClientMockReleaseImage) Set(f func(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions) (ip1 *ImageResult, err error)) *ClientMock {
 	if mmReleaseImage.defaultExpectation != nil {
 		mmReleaseImage.mock.t.Fatalf("Default expectation is already set for the Client.ReleaseImage method")
 	}
@@ -1889,14 +1551,14 @@ func (mmReleaseImage *mClientMockReleaseImage) Set(f func(ctx context.Context, m
 
 // When sets expectation for the Client.ReleaseImage which will trigger the result defined by the following
 // Then helper
-func (mmReleaseImage *mClientMockReleaseImage) When(ctx context.Context, moduleName string, releaseChannel string) *ClientMockReleaseImageExpectation {
+func (mmReleaseImage *mClientMockReleaseImage) When(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions) *ClientMockReleaseImageExpectation {
 	if mmReleaseImage.mock.funcReleaseImage != nil {
 		mmReleaseImage.mock.t.Fatalf("ClientMock.ReleaseImage mock is already set by Set")
 	}
 
 	expectation := &ClientMockReleaseImageExpectation{
 		mock:               mmReleaseImage.mock,
-		params:             &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel},
+		params:             &ClientMockReleaseImageParams{ctx, moduleName, releaseChannel, opts},
 		expectationOrigins: ClientMockReleaseImageExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmReleaseImage.expectations = append(mmReleaseImage.expectations, expectation)
@@ -1904,8 +1566,8 @@ func (mmReleaseImage *mClientMockReleaseImage) When(ctx context.Context, moduleN
 }
 
 // Then sets up Client.ReleaseImage return parameters for the expectation previously defined by the When method
-func (e *ClientMockReleaseImageExpectation) Then(i1 v1.Image, err error) *ClientMock {
-	e.results = &ClientMockReleaseImageResults{i1, err}
+func (e *ClientMockReleaseImageExpectation) Then(ip1 *ImageResult, err error) *ClientMock {
+	e.results = &ClientMockReleaseImageResults{ip1, err}
 	return e.mock
 }
 
@@ -1931,17 +1593,17 @@ func (mmReleaseImage *mClientMockReleaseImage) invocationsDone() bool {
 }
 
 // ReleaseImage implements Client
-func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName string, releaseChannel string) (i1 v1.Image, err error) {
+func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName string, releaseChannel string, opts ...FetchOptions) (ip1 *ImageResult, err error) {
 	mm_atomic.AddUint64(&mmReleaseImage.beforeReleaseImageCounter, 1)
 	defer mm_atomic.AddUint64(&mmReleaseImage.afterReleaseImageCounter, 1)
 
 	mmReleaseImage.t.Helper()
 
 	if mmReleaseImage.inspectFuncReleaseImage != nil {
-		mmReleaseImage.inspectFuncReleaseImage(ctx, moduleName, releaseChannel)
+		mmReleaseImage.inspectFuncReleaseImage(ctx, moduleName, releaseChannel, opts...)
 	}
 
-	mm_params := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
+	mm_params := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel, opts}
 
 	// Record call args
 	mmReleaseImage.ReleaseImageMock.mutex.Lock()
@@ -1951,7 +1613,7 @@ func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName s
 	for _, e := range mmReleaseImage.ReleaseImageMock.expectations {
 		if minimock.Equal(*e.params, mm_params) {
 			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.i1, e.results.err
+			return e.results.ip1, e.results.err
 		}
 	}
 
@@ -1960,7 +1622,7 @@ func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName s
 		mm_want := mmReleaseImage.ReleaseImageMock.defaultExpectation.params
 		mm_want_ptrs := mmReleaseImage.ReleaseImageMock.defaultExpectation.paramPtrs
 
-		mm_got := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel}
+		mm_got := ClientMockReleaseImageParams{ctx, moduleName, releaseChannel, opts}
 
 		if mm_want_ptrs != nil {
 
@@ -1979,6 +1641,11 @@ func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName s
 					mmReleaseImage.ReleaseImageMock.defaultExpectation.expectationOrigins.originReleaseChannel, *mm_want_ptrs.releaseChannel, mm_got.releaseChannel, minimock.Diff(*mm_want_ptrs.releaseChannel, mm_got.releaseChannel))
 			}
 
+			if mm_want_ptrs.opts != nil && !minimock.Equal(*mm_want_ptrs.opts, mm_got.opts) {
+				mmReleaseImage.t.Errorf("ClientMock.ReleaseImage got unexpected parameter opts, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmReleaseImage.ReleaseImageMock.defaultExpectation.expectationOrigins.originOpts, *mm_want_ptrs.opts, mm_got.opts, minimock.Diff(*mm_want_ptrs.opts, mm_got.opts))
+			}
+
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
 			mmReleaseImage.t.Errorf("ClientMock.ReleaseImage got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
 				mmReleaseImage.ReleaseImageMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
@@ -1988,12 +1655,12 @@ func (mmReleaseImage *ClientMock) ReleaseImage(ctx context.Context, moduleName s
 		if mm_results == nil {
 			mmReleaseImage.t.Fatal("No results are set for the ClientMock.ReleaseImage")
 		}
-		return (*mm_results).i1, (*mm_results).err
+		return (*mm_results).ip1, (*mm_results).err
 	}
 	if mmReleaseImage.funcReleaseImage != nil {
-		return mmReleaseImage.funcReleaseImage(ctx, moduleName, releaseChannel)
+		return mmReleaseImage.funcReleaseImage(ctx, moduleName, releaseChannel, opts...)
 	}
-	mmReleaseImage.t.Fatalf("Unexpected call to ClientMock.ReleaseImage. %v %v %v", ctx, moduleName, releaseChannel)
+	mmReleaseImage.t.Fatalf("Unexpected call to ClientMock.ReleaseImage. %v %v %v %v", ctx, moduleName, releaseChannel, opts)
 	return
 }
 
@@ -2065,386 +1732,10 @@ func (m *ClientMock) MinimockReleaseImageInspect() {
 	}
 }
 
-type mClientMockReleaseImageDigest struct {
-	optional           bool
-	mock               *ClientMock
-	defaultExpectation *ClientMockReleaseImageDigestExpectation
-	expectations       []*ClientMockReleaseImageDigestExpectation
-
-	callArgs []*ClientMockReleaseImageDigestParams
-	mutex    sync.RWMutex
-
-	expectedInvocations       uint64
-	expectedInvocationsOrigin string
-}
-
-// ClientMockReleaseImageDigestExpectation specifies expectation struct of the Client.ReleaseImageDigest
-type ClientMockReleaseImageDigestExpectation struct {
-	mock               *ClientMock
-	params             *ClientMockReleaseImageDigestParams
-	paramPtrs          *ClientMockReleaseImageDigestParamPtrs
-	expectationOrigins ClientMockReleaseImageDigestExpectationOrigins
-	results            *ClientMockReleaseImageDigestResults
-	returnOrigin       string
-	Counter            uint64
-}
-
-// ClientMockReleaseImageDigestParams contains parameters of the Client.ReleaseImageDigest
-type ClientMockReleaseImageDigestParams struct {
-	ctx            context.Context
-	moduleName     string
-	releaseChannel string
-}
-
-// ClientMockReleaseImageDigestParamPtrs contains pointers to parameters of the Client.ReleaseImageDigest
-type ClientMockReleaseImageDigestParamPtrs struct {
-	ctx            *context.Context
-	moduleName     *string
-	releaseChannel *string
-}
-
-// ClientMockReleaseImageDigestResults contains results of the Client.ReleaseImageDigest
-type ClientMockReleaseImageDigestResults struct {
-	s1  string
-	err error
-}
-
-// ClientMockReleaseImageDigestOrigins contains origins of expectations of the Client.ReleaseImageDigest
-type ClientMockReleaseImageDigestExpectationOrigins struct {
-	origin               string
-	originCtx            string
-	originModuleName     string
-	originReleaseChannel string
-}
-
-// Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
-// the test will fail minimock's automatic final call check if the mocked method was not called at least once.
-// Optional() makes method check to work in '0 or more' mode.
-// It is NOT RECOMMENDED to use this option unless you really need it, as default behaviour helps to
-// catch the problems when the expected method call is totally skipped during test run.
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Optional() *mClientMockReleaseImageDigest {
-	mmReleaseImageDigest.optional = true
-	return mmReleaseImageDigest
-}
-
-// Expect sets up expected params for Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Expect(ctx context.Context, moduleName string, releaseChannel string) *mClientMockReleaseImageDigest {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation == nil {
-		mmReleaseImageDigest.defaultExpectation = &ClientMockReleaseImageDigestExpectation{}
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.paramPtrs != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by ExpectParams functions")
-	}
-
-	mmReleaseImageDigest.defaultExpectation.params = &ClientMockReleaseImageDigestParams{ctx, moduleName, releaseChannel}
-	mmReleaseImageDigest.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
-	for _, e := range mmReleaseImageDigest.expectations {
-		if minimock.Equal(e.params, mmReleaseImageDigest.defaultExpectation.params) {
-			mmReleaseImageDigest.mock.t.Fatalf("Expectation set by When has same params: %#v", *mmReleaseImageDigest.defaultExpectation.params)
-		}
-	}
-
-	return mmReleaseImageDigest
-}
-
-// ExpectCtxParam1 sets up expected param ctx for Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) ExpectCtxParam1(ctx context.Context) *mClientMockReleaseImageDigest {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation == nil {
-		mmReleaseImageDigest.defaultExpectation = &ClientMockReleaseImageDigestExpectation{}
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.params != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Expect")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.paramPtrs == nil {
-		mmReleaseImageDigest.defaultExpectation.paramPtrs = &ClientMockReleaseImageDigestParamPtrs{}
-	}
-	mmReleaseImageDigest.defaultExpectation.paramPtrs.ctx = &ctx
-	mmReleaseImageDigest.defaultExpectation.expectationOrigins.originCtx = minimock.CallerInfo(1)
-
-	return mmReleaseImageDigest
-}
-
-// ExpectModuleNameParam2 sets up expected param moduleName for Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) ExpectModuleNameParam2(moduleName string) *mClientMockReleaseImageDigest {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation == nil {
-		mmReleaseImageDigest.defaultExpectation = &ClientMockReleaseImageDigestExpectation{}
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.params != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Expect")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.paramPtrs == nil {
-		mmReleaseImageDigest.defaultExpectation.paramPtrs = &ClientMockReleaseImageDigestParamPtrs{}
-	}
-	mmReleaseImageDigest.defaultExpectation.paramPtrs.moduleName = &moduleName
-	mmReleaseImageDigest.defaultExpectation.expectationOrigins.originModuleName = minimock.CallerInfo(1)
-
-	return mmReleaseImageDigest
-}
-
-// ExpectReleaseChannelParam3 sets up expected param releaseChannel for Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) ExpectReleaseChannelParam3(releaseChannel string) *mClientMockReleaseImageDigest {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation == nil {
-		mmReleaseImageDigest.defaultExpectation = &ClientMockReleaseImageDigestExpectation{}
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.params != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Expect")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation.paramPtrs == nil {
-		mmReleaseImageDigest.defaultExpectation.paramPtrs = &ClientMockReleaseImageDigestParamPtrs{}
-	}
-	mmReleaseImageDigest.defaultExpectation.paramPtrs.releaseChannel = &releaseChannel
-	mmReleaseImageDigest.defaultExpectation.expectationOrigins.originReleaseChannel = minimock.CallerInfo(1)
-
-	return mmReleaseImageDigest
-}
-
-// Inspect accepts an inspector function that has same arguments as the Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Inspect(f func(ctx context.Context, moduleName string, releaseChannel string)) *mClientMockReleaseImageDigest {
-	if mmReleaseImageDigest.mock.inspectFuncReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("Inspect function is already set for ClientMock.ReleaseImageDigest")
-	}
-
-	mmReleaseImageDigest.mock.inspectFuncReleaseImageDigest = f
-
-	return mmReleaseImageDigest
-}
-
-// Return sets up results that will be returned by Client.ReleaseImageDigest
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Return(s1 string, err error) *ClientMock {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	if mmReleaseImageDigest.defaultExpectation == nil {
-		mmReleaseImageDigest.defaultExpectation = &ClientMockReleaseImageDigestExpectation{mock: mmReleaseImageDigest.mock}
-	}
-	mmReleaseImageDigest.defaultExpectation.results = &ClientMockReleaseImageDigestResults{s1, err}
-	mmReleaseImageDigest.defaultExpectation.returnOrigin = minimock.CallerInfo(1)
-	return mmReleaseImageDigest.mock
-}
-
-// Set uses given function f to mock the Client.ReleaseImageDigest method
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Set(f func(ctx context.Context, moduleName string, releaseChannel string) (s1 string, err error)) *ClientMock {
-	if mmReleaseImageDigest.defaultExpectation != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("Default expectation is already set for the Client.ReleaseImageDigest method")
-	}
-
-	if len(mmReleaseImageDigest.expectations) > 0 {
-		mmReleaseImageDigest.mock.t.Fatalf("Some expectations are already set for the Client.ReleaseImageDigest method")
-	}
-
-	mmReleaseImageDigest.mock.funcReleaseImageDigest = f
-	mmReleaseImageDigest.mock.funcReleaseImageDigestOrigin = minimock.CallerInfo(1)
-	return mmReleaseImageDigest.mock
-}
-
-// When sets expectation for the Client.ReleaseImageDigest which will trigger the result defined by the following
-// Then helper
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) When(ctx context.Context, moduleName string, releaseChannel string) *ClientMockReleaseImageDigestExpectation {
-	if mmReleaseImageDigest.mock.funcReleaseImageDigest != nil {
-		mmReleaseImageDigest.mock.t.Fatalf("ClientMock.ReleaseImageDigest mock is already set by Set")
-	}
-
-	expectation := &ClientMockReleaseImageDigestExpectation{
-		mock:               mmReleaseImageDigest.mock,
-		params:             &ClientMockReleaseImageDigestParams{ctx, moduleName, releaseChannel},
-		expectationOrigins: ClientMockReleaseImageDigestExpectationOrigins{origin: minimock.CallerInfo(1)},
-	}
-	mmReleaseImageDigest.expectations = append(mmReleaseImageDigest.expectations, expectation)
-	return expectation
-}
-
-// Then sets up Client.ReleaseImageDigest return parameters for the expectation previously defined by the When method
-func (e *ClientMockReleaseImageDigestExpectation) Then(s1 string, err error) *ClientMock {
-	e.results = &ClientMockReleaseImageDigestResults{s1, err}
-	return e.mock
-}
-
-// Times sets number of times Client.ReleaseImageDigest should be invoked
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Times(n uint64) *mClientMockReleaseImageDigest {
-	if n == 0 {
-		mmReleaseImageDigest.mock.t.Fatalf("Times of ClientMock.ReleaseImageDigest mock can not be zero")
-	}
-	mm_atomic.StoreUint64(&mmReleaseImageDigest.expectedInvocations, n)
-	mmReleaseImageDigest.expectedInvocationsOrigin = minimock.CallerInfo(1)
-	return mmReleaseImageDigest
-}
-
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) invocationsDone() bool {
-	if len(mmReleaseImageDigest.expectations) == 0 && mmReleaseImageDigest.defaultExpectation == nil && mmReleaseImageDigest.mock.funcReleaseImageDigest == nil {
-		return true
-	}
-
-	totalInvocations := mm_atomic.LoadUint64(&mmReleaseImageDigest.mock.afterReleaseImageDigestCounter)
-	expectedInvocations := mm_atomic.LoadUint64(&mmReleaseImageDigest.expectedInvocations)
-
-	return totalInvocations > 0 && (expectedInvocations == 0 || expectedInvocations == totalInvocations)
-}
-
-// ReleaseImageDigest implements Client
-func (mmReleaseImageDigest *ClientMock) ReleaseImageDigest(ctx context.Context, moduleName string, releaseChannel string) (s1 string, err error) {
-	mm_atomic.AddUint64(&mmReleaseImageDigest.beforeReleaseImageDigestCounter, 1)
-	defer mm_atomic.AddUint64(&mmReleaseImageDigest.afterReleaseImageDigestCounter, 1)
-
-	mmReleaseImageDigest.t.Helper()
-
-	if mmReleaseImageDigest.inspectFuncReleaseImageDigest != nil {
-		mmReleaseImageDigest.inspectFuncReleaseImageDigest(ctx, moduleName, releaseChannel)
-	}
-
-	mm_params := ClientMockReleaseImageDigestParams{ctx, moduleName, releaseChannel}
-
-	// Record call args
-	mmReleaseImageDigest.ReleaseImageDigestMock.mutex.Lock()
-	mmReleaseImageDigest.ReleaseImageDigestMock.callArgs = append(mmReleaseImageDigest.ReleaseImageDigestMock.callArgs, &mm_params)
-	mmReleaseImageDigest.ReleaseImageDigestMock.mutex.Unlock()
-
-	for _, e := range mmReleaseImageDigest.ReleaseImageDigestMock.expectations {
-		if minimock.Equal(*e.params, mm_params) {
-			mm_atomic.AddUint64(&e.Counter, 1)
-			return e.results.s1, e.results.err
-		}
-	}
-
-	if mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation != nil {
-		mm_atomic.AddUint64(&mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.Counter, 1)
-		mm_want := mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.params
-		mm_want_ptrs := mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.paramPtrs
-
-		mm_got := ClientMockReleaseImageDigestParams{ctx, moduleName, releaseChannel}
-
-		if mm_want_ptrs != nil {
-
-			if mm_want_ptrs.ctx != nil && !minimock.Equal(*mm_want_ptrs.ctx, mm_got.ctx) {
-				mmReleaseImageDigest.t.Errorf("ClientMock.ReleaseImageDigest got unexpected parameter ctx, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.expectationOrigins.originCtx, *mm_want_ptrs.ctx, mm_got.ctx, minimock.Diff(*mm_want_ptrs.ctx, mm_got.ctx))
-			}
-
-			if mm_want_ptrs.moduleName != nil && !minimock.Equal(*mm_want_ptrs.moduleName, mm_got.moduleName) {
-				mmReleaseImageDigest.t.Errorf("ClientMock.ReleaseImageDigest got unexpected parameter moduleName, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.expectationOrigins.originModuleName, *mm_want_ptrs.moduleName, mm_got.moduleName, minimock.Diff(*mm_want_ptrs.moduleName, mm_got.moduleName))
-			}
-
-			if mm_want_ptrs.releaseChannel != nil && !minimock.Equal(*mm_want_ptrs.releaseChannel, mm_got.releaseChannel) {
-				mmReleaseImageDigest.t.Errorf("ClientMock.ReleaseImageDigest got unexpected parameter releaseChannel, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.expectationOrigins.originReleaseChannel, *mm_want_ptrs.releaseChannel, mm_got.releaseChannel, minimock.Diff(*mm_want_ptrs.releaseChannel, mm_got.releaseChannel))
-			}
-
-		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
-			mmReleaseImageDigest.t.Errorf("ClientMock.ReleaseImageDigest got unexpected parameters, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-				mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.expectationOrigins.origin, *mm_want, mm_got, minimock.Diff(*mm_want, mm_got))
-		}
-
-		mm_results := mmReleaseImageDigest.ReleaseImageDigestMock.defaultExpectation.results
-		if mm_results == nil {
-			mmReleaseImageDigest.t.Fatal("No results are set for the ClientMock.ReleaseImageDigest")
-		}
-		return (*mm_results).s1, (*mm_results).err
-	}
-	if mmReleaseImageDigest.funcReleaseImageDigest != nil {
-		return mmReleaseImageDigest.funcReleaseImageDigest(ctx, moduleName, releaseChannel)
-	}
-	mmReleaseImageDigest.t.Fatalf("Unexpected call to ClientMock.ReleaseImageDigest. %v %v %v", ctx, moduleName, releaseChannel)
-	return
-}
-
-// ReleaseImageDigestAfterCounter returns a count of finished ClientMock.ReleaseImageDigest invocations
-func (mmReleaseImageDigest *ClientMock) ReleaseImageDigestAfterCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmReleaseImageDigest.afterReleaseImageDigestCounter)
-}
-
-// ReleaseImageDigestBeforeCounter returns a count of ClientMock.ReleaseImageDigest invocations
-func (mmReleaseImageDigest *ClientMock) ReleaseImageDigestBeforeCounter() uint64 {
-	return mm_atomic.LoadUint64(&mmReleaseImageDigest.beforeReleaseImageDigestCounter)
-}
-
-// Calls returns a list of arguments used in each call to ClientMock.ReleaseImageDigest.
-// The list is in the same order as the calls were made (i.e. recent calls have a higher index)
-func (mmReleaseImageDigest *mClientMockReleaseImageDigest) Calls() []*ClientMockReleaseImageDigestParams {
-	mmReleaseImageDigest.mutex.RLock()
-
-	argCopy := make([]*ClientMockReleaseImageDigestParams, len(mmReleaseImageDigest.callArgs))
-	copy(argCopy, mmReleaseImageDigest.callArgs)
-
-	mmReleaseImageDigest.mutex.RUnlock()
-
-	return argCopy
-}
-
-// MinimockReleaseImageDigestDone returns true if the count of the ReleaseImageDigest invocations corresponds
-// the number of defined expectations
-func (m *ClientMock) MinimockReleaseImageDigestDone() bool {
-	if m.ReleaseImageDigestMock.optional {
-		// Optional methods provide '0 or more' call count restriction.
-		return true
-	}
-
-	for _, e := range m.ReleaseImageDigestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			return false
-		}
-	}
-
-	return m.ReleaseImageDigestMock.invocationsDone()
-}
-
-// MinimockReleaseImageDigestInspect logs each unmet expectation
-func (m *ClientMock) MinimockReleaseImageDigestInspect() {
-	for _, e := range m.ReleaseImageDigestMock.expectations {
-		if mm_atomic.LoadUint64(&e.Counter) < 1 {
-			m.t.Errorf("Expected call to ClientMock.ReleaseImageDigest at\n%s with params: %#v", e.expectationOrigins.origin, *e.params)
-		}
-	}
-
-	afterReleaseImageDigestCounter := mm_atomic.LoadUint64(&m.afterReleaseImageDigestCounter)
-	// if default expectation was set then invocations count should be greater than zero
-	if m.ReleaseImageDigestMock.defaultExpectation != nil && afterReleaseImageDigestCounter < 1 {
-		if m.ReleaseImageDigestMock.defaultExpectation.params == nil {
-			m.t.Errorf("Expected call to ClientMock.ReleaseImageDigest at\n%s", m.ReleaseImageDigestMock.defaultExpectation.returnOrigin)
-		} else {
-			m.t.Errorf("Expected call to ClientMock.ReleaseImageDigest at\n%s with params: %#v", m.ReleaseImageDigestMock.defaultExpectation.expectationOrigins.origin, *m.ReleaseImageDigestMock.defaultExpectation.params)
-		}
-	}
-	// if func was set then invocations count should be greater than zero
-	if m.funcReleaseImageDigest != nil && afterReleaseImageDigestCounter < 1 {
-		m.t.Errorf("Expected call to ClientMock.ReleaseImageDigest at\n%s", m.funcReleaseImageDigestOrigin)
-	}
-
-	if !m.ReleaseImageDigestMock.invocationsDone() && afterReleaseImageDigestCounter > 0 {
-		m.t.Errorf("Expected %d calls to ClientMock.ReleaseImageDigest at\n%s but found %d calls",
-			mm_atomic.LoadUint64(&m.ReleaseImageDigestMock.expectedInvocations), m.ReleaseImageDigestMock.expectedInvocationsOrigin, afterReleaseImageDigestCounter)
-	}
-}
-
 // MinimockFinish checks that all mocked methods have been called the expected number of times
 func (m *ClientMock) MinimockFinish() {
 	m.finishOnce.Do(func() {
 		if !m.minimockDone() {
-			m.MinimockDigestInspect()
-
 			m.MinimockImageInspect()
 
 			m.MinimockListTagsInspect()
@@ -2454,8 +1745,6 @@ func (m *ClientMock) MinimockFinish() {
 			m.MinimockNameInspect()
 
 			m.MinimockReleaseImageInspect()
-
-			m.MinimockReleaseImageDigestInspect()
 		}
 	})
 }
@@ -2479,11 +1768,9 @@ func (m *ClientMock) MinimockWait(timeout mm_time.Duration) {
 func (m *ClientMock) minimockDone() bool {
 	done := true
 	return done &&
-		m.MinimockDigestDone() &&
 		m.MinimockImageDone() &&
 		m.MinimockListTagsDone() &&
 		m.MinimockModulesDone() &&
 		m.MinimockNameDone() &&
-		m.MinimockReleaseImageDone() &&
-		m.MinimockReleaseImageDigestDone()
+		m.MinimockReleaseImageDone()
 }
