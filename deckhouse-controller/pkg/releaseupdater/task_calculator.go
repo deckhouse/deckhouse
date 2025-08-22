@@ -91,6 +91,7 @@ type ReleaseInfo struct {
 	Version *semver.Version
 }
 
+// inner structure to save inner logic
 type releaseInfo struct {
 	IndexInReleaseList int
 	Name               string
@@ -98,6 +99,10 @@ type releaseInfo struct {
 }
 
 func (ri *releaseInfo) RemapToReleaseInfo() *ReleaseInfo {
+	if ri == nil {
+		return nil
+	}
+
 	return &ReleaseInfo{
 		Name:    ri.Name,
 		Version: ri.Version,
@@ -201,24 +206,24 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
-	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
-	if deployedReleaseInfo != nil {
-		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, p.log)
+	// // If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
+	// if deployedReleaseInfo != nil {
+	// 	endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo)
 
-		// If current release is the endpoint, process it.
-		// And if current is after endpoint – proceed with normal flow below
-		if releaseIdx == endpointIdx {
-			logger.Debug("processing as endpoint due to updateConstraints")
+	// 	// If current release is the endpoint, process it.
+	// 	// And if current is after endpoint – proceed with normal flow below
+	// 	if releaseIdx == endpointIdx {
+	// 		logger.Debug("processing as endpoint due to updateConstraints")
 
-			return &Task{
-				TaskType:            Process,
-				IsPatch:             false,
-				IsLatest:            endpointIdx == len(releases)-1,
-				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-				QueueDepth:          min(len(releases)-releaseIdx, 3),
-			}, nil
-		}
-	}
+	// 		return &Task{
+	// 			TaskType:            Process,
+	// 			IsPatch:             false,
+	// 			IsLatest:            endpointIdx == len(releases)-1,
+	// 			DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+	// 			QueueDepth:          min(len(releases)-releaseIdx, 3),
+	// 		}, nil
+	// 	}
+	// }
 
 	// check previous release
 	// only for awaiting purpose
@@ -365,9 +370,7 @@ func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([
 // - Look into the processing release's spec.update (if exists)
 // - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
 // - If no endpoint found in current constraints, return -1.
-func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo, logger *log.Logger) int {
-	var constrainedRelease v1alpha1.Release
-
+func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo) int {
 	// Pick constraints from the highest pending release that has them.
 	for i := len(releases) - 1; i >= 0; i-- {
 		r := releases[i]
@@ -377,33 +380,36 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 		}
 
 		if r.GetUpdateSpec() != nil && len(r.GetUpdateSpec().Versions) > 0 {
-			constrainedRelease = r
-			break
+			compliantRelease := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed)
+			if compliantRelease != -1 {
+				return compliantRelease
+			}
 		}
 	}
 
-	if constrainedRelease == nil {
-		return -1
-	}
+	return -1
+}
 
-	// Deployed is mandatory for skipping logic
-	if deployed == nil {
-		return -1
-	}
-
+// getFirstCompliantRelease determines the index of the first update constraints compliant release
+// Rules:
+// - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
+// - If no endpoint found in current constraints, return -1.
+func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, constraints []v1alpha1.UpdateConstraint, deployed *releaseInfo) int {
 	bestIdx := -1
 
 	// Check each constraint for inclusion of deployed version
-	for _, c := range constrainedRelease.GetUpdateSpec().Versions {
+	for _, c := range constraints {
 		fromVer, err := semver.NewVersion(c.From)
 		if err != nil {
-			logger.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
+			p.log.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
+
 			continue
 		}
 
 		toVer, err := semver.NewVersion(c.To)
 		if err != nil {
-			logger.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
+			p.log.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
+
 			continue
 		}
 
