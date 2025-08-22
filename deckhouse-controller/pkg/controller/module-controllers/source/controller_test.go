@@ -286,7 +286,9 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("source with pull error", func() {
-		dependency.TestDC.CRClient.DigestMock.Return("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879", nil)
+		// Mock for enabledmodule - should work normally
+		enabledDigest := "sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879"
+		dependency.TestDC.CRClient.DigestMock.Return(enabledDigest, nil)
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
@@ -296,10 +298,14 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			return &crfake.FakeImage{
 				ManifestStub: manifestStub,
 				LayersStub: func() ([]crv1.Layer, error) {
-					return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}}}, nil
+					return []crv1.Layer{
+						&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.2.3"}`}},
+						&utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}},
+					}, nil
 				},
 				DigestStub: func() (crv1.Hash, error) {
-					return crv1.Hash{Algorithm: "sha256"}, nil
+					// Return the same digest that DigestMock returns for enabledmodule
+					return crv1.Hash{Algorithm: "sha256", Hex: "e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879"}, nil
 				},
 			}, nil
 		})
