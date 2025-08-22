@@ -79,10 +79,10 @@ spec:
                         properties:
                           from:
                             type: string
-                            description: The minimum version from which the transition is allowed (in the format `X.Y` or `X.Y.Z`).
+                            description: The minimum version from which the transition is allowed (in the format `X.Y` or `X.Y`).
                           to:
                             type: string
-                            description: The target version of the end of the range to jump to (in `X.Y` or `X.Y.Z` format).
+                            description: The target version of the end of the range to jump to (in `X.Y` or `X.Y` format).
                 changelog:
                   type: object
                   description: Release's changelog for the module.
