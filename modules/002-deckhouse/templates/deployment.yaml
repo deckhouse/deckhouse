@@ -346,7 +346,7 @@ spec:
           medium: Memory
         name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
-      - emptyDir:
+      - emptyDir: {}
         name: chroot
 {{- end }}
       - emptyDir:
