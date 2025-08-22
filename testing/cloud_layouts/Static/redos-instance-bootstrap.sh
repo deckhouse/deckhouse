@@ -20,4 +20,3 @@ set -Eeo pipefail
 cat /etc/redos-release | grep -q "RED OS release (8.0) MINIMAL"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
-echo "root:Qaz123wsX" | chpasswd

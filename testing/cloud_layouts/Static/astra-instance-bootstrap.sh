@@ -20,7 +20,6 @@ set -Eeo pipefail
 # uname -a | grep -q hardened
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
-echo "root:Qaz123wsX" | chpasswd
 
 
 # This is temporarily commented out because DRBD doesn't currently compile on Astra with a hardened kernel.
