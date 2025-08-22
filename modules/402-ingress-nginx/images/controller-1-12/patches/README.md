@@ -88,6 +88,6 @@ Slightly tunes some logic related to validating ingress objects.
 
 Added additional logging when downloading GeoIP databases from the MaxMind service.
 
-### 014-fix-success-reload-metric.patch
+### 015-fix-success-reload-metric.patch
 
 This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
