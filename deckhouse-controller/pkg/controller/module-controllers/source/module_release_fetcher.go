@@ -173,7 +173,7 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	}
 
 	// Only download image info if not already obtained from release channel
-	if !f.targetReleaseMeta.FromReleaseChannel {
+	if !wasDownloadedFromChannel(f.targetReleaseMeta) {
 		imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
 		if err != nil {
 			return fmt.Errorf("download module definition: %w", err)
@@ -295,7 +295,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			var err error
 
 			// Check if this is the target version that was already obtained from release channel
-			if f.targetReleaseMeta.FromReleaseChannel && "v"+ver.String() == f.targetReleaseMeta.ModuleVersion {
+			if wasDownloadedFromChannel(f.targetReleaseMeta) && "v"+ver.String() == f.targetReleaseMeta.ModuleVersion {
 				// Use the already downloaded metadata instead of making another request
 				m = f.targetReleaseMeta
 			} else {
@@ -628,4 +628,10 @@ func isVersionGreaterThanTarget(ver, target *semver.Version) bool {
 	return ver.Major() > target.Major() ||
 		(ver.Major() == target.Major() && ver.Minor() > target.Minor()) ||
 		(ver.Major() == target.Major() && ver.Minor() == target.Minor() && ver.Patch() > target.Patch())
+}
+
+// wasDownloadedFromChannel returns true if the metadata was obtained from a release channel
+// (not by specific version) and contains complete metadata
+func wasDownloadedFromChannel(meta *downloader.ModuleDownloadResult) bool {
+	return meta.ChannelTag != ""
 }
