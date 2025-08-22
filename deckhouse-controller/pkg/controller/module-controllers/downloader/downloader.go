@@ -28,7 +28,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -58,27 +57,20 @@ const (
 // ReleaseImageInfoCache provides thread-safe caching for lightweight release metadata
 // Uses LightweightReleaseInfo to minimize memory footprint (1-8KB vs 50-200MB per entry)
 type ReleaseImageInfoCache struct {
-	cache       map[string]*cacheEntry
-	mutex       sync.RWMutex
-	hitCount    int64
-	missCount   int64
-	maxSize     int
-	maxMemoryMB int64
+	cache map[string]*cacheEntry
+	mutex sync.RWMutex
 }
 
 type cacheEntry struct {
-	info        *LightweightReleaseInfo
-	timestamp   time.Time
-	accessCount int64
+	info      *LightweightReleaseInfo
+	timestamp time.Time
 }
 
 // NewReleaseImageInfoCache creates a new cache with optimized settings
 func NewReleaseImageInfoCache() *ReleaseImageInfoCache {
 	return &ReleaseImageInfoCache{
-		cache:       make(map[string]*cacheEntry),
-		mutex:       sync.RWMutex{},
-		maxSize:     1000, // Maximum number of cached entries
-		maxMemoryMB: 100,  // Maximum cache memory usage in MB
+		cache: make(map[string]*cacheEntry),
+		mutex: sync.RWMutex{},
 	}
 }
 
@@ -94,13 +86,10 @@ func (c *ReleaseImageInfoCache) Get(digest string) (*LightweightReleaseInfo, boo
 
 	entry, exists := c.cache[digest]
 	if !exists {
-		atomic.AddInt64(&c.missCount, 1)
 		return nil, false
 	}
 
 	// Update access statistics
-	atomic.AddInt64(&c.hitCount, 1)
-	atomic.AddInt64(&entry.accessCount, 1)
 	entry.timestamp = time.Now()
 
 	return entry.info, true
@@ -111,13 +100,9 @@ func (c *ReleaseImageInfoCache) Set(digest string, info *LightweightReleaseInfo)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	// Check if cache needs cleanup before adding new entry
-	c.evictIfNeeded()
-
 	c.cache[digest] = &cacheEntry{
-		info:        info,
-		timestamp:   time.Now(),
-		accessCount: 1,
+		info:      info,
+		timestamp: time.Now(),
 	}
 }
 
@@ -127,71 +112,6 @@ func (c *ReleaseImageInfoCache) Clear() {
 	defer c.mutex.Unlock()
 
 	c.cache = make(map[string]*cacheEntry)
-	atomic.StoreInt64(&c.hitCount, 0)
-	atomic.StoreInt64(&c.missCount, 0)
-}
-
-// Stats returns cache statistics
-func (c *ReleaseImageInfoCache) Stats() (int64, int64, int) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	hits := atomic.LoadInt64(&c.hitCount)
-	misses := atomic.LoadInt64(&c.missCount)
-	size := len(c.cache)
-	return hits, misses, size
-}
-
-// GetHitRate returns cache hit rate as percentage
-func (c *ReleaseImageInfoCache) GetHitRate() float64 {
-	hits := atomic.LoadInt64(&c.hitCount)
-	misses := atomic.LoadInt64(&c.missCount)
-	total := hits + misses
-	if total == 0 {
-		return 0.0
-	}
-	return float64(hits) / float64(total) * 100.0
-}
-
-// evictIfNeeded removes old entries if cache exceeds size limits
-func (c *ReleaseImageInfoCache) evictIfNeeded() {
-	// Note: This method should be called while holding write lock
-	if len(c.cache) < c.maxSize {
-		return
-	}
-
-	// Find oldest entries to evict (LRU strategy)
-	type entryAge struct {
-		digest    string
-		timestamp time.Time
-	}
-
-	entries := make([]entryAge, 0, len(c.cache))
-	for digest, entry := range c.cache {
-		entries = append(entries, entryAge{
-			digest:    digest,
-			timestamp: entry.timestamp,
-		})
-	}
-
-	// Sort by timestamp (oldest first)
-	for i := 0; i < len(entries)-1; i++ {
-		for j := i + 1; j < len(entries); j++ {
-			if entries[i].timestamp.After(entries[j].timestamp) {
-				entries[i], entries[j] = entries[j], entries[i]
-			}
-		}
-	}
-
-	// Remove oldest 10% of entries
-	toRemove := len(entries) / 10
-	if toRemove == 0 {
-		toRemove = 1
-	}
-
-	for i := 0; i < toRemove; i++ {
-		delete(c.cache, entries[i].digest)
-	}
 }
 
 // GetMemoryUsage estimates cache memory usage in bytes
@@ -297,13 +217,6 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 	span.SetAttributes(attribute.String("module", moduleName))
 	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	md.logger.Info("🔵 REGISTRY REQUEST: Starting download metadata from release channel",
-		slog.String("module", moduleName),
-		slog.String("releaseChannel", releaseChannel),
-		slog.String("registry_operation", "GET_RELEASE_CHANNEL"),
-		slog.String("controller", "source"),
-	)
-
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
 		return nil, err
@@ -317,26 +230,12 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 		FromReleaseChannel: true,
 	}
 
-	md.logger.Info("🔵 REGISTRY REQUEST: Completed download metadata from release channel",
-		slog.String("module", moduleName),
-		slog.String("version", res.ModuleVersion),
-		slog.String("checksum", res.Checksum),
-		slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
-	)
-
 	return res, nil
 }
 
 // DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
 // does not fetch and install the desired version on the module, only fetches its module definition
 func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
-	md.logger.Info("🔴 REGISTRY REQUEST: Starting download image info by specific version",
-		slog.String("module", moduleName),
-		slog.String("version", moduleVersion),
-		slog.String("registry_operation", "GET_VERSION_SPECIFIC"),
-		slog.String("controller", "release/override/moduleloader"),
-	)
-
 	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module release: %w", err)
@@ -350,12 +249,6 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 	}
 	if releaseImageInfo.Metadata.ModuleDefinition != nil {
 		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition
-		md.logger.Info("🔴 REGISTRY REQUEST: Completed download image info by specific version (from metadata)",
-			slog.String("module", moduleName),
-			slog.String("version", moduleVersion),
-			slog.String("checksum", res.Checksum),
-			slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
-		)
 		return res, nil
 	}
 
@@ -369,13 +262,6 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
 	res.ModuleDefinition = def
-
-	md.logger.Info("🔴 REGISTRY REQUEST: Completed download image info by specific version (from image)",
-		slog.String("module", moduleName),
-		slog.String("version", moduleVersion),
-		slog.String("checksum", res.Checksum),
-		slog.Bool("fromReleaseChannel", res.FromReleaseChannel),
-	)
 
 	return res, nil
 }
@@ -588,19 +474,6 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 
 	// Check cache first - only metadata is cached for memory efficiency
 	if cachedLightInfo, found := md.releaseInfoCache.Get(digestStr); found {
-		hits, misses, size := md.releaseInfoCache.Stats()
-		hitRate := md.releaseInfoCache.GetHitRate()
-		memUsage := md.releaseInfoCache.GetMemoryUsage()
-		md.logger.Info("🟢 CACHE HIT: Release metadata found in cache, fetching image for complete info",
-			slog.String("digest", digestStr),
-			slog.String("image_tag", imageTag),
-			slog.Int64("cache_hits", hits),
-			slog.Int64("cache_misses", misses),
-			slog.Int("cache_size", size),
-			slog.Float64("hit_rate", hitRate),
-			slog.Int64("memory_kb", memUsage/1024),
-		)
-
 		// Fetch image for complete ReleaseImageInfo (metadata is cached, image is fetched fresh)
 		img, err := regCli.Image(ctx, imageTag)
 		if err != nil {
@@ -614,20 +487,6 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 			Metadata: cachedLightInfo.Metadata,
 		}, nil
 	}
-
-	hits, misses, size := md.releaseInfoCache.Stats()
-	hitRate := md.releaseInfoCache.GetHitRate()
-	memUsage := md.releaseInfoCache.GetMemoryUsage()
-	md.logger.Info("🔴 CACHE MISS: Release metadata not found in cache, downloading full image and extracting metadata",
-		slog.String("digest", digestStr),
-		slog.String("image_tag", imageTag),
-		slog.Int64("cache_hits", hits),
-		slog.Int64("cache_misses", misses),
-		slog.Int("cache_size", size),
-		slog.Float64("hit_rate", hitRate),
-		slog.Int64("memory_kb", memUsage/1024),
-		slog.String("registry_operation", "IMAGE_DOWNLOAD"),
-	)
 
 	// If not in cache, download the full image
 	img, err := regCli.Image(ctx, imageTag)
@@ -669,19 +528,6 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 		Digest:   imgDigest,
 		Metadata: &moduleMetadata,
 	}
-
-	hits, misses, size = md.releaseInfoCache.Stats()
-	hitRate = md.releaseInfoCache.GetHitRate()
-	memUsage = md.releaseInfoCache.GetMemoryUsage()
-	md.logger.Info("💾 CACHE STORE: Lightweight metadata stored in cache (99.9% memory savings)",
-		slog.String("digest", digestStr),
-		slog.String("image_tag", imageTag),
-		slog.Int64("cache_hits", hits),
-		slog.Int64("cache_misses", misses),
-		slog.Int("cache_size", size),
-		slog.Float64("hit_rate", hitRate),
-		slog.Int64("memory_kb", memUsage/1024),
-	)
 
 	return releaseImageInfo, nil
 }

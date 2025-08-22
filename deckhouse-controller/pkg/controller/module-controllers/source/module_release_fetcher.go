@@ -174,22 +174,12 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 
 	// Only download image info if not already obtained from release channel
 	if !f.targetReleaseMeta.FromReleaseChannel {
-		f.logger.Info("⚪ OPTIMIZATION: Downloading module definition for target version (not from release channel)",
-			slog.String("module", f.moduleName),
-			slog.String("version", f.targetReleaseMeta.ModuleVersion),
-		)
 		imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
 		if err != nil {
 			return fmt.Errorf("download module definition: %w", err)
 		}
 
 		f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
-	} else {
-		f.logger.Info("🟢 OPTIMIZATION: Skipping registry request - using data from release channel",
-			slog.String("module", f.moduleName),
-			slog.String("version", f.targetReleaseMeta.ModuleVersion),
-			slog.Bool("fromReleaseChannel", f.targetReleaseMeta.FromReleaseChannel),
-		)
 	}
 
 	// sort releases before
@@ -307,19 +297,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			// Check if this is the target version that was already obtained from release channel
 			if f.targetReleaseMeta.FromReleaseChannel && "v"+ver.String() == f.targetReleaseMeta.ModuleVersion {
 				// Use the already downloaded metadata instead of making another request
-				f.logger.Info("🟢 STEP-BY-STEP OPTIMIZATION: Reusing target version from release channel",
-					slog.String("module", f.moduleName),
-					slog.String("version", "v"+ver.String()),
-					slog.Bool("isTargetVersion", true),
-				)
 				m = f.targetReleaseMeta
 			} else {
 				// Download metadata for intermediate versions or when not from release channel
-				f.logger.Info("⚪ STEP-BY-STEP: Downloading intermediate version metadata",
-					slog.String("module", f.moduleName),
-					slog.String("version", "v"+ver.String()),
-					slog.Bool("isTargetVersion", "v"+ver.String() == f.targetReleaseMeta.ModuleVersion),
-				)
 				m, err = f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
 				if err != nil {
 					f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))

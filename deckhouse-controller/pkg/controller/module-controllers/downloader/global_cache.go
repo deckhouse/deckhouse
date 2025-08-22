@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,12 +29,6 @@ var (
 // GetGlobalReleaseImageInfoCache returns the singleton global cache instance
 // This ensures all ModuleDownloader instances share the same cache, preventing
 // the cache isolation problem where each controller creates its own cache.
-//
-// TTL is not implemented here because:
-// 1. Cache lifetime equals controller process lifetime
-// 2. On controller restart, cache is automatically cleared
-// 3. Module metadata doesn't change during controller runtime
-// 4. TTL would add unnecessary complexity and performance overhead
 //
 // Usage example:
 //
