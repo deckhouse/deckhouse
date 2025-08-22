@@ -84,7 +84,7 @@ kind: Module
 metadata:
   name: notthissourcemodule
 properties:
-  source: test-source-2
+  source: test-source-1
   availableSources:
     - test-source-1
 status:
