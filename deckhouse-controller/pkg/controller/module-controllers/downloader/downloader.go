@@ -69,11 +69,6 @@ func NewReleaseImageInfoCache() *ReleaseImageInfoCache {
 	}
 }
 
-// newReleaseImageInfoCache creates a new cache (internal function for backward compatibility)
-func newReleaseImageInfoCache() *ReleaseImageInfoCache {
-	return NewReleaseImageInfoCache()
-}
-
 // Get retrieves LightweightReleaseInfo from cache if it exists
 func (c *ReleaseImageInfoCache) Get(digest string) (*LightweightReleaseInfo, bool) {
 	c.mutex.RLock()
@@ -129,7 +124,7 @@ func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, m
 
 	// If no cache provided, create a new one (for backward compatibility)
 	if len(cache) == 0 || cache[0] == nil {
-		releaseInfoCache = newReleaseImageInfoCache()
+		releaseInfoCache = NewReleaseImageInfoCache()
 	} else {
 		releaseInfoCache = cache[0]
 	}
