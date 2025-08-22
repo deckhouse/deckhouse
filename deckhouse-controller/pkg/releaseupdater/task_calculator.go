@@ -210,6 +210,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	if deployedReleaseInfo != nil {
 		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
+		logger.Debug("from-to release found", slog.Int("release_index", releaseIdx), slog.Int("constraint_endpoint_index", endpointIdx))
+
 		// If current release is the endpoint, process it.
 		// And if current is after endpoint – proceed with normal flow below
 		if releaseIdx == endpointIdx {
@@ -371,8 +373,15 @@ func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([
 // - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
 // - If no endpoint found in current constraints, return -1.
 func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo, logEntry *log.Logger) int {
+	compliantRelease := -1
+
 	// Pick constraints from the highest pending release that has them.
 	for i := len(releases) - 1; i >= 0; i-- {
+		// compliant release can not be lower or equal deployed
+		if i <= deployed.IndexInReleaseList {
+			break
+		}
+
 		r := releases[i]
 
 		if r.GetPhase() != v1alpha1.ModuleReleasePhasePending {
@@ -383,14 +392,10 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 			continue
 		}
 
-		compliantRelease := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
-		if compliantRelease != -1 {
-			logEntry.Info("from-to release found", slog.Int("index", compliantRelease))
-			return compliantRelease
-		}
+		compliantRelease = p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
 	}
 
-	return -1
+	return compliantRelease
 }
 
 // getFirstCompliantRelease determines the index of the first update constraints compliant release
@@ -437,19 +442,26 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 			}
 
 			rv := r.GetVersion()
+
+			// trying to get first version with the same Major and Minor version as "to" constraint
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
-				if bestIdx == -1 || releases[bestIdx].GetVersion().Patch() < rv.Patch() {
+				if bestIdx == -1 {
 					bestIdx = idx
+
+					continue
 				}
 			}
 
-			if bestIdx != -1 {
-				bestIdxVersion := releases[bestIdx].GetVersion()
-				if bestIdxVersion.Major() < rv.Major() ||
-					bestIdxVersion.Minor() < rv.Minor() ||
-					bestIdxVersion.Patch() < rv.Patch() {
-					bestIdx = idx
-				}
+			if bestIdx == -1 {
+				continue
+			}
+
+			bestIdxVersion := releases[bestIdx].GetVersion()
+
+			if bestIdxVersion.Patch() < rv.Patch() ||
+				bestIdxVersion.Minor() < rv.Minor() ||
+				bestIdxVersion.Major() < rv.Major() {
+				bestIdx = idx
 			}
 		}
 	}
