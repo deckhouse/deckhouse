@@ -410,12 +410,9 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
 	defer span.End()
 
-	md.logger.Info("fetching module release metadata",
+	md.logger.Debug("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("release_channel", releaseChannel),
-	)
-
-	md.logger.Debug("module metadata",
 		slog.String("module_name", moduleName),
 	)
 
@@ -440,12 +437,9 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Cont
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
 	defer span.End()
 
-	md.logger.Info("fetching module release metadata",
+	md.logger.Debug("fetching module release metadata",
 		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
 		slog.String("module_version", moduleVersion),
-	)
-
-	md.logger.Debug("module metadata",
 		slog.String("module_name", moduleName),
 	)
 
