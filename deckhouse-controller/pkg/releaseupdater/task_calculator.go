@@ -394,7 +394,10 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 			continue
 		}
 
-		compliantRelease = p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
+		releaseIndex := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
+		if releaseIndex > compliantRelease {
+			compliantRelease = releaseIndex
+		}
 	}
 
 	return compliantRelease
@@ -455,7 +458,7 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 
 			// trying to get first version with the same Major and Minor version as "to" constraint
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
-				if bestIdx == -1 || releases[bestIdx].GetVersion().Patch() <= rv.Patch() {
+				if bestIdx == -1 || bestIdx < idx {
 					bestIdx = idx
 					logEntry.Debug("found most suitable index for from-to releaseleap",
 						slog.String("suitable_version", "v"+releases[bestIdx].GetVersion().String()),

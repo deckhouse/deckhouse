@@ -81,7 +81,7 @@ metadata:
     modules.deckhouse.io/update-policy: demo
     source: test-source
     status: skipped
-  name: demo-1.69.0
+  name: demo-1.69.3
   resourceVersion: "1004"
 spec:
   moduleName: demo
@@ -89,7 +89,7 @@ spec:
     versions:
     - from: "1.67"
       to: "1.69"
-  version: 1.69.0
+  version: 1.69.3
   weight: 900
 status:
   approved: false
