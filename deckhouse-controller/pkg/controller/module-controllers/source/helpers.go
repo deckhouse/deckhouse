@@ -187,10 +187,10 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	// check the module enabled
+	// check the module enabled - return false immediately for disabled modules
 	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
 		enabledByBundle := false
-		if meta.ModuleDefinition != nil {
+		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Accessibility != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
 		}
 
