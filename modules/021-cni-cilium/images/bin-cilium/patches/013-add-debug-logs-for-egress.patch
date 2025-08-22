@@ -1,0 +1,171 @@
+From 69ea4ef53e4d0b634d24f0d5448cf8c3ebfe3eee Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Wed, 20 Aug 2025 14:29:48 +0300
+Subject: [PATCH] add debug logs for egress
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ operator/watchers/node.go    |  4 ++++
+ pkg/egressgateway/manager.go | 13 +++++++++++++
+ pkg/egressgateway/policy.go  | 13 +++++++++++--
+ 3 files changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/operator/watchers/node.go b/operator/watchers/node.go
+index a7ab5dd1c3..f77ea8b06c 100644
+--- a/operator/watchers/node.go
++++ b/operator/watchers/node.go
+@@ -47,10 +47,12 @@ type nodeGetter struct{}
+ // The return structure should only be used for read purposes and should never
+ // be written into it.
+ func (nodeGetter) GetK8sSlimNode(nodeName string) (*slim_corev1.Node, error) {
++	fmt.Printf("DEBUG GetK8sSlimNode nodeName %v\n", nodeName)
+ 	nodeInterface, exists, err := slimNodeStore.GetByKey(nodeName)
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	fmt.Printf("DEBUG GetK8sSlimNode nodeInterface %v\n", nodeInterface.(*slim_corev1.Node))
+ 	if !exists {
+ 		return nil, k8sErrors.NewNotFound(schema.GroupResource{
+ 			Group:    "core",
+@@ -82,10 +84,12 @@ func nodesInit(wg *sync.WaitGroup, slimClient slimclientset.Interface, stopCh <-
+ 			0,
+ 			cache.ResourceEventHandlerFuncs{
+ 				AddFunc: func(obj interface{}) {
++					fmt.Printf("DEBUG nodesInit AddFunc %v\n", obj)
+ 					key, _ := queueKeyFunc(obj)
+ 					nodeQueue.Add(key)
+ 				},
+ 				UpdateFunc: func(_, newObj interface{}) {
++					fmt.Printf("DEBUG nodesInit UpdateFunc %v\n", newObj)
+ 					key, _ := queueKeyFunc(newObj)
+ 					nodeQueue.Add(key)
+ 				},
+diff --git a/pkg/egressgateway/manager.go b/pkg/egressgateway/manager.go
+index 971d84e3e7..a9774cbfa3 100644
+--- a/pkg/egressgateway/manager.go
++++ b/pkg/egressgateway/manager.go
+@@ -655,10 +655,13 @@ func (manager *Manager) addMissingEgressRules() {
+ 			gatewayIP = ExcludedCIDRIPv4
+ 		}
+ 
++		fmt.Printf("DEBUG addEgressRule before Match %v, %v\n", gwc.egressIP, gatewayIP)
+ 		if policyPresent && policyVal.Match(gwc.egressIP, gatewayIP) {
++			fmt.Printf("DEBUG addEgressRule NOT Matched %v, %v\n", gwc.egressIP, gatewayIP)
+ 			return
+ 		}
+ 
++		fmt.Printf("DEBUG addEgressRule Matched %v, %v\n", gwc.egressIP, gatewayIP)
+ 		logger := log.WithFields(logrus.Fields{
+ 			logfields.SourceIP:        endpointIP,
+ 			logfields.DestinationCIDR: dstCIDR.String(),
+@@ -722,7 +725,9 @@ func (manager *Manager) removeUnusedEgressRules() {
+ // Whenever it encounters an error, it will just log it and move to the next
+ // item, in order to reconcile as many states as possible.
+ func (manager *Manager) reconcileLocked() {
++	fmt.Printf("DEBUG reconcileLocked START\n")
+ 	if !manager.allCachesSynced {
++		fmt.Printf("DEBUG reconcileLocked RETURN 111\n")
+ 		return
+ 	}
+ 
+@@ -731,13 +736,19 @@ func (manager *Manager) reconcileLocked() {
+ 	// we don't know which k8s events/resources were received during the
+ 	// initial k8s sync
+ 	case manager.eventBitmapIsSet(eventUpdateEndpoint, eventDeleteEndpoint, eventUpdateNode, eventDeleteNode, eventK8sSyncDone):
++		fmt.Printf("DEBUG reconcileLocked eventUpdateEndpoint\n")
+ 		manager.updatePoliciesMatchedEndpointIDs()
+ 		fallthrough
+ 	case manager.eventBitmapIsSet(eventAddPolicy, eventDeletePolicy):
++		fmt.Printf("DEBUG reconcileLocked eventAddPolicy\n")
+ 		manager.updatePoliciesBySourceIP()
++	default:
++		fmt.Printf("DEBUG reconcileLocked default - no actions\n")
+ 	}
+ 
++	fmt.Printf("DEBUG reconcileLocked 222\n")
+ 	if manager.eventBitmapIsSet(eventK8sSyncDone, eventAddPolicy, eventDeletePolicy, eventUpdateNode, eventDeleteNode) {
++		fmt.Printf("DEBUG reconcileLocked 333\n")
+ 		manager.regenerateGatewayConfigs()
+ 
+ 		// Sysctl updates are handled by a reconciler, with the initial update attempting to wait some time
+@@ -757,7 +768,9 @@ func (manager *Manager) reconcileLocked() {
+ 
+ 	// The order of the next 2 function calls matters, as by first adding missing policies and
+ 	// only then removing obsolete ones we make sure there will be no connectivity disruption
++	fmt.Printf("DEBUG reconcileLocked 444\n")
+ 	manager.addMissingEgressRules()
++	fmt.Printf("DEBUG reconcileLocked 555\n")
+ 	manager.removeUnusedEgressRules()
+ 
+ 	// clear the events bitmap
+diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
+index 36e8e871ad..6f9a171dc3 100644
+--- a/pkg/egressgateway/policy.go
++++ b/pkg/egressgateway/policy.go
+@@ -102,6 +102,7 @@ func (config *PolicyConfig) updateMatchedEndpointIDs(epDataStore map[endpointID]
+ 	config.matchedEndpoints = make(map[endpointID]*endpointMetadata)
+ 	for _, endpoint := range epDataStore {
+ 		if config.matchesEndpointLabels(endpoint) && config.matchesNodeLabels(nodesAddresses2Labels[endpoint.nodeIP]) {
++			fmt.Printf("DEBUG updateMatchedEndpointIDs endpoint_id: %v\n", endpoint.id)
+ 			config.matchedEndpoints[endpoint.id] = endpoint
+ 		}
+ 	}
+@@ -120,17 +121,21 @@ func (config *PolicyConfig) regenerateGatewayConfig(manager *Manager) {
+ 	policyGwc := config.policyGwConfig
+ 
+ 	for _, node := range manager.nodes {
++		fmt.Printf("DEBUG regenerateGatewayConfig node %v\n", node.Name)
+ 		if !policyGwc.selectsNodeAsGateway(node) {
++			fmt.Printf("DEBUG regenerateGatewayConfig continue %v\n", node.Name)
+ 			continue
+ 		}
+ 
+ 		addr, ok := netipx.FromStdIP(node.GetK8sNodeIP())
+ 		if !ok {
++			fmt.Printf("DEBUG regenerateGatewayConfig continue 222 %v\n", node.Name)
+ 			continue
+ 		}
+ 		gwc.gatewayIP = addr
+ 
+ 		if node.IsLocal() {
++			fmt.Printf("DEBUG regenerateGatewayConfig IsLocal %v\n", node.Name)
+ 			err := gwc.deriveFromPolicyGatewayConfig(policyGwc)
+ 			if err != nil {
+ 				logger := log.WithFields(logrus.Fields{
+@@ -139,9 +144,10 @@ func (config *PolicyConfig) regenerateGatewayConfig(manager *Manager) {
+ 					logfields.EgressIP:                      policyGwc.egressIP,
+ 				})
+ 				logger.WithError(err).Error("Failed to derive policy gateway configuration")
++				fmt.Printf("DEBUG regenerateGatewayConfig IsLocal Failed %v\n", node.Name)
+ 			}
+ 		}
+-
++		fmt.Printf("DEBUG regenerateGatewayConfig DONE %v\n", node.Name)
+ 		break
+ 	}
+ 
+@@ -201,10 +207,12 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
+ // with a boolean value indicating if the CIDR belongs to the excluded ones and
+ // the gatewayConfig of the receiver policy
+ func (config *PolicyConfig) forEachEndpointAndCIDR(f func(netip.Addr, netip.Prefix, bool, *gatewayConfig)) {
+-
++	fmt.Printf("DEBUG forEachEndpointAndCIDR START\n")
+ 	for _, endpoint := range config.matchedEndpoints {
++		fmt.Printf("DEBUG forEachEndpointAndCIDR endpoint %v\n", endpoint.nodeIP)
+ 		for _, endpointIP := range endpoint.ips {
+ 			isExcludedCIDR := false
++			fmt.Printf("DEBUG forEachEndpointAndCIDR endpointIP %v\n", endpointIP)
+ 			for _, dstCIDR := range config.dstCIDRs {
+ 				f(endpointIP, dstCIDR, isExcludedCIDR, &config.gatewayConfig)
+ 			}
+@@ -283,6 +291,7 @@ func ParseCEGP(cegp *v2.CiliumEgressGatewayPolicy) (*PolicyConfig, error) {
+ 			nodeSelectorList = append(
+ 				nodeSelectorList,
+ 				api.NewESFromK8sLabelSelector("", egressRule.NodeSelector))
++			fmt.Printf("DEBUG ParseCEGP nodeSelectorList: %v\n", nodeSelectorList)
+ 		}
+ 		if egressRule.NamespaceSelector != nil {
+ 			prefixedNsSelector := egressRule.NamespaceSelector
+-- 
+2.34.1
+
