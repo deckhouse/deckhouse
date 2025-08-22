@@ -57,19 +57,14 @@ const (
 // ReleaseImageInfoCache provides thread-safe caching for lightweight release metadata
 // Uses LightweightReleaseInfo to minimize memory footprint (1-8KB vs 50-200MB per entry)
 type ReleaseImageInfoCache struct {
-	cache map[string]*cacheEntry
+	cache map[string]*LightweightReleaseInfo
 	mutex sync.RWMutex
-}
-
-type cacheEntry struct {
-	info      *LightweightReleaseInfo
-	timestamp time.Time
 }
 
 // NewReleaseImageInfoCache creates a new cache with optimized settings
 func NewReleaseImageInfoCache() *ReleaseImageInfoCache {
 	return &ReleaseImageInfoCache{
-		cache: make(map[string]*cacheEntry),
+		cache: make(map[string]*LightweightReleaseInfo),
 		mutex: sync.RWMutex{},
 	}
 }
@@ -89,10 +84,7 @@ func (c *ReleaseImageInfoCache) Get(digest string) (*LightweightReleaseInfo, boo
 		return nil, false
 	}
 
-	// Update access statistics
-	entry.timestamp = time.Now()
-
-	return entry.info, true
+	return entry, true
 }
 
 // Set stores LightweightReleaseInfo in cache
@@ -100,10 +92,7 @@ func (c *ReleaseImageInfoCache) Set(digest string, info *LightweightReleaseInfo)
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.cache[digest] = &cacheEntry{
-		info:      info,
-		timestamp: time.Now(),
-	}
+	c.cache[digest] = info
 }
 
 // Clear removes all entries from cache
@@ -111,7 +100,7 @@ func (c *ReleaseImageInfoCache) Clear() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.cache = make(map[string]*cacheEntry)
+	c.cache = make(map[string]*LightweightReleaseInfo)
 }
 
 // GetMemoryUsage estimates cache memory usage in bytes
