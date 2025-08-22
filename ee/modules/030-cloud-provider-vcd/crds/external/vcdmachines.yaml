@@ -29,7 +29,7 @@ spec:
               APIVersion defines the versioned schema of this representation of an object.
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
@@ -37,7 +37,7 @@ spec:
               Servers may infer this from the endpoint the client submits requests to.
               Cannot be updated.
               In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
@@ -47,7 +47,7 @@ spec:
               bootstrapped:
                 description: |-
                   Bootstrapped is true when the kubeadm bootstrapping has been run
-                  against this machine
+                  against this machine.
                 type: boolean
               catalog:
                 description: Catalog hosting templates
@@ -62,8 +62,8 @@ spec:
                 x-kubernetes-int-or-string: true
               enableNvidiaGPU:
                 description: |-
-                  EnableNvidiaGPU is true when a VM should be created with the relevant binaries installed
-                  If true, then an appropriate placement policy should be set
+                  EnableNvidiaGPU is true when a VM should be created with the relevant binaries installed.
+                  If true, then an appropriate placement policy should be set.
                 type: boolean
               extraOvdcNetworks:
                 description: |-
@@ -76,8 +76,8 @@ spec:
                 description: Metadata for the VCDMachine
                 items:
                   description: |-
-                    VCDMachineMetadata defines metadata for the VCDMachine
-                    useful for organizing and categorizing your virtualization inventory
+                    VCDMachineMetadata defines metadata for the VCDMachine.
+                    Useful for organizing and categorizing your virtualization inventory.
                   properties:
                     isSystem:
                       description: Whether the metadata is a system metadata or not.
@@ -126,7 +126,7 @@ spec:
               sizingPolicy:
                 description: |-
                   SizingPolicy is the sizing policy to be used on this machine.
-                  If no sizing policy is specified, default sizing policy will be used to create the nodes
+                  If no sizing policy is specified, default sizing policy will be used to create the nodes.
                 type: string
               storageProfile:
                 description: StorageProfile is the storage profile to be used on this
@@ -138,13 +138,13 @@ spec:
                 type: string
               templateOrg:
                 description: TemplateOrg is the organization of the template OVA that
-                  is to be used
+                  is to be used.
                 type: string
               vmNamingTemplate:
                 description: |-
                   VmNamingTemplate is go template to generate VM names based on Machine and VCDMachine CRs.
-                  Functions of Sprig library are supported. See https://github.com/Masterminds/sprig
-                  Immutable field. machine.Name is used as VM name when this field is empty.
+                  Functions of Sprig library are supported. [See details](https://github.com/Masterminds/sprig).
+                  This is immutable field. If this field is empty, the `machine.Name` is used as the VM name.
                 type: string
             type: object
           status:
@@ -197,16 +197,16 @@ spec:
                       description: |-
                         Severity provides an explicit classification of Reason code, so the users or machines can immediately
                         understand the current situation and act accordingly.
-                        The Severity field MUST be set only when Status=False.
+                        The Severity field **must be set** only when `Status=False`.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
                       description: |-
-                        Type of condition in CamelCase or in foo.example.com/CamelCase.
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
-                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                        Type of condition in CamelCase or in `foo.example.com/CamelCase`.
+                        Many `.condition.type` values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see `.node.status.conditions`), the ability to deconflict is important.
                       type: string
                   required:
                   - lastTransitionTime
