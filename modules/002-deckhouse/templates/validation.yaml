@@ -107,7 +107,7 @@ spec:
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: "heritage-label-objects.deckhouse.io"
+  name: {{ $policyName }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
 spec:
   policyName: {{ $policyName }}
