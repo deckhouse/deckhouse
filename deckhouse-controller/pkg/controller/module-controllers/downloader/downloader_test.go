@@ -115,7 +115,7 @@ func TestReleaseImageInfoCache(t *testing.T) {
 	cache.Set("digest3", info3)
 
 	// Test clearing cache
-	cache.Clear()
+	cache.cache = make(map[string]*LightweightReleaseInfo)
 }
 
 func TestModuleDownloaderCache(t *testing.T) {

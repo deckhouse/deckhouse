@@ -90,23 +90,6 @@ func (c *ReleaseImageInfoCache) Set(digest string, info *LightweightReleaseInfo)
 	c.cache[digest] = info
 }
 
-// Clear removes all entries from cache
-func (c *ReleaseImageInfoCache) Clear() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.cache = make(map[string]*LightweightReleaseInfo)
-}
-
-// GetMemoryUsage estimates cache memory usage in bytes
-func (c *ReleaseImageInfoCache) GetMemoryUsage() int64 {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	// Estimate: ~4KB per entry (metadata + overhead)
-	return int64(len(c.cache)) * 4 * 1024
-}
-
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
