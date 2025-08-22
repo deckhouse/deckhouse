@@ -231,6 +231,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"web":            "imageHash-dashboard-web",
 	},
 	"deckhouse": map[string]interface{}{
+		"init":           "imageHash-deckhouse-init",
 		"webhookHandler": "imageHash-deckhouse-webhookHandler",
 	},
 	"deckhouseTools": map[string]interface{}{
@@ -377,9 +378,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"operator":      "imageHash-operatorTrivy-operator",
 		"reportUpdater": "imageHash-operatorTrivy-reportUpdater",
 		"trivy":         "imageHash-operatorTrivy-trivy",
-	},
-	"podReloader": map[string]interface{}{
-		"podReloader": "imageHash-podReloader-podReloader",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",

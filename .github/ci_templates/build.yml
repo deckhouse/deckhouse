@@ -4,7 +4,7 @@ check_changelog:
   name: Check changelog
   runs-on: ubuntu-latest
   steps:
-  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 4 }!}
+  {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
       run: |
         if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
@@ -134,8 +134,11 @@ steps:
         export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
         # Set cosign auth values
-        export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-        export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+        export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+        export COSIGN_VAULT_KEY="dh-2025-aug"
+        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+        AUTH_ROLE="dh-signer_dh-signer"
 
         # The Git tag may contain a '+' sign, so use slugify for this situation.
         # Slugify doesn't change a tag with safe-only characters.
@@ -147,8 +150,11 @@ steps:
         export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
         # Set cosign auth values
-        export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-        export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+        export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+        export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+        export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+        export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+        AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
         # Determine image tag
         if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -158,28 +164,21 @@ steps:
         # Use it as image tag. Add suffix to not overlap with PRs in main repo.
         IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
       fi
+      # Set cosign auth values
+      export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+      ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+      export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+      ACTIONS_ID_TOKEN="null" #clear value
+      AUTH_ROLE="null" #clear value
+
       type werf && source $(werf ci-env github --verbose --as-file)
-
-      werf config render > werf-rendered.yaml
-
       werf build \
-        --dev \
-        --config werf-rendered.yaml \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json
 
       cp images_tags_werf.json "$TEMP_WORKDIR"
-
-      # Encrypting the rendered build file before dumping it into artifacts
-      echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea" > id_rsa.pub
-      ssh-keygen -f id_rsa.pub -e -m PEM > id_rsa.pub.pem
-      openssl rand -out key.bin 32
-      openssl enc -aes-256-cbc -pbkdf2 -salt -in werf-rendered.yaml -out ${TEMP_WORKDIR}/werf-rendered.yaml.enc -pass file:./key.bin
-      openssl pkeyutl -encrypt -pubin -inkey id_rsa.pub.pem -in key.bin -out ${TEMP_WORKDIR}/key.bin.enc
-      rm -f ./key.bin
-      rm -f ./werf-rendered.yaml
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -232,8 +231,6 @@ steps:
       name: build_report_${{ env.WERF_ENV }}
       path: |
         ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-        ${{ steps.build.outputs.build_report_dir }}/werf-rendered.yaml.enc
-        ${{ steps.build.outputs.build_report_dir }}/key.bin.enc
 
 # </template: build_template>
 {!{ end }!}

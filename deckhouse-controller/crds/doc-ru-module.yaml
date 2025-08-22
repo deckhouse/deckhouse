@@ -54,4 +54,4 @@ spec:
                 description: Настройки доступности модуля.
                 properties:
                   editions:
-                    description: Настройки изданий.
+                    description: Настройки работы модуля в редакциях Deckhouse.

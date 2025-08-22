@@ -19,15 +19,17 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache bash git binutils
   install:
   - cd /src
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
