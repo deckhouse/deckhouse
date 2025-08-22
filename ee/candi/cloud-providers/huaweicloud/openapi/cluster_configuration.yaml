@@ -218,6 +218,17 @@ apiVersions:
                 Partial contents of the fields.
               properties:
                 <<: *instanceClassProperties
+            volumeTypeMap:
+              description: |
+                A dictionary of disk types for storing Kubernetes configuration files.
+
+                Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
+
+                If the `rootDiskSize` parameter is specified, the same disk type will be used for the VM's boot drive.
+
+                We recommend using the fastest disks provided by the provider in all cases.
+
+                If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `fast-eu-1a` disk type, while master-1, master-3 will have the `fast-eu-1b` disk type.
       layout:
         description: |
           The layout name.
