@@ -4,7 +4,7 @@
   {{- $mountPoints := ($.Files.Get (printf "%smodules/%s-%s/images/%s/mount-points.yaml" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) | fromYaml) }}
   {{- range $v := $mountPoints.dirs }}
 - add: /tools/mounts/mountdir
-  to: {{ $v }}
+  to: {{ trimSuffix "/" $v }}
   owner: 64535
   group: 64535
   stageDependencies:
