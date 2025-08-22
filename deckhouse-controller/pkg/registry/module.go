@@ -28,9 +28,9 @@ import (
 	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v2"
 
-	modRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/go_lib/cache"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -91,7 +91,7 @@ func (svc *moduleReleaseService) ListModuleTags(ctx context.Context, moduleName 
 	return ls, err
 }
 
-func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*modRelease.ModuleReleaseMetadata, error) {
+func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleName, releaseChannel string) (*cache.ModuleReleaseMetadata, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, moduleName, "release"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -118,8 +118,8 @@ func (svc *moduleReleaseService) GetModuleRelease(ctx context.Context, moduleNam
 	return moduleMetadata, nil
 }
 
-func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modRelease.ModuleReleaseMetadata, error) {
-	var meta = new(modRelease.ModuleReleaseMetadata)
+func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*cache.ModuleReleaseMetadata, error) {
+	var meta = new(cache.ModuleReleaseMetadata)
 
 	rc, err := cr.Extract(img)
 	if err != nil {

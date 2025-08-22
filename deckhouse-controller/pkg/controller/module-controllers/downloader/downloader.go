@@ -27,10 +27,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
@@ -41,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
+	"github.com/deckhouse/deckhouse/go_lib/cache"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -54,42 +53,6 @@ const (
 	tracerName = "downloader"
 )
 
-// ReleaseImageInfoCache provides thread-safe caching for lightweight release metadata
-// Uses LightweightReleaseInfo to minimize memory footprint (1-8KB vs 50-200MB per entry)
-type ReleaseImageInfoCache struct {
-	cache map[string]*LightweightReleaseInfo
-	mutex sync.RWMutex
-}
-
-// NewReleaseImageInfoCache creates a new cache with optimized settings
-func NewReleaseImageInfoCache() *ReleaseImageInfoCache {
-	return &ReleaseImageInfoCache{
-		cache: make(map[string]*LightweightReleaseInfo),
-		mutex: sync.RWMutex{},
-	}
-}
-
-// Get retrieves LightweightReleaseInfo from cache if it exists
-func (c *ReleaseImageInfoCache) Get(digest string) (*LightweightReleaseInfo, bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	entry, exists := c.cache[digest]
-	if !exists {
-		return nil, false
-	}
-
-	return entry, true
-}
-
-// Set stores LightweightReleaseInfo in cache
-func (c *ReleaseImageInfoCache) Set(digest string, info *LightweightReleaseInfo) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	c.cache[digest] = info
-}
-
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
@@ -99,18 +62,11 @@ type ModuleDownloader struct {
 	logger          *log.Logger
 
 	// Cache for ReleaseImageInfo to avoid repeated downloads
-	releaseInfoCache *ReleaseImageInfoCache
+	releaseInfoCache *cache.ReleaseImageInfoCache
 }
 
-func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option, cache ...*ReleaseImageInfoCache) *ModuleDownloader {
-	var releaseInfoCache *ReleaseImageInfoCache
-
-	// If no cache provided, create a new one (for backward compatibility)
-	if len(cache) == 0 || cache[0] == nil {
-		releaseInfoCache = NewReleaseImageInfoCache()
-	} else {
-		releaseInfoCache = cache[0]
-	}
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
+	releaseInfoCache := cache.GetGlobalCache() // Always use global cache
 
 	return &ModuleDownloader{
 		dc:                   dc,
@@ -475,9 +431,13 @@ func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.C
 	}
 
 	// Create lightweight version for caching (saves 99.9% memory)
-	lightweightInfo := &LightweightReleaseInfo{
-		Digest:   imgDigest,
-		Metadata: &moduleMetadata,
+	lightweightInfo := &cache.LightweightReleaseInfo{
+		Digest: imgDigest,
+		Metadata: &cache.ModuleReleaseMetadata{
+			Version:          moduleMetadata.Version,
+			Changelog:        moduleMetadata.Changelog,
+			ModuleDefinition: moduleMetadata.ModuleDefinition,
+		},
 	}
 
 	// Store only lightweight metadata in cache (not the heavy Image object)
@@ -548,11 +508,11 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (ModuleReleaseMetadata, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (cache.ModuleReleaseMetadata, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadata")
 	defer span.End()
 
-	var meta ModuleReleaseMetadata
+	var meta cache.ModuleReleaseMetadata
 
 	rc, err := cr.Extract(img)
 	if err != nil {
@@ -644,22 +604,8 @@ func isRel(candidate, target string) bool {
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
-type ModuleReleaseMetadata struct {
-	Version *semver.Version `json:"version"`
-
-	Changelog        map[string]any          `json:"-"`
-	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
-}
-
-// LightweightReleaseInfo contains only metadata and digest, without the heavy Image object
-// This reduces memory usage by 99.9% (from ~50-200MB to ~1-8KB per cache entry)
-type LightweightReleaseInfo struct {
-	Metadata *ModuleReleaseMetadata
-	Digest   crv1.Hash
-}
-
 type ReleaseImageInfo struct {
-	Metadata *ModuleReleaseMetadata
+	Metadata *cache.ModuleReleaseMetadata
 	Image    crv1.Image
 	Digest   crv1.Hash
 }
