@@ -176,7 +176,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 		},
 		{
 			name:           "reject approved release with migrated modules not found",
-			enabledModules: []string{"module1", "module2"},
+			enabledModules: []string{"module1", "module2", "non-existent-module"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 			},
@@ -190,7 +190,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 		},
 		{
 			name:           "allow approved release with migrated modules found",
-			enabledModules: []string{"module1", "module2"},
+			enabledModules: []string{"module1", "module2", "migrated-module1", "migrated-module2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleSource("source1", []string{"migrated-module1", "migrated-module2"}),
@@ -227,6 +227,34 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: true,
 			description: "Approved releases with whitespace-only migrated modules should be allowed",
+		},
+		{
+			name:           "reject when migrated module is disabled",
+			enabledModules: []string{"module1"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "disabled-module",
+			}),
+			wantAllowed: false,
+			wantMessage: "migrated module",
+			description: "Releases with migrated modules for disabled modules should be rejected",
+		},
+		{
+			name:           "reject when enabled migrated module exists and disabled missing",
+			enabledModules: []string{"enabled-module"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "enabled-module, disabled-module",
+			}),
+			wantAllowed: false,
+			wantMessage: "migrated module",
+			description: "Releases with mixed enabled/disabled migrated modules should be rejected",
 		},
 	}
 

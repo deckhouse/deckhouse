@@ -1158,12 +1158,45 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 
-			// Check that v1.49.0 is superseded and v1.50.0 is deployed
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
 			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
+		})
+
+		suite.Run("Disabled migrated module is rejected", func() {
+			suite.setupController("disabled-migrated-module.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
+		})
+
+		suite.Run("Mixed enabled and disabled migrated modules are rejected", func() {
+			suite.setupController("mixed-enabled-disabled.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
+		})
+
+		suite.Run("Enabled module not found in ModuleSource is rejected", func() {
+			suite.setupController("enabled-module-not-found.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
+			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 	})
 }
@@ -1283,7 +1316,14 @@ func (suite *ControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer
 type stubModulesManager struct{}
 
 func (s stubModulesManager) GetEnabledModuleNames() []string {
-	return []string{"cert-manager", "prometheus"}
+	return []string{
+		"cert-manager",
+		"prometheus",
+		"test-module-1",
+		"test-module-2",
+		"test-module-missing",
+		"enabled-module-not-found",
+	}
 }
 
 func (s stubModulesManager) IsModuleEnabled(_ string) bool {

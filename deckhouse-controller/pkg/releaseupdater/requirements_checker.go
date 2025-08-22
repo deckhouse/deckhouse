@@ -138,7 +138,7 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
-			newMigratedModulesCheck(k8sclient, metricStorage, config.logger),
+			newMigratedModulesCheck(k8sclient, enabledModules, metricStorage, config.logger),
 		},
 		logger: config.logger,
 	}, nil
@@ -386,17 +386,19 @@ func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleR
 type migratedModulesCheck struct {
 	name string
 
-	k8sclient     client.Client
-	metricStorage metric.Storage
-	logger        *log.Logger
+	k8sclient      client.Client
+	metricStorage  metric.Storage
+	logger         *log.Logger
+	enabledModules set.Set
 }
 
-func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
+func newMigratedModulesCheck(k8sclient client.Client, enabledModules []string, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
-		name:          "migrated modules check",
-		k8sclient:     k8sclient,
-		metricStorage: metricStorage,
-		logger:        logger,
+		name:           "migrated modules check",
+		k8sclient:      k8sclient,
+		metricStorage:  metricStorage,
+		logger:         logger,
+		enabledModules: set.New(enabledModules...),
 	}
 }
 
@@ -434,6 +436,12 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	}
 
 	for _, moduleName := range modules {
+		// Reject release if migrated module is disabled - migration cannot occur
+		if c.enabledModules.Size() > 0 && !c.enabledModules.Has(moduleName) {
+			c.logger.Warn("migrated module is disabled, cannot migrate", slog.String("module", moduleName))
+			return fmt.Errorf("migrated module %q is disabled, migration cannot occur", moduleName)
+		}
+
 		found := false
 
 		for _, source := range moduleSources.Items {
