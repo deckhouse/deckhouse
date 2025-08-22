@@ -354,7 +354,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			release: createDeckhouseRelease("test-release", true, map[string]string{
 				"migratedModules": "module-a, module-b , module-c",
 			}),
-			enabledModules: []string{"module1"},
+			enabledModules: []string{"module-a", "module-b", "module-c"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleSource("source1", []string{"module-a", "module-b"}),
