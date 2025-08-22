@@ -302,6 +302,12 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				return fmt.Errorf("ensure module release: %w", err)
 			}
 
+			// do not check sequence if module has from-to mechanism
+			if f.targetReleaseMeta.ModuleDefinition.Update != nil &&
+				len(f.targetReleaseMeta.ModuleDefinition.Update.Versions) > 0 {
+				return nil
+			}
+
 			// if next version is not in sequence with actual
 			if !isUpdatingSequence(current, ver) {
 				f.logger.Warn("version sequence is broken", slog.String("previous", "v"+current.String()), slog.String("next", "v"+ver.String()))
