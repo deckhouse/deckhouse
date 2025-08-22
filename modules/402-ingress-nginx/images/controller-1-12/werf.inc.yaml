@@ -8,7 +8,7 @@
 ---
 {{ $luaProtobufVersion := "0.5.1" }}
 {{ $luaIconvVersion := "7-3" }}
-{{ $protobufVersion := "v24.4" }}
+{{ $protobufVersion := "v29.4" }}
 {{ $abseilCppVersion := "20240722.1" }}
 {{ $grpcVersion := "v1.62.1" }}
 {{ $re2Version := "2024-07-02" }}
@@ -27,7 +27,7 @@
 {{ $xzVersion := "v5.8.1" }}
 {{ $libxml2Version := "v2.14.3" }}
 {{ $yajlVersion := "2.1.0" }}
-{{ $gccVersion := "12.1.0" }}
+{{ $gccVersion := "releases/gcc-14.2.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
@@ -262,11 +262,11 @@ from: dev-registry.deckhouse.io/base_images@sha256:c02c38947580c8214057ceed5659a
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:52ba2f8aaad0b3ca4e3da3741a902530a8cbe4da5eeddeb9c607ce720a482de1
+from: localhost:5001/base-images:249640dd869c1d9d7f7361f046f0ccd32fbedeadd255c25be44eb0f5-1755849050707
 final: false
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: builder/alpine-3.21
+fromImage: builder/alpine-3.22
 fromCacheVersion: "2025-08-20.02"
 final: false
 import:
@@ -358,17 +358,18 @@ import:
   add: /usr
   to: /base_images/yajl
   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }}
-#   add: /usr
-#   to: /base_images/gcc
-#   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }}
+  add: /usr
+  to: /base_images/gcc
+  before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patch gcc g++ make cmake linux-headers autoconf automake libtool bash pkgconfig ninja # build-base
+  - apk add --no-cache patch make linux-headers autoconf automake libtool bash pkgconfig ninja musl-dev
+  - apk add --no-cache cmake binutils # These packages bring the so-libraries used for compilation (for future replacement)
   install:
   - cp -a /base_images/protobuf/* /usr
   - cp -a /base_images/grpc/* /usr
@@ -389,9 +390,9 @@ shell:
   - cp -a /base_images/libxml2/* /usr
   - cp -a /base_images/yajl/* /usr
   - cp -a /base_images/openssl/* /usr
-  # - cp -a /base_images/gcc/lib64/libgcc_s.so* /usr/lib
-  # - cp -a /base_images/gcc/lib64/libstdc++.so* /usr/lib
-  # - cp -a /base_images/gcc/* /usr # FIXME delete
+  # - cp -a /base_images/gcc/lib64/libgcc_s.so* /usr/lib # FIXME delete
+  # - cp -a /base_images/gcc/lib64/libstdc++.so* /usr/lib # FIXME delete
+  - cp -a /base_images/gcc/* /usr
   - mkdir -p /usr/lib64
   - ln -sf /usr/lib/libssl.so /usr/lib64/libssl.so
   - ln -sf /usr/lib/libcrypto.so /usr/lib64/libcrypto.so
@@ -763,7 +764,7 @@ shell:
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: builder/alpine-3.21
+fromImage: builder/alpine-3.22
 fromCacheVersion: "2025-08-20.02"
 final: false
 mount:
@@ -789,16 +790,16 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv-{{ $luaIconvVersion }}
   add: /
   to: /chroot/usr/local
-  # owner: "64535"
-  # group: "64535"
+  # owner: "64535" # FIXME
+  # group: "64535" # FIXME
   includePaths:
   - lib/lua/5.1/iconv.so
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf-{{ $luaProtobufVersion }}
   add: /
   to: /chroot/usr/local
-  # owner: "64535"
-  # group: "64535"
+  # owner: "64535" # FIXME
+  # group: "64535" # FIXME
   includePaths:
   - lib/lua/5.1/pb.so
   - share/lua/5.1/protoc.lua
@@ -826,8 +827,8 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /chroot
-  # owner: "64535"
-  # group: "64535"
+  # owner: "64535" # FIXME
+  # group: "64535" # FIXME
   includePaths:
   - usr/lib/libc.so
   - lib/ld-musl-x86_64.so.1
@@ -934,7 +935,7 @@ import:
   - usr/local/lib/libluajit-5.1.so*
   - usr/local/modsecurity/lib/libmodsecurity.so*
   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }}
+# - image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }} # FIXME delete
 #   add: /usr/lib64
 #   to: /chroot/usr/lib
 #   # owner: "64535"
@@ -994,7 +995,7 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine-3.21 # FIXME replace!
+# fromImage: builder/alpine-3.22 # FIXME replace!
 fromImage: base/distroless
 fromCacheVersion: "2025-08-20.02"
 mount:
