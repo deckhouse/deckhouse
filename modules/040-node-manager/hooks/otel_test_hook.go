@@ -60,7 +60,7 @@ func otelTestHookLogic(input *go_hook.HookInput, dc dependency.Container) error 
 		input.Logger.Error("HTTP request failed",
 			slog.String("error", err.Error()),
 			slog.String("url", testURL))
-		// Не возвращаем ошибку, так как endpoint может быть недоступен
+
 		return nil
 	}
 	defer resp.Body.Close()
