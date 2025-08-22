@@ -329,6 +329,9 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		// clear process error
 		availableModule.Error = ""
+
+		// TODO: remove this emptify after 1.75
+		// nolint: staticcheck
 		availableModule.PullError = ""
 
 		// clear overridden
