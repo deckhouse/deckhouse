@@ -679,13 +679,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1035,13 +1031,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1391,13 +1383,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1747,13 +1735,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2103,13 +2087,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2459,13 +2439,9 @@ jobs:
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
-            # For release branches, also push images to dev registry replicating prod-registry structure for testing upgrades
+            # For release branches, also push release-channel to dev
             if [[ "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              RELEASE_BRANCH_TAG="${BASH_REMATCH[1]}.0"
-              publish_image 'dev' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${RELEASE_BRANCH_TAG}"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone:${RELEASE_BRANCH_TAG}"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel:${RELEASE_BRANCH_TAG}"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
