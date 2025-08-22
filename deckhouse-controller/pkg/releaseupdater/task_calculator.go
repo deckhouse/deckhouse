@@ -210,7 +210,9 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	if deployedReleaseInfo != nil {
 		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
-		logger.Debug("from-to release found", slog.Int("release_index", releaseIdx), slog.Int("constraint_endpoint_index", endpointIdx))
+		if endpointIdx >= 0 {
+			logger.Debug("from-to release found", slog.String("constraint_endpoint_version", "v"+releases[endpointIdx].GetVersion().String()))
+		}
 
 		// If current release is the endpoint, process it.
 		// And if current is after endpoint – proceed with normal flow below
@@ -407,6 +409,10 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 
 	// Check each constraint for inclusion of deployed version
 	for _, c := range constraints {
+		logEntry.Debug("constrains found",
+			slog.String("from_ver", c.From),
+			slog.String("to_ver", c.To),
+		)
 		fromVer, err := semver.NewVersion(c.From)
 		if err != nil {
 			logEntry.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
@@ -441,40 +447,22 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 				continue
 			}
 
+			if bestIdx >= idx {
+				continue
+			}
+
 			rv := r.GetVersion()
 
 			// trying to get first version with the same Major and Minor version as "to" constraint
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
-				if bestIdx == -1 {
+				if bestIdx == -1 || releases[bestIdx].GetVersion().Patch() <= rv.Patch() {
 					bestIdx = idx
-
-					continue
+					logEntry.Debug("found most suitable index for from-to releaseleap",
+						slog.String("suitable_version", "v"+releases[bestIdx].GetVersion().String()),
+						slog.String("from_ver", c.From),
+						slog.String("to_ver", c.To),
+					)
 				}
-			}
-
-			if bestIdx == -1 {
-				continue
-			}
-
-			bestIdxVersion := releases[bestIdx].GetVersion()
-
-			if bestIdxVersion.Major() < toVer.Major() {
-				bestIdx = idx
-
-				continue
-			}
-
-			if bestIdxVersion.Major() == toVer.Major() &&
-				bestIdxVersion.Minor() < toVer.Minor() {
-				bestIdx = idx
-
-				continue
-			}
-
-			if bestIdxVersion.Major() == toVer.Major() &&
-				bestIdxVersion.Minor() == toVer.Minor() &&
-				bestIdxVersion.Patch() < rv.Patch() {
-				bestIdx = idx
 			}
 		}
 	}

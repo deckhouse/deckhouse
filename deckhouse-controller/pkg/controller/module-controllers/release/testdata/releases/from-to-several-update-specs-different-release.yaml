@@ -63,7 +63,7 @@ spec:
       - from: 1.67
         to: "1.69"
       - from: 1.67
-        to: 1.70
+        to: "1.70"
 status:
   phase: Pending
 ---

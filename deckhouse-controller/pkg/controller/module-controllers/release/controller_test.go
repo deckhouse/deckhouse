@@ -693,14 +693,14 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
 				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.3"))
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
 				require.NoError(suite.T(), err)
 			})
 		})
 
-		// 7) Several update specs (different from constrainted release is approved and matches constraint)
+		// 7) Several update specs (different from maximum leap release is approved and matches constraint)
 		suite.Run("Different from constrainted release is approved and matches constraint", func() {
 			testData := suite.fetchTestFileData("from-to-several-update-specs-different-release.yaml")
 			suite.setupReleaseController(testData)
