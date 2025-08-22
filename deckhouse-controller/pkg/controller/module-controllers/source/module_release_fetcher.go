@@ -35,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -302,14 +303,34 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 				return fmt.Errorf("ensure module release: %w", err)
 			}
 
-			// do not check sequence if module has from-to mechanism
-			if f.targetReleaseMeta.ModuleDefinition.Update != nil &&
-				len(f.targetReleaseMeta.ModuleDefinition.Update.Versions) > 0 {
+			// is ensured module release has from-to mechanism - check previous version for sequence
+			if m.ModuleDefinition.Update != nil &&
+				len(m.ModuleDefinition.Update.Versions) > 0 {
+				err := isUpdatingSequenceWithFromTo(current, f.targetReleaseMeta.ModuleDefinition.Update.Versions)
+				if err != nil {
+					return fmt.Errorf("from-to check from ensured module: not sequential version: %w", err)
+				}
+
 				return nil
 			}
 
 			// if next version is not in sequence with actual
 			if !isUpdatingSequence(current, ver) {
+				// is target module release has from-to mechanism - check previous version for sequence
+				if f.targetReleaseMeta.ModuleDefinition.Update != nil &&
+					len(f.targetReleaseMeta.ModuleDefinition.Update.Versions) > 0 {
+					err := isUpdatingSequenceWithFromTo(current, f.targetReleaseMeta.ModuleDefinition.Update.Versions)
+					if err == nil {
+						logger.Info("from-to check from target module: version is in sequence")
+
+						return nil
+					}
+
+					logger.Warn("from-to check from target module: not sequential version", slog.String("previous", "v"+current.String()), log.Err(err))
+
+					return fmt.Errorf("from-to check from target module: not sequential version: prev 'v%s' next 'v%s': %w", current.String(), ver.String(), err)
+				}
+
 				f.logger.Warn("version sequence is broken", slog.String("previous", "v"+current.String()), slog.String("next", "v"+ver.String()))
 
 				return fmt.Errorf("not sequential version: prev 'v%s' next 'v%s'", current.String(), ver.String())
@@ -356,6 +377,37 @@ func isUpdatingSequence(a, b *semver.Version) bool {
 	}
 
 	return true
+}
+
+func isUpdatingSequenceWithFromTo(a *semver.Version, constraints []moduletypes.ModuleUpdateVersion) error {
+	var errs error
+
+	for _, c := range constraints {
+		fromVer, err := semver.NewVersion(c.From)
+		if err != nil {
+			errs = errors.Join(err, fmt.Errorf("parse constraint from '%s': %w", c.From, err))
+
+			continue
+		}
+
+		toVer, err := semver.NewVersion(c.To)
+		if err != nil {
+			errs = errors.Join(err, fmt.Errorf("parse constraint to '%s': %w", c.To, err))
+
+			continue
+		}
+
+		if a.Compare(fromVer) >= 0 && a.Compare(toVer) < 0 {
+			// 'a' is in [from, to) range
+			return nil
+		}
+	}
+
+	if errs != nil {
+		return fmt.Errorf("parse constraint: %w", errs)
+	}
+
+	return nil
 }
 
 func (f *ModuleReleaseFetcher) listModuleReleases(ctx context.Context, moduleName string) ([]*v1alpha1.ModuleRelease, error) {
