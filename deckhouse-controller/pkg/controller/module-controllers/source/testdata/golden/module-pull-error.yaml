@@ -18,7 +18,7 @@ spec:
 status:
   message: Some errors occurred. Inspect status for details
   modules:
-  - checksum: sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879
+  - checksum: 'sha256:'
     name: enabledmodule
     version: v1.2.3
   - name: errormodule
@@ -41,7 +41,7 @@ metadata:
   labels:
     module: enabledmodule
     modules.deckhouse.io/update-policy: ""
-    release-checksum: b6365ee5e36c5566f48b03bbfb5886b9
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
     source: test-source-1
   name: enabledmodule-v1.2.3
   ownerReferences:
