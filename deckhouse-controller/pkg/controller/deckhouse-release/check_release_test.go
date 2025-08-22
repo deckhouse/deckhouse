@@ -77,7 +77,7 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		LayersStub: func() ([]v1.Layer, error) {
 			return []v1.Layer{&fakeLayer{}, &fakeLayer{
 				FilesContent: map[string]string{
-					"version.json": fmt.Sprintf("{`version`: `%s`}", testDeckhouseVersion),
+					"version.json": fmt.Sprintf(`{"version": "%s"}`, testDeckhouseVersion),
 				}}}, nil
 		}}
 	suite.Run("Have new deckhouse image", func() {
@@ -630,14 +630,64 @@ disable:
 	})
 
 	suite.Run("Correct links in registry", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.15.0",
+			"v1.16.0",
+			"v1.17.0",
+			"v1.18.0",
+		}, nil)
+
+		// Mock digest for release channel (stable)
 		dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879", nil)
+
+		// Mock image for release channel (stable) - this returns v1.18.0 as target version
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
 				return []v1.Layer{
 					&fakeLayer{},
 					&fakeLayer{FilesContent: map[string]string{
-						"version.json": `{"version":"v1.16.0"}`,
+						"version.json": `{"version":"v1.18.0","requirements":{"kubernetes":">= 1.27"}}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		// Mock images for individual versions to get their metadata for step-by-step update
+		// v1.16.0 - intermediate version
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.16.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.16.0","requirements":{"kubernetes":">= 1.27"}}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		// v1.17.0 - intermediate version
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.17.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.17.0","requirements":{"kubernetes":">= 1.27"}}`,
+					}},
+				}, nil
+			},
+		}, nil)
+
+		// v1.18.0 - target version (also needed for step-by-step update)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.18.0").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{
+					&fakeLayer{},
+					&fakeLayer{FilesContent: map[string]string{
+						"version.json": `{"version":"v1.18.0","requirements":{"kubernetes":">= 1.27"}}`,
 					}},
 				}, nil
 			},

@@ -398,7 +398,6 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 
 	if releaseMetadata != nil {
 		release.Spec.Requirements = releaseMetadata.Requirements
-		release.Spec.ChangelogLink = fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version)
 	}
 
 	err = client.IgnoreAlreadyExists(f.k8sClient.Create(ctx, release))
