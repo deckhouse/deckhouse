@@ -262,6 +262,11 @@ func (mr *ModuleRelease) GetWeight() uint32 {
 	return mr.Spec.Weight
 }
 
+// GetUpdateSpec returns the optional update spec of the related release
+func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
+	return mr.Spec.UpdateSpec
+}
+
 func (c Changelog) DeepCopy() Changelog {
 	if c == nil {
 		return nil
@@ -296,19 +301,19 @@ type ModuleReleaseSpec struct {
 	Version    string `json:"version,omitempty"`
 	Weight     uint32 `json:"weight,omitempty"`
 
-	ApplyAfter        *metav1.Time               `json:"applyAfter,omitempty"`
-	Requirements      *ModuleReleaseRequirements `json:"requirements,omitempty"`
-	UpdateConstraints *ModuleUpdateConstraints   `json:"updateConstraints,omitempty"`
-	Changelog         Changelog                  `json:"changelog,omitempty"`
+	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
+	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
+	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
+	Changelog    Changelog                  `json:"changelog,omitempty"`
 }
 
-type ModuleUpdateConstraints struct {
-	Versions []ModuleUpdateConstraint `json:"versions,omitempty"`
+type UpdateSpec struct {
+	Versions []UpdateConstraint `json:"versions,omitempty"`
 }
 
-// ModuleUpdateConstraint defines a semver range [from, to] where From is the minimal version that can upgrade directly
+// UpdateConstraint defines a semver range [from, to] where From is the minimal version that can upgrade directly
 // to the To endpoint. Values support major.minor or full semver.
-type ModuleUpdateConstraint struct {
+type UpdateConstraint struct {
 	From string `json:"from"`
 	To   string `json:"to"`
 }

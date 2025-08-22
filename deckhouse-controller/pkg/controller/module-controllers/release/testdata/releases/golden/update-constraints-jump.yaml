@@ -155,7 +155,7 @@ metadata:
   resourceVersion: "1005"
 spec:
   moduleName: demo
-  updateConstraints:
+  update:
     versions:
     - from: "1.67"
       to: "1.75"

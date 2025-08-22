@@ -69,7 +69,7 @@ spec:
   moduleName: demo
   version: 1.71.0
   weight: 900
-  updateConstraints:
+  update:
     versions:
       - from: 1.67
         to: 1.71
