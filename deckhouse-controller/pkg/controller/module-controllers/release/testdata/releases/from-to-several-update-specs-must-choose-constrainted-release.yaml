@@ -41,6 +41,10 @@ spec:
   moduleName: demo
   version: 1.69.0
   weight: 900
+  update:
+    versions:
+      - from: 1.67
+        to: "1.69"
 status:
   phase: Pending
 ---
@@ -61,7 +65,9 @@ spec:
   update:
     versions:
       - from: 1.67
-        to: 1.70
+        to: "1.69"
+      - from: 1.67
+        to: "1.70"
 status:
   phase: Pending
 ---

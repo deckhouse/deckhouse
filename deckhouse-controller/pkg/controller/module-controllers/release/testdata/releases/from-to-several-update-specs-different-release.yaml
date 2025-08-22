@@ -32,6 +32,8 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
   name: demo-1.69.0
   labels:
     module: demo
@@ -47,8 +49,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    modules.deckhouse.io/approved: "true"
   name: demo-1.70.0
   labels:
     module: demo
@@ -60,6 +60,8 @@ spec:
   weight: 900
   update:
     versions:
+      - from: 1.67
+        to: "1.69"
       - from: 1.67
         to: 1.70
 status:

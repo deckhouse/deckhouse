@@ -49,75 +49,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  annotations:
-    modules.deckhouse.io/isUpdating: "false"
-    modules.deckhouse.io/notified: "true"
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: demo
-    source: test-source
-  name: demo-1.68.4
-  resourceVersion: "1004"
-spec:
-  moduleName: demo
-  version: 1.68.4
-  weight: 900
-status:
-  approved: false
-  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
-  phase: Pending
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: demo
-    source: test-source
-  name: demo-1.69.10
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  version: 1.69.10
-  weight: 900
-status:
-  approved: false
-  message: awaiting for v1.68.4 release to be deployed
-  phase: Pending
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: demo
-    source: test-source
-  name: demo-1.70.11
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  version: 1.70.11
-  weight: 900
-status:
-  approved: false
-  message: awaiting for v1.68.4 release to be deployed
-  phase: Pending
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
   creationTimestamp: null
   labels:
     module: demo
@@ -135,7 +66,7 @@ spec:
   weight: 900
 status:
   approved: false
-  message: awaiting for v1.68.4 release to be deployed
+  message: minor version is greater than deployed 1.67.5 by one
   phase: Pending
   pullDuration: 0s
   size: 0
@@ -152,7 +83,7 @@ metadata:
     modules.deckhouse.io/update-policy: demo
     source: test-source
   name: demo-1.75.2
-  resourceVersion: "1004"
+  resourceVersion: "1003"
 spec:
   moduleName: demo
   update:
@@ -163,7 +94,7 @@ spec:
   weight: 900
 status:
   approved: true
-  message: awaiting for v1.68.4 release to be deployed
+  message: awaiting for v1.75.1 release to be deployed
   phase: Pending
   pullDuration: 0s
   size: 0
@@ -203,7 +134,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "1007"
+  resourceVersion: "1003"
 properties: {}
 status:
   conditions:

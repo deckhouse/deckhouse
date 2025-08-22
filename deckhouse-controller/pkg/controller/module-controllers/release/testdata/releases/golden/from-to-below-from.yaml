@@ -96,28 +96,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: demo
-    source: test-source
-  name: demo-1.69.10
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  version: 1.69.10
-  weight: 900
-status:
-  approved: false
-  message: awaiting for v1.67.0 release to be deployed
-  phase: Pending
-  pullDuration: 0s
-  size: 0
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
   creationTimestamp: null

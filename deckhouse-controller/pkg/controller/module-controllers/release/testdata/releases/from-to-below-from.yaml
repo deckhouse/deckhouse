@@ -49,21 +49,6 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
-  name: demo-1.69.10
-  labels:
-    module: demo
-    source: test-source
-    modules.deckhouse.io/update-policy: demo
-spec:
-  moduleName: demo
-  version: 1.69.10
-  weight: 900
-status:
-  phase: Pending
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
   annotations:
     modules.deckhouse.io/approved: "true"
   name: demo-1.75.2

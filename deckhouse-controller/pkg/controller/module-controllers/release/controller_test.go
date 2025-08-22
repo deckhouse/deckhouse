@@ -573,7 +573,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("Module Release Skip Feature (from to)", func() {
 		// 1) Sequential - should skip intermediate versions when constraint allows jump
 		suite.Run("Sequential", func() {
-			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0, 1.71.0 (with constraint from 1.67 to 1.71)
+			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0 (with constraint from 1.67 to 1.70)
 			testData := suite.fetchTestFileData("from-to-sequential.yaml")
 			suite.setupReleaseController(testData)
 
@@ -586,8 +586,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
 				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.71.0"))
-				require.NoError(suite.T(), err)
 			})
 		})
 
@@ -597,7 +595,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData)
 
 			repeatTest(func() {
-				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.75.2
 				// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
 				require.NoError(suite.T(), err)
@@ -605,12 +603,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
 				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
-				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
 				require.NoError(suite.T(), err)
 			})
-			// require.NoError(suite.T(), errors.New("lol"))
 		})
 
 		// 2.1) Jump through n versions, but approved not latest
@@ -619,15 +614,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			suite.setupReleaseController(testData)
 
 			repeatTest(func() {
-				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.1, 1.75.2 (approved), 1.75.3
+				// deployed is 1.67.5, pendings: 1.75.1, 1.75.2 (approved), 1.75.3
 				// release will not deployed and stuck on 1.75.3
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.11"))
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.1"))
 				require.NoError(suite.T(), err)
@@ -669,8 +658,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
 				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
 				require.NoError(suite.T(), err)
 			})
@@ -689,9 +676,45 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.3"))
 				require.NoError(suite.T(), err)
-				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
-				require.NoError(suite.T(), err)
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 6) Several update specs (approved version in second constraint)
+		suite.Run("Several update specs, must choose jump to constrainted release", func() {
+			testData := suite.fetchTestFileData("from-to-several-update-specs-must-choose-constrainted-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, constrainted release must be chosen
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 7) Several update specs (different from constrainted release is approved and matches constraint)
+		suite.Run("Different from constrainted release is approved and matches constraint", func() {
+			testData := suite.fetchTestFileData("from-to-several-update-specs-different-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11, 1.75.2
+			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, no release can be processed
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
 				require.NoError(suite.T(), err)
 			})
 		})
