@@ -3,8 +3,10 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
   name: test-source
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   registry:
     ca: ""
@@ -22,91 +24,95 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
   creationTimestamp: null
   labels:
     module: demo
-    modules.deckhouse.io/update-policy: ""
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: skipped
+  name: demo-1.66.23
+  resourceVersion: "1002"
+spec:
+  moduleName: demo
+  version: 1.66.23
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: skipped
+  name: demo-1.67.5
+  resourceVersion: "1002"
+spec:
+  moduleName: demo
+  version: 1.67.5
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: skipped
+  name: demo-1.68.3
+  resourceVersion: "1002"
+spec:
+  moduleName: demo
+  version: 1.68.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Skipped
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+    status: deployed
   name: demo-1.69.10
-  resourceVersion: "1003"
+  resourceVersion: "1000"
 spec:
   moduleName: demo
   version: 1.69.10
   weight: 900
 status:
-  approved: true
-  message: ""
-  phase: Skipped
-  pullDuration: 0s
-  size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: ""
-    source: test-source
-    status: skipped
-  name: demo-1.70.11
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  version: 1.70.11
-  weight: 900
-status:
-  approved: true
-  message: ""
-  phase: Skipped
-  pullDuration: 0s
-  size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    modules.deckhouse.io/update-policy: ""
-    source: test-source
-    status: skipped
-  name: demo-1.75.2
-  resourceVersion: "1003"
-spec:
-  moduleName: demo
-  update:
-    versions:
-    - from: "1.67"
-      to: "1.75"
-  version: 1.75.2
-  weight: 900
-status:
-  approved: true
-  message: ""
-  phase: Skipped
-  pullDuration: 0s
-  size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleRelease
-metadata:
-  creationTimestamp: null
-  labels:
-    module: demo
-    source: test-source
-  name: demo-1.76.0
-  resourceVersion: "999"
-spec:
-  moduleName: demo
-  version: 1.76.0
-  weight: 900
-status:
-  approved: true
+  approved: false
   message: ""
   phase: Deployed
   pullDuration: 0s
@@ -114,11 +120,42 @@ status:
   transitionTime: "2021-12-08T08:34:01Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: demo
+    modules.deckhouse.io/update-policy: demo
+    source: test-source
+  name: demo-1.75.2
+  resourceVersion: "1003"
+spec:
+  moduleName: demo
+  update:
+    versions:
+    - from: "1.66"
+      to: "1.68"
+  version: 1.75.2
+  weight: 900
+status:
+  approved: false
+  message: minor version is greater than deployed 1.69.10 by one
+  phase: Pending
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "999"
+  resourceVersion: "1000"
 properties: {}
 status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
   phase: Ready

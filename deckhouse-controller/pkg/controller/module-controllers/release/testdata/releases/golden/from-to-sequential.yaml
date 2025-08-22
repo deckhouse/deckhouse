@@ -25,11 +25,12 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   creationTimestamp: null
-  deletionTimestamp: "2025-08-20T11:52:26Z"
+  deletionTimestamp: "2025-08-22T11:04:30Z"
   finalizers:
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: superseded
   name: demo-1.67.0
@@ -49,21 +50,24 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   labels:
     module: demo
-    modules.deckhouse.io/update-policy: ""
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: skipped
   name: demo-1.68.0
-  resourceVersion: "1003"
+  resourceVersion: "1005"
 spec:
   moduleName: demo
   version: 1.68.0
   weight: 900
 status:
-  approved: true
-  message: skipped by update constraints
+  approved: false
+  message: ""
   phase: Skipped
   pullDuration: 0s
   size: 0
@@ -75,18 +79,18 @@ metadata:
   creationTimestamp: null
   labels:
     module: demo
-    modules.deckhouse.io/update-policy: ""
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: skipped
   name: demo-1.69.0
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: demo
   version: 1.69.0
   weight: 900
 status:
-  approved: true
-  message: skipped by update constraints
+  approved: false
+  message: ""
   phase: Skipped
   pullDuration: 0s
   size: 0
@@ -98,18 +102,18 @@ metadata:
   creationTimestamp: null
   labels:
     module: demo
-    modules.deckhouse.io/update-policy: ""
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: skipped
   name: demo-1.70.0
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: demo
   version: 1.70.0
   weight: 900
 status:
-  approved: true
-  message: skipped by update constraints
+  approved: false
+  message: ""
   phase: Skipped
   pullDuration: 0s
   size: 0
@@ -119,6 +123,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    modules.deckhouse.io/approved: "true"
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
@@ -126,11 +131,11 @@ metadata:
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: demo
-    modules.deckhouse.io/update-policy: ""
+    modules.deckhouse.io/update-policy: demo
     source: test-source
     status: deployed
   name: demo-1.71.0
-  resourceVersion: "1004"
+  resourceVersion: "1003"
 spec:
   moduleName: demo
   update:
@@ -152,7 +157,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: demo
-  resourceVersion: "1000"
+  resourceVersion: "1002"
 properties: {}
 status:
   conditions:

@@ -11,7 +11,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    release.deckhouse.io/approved: "true"
+    modules.deckhouse.io/approved: "true"
   labels:
     module: echo
     modules.deckhouse.io/update-policy: echo

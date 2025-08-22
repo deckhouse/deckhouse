@@ -206,24 +206,24 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	isLatestRelease := releaseQueueDepth == 0
 	isPatch := true
 
-	// // If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
-	// if deployedReleaseInfo != nil {
-	// 	endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo)
+	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
+	if deployedReleaseInfo != nil {
+		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
-	// 	// If current release is the endpoint, process it.
-	// 	// And if current is after endpoint – proceed with normal flow below
-	// 	if releaseIdx == endpointIdx {
-	// 		logger.Debug("processing as endpoint due to updateConstraints")
+		// If current release is the endpoint, process it.
+		// And if current is after endpoint – proceed with normal flow below
+		if releaseIdx == endpointIdx {
+			logger.Debug("processing as endpoint due to update constraints")
 
-	// 		return &Task{
-	// 			TaskType:            Process,
-	// 			IsPatch:             false,
-	// 			IsLatest:            endpointIdx == len(releases)-1,
-	// 			DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
-	// 			QueueDepth:          min(len(releases)-releaseIdx, 3),
-	// 		}, nil
-	// 	}
-	// }
+			return &Task{
+				TaskType:            Process,
+				IsPatch:             false,
+				IsLatest:            endpointIdx == len(releases)-1,
+				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
+				QueueDepth:          min(len(releases)-releaseIdx, 3),
+			}, nil
+		}
+	}
 
 	// check previous release
 	// only for awaiting purpose
@@ -370,7 +370,7 @@ func (p *TaskCalculator) listReleases(ctx context.Context, moduleName string) ([
 // - Look into the processing release's spec.update (if exists)
 // - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
 // - If no endpoint found in current constraints, return -1.
-func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo) int {
+func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release, deployed *releaseInfo, logEntry *log.Logger) int {
 	// Pick constraints from the highest pending release that has them.
 	for i := len(releases) - 1; i >= 0; i-- {
 		r := releases[i]
@@ -379,11 +379,14 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 			continue
 		}
 
-		if r.GetUpdateSpec() != nil && len(r.GetUpdateSpec().Versions) > 0 {
-			compliantRelease := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed)
-			if compliantRelease != -1 {
-				return compliantRelease
-			}
+		if r.GetUpdateSpec() == nil || len(r.GetUpdateSpec().Versions) == 0 {
+			continue
+		}
+
+		compliantRelease := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
+		if compliantRelease != -1 {
+			logEntry.Info("from-to release found", slog.Int("index", compliantRelease))
+			return compliantRelease
 		}
 	}
 
@@ -394,40 +397,57 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 // Rules:
 // - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
 // - If no endpoint found in current constraints, return -1.
-func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, constraints []v1alpha1.UpdateConstraint, deployed *releaseInfo) int {
+func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, constraints []v1alpha1.UpdateConstraint, deployed *releaseInfo, logEntry *log.Logger) int {
 	bestIdx := -1
 
 	// Check each constraint for inclusion of deployed version
 	for _, c := range constraints {
 		fromVer, err := semver.NewVersion(c.From)
 		if err != nil {
-			p.log.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
+			logEntry.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
 
 			continue
 		}
 
 		toVer, err := semver.NewVersion(c.To)
 		if err != nil {
-			p.log.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
+			logEntry.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
 
 			continue
 		}
 
 		// if deployed version is lower than "from" constraint
-		if fromVer.Compare(deployed.Version) < 0 {
+		if deployed.Version.Compare(fromVer) < 0 {
+			logEntry.Debug("skip from constraint because deployed version is lower", slog.String("from_version", "v"+fromVer.String()))
+
 			continue
 		}
 
 		// if deployed version is greater or equal "to" constraint
-		if toVer.Compare(deployed.Version) >= 0 {
+		if deployed.Version.Compare(toVer) >= 0 {
+			logEntry.Debug("skip to constraint because deployed version higher or equal", slog.String("to_version", "v"+toVer.String()))
+
 			continue
 		}
 
 		// Find highest patch within target minor/major
 		for idx, r := range releases {
+			if idx <= deployed.IndexInReleaseList {
+				continue
+			}
+
 			rv := r.GetVersion()
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
 				if bestIdx == -1 || releases[bestIdx].GetVersion().Patch() < rv.Patch() {
+					bestIdx = idx
+				}
+			}
+
+			if bestIdx != -1 {
+				bestIdxVersion := releases[bestIdx].GetVersion()
+				if bestIdxVersion.Major() < rv.Major() ||
+					bestIdxVersion.Minor() < rv.Minor() ||
+					bestIdxVersion.Patch() < rv.Patch() {
 					bestIdx = idx
 				}
 			}
