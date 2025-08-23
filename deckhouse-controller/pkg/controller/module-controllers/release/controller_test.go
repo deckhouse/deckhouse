@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -569,11 +571,11 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		i      int
 	)
 
-	// Setting restartReason field in real code causes the process to reboot.
+	// Setting needsRestart field in real code causes the process to reboot.
 	// And at the next startup, Reconcile will be called for existing objects.
 	// Therefore, this condition emulates the behavior in real code.
-	for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
-		suite.ctr.restartReason = ""
+	for result.Requeue || result.RequeueAfter > 0 || atomic.LoadInt64(&suite.ctr.needsRestart) != 0 {
+		atomic.StoreInt64(&suite.ctr.needsRestart, 0)
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getModuleRelease(releaseName)
@@ -906,6 +908,157 @@ func TestValidateModule(t *testing.T) {
 		},
 	})
 	check("validation/virtualization", true, nil)
+}
+
+func TestConcurrentModuleRestartFlow(t *testing.T) {
+	t.Run("real world scenario: 3 concurrent modules wait for all to complete before restart", func(t *testing.T) {
+		rec := &reconciler{
+			log:                log.NewNop(),
+			activeApplyCount:   0,
+			hasAppliedReleases: 0,
+			needsRestart:       0,
+			delayTimer:         time.NewTimer(time.Second),
+		}
+
+		const numModules = 3
+		var wg sync.WaitGroup
+		moduleStarted := make(chan struct{}, numModules)
+		allowCompletion := make(chan struct{})
+		restartTriggered := int64(0)
+
+		// Mock the restart condition check function
+		checkRestartCondition := func() bool {
+			return atomic.LoadInt64(&rec.needsRestart) == 1 &&
+				atomic.LoadInt64(&rec.activeApplyCount) == 0 &&
+				atomic.LoadInt64(&rec.hasAppliedReleases) == 1
+		}
+
+		// Simulate restart checker (like restartLoop)
+		go func() {
+			ticker := time.NewTicker(10 * time.Millisecond)
+			defer ticker.Stop()
+			for range ticker.C {
+				if checkRestartCondition() {
+					atomic.StoreInt64(&restartTriggered, 1)
+					return
+				}
+			}
+		}()
+
+		// Simulate ApplyRelease for multiple modules
+		mockApplyRelease := func(_ int) {
+			atomic.AddInt64(&rec.activeApplyCount, 1)
+			defer func() {
+				atomic.AddInt64(&rec.activeApplyCount, -1)
+				atomic.StoreInt64(&rec.hasAppliedReleases, 1)
+			}()
+
+			moduleStarted <- struct{}{}
+			<-allowCompletion
+			// Simulate module work
+			time.Sleep(5 * time.Millisecond)
+		}
+
+		// Start concurrent modules
+		for i := 0; i < numModules; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				mockApplyRelease(id)
+			}(i)
+		}
+
+		// Wait for all modules to start
+		for i := 0; i < numModules; i++ {
+			<-moduleStarted
+		}
+
+		// Trigger restart request while modules are still running
+		rec.emitRestart("module updates deployed")
+
+		// Verify restart is requested but not triggered while modules are active
+		assert.Equal(t, int64(1), atomic.LoadInt64(&rec.needsRestart))
+		assert.Equal(t, int64(numModules), atomic.LoadInt64(&rec.activeApplyCount))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&restartTriggered))
+
+		// Allow modules to complete
+		close(allowCompletion)
+		wg.Wait()
+
+		// Give restart checker time to detect the condition
+		time.Sleep(50 * time.Millisecond)
+
+		// Verify restart was triggered after all modules completed
+		assert.Equal(t, int64(1), atomic.LoadInt64(&restartTriggered))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&rec.activeApplyCount))
+		assert.Equal(t, int64(1), atomic.LoadInt64(&rec.hasAppliedReleases))
+	})
+
+	t.Run("restart is delayed until all modules complete even with staggered completion", func(t *testing.T) {
+		rec := &reconciler{
+			log:                log.NewNop(),
+			activeApplyCount:   0,
+			hasAppliedReleases: 0,
+			needsRestart:       0,
+			delayTimer:         time.NewTimer(time.Second),
+		}
+
+		restartChecks := int64(0)
+		restartTriggered := int64(0)
+
+		// Mock the restart condition check
+		checkRestartCondition := func() bool {
+			atomic.AddInt64(&restartChecks, 1)
+			if atomic.LoadInt64(&rec.needsRestart) == 1 &&
+				atomic.LoadInt64(&rec.activeApplyCount) == 0 &&
+				atomic.LoadInt64(&rec.hasAppliedReleases) == 1 {
+				atomic.StoreInt64(&restartTriggered, 1)
+				return true
+			}
+			return false
+		}
+
+		// Simulate restart checker
+		go func() {
+			ticker := time.NewTicker(5 * time.Millisecond)
+			defer ticker.Stop()
+			for range ticker.C {
+				if checkRestartCondition() {
+					return
+				}
+			}
+		}()
+
+		// Start first module
+		atomic.AddInt64(&rec.activeApplyCount, 1)
+
+		// Start second module after delay
+		go func() {
+			time.Sleep(20 * time.Millisecond)
+			atomic.AddInt64(&rec.activeApplyCount, 1)
+			defer func() {
+				atomic.AddInt64(&rec.activeApplyCount, -1)
+				atomic.StoreInt64(&rec.hasAppliedReleases, 1)
+			}()
+			time.Sleep(30 * time.Millisecond) // Module 2 work
+		}()
+
+		// Request restart
+		rec.emitRestart("staggered module deployment")
+
+		// Complete first module after some time
+		time.Sleep(40 * time.Millisecond)
+		atomic.AddInt64(&rec.activeApplyCount, -1)
+		atomic.StoreInt64(&rec.hasAppliedReleases, 1)
+
+		// Wait for second module to complete and restart to trigger
+		time.Sleep(60 * time.Millisecond)
+
+		// Verify restart was triggered only after all modules completed
+		assert.Equal(t, int64(1), atomic.LoadInt64(&restartTriggered))
+		assert.Equal(t, int64(0), atomic.LoadInt64(&rec.activeApplyCount))
+		assert.Greater(t, atomic.LoadInt64(&restartChecks), int64(5), "restart should have been checked multiple times")
+	})
 }
 
 const repeatCount = 3
