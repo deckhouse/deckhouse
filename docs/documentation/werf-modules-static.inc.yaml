@@ -151,6 +151,7 @@ git:
     - '**/.helm'
     - documentation/pages
     - documentation/config
+    - documentation/assets
 {{ if eq .ModuleName "documentation" }}
     - site/pages/*.html
     - site/_includes/footer.html
