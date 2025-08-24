@@ -1,4 +1,4 @@
-# version=v0.5.22
+# version=v0.5.23
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:6181c0922d240f806ed69842e0c35b2881db7e28f936b00241969fbe39545cde" # fromImage: builder/scratch
@@ -12,6 +12,7 @@ base/ruby: "sha256:719de57eac489bcf722e91a73544acd9cf7b2ebc66a23f779435bba1b6260
 base/ruby-bundler: "sha256:ad6c18648d59dc9f9e4852d9ea36aed47b2760ec671fc90a98d763680ebf0bf0" # fromImage: builder/alpine-build-artifact-3.21
 base/ruby-bundler-v3_4_5: "sha256:ad6c18648d59dc9f9e4852d9ea36aed47b2760ec671fc90a98d763680ebf0bf0" # fromImage: builder/alpine-build-artifact-3.21
 base/ruby-v3_4_5: "sha256:719de57eac489bcf722e91a73544acd9cf7b2ebc66a23f779435bba1b6260c99" # fromImage: base/distroless
+base/scratch: "sha256:cfac1c6b53f9365ee59ffe94c90211253f2a85ece372a6a9dfad61f4e0ab0bea" # fromImage: builder/scratch
 base/shell-operator: "sha256:ff0be2d53ec022cbf20fd31ba26cf5364e36aab373ebbc37683f41d215d6594c" # fromImage: builder/scratch
 base/shell-operator-v1.9.1: "sha256:ff0be2d53ec022cbf20fd31ba26cf5364e36aab373ebbc37683f41d215d6594c" # fromImage: builder/scratch
 builder/alpine: "sha256:590dc522ebb14efc901a9f232fa285d04808bfeb834b9dfeddcbec0a6e45a6bd" # from: alpine:3.22.1
@@ -180,6 +181,8 @@ tools/findutils: "sha256:2da1da4150b5169ff38b2131aabcee5a9aaf62128e8864fdc7eec59
 tools/findutils-v4.10.0: "sha256:2da1da4150b5169ff38b2131aabcee5a9aaf62128e8864fdc7eec59218ef2942" # fromImage: builder/scratch
 tools/gawk: "sha256:7a4d90ea45c245deb10e659e62a717ca89e7e06d3c93de08bb6e9dc5451b7ef4" # fromImage: builder/scratch
 tools/gawk-v5.3.2: "sha256:7a4d90ea45c245deb10e659e62a717ca89e7e06d3c93de08bb6e9dc5451b7ef4" # fromImage: builder/scratch
+tools/git: "sha256:11c4c61d3a96138c43224e67e4d6ae498a0913f26df3704ea4e21226431a47c0" # fromImage: builder/scratch
+tools/git-v2.50.1: "sha256:11c4c61d3a96138c43224e67e4d6ae498a0913f26df3704ea4e21226431a47c0" # fromImage: builder/scratch
 tools/grep: "sha256:285b55f452307f4b1ff9982660abdf8a73bd66d4795fd09d74fa48705969e919" # fromImage: builder/scratch
 tools/grep-grep-3.11: "sha256:285b55f452307f4b1ff9982660abdf8a73bd66d4795fd09d74fa48705969e919" # fromImage: builder/scratch
 tools/iproute2: "sha256:b5a9f11235c6c2ebdce03d9526afe220d57251c06825c454c0e4fa8a8834eb30" # fromImage: builder/scratch
@@ -202,11 +205,13 @@ tools/luarocks5-1: "sha256:738fc4ad1792386136229abb7e6ef34d6175c669927ae9c497442
 tools/luarocks5-1-v3.12.2: "sha256:738fc4ad1792386136229abb7e6ef34d6175c669927ae9c49744295f4a6fac89" # fromImage: builder/scratch
 tools/lvm2: "sha256:4925d84b8e746705c0f952645fc524a0954ab7504d3d3b5721c2da9effff94f6" # fromImage: builder/scratch
 tools/lvm2-v2_03_31: "sha256:4925d84b8e746705c0f952645fc524a0954ab7504d3d3b5721c2da9effff94f6" # fromImage: builder/scratch
+tools/memcached: "sha256:cc6cfe665fd44405a62f711a4c3df6ed425d0063a3491a0665d7b5d9f333b9f2" # fromImage: builder/scratch
+tools/memcached-1.6.39: "sha256:cc6cfe665fd44405a62f711a4c3df6ed425d0063a3491a0665d7b5d9f333b9f2" # fromImage: builder/scratch
 tools/nfs-utils: "sha256:64ea1cc4a9329d3308b1e1e58f3e91f95f32ad7c90165a6bf54987b99394d797" # fromImage: builder/scratch
 tools/nfs-utils-nfs-utils-2-8-2: "sha256:64ea1cc4a9329d3308b1e1e58f3e91f95f32ad7c90165a6bf54987b99394d797" # fromImage: builder/scratch
 tools/nginx: "sha256:cb5eaed246862c800952f29ed7df0b32560d5c3470b2b73af3af3f221f2dd952" # fromImage: builder/scratch
-tools/nginx-njs: "sha256:5d1fd5d76998522d4513b00b4d01c0af8f76018d460bb0dadbb770fcff5db876" # fromImage: builder/scratch
-tools/nginx-njs-release-1.28.0: "sha256:5d1fd5d76998522d4513b00b4d01c0af8f76018d460bb0dadbb770fcff5db876" # fromImage: builder/scratch
+tools/nginx-njs: "sha256:25c1ca378f8c22df3a149bf46f3851c3913b96a4be6117731111352fddd96488" # fromImage: builder/scratch
+tools/nginx-njs-release-1.28.0: "sha256:25c1ca378f8c22df3a149bf46f3851c3913b96a4be6117731111352fddd96488" # fromImage: builder/scratch
 tools/nginx-release-1.28.0: "sha256:cb5eaed246862c800952f29ed7df0b32560d5c3470b2b73af3af3f221f2dd952" # fromImage: builder/scratch
 tools/openssl: "sha256:b62c1a04192ba4605b92f068d5fa21f7d05d9478946d6feee0449a57f96cebc7" # fromImage: builder/scratch
 tools/openssl-openssl-3.5.1: "sha256:b62c1a04192ba4605b92f068d5fa21f7d05d9478946d6feee0449a57f96cebc7" # fromImage: builder/scratch

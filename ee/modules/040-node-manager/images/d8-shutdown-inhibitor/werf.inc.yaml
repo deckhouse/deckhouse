@@ -15,7 +15,7 @@ git:
     - '**/*'
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/scratch
+fromImage: base/scratch
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /

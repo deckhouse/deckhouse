@@ -1410,23 +1410,6 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/flow-schema/faq.html
-            - title:
-                en: pod-reloader
-                ru: pod-reloader
-              moduleName: pod-reloader
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/pod-reloader/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/pod-reloader/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/pod-reloader/configuration.html
     - title:
         en: Security
         ru: Безопасность

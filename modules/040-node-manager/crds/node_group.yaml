@@ -1607,6 +1607,7 @@ spec:
                         - Support for `CgroupsV2`.
                         - Linux kernel version `5.8` or newer.
                         - Systemd version `244` or newer.
+                        - Support for `erofs` kernel module.
                       properties:
                         maxConcurrentDownloads:
                           type: integer

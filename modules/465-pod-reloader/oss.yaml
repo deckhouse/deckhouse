@@ -1,5 +1,0 @@
-- name: RELOADER
-  link: https://github.com/stakater/Reloader
-  description: Reloader watches for ConfigMap and Secret and detects if there are changes in data of these objects. After change detection reloader performs rolling upgrade on relevant Pods via associated Deployment, DaemonSet and StatefulSet.
-  logo: /images/logos/reloader.jpg
-  license: Apache License 2.0

@@ -3,7 +3,9 @@
 {{- $containerd2runc := dict "1.7.27" "1.2.5" "2.1.3" "1.3.0" }}
 {{- $containerd_integrity_patches_version := "2" }}
 
-# calculate base image for terraform-auto-exporter and terraform-state-exporteer
+# calculate additional build options for containerd
+# skip for v1 and not CSE. Now we calculate namespaces for integrity check
+# from /tools/build_includes/integrity-check-namespaces.yaml file
 # . is dict with keys:
 #   rootContext - context of template. Should contain Files and Env (werf env) keys
 #   isV2 - bool value that indicates that we render container v2 template
@@ -48,7 +50,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
-fromImage: builder/golang-bookworm
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -62,14 +64,19 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "false" }}
   {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
+{{- else }}
+  - apt-get update && apt-get install libseccomp-devel -y
+{{- end }}
   - mkdir -p /out
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
-  - make COMMIT="$(cat COMMIT)" static
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `make COMMIT="$(cat COMMIT)" static`) | indent 6 }}
   - mv runc /out/runc
   - chown -R 64535:64535 /out
   - chmod 755 /out/runc
@@ -111,7 +118,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-fromCacheVersion: "2025-06-24.2"
+fromCacheVersion: "2025-08-19.1"
 fromImage: common/src-artifact
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
@@ -137,8 +144,6 @@ shell:
   - alias cp='cp'
   - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
-  - echo "Patches list:"
-  - ls -lh /patches
 {{- end }}
   - git clone --depth=1 --branch v{{ $containerd_version }} $(cat /run/secrets/SOURCE_REPO)/containerd/containerd.git /src/containerd
   - cd /src/containerd

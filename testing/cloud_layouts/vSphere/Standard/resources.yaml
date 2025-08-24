@@ -7,8 +7,8 @@ spec:
   numCPUs: 4
   memory: 8192
   rootDiskSize: 40
-  mainNetwork: DPortGroup-lab-vms
-  datastore: SPB-5/vsan-spb-5-datastore
+  mainNetwork: DPortGroup-MSK1-MGMT-240-VLAN-240-192.168.240.0[24]
+  datastore: MSK-1/vsan-msk-1-datastore
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -17,7 +17,7 @@ metadata:
 spec:
   cloudInstances:
     zones:
-    - spb5-zone
+    - e2e-zone-msk1
     classReference:
       kind: VsphereInstanceClass
       name: autoscaler
@@ -42,8 +42,8 @@ spec:
   numCPUs: 4
   memory: 8192
   rootDiskSize: 40
-  mainNetwork: DPortGroup-lab-vms
-  datastore: SPB-5/vsan-spb-5-datastore
+  mainNetwork: DPortGroup-MSK1-MGMT-240-VLAN-240-192.168.240.0[24]
+  datastore: MSK-1/vsan-msk-1-datastore
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
@@ -53,7 +53,7 @@ spec:
   nodeType: CloudEphemeral
   cloudInstances:
     zones:
-    - spb5-zone
+    - e2e-zone-msk1
     minPerZone: 1
     maxPerZone: 1
     classReference:

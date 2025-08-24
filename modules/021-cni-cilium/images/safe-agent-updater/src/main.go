@@ -30,10 +30,12 @@ import (
 )
 
 const (
-	ciliumNS             = "d8-cni-cilium"
-	generationAnnotation = "safe-agent-updater-daemonset-generation"
-	scanInterval         = 3 * time.Second
-	scanIterations       = 20
+	ciliumNS                     = "d8-cni-cilium"
+	generationAnnotation         = "safe-agent-updater-daemonset-generation"
+	migrationSucceededAnnotation = "network.deckhouse.io/cilium-1-17-migration-succeeded"
+	migrationRequiredAnnotation  = "network.deckhouse.io/cilium-1-17-migration-disruptive-update-required"
+	scanInterval                 = 3 * time.Second
+	scanIterations               = 20
 )
 
 func main() {
@@ -46,11 +48,44 @@ func main() {
 	if len(nodeName) == 0 {
 		log.Fatalf("[SafeAgentUpdater] Failed to get env NODE_NAME.")
 	}
-	currentAgentPodName, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(kubeClient, nodeName)
+	desiredAgentImageHash := os.Getenv("CILIUM_AGENT_DESIRED_IMAGE_HASH")
+	if len(desiredAgentImageHash) == 0 {
+		log.Fatalf("[SafeAgentUpdater] Failed to get env CILIUM_AGENT_DESIRED_IMAGE_HASH.")
+	}
+	currentAgentPodName, currentAgentImageHash, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(kubeClient, nodeName)
 	if err != nil {
 		log.Fatal(err)
 	}
 	if !isCurrentAgentPodGenerationDesired {
+		if isMigrationSucceeded(kubeClient, nodeName) {
+			log.Infof("[SafeAgentUpdater] The 1.17-migration-disruptive-update already succeeded")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if isCurrentImageEqUpcoming(desiredAgentImageHash, currentAgentImageHash) {
+			log.Infof("[SafeAgentUpdater] The current agent image is the same as in the upcoming update, so the 1.17-migration-disruptive-update is no needed.")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else if areSTSPodsPresentOnNode(kubeClient, nodeName) {
+			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, and sts pods are present on node, so the 1.17-migration-disruptive-update is needed")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "true")
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = waitUntilDisruptionApproved(kubeClient, nodeName)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, but sts pods are not present on node, so the 1.17-migration-disruptive-update is no needed")
+			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 		err = deletePod(kubeClient, currentAgentPodName)
 		if err != nil {
 			log.Fatal(err)
@@ -59,18 +94,26 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		err = setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, "")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
+	if err != nil {
+		log.Fatal(err)
 	}
 	log.Infof("[SafeAgentUpdater] Finished and exit")
 }
 
-func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, isCurrentAgentPodGenerationDesired bool, err error) {
+func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, currentAgentImageHash string, isCurrentAgentPodGenerationDesired bool, err error) {
 	ciliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNS).Get(
 		context.TODO(),
 		"agent",
 		metav1.GetOptions{},
 	)
 	if err != nil {
-		return "", false, fmt.Errorf(
+		return "", "", false, fmt.Errorf(
 			"[SafeAgentUpdater] Failed to get DaemonSets %s/agent. Error: %v",
 			ciliumNS,
 			err,
@@ -79,7 +122,7 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 
 	desiredAgentGeneration := ciliumAgentDS.Spec.Template.Annotations[generationAnnotation]
 	if len(desiredAgentGeneration) == 0 {
-		return "", false, fmt.Errorf(
+		return "", "", false, fmt.Errorf(
 			"[SafeAgentUpdater] DaemonSets %s/agent doesn't have annotation %s",
 			ciliumNS,
 			generationAnnotation,
@@ -98,7 +141,7 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 		},
 	)
 	if err != nil {
-		return "", false, fmt.Errorf(
+		return "", "", false, fmt.Errorf(
 			"[SafeAgentUpdater] Failed to list pods on same node. Error: %v",
 			err,
 		)
@@ -111,12 +154,12 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 	)
 	switch {
 	case len(ciliumAgentPodsOnSameNode.Items) == 0:
-		return "", false, fmt.Errorf(
+		return "", "", false, fmt.Errorf(
 			"[SafeAgentUpdater] There aren't agent pods on node %s",
 			nodeName,
 		)
 	case len(ciliumAgentPodsOnSameNode.Items) > 1:
-		return "", false, fmt.Errorf(
+		return "", "", false, fmt.Errorf(
 			"[SafeAgentUpdater] There are more than one running agent pods on node %s",
 			nodeName,
 		)
@@ -140,15 +183,97 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 			desiredAgentGeneration,
 			currentAgentGeneration,
 		)
-		return currentPod.Name, true, nil
+		return currentPod.Name, currentPod.Spec.Containers[0].Image, true, nil
 	}
 	log.Infof(
 		"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
 		desiredAgentGeneration,
 		currentAgentGeneration,
 	)
-	return currentPod.Name, false, nil
+	return currentPod.Name, currentPod.Spec.Containers[0].Image, false, nil
 
+}
+
+func isMigrationSucceeded(kubeClient kubernetes.Interface, nodeName string) bool {
+	node, err := kubeClient.CoreV1().Nodes().Get(
+		context.TODO(),
+		nodeName,
+		metav1.GetOptions{},
+	)
+	if err != nil {
+		log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v.", nodeName, err)
+		return false
+	}
+	if val, ok := node.Annotations[migrationSucceededAnnotation]; ok && val == "" {
+		return true
+	}
+	return false
+}
+
+func isCurrentImageEqUpcoming(desiredAgentImageHash, currentAgentImageHash string) bool {
+	return desiredAgentImageHash == currentAgentImageHash
+}
+
+func areSTSPodsPresentOnNode(kubeClient kubernetes.Interface, nodeName string) bool {
+	allPodsOnNode, err := kubeClient.CoreV1().Pods("").List(
+		context.TODO(),
+		metav1.ListOptions{
+			FieldSelector: "spec.nodeName=" + nodeName,
+		},
+	)
+	if err != nil {
+		log.Errorf("[SafeAgentUpdater] Failed to list pods on same node. Error: %v.", err)
+		return false
+	}
+	for _, pod := range allPodsOnNode.Items {
+		for _, ownerRef := range pod.OwnerReferences {
+			if ownerRef.Kind == "StatefulSet" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func setAnnotationToNode(kubeClient kubernetes.Interface, nodeName string, annotationKey string, annotationValue string) error {
+	node, err := kubeClient.CoreV1().Nodes().Get(
+		context.TODO(),
+		nodeName,
+		metav1.GetOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
+	}
+	if node.Annotations == nil {
+		node.Annotations = make(map[string]string)
+	}
+	node.Annotations[annotationKey] = annotationValue
+	_, err = kubeClient.CoreV1().Nodes().Update(
+		context.TODO(),
+		node,
+		metav1.UpdateOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("[SafeAgentUpdater] Failed to update node %s. Error: %v", nodeName, err)
+	}
+	return nil
+}
+
+func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName string) error {
+	for {
+		node, err := kubeClient.CoreV1().Nodes().Get(
+			context.TODO(),
+			nodeName,
+			metav1.GetOptions{},
+		)
+		if err != nil {
+			log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
+		} else if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
+			return nil
+		}
+		log.Infof("[SafeAgentUpdater] Waiting until disruption update on node %s was approved", nodeName)
+		time.Sleep(10 * time.Second)
+	}
 }
 
 func deletePod(kubeClient kubernetes.Interface, podName string) error {

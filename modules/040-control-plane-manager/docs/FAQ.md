@@ -581,7 +581,7 @@ CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. 
 Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
@@ -746,6 +746,12 @@ In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#how-to-manual
 
 Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
 
+1. Set the correct access permissions for the backup file:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Set full path for snapshot file and for the tool into environmental variables:
 
    ```shell
@@ -770,13 +776,20 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+         # Uncomment the fragment below to set limits for the container if the node does not have enough resources to run it.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -795,6 +808,9 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        volumes:
        - name: etcddir
          emptyDir: {}
+         # Use the snippet below instead of emptyDir: {} to set limits for the container if the node's resources are insufficient to run it.
+         # emptyDir:
+         #  sizeLimit: 500Mi
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT
