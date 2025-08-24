@@ -100,11 +100,17 @@ shell:
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor
+
+{{- if eq $.SVACE_ENABLED "true" }}
+# we need stat analyse only one kube-api-server
   - |
   {{- $buildContext := deepCopy $ -}}
-  {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
-  {{- $_ := set $buildContext "ProjectName" (printf "kubernetes-%s" $version) -}}
+  {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "kubernetes-api-%s" $version) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
+{{- end }}
+
+  - make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"
   - rm -rf vendor
 {{- end }}
 
