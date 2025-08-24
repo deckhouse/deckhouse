@@ -101,7 +101,10 @@ shell:
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor
   - |
-  {{- include "image-build.build" (set $ "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"`) | indent 4 }}
+  {{- $buildContext := deepCopy $ -}}
+  {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver kube-controller-manager kube-scheduler kube-proxy kubelet kubectl kubeadm GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "kubernetes-%s" $version) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
   - rm -rf vendor
 {{- end }}
 
