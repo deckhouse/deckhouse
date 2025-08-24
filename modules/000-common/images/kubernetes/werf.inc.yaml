@@ -100,8 +100,8 @@ shell:
   - cd /src
   - export KUBE_GIT_VERSION_FILE=.kube-version
   - go mod vendor
-# we need stat analyse only one kube-api-server
 {{- if eq $.SVACE_ENABLED "true" }}
+# we need stat analyse only one kube-api-server
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
