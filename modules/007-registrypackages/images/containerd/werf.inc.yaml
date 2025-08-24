@@ -50,7 +50,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
-fromImage: builder/golang-bookworm
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -64,14 +64,19 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "false" }}
   {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
+{{- else }}
+  - apt-get update && apt-get install libseccomp-devel -y
+{{- end }}
   - mkdir -p /out
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
-  - make COMMIT="$(cat COMMIT)" static
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `make COMMIT="$(cat COMMIT)" static`) | indent 6 }}
   - mv runc /out/runc
   - chown -R 64535:64535 /out
   - chmod 755 /out/runc
