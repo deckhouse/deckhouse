@@ -76,7 +76,10 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   - git config --global user.email "builder@deckhouse.io"
   - |
-  {{- include "image-build.build" (set $ "BuildCommand" `make COMMIT="$(cat COMMIT)" static`) | indent 6 }}
+  {{- $buildContext := deepCopy $ -}}
+  {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" static` -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "runc-%s" $runc_version) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
   - mv runc /out/runc
   - chown -R 64535:64535 /out
   - chmod 755 /out/runc
