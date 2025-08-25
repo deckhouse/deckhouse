@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.14.0
   labels:
     heritage: deckhouse
     module: cloud-provider-vcd
@@ -27,14 +26,19 @@ spec:
           API
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
@@ -44,24 +48,27 @@ spec:
               template:
                 properties:
                   metadata:
-                    description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
+                    description: |-
+                      Standard object's metadata.
+                      [More info](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata).
                     properties:
                       annotations:
                         additionalProperties:
                           type: string
-                        description: 'Annotations is an unstructured key value map
-                          stored with a resource that may be set by external tools
-                          to store and retrieve arbitrary metadata. They are not queryable
-                          and should be preserved when modifying objects. More info:
-                          http://kubernetes.io/docs/user-guide/annotations'
+                        description: |-
+                          Annotations is an unstructured key value map stored with a resource that may be
+                          set by external tools to store and retrieve arbitrary metadata. They are not
+                          queryable and should be preserved when modifying objects.
+                          [More info](http://kubernetes.io/docs/user-guide/annotations).
                         type: object
                       labels:
                         additionalProperties:
                           type: string
-                        description: 'Map of string keys and values that can be used
-                          to organize and categorize (scope and select) objects. May
-                          match selectors of replication controllers and services.
-                          More info: http://kubernetes.io/docs/user-guide/labels'
+                        description: |-
+                          Map of string keys and values that can be used to organize and categorize
+                          (scope and select) objects. May match selectors of replication controllers
+                          and services.
+                          [More info](http://kubernetes.io/docs/user-guide/labels).
                         type: object
                     type: object
                   spec:
@@ -69,8 +76,9 @@ spec:
                       of the machine.
                     properties:
                       bootstrapped:
-                        description: Bootstrapped is true when the kubeadm bootstrapping
-                          has been run against this machine
+                        description: |-
+                          Bootstrapped is true when the kubeadm bootstrapping has been run
+                          against this machine.
                         type: boolean
                       catalog:
                         description: Catalog hosting templates
@@ -84,16 +92,60 @@ spec:
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                         x-kubernetes-int-or-string: true
                       enableNvidiaGPU:
-                        description: EnableNvidiaGPU is true when a VM should be created
-                          with the relevant binaries installed If true, then an appropriate
-                          placement policy should be set
+                        description: |-
+                          EnableNvidiaGPU is true when a VM should be created with the relevant binaries installed
+                          If true, then an appropriate placement policy should be set.
                         type: boolean
                       extraOvdcNetworks:
-                        description: ExtraOvdcNetworks is the list of extra Ovdc Networks
-                          that are mounted to machines. VCDClusterSpec.OvdcNetwork
-                          is always attached regardless of this field.
+                        description: |-
+                          ExtraOvdcNetworks is the list of extra Ovdc Networks that are mounted to machines.
+                          VCDClusterSpec.OvdcNetwork is always attached regardless of this field.
                         items:
                           type: string
+                        type: array
+                      metadata:
+                        description: Metadata for the VCDMachine
+                        items:
+                          description: |-
+                            VCDMachineMetadata defines metadata for the VCDMachine
+                            useful for organizing and categorizing your virtualization inventory.
+                          properties:
+                            isSystem:
+                              description: Whether the metadata is a system metadata
+                                or not.
+                              type: boolean
+                            key:
+                              description: The key of the metadata item.
+                              maxLength: 256
+                              minLength: 1
+                              type: string
+                            type:
+                              default: String
+                              description: |-
+                                The type of the metadata. Can be one of `String`, `Number`, `Boolean` or `DateTime`.
+                                Default value is `String`.
+                              enum:
+                              - String
+                              - Number
+                              - Boolean
+                              - DateTime
+                              type: string
+                            userAccess:
+                              default: READWRITE
+                              description: |-
+                                The user access level for the metadata. Can be one of `READONLY`, `READWRITE` or `PRIVATE`.
+                                Default value is `READWRITE`.
+                              enum:
+                              - READONLY
+                              - READWRITE
+                              - PRIVATE
+                              type: string
+                            value:
+                              description: The value of the metadata item.
+                              maxLength: 256
+                              minLength: 1
+                              type: string
+                          type: object
                         type: array
                       placementPolicy:
                         description: PlacementPolicy is the placement policy to be
@@ -104,9 +156,9 @@ spec:
                           format (vmware-cloud-director://<vm id>)
                         type: string
                       sizingPolicy:
-                        description: SizingPolicy is the sizing policy to be used
-                          on this machine. If no sizing policy is specified, default
-                          sizing policy will be used to create the nodes
+                        description: |-
+                          SizingPolicy is the sizing policy to be used on this machine.
+                          If no sizing policy is specified, default sizing policy will be used to create the nodes.
                         type: string
                       storageProfile:
                         description: StorageProfile is the storage profile to be used
@@ -117,14 +169,14 @@ spec:
                           that is to be used
                         type: string
                       templateOrg:
-                        description: TemplateOrg is the organization of the template OVA that is to be used
+                        description: TemplateOrg is the organization of the template
+                          OVA that is to be used.
                         type: string
                       vmNamingTemplate:
-                        description: VmNamingTemplate is go template to generate VM
-                          names based on Machine and VCDMachine CRs. Functions of
-                          Sprig library are supported. See https://github.com/Masterminds/sprig
-                          Immutable field. machine.Name is used as VM name when this
-                          field is empty.
+                        description: |-
+                          VmNamingTemplate is go template to generate VM names based on Machine and VCDMachine CRs.
+                          Functions of Sprig library are supported. [See details](https://github.com/Masterminds/sprig).
+                          This is immutable field. If this field is empty, the `machine.Name` is used as the VM name.
                         type: string
                     type: object
                 required:
@@ -141,9 +193,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
