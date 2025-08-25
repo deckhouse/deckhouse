@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 The [`VirtualMachineClass`](../../../../reference/cr/virtualmachineclass.html) resource is intended for centralized configuration of preferred virtual machine parameters. It allows setting parameters for CPU, including instructions and resource configuration policies, as well as defining the ratio between CPU and memory resources. Additionally, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) manages the placement of virtual machines across the platform nodes, helping administrators efficiently distribute resources and optimally place virtual machines.
 
-By default, a single VirtualMachineClass `generic` resource is automatically created, which represents a universal CPU model that uses the rather old but supported by most modern processors Nehalem model. This allows you to run VMs on any nodes in the cluster with the possibility of live migration.
+During installation, a single VirtualMachineClass `generic` resource is automatically created. It represents a universal CPU type based on the older, but widely supported, Nehalem architecture. This enables running VMs on any nodes in the cluster and allows live migration.
 
 {% alert level="info" %}
 It is recommended that you create at least one VirtualMachineClass resource in the cluster with the `Discovery` type immediately after all nodes are configured and added to the cluster. This allows virtual machines to utilize a generic CPU with the highest possible CPU performance considering the CPUs on the cluster nodes. This allows the virtual machines to utilize the maximum CPU capabilities and migrate seamlessly between cluster nodes if necessary.
@@ -39,6 +39,41 @@ spec:
   ...
 ```
 
+### Default VirtualMachineClass
+
+For convenience, you can assign a default VirtualMachineClass. This class will be used in the `spec.virtualMachineClassName` field if it is not specified in the virtual machine manifest.
+
+The default VirtualMachineClass is set via the `virtualmachineclass.virtualization.deckhouse.io/is-default-class` annotation. There can be only one default class in the cluster. To change the default class, remove the annotation from one class and add it to another.
+
+It is not recommended to set the annotation on the `generic` class, since the annotation may be removed during an update. It is recommended to create your own class and assign it as the default.
+
+Example output of the class list without a default class:
+
+```console
+$ d8 k get vmclass 
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready               1d
+```
+
+Example command of assigning the default class:
+
+```shell
+d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
+virtualmachineclass.virtualization.deckhouse.io/host-passthrough-custom annotated
+```
+
+After assigning the default class, the output will be:
+
+```console
+$ d8 k get vmclass 
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready   true        1d
+```
+
+When creating a VM without specifying the `spec.virtualMachineClassName` field, it will be set to `host-passthrough-custom`.
+
 ## VirtualMachineClass settings
 
 The structure of the `VirtualMachineClass` resource is as follows:
@@ -47,20 +82,21 @@ The structure of the `VirtualMachineClass` resource is as follows:
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineClass
 metadata:
-name: <vmclass-name>
+  name: <vmclass-name>
+  # (optional) Set class as a default.
+  # annotations:
+  #   virtualmachineclass.virtualization.deckhouse.io/is-default-class: "true"
 spec:
-# Block describes the parameters of the virtual processor for virtual machines.
-# This block cannot be changed after the resource is created.
-cpu: ...
-
-# (optional block) Describes the rules for placing virtual machines on nodes.
-# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
-nodeSelector: ...
-
-# (optional block) Describes the policy for configuring virtual machine resources.
-# When changed, automatically applies to all virtual machines using this VirtualMachineClass.
-sizingPolicies: ...
-  ```
+  # The section describes virtual processor parameters for virtual machines.
+  # This block cannot be changed after the resource has been created.
+  cpu: ...
+  # (optional) Describes the rules for allocating virtual machines between nodes.
+  # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+  nodeSelector: ...
+  # (optional) Describes the sizing policy for configuring virtual machine resources.
+  # When changed, it is automatically applied to all virtual machines using this VirtualMachineClass.
+  sizingPolicies: ...
+```
 
 Next, let's take a closer look at the setting blocks.
 
