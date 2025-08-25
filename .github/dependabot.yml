@@ -295,6 +295,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/002-deckhouse/images/webhook-handler/operator"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/002-deckhouse/images/webhook-handler/src/label-converter"
   labels:
   - "type/dependencies"
