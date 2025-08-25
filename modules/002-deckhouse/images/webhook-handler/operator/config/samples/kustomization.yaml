@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- deckhouse.io_v1alpha1_validationwebhook.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
