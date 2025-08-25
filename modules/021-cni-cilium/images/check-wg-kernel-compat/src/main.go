@@ -41,7 +41,7 @@ const (
 func main() {
 	ciliumConstraint := os.Getenv("CILIUM_CONSTRAINT")
 	if ciliumConstraint == "" {
-		log.Info("CILIUM_CONSTRAINT is not set, use default value %v", ciliumConstraintDef)
+		log.Info("ENV variable CILIUM_CONSTRAINT is not set, use default value '%s'", ciliumConstraintDef)
 		ciliumConstraint = ciliumConstraintDef
 	}
 	if exist, err := isCiliumBinaryExists(cniCiliumPath); !exist {
