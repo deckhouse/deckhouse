@@ -61,6 +61,15 @@ vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
 
+How to configure the `virtualization` module in the web interface:
+
+- Go to the "System" tab, then to the `Deckhouse` -> "Modules" section.
+- Select the `virtualization` module from the list.
+- In the pop-up window, select the "Configuration" tab.
+- To display the settings, click the "Advanced settings" switch.
+- Configure the settings. The names of the fields on the form correspond to the names of the parameters in YAML.
+- To apply the settings, click the "Save" button.
+
 ### Parameter description
 
 The following are descriptions of the virtualization module parameters.
