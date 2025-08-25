@@ -283,6 +283,8 @@ apiVersions:
                       example: 10Gi
                     storageClass:
                       type: string
+                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Name of the existing StorageClass will be used to create the virtual machine's root disk.
 
@@ -327,6 +329,8 @@ apiVersions:
                       example: 10Gi
                     storageClass:
                       type: string
+                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Name of the existing StorageClass will be used to create the etcd data disk.
 

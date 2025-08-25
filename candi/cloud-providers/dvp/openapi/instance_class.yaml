@@ -96,6 +96,8 @@ spec:
                       x-doc-example: "10Gi"
                     storageClass:
                       type: string
+                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         The name of the existing StorageClass will be used to create the virtual machine's root disk.
 
