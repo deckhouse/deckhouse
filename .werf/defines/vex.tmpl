@@ -1,0 +1,70 @@
+# put image with vex mitigations to registry.
+# Mitigations can be found in the known_vulnerabilities.vex file in the image directory
+# input parameters:
+# list of $ and image name.
+# list ($ "common/kubernetes")
+{{- define "vex mitigation" }}
+  {{- $context := index . 0 }}
+  {{- $imageName := index . 1 }}
+  {{- $knownVulnPath := (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $vexFile := false }}
+  {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
+    {{- $vexFile = true }}
+  {{- end }}
+  {{- if $vexFile }}
+---
+image: {{ $imageName }}-vex-artifact
+fromImage: builder/alpine
+final: false
+secrets:
+- id: REGISTRY_USER
+  value: {{ $context.RegistryUser }}
+- id: REGISTRY_PASSWORD
+  value: {{ $context.RegistryPassword }}
+- id: COSIGN_VAULT_ADRESS
+  value: {{ $context.CosignVaultAdress }}
+- id: COSIGN_VAULT_TOKEN
+  value: {{ $context.CosignVaultToken }}
+- id: COSIGN_VAULT_KEY
+  value: {{ $context.CosignVaultKey }}
+- id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+  value: {{ $context.CosignTransitSecret }}
+import:
+- image: tools/cosign
+  add: /usr/bin/cosign
+  to: /usr/bin/cosign
+  before: install
+git:
+- add: {{ $knownVulnPath }}
+  to: /known_vulnerabilities.vex
+  stageDependencies:
+    setup:
+    - 'known_vulnerabilities.vex'
+dependencies:
+- image: {{ $imageName }}
+  before: install
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" $context | nindent 2 }}
+  - apk add --no-cache curl jq
+  install:
+  - |
+    VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADRESS)" \
+    TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)" \
+    VAULT_TOKEN="$(eval "$(cat /run/secrets/COSIGN_VAULT_TOKEN)" | jq -r '.auth.client_token')" \
+    cosign attest \
+      --registry-username="$(cat /run/secrets/REGISTRY_USER)" \
+      --registry-password="$(cat /run/secrets/REGISTRY_PASSWORD)" \
+      --predicate /known_vulnerabilities.vex \
+      --type openvex \
+      --key hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY) \
+      --tlog-upload=false \
+      -y \
+      "${IMAGE_REPO}@${IMAGE_DIGEST}"
+  {{- end }}
+{{- end }}

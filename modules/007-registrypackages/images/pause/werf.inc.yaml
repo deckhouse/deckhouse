@@ -37,13 +37,17 @@ dependencies:
     targetEnv: IMAGE_DIGEST
   - type: ImageRepo
     targetEnv: IMAGE_REPO
-mount:
-- fromPath: ~/.docker
-  to: /root/.docker
+secrets:
+- id: REGISTRY_USER
+  value: {{ .RegistryUser }}
+- id: REGISTRY_PASSWORD
+  value: {{ .RegistryPassword }}
 shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
   - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /pause.tar
+  - rm -f ~/.docker/config.json
   - mkdir /tmp/pause
   - tar -xf /pause.tar -C /tmp/pause
   - cd /tmp/pause
