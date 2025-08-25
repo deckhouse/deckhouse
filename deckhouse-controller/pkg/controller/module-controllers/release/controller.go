@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -150,6 +151,10 @@ type reconciler struct {
 	mtx                  sync.Mutex
 	delayTimer           *time.Timer
 
+	activeApplyCount   int64
+	hasAppliedReleases int64
+	needsRestart       int64
+
 	metricsUpdater MetricsUpdater
 }
 
@@ -202,11 +207,16 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 		r.mtx.Lock()
 		select {
 		case <-r.delayTimer.C:
-			if r.restartReason != "" {
+			if atomic.LoadInt64(&r.needsRestart) == 1 &&
+				atomic.LoadInt64(&r.activeApplyCount) == 0 &&
+				atomic.LoadInt64(&r.hasAppliedReleases) == 1 {
 				r.log.Info("restart Deckhouse", slog.String("reason", r.restartReason))
 				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
 					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
 				}
+				atomic.StoreInt64(&r.needsRestart, 0)
+				atomic.StoreInt64(&r.hasAppliedReleases, 0)
+				r.restartReason = ""
 			}
 			r.delayTimer.Reset(delayTimer)
 
@@ -222,6 +232,8 @@ func (r *reconciler) emitRestart(msg string) {
 	r.delayTimer.Reset(delayTimer)
 	r.restartReason = msg
 	r.mtx.Unlock()
+
+	atomic.StoreInt64(&r.needsRestart, 1)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -859,6 +871,12 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
 	defer span.End()
+
+	atomic.AddInt64(&r.activeApplyCount, 1)
+	defer func() {
+		atomic.AddInt64(&r.activeApplyCount, -1)
+		atomic.StoreInt64(&r.hasAppliedReleases, 1)
+	}()
 
 	var dri *releaseUpdater.ReleaseInfo
 
