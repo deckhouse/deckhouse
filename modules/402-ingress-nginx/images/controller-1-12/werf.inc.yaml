@@ -251,6 +251,9 @@ import:
 - image: tools/gcc-gnu-{{ $gccVersion }}
   add: /usr
   to: /base_images/gcc
+  includePaths:
+  - lib/libgcc_s.so*
+  - lib/libstdc++.so*
   before: install
 secrets:
 - id: SOURCE_REPO
@@ -279,8 +282,7 @@ shell:
   - cp -a /base_images/libxml2/* /usr
   - cp -a /base_images/yajl/* /usr
   - cp -a /base_images/openssl/* /usr
-  - cp -a /base_images/gcc/lib/libgcc_s.so* /usr/lib
-  - cp -a /base_images/gcc/lib/libstdc++.so* /usr/lib
+  - cp -a /base_images/gcc/* /usr
   - mkdir -p /usr/lib64
   - ln -sf /usr/lib/libssl.so /usr/lib64/libssl.so
   - ln -sf /usr/lib/libcrypto.so /usr/lib64/libcrypto.so
@@ -678,16 +680,16 @@ import:
 - image: libs/lua-iconv-{{ $luaIconvVersion }}
   add: /
   to: /chroot/usr/local
-  # owner: "64535" # FIXME
-  # group: "64535" # FIXME
+  owner: "0"
+  group: "0"
   includePaths:
   - lib/lua/5.1/iconv.so
   before: install
 - image: libs/lua-protobuf-{{ $luaProtobufVersion }}
   add: /
   to: /chroot/usr/local
-  # owner: "64535" # FIXME
-  # group: "64535" # FIXME
+  owner: "0"
+  group: "0"
   includePaths:
   - lib/lua/5.1/pb.so
   - share/lua/5.1/protoc.lua
@@ -699,8 +701,8 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /chroot
-  owner: "64535"
-  group: "64535"
+  owner: "0"
+  group: "0"
   includePaths:
   - etc/nginx
   - opt/modsecurity
@@ -715,8 +717,8 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
   add: /
   to: /chroot
-  # owner: "64535" # FIXME
-  # group: "64535" # FIXME
+  owner: "0"
+  group: "0"
   includePaths:
   - usr/lib/libc.so
   - lib/ld-musl-x86_64.so.1
@@ -872,7 +874,6 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine-3.21 # FIXME replace!
 fromImage: base/distroless
 fromCacheVersion: "2025-08-25.01"
 mount:
@@ -929,6 +930,8 @@ import:
 - image: tools/bash
   add: /usr
   to: /
+  owner: "0"
+  group: "0"
   includePaths:
   - bin/bash
   - bin/sh
@@ -936,6 +939,8 @@ import:
 - image: tools/procps
   add: /
   to: /
+  owner: "0"
+  group: "0"
   includePaths:
   - bin/pkill
   - bin/pgrep
@@ -943,14 +948,20 @@ import:
 - image: tools/diffutils
   add: /usr/bin/diff
   to: /usr/bin/diff
+  owner: "0"
+  group: "0"
   before: install
 - image: tools/util-linux
   add: /usr/bin/unshare
   to: /usr/bin/unshare
+  owner: "0"
+  group: "0"
   before: install
 - image: tools/coreutils
   add: /
   to: /
+  owner: "0"
+  group: "0"
   includePaths:
   - usr/bin/coreutils
   - usr/bin/test
