@@ -875,7 +875,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
-fromCacheVersion: "2025-08-25.01"
+fromCacheVersion: "2025-08-25.03"
 mount:
 - from: build_dir
   to: /tmp/apps
