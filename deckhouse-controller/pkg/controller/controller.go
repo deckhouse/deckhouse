@@ -217,6 +217,11 @@ func NewDeckhouseController(
 			return "v2.0.0", nil
 		}
 
+		// disabled module should not have version
+		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
+			return "", nil
+		}
+
 		return module.GetVersion(), nil
 	})
 

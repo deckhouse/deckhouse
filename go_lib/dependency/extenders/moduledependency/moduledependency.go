@@ -52,15 +52,20 @@ var (
 type Extender struct {
 	modulesVersionHelper func(moduleName string) (string, error)
 	modulesStateHelper   func() []string
-	modules              map[string]*versionmatcher.Matcher
+	modules              map[string]*requirement
 	logger               *log.Logger
+}
+
+type requirement struct {
+	matcher  *versionmatcher.Matcher
+	optional map[string]struct{}
 }
 
 func Instance() *Extender {
 	once.Do(func() {
 		instance = &Extender{
 			logger:  log.Default().With("extender", Name),
-			modules: make(map[string]*versionmatcher.Matcher),
+			modules: make(map[string]*requirement),
 		}
 	})
 	return instance
@@ -78,7 +83,7 @@ func (e *Extender) constraintFormsLoop(name string, value map[string]string) (bo
 		parentModule := itinerary[0]
 		itinerary = itinerary[1:]
 		if constraint, found := e.modules[parentModule]; found {
-			for _, parentModuleConstraintName := range constraint.GetConstraintsNames() {
+			for _, parentModuleConstraintName := range constraint.matcher.GetConstraintsNames() {
 				if parentModuleConstraintName == name {
 					return true, parentModule
 				}
@@ -95,32 +100,43 @@ func (e *Extender) SetModulesVersionHelper(f func(moduleName string) (string, er
 	e.modulesVersionHelper = f
 }
 
-func (e *Extender) createConstrainstForModule(name string, value map[string]string) (*versionmatcher.Matcher, error) {
-	constraints := versionmatcher.New(false)
+func (e *Extender) AddConstraint(name string, value map[string]string) error {
+	req, err := e.createModuleRequirement(name, value)
+	if err != nil {
+		return fmt.Errorf("create the '%s' module requirement: %w", name, err)
+	}
+
+	e.modules[name] = req
+	e.logger.Debug("installed constraint for the module is added", slog.String("name", name))
+
+	return nil
+}
+
+func (e *Extender) createModuleRequirement(name string, value map[string]string) (*requirement, error) {
+	req := new(requirement)
+
+	req.optional = make(map[string]struct{})
+
+	matcher := versionmatcher.New(false)
 	for dependency, constraint := range value {
 		if name == dependency {
 			e.logger.Warn(fmt.Sprintf("parent module '%s' is excluded from the '%s' module constraints", dependency, name))
 			continue
 		}
 
-		if err := constraints.AddConstraint(dependency, constraint); err != nil {
+		raw, optional := strings.CutSuffix(constraint, "!optional")
+		if optional {
+			req.optional[dependency] = struct{}{}
+		}
+
+		if err := matcher.AddConstraint(dependency, raw); err != nil {
 			return nil, err
 		}
 	}
 
-	return constraints, nil
-}
+	req.matcher = matcher
 
-func (e *Extender) AddConstraint(name string, value map[string]string) error {
-	constraints, err := e.createConstrainstForModule(name, value)
-	if err != nil {
-		return err
-	}
-
-	e.modules[name] = constraints
-	e.logger.Debug("installed constraint for the module is added", slog.String("name", name))
-
-	return nil
+	return req, nil
 }
 
 func errorFormatter(es []error) string {
@@ -179,14 +195,14 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 		return validateErr
 	}
 
-	constraints, err := e.createConstrainstForModule(moduleName, value)
+	req, err := e.createModuleRequirement(moduleName, value)
 	if err != nil {
-		validateErr = multierror.Append(validateErr, fmt.Errorf("could not validate the \"%s\" module dependencies: %s", moduleName, err.Error()))
+		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to validate module dependencies: %s", err.Error()))
 		return validateErr
 	}
 
 	// check if the new requirements are satisfied
-	for _, parentModule := range constraints.GetConstraintsNames() {
+	for _, parentModule := range req.matcher.GetConstraintsNames() {
 		parentVersion, err := e.modulesVersionHelper(parentModule)
 		if err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("could not get the \"%s\" module version: %s", parentModule, err.Error()))
@@ -197,30 +213,37 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 		// if parent version is empty, we think that module is not deployed
 		if parentVersion == "" {
-			validateErr = multierror.Append(validateErr, fmt.Errorf(`"%s" is not deployed`, parentModule))
+			// if parent req is optional and disabled just skip it
+			if _, ok := req.optional[parentModule]; ok {
+				e.logger.Debug("module`s requirement not met, but its optional",
+					slog.String("module", moduleName), slog.String("required", parentModule))
+				continue
+			}
+
+			validateErr = multierror.Append(validateErr, fmt.Errorf(`'%s' is not deployed`, parentModule))
 			continue
 		}
 
 		parsedParentVersion, err := parseParentVersion(parentVersion)
 		if err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
 			continue
 		}
 
-		if err := constraints.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint: %s", moduleName, parentModule, err.Error()))
+		if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' not meet version constraint: %s", parentModule, err.Error()))
 		}
 	}
 
 	sanitizedVersion, err := removePrereleaseAndMetadata(version)
 	if err != nil {
-		validateErr = multierror.Append(validateErr, fmt.Errorf("couldn't get the \"%s\" module version without prerelease and metadata info: %s", moduleName, err.Error()))
+		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to get module version without prerelease and metadata info: %s", err.Error()))
 	}
 
 	// check if the new module's version breaks current constraints
-	for dependentModule, constraints := range e.modules {
-		if err := constraints.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
+	for dependentModule, r := range e.modules {
+		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
+			validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if '%s' module release is installed: %s", dependentModule, moduleRelease, err.Error()))
 		}
 	}
 
@@ -244,8 +267,8 @@ func (e *Extender) IsTerminator() bool {
 // GetTopologicalHints implements TopologicalExtender interface of the addon-operator
 func (e *Extender) GetTopologicalHints(moduleName string) []string {
 	hints := make([]string, 0)
-	if constraints, found := e.modules[moduleName]; found {
-		hints = append(hints, constraints.GetConstraintsNames()...)
+	if req, found := e.modules[moduleName]; found {
+		hints = append(hints, req.matcher.GetConstraintsNames()...)
 	}
 
 	return hints
@@ -253,7 +276,7 @@ func (e *Extender) GetTopologicalHints(moduleName string) []string {
 
 // Filter implements Extender interface, it is used by scheduler in addon-operator
 func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error) {
-	constraints, found := e.modules[moduleName]
+	req, found := e.modules[moduleName]
 	if !found {
 		return nil, nil
 	}
@@ -261,7 +284,7 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 	err := &multierror.Error{ErrorFormat: errorFormatter}
 	enabledModules := e.modulesStateHelper()
 
-	for _, parentModule := range constraints.GetConstraintsNames() {
+	for _, parentModule := range req.matcher.GetConstraintsNames() {
 		exists := true
 		parentVersion, getErr := e.modulesVersionHelper(parentModule)
 		if getErr != nil {
@@ -273,23 +296,30 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 
 		// check if the parent module is disabled/absent
 		if !slices.Contains(enabledModules, parentModule) {
+			// if parent req is optional and disabled just skip it
+			if _, ok := req.optional[parentModule]; ok {
+				e.logger.Debug("module`s requirement not met, but its optional",
+					slog.String("module", moduleName), slog.String("required", parentModule))
+				continue
+			}
+
 			msg := "not found"
 			if exists {
 				msg = "is disabled"
 			}
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" %s", moduleName, parentModule, msg))
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' %s", parentModule, msg))
 			continue
 		}
 
 		parsedParentVersion, parseErr := parseParentVersion(parentVersion)
 		if parseErr != nil {
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
 			continue
 		}
 
 		// check if the parent module is of an inappropriate version
-		if versionErr := constraints.ValidateModuleVersion(parentModule, parsedParentVersion); versionErr != nil {
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint: %s", moduleName, parentModule, versionErr.Error()))
+		if versionErr := req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); versionErr != nil {
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' not meet the version constraint: %s", parentModule, versionErr.Error()))
 		}
 	}
 

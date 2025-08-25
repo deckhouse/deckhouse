@@ -141,3 +141,13 @@ func (b *ExtendersStack) IsExtendersField(field string) bool {
 		v1alpha1.ModuleDependencyRequirementFieldName,
 	}, field)
 }
+
+func (b *ExtendersStack) Filter(module string) error {
+	for _, ext := range b.GetExtenders() {
+		if _, err := ext.Filter(module, nil); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
