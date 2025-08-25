@@ -14,7 +14,6 @@ resources:
     namespaced: true
   controller: true
   domain: deckhouse.io
-  group: deckhouse.io
   kind: ValidationWebhook
   path: deckhouse.io/webhook/api/v1alpha1
   version: v1alpha1
