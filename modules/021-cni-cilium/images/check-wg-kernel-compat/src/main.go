@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	cniCiliumPath    = "/opt/cni/bin/cilium-cni"
+	// /opt/cni/bin is mounted to /hostbin
+	cniCiliumPath    = "/hostbin/cilium-cni"
 	ciliumConstraint = ">= 1.17.4"
 )
 
