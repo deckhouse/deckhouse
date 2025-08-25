@@ -802,4 +802,49 @@ resources:
 			})
 		})
 	})
+
+	Context("kubeadm-config-render", func() {
+		const kubeadmConfigTestValues = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  serviceAccount:
+    issuer: https://api.example.com
+    additionalAPIAudiences:
+      - https://additional.example.com
+`
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("controlPlaneManager", kubeadmConfigTestValues)
+			f.HelmRender()
+		})
+
+		It("should generate valid kubeadm configuration", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+			Expect(secret.Exists()).To(BeTrue())
+
+			kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
+
+			var config ClusterConfigurationV4
+			err = yaml.Unmarshal(kubeadmConfigData, &config)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+			Expect(config.Kind).To(Equal("ClusterConfiguration"))
+			Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
+				Name:  "service-account-issuer",
+				Value: "https://api.example.com",
+			}))
+		})
+	})
 })
