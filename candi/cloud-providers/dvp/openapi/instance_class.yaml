@@ -97,7 +97,7 @@ spec:
                     storageClass:
                       type: string
                       description: |
-                        The name of StorageClass that will be used in the cluster by default.
+                        The name of the existing StorageClass will be used to create the virtual machine's root disk.
 
                         If the parameter is omitted, the default StorageClass will be one of the following:
 
