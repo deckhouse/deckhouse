@@ -138,6 +138,6 @@ metadata:
 spec:
   folder: Custom
   definition: |
-{{ tpl (.Files.Get "dashboards/no-module-config.yaml") . | indent 4 }}
+{{ tpl (.Files.Get "dashboards/modules-validation.yaml") . | indent 4 }}
 {{- end }}
 # \{\{- end }} 
