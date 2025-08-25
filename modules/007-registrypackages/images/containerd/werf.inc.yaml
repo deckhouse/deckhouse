@@ -50,7 +50,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/debian-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -64,12 +64,8 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-{{- if eq $.SVACE_ENABLED "false" }}
   {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
-{{- else }}
-  - apt-get update && apt-get install libseccomp-devel -y
-{{- end }}
   - mkdir -p /out
   install:
   - cd /src
