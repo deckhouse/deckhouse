@@ -39,6 +39,26 @@ spec:
                         * `BIOS` — используется BIOS;
                         * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
                         * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                additionalDisks:
+                  description: |
+                    Дополнительные диски для виртуальной машины.
+
+                    Массив объектов, каждый из которых описывает отдельный диск.
+                    Для каждого диска необходимо указать размер и StorageClass.
+                  type: array
+                  items:
+                    type: object
+                    required: ["size", "storageClass"]
+                    properties:
+                      size:
+                        description: |
+                          Размер дополнительного диска (например, `10Gi`).
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      storageClass:
+                        description: |
+                          Имя существующего StorageClass, который будет использоваться для создания диска.
+                        type: string
                 rootDisk:
                   description: |
                     Указывает настройки для корневого диска виртуальной машины.

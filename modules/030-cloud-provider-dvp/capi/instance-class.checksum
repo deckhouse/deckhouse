@@ -10,5 +10,6 @@
 {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction -}}
 {{- $_ := set $options "osImageRefKind" .nodeGroup.instanceClass.rootDisk.image.kind -}}
 {{- $_ := set $options "coreFraction" .nodeGroup.instanceClass.rootDisk.image.name -}}
+{{- $_ := set $options "additionalDisks" .nodeGroup.instanceClass.additionalDisks -}}
 
 {{- $options | toYaml | trimSuffix "\n" | printf "%s\n" | sha256sum -}}
