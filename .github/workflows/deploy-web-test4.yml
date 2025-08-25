@@ -300,6 +300,11 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.4.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test4"
           WERF_SET_DCNAME: "web.dc_name=dev"
+          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
+          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
+          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
       # </template: deploy_doc_template>
 
       # <template: update_comment_on_finish>
