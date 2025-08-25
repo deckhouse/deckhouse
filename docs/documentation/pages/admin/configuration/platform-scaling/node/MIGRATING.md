@@ -10,14 +10,33 @@ You can configure containerd v2 as the primary container runtime either at the c
 
 Migration to containerd v2 is possible under the following conditions:
 
-- Nodes meet the requirements described in the [cluster-wide parameters](/installing/configuration.html#clusterconfiguration-defaultcri).
+- Nodes meet the requirements described in the [cluster-wide parameters](../../../../installing/configuration.html#clusterconfiguration-defaultcri).
 - There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+
+If any of the requirements described in the [general cluster parameters](../../../../installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config` is added to it.
+
+If one of these labels is present, changing the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
+
+```shell
+d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
+d8 k get node -l node.deckhouse.io/containerd-config
+```
+
+Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
+
+```shell
+uname -r | cut -d- -f1
+stat -f -c %T /sys/fs/cgroup
+systemctl --version | awk 'NR==1{print $2}'
+modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+ls -l /etc/containerd/conf.d
+```
 
 ## How to enable containerd v2
 
 You can enable containerd v2 in two ways:
 
-1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/installing/configuration.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
+1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](../../../../installing/configuration.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
 
    Example:
 
@@ -42,9 +61,16 @@ You can enable containerd v2 in two ways:
        type: ContainerdV2
    ```
 
-When migrating to containerd v2:
+When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
 
-- The `/var/lib/containerd` directory, where containerd stores its data, is cleared.
-- containerd v2 uses a separate configuration directory: `/etc/containerd/conf2.d` instead of `/etc/containerd/conf.d`.
+Example:
 
-This means that when containerd v2 is enabled, all previous containerd configurations are ignored, and the node starts using an isolated settings structure and data directory.
+```shell
+d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
+
+{% alert level="info" %}
+Under [certain conditions](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval), this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+{% endalert %}
