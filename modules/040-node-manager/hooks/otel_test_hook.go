@@ -44,7 +44,7 @@ func otelTestHookLogic(input *go_hook.HookInput, dc dependency.Container) error 
 
 	client := dc.GetHTTPClient()
 
-	testURL := "http://127.0.0.1:9115/ready"
+	testURL := "http://deckhouse.d8-system.svc.cluster.local:8080/readyz"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, testURL, nil)
 	if err != nil {
 		input.Logger.Error("Failed to create HTTP request", slog.String("error", err.Error()))
