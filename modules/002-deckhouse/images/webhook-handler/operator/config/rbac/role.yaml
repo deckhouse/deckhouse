@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - deckhouse.io.deckhouse.io
+  resources:
+  - validationwebhooks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - deckhouse.io.deckhouse.io
+  resources:
+  - validationwebhooks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io.deckhouse.io
+  resources:
+  - validationwebhooks/status
+  verbs:
+  - get
+  - patch
+  - update
