@@ -1,5 +1,5 @@
 /*
-Copyright 2024 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,10 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -34,59 +38,25 @@ const (
 )
 
 func main() {
-	// Start and init
-
-	// Check cilium-cni binary existence
-	//   if cilium-cni exist
-	//     then check its version
-	//       if cilium-cni version grate or equal 1.17.4 (semver)
-	//         then exit 0
-	//       if cilium-cni version lower 1.17.4 (semver) or we not be able to get version
-	//         then check is wg interfaces present on node
-	//           if we can not be able to get interfaces or determine its
-	//             then ???
-	//           if not present
-	//             then exit 0
-	//           if present
-	//             then check kernel version
-	//               if kernel version met
-	//                 then exit 0
-	//               if kernel version not met
-	//                 then
-	//                   error "kernel version need update to 6.8 or greater"
-	//                   exit 1
-	//   if cilium-cni not exist
-	//     then check is wg interfaces present on node
-	//       if we can not be able to get interfaces or determine its
-	//         then ???
-	//       if not present
-	//         then exit 0
-	//       if present
-	//         then check kernel version
-	//           if kernel version met
-	//             then exit 0
-	//           if kernel version not met
-	//             then
-	//               error "kernel version need update to 6.8 or greater"
-	//               exit 1
-
-	_, err := os.Stat(cniCiliumPath)
-	if err == nil {
-		isCiliumAlreadyUpgraded, err := checkCiliumVersionByCNI(cniCiliumPath, ciliumConstraint)
+	if exist, err := isCiliumBinaryExists(cniCiliumPath); !exist {
 		if err != nil {
-			log.Error("failed to check cilium version: %w", err)
+			log.Error("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err)
+		} else {
+			log.Info("cilium-cni binary '%s' does not exist", cniCiliumPath)
 		}
-		if isCiliumAlreadyUpgraded {
-			log.Info("Cilium is already upgraded, nothing to do")
-			return
-		}
-	} else {
-		log.Info("cilium-cni binary '%s' does not exist: %w", cniCiliumPath, err)
+	} else if cniCiliumVersionStr, err := getCiliumVersionByCNI(cniCiliumPath); err != nil {
+		log.Warn("failed to get cilium version: %v", err)
+	} else if isCiliumAlreadyUpgraded, err := checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint); err != nil {
+		log.Warn("failed to check cilium version: %v", err)
+	} else if isCiliumAlreadyUpgraded {
+		log.Info("cilium is already upgraded, there is nothing to do")
+		return
 	}
 
 	isWGPresent, err := checkWireGuardInterfacesOnNode()
 	if err != nil {
-		log.Fatal("failed to check WireGuard interfaces: %w", err)
+		log.Error("failed to check for WireGuard interfaces: %v. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		return
 	}
 	if !isWGPresent {
 		log.Info("WireGuard interfaces are not present on the node")
@@ -97,45 +67,76 @@ func main() {
 	if wgKernelConstraint == "" {
 		log.Fatal("ENV variable WG_KERNEL_CONSTRAINT must be set")
 	}
-	isKernelVersionMet, err := checkKernelVersionWGCiliumRequirements(wgKernelConstraint)
+
+	kernelVersion, err := getCurrentKernelVersion()
 	if err != nil {
-		log.Fatal("failed to check kernel version: %w", err)
+		log.Error("failed to get current kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		return
 	}
-	if !isKernelVersionMet {
-		log.Fatal("the kernel does not met the requirements, and need to be updated to 6.8 or greater")
+	isKernelVersionMeet, err := checkKernelVersionWGCiliumRequirements(kernelVersion, wgKernelConstraint)
+	if err != nil {
+		log.Error("failed to check kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		return
 	}
-	log.Info("the kernel meets the requirements, nothing to do")
+	if !isKernelVersionMeet {
+		log.Fatal("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
+	}
+	log.Info("the kernel meets the requirements, there is nothing to do")
 	return
 }
 
-func checkCiliumVersionByCNI(cniCiliumPath, ciliumConstraint string) (bool, error) {
+func isCiliumBinaryExists(cniCiliumPath string) (bool, error) {
+	_, err := os.Stat(cniCiliumPath)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func getCiliumVersionByCNI(cniCiliumPath string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, cniCiliumPath, "VERSION")
+	output, err := cmd.CombinedOutput()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return "", fmt.Errorf("command '%s VERSION' timed out", cniCiliumPath)
+	}
+	if err != nil {
+		return "", fmt.Errorf("cant execute '%s VERSION': %w", cniCiliumPath, err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+func checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint string) (bool, error) {
 	startPhrase := "Cilium CNI plugin"
 	endPhrase := "go version"
 	var versionStr string
 
-	cmd := exec.Command(cniCiliumPath, "VERSION")
+	startPhraseIndex := strings.Index(cniCiliumVersionStr, startPhrase)
 
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		return false, fmt.Errorf("cant execute '%s': %w", cniCiliumPath, err)
-	}
-
-	startIndex := strings.Index(string(output), startPhrase)
-
-	if startIndex == -1 {
+	if startPhraseIndex == -1 {
 		return false, fmt.Errorf("the version of the cilium could not be identified")
 	}
 
-	substr := string(output)[startIndex+len(startPhrase):]
+	substr := cniCiliumVersionStr[startPhraseIndex+len(startPhrase):]
 
-	endIndex := strings.Index(substr, endPhrase)
+	endPhraseIndex := strings.Index(substr, endPhrase)
+	lineEndIndex := strings.IndexAny(substr, "\r\n")
 
-	if endIndex != -1 {
-		versionStr = strings.TrimSpace(substr[:endIndex])
-	} else {
-		versionStr = strings.TrimSpace(substr)
+	endIndex := len(substr)
+
+	if endPhraseIndex != -1 && endPhraseIndex < endIndex {
+		endIndex = endPhraseIndex
 	}
+	if lineEndIndex != -1 && lineEndIndex < endIndex {
+		endIndex = lineEndIndex
+	}
+
+	versionStr = strings.TrimSpace(substr[:endIndex])
 
 	ciliumVersionSM, err := semver.NewVersion(versionStr)
 	if err != nil {
@@ -148,20 +149,35 @@ func checkCiliumVersionByCNI(cniCiliumPath, ciliumConstraint string) (bool, erro
 	}
 
 	if !ciliumConstraintSM.Check(ciliumVersionSM) {
-		return false, fmt.Errorf("the cilium is already at upgraded (%s %s)", ciliumVersionSM, ciliumConstraintSM)
+		return false, fmt.Errorf("the Cilium version has not been upgraded yet. The condition (%s %s) has not been met", ciliumVersionSM, ciliumConstraintSM)
 	}
 
 	return true, nil
 }
 
-func checkKernelVersionWGCiliumRequirements(kernelConstraint string) (bool, error) {
+func checkWireGuardInterfacesOnNode() (bool, error) {
+	links, err := netlink.LinkList()
+	if err != nil {
+		return false, fmt.Errorf("failed to get link list: %v", err)
+	}
+	for _, link := range links {
+		if link.Type() == "wireguard" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func getCurrentKernelVersion() (string, error) {
 	utsname := unix.Utsname{}
 	err := unix.Uname(&utsname)
 	if err != nil {
-		return false, fmt.Errorf("failed to get kernel version: %w", err)
+		return "", fmt.Errorf("failed to get kernel version: %w", err)
 	}
-	kernelVersion := string(utsname.Release[:])
+	return strings.TrimSpace(string(bytes.TrimRight(utsname.Release[:], "\x00"))), nil
+}
 
+func checkKernelVersionWGCiliumRequirements(kernelVersion, kernelConstraint string) (bool, error) {
 	kernelVersionSM, err := semver.NewVersion(strings.Split(kernelVersion, "-")[0])
 	if err != nil {
 		return false, fmt.Errorf("failed to parse kernel version '%s': %w", kernelVersion, err)
@@ -177,22 +193,4 @@ func checkKernelVersionWGCiliumRequirements(kernelConstraint string) (bool, erro
 	}
 
 	return true, nil
-}
-
-func checkWireGuardInterfacesOnNode() (bool, error) {
-	links, err := netlink.LinkList()
-	if err != nil {
-		return false, fmt.Errorf("failed to get link list: %v", err)
-	}
-	hasWgInterface := false
-	for _, link := range links {
-		if link.Type() == "wireguard" {
-			hasWgInterface = true
-			break
-		}
-	}
-	if hasWgInterface {
-		return true, nil
-	}
-	return false, nil
 }
