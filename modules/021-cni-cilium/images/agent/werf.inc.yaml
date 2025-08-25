@@ -9,42 +9,16 @@
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (release stage)
 ---
 # #####################################################################
-# List of binary files used by agent
-{{ $binariesFromBaseImages := "" }}
-# shell-scripts dependencies
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/awk /usr/bin/bash /usr/bin/find /usr/bin/grep /usr/bin/sed" }}
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/nsenter /bin/mount" }}
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/cut /usr/bin/echo /usr/bin/head" }}
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/wc" }}
-# groups
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/groups" }}
-# for prepull
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/true" }}
-# for cilium-cli sysdump
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/tar /usr/bin/stat /usr/bin/tail /usr/bin/timeout" }}
-# for debug and usability
-{{ $binariesFromBaseImages := cat $binariesFromBaseImages "/usr/bin/curl /usr/bin/env /usr/bin/ls /usr/bin/sleep" }}
-#####################################################################
 {{ $binariesFromALT := "" }}
-# from base install script
-# {{ $binariesFromALT := cat $binariesFromALT "/etc/localtime" }} #### create link /etc/localtime -> /usr/share/zoneinfo/Etc/UTC
-# shell-scripts dependencies
-# {{ $binariesFromALT := cat $binariesFromALT "/bin/sh" }} #### see shell operator / create link /bin/sh -> /bin/bash
-# clang dependencies
-# {{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
-# bash-completion
-# {{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }} ###### see linux utils / fox
-# {{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }} ###### see linux utils / fox
-# for debug
 {{ $binariesFromALT := cat $binariesFromALT "/usr/bin/ldd /usr/bin/strace" }}
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }} #### problem with dynamic link
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }} #### problem with dynamic link
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -64,14 +38,6 @@
 # iptables and dependencies
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
-# ipset and dependencies
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ipset" }} ### test
-# kmod and dependencies
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }} ### test
-# iproute2 and dependencies
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }} ### test
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }} ### test
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/ctstat /usr/sbin/rtstat" }} ### test
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -249,7 +215,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-22.1"
+fromCacheVersion: "2025-08-25.1"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
@@ -456,7 +422,6 @@ import:
   - liblzma.so.5
   - liblzma.so.5.6.3
   - liblzma.so.5.8.1
-### place for libedit
 - image: libs/libedit-v20250104.3.1
   add: /usr/lib
   to: /lib64
@@ -468,7 +433,6 @@ import:
   - libedit.so.0
   - libedit.so.0.0.75
   - libedit.so.3
-### place for ncurses
 - image: libs/ncurses-v6.5
   add: /usr/lib
   to: /lib64
@@ -516,7 +480,6 @@ import:
   - libtinfo.a
   - libtinfo.so
   - libtinfo.so.6
-### place for llvm
 - image: {{ .ModuleName }}/llvm-artifact
   add: /lib64/libLLVM.so.19.1
   to: /lib64/libLLVM.so.19.1
@@ -525,7 +488,6 @@ import:
   add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   before: install
-### place for gcc
 - image: tools/gcc-12.1.0
   add: /usr/lib64
   to: /lib64
@@ -534,7 +496,6 @@ import:
   - libstdc++.so.6
   - libstdc++.so.6.0.30
   - libgcc_s.so.1
-### temp
 - image: libs/glibc-v2.41
   add: /lib64/libc.musl-x86_64.so.1
   to: /lib64/libc.musl-x86_64.so.1
