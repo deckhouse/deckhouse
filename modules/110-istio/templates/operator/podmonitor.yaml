@@ -1,6 +1,7 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
+    {{- $fullVersion := get $versionInfo "fullVersion" }}
     {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
