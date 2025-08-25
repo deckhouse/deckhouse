@@ -36,8 +36,9 @@ import (
 )
 
 type expirePatch struct {
-	ExpireAt string   `json:"expireAt,omitempty"`
-	Groups   []string `json:"groups"`
+	ExpireAt    string     `json:"expireAt,omitempty"`
+	Groups      []string   `json:"groups"`
+	LockedUntil *time.Time `json:"lockedUntil"`
 }
 
 type DexUserInternalValues struct {
@@ -96,6 +97,15 @@ type DexGroupStatus struct {
 	} `json:"errors,omitempty"`
 }
 
+type Password struct {
+	// what?
+	UserID   string `json:"userID"`
+	Username string `json:"username"`
+	// what?
+	Email       string     `json:"email"`
+	LockedUntil *time.Time `json:"lockedUntil"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/user-authn",
@@ -115,6 +125,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Group",
 			FilterFunc: applyDexGroupFilter,
 		},
+		{
+			Name:       "passwords",
+			ApiVersion: "dex.coreos.com/v1",
+			Kind:       "Password",
+			FilterFunc: applyPasswordFilter,
+		},
 	},
 }, getDexUsers)
 
@@ -132,6 +148,15 @@ func getDexUsers(input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("error while make user groups map for group %s: %v", group.Spec.Name, err)
 		}
+	}
+
+	userNameToPassword := make(map[string]Password)
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.NewSnapshots.Get("passwords")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert user to password: cannot iterate over 'passwords' snapshot: %v", err)
+		}
+
+		userNameToPassword[password.Username] = password
 	}
 
 	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.NewSnapshots.Get("users")) {
@@ -171,24 +196,22 @@ func getDexUsers(input *go_hook.HookInput) error {
 			ExpireAt:    expireAt,
 		})
 
-		var patch map[string]interface{}
-		if expireAt == "" {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					Groups: groups,
-				},
-			}
-		} else {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					ExpireAt: expireAt,
-					Groups:   groups,
-				},
-			}
+		patch := expirePatch{
+			Groups: groups,
+		}
+		password, ok := userNameToPassword[dexUser.Name]
+		if ok {
+			patch.LockedUntil = password.LockedUntil
+		}
+		if expireAt != "" {
+			patch.ExpireAt = expireAt
+		}
+		patchMap := map[string]any{
+			"status": patch,
 		}
 
-		input.Logger.Info("Update groups in user status", slog.String("name", dexUser.Name), slog.String("groups", strings.Join(patch["status"].(expirePatch).Groups, ",")))
-		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
+		input.Logger.Info("Update groups in user status", slog.String("name", dexUser.Name), slog.String("groups", strings.Join(patchMap["status"].(expirePatch).Groups, ",")))
+		input.PatchCollector.PatchWithMerge(patchMap, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)
@@ -211,6 +234,15 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 	return user, nil
+}
+
+func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var group = &Password{}
+	err := sdk.FromUnstructured(obj, group)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	}
+	return group, nil
 }
 
 func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {
