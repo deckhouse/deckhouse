@@ -83,7 +83,7 @@ type Task struct {
 	IsLatest bool
 
 	DeployedReleaseInfo *ReleaseInfo
-	QueueDepth          int
+	QueueDepth          *ReleaseQueueDepthDelta
 }
 
 type ReleaseInfo struct {
@@ -91,16 +91,80 @@ type ReleaseInfo struct {
 	Version *semver.Version
 }
 
+// ReleaseQueueDepthDelta represents the difference between deployed and latest releases
+type ReleaseQueueDepthDelta struct {
+	Major int // Major versions delta, not used right now, for future usage
+	Minor int // Minor versions delta
+	Patch int // Patch can be 0 or 1
+}
+
+// GetReleaseQueueDepth returns the queue depth value for alerts and metrics
+// NOTE: separate alert planned for major updates in future
+func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
+	if d.Patch > 0 {
+		return d.Patch
+	}
+	if d.Minor > 0 {
+		return d.Minor
+	}
+	// major versions are not returned (will have separate alert)
+	return 0
+}
+
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
 
-// isPatchRelease returns true if b is greater only in terms of the patch versions.
 func isPatchRelease(a, b *semver.Version) bool {
 	if b.Major() == a.Major() && b.Minor() == a.Minor() && b.Patch() > a.Patch() {
 		return true
 	}
 
 	return false
+}
+
+func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleaseInfo *ReleaseInfo) *ReleaseQueueDepthDelta {
+	delta := &ReleaseQueueDepthDelta{}
+
+	if deployedReleaseInfo == nil || len(releases) == 0 {
+		return delta
+	}
+
+	deployed := deployedReleaseInfo.Version
+	latestRelease := releases[len(releases)-1]
+	latest := latestRelease.GetVersion()
+
+	// major delta exists
+	if latest.Major() > deployed.Major() {
+		delta.Major = int(latest.Major() - deployed.Major())
+
+		// find the latest release in the same major version as deployed
+		var latestInSameMajor *semver.Version
+		for i := len(releases) - 1; i >= 0; i-- {
+			if releases[i].GetVersion().Major() == deployed.Major() {
+				latestInSameMajor = releases[i].GetVersion()
+				break
+			}
+		}
+
+		if latestInSameMajor != nil && latestInSameMajor.Minor() > deployed.Minor() {
+			delta.Minor = int(latestInSameMajor.Minor() - deployed.Minor())
+		}
+
+		return delta
+	}
+
+	// skip Patch in case Minor delta exists
+	if latest.Minor() > deployed.Minor() {
+		delta.Minor = int(latest.Minor() - deployed.Minor())
+		delta.Patch = 0 // explicitly zero out patch
+		return delta
+	}
+
+	if latest.Patch() > deployed.Patch() {
+		delta.Patch = 1
+	}
+
+	return delta
 }
 
 const ltsReleaseChannel = "lts"
@@ -182,10 +246,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return a.GetVersion().Compare(b)
 	})
 
-	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
-	// compute depth including current release (off-by-one fix): len(releases) - releaseIdx
-	releaseQueueDepth := min(len(releases)-releaseIdx, 3)
-	isLatestRelease := releaseQueueDepth == 0
+	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
+	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
 	isPatch := true
 
 	// check previous release
@@ -212,6 +274,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					TaskType:            Await,
 					Message:             msg,
 					DeployedReleaseInfo: deployedReleaseInfo,
+					QueueDepth:          queueDepthDelta,
 				}, nil
 			}
 
@@ -234,6 +297,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 						TaskType:            Await,
 						Message:             msg,
 						DeployedReleaseInfo: deployedReleaseInfo,
+						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
 
@@ -251,6 +315,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 						TaskType:            Await,
 						Message:             msg,
 						DeployedReleaseInfo: deployedReleaseInfo,
+						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
 			}
@@ -270,6 +335,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 						TaskType:            Await,
 						Message:             msg,
 						DeployedReleaseInfo: deployedReleaseInfo,
+						QueueDepth:          queueDepthDelta,
 					}, nil
 				}
 			}
@@ -299,7 +365,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				IsPatch:             isPatch,
 				IsLatest:            isLatestRelease,
 				DeployedReleaseInfo: deployedReleaseInfo,
-				QueueDepth:          releaseQueueDepth,
+				QueueDepth:          queueDepthDelta,
 			}, nil
 		}
 
@@ -320,7 +386,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		IsLatest:            isLatestRelease,
 		IsPatch:             isPatch,
 		DeployedReleaseInfo: deployedReleaseInfo,
-		QueueDepth:          releaseQueueDepth,
+		QueueDepth:          queueDepthDelta,
 	}, nil
 }
 
