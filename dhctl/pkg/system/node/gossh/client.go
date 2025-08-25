@@ -119,7 +119,7 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		log.DebugF("Connect to bastion host %s\n", bastionAddr)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 60, 2*time.Second).Run(func() error {
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
 		})
@@ -164,24 +164,23 @@ func (s *Client) Start() error {
 	var targetConn net.Conn
 	var clientConn ssh.Conn
 
-	s.Settings.ChoiceNewHost()
-	addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
-
 	config.Timeout = 30 * time.Second
 	config.BannerCallback = func(message string) error {
 		return nil
 	}
 
 	if bastionClient == nil {
-		log.DebugF("Try to direct connect host master host %s\n", addr)
+		log.DebugLn("Try to direct connect host master host")
 
 		var err error
 		err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
+			s.Settings.ChoiceNewHost()
+			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			client, err = ssh.Dial("tcp", addr, config)
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("failed to connect to host %s: %w", addr, err)
+			return fmt.Errorf("failed to connect to host: %w", err)
 		}
 
 		s.sshClient = client
@@ -196,10 +195,13 @@ func (s *Client) Start() error {
 		return nil
 	}
 
-	log.DebugF("Try to connect to through bastion host master host %s\n", addr)
+	log.DebugF("Try to connect to through bastion host master host \n")
 
+	var addr string
 	var err error
-	err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get SSH client", 50, 2*time.Second).Run(func() error {
+		s.Settings.ChoiceNewHost()
+		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		targetConn, err = bastionClient.Dial("tcp", addr)
 		return err
 	})
@@ -209,7 +211,7 @@ func (s *Client) Start() error {
 	var targetClientConn ssh.Conn
 	var targetNewChan <-chan ssh.NewChannel
 	var targetReqChan <-chan *ssh.Request
-	err = retry.NewSilentLoop("Connect to target SSH host", 30, 5*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Connect to target SSH host", 50, 2*time.Second).Run(func() error {
 		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
 		return err
 	})
@@ -252,12 +254,6 @@ func (s *Client) keepAlive() {
 				s.live = false
 				s.stopChan = nil
 				s.Start()
-				for _, sess := range s.sessionList {
-					if sess != nil {
-						sess.Signal(ssh.SIGKILL)
-						sess.Close()
-					}
-				}
 				s.sessionList = nil
 				return
 			}
