@@ -220,18 +220,18 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 				continue
 			}
 
-			validateErr = multierror.Append(validateErr, fmt.Errorf(`"%s" is not deployed`, parentModule))
+			validateErr = multierror.Append(validateErr, fmt.Errorf(`'%s' is not deployed`, parentModule))
 			continue
 		}
 
 		parsedParentVersion, err := parseParentVersion(parentVersion)
 		if err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency \"%s\" has unparsable version", parentModule))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
 			continue
 		}
 
 		if err = req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency %q not meet version constraint: %s", parentModule, err.Error()))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("dependency '%s' not meet version constraint: %s", parentModule, err.Error()))
 		}
 	}
 
@@ -243,7 +243,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 	// check if the new module's version breaks current constraints
 	for dependentModule, r := range e.modules {
 		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
-			validateErr = multierror.Append(validateErr, fmt.Errorf("the \"%s\" dependency \"%s\" not meet the version constraint if the \"%s\" module release is installed: %s", dependentModule, moduleName, moduleRelease, err.Error()))
+			validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if '%s' module release is installed: %s", dependentModule, moduleRelease, err.Error()))
 		}
 	}
 
@@ -307,19 +307,19 @@ func (e *Extender) Filter(moduleName string, _ map[string]string) (*bool, error)
 			if exists {
 				msg = "is disabled"
 			}
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" %s", moduleName, parentModule, msg))
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' %s", parentModule, msg))
 			continue
 		}
 
 		parsedParentVersion, parseErr := parseParentVersion(parentVersion)
 		if parseErr != nil {
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" has unparsable version", moduleName, parentModule))
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' has unparsable version: %s", parentModule, parentVersion))
 			continue
 		}
 
 		// check if the parent module is of an inappropriate version
 		if versionErr := req.matcher.ValidateModuleVersion(parentModule, parsedParentVersion); versionErr != nil {
-			err = multierror.Append(err, fmt.Errorf("the \"%s\" module dependency \"%s\" does not meet the version constraint: %s", moduleName, parentModule, versionErr.Error()))
+			err = multierror.Append(err, fmt.Errorf("dependency '%s' not meet the version constraint: %s", parentModule, versionErr.Error()))
 		}
 	}
 
