@@ -1158,6 +1158,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 
+			// Check that v1.49.0 is superseded and v1.50.0 is deployed
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
 			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
