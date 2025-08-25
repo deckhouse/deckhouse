@@ -46,7 +46,7 @@ func main() {
 	}
 	if exist, err := isCiliumBinaryExists(cniCiliumPath); !exist {
 		if err != nil {
-			log.Error(fmt.Sprintf("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err))
+			log.Warn(fmt.Sprintf("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err))
 		} else {
 			log.Info(fmt.Sprintf("cilium-cni binary '%s' does not exist", cniCiliumPath))
 		}
@@ -61,7 +61,7 @@ func main() {
 
 	isWGPresent, err := checkWireGuardInterfacesOnNode()
 	if err != nil {
-		log.Error("failed to check for WireGuard interfaces. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
+		log.Warn("failed to check for WireGuard interfaces. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	if !isWGPresent {
@@ -72,22 +72,22 @@ func main() {
 
 	wgKernelConstraint := os.Getenv("WG_KERNEL_CONSTRAINT")
 	if wgKernelConstraint == "" {
-		log.Error("ENV variable WG_KERNEL_CONSTRAINT must be set")
+		log.Warn("ENV variable WG_KERNEL_CONSTRAINT must be set")
 		os.Exit(1)
 	}
 
 	kernelVersion, err := getCurrentKernelVersion()
 	if err != nil {
-		log.Error("failed to get current kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
+		log.Warn("failed to get current kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	isKernelVersionMeet, err := checkKernelVersionWGCiliumRequirements(kernelVersion, wgKernelConstraint)
 	if err != nil {
-		log.Error("failed to check kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
+		log.Warn("failed to check kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	if !isKernelVersionMeet {
-		log.Error("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
+		log.Warn("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
 		os.Exit(1)
 	}
 	log.Info("the kernel meets the requirements, there is nothing to do")
