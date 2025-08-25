@@ -672,7 +672,7 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /
+  add: /4
   to: /
   includePaths:
   - chroot
@@ -966,6 +966,8 @@ import:
   - usr/bin/coreutils
   - usr/bin/test
   - usr/bin/chroot
+  - usr/bin/cat # to view nginx logs from file
+  - usr/bin/tail # to view nginx logs from file
   before: install
 shell:
   setup:
