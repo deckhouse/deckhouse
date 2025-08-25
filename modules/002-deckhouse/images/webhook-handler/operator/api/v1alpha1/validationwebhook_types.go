@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,6 +34,8 @@ type ValidationWebhookSpec struct {
 	// foo is an example field of ValidationWebhook. Edit validationwebhook_types.go to remove/update
 	// +optional
 	Foo *string `json:"foo,omitempty"`
+
+	Webhook *admissionregistrationv1.ValidatingWebhook `json:"webhook,omitempty"`
 }
 
 // ValidationWebhookStatus defines the observed state of ValidationWebhook.
@@ -43,6 +46,7 @@ type ValidationWebhookStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,shortName=vwhc
 
 // ValidationWebhook is the Schema for the validationwebhooks API
 type ValidationWebhook struct {
