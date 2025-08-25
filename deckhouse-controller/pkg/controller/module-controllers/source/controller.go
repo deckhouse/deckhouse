@@ -93,6 +93,7 @@ func RegisterController(
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
+		releaseInfoCache:     downloader.GetGlobalReleaseImageInfoCache(),
 	}
 
 	r.init.Add(1)
@@ -161,6 +162,9 @@ type reconciler struct {
 	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
+
+	// Global cache for module release image information
+	releaseInfoCache *downloader.ReleaseImageInfoCache
 }
 
 type moduleManager interface {
@@ -300,7 +304,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
 	defer span.End()
 
-	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, r.logger.Named("downloader"), opts)
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, r.logger.Named("downloader"), opts, r.releaseInfoCache)
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)

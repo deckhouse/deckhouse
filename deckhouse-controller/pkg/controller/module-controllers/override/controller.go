@@ -282,7 +282,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}()
 
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
-	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, r.log.Named("downloader"), options)
+	globalCache := downloader.GetGlobalReleaseImageInfoCache()
+	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, r.log.Named("downloader"), options, globalCache)
 
 	r.log.Debug("downloading tag of module", slog.String("tag", mpo.Spec.ImageTag), slog.String("name", mpo.Name))
 	newChecksum, moduleDef, err := md.DownloadDevImageTag(mpo.Name, mpo.Spec.ImageTag, mpo.Status.ImageDigest)
