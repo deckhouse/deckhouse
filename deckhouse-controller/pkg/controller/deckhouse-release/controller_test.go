@@ -1096,7 +1096,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Migrated Modules", func() {
-		suite.Run("No migrated modules", func() {
+		suite.Run("no-migrated-modules", func() {
 			suite.setupController("no-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1110,7 +1110,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("Empty migrated modules", func() {
+		suite.Run("empty-migrated-modules", func() {
 			suite.setupController("empty-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1124,7 +1124,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("Modules available", func() {
+		suite.Run("modules-available", func() {
 			suite.setupController("modules-available.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1138,21 +1138,21 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("Module missing", func() {
+		suite.Run("module-missing", func() {
 			suite.setupController("module-missing.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 
-		suite.Run("Module pull error", func() {
+		suite.Run("module-pull-error", func() {
 			suite.setupController("module-pull-error.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 
-		suite.Run("Multiple sources", func() {
+		suite.Run("multiple-sources", func() {
 			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1166,7 +1166,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("Disabled migrated module is rejected", func() {
+		suite.Run("disabled-migrated-module", func() {
 			suite.setupController("disabled-migrated-module.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1180,7 +1180,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Contains(suite.T(), newRelease.Status.Message, "migrated module \"disabled-module\" is disabled, migration cannot occur")
 		})
 
-		suite.Run("Mixed enabled and disabled migrated modules are rejected", func() {
+		suite.Run("mixed-enabled-disabled", func() {
 			suite.setupController("mixed-enabled-disabled.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1194,7 +1194,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Contains(suite.T(), newRelease.Status.Message, "migrated module \"disabled-module\" is disabled, migration cannot occur")
 		})
 
-		suite.Run("Enabled module not found in ModuleSource is rejected", func() {
+		suite.Run("enabled-module-not-found", func() {
 			suite.setupController("enabled-module-not-found.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1209,7 +1209,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
-		suite.Run("Migrated module not in enabled modules list is rejected", func() {
+		suite.Run("migrated-module-not-enabled", func() {
 			suite.setupController("migrated-module-not-enabled.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
