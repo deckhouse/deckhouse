@@ -51,44 +51,44 @@ func main() {
 			log.Info(fmt.Sprintf("cilium-cni binary '%s' does not exist", cniCiliumPath))
 		}
 	} else if cniCiliumVersionStr, err := getCiliumVersionByCNI(cniCiliumPath); err != nil {
-		log.Warn(fmt.Sprintf("failed to get cilium version: %v", err))
+		log.Warn("failed to get cilium version", log.Err(err))
 	} else if isCiliumAlreadyUpgraded, err := checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint); err != nil {
-		log.Warn(fmt.Sprintf("failed to check cilium version: %v", err))
+		log.Warn("failed to check cilium version", log.Err(err))
 	} else if isCiliumAlreadyUpgraded {
-		log.Info(fmt.Sprintf("cilium is already upgraded, there is nothing to do"))
+		log.Info("cilium is already upgraded, there is nothing to do")
 		return
 	}
 
 	isWGPresent, err := checkWireGuardInterfacesOnNode()
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to check for WireGuard interfaces: %v. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
+		log.Error("failed to check for WireGuard interfaces. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	if !isWGPresent {
-		log.Info(fmt.Sprintf("WireGuard interfaces are not present on the node"))
+		log.Info("WireGuard interfaces are not present on the node")
 		return
 	}
-	log.Info(fmt.Sprintf("WireGuard interfaces are present on the node"))
+	log.Info("WireGuard interfaces are present on the node")
 
 	wgKernelConstraint := os.Getenv("WG_KERNEL_CONSTRAINT")
 	if wgKernelConstraint == "" {
-		log.Fatal(fmt.Sprintf("ENV variable WG_KERNEL_CONSTRAINT must be set"))
+		log.Fatal("ENV variable WG_KERNEL_CONSTRAINT must be set")
 	}
 
 	kernelVersion, err := getCurrentKernelVersion()
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to get current kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
+		log.Error("failed to get current kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	isKernelVersionMeet, err := checkKernelVersionWGCiliumRequirements(kernelVersion, wgKernelConstraint)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to check kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
+		log.Error("failed to check kernel version. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", log.Err(err))
 		return
 	}
 	if !isKernelVersionMeet {
-		log.Fatal(fmt.Sprintf("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher"))
+		log.Fatal("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
 	}
-	log.Info(fmt.Sprintf("the kernel meets the requirements, there is nothing to do"))
+	log.Info("the kernel meets the requirements, there is nothing to do")
 	return
 }
 
@@ -196,7 +196,7 @@ func checkKernelVersionWGCiliumRequirements(kernelVersion, kernelConstraint stri
 	}
 
 	if !kernelConstraintSM.Check(kernelVersionSM) {
-		return false, fmt.Errorf("the kernel %s does not meet the requirements: %s", kernelVersion, kernelConstraint)
+		return false, nil
 	}
 
 	return true, nil

@@ -187,7 +187,7 @@ func TestCheckKernelVersionWGCiliumRequirements(t *testing.T) {
 			name:          "Version parsing ok and not met requirements",
 			inVerStr:      "5.15.15",
 			expectCondMet: false,
-			expectError:   true,
+			expectError:   false,
 		},
 		{
 			name:          "Version parsing failed",
