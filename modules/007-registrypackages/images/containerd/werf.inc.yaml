@@ -66,6 +66,9 @@ shell:
   beforeInstall:
   {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
+{{- if eq $.SVACE_ENABLED "true" }}
+  - apt-get update && apt-get install golang-1.24 golang -y
+{{- end }}
   - mkdir -p /out
   install:
   - cd /src
