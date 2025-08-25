@@ -41,53 +41,53 @@ const (
 func main() {
 	ciliumConstraint := os.Getenv("CILIUM_CONSTRAINT")
 	if ciliumConstraint == "" {
-		log.Info("ENV variable CILIUM_CONSTRAINT is not set, use default value '%s'", ciliumConstraintDef)
+		log.Info(fmt.Sprintf("ENV variable CILIUM_CONSTRAINT is not set, use default value '%s'", ciliumConstraintDef))
 		ciliumConstraint = ciliumConstraintDef
 	}
 	if exist, err := isCiliumBinaryExists(cniCiliumPath); !exist {
 		if err != nil {
-			log.Error("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err)
+			log.Error(fmt.Sprintf("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err))
 		} else {
-			log.Info("cilium-cni binary '%s' does not exist", cniCiliumPath)
+			log.Info(fmt.Sprintf("cilium-cni binary '%s' does not exist", cniCiliumPath))
 		}
 	} else if cniCiliumVersionStr, err := getCiliumVersionByCNI(cniCiliumPath); err != nil {
-		log.Warn("failed to get cilium version: %v", err)
+		log.Warn(fmt.Sprintf("failed to get cilium version: %v", err))
 	} else if isCiliumAlreadyUpgraded, err := checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint); err != nil {
-		log.Warn("failed to check cilium version: %v", err)
+		log.Warn(fmt.Sprintf("failed to check cilium version: %v", err))
 	} else if isCiliumAlreadyUpgraded {
-		log.Info("cilium is already upgraded, there is nothing to do")
+		log.Info(fmt.Sprintf("cilium is already upgraded, there is nothing to do"))
 		return
 	}
 
 	isWGPresent, err := checkWireGuardInterfacesOnNode()
 	if err != nil {
-		log.Error("failed to check for WireGuard interfaces: %v. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		log.Error(fmt.Sprintf("failed to check for WireGuard interfaces: %v. If the WireGuard interfaces are present on the node and the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
 		return
 	}
 	if !isWGPresent {
-		log.Info("WireGuard interfaces are not present on the node")
+		log.Info(fmt.Sprintf("WireGuard interfaces are not present on the node"))
 		return
 	}
 
 	wgKernelConstraint := os.Getenv("WG_KERNEL_CONSTRAINT")
 	if wgKernelConstraint == "" {
-		log.Fatal("ENV variable WG_KERNEL_CONSTRAINT must be set")
+		log.Fatal(fmt.Sprintf("ENV variable WG_KERNEL_CONSTRAINT must be set"))
 	}
 
 	kernelVersion, err := getCurrentKernelVersion()
 	if err != nil {
-		log.Error("failed to get current kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		log.Error(fmt.Sprintf("failed to get current kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
 		return
 	}
 	isKernelVersionMeet, err := checkKernelVersionWGCiliumRequirements(kernelVersion, wgKernelConstraint)
 	if err != nil {
-		log.Error("failed to check kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err)
+		log.Error(fmt.Sprintf("failed to check kernel version: %v. If the kernel version is less than 6.8, there may be an issue with 'BPF is too large'", err))
 		return
 	}
 	if !isKernelVersionMeet {
-		log.Fatal("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
+		log.Fatal(fmt.Sprintf("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher"))
 	}
-	log.Info("the kernel meets the requirements, there is nothing to do")
+	log.Info(fmt.Sprintf("the kernel meets the requirements, there is nothing to do"))
 	return
 }
 
@@ -155,7 +155,7 @@ func checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint string) (bool, err
 	}
 
 	if !ciliumConstraintSM.Check(ciliumVersionSM) {
-		return false, fmt.Errorf("the Cilium version has not been upgraded yet. The condition ('%s %s') has not been met", ciliumVersionSM, ciliumConstraintSM)
+		return false, fmt.Errorf("the Cilium version has not been upgraded yet. The condition (%s %s) has not been met", ciliumVersionSM.String(), ciliumConstraintSM.String())
 	}
 
 	return true, nil
