@@ -62,6 +62,12 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 			plan:    "./mocks/checkplan/destructively_changed.json",
 			changes: destructivelyChanged,
 		},
+		{
+			name:    "Has destructive changes but without VM",
+			plan:    "./mocks/checkplan/destructively_changed_without_vm.json",
+			changes: nil,
+			err:     nil,
+		},
 	}
 
 	for _, tc := range tests {
