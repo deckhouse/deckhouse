@@ -18,8 +18,8 @@ lang: ru
 При наличии одного из этих лейблов cмена параметра [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
 
 ```shell
-kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
-kubectl get node -l node.deckhouse.io/containerd-config
+d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
+d8 k get node -l node.deckhouse.io/containerd-config
 ```
 
 Также администратор может проверить конкретный узел на соответствие требованиям с помощью команд:
@@ -66,7 +66,7 @@ ls -l /etc/containerd/conf.d
 Пример команды для добавления аннотации на узел:
 
 ```shell
-kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
 Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).

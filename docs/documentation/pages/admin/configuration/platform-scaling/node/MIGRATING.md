@@ -18,8 +18,8 @@ If any of the requirements described in the [general cluster parameters](../../.
 If one of these labels is present, changing the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
 
 ```shell
-kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
-kubectl get node -l node.deckhouse.io/containerd-config
+d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
+d8 k get node -l node.deckhouse.io/containerd-config
 ```
 
 Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
@@ -66,7 +66,7 @@ When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequent
 Example:
 
 ```shell
-kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
 During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
