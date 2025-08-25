@@ -72,7 +72,8 @@ func main() {
 
 	wgKernelConstraint := os.Getenv("WG_KERNEL_CONSTRAINT")
 	if wgKernelConstraint == "" {
-		log.Fatal("ENV variable WG_KERNEL_CONSTRAINT must be set")
+		log.Error("ENV variable WG_KERNEL_CONSTRAINT must be set")
+		os.Exit(1)
 	}
 
 	kernelVersion, err := getCurrentKernelVersion()
@@ -86,7 +87,8 @@ func main() {
 		return
 	}
 	if !isKernelVersionMeet {
-		log.Fatal("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
+		log.Error("the kernel does not meet the requirements and needs to be updated to version 6.8 or higher")
+		os.Exit(1)
 	}
 	log.Info("the kernel meets the requirements, there is nothing to do")
 	return
