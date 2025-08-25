@@ -247,6 +247,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
