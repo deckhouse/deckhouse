@@ -117,7 +117,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "max by(module) (d8_telemetry_no_module_yaml)",
+          "expr": "max by(module) (d8_telemetry_module_validations_no_module_yaml_in_release_image)",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
