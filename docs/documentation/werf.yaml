@@ -25,3 +25,4 @@ configVersion: 1
 {{- $_ := set $context "BuildModules" false }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
 ---
+{{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}

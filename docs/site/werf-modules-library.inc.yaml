@@ -25,18 +25,3 @@ shell:
 #  before: setup
 #  owner: nginx
 #  group: nginx
----
-# Image, containing static files of all the embedded modules for loading into the storage
-image: {{ .ModuleName }}/modules-embeded/static
-{{ if eq .ModuleName "documentation" }}
-fromImage: common/distroless
-{{ else }}
-fromImage: base/distroless
-{{ end }}
-import:
-- image: {{ .ModuleName }}/modules-embeded/static-artifact
-  add: /app/_site/
-  to: /modules-embedded
-  before: setup
----
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) $ }}

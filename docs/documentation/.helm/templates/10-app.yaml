@@ -27,7 +27,7 @@ spec:
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       containers:
         - name: web
-          image: {{ index .Values.werf.image "docs/web" }}
+          image: {{ index .Values.werf.image "website-docs/web" }}
           {{- include "resources" . | nindent 10 }}
           ports:
           - containerPort: 80
