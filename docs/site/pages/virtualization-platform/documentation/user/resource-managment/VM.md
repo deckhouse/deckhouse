@@ -646,7 +646,7 @@ spec:
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines”"section.
+- Go to the "Virtualization" -> "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Additional Settings" section.
 - Enable the "Auto-apply changes" switch.

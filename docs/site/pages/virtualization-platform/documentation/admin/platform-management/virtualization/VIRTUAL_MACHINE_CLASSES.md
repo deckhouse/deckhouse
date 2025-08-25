@@ -330,7 +330,7 @@ spec:
 How to configure sizing policies in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
 - Click "Add" in the "Resource allocation rules for virtual machines" block.
-- In the "PU" block, enter `1` in the "Min" field.
+- In the "CPU" block, enter `1` in the "Min" field.
 - In the "CPU" block, enter `4` in the "Max" field.
 - In the "CPU" block, select the values `5%`, `10%`, `20%`, `50%`, `100%` in order in the "Allow setting core fractions" field.
 - In the "Memory" block, set the switch to "Amount per core".

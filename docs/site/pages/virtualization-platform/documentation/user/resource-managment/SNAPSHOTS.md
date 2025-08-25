@@ -112,7 +112,7 @@ How to restore a disk from a previously created snapshot in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
 - Go to the "Virtualization" -> "VM Disks" section.
-- Click "Create Disk""
+- Click "Create Disk".
 - In the form that opens, enter a name for the disk in the "Disk Name" field.
 - In the "Source" field, make sure the "Snapshots" checkbox is selected.
 - From the drop-down list, select the disk snapshot you want to restore from.

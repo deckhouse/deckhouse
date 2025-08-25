@@ -113,7 +113,7 @@ d8 k uncordon <nodename>
 
 How to perform the operation in the web interface:
 
-- Go to the "System”"tab, then to the "Nodes" section -> "Nodes of all groups".
+- Go to the "System" tab, then to the "Nodes" section -> "Nodes of all groups".
 - Select the desired node from the list and click the "Cordon + Drain" button.
 - To remove it from maintenance mode, click the "Uncordon" button.
 
