@@ -118,13 +118,13 @@ spec:
         items: []
     - macro:
         name: user_known_container_drift_activities
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: user_known_modify_bin_dir_activities
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: user_known_package_manager_in_container
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: system_namespace
         condition: ((ka.target.namespace in (kube-system, kube-public, default)) or (ka.target.name startswith "d8-"))
