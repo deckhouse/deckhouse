@@ -284,7 +284,14 @@ apiVersions:
                     storageClass:
                       type: string
                       description: |
-                        Name of the existing StorageClass will be used to create the virtual machine's root disk.
+                        The name of StorageClass that will be used in the cluster by default.
+
+                        If the parameter is omitted, the default StorageClass will be one of the following:
+
+                        * an arbitrary StorageClass present in the cluster that has the default annotation;
+                        * the first (in lexicographic order) StorageClass created by the module.
+
+                        > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
                     image:
                       type: object
                       description: |
