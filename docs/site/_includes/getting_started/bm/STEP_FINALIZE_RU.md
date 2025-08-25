@@ -144,6 +144,24 @@ cat /dev/shm/caps-id.pub
   </li>
   <li>
     <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
+{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
+В операционных системах на базе Red Hat Linux пользователя caps нужно добавлять в группу wheel. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
+<div markdown="1">
+```bash
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+</div>
+Далее перейдите к следующему шагу, **выполнять команду ниже не нужно**.
+{% endofftopic %}
 <div markdown="1">
 ```bash
 # Укажите публичную часть SSH-ключа пользователя.
