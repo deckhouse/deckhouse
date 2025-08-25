@@ -69,3 +69,6 @@ spec:
     runAsNonRoot: false
     runAsUser: 0
     runAsGroup: 0
+    seLinuxOptions:
+      type: spc_t
+      level: s0
