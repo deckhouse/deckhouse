@@ -79,7 +79,7 @@ git:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -92,9 +92,10 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - export GOPROXY=$(cat /run/secrets/GOPROXY)
-    - cd /src
-    - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o /label-converter label_converter.go
+    - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux
+    - cd /src 
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w -extldflags "-static"' -o /label-converter label_converter.go`) | indent 6 }} 
     - chown 64535:64535 /label-converter
     - chmod 755 /label-converter
 ---

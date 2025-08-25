@@ -49,7 +49,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -69,7 +69,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - make build
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make build`) | indent 6 }}
   - cp bin/csi-provisioner /csi-provisioner
   - chown 64535:64535 /csi-provisioner
   - chmod 0755 /csi-provisioner

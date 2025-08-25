@@ -59,7 +59,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -75,7 +75,8 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - go build -ldflags="-s -w" .
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" .`) | indent 6 }}
   - chown -R 64535:64535 /src
   - chmod 0755 /src/ovpn-admin
 ---

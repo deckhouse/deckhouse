@@ -45,7 +45,7 @@ shell:
   - rm -rf /src/cloudprovider/azure/test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
@@ -62,7 +62,8 @@ shell:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - go build -ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler`) | indent 6 }}
   - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}

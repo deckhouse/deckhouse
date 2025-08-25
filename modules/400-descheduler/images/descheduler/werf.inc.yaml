@@ -22,7 +22,7 @@ shell:
 ---
 image: {{ .ModuleName }}/build-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -38,7 +38,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
-  - go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w -X sigs.k8s.io/descheduler/pkg/version.version={{ $version }}" -o /descheduler sigs.k8s.io/descheduler/cmd/descheduler`) | indent 6 }}
   - chown 64535:64535 /descheduler
   - chmod 0700 /descheduler
 ---

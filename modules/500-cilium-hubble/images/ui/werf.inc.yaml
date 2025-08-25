@@ -34,7 +34,7 @@ shell:
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend-build-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -52,7 +52,9 @@ shell:
   - export "GOARCH=amd64"
   - cd /src/hubble-ui/backend
   - go mod download -x && go mod vendor && go mod verify
-  - CGO_ENABLED=0 go build -ldflags "-s -w" -o backend
+  - export CGO_ENABLED=0 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w" -o backend`) | indent 6 }}
   - chown 64535:64535 /src/hubble-ui/backend/backend
   - chmod 0700 /src/hubble-ui/backend/backend
 ---

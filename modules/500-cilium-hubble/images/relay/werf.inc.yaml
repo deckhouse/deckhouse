@@ -4,7 +4,7 @@
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: cni-cilium/bin-cilium-src-artifact
@@ -26,7 +26,8 @@ shell:
   #
   - cd /src/cilium
   - go mod vendor && go mod download -x
-  - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay`) | indent 6 }}
   - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
   - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
 ---

@@ -25,7 +25,7 @@ imageSpec:
     
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.23" "builder/golang-alpine-svace-1.23" }}
 fromCacheVersion: "2025-05-26"
 final: false
 import:
@@ -48,7 +48,8 @@ shell:
   setup:
   - cd /src
   - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o /src/monitoring-ping
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /src/monitoring-ping`) | indent 6 }}
   - chmod 0755 /src/monitoring-ping # change to 0500 after removed init container
   - chown 64535:64535 /src/monitoring-ping
 ---

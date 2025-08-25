@@ -12,7 +12,7 @@ shell:
   - rm -rf .git website
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine-1.23
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.23" "builder/golang-alpine-svace-1.23" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -31,6 +31,8 @@ shell:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go test ./... -v
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /task cmd/task/task.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /task cmd/task/task.go`) | indent 6 }}
   - chown 64535:64535 /task
   - chmod 0755 /task

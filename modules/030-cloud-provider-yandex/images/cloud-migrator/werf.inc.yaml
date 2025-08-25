@@ -32,7 +32,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
@@ -47,6 +47,8 @@ shell:
   setup:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /migrator
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /migrator`) | indent 6 }}
   - chown 64535:64535 /migrator
   - chmod 0755 /migrator

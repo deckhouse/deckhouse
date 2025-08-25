@@ -53,7 +53,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src
@@ -71,7 +71,9 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/driver.driverVersion={{ $value.csi.aws }} -X github.com/kubernetes-sigs/aws-ebs-csi-driver/pkg/cloud.driverVersion={{ $value.csi.aws }} -s -w" -o /aws-ebs-csi-driver ./cmd/main.go`) | indent 6 }}
   - chown 64535:64535 /aws-ebs-csi-driver
   - chmod 0755 /aws-ebs-csi-driver
  {{- end }}

@@ -31,7 +31,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /go/src/app
@@ -48,11 +48,9 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
     - cd /go/src/app
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
     - |
-      CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
-      -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $version }}' \
-      -o /go/bin/yandex-csi-driver \
-      github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -a -ldflags '-X github.com/deckhouse/yandex-csi-driver/driver.version={{ $version }}' -o /go/bin/yandex-csi-driver github.com/deckhouse/yandex-csi-driver/cmd/yandex-csi-driver`) | indent 6 }}
     - chown 64535:64535 /go/bin/yandex-csi-driver
     - chmod 0755 /go/bin/yandex-csi-driver
 ---

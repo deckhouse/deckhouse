@@ -19,7 +19,7 @@ shell:
     - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -35,7 +35,8 @@ shell:
   install:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.0' -o /coredns
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.0' -o /coredns`) | indent 6 }}
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
 ---

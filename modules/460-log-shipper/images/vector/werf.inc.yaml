@@ -85,7 +85,7 @@ shell:
   - chmod 0755 /vector
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-reloader-artifact
-fromImage: builder/golang-alpine-1.24
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine-1.24" "builder/golang-alpine-svace-1.24" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -101,7 +101,8 @@ shell:
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go build -ldflags="-s -w" -o /reloader main.go
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /reloader main.go`) | indent 6 }}
   - chown 64535:64535 /reloader
   - chmod 755 /reloader
 ---

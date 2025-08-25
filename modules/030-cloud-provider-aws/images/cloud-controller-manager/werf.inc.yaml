@@ -46,7 +46,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
     add: /src
@@ -63,7 +63,9 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s -X k8s.io/component-base/version.gitVersion={{ $value.ccm.aws }} -X main.gitVersion={{ $value.ccm.aws }}" -o=aws-cloud-controller-manager cmd/aws-cloud-controller-manager/main.go
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -trimpath -ldflags="-w -s -X k8s.io/component-base/version.gitVersion={{ $value.ccm.aws }} -X main.gitVersion={{ $value.ccm.aws }}" -o=aws-cloud-controller-manager cmd/aws-cloud-controller-manager/main.go`) | indent 6 }}
   - chown 64535:64535 /src/aws-cloud-controller-manager
   - chmod 0755 /src/aws-cloud-controller-manager
   {{- end }}

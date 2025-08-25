@@ -26,7 +26,7 @@ shell:
   - rm -rf .git
 ---
 image: terraform-provider-kubernetes
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 - fromPath: ~/go-pkg-cache
@@ -44,7 +44,9 @@ shell:
   - export GOPROXY={{ $.GOPROXY }}
   - cd /src
   - go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.kubernetes.version }} -X main.commit=00000000" -o terraform-provider-kubernetes ./
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.kubernetes.version }} -X main.commit=00000000" -o terraform-provider-kubernetes ./`) | indent 6 }}
   - mv /src/terraform-provider-kubernetes /terraform-provider-kubernetes
   - chmod -R 755 /terraform-provider-kubernetes
   - chown 64535:64535 /terraform-provider-kubernetes

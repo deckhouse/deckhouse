@@ -31,7 +31,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -47,6 +47,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
-  - go build -a -ldflags '-s -w -extldflags "-static"' -o alertmanager cmd/alertmanager/main.go
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -a -ldflags '-s -w -extldflags "-static"' -o alertmanager cmd/alertmanager/main.go`) | indent 6 }}
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/alertmanager

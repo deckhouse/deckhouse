@@ -37,7 +37,7 @@ import:
   add: /src
   to: /src
   before: install
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -47,7 +47,9 @@ shell:
   - GIT_COMMIT=$(cat GIT_COMMIT)
   - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go`) | indent 6 }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

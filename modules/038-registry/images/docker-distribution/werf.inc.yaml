@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
@@ -42,7 +42,8 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/distribution
-    - make build
+    - |
+      {{- include "image-build.build" (set $ "BuildCommand" `make build`) | indent 6 }}
     - make binaries
     - chmod +x ./registry
     - mv ./bin/registry /registry
