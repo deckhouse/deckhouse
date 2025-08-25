@@ -45,7 +45,7 @@
 >       node-role.kubernetes.io/master: master
 > ```
 
-Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `spec.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
+Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `.spec.settings.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
 
 > Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
 > ```yaml
