@@ -25,26 +25,29 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    modules.deckhouse.io/isUpdating: "false"
-    modules.deckhouse.io/notified: "true"
-    release.deckhouse.io/approved: "true"
+    modules.deckhouse.io/approved: "true"
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
     modules.deckhouse.io/update-policy: echo
     release-checksum: fd59af7328ed891b53cc999f242b0866
     source: test
+    status: deployed
   name: echo-v0.4.69
-  resourceVersion: "1001"
+  resourceVersion: "1004"
 spec:
   moduleName: echo
   version: 0.4.69
   weight: 900
 status:
-  approved: false
-  message: 'Release is waiting for the ''modules.deckhouse.io/approved: "true"'' annotation'
-  phase: Pending
-  pullDuration: 0s
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 9m15s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
 ---
@@ -59,8 +62,5 @@ status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'ModuleRelease could not be applied, release postponed: see details in
-      the module release v0.4.69'
-    reason: ReleaseDeployTimeCheck
-    status: "False"
+    status: "True"
     type: LastReleaseDeployed

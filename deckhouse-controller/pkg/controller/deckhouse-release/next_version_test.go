@@ -69,6 +69,7 @@ func (suite *ReleaseTestSuite) SetupSubTest() {
 		"v2.0.5",
 		"v2.1.2",
 		"v2.1.12",
+		"v2.5.1",
 	}, nil)
 
 	suite.ctr, suite.kubeClient = setupFakeController(suite.T(), "", initValues, embeddedMUP)
@@ -124,5 +125,13 @@ func (suite *ReleaseTestSuite) TestCheckRelease() {
 	check("Last Minor is not equal to target", "1.31.0", "1.33.0", []*semver.Version{
 		semver.MustParse("1.32.3"),
 		semver.MustParse("1.33.0"),
+	})
+
+	check("Last Leap Minor", "1.31.0", "2.5.1", []*semver.Version{
+		semver.MustParse("1.32.3"),
+		semver.MustParse("1.33.1"),
+		semver.MustParse("2.0.5"),
+		semver.MustParse("2.1.12"),
+		semver.MustParse("2.5.1"),
 	})
 }

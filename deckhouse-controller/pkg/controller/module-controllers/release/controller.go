@@ -362,6 +362,24 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 	return ctrl.Result{}, nil
 }
 
+// patchManualRelease modify deckhouse release with approved status
+func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.ModuleRelease, us *releaseUpdater.Settings) error {
+	if us.Mode.String() != v1alpha2.UpdateModeManual.String() {
+		return nil
+	}
+
+	patch := client.MergeFrom(release.DeepCopy())
+
+	release.SetApprovedStatus(release.GetManuallyApproved())
+
+	err := r.client.Status().Patch(ctx, release, patch)
+	if err != nil {
+		return fmt.Errorf("patch approved status: %w", err)
+	}
+
+	return nil
+}
+
 // handleDeployedRelease handles deployed releases
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleDeployedRelease")
@@ -630,6 +648,18 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
+	us := &releaseUpdater.Settings{
+		NotificationConfig: config,
+		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
+		Windows:            policy.Spec.Update.Windows,
+		Subject:            releaseUpdater.SubjectModule,
+	}
+
+	err = r.patchManualRelease(ctx, release, us)
+	if err != nil {
+		return res, err
+	}
+
 	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, logger)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
@@ -756,13 +786,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	logger.Debug("requirements checks passed")
-
-	us := &releaseUpdater.Settings{
-		NotificationConfig: config,
-		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
-		Windows:            policy.Spec.Update.Windows,
-		Subject:            releaseUpdater.SubjectModule,
-	}
 
 	// handling error inside function
 	err = r.PreApplyReleaseCheck(ctx, release, task, us, metricLabels)
