@@ -17,6 +17,9 @@ spec:
         name: always_true
         condition: (evt.num>=0)
     - macro:
+        name: never_true
+        condition: (evt.num=0)
+    - macro:
         name: open_write
         condition: (evt.type in (open,openat,openat2) and evt.is_open_write=true and fd.typechar='f' and fd.num>=0)
     - macro:
