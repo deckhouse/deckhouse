@@ -35,7 +35,7 @@ shell:
   - cd /src
   - go build -ldflags="-s -w" -o check-wg-kernel-compat .
   - chown 64535:64535 /src/check-wg-kernel-compat
-  - chmod 0700 /src/check-wg-kernel-compat
+  - chmod 0755 /src/check-wg-kernel-compat
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
