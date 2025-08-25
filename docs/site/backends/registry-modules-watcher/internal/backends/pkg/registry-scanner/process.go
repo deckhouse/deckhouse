@@ -298,9 +298,6 @@ func getMetadataFromImage(releaseImage crv1.Image) (*ImageMetadata, error) {
 		if err != nil {
 			return nil, fmt.Errorf("tar reader next: %w", err)
 		}
-		// if hdr.Typeflag != tar.TypeReg {
-		// 	continue
-		// }
 
 		switch hdr.Name {
 		case versionFileName:
