@@ -12,7 +12,7 @@
 {{ $abseilCppVersion := "20240722.1" }}
 {{ $grpcVersion := "v1.62.1" }}
 {{ $re2Version := "2024-07-02" }}
-{{ $icuVersion := "release-76-1" }}
+{{ $icuVersion := "release-77-1" }}
 {{ $pcreVersion := "8.45" }}
 {{ $libmaxminddbVersion := "1.12.2" }}
 {{ $curlVersion := "curl-8_12_1" }}
@@ -31,7 +31,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
-fromCacheVersion: "2025-08-20.02"
+fromCacheVersion: "2025-08-25.01"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -126,7 +126,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine-1.24
-fromCacheVersion: "2025-08-20.02"
+fromCacheVersion: "2025-08-25.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -155,119 +155,9 @@ shell:
     echo "Loaded: COMMIT_SHA=$COMMIT_SHA, REPO_INFO=$REPO_INFO, ARCH=$GOARCH, PKG=$PKG TAG=$TAG" && \
     make GO111MODULE=on USE_DOCKER=false build
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-bash # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:dee4aebe130aa5d3dd6ac212b97a9026ec8f99a5b1f9505c7cd4955069dff6ed
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-procps # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:4c6b413a875d5ec2fc6ff9f10f66bbc33fd471adaa54f06d167c319d15549576
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-diffutils # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:81d8111af1895614d50b7ff4c4c8efd4db9ab888d47da790b118f6fe01bb93e4
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:0e9bea110f3f10f1206a6dc12bf9625671a73c273a6221bc1fff74f9500a4c0e
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf-{{ $luaProtobufVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:36d154f2bcb9731c66063f24834c4746b7fa057737fd55c0f7e07ed0140eec9c
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv-{{ $luaIconvVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:700416c65f3303962753f3cef3b869b1b68796f721a5ee7c87df6d63f1225feb
-final: false
----
-#
-image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf-{{ $protobufVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:a9911ce5ef57641a9224c60efb422987934a0e6ed90aff55ba726994a1b9a3b0
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-cpp-{{ $abseilCppVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:97607a768e010581398067e6ebf0f373ae5c2e48251606a9adfc909df2e1fc8f
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-grpc-{{ $grpcVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:06447f78248fc8600554f6e7598133a2786c9cdcffd4be740962e560022a29f5
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-re2-{{ $re2Version }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:d20df3f4d46a1dd7cf23a4bcccef69410aab2eee4c050b1dda194684e027f7f9
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-icu-{{ $icuVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:c0a010969e9e6d88c0704f3e4dd437483ad520ec45397b03fb30c3c1f62b098e
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre-{{ $pcreVersion  }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:e1885ef31c2191b0b87728db2830e2ca12861d58a6a5821f5a27b9260f28e079
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-libmaxminddb-{{ $libmaxminddbVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:f778577994a8ee29716e6bfb66d1097559f597f19416d95239a0ec91c3884563
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-curl-{{ $curlVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:c02c38947580c8214057ceed5659a6449d8219842fab995a277168cbeecb8539
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-zlib-{{ $zlibVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:8b1ed7a3f400e1a7ea22432eab7297664b6ba1f797ae1d9a8f754c1861b1cb4c
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-c-ares-{{ $cAresVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:e055f34cb2844a79d994f38ef2e3057207dc9d5b5a6d3e3b5ed4fba53bc7e2f2
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-openssl-{{ $opensslVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:b62c1a04192ba4605b92f068d5fa21f7d05d9478946d6feee0449a57f96cebc7
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli-{{ $brotliVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:09ed844bdd92f269bf4887754eb9d71e49d8d5e0c552ae5d9a79fe3e26e1b0dc
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-libidn2-{{ $libidn2Version }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:f719cbe0fb84912aaed57393beab1a8af107972beadbd9bad0ea0721d86b25e4
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd-{{ $zstdVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:4252e03b0575e8ab4f98c0ac8399bea7afa174c3f57403bd8091a912fd2c66a0
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-libpsl-{{ $libpslVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:2937dc08ce8a615a386a5a627b1c6d0ba5927040b1c59807e405db37f269b7be
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-nghttp2-{{ $nghttp2Version }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:64c509d45b28449cd093f0f9fbeec9c8c809f8ecc007b7876bc73420545ff3b2
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-xz-{{ $xzVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:0dbbf6172f91e72977a8108fa678809852fb3797854bbdf8b4f229c447fb4d99
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-libxml2-{{ $libxml2Version }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:7ab672f08a0af16744b6a0c14b65934efc2909e9de3f9dfe1906ae617769f883
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-yajl-{{ $yajlVersion }} # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:d12672f3b59a0cfb250f8c08aa7df80c90ebc01952f2036892b8ef8d0580aaa5
-final: false
----
-#
-image: {{ $.ModuleName }}/{{ $.ImageName }}-curl # FIXME delete
-from: dev-registry.deckhouse.io/base_images@sha256:c02c38947580c8214057ceed5659a6449d8219842fab995a277168cbeecb8539
-final: false
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }} # FIXME delete
-from: localhost:5001/base-images:249640dd869c1d9d7f7361f046f0ccd32fbedeadd255c25be44eb0f5-1755849050707
-final: false
----
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: builder/alpine-3.22
-fromCacheVersion: "2025-08-20.02"
+fromImage: builder/alpine-3.21
+fromCacheVersion: "2025-08-25.01"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -282,83 +172,83 @@ import:
   add: /src/nginx-deps
   to: /src/nginx-deps
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-protobuf-{{ $protobufVersion }}
+- image: libs/protobuf-{{ $protobufVersion }}
   add: /usr
   to: /base_images/protobuf
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-abseil-cpp-{{ $abseilCppVersion }}
+- image: libs/abseil-cpp-{{ $abseilCppVersion }}
   add: /usr
   to: /base_images/abseil-cpp
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-grpc-{{ $grpcVersion }}
+- image: libs/grpc-{{ $grpcVersion }}
   add: /usr
   to: /base_images/grpc
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-re2-{{ $re2Version }}
+- image: libs/re2-{{ $re2Version }}
   add: /usr
   to: /base_images/re2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-icu-{{ $icuVersion }}
+- image: libs/icu-{{ $icuVersion }}
   add: /usr
   to: /base_images/icu
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pcre-{{ $pcreVersion  }}
+- image: libs/pcre-{{ $pcreVersion  }}
   add: /usr
   to: /base_images/pcre
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-libmaxminddb-{{ $libmaxminddbVersion }}
+- image: libs/libmaxminddb-{{ $libmaxminddbVersion }}
   add: /usr
   to: /base_images/libmaxminddb
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-curl-{{ $curlVersion }}
+- image: tools/curl-{{ $curlVersion }}
   add: /usr
   to: /base_images/curl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-zlib-{{ $zlibVersion }}
+- image: libs/zlib-{{ $zlibVersion }}
   add: /usr
   to: /base_images/zlib
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-c-ares-{{ $cAresVersion }}
+- image: libs/c-ares-{{ $cAresVersion }}
   add: /usr
   to: /base_images/c-ares
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-openssl-{{ $opensslVersion }}
+- image: tools/openssl-{{ $opensslVersion }}
   add: /usr
   to: /base_images/openssl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-brotli-{{ $brotliVersion }}
+- image: libs/brotli-{{ $brotliVersion }}
   add: /usr
   to: /base_images/brotli
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-libidn2-{{ $libidn2Version }}
+- image: libs/libidn2-{{ $libidn2Version }}
   add: /usr
   to: /base_images/libidn2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-zstd-{{ $zstdVersion }}
+- image: libs/zstd-{{ $zstdVersion }}
   add: /usr
   to: /base_images/libzstd
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-libpsl-{{ $libpslVersion }}
+- image: libs/libpsl-{{ $libpslVersion }}
   add: /usr
   to: /base_images/libpsl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-nghttp2-{{ $nghttp2Version }}
+- image: libs/nghttp2-{{ $nghttp2Version }}
   add: /usr
   to: /base_images/libnghttp2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-xz-{{ $xzVersion }}
+- image: libs/xz-{{ $xzVersion }}
   add: /usr
   to: /base_images/xz
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-libxml2-{{ $libxml2Version }}
+- image: libs/libxml2-{{ $libxml2Version }}
   add: /usr
   to: /base_images/libxml2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-yajl-{{ $yajlVersion }}
+- image: libs/yajl-{{ $yajlVersion }}
   add: /usr
   to: /base_images/yajl
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }}
+- image: tools/gcc-gnu-{{ $gccVersion }}
   add: /usr
   to: /base_images/gcc
   before: install
@@ -368,8 +258,7 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache patch make linux-headers autoconf automake libtool bash pkgconfig ninja musl-dev
-  - apk add --no-cache cmake binutils # These packages bring the so-libraries used for compilation (for future replacement)
+  - apk add --no-cache patch make linux-headers autoconf automake libtool bash pkgconfig ninja musl-dev cmake binutils g++
   install:
   - cp -a /base_images/protobuf/* /usr
   - cp -a /base_images/grpc/* /usr
@@ -390,9 +279,8 @@ shell:
   - cp -a /base_images/libxml2/* /usr
   - cp -a /base_images/yajl/* /usr
   - cp -a /base_images/openssl/* /usr
-  # - cp -a /base_images/gcc/lib64/libgcc_s.so* /usr/lib # FIXME delete
-  # - cp -a /base_images/gcc/lib64/libstdc++.so* /usr/lib # FIXME delete
-  - cp -a /base_images/gcc/* /usr
+  - cp -a /base_images/gcc/lib/libgcc_s.so* /usr/lib
+  - cp -a /base_images/gcc/lib/libstdc++.so* /usr/lib
   - mkdir -p /usr/lib64
   - ln -sf /usr/lib/libssl.so /usr/lib64/libssl.so
   - ln -sf /usr/lib/libcrypto.so /usr/lib64/libcrypto.so
@@ -764,8 +652,8 @@ shell:
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: builder/alpine-3.22
-fromCacheVersion: "2025-08-20.02"
+fromImage: builder/alpine-3.21
+fromCacheVersion: "2025-08-25.01"
 final: false
 mount:
 - from: build_dir
@@ -775,7 +663,7 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-curl
+- image: tools/curl
   add: /usr/bin/curl-static
   to: /chroot/usr/bin/curl
   owner: "64535"
@@ -787,7 +675,7 @@ import:
   includePaths:
   - chroot
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-iconv-{{ $luaIconvVersion }}
+- image: libs/lua-iconv-{{ $luaIconvVersion }}
   add: /
   to: /chroot/usr/local
   # owner: "64535" # FIXME
@@ -795,7 +683,7 @@ import:
   includePaths:
   - lib/lua/5.1/iconv.so
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-protobuf-{{ $luaProtobufVersion }}
+- image: libs/lua-protobuf-{{ $luaProtobufVersion }}
   add: /
   to: /chroot/usr/local
   # owner: "64535" # FIXME
@@ -899,7 +787,7 @@ import:
   - usr/lib/libcares.so*
   - usr/lib/libcrypto.so*
   - usr/lib/libcurl.so*
-  - usr/lib/libgcc_s.so* # FIXME delete
+  - usr/lib/libgcc_s.so*
   - usr/lib/libgpr.so*
   - usr/lib/libgrpc.so*
   - usr/lib/libgrpc++.so*
@@ -920,7 +808,7 @@ import:
   - usr/lib/libpsl.so*
   - usr/lib/libre2.so*
   - usr/lib/libssl.so*
-  - usr/lib/libstdc++.so* # FIXME delete
+  - usr/lib/libstdc++.so*
   - usr/lib/libupb_base_lib.so*
   - usr/lib/libupb_json_lib.so*
   - usr/lib/libupb_mem_lib.so*
@@ -935,17 +823,6 @@ import:
   - usr/local/lib/libluajit-5.1.so*
   - usr/local/modsecurity/lib/libmodsecurity.so*
   before: install
-# - image: {{ $.ModuleName }}/{{ $.ImageName }}-gcc-{{ $gccVersion }} # FIXME delete
-#   add: /usr/lib64
-#   to: /chroot/usr/lib
-#   # owner: "64535"
-#   # group: "64535"
-#   includePaths:
-#   - libgcc_s.so*
-#   - libstdc++.so*
-#   excludePaths:
-#   - libstdc++.so.6.0.30-gdb.py
-#   before: install
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -995,9 +872,9 @@ shell:
   - cp -a /tools/setcap /tmp/apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-# fromImage: builder/alpine-3.22 # FIXME replace!
+# fromImage: builder/alpine-3.21 # FIXME replace!
 fromImage: base/distroless
-fromCacheVersion: "2025-08-20.02"
+fromCacheVersion: "2025-08-25.01"
 mount:
 - from: build_dir
   to: /tmp/apps
@@ -1045,25 +922,25 @@ import:
   owner: "64535"
   group: "64535"
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init
+- image: tools/dumb-init
   add: /dumb-init
   to: /usr/bin/dumb-init
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-bash
+- image: tools/bash
   add: /usr
   to: /
   includePaths:
   - bin/bash
   - bin/sh
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-procps
+- image: tools/procps
   add: /
   to: /
   includePaths:
   - bin/pkill
   - bin/pgrep
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-diffutils
+- image: tools/diffutils
   add: /usr/bin/diff
   to: /usr/bin/diff
   before: install
