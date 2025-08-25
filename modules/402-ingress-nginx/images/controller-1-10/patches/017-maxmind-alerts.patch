@@ -1,30 +1,21 @@
 diff --git a/cmd/nginx/main.go b/cmd/nginx/main.go
+index 1d30091ef..46cbfb91d 100644
 --- a/cmd/nginx/main.go
 +++ b/cmd/nginx/main.go
-@@ -121,12 +121,13 @@ func main() {
- 	reg := prometheus.NewRegistry()
-
- 	reg.MustRegister(collectors.NewGoCollector())
- 	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
- 		PidFn:        func() (int, error) { return os.Getpid(), nil },
+@@ -128,6 +128,8 @@ func main() {
  		ReportErrors: true,
  	}))
-+	reg.MustRegister(nginx.GeoIPErrors)
 
++	reg.MustRegister(nginx.GeoIPErrors)
++
  	mc := metric.NewDummyCollector()
  	if conf.EnableMetrics {
--		mc, err = metric.NewCollector(conf.MetricsPerHost, conf.ReportStatusClasses, reg, conf.IngressClassConfiguration.Controller, *conf.MetricsBuckets, conf.ExcludeSocketMetrics)
-+		mc, err = metric.NewCollector(conf.MetricsPerHost, conf.MetricsPerUndefinedHost, conf.ReportStatusClasses, reg, conf.IngressClassConfiguration.Controller, *conf.MetricsBuckets, conf.MetricsBucketFactor, conf.MetricsMaxBuckets, conf.ExcludeSocketMetrics)
- 		if err != nil {
- 			klog.Fatalf("Error creating prometheus collector:  %v", err)
- 		}
- 	}
+ 		mc, err = metric.NewCollector(conf.MetricsPerHost, conf.ReportStatusClasses, reg, conf.IngressClassConfiguration.Controller, *conf.MetricsBuckets, conf.ExcludeSocketMetrics)
 diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+index 032a3e19f..d7ca0f59c 100644
 --- a/internal/nginx/maxmind.go
 +++ b/internal/nginx/maxmind.go
-@@ -27,10 +27,12 @@ import (
- 	"os"
- 	"os/exec"
+@@ -30,6 +30,7 @@ import (
  	"syscall"
  	"time"
 
@@ -32,9 +23,9 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
  	"k8s.io/apimachinery/pkg/util/wait"
  	klog "k8s.io/klog/v2"
  )
-@@ -49,6 +51,15 @@ var MaxmindRetriesCount = 1
- // MaxmindRetriesTimeout maxmind download retries timeout in seconds, 0 - do not retry to download if something went wrong
- var MaxmindRetriesTimeout = time.Second * 0
+@@ -55,6 +56,15 @@ var MaxmindRetriesTimeout = time.Second * 0
+ // minimumRetriesCount minimum value of the MaxmindRetriesCount parameter. If MaxmindRetriesCount less than minimumRetriesCount, it will be set to minimumRetriesCount
+ const minimumRetriesCount = 1
 
 +// GeoIPErrors number of errors when loading Geo2 DB
 +var GeoIPErrors = prometheus.NewCounterVec(
@@ -45,10 +36,10 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 +	[]string{"reason", "type"},
 +)
 +
- // minimumRetriesCount minimum value of the MaxmindRetriesCount parameter. If MaxmindRetriesCount less than minimumRetriesCount, it will be set to minimumRetriesCount
- const minimumRetriesCount = 1
-
-@@ -113,6 +124,13 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+ const (
+ 	geoIPPath   = "/etc/ingress-controller/geoip"
+ 	dbExtension = ".mmdb"
+@@ -116,6 +126,14 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
  			klog.V(2).Infof("Attempting to download GeoIP DB: %s", dbName)
  			dlError = downloadDatabase(dbName)
  			if dlError != nil {
@@ -56,9 +47,10 @@ diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
 +				if len(trimmedError) > 64 {
 +					trimmedError = trimmedError[:64]
 +				}
-+				stringErr := string(trimmedError)
-+				GeoIPErrors.WithLabelValues(stringErr, "download").Inc()
 +
++				stringErr := string(trimmedError)
++
++				GeoIPErrors.WithLabelValues(stringErr, "download").Inc()
  				break
  			}
  		}
