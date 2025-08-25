@@ -121,7 +121,7 @@ CNI protocol versions supported: 0.1.0, 0.2.0, 0.3.0, 0.3.1, 0.4.0, 1.0.0`,
 	}
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
-			isCiliumAlreadyUpgraded, err := checkCiliumVersion(test.inVerStr, ciliumConstraint)
+			isCiliumAlreadyUpgraded, err := checkCiliumVersion(test.inVerStr, ciliumConstraintDef)
 
 			switch test.expectError {
 			case true:

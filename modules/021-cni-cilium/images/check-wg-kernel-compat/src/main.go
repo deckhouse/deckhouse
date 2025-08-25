@@ -34,11 +34,16 @@ import (
 
 const (
 	// /opt/cni/bin is mounted to /hostbin
-	cniCiliumPath    = "/hostbin/cilium-cni"
-	ciliumConstraint = ">= 1.17.4"
+	cniCiliumPath       = "/hostbin/cilium-cni"
+	ciliumConstraintDef = ">= 1.17.4"
 )
 
 func main() {
+	ciliumConstraint := os.Getenv("CILIUM_CONSTRAINT")
+	if ciliumConstraint == "" {
+		log.Info("CILIUM_CONSTRAINT is not set, use default value %v", ciliumConstraintDef)
+		ciliumConstraint = ciliumConstraintDef
+	}
 	if exist, err := isCiliumBinaryExists(cniCiliumPath); !exist {
 		if err != nil {
 			log.Error("failed to check cilium-cni binary '%s': %v", cniCiliumPath, err)
