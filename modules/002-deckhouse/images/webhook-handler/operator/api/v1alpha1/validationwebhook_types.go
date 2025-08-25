@@ -31,11 +31,40 @@ type ValidationWebhookSpec struct {
 	// The following markers will use OpenAPI v3 schema to validate the value
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
-	// foo is an example field of ValidationWebhook. Edit validationwebhook_types.go to remove/update
-	// +optional
 	Foo *string `json:"foo,omitempty"`
 
+	// ValidatingWebhook describes an webhook and the resources and operations it applies to.
+	// +optional
 	Webhook *admissionregistrationv1.ValidatingWebhook `json:"webhook,omitempty"`
+
+	Context []Context `json:"context,omitempty"`
+
+	Handler Handler `json:"handler,omitempty"`
+}
+
+type Context struct {
+	Context []struct {
+		Name string `yaml:"name"`
+	} `yaml:"context"`
+	Kubernetes        interface{} `yaml:"kubernetes"`
+	APIVersion        string      `yaml:"apiVersion"`
+	Kind              string      `yaml:"kind"`
+	NameSelector      interface{} `yaml:"nameSelector"`
+	MatchNames        []string    `yaml:"matchNames"`
+	LabelSelector     interface{} `yaml:"labelSelector"`
+	MatchLabels       interface{} `yaml:"matchLabels"`
+	Foo               string      `yaml:"foo"`
+	NamespaceSelector interface{} `yaml:"namespaceSelector"`
+	JqFilter          struct {
+		NodeName string `yaml:"nodeName"`
+	} `yaml:"jqFilter"`
+}
+
+type Handler struct {
+	// this is a python script handler for object
+	Python string `json:"python,omitempty"`
+	// this is a cel rules handler for object
+	CEL string `json:"cel,omitempty"`
 }
 
 // ValidationWebhookStatus defines the observed state of ValidationWebhook.
