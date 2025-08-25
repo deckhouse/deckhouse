@@ -176,7 +176,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 		},
 		{
 			name:           "reject approved release with migrated modules not found",
-			enabledModules: []string{"module1", "module2", "non-existent-module"},
+			enabledModules: []string{"module1", "module2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 			},
@@ -255,6 +255,21 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			wantAllowed: false,
 			wantMessage: "migrated module",
 			description: "Releases with mixed enabled/disabled migrated modules should be rejected",
+		},
+		{
+			name:           "reject when migrated module is not in enabled modules list",
+			enabledModules: []string{"cert-manager", "prometheus", "dashboard"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleSource("test-source", []string{"cert-manager", "prometheus", "non-enabled-module"}),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "cert-manager, prometheus, non-enabled-module",
+			}),
+			wantAllowed: false,
+			wantMessage: "migrated module \"non-enabled-module\" is disabled, migration cannot occur",
+			description: "Releases with migrated modules that are not in enabled modules list should be rejected",
 		},
 	}
 

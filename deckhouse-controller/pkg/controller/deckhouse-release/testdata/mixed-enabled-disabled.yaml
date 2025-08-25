@@ -18,7 +18,7 @@ metadata:
 spec:
   version: v1.50.0
   requirements:
-    migratedModules: "disabled-module, enabled-module"
+    migratedModules: "enabled-module, disabled-module"
 status:
   approved: false
   message: ""

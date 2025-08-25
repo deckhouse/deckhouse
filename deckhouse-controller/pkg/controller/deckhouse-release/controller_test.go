@@ -1174,7 +1174,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module \"disabled-module\" is disabled, migration cannot occur")
 		})
 
 		suite.Run("Mixed enabled and disabled migrated modules are rejected", func() {
@@ -1185,7 +1185,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module \"disabled-module\" is disabled, migration cannot occur")
 		})
 
 		suite.Run("Enabled module not found in ModuleSource is rejected", func() {
@@ -1198,6 +1198,17 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
 			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
 			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
+		})
+
+		suite.Run("Migrated module not in enabled modules list is rejected", func() {
+			suite.setupController("migrated-module-not-enabled.yaml", initValues, embeddedMUP)
+			dr := suite.getDeckhouseRelease("v1.50.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+
+			newRelease := suite.getDeckhouseRelease("v1.50.0")
+			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
+			require.Contains(suite.T(), newRelease.Status.Message, "migrated module \"non-enabled-module\" is disabled, migration cannot occur")
 		})
 	})
 }
@@ -1324,6 +1335,7 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 		"test-module-2",
 		"test-module-missing",
 		"enabled-module-not-found",
+		"enabled-module",
 	}
 }
 
