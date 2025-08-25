@@ -55,7 +55,7 @@ spec:
       initContainers:
       initContainers:
       - name: check-wg-kernel-compat
-        image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
+        image: {{ include "helm_lib_module_image" (list . "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
         env:
         - name: WG_KERNEL_CONSTRAINT
@@ -64,7 +64,7 @@ spec:
           - "/check-wg-kernel-compat"
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
         securityContext:
           seLinuxOptions:
             level: 's0'
