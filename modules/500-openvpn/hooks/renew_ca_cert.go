@@ -78,15 +78,19 @@ func applyCASecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 }
 
 func checkServerCertExpiry(input *go_hook.HookInput) error {
-	snapshotsCa := input.Snapshots["openvpn_pki_ca"]
+	snaps := input.NewSnapshots.Get("openvpn_pki_ca")
 
-	if len(snapshotsCa) == 0 {
+	if len(snaps) == 0 {
 		input.Logger.Warn("Secret openvpn-pki-server or openvpn-pki-ca not found, skipping")
 		return nil
 	}
 
 	now := time.Now()
-	caCertNotAfter := certNotAfter(snapshotsCa[0].(CertInfo), input)
+	var caInfo CertInfo
+	if err := snaps[0].UnmarshalTo(&caInfo); err != nil {
+		return fmt.Errorf("failed to unmarshal 'openvpn_pki_ca': %w", err)
+	}
+	caCertNotAfter := certNotAfter(caInfo, input)
 
 	if caCertNotAfter == nil {
 		input.Logger.Error("Failed to parse certificates, skipping")

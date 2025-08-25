@@ -19,11 +19,15 @@
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
@@ -70,7 +74,7 @@ func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 }
 
 func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ingressControllers"]
+	snap := input.NewSnapshots.Get("ingressControllers")
 	isIncompatible := false
 
 	var minVersion *semver.Version
@@ -84,12 +88,11 @@ func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
 		requirements.RemoveValue(configuredDefaultVersionKey)
 	}
 
-	for _, s := range snap {
-		if s == nil {
-			continue
+	for ctrl, err := range sdkobjectpatch.SnapshotIter[ingressNginxController](snap) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ingressControllers' snapshots: %w", err)
 		}
 
-		ctrl := s.(ingressNginxController)
 		if ctrl.Version == "" {
 			ctrl.Version = configuredDefaultVersion
 			if ctrl.Version == "0.33" {

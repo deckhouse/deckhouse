@@ -25,6 +25,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
@@ -76,10 +78,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func delectStorageClassCloudManual(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
-	storageclasses := input.Snapshots["storageclasses"]
+	storageclasses := input.NewSnapshots.Get("storageclasses")
 
-	for _, o := range storageclasses {
-		sc := o.(CloudStorageClass)
+	for sc, err := range sdkobjectpatch.SnapshotIter[CloudStorageClass](storageclasses) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'storageclasses' snapshots: %w", err)
+		}
+
 		if sc.IsCloud && (sc.Name != "vsphere-main" || sc.Provisioner != "vsphere.csi.vmware.com") {
 			input.MetricsCollector.Set(
 				"storage_class_cloud_manual",

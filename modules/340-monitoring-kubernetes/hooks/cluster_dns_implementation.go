@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -74,11 +75,17 @@ func setDNSImplementation(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	kubeDNSDeployments := input.Snapshots["kube_dns_deployment"]
+	kubeDNSDeployments := input.NewSnapshots.Get("kube_dns_deployment")
+
 	if len(kubeDNSDeployments) != 1 {
 		return errors.New("ERROR: can't determine cluster DNS implementation")
 	}
 
-	input.Values.Set("monitoringKubernetes.internal.clusterDNSImplementation", kubeDNSDeployments[0].(string))
+	var clusterDNSImplementation string
+	if err := kubeDNSDeployments[0].UnmarshalTo(&clusterDNSImplementation); err != nil {
+		return fmt.Errorf("failed to unmarshal 'kube_dns_deployment' snapshots: %w", err)
+	}
+
+	input.Values.Set("monitoringKubernetes.internal.clusterDNSImplementation", clusterDNSImplementation)
 	return nil
 }
