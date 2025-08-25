@@ -155,7 +155,7 @@ func checkCiliumVersion(cniCiliumVersionStr, ciliumConstraint string) (bool, err
 	}
 
 	if !ciliumConstraintSM.Check(ciliumVersionSM) {
-		return false, fmt.Errorf("the Cilium version has not been upgraded yet. The condition (%s %s) has not been met", ciliumVersionSM, ciliumConstraintSM)
+		return false, fmt.Errorf("the Cilium version has not been upgraded yet. The condition ('%s %s') has not been met", ciliumVersionSM, ciliumConstraintSM)
 	}
 
 	return true, nil
