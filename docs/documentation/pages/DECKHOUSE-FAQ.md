@@ -1097,7 +1097,10 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
    To switch to BE/SE/SE+/EE editions:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+   DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+   kubectl -n d8-system exec -it deploy/deckhouse -- bash -c "
+   kubectl -n d8-system exec -it deploy/deckhouse -- bash -c " kubectl patch secret -n d8-cloud-instance-manager deckhouse-registry -p='{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}' "
+   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
    To switch to CE edition:

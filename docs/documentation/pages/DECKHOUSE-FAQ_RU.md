@@ -1104,6 +1104,9 @@ kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-con
    Для переключения на BE/SE/SE+/EE издания:
 
    ```shell
+   DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+   kubectl -n d8-system exec -it deploy/deckhouse -- bash -c "
+   kubectl -n d8-system exec -it deploy/deckhouse -- bash -c " kubectl patch secret -n d8-cloud-instance-manager deckhouse-registry -p='{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}' "
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.ru/deckhouse/$NEW_EDITION
    ```
 
