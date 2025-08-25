@@ -68,6 +68,7 @@ func main() {
 		log.Info(fmt.Sprintf("WireGuard interfaces are not present on the node"))
 		return
 	}
+	log.Info(fmt.Sprintf("WireGuard interfaces are present on the node"))
 
 	wgKernelConstraint := os.Getenv("WG_KERNEL_CONSTRAINT")
 	if wgKernelConstraint == "" {
