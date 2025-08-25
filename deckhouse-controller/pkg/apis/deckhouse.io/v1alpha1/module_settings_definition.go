@@ -77,12 +77,23 @@ type ModuleSettingsDefinitionSpec struct {
 }
 
 type ModuleSettingsDefinitionVersion struct {
-	Name   string                                    `json:"name"`
-	Schema *apiextensionsv1.CustomResourceValidation `json:"schema,omitempty"`
+	Name        string                                    `json:"name"`
+	Schema      *apiextensionsv1.CustomResourceValidation `json:"schema,omitempty"`
+	Conversions []ModuleSettingsConversion                `json:"conversions,omitempty"`
+}
+
+type ModuleSettingsConversion struct {
+	Expr         []string                              `json:"expr"`
+	Descriptions *ModuleSettingsConversionDescriptions `json:"descriptions,omitempty"`
+}
+
+type ModuleSettingsConversionDescriptions struct {
+	Ru string `json:"ru,omitempty"`
+	En string `json:"en,omitempty"`
 }
 
 // SetVersion adds or updates a version in the ModuleSettingsSpec.
-func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte) error {
+func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte, conversions []ModuleSettingsConversion) error {
 	if rawSchema == nil {
 		return nil
 	}
@@ -100,8 +111,9 @@ func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte) error {
 	}
 
 	version := ModuleSettingsDefinitionVersion{
-		Name:   jsonSchema.Version,
-		Schema: &apiextensionsv1.CustomResourceValidation{OpenAPIV3Schema: &jsonSchema.JSONSchemaProps},
+		Name:        jsonSchema.Version,
+		Schema:      &apiextensionsv1.CustomResourceValidation{OpenAPIV3Schema: &jsonSchema.JSONSchemaProps},
+		Conversions: conversions,
 	}
 
 	for i, v := range s.Spec.Versions {
