@@ -48,4 +48,3 @@ cleanup:
 {{ tpl (.Files.Get "werf-web-router.inc.yaml") $ }}
 ---
 {{ tpl (.Files.Get "werf-web-frontend.inc.yaml") $ }}
----

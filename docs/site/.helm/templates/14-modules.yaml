@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: modules-library
+  name: moduleslibrary
   annotations:
     "werf.io/replicas-on-creation": "1"
   labels:
-    service: modules-library
+    service: moduleslibrary
     app.kubernetes.io/part-of: deckhouse-docs
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      service: modules-library
+      service: moduleslibrary
   template:
     metadata:
       labels:
-        service: modules-library
+        service: moduleslibrary
     spec:
       imagePullSecrets:
         - name: deckhouse-registry-site
@@ -61,7 +61,7 @@ spec:
           command:
             - "/app/server"
             - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
-          image: {{ index .Values.werf.image "docs/builder" }}
+          image: {{ index .Values.werf.image "website-docs/builder" }}
           {{- include "resources" . | nindent 10 }}
           env:
             - name: HUGO_ENVIRONMENT
@@ -120,13 +120,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: modules-library
+  name: moduleslibrary
   labels:
     prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
 spec:
   clusterIP: None
   selector:
-    service: modules-library
+    service: moduleslibrary
   ports:
   - name: http
     port: 80
@@ -140,21 +140,21 @@ spec:
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: modules-library
+  name: moduleslibrary
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
-    name: modules-library
+    name: moduleslibrary
   updatePolicy:
     updateMode: "Auto"
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: modules-library
+  name: moduleslibrary
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      service: modules-library
+      service: moduleslibrary
