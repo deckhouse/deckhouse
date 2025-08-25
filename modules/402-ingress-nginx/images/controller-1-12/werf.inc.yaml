@@ -672,7 +672,7 @@ import:
   group: "64535"
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-  add: /4
+  add: /
   to: /
   includePaths:
   - chroot
