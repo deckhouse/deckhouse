@@ -69,7 +69,7 @@ send_report() {
     -F "push_to_jira=false" \
     -F "file=@${2}" \
     -F "product_type_name=DKP" \
-    -F "product_name=Deckhouse" \
+    -F "product_name=${3}" \
     -F "scan_date=${date_iso}" \
     -F "engagement_name=${1}" \
     -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
@@ -265,8 +265,8 @@ for d8_tag in "${d8_tags[@]}"; do
         trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       fi
 
-      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json"
-      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json"
+      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}"
+      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}"
     done
   done
 done
