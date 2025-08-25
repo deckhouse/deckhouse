@@ -165,3 +165,8 @@ spec:
             memory: "1Mi"
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       {{- end }}
+      volumes:
+      - name: cni-path
+        hostPath:
+          path:  "/opt/cni/bin"
+          type: DirectoryOrCreate
