@@ -250,19 +250,10 @@ func isEnabledInBundle(bundles []string, requested string) bool {
 	return false
 }
 
-func (m *Module) ConditionStatus(condName string) bool {
+func (m *Module) IsCondition(condName string, status corev1.ConditionStatus) bool {
 	for _, cond := range m.Status.Conditions {
 		if cond.Type == condName {
-			return cond.Status == corev1.ConditionTrue
-		}
-	}
-	return false
-}
-
-func (m *Module) ConditionUnknown(condName string) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return cond.Status == corev1.ConditionUnknown
+			return cond.Status == status
 		}
 	}
 

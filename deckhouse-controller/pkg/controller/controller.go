@@ -213,7 +213,7 @@ func NewDeckhouseController(
 		}
 
 		// set some version for the modules overridden by mpos
-		if module.ConditionStatus(v1alpha1.ModuleConditionIsOverridden) {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
 			return "v2.0.0", nil
 		}
 
