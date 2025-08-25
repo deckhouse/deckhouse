@@ -655,7 +655,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-08-25.01"
+fromCacheVersion: "2025-08-25.02"
 final: false
 mount:
 - from: build_dir
