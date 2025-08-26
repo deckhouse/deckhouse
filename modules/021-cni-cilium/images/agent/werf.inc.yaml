@@ -15,7 +15,7 @@
 # from bpftool-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -211,7 +211,6 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-26.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
