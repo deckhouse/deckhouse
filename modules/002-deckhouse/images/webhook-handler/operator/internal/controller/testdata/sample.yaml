@@ -1,0 +1,89 @@
+{
+  "apiVersion": "deckhouse.io/v1alpha1",
+  "kind": "ValidationWebhook",
+  "metadata": {
+    "labels": {
+      "app.kubernetes.io/name": "operator",
+      "app.kubernetes.io/managed-by": "kustomize"
+    },
+    "name": "validationwebhook-sample"
+  },
+  "spec": {
+    "validationObject": {
+      "rules": [
+        {
+          "apiGroups": [
+            "apps"
+          ],
+          "apiVersions": [
+            "v1",
+            "v1beta1"
+          ],
+          "operations": [
+            "CREATE",
+            "UPDATE"
+          ],
+          "resources": [
+            "deployments",
+            "replicasets"
+          ],
+          "scope": "Namespaced"
+        }
+      ],
+      "objectSelector": {
+        "matchLabels": {
+          "foo": "bar"
+        }
+      },
+      "namespaceSelector": {
+        "matchExpressions": [
+          {
+            "key": "runlevel",
+            "operator": "NotIn",
+            "values": [
+              "0",
+              "1"
+            ]
+          }
+        ]
+      },
+      "matchConditions": [
+        {
+          "name": "yyyy",
+          "expression": "request.resource.group != \"rbac.authorization.k8s.io\""
+        }
+      ]
+    },
+    "context": [
+      {
+        "name": "some_node",
+        "kubernetes": {
+          "apiVersion": "v1",
+          "kind": "Node",
+          "nameSelector": {
+            "matchNames": [
+              "global"
+            ]
+          },
+          "labelSelector": {
+            "matchLabels": {
+              "foo": "bar"
+            }
+          },
+          "namespaceSelector": {
+            "matchLabels": {
+              "bar": "foo"
+            }
+          },
+          "jqFilter": {
+            "nodeName": ".metadata.name"
+          }
+        }
+      }
+    ],
+    "handler": {
+      "cel": "TODO: сейчас не делаем\n",
+      "python": "def validate(request: admission.Request, context: []Object || Context) -> tuple[Optional[str], bool]:\n  // logic here\n  return \"message\", True\n"
+    }
+  }
+}
