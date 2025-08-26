@@ -39,6 +39,16 @@ status:
     - name: test-module-2
   modulesCount: 2
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-2
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -102,6 +102,15 @@ func createModuleSource(name string, modules []string) *v1alpha1.ModuleSource {
 	}
 }
 
+// nolint:unparam
+func createModule(name string) *v1alpha1.Module {
+	return &v1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}
+
 func createAdmissionReview(operation string, obj, oldObj interface{}) *admissionv1.AdmissionReview {
 	review := &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
@@ -194,6 +203,8 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleSource("source1", []string{"migrated-module1", "migrated-module2"}),
+				createModule("migrated-module1"),
+				createModule("migrated-module2"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -229,7 +240,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Approved releases with whitespace-only migrated modules should be allowed",
 		},
 		{
-			name:           "reject when migrated module is disabled",
+			name:           "reject when migrated module is missing",
 			enabledModules: []string{"module1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -239,25 +250,26 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				"migratedModules": "disabled-module",
 			}),
 			wantAllowed: false,
-			wantMessage: "migrated module",
-			description: "Releases with migrated modules for disabled modules should be rejected",
+			wantMessage: "requirements not met",
+			description: "Releases with migrated modules that are missing in cluster should be rejected",
 		},
 		{
-			name:           "reject when enabled migrated module exists and disabled missing",
+			name:           "reject when one migrated module exists and another is missing",
 			enabledModules: []string{"enabled-module"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
+				createModule("enabled-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
 				"migratedModules": "enabled-module, disabled-module",
 			}),
 			wantAllowed: false,
-			wantMessage: "migrated module",
-			description: "Releases with mixed enabled/disabled migrated modules should be rejected",
+			wantMessage: "requirements not met",
+			description: "Releases with mixed present/missing migrated modules should be rejected",
 		},
 		{
-			name:           "reject when migrated module is not in enabled modules list",
+			name:           "reject when migrated module is not present in cluster",
 			enabledModules: []string{"cert-manager", "prometheus", "dashboard"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -268,8 +280,8 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				"migratedModules": "cert-manager, prometheus, non-enabled-module",
 			}),
 			wantAllowed: false,
-			wantMessage: "migrated module \"non-enabled-module\" is disabled, migration cannot occur",
-			description: "Releases with migrated modules that are not in enabled modules list should be rejected",
+			wantMessage: "requirements not met",
+			description: "Releases with migrated modules that are not present in cluster should be rejected",
 		},
 	}
 
@@ -374,6 +386,9 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 				createClusterConfigSecret("1.28.0"),
 				createModuleSource("source1", []string{"module-a", "module-b"}),
 				createModuleSource("source2", []string{"module-c"}),
+				createModule("module-a"),
+				createModule("module-b"),
+				createModule("module-c"),
 			},
 			wantAllowed: true,
 			description: "DeckhouseRelease with complex migratedModules should be allowed when all modules exist",
@@ -387,6 +402,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
 				createModuleSource("source1", []string{"available-module"}),
+				createModule("available-module"),
 			},
 			wantAllowed: false,
 			description: "DeckhouseRelease with partially available migratedModules should be rejected",

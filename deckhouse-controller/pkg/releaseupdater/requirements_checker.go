@@ -435,11 +435,21 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		return fmt.Errorf("failed to list ModuleSources: %w", err)
 	}
 
+	// Fetch existing modules in the cluster to verify their presence regardless of enabled state
+	moduleList := &v1alpha1.ModuleList{}
+	if err := c.k8sclient.List(ctx, moduleList); err != nil {
+		return fmt.Errorf("failed to list Modules: %w", err)
+	}
+	existingModules := set.New()
+	for _, m := range moduleList.Items {
+		existingModules.Add(m.Name)
+	}
+
 	for _, moduleName := range modules {
-		// Reject release if migrated module is disabled - migration cannot occur
-		if c.enabledModules.Size() > 0 && !c.enabledModules.Has(moduleName) {
-			c.logger.Warn("migrated module is disabled, cannot migrate", slog.String("module", moduleName))
-			return fmt.Errorf("migrated module %q is disabled, migration cannot occur", moduleName)
+		// Reject release if migrated module is absent in the cluster - migration cannot occur
+		if !existingModules.Has(moduleName) {
+			c.logger.Warn("migrated module is missing in cluster, cannot migrate", slog.String("module", moduleName))
+			return fmt.Errorf("migrated module %q is not present in the cluster, migration cannot occur", moduleName)
 		}
 
 		found := false
