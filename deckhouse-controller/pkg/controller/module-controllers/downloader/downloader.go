@@ -541,6 +541,8 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 			return err
 		}
 
+		log.Warn("file found", slog.String("name", hdr.Name))
+
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
@@ -554,6 +556,7 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 			return nil
 
 		default:
+
 			continue
 		}
 	}
