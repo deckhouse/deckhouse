@@ -17,8 +17,9 @@ limitations under the License.
 package ssh
 
 import (
-	"caps-controller-manager/internal/scope"
 	"io"
+
+	"caps-controller-manager/internal/scope"
 )
 
 type SSH interface {

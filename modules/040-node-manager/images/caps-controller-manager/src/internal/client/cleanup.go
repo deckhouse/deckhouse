@@ -23,9 +23,6 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/scope"
-	"caps-controller-manager/internal/ssh"
-	"caps-controller-manager/internal/ssh/clissh"
-	"caps-controller-manager/internal/ssh/gossh"
 )
 
 // Cleanup runs the cleanup script on StaticInstance.
@@ -79,31 +76,37 @@ func (c *Client) cleanupFromCleaningPhase(ctx context.Context, instanceScope *sc
 }
 
 func (c *Client) cleanup(instanceScope *scope.InstanceScope) bool {
-	done := c.cleanupTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
+	const operation = "cleanup"
+
+	id := taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
+
+	done := c.cleanupTaskManager.spawn(id, func() bool {
+		logger := getLogger(instanceScope, operation)
+
+		logger.Info("start new task", "id", id)
+
+		sshCl, err := CreateSSHClient(instanceScope)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
+			logger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
 			return false
 		}
+
+		logger.Info("exec clean up command...")
+
 		err = sshCl.ExecSSHCommand(instanceScope, "if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
+			logger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
 			return false
 		}
+
+		logger.Info("cleanup command finished successfully")
+
 		return true
 	})
 	if done != nil && *done {
 		c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
 		return true
 	}
-	instanceScope.Logger.Info("Cleaning is not finished yet, waiting...")
+	getLogger(instanceScope, operation).Info("Cleaning is not finished yet, waiting...")
 	return false
 }
