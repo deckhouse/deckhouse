@@ -89,16 +89,6 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 ### Setup steps
 
-1. Add an annotation to all existing static node groups (NodeGroup resources) exclude nodes from Cluster Autoscaler deletion:
-
-   ```yaml
-   metadata:
-    annotations:
-      cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
-   ```
-
-   This annotation prevents adding taints such as `ToBeDeletedByClusterAutoscaler` and `DeletionCandidateOfClusterAutoscaler` to nodes that are not managed by `machine-controller-manager` (e.g., `static` and `CloudPermanent`). [More info](https://github.com/deckhouse/deckhouse/issues/5252).
-
 1. Create a Service Account in the required Yandex Cloud folder:
 
    - Assign the `editor` role.
