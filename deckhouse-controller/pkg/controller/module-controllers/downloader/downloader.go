@@ -455,7 +455,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName stri
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -468,11 +468,9 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName stri
 	}
 
 	if rr.moduleReader.Len() > 0 {
-		md.logger.Warn("module definition found", slog.String("module def", rr.moduleReader.String()))
-
 		err = yaml.NewDecoder(rr.moduleReader).Decode(def)
 		if err != nil {
-			return def, err
+			return nil, fmt.Errorf("yaml decode: %w", err)
 		}
 	}
 
@@ -549,8 +547,6 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 			return err
 		}
 
-		log.Warn("file found", slog.String("name", hdr.Name))
-
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
@@ -561,8 +557,8 @@ func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 			if err != nil {
 				return err
 			}
-			return nil
 
+			return nil
 		default:
 
 			continue
