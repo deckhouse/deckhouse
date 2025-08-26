@@ -309,9 +309,13 @@ spec:
     {{- $alertmanagers_internal = true }}
   {{- end }}
 {{- end }}
-{{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
     alertmanagers:
+    - name: alerts-receiver
+      namespace: d8-monitoring
+      pathPrefix: /
+      port: http
+      resourceName: alerts-receiver
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}
@@ -332,7 +336,6 @@ spec:
         insecureSkipVerify: true
     {{- end }}
   {{- end }}
-{{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
@@ -356,9 +359,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
       {{- include "prometheus_resources" . | nindent 6 }}
-{{- end }}
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:
