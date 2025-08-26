@@ -46,7 +46,7 @@ data:
 
       keepalive_timeout  65;
 
-      ssi on;
+      ssi off;
       gzip off;
       port_in_redirect off;
       absolute_redirect off;
@@ -86,25 +86,52 @@ data:
             try_files /$lang/modules/index.html =404;
         }
 
-        location ~* ^/modules/(.+)$  {
-            limit_except GET {
-                deny all;
-            }
+        #location ~* ^/modules/code/(.+)  {
+        #    try_files /$lang/modules/code/alpha/$1 =404;
+        #}
 
-            rewrite ^(.*) /modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/$lang/$1 break;
+        #location ~* ^/modules/(.+)$  {
 
-            try_files @s3 =404;
-            #try_files /$lang/embedded-modules/$1 /$lang/embedded-modules/$1/index.html /$lang/embedded-modules/$1/ /$lang/modules/$1 /$lang/modules/$1/index.html /$lang/modules/$1/ =404;
+        # Internal redirect to serve module docs from sources
+        location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
+            internal;
+            try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
         }
 
-        location @s3 {
-            set                     $original_uri  $uri;
+        # Modules from sources (they are served locally.)
+        location ~* ^/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
+            set $module "$1";
+            set $channel "$2";
+            set $module_doc "$3";
 
+            if (-d $document_root/$lang/modules/$module/$channel) {
+               rewrite ^/modules/[^/]+/[^/]+/.*$ /$lang/modules/$module/$channel/$module_doc last;
+            }
+        }
+
+        # Embeddede modules (they are served from s3)
+        location ~* ^/modules/([^/]+)/(latest|v1\.[0-9]+)/(.*)$ {
+            #limit_except GET {
+            #    deny all;
+            #}
+
+            set $module "$1";
+            set $channel "$2";
+            set $module_doc "$3";
+
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.*)$ /modules-web-test2/$channel/$lang/modules/$module/$module_doc break;
+            #rewrite ^/(.+) /modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/$lang/$1 break;
+
+            #try_files @s3 =404;
+            #try_files /$lang/embedded-modules/$1 /$lang/embedded-modules/$1/index.html /$lang/embedded-modules/$1/ /$lang/modules/$1 /$lang/modules/$1/index.html /$lang/modules/$1/ =404;
+        #}
+
+        #location @s3 {
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
-            proxy_cache_key         $original_uri;
+            proxy_cache_key         $uri;
             proxy_intercept_errors  on;
-            proxy_buffering on;
+            proxy_buffering         on;
             proxy_buffer_size       16k;
             proxy_buffers           4 16k;
             proxy_ignore_headers    Set-Cookie;
@@ -120,7 +147,7 @@ data:
         }
 
         location / {
-            try_files /platform$uri /platform$uri/ =404;
+            try_files $uri $uri/ =404;
         }
 
 
