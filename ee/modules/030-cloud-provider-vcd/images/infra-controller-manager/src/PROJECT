@@ -8,7 +8,7 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: src
+projectName: infra-controller-manager
 repo: infra-controller-manager
 resources:
 - api:
@@ -16,7 +16,15 @@ resources:
     namespaced: true
   controller: true
   domain: deckhouse.io
-  kind: Affinity
+  kind: VCDAffinityRule
   path: infra-controller-manager/api/v1alpha1
+  version: v1alpha1
+- controller: true
+  domain: deckhouse.io
+  kind: InstanceClassAffinity
+  version: v1alpha1
+- controller: true
+  domain: deckhouse.io
+  kind: ProviderClusterConfigurationAffinity
   version: v1alpha1
 version: "3"
