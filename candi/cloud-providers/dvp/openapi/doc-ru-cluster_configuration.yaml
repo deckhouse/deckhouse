@@ -137,12 +137,7 @@ apiVersions:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания диска данных etcd.
 
-                        Если значение не указано, фактический StorageClass по умолчанию будет определён следующим образом:
-
-                        - присутствующий StorageClass в кластере, имеющий default-аннотацию;
-                        - первый (по алфавиту) StorageClass из тех, что создаются провайдером (в порядке из таблицы выше).
-
-                        > **Параметр устарел.** Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
                 additionalLabels:
                   description: |
                     Дополнительные метки.
