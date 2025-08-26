@@ -37,28 +37,32 @@ type ValidationWebhookSpec struct {
 	// +optional
 	Webhook *admissionregistrationv1.ValidatingWebhook `json:"webhook,omitempty"`
 
-	Context []Context `json:"context,omitempty"`
+	// Context []Context `json:"context,omitempty"`
 
 	Handler Handler `json:"handler,omitempty"`
 }
 
-type Context struct {
-	Context []struct {
-		Name string `yaml:"name"`
-	} `yaml:"context"`
-	Kubernetes        interface{} `yaml:"kubernetes"`
-	APIVersion        string      `yaml:"apiVersion"`
-	Kind              string      `yaml:"kind"`
-	NameSelector      interface{} `yaml:"nameSelector"`
-	MatchNames        []string    `yaml:"matchNames"`
-	LabelSelector     interface{} `yaml:"labelSelector"`
-	MatchLabels       interface{} `yaml:"matchLabels"`
-	Foo               string      `yaml:"foo"`
-	NamespaceSelector interface{} `yaml:"namespaceSelector"`
-	JqFilter          struct {
-		NodeName string `yaml:"nodeName"`
-	} `yaml:"jqFilter"`
-}
+// type ContextName struct {
+// 	Name string `yaml:"name"`
+// }
+
+// type JqFilter struct {
+// 	NodeName string `yaml:"nodeName"`
+// }
+
+// type Context struct {
+// 	Context           []ContextName `yaml:"context"`
+// 	Kubernetes        interface{}   `yaml:"kubernetes"`
+// 	APIVersion        string        `yaml:"apiVersion"`
+// 	Kind              string        `yaml:"kind"`
+// 	NameSelector      interface{}   `yaml:"nameSelector"`
+// 	MatchNames        []string      `yaml:"matchNames"`
+// 	LabelSelector     interface{}   `yaml:"labelSelector"`
+// 	MatchLabels       interface{}   `yaml:"matchLabels"`
+// 	Foo               string        `yaml:"foo"`
+// 	NamespaceSelector interface{}   `yaml:"namespaceSelector"`
+// 	JqFilter          JqFilter      `yaml:"jqFilter"`
+// }
 
 type Handler struct {
 	// this is a python script handler for object

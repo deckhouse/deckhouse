@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"log/slog"
+	"os"
+	"text/template"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,7 +28,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 )
@@ -53,9 +54,6 @@ type ValidationWebhookReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// TODO: replace with deckhouse/pkg/log
-	_ = logf.FromContext(ctx)
-
 	var res ctrl.Result
 
 	r.Logger.Debug("validating webhook processing started", slog.String("resource_name", req.Name))
@@ -113,6 +111,17 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	// 4) Write to file (add finalizer)
 	// 5) write finalizer
 	// 6) kill shell-operator binary (we can start shell operator as library too?)
+
+	// hooks/002-deckhouse/webhooks/validating
+	os.MkdirAll("/hooks/"+vh.Name+"/webhooks/validating/", 0777)
+
+	templateFile := "templates/webhook.tpl"
+	tpl, err := template.ParseFiles(templateFile)
+	if err != nil {
+		// TODO: do something
+	}
+
+	tpl.Execute(os.Stdout, vh)
 
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(vh, "some finalizer") {
