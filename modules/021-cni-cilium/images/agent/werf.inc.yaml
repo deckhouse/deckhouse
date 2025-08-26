@@ -1,3 +1,4 @@
+
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
@@ -7,35 +8,6 @@
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/install-runtime-deps.sh
 # and https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (release stage)
 ---
-# #####################################################################
-# List of binary files used by agent
-# from base install script
-## ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-{{ $binariesFromALT := "/etc/localtime" }}
-# shell-scripts dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/bash /bin/sh /bin/echo /usr/bin/printf /bin/sed /bin/awk /usr/bin/nsenter /bin/mount /bin/mkdir /bin/basename" }}
-{{ $binariesFromALT := cat $binariesFromALT "/bin/cat /bin/head /bin/cut /usr/bin/od /bin/grep /bin/cp /bin/mv /bin/rm /bin/ln /bin/wc /bin/find" }}
-# kmod and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/bin/kmod /bin/lsmod /sbin/depmod /sbin/insmod /sbin/lsmod /sbin/modinfo /sbin/modprobe /sbin/rmmod" }}
-# iproute2 and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/dcb /sbin/devlink /sbin/ip /sbin/rdma /sbin/rtmon /sbin/tc /sbin/vdpa" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/bridge /usr/sbin/genl /usr/sbin/lnstat /usr/sbin/nstat /usr/sbin/rtacct /usr/sbin/ss /usr/sbin/tipc" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/sbin/ctstat /usr/sbin/rtstat" }}
-# ipset and dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/sbin/ipset" }}
-# clang dependencies
-{{ $binariesFromALT := cat $binariesFromALT "/usr/lib64/libstdc++.so.6" }}
-# bash-completion
-{{ $binariesFromALT := cat $binariesFromALT "/etc/bashrc.d/bash_completion.sh" }}
-{{ $binariesFromALT := cat $binariesFromALT "/usr/share/bash-completion/bash_completion" }}
-# groups
-{{ $binariesFromALT := cat $binariesFromALT "/usr/bin/groups" }}
-# for prepull
-{{ $binariesFromALT := cat $binariesFromALT "/bin/true" }}
-# for cilium-cli sysdump
-{{ $binariesFromALT := cat $binariesFromALT "/bin/tar /usr/bin/timeout /usr/bin/stat /bin/tail" }}
-# for debug
-{{ $binariesFromALT := cat $binariesFromALT "/bin/sleep /bin/ls /usr/bin/curl /usr/bin/ldd /usr/bin/strace /usr/bin/env" }}
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
@@ -43,7 +15,7 @@
 # from bpftool-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
@@ -64,7 +36,6 @@
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/sbin/xtables*" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/sbin/iptables-wrapper" }}
 # #####################################################################
-# Binaries artifact for distroless agent (based on Ubuntu)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -169,9 +140,8 @@ shell:
   # common relocate
   - chmod +x /binary_replace.sh
   - mkdir -p /relocate
-  # copy base binaries and deps from ALT
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
-  - /binary_replace.sh -i "{{ $binariesFromALT }}" -o /relocate
+  - /binary_replace.sh -i "/etc/localtime" -o /relocate
   # copy self built binaries and deps
   # fix compatibility with the new version of bash_completion
   - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/cilium-dbg
@@ -241,10 +211,294 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
+fromCacheVersion: "2025-08-26.2"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
+  before: install
+- image: tools/coreutils-v9.7
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/env
+  - usr/bin/ls
+  - usr/bin/sleep
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
+  before: install
+- image: tools/bash-v5.2.37
+  before: install
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - bash
+  - sh
+- image: tools/coreutils-v9.7
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/basename
+  - usr/bin/cat
+  - usr/bin/cp
+  - usr/bin/coreutils
+  - usr/bin/cut
+  - usr/bin/echo
+  - usr/bin/groups
+  - usr/bin/head
+  - usr/bin/ln
+  - usr/bin/mkdir
+  - usr/bin/mv
+  - usr/bin/od
+  - usr/bin/printf
+  - usr/bin/rm
+  - usr/bin/stat
+  - usr/bin/tail
+  - usr/bin/timeout
+  - usr/bin/true
+  - usr/bin/wc
+- image: tools/findutils-v4.10.0
+  before: install
+  add: /usr/bin/find
+- image: tools/gawk-v5.3.2
+  before: install
+  add: /
+  to: /
+  includePaths:
+  - usr/bin/awk
+  - usr/bin/gawk
+- image: tools/grep-grep-3.11
+  before: install
+  add: /usr/bin/grep
+- image: tools/sed-v4.9
+  before: install
+  add: /usr/bin/sed
+- image: tools/tar-v1.35
+  before: install
+  add: /usr/bin/tar
+- image: tools/util-linux-v2.41
+  before: install
+  add: /usr/bin/nsenter
+- image: tools/util-linux-v2.41
+  before: install
+  add: /bin/mount
+  to: /usr/bin/mount
+- image: tools/ipset-v7.22
+  before: install
+  add: /usr/sbin/ipset
+  to: /usr/sbin/ipset
+- image: tools/kmod-v33
+  before: install
+  add: /bin/
+  to: /usr/bin/
+  includePaths:
+  - kmod
+  - lsmod
+- image: tools/kmod-v33
+  before: install
+  add: /bin/
+  to: /usr/sbin/
+  includePaths:
+  - depmod
+  - insmod
+  - lsmod
+  - modinfo
+  - modprobe
+  - rmmod
+- image: tools/iproute2-v6.12.0
+  before: install
+  add: /sbin/
+  to: /usr/sbin/
+  includePaths:
+  - dcb
+  - devlink
+  - ip
+  - rdma
+  - rtmon
+  - tc
+  - vdpa
+  - bridge
+  - genl
+  - lnstat
+  - nstat
+  - rtacct
+  - ss
+  - tipc
+  - ctstat
+  - rtstat
+- image: tools/bash-completion-2.16.0
+  before: install
+  add: /usr/share/bash-completion
+  to: /usr/share/bash-completion
+- image: tools/bash-completion-2.16.0
+  before: install
+  add: /etc/profile.d/bash_completion.sh
+  to: /etc/bashrc.d/bash_completion.sh
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
+- image: tools/elfutils-elfutils-0.193
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
+- image: libs/zlib-v1.3.1
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libz.a
+  - libz.so
+  - libz.so.1
+  - libz.so.1.3.1
+- image: libs/libcap-v1.2.69
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcap.a
+  - libcap.so
+  - libcap.so.2
+  - libcap.so.2.69
+- image: libs/zstd-v1.5.7
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libzstd.a
+  - libzstd.so
+  - libzstd.so.1
+  - libzstd.so.1.5.6
+- image: libs/libxml2-v2.13.8
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libxml2.a
+  - libxml2.la
+  - libxml2.so
+  - libxml2.so.2
+  - libxml2.so.2.13.4
+  - libxml2.so.2.13.8
+- image: libs/libffi-v3.4.8
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libffi.a
+  - libffi.la
+  - libffi.so
+  - libffi.so.8
+  - libffi.so.8.1.4
+- image: libs/xz-v5.8.1
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libc.so
+  - liblzma.a
+  - liblzma.la
+  - liblzma.so
+  - liblzma.so.5
+  - liblzma.so.5.6.3
+  - liblzma.so.5.8.1
+- image: libs/libedit-v20250104.3.1
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libedit.a
+  - libedit.la
+  - libedit.so
+  - libedit.so.0
+  - libedit.so.0.0.75
+  - libedit.so.3
+- image: libs/ncurses-v6.5
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libcurses.a
+  - libcurses.so
+  - libform.a
+  - libform.so
+  - libformw.a
+  - libformw_g.a
+  - libformw.so
+  - libformw.so.6
+  - libformw.so.6.5
+  - libmenu.a
+  - libmenu.so
+  - libmenuw.a
+  - libmenuw_g.a
+  - libmenuw.so
+  - libmenuw.so.6
+  - libmenuw.so.6.5
+  - libncurses++.a
+  - libncurses.a
+  - libncurses++.so
+  - libncurses.so
+  - libncurses++w.a
+  - libncursesw.a
+  - libncurses++w_g.a
+  - libncursesw_g.a
+  - libncurses++w.so
+  - libncursesw.so
+  - libncurses++w.so.6
+  - libncursesw.so.6
+  - libncurses++w.so.6.5
+  - libncursesw.so.6.5
+  - libpanel.a
+  - libpanel.so
+  - libpanelw.a
+  - libpanelw_g.a
+  - libpanelw.so
+  - libpanelw.so.6
+  - libpanelw.so.6.5
+  - libtic.a
+  - libtic.so
+  - libtinfo.a
+  - libtinfo.so
+  - libtinfo.so.6
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /lib64/libLLVM.so.19.1
+  to: /lib64/libLLVM.so.19.1
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
+  before: install
+- image: tools/gcc-12.1.0
+  add: /usr/lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libstdc++.so.6
+  - libstdc++.so.6.0.30
+  - libgcc_s.so.1
+- image: libs/glibc-v2.41
+  add: /lib64/libc.musl-x86_64.so.1
+  to: /lib64/libc.musl-x86_64.so.1
+  before: install
+- image: libs/xz-v5.8.1
+  add: /usr/lib/libc.so
+  to: /lib/x86_64-linux-gnu/libc.so
   before: install
 git:
 {{- include "image mount points" . }}
