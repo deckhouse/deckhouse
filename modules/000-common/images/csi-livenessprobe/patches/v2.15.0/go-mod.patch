@@ -1,18 +1,22 @@
 diff --git a/go.mod b/go.mod
-index 69aaa42..7d83497 100644
+index 69aaa42..d8102dc 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -42,7 +42,7 @@ require (
+@@ -42,9 +42,9 @@ require (
  	go.opentelemetry.io/otel/trace v1.33.0 // indirect
  	go.uber.org/multierr v1.11.0 // indirect
  	go.uber.org/zap v1.27.0 // indirect
 -	golang.org/x/net v0.32.0 // indirect
-+	golang.org/x/net v0.33.0 // indirect
- 	golang.org/x/sys v0.28.0 // indirect
- 	golang.org/x/text v0.21.0 // indirect
+-	golang.org/x/sys v0.28.0 // indirect
+-	golang.org/x/text v0.21.0 // indirect
++	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/sys v0.31.0 // indirect
++	golang.org/x/text v0.23.0 // indirect
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20241216192217-9240e9c98484 // indirect
+ 	google.golang.org/grpc v1.69.0 // indirect
+ 	google.golang.org/protobuf v1.36.0 // indirect
 diff --git a/go.sum b/go.sum
-index b54998e..8268ad2 100644
+index b54998e..3d0c6e0 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -117,8 +117,8 @@ golang.org/x/net v0.0.0-20190620200207-3b0461eec859/go.mod h1:z5CRVTTTmAJ677TzLL
@@ -21,21 +25,58 @@ index b54998e..8268ad2 100644
  golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4/go.mod h1:p54w0d4576C0XHj96bSt6lcn1PtDYWL6XObtHCRCNQM=
 -golang.org/x/net v0.32.0 h1:ZqPmj8Kzc+Y6e0+skZsuACbx+wzMgo5MQsJh9Qd6aYI=
 -golang.org/x/net v0.32.0/go.mod h1:CwU0IoeOlnQQWJ6ioyFrfRuomB8GKF6KbYXZVyeXNfs=
-+golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
-+golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
++golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
++golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
  golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
  golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+@@ -129,13 +129,13 @@ golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7w
+ golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20210330210617-4fbd30eecc44/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+ golang.org/x/sys v0.0.0-20210510120138-977fb7262007/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.28.0 h1:Fksou7UEQUWlKvIdsqzJmUmCX3cZuD2+P3XyyzwMhlA=
+-golang.org/x/sys v0.28.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
++golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
++golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+ golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
+ golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
+ golang.org/x/text v0.3.3/go.mod h1:5Zoc/QRtKVWzQhOtBMvqHzDpF6irO9z98xDceosuGiQ=
+-golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
+-golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
++golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
++golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
+ golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
+ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+ golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 diff --git a/vendor/modules.txt b/vendor/modules.txt
-index 688aa69..703e749 100644
+index 688aa69..4d11e0f 100644
 --- a/vendor/modules.txt
 +++ b/vendor/modules.txt
-@@ -151,7 +151,7 @@ go.uber.org/zap/internal/exit
+@@ -151,20 +151,21 @@ go.uber.org/zap/internal/exit
  go.uber.org/zap/internal/pool
  go.uber.org/zap/internal/stacktrace
  go.uber.org/zap/zapcore
 -# golang.org/x/net v0.32.0
-+# golang.org/x/net v0.33.0
- ## explicit; go 1.18
+-## explicit; go 1.18
++# golang.org/x/net v0.38.0
++## explicit; go 1.23.0
  golang.org/x/net/http/httpguts
  golang.org/x/net/http2
+ golang.org/x/net/http2/hpack
+ golang.org/x/net/idna
++golang.org/x/net/internal/httpcommon
+ golang.org/x/net/internal/timeseries
+ golang.org/x/net/trace
+-# golang.org/x/sys v0.28.0
+-## explicit; go 1.18
++# golang.org/x/sys v0.31.0
++## explicit; go 1.23.0
+ golang.org/x/sys/unix
+ golang.org/x/sys/windows
+-# golang.org/x/text v0.21.0
+-## explicit; go 1.18
++# golang.org/x/text v0.23.0
++## explicit; go 1.23.0
+ golang.org/x/text/secure/bidirule
+ golang.org/x/text/transform
+ golang.org/x/text/unicode/bidi
