@@ -145,7 +145,7 @@ cat /dev/shm/caps-id.pub
   <li>
     <p>Create the <code>caps</code> user on the <strong>virtual machine you have started</strong>. To do so, run the following command, specifying the public part of the SSH key obtained in the previous step:</p>
 {% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
-In Red Hat Linux-based operating systems, the caps user must be added to the wheel group. To do this, run the following command, specifying the public part of the SSH key obtained in the previous step:
+In RHEL-based (Red Hat Enterprise Linux) operating systems, the caps user must be added to the wheel group. To do this, run the following command, specifying the public part of the SSH key obtained in the previous step:
 <div markdown="1">
 ```bash
 # Specify the public part of the user SSH key.
