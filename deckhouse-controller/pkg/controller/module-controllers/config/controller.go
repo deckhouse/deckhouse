@@ -469,10 +469,10 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 		}
 
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
 
 		return true
