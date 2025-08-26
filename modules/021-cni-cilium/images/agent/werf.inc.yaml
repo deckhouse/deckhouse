@@ -292,7 +292,7 @@ import:
 - image: tools/kmod-v33
   before: install
   add: /bin/
-  to: /usr/bin/
+  to: /usr/sbin/
   includePaths:
   - kmod
   - lsmod
