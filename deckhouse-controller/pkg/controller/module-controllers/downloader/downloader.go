@@ -168,7 +168,13 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 		slog.String("module_version", moduleVersion),
 	)
 
-	def, err := md.fetchModuleDefinitionFromImage(moduleName, releaseImageInfo.Image)
+	// fetch module image
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+
+	def, err := md.fetchModuleDefinitionFromModuleImage(moduleName, img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
@@ -439,7 +445,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
+func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
 	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
