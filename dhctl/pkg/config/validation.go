@@ -392,6 +392,14 @@ func ValidateProviderSpecificClusterConfiguration(
 		})
 	}
 
+	if providerKind == "VCDClusterConfiguration" && clusterConfigDocsCount == 1 {
+		if err := validateVCDServerNoTrailingSlash(providerSpecificClusterConfiguration); err != nil {
+			errs.Append(ErrKindValidationFailed, Error{
+				Messages: []string{err.Error()},
+			})
+		}
+	}
+
 	return errs.ErrorOrNil()
 }
 
@@ -770,6 +778,26 @@ func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
 
 	if !regex.(*regexp.Regexp).MatchString(prefix) {
 		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, provider, regex)
+	}
+
+	return nil
+}
+
+func validateVCDServerNoTrailingSlash(raw string) error {
+	var m map[string]interface{}
+	if err := yaml.Unmarshal([]byte(raw), &m); err != nil {
+		return nil
+	}
+
+	p, _ := m["provider"].(map[string]interface{})
+	srv, _ := p["server"].(string)
+
+	srv = strings.TrimSpace(srv)
+	if srv == "" {
+		return nil
+	}
+	if strings.HasSuffix(srv, "/") {
+		return fmt.Errorf("provider.server must not end with a slash '/'")
 	}
 
 	return nil
