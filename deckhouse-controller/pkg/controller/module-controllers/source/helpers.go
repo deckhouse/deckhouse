@@ -56,7 +56,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules without sources, it seems impossible, but just in case
 			if len(module.Properties.AvailableSources) == 0 {
 				// don`t delete enabled module
-				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionFalse) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				return nil
@@ -65,7 +65,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules with this source as the last source
 			if len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName {
 				// don`t delete enabled module
-				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionFalse) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				module.Properties.AvailableSources = []string{}
@@ -188,7 +188,8 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+	//  not found or unknown
+	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) || module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
 		enabledByBundle := false
 		if meta.ModuleDefinition != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
@@ -202,6 +203,7 @@ func (r *reconciler) needToEnsureRelease(
 			return false
 		}
 	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+		// disabled by module config
 		return false
 	}
 
