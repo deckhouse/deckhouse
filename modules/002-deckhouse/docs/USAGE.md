@@ -136,6 +136,73 @@ spec:
         minimalNotificationTime: 8h
 ```
 
+<details>
+<summary>Minimal webhook example (Go)</summary>
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+)
+
+// Payload structure Deckhouse sends in POST body.
+type WebhookData struct {
+	Subject       string            `json:"subject"`
+	Version       string            `json:"version"`
+	Requirements  map[string]string `json:"requirements,omitempty"`
+	ChangelogLink string            `json:"changelogLink,omitempty"`
+	ApplyTime     string            `json:"applyTime,omitempty"`
+	Message       string            `json:"message"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	defer r.Body.Close()
+
+	var data WebhookData
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		log.Printf("failed to decode payload: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Print payload fields
+	log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v", 
+		data.Subject, data.Version, data.ApplyTime, data.ChangelogLink, data.Requirements)
+	log.Printf("message=%s", data.Message)
+
+	// Example conditional logic: fail intentionally for testing
+	if data.Version == "v0.0.0-fail" {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("intentional failure for testing"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
+}
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/webhook", handler)
+
+	addr := ":8080"
+	fmt.Printf("listening on %s, POST to http://localhost%s/webhook\n", addr, addr)
+	if err := http.ListenAndServe(addr, mux); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+</details>
+
 ## Collect debug info
 
 Read [the FAQ](faq.html#how-to-collect-debug-info) to learn more about collecting debug information.
