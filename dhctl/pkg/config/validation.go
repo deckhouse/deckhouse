@@ -392,14 +392,6 @@ func ValidateProviderSpecificClusterConfiguration(
 		})
 	}
 
-	if providerKind == "VCDClusterConfiguration" && clusterConfigDocsCount == 1 {
-		if err := validateVCDServerNoTrailingSlash(providerSpecificClusterConfiguration); err != nil {
-			errs.Append(ErrKindValidationFailed, Error{
-				Messages: []string{err.Error()},
-			})
-		}
-	}
-
 	return errs.ErrorOrNil()
 }
 
@@ -783,20 +775,12 @@ func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
 	return nil
 }
 
-func validateVCDServerNoTrailingSlash(raw string) error {
-	var m map[string]interface{}
-	if err := yaml.Unmarshal([]byte(raw), &m); err != nil {
+func validateVCDServerNoTrailingSlash(server string) error {
+	server = strings.TrimSpace(server)
+	if server == "" {
 		return nil
 	}
-
-	p, _ := m["provider"].(map[string]interface{})
-	srv, _ := p["server"].(string)
-
-	srv = strings.TrimSpace(srv)
-	if srv == "" {
-		return nil
-	}
-	if strings.HasSuffix(srv, "/") {
+	if strings.HasSuffix(server, "/") {
 		return fmt.Errorf("provider.server must not end with a slash '/'")
 	}
 
