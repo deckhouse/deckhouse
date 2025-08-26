@@ -172,7 +172,14 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("fetch module definition: %w", err)
 	}
+
 	res.ModuleDefinition = def
+
+	md.logger.Info("module definition extracted from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+		slog.Any("def", def),
+	)
 
 	return res, nil
 }
@@ -444,18 +451,21 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 	}
 	defer rc.Close()
 
-	buf := bytes.NewBuffer(nil)
-
-	if err = untarModuleDefinition(rc, buf); err != nil {
-		return def, err
+	rr := &moduleReader{
+		moduleReader: bytes.NewBuffer(nil),
 	}
 
-	if buf.Len() == 0 {
-		return def, nil
+	if err = rr.untarMetadata(rc); err != nil {
+		return def, fmt.Errorf("untar metadata: %w", err)
 	}
 
-	if err = yaml.NewDecoder(buf).Decode(def); err != nil {
-		return def, err
+	if rr.moduleReader.Len() > 0 {
+		md.logger.Warn("module definition found", slog.String("module def", rr.moduleReader.String()))
+
+		err = yaml.NewDecoder(rr.moduleReader).Decode(def)
+		if err != nil {
+			return def, err
+		}
 	}
 
 	return def, nil
@@ -514,7 +524,11 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 	return meta, err
 }
 
-func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
+type moduleReader struct {
+	moduleReader *bytes.Buffer
+}
+
+func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -522,16 +536,18 @@ func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
 			// end of archive
 			return nil
 		}
+
 		if err != nil {
 			return err
 		}
+
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
 
-		switch hdr.Name {
+		switch strings.ToLower(hdr.Name) {
 		case "module.yaml":
-			_, err = io.Copy(rw, tr)
+			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
 				return err
 			}
