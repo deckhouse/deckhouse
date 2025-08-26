@@ -95,19 +95,41 @@ type ReleaseInfo struct {
 type ReleaseQueueDepthDelta struct {
 	Major int // Major versions delta, not used right now, for future usage
 	Minor int // Minor versions delta
-	Patch int // Patch can be 0 or 1
+	Patch int // Patch versions delta
 }
 
-// GetReleaseQueueDepth returns the queue depth value for alerts and metrics
-// NOTE: separate alert planned for major updates in future
+// GetReleaseQueueDepth calculates the effective queue depth for monitoring and alerting purposes.
+// This method transforms the internal delta representation into a simplified metric value that
+// represents how many releases are pending deployment.
+//
+// Queue depth calculation logic:
+//   - If minor version differences exist: return the minor delta count
+//   - If only patch version differences exist: return 1 (normalized patch indicator)
+//   - If no differences exist: return 0 (up to date)
+//
+// The function prioritizes minor version gaps over patch version gaps because:
+//  1. Minor version updates typically contain more significant changes
+//  2. Multiple patch versions are normalized to a single indicator (1)
+//  3. This provides a cleaner metric for alerting thresholds
+//
+// Examples:
+//   - Delta{Major: 0, Minor: 3, Patch: 0} → Returns: 3 (3 minor versions behind)
+//   - Delta{Major: 0, Minor: 0, Patch: 5} → Returns: 1 (patch updates available, normalized)
+//   - Delta{Major: 1, Minor: 2, Patch: 0} → Returns: 2 (focuses on minor gap, major handled separately)
+//   - Delta{Major: 0, Minor: 0, Patch: 0} → Returns: 0 (up to date)
+//
+// Note: Major version deltas are intentionally excluded from this calculation.
+// A separate alerting mechanism is planned for major version updates due to their
+// potentially breaking nature and different handling requirements.
 func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
-	if d.Patch > 0 {
-		return d.Patch
-	}
 	if d.Minor > 0 {
 		return d.Minor
 	}
-	// major versions are not returned (will have separate alert)
+
+	if d.Patch > 0 {
+		return 1
+	}
+
 	return 0
 }
 
@@ -122,6 +144,44 @@ func isPatchRelease(a, b *semver.Version) bool {
 	return false
 }
 
+// calculateReleaseQueueDepthDelta computes the version gap between the currently deployed release
+// and the latest available release. This delta is used for monitoring, alerting, and metrics
+// to understand how far behind the deployed version is from the latest available version.
+//
+// The function implements a hierarchical priority system for version differences:
+//
+// 1. MAJOR VERSION PRIORITY: When a major version difference exists, it takes precedence.
+//   - Calculate major version delta (latest.major - deployed.major)
+//   - Additionally calculate minor version delta within the deployed major version range
+//   - This helps track both the major jump and any skipped minors within the current major
+//
+// 2. MINOR VERSION PRIORITY: When major versions are equal but minor differs.
+//   - Calculate only minor version delta (latest.minor - deployed.minor)
+//   - Patch differences are ignored when minor differences exist
+//
+// 3. PATCH VERSION FALLBACK: When major and minor are identical.
+//   - Calculate patch version delta (latest.patch - deployed.patch)
+//
+// Example scenarios:
+//
+//	Scenario 1 - Major version jump with minor tracking:
+//	Deployed: 1.67.5
+//	Releases: 1.68.2, 1.69.7, 1.70.0, 2.0.1, 2.1.5
+//	Latest: 2.1.5
+//	Result: { Major: 1, Minor: 3, Patch: 0 }
+//	Explanation: 1 major jump (1→2), 3 minor versions within major 1 (67→70)
+//
+//	Scenario 2 - Minor version difference:
+//	Deployed: 1.67.5
+//	Latest: 1.70.3
+//	Result: { Major: 0, Minor: 3, Patch: 0 }
+//	Explanation: Same major (1), 3 minor versions difference (67→70)
+//
+//	Scenario 3 - Patch version difference:
+//	Deployed: 1.67.5
+//	Latest: 1.67.8
+//	Result: { Major: 0, Minor: 0, Patch: 3 }
+//	Explanation: Same major.minor (1.67), 3 patch versions difference (5→8)
 func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleaseInfo *ReleaseInfo) *ReleaseQueueDepthDelta {
 	delta := &ReleaseQueueDepthDelta{}
 
@@ -137,8 +197,9 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	if latest.Major() > deployed.Major() {
 		delta.Major = int(latest.Major() - deployed.Major())
 
-		// find the latest release in the same major version as deployed
 		var latestInSameMajor *semver.Version
+
+		// find the latest release in the same major version as deployed
 		for i := len(releases) - 1; i >= 0; i-- {
 			if releases[i].GetVersion().Major() == deployed.Major() {
 				latestInSameMajor = releases[i].GetVersion()
@@ -156,12 +217,11 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	// skip Patch in case Minor delta exists
 	if latest.Minor() > deployed.Minor() {
 		delta.Minor = int(latest.Minor() - deployed.Minor())
-		delta.Patch = 0 // explicitly zero out patch
 		return delta
 	}
 
 	if latest.Patch() > deployed.Patch() {
-		delta.Patch = 1
+		delta.Patch = int(latest.Patch() - deployed.Patch())
 	}
 
 	return delta
