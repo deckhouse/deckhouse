@@ -61,7 +61,7 @@ data:
       }
 
       server {
-        listen   127.0.0.1:8080;
+        listen   8080;
         server_name _;
 
         root   /app;
@@ -99,7 +99,6 @@ data:
 
         location @s3 {
             set                     $original_uri  $uri;
-            set                     $orig_loc      $upstream_http_location;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
@@ -111,13 +110,13 @@ data:
             proxy_ignore_headers    Set-Cookie;
             proxy_ignore_headers    Cache-Control;
 
-            proxy_set_header Host   $host;
+            proxy_set_header Host   {{ .Values.global.doc_s3_bucket_public_url }};
 
             proxy_connect_timeout   30s;
             proxy_read_timeout      30s;
             proxy_send_timeout      30s;
 
-            proxy_pass              {{ .Values.global.doc_s3_bucket_public_url }};
+            proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
         location / {
