@@ -47,26 +47,41 @@ The default VirtualMachineClass is set via the `virtualmachineclass.virtualizati
 
 It is not recommended to set the annotation on the `generic` class, since the annotation may be removed during an update. It is recommended to create your own class and assign it as the default.
 
-Example output of the class list without a default class:
+To list all VirtualMachineClass resources, run the following command:
+
+```shell
+d8 k get virtualmachineclass
+```
+
+Example output (no default class):
 
 ```console
-$ d8 k get vmclass 
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready               1d
 ```
 
-Example command of assigning the default class:
+To assign the default class, run:
 
 ```shell
 d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
+```
+
+Example output:
+
+```console
 virtualmachineclass.virtualization.deckhouse.io/host-passthrough-custom annotated
 ```
 
-After assigning the default class, the output will be:
+After assigning the default class, list all VirtualMachineClass resources again:
+
+```shell
+d8 k get vmclass
+```
+
+Example output (with default class):
 
 ```console
-$ d8 k get vmclass 
 NAME                                    PHASE   ISDEFAULT   AGE
 generic                                 Ready               1d
 host-passthrough-custom                 Ready   true        1d
