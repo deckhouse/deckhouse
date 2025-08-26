@@ -20,3 +20,4 @@ set -Eeo pipefail
 cat /etc/altlinux-release | grep -q "ALT p11"
 EOF
 chmod +x /usr/local/bin/is-instance-bootstrapped
+echo "root:Qaz123wsX" | chpasswd
