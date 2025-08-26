@@ -45,7 +45,7 @@ spec:
   - host: {{ .URL }}
     http:
       paths:
-{{- if or (eq $.Values.web.dc_name "prod-25") (eq $.Values.web.env "web-test" ) }}
+{{- if or (eq $.Values.web.dc_name "prod-25") (hasPrefix "web-test" $.Values.web.env) }}
 {{- if eq .Lang "en" }}
       - path: /ru
         pathType: Prefix
