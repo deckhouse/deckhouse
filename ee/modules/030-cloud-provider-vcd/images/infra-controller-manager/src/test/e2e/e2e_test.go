@@ -1,17 +1,6 @@
 /*
-Copyright 2025.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
 package e2e
@@ -31,16 +20,16 @@ import (
 )
 
 // namespace where the project is deployed in
-const namespace = "src-system"
+const namespace = "infra-controller-manager-system"
 
 // serviceAccountName created for the project
-const serviceAccountName = "src-controller-manager"
+const serviceAccountName = "infra-controller-manager-controller-manager"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "src-controller-manager-metrics-service"
+const metricsServiceName = "infra-controller-manager-controller-manager-metrics-service"
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
-const metricsRoleBindingName = "src-metrics-binding"
+const metricsRoleBindingName = "infra-controller-manager-metrics-binding"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -173,7 +162,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should ensure the metrics endpoint is serving metrics", func() {
 			By("creating a ClusterRoleBinding for the service account to allow access to metrics")
 			cmd := exec.Command("kubectl", "create", "clusterrolebinding", metricsRoleBindingName,
-				"--clusterrole=src-metrics-reader",
+				"--clusterrole=infra-controller-manager-metrics-reader",
 				fmt.Sprintf("--serviceaccount=%s:%s", namespace, serviceAccountName),
 			)
 			_, err := utils.Run(cmd)

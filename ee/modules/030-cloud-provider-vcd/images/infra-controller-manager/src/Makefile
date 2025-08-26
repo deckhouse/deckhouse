@@ -28,8 +28,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# deckhouse.io/src-bundle:$VERSION and deckhouse.io/src-catalog:$VERSION.
-IMAGE_TAG_BASE ?= deckhouse.io/src
+# deckhouse.io/infra-controller-manager-bundle:$VERSION and deckhouse.io/infra-controller-manager-catalog:$VERSION.
+IMAGE_TAG_BASE ?= deckhouse.io/infra-controller-manager
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
@@ -93,8 +93,9 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: controller-gen ## Generate CustomResourceDefinition objects.
+	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../../../crds/external/
+	mv ../../../crds/external/deckhouse.io_vcdaffinityrules.yaml ../../../crds/external/vcdaffinityrules.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -116,7 +117,7 @@ test: manifests generate fmt vet setup-envtest ## Run tests.
 # The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
 # CertManager is installed by default; skip with:
 # - CERT_MANAGER_INSTALL_SKIP=true
-KIND_CLUSTER ?= src-test-e2e
+KIND_CLUSTER ?= infra-controller-manager-test-e2e
 
 .PHONY: setup-test-e2e
 setup-test-e2e: ## Set up a Kind cluster for e2e tests if it does not exist
@@ -185,10 +186,10 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- $(CONTAINER_TOOL) buildx create --name src-builder
-	$(CONTAINER_TOOL) buildx use src-builder
+	- $(CONTAINER_TOOL) buildx create --name infra-controller-manager-builder
+	$(CONTAINER_TOOL) buildx use infra-controller-manager-builder
 	- $(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
-	- $(CONTAINER_TOOL) buildx rm src-builder
+	- $(CONTAINER_TOOL) buildx rm infra-controller-manager-builder
 	rm Dockerfile.cross
 
 .PHONY: build-installer
