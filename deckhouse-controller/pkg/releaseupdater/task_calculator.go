@@ -122,6 +122,10 @@ type ReleaseQueueDepthDelta struct {
 // A separate alerting mechanism is planned for major version updates due to their
 // potentially breaking nature and different handling requirements.
 func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
+	if d == nil {
+		return 0
+	}
+
 	if d.Minor > 0 {
 		return d.Minor
 	}
