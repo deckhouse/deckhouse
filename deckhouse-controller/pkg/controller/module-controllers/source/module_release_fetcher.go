@@ -447,8 +447,6 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		changeCause += " (" + createProcess + ")"
 	}
 
-	f.logger.Warn("module definition", slog.Any("def", meta.ModuleDefinition))
-
 	release := new(v1alpha1.ModuleRelease)
 	if err := f.k8sClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", f.moduleName, meta.ModuleVersion)}, release); err != nil {
 		if !apierrors.IsNotFound(err) {

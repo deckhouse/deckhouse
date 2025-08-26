@@ -451,8 +451,6 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName stri
 		Weight: defaultModuleWeight,
 	}
 
-	md.logger.Warn("trying to fetch module def")
-
 	rc, err := cr.Extract(img)
 	if err != nil {
 		return nil, fmt.Errorf("extract: %w", err)
