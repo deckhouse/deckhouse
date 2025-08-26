@@ -36,7 +36,7 @@ spec:
 status:
   modules:
     - name: test-module-1
-      pullError: "failed to pull module"
+      error: "failed to pull module"
   modulesCount: 1
 ---
 apiVersion: apps/v1

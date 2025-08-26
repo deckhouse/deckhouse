@@ -379,9 +379,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"reportUpdater": "imageHash-operatorTrivy-reportUpdater",
 		"trivy":         "imageHash-operatorTrivy-trivy",
 	},
-	"podReloader": map[string]interface{}{
-		"podReloader": "imageHash-podReloader-podReloader",
-	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
 		"alertsReceiver":              "imageHash-prometheus-alertsReceiver",

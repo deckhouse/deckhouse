@@ -49,6 +49,9 @@ spec:
                       pullError:
                         type: string
                         description: Ошибка скачивания модуля.
+                      error:
+                        type: string
+                        description: Ошибка процессинга модуля.
                       checksum:
                         type: string
                         description: Чексумма релиза.

@@ -4,4 +4,5 @@ dirs:
 - /host/dev
 - /etc/falco/webhook
 - /etc/falco/rules.d
+files:
 - /host/run/containerd/containerd.sock

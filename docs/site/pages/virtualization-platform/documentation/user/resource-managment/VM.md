@@ -58,7 +58,7 @@ metadata:
   name: linux-vm
 spec:
   # Virtual machine class name.
-  virtualMachineClassName: host
+  virtualMachineClassName: generic
   # Cloud-init script block for provisioning the VM.
   provisioning:
     type: UserData
