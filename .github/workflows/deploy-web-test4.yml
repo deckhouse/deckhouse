@@ -301,6 +301,7 @@ jobs:
           WERF_SET_WEB_ENV: "web.env=web-test4"
           WERF_SET_DCNAME: "web.dc_name=dev"
           WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
+          WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url=${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}"
           WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
           WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
           WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"

@@ -192,7 +192,8 @@ steps:
 {!{- $urlRu := printf "deckhouse.ru.%s.flant.com" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
-{!{- $s3bucket := "${{ secrets.DOC_S3_BUCKET_DEV }}" -}!}
+{!{- $s3Bucket := "${{ secrets.DOC_S3_BUCKET_DEV }}" -}!}
+{!{- $s3BucketPublicUrl := "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}" -}!}
 {!{- $s3AcessKey := "${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}" -}!}
 {!{- $s3SecretKey := "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}" -}!}
 {!{- $repo := "${{ steps.check_dev_registry.outputs.web_registry_path }}" -}!}
@@ -202,7 +203,8 @@ steps:
   {!{- $urlRu = "deckhouse.ru" -}!}
   {!{- $kubeConfig = "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}" -}!}
   {!{- $dcName = "prod-25" -}!}
-  {!{- $s3bucket = "${{ secrets.DOC_S3_BUCKET_PROD }}" -}!}
+  {!{- $s3Bucket = "${{ secrets.DOC_S3_BUCKET_PROD }}" -}!}
+  {!{- $s3BucketPublicUrl = "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_PROD }}" -}!}
   {!{- $s3AcessKey = "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}" -}!}
   {!{- $s3SecretKey = "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}" -}!}
 {!{- else if eq $env "test2" }!}
@@ -242,7 +244,8 @@ steps:
     WERF_SET_URL_RU: "global.url_ru={!{ $urlRu }!}"
     WERF_SET_WEB_ENV: "web.env={!{ $webEnv }!}"
     WERF_SET_DCNAME: "web.dc_name={!{ $dcName }!}"
-    WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket={!{ $s3bucket }!}"
+    WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket={!{ $s3Bucket }!}"
+    WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url={!{ $s3BucketPublicUrl }!}"
     WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
     WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
     WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id={!{ $s3AcessKey }!}"
