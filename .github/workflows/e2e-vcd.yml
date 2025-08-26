@@ -327,7 +327,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -347,6 +346,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -857,7 +857,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -877,6 +876,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -1387,7 +1387,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1407,6 +1406,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -1917,7 +1917,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1937,6 +1936,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2447,7 +2447,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2467,6 +2466,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2977,7 +2977,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2997,6 +2996,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -3507,7 +3507,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3527,6 +3526,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4037,7 +4037,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -4057,6 +4056,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4567,7 +4567,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -4587,6 +4586,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5097,7 +5097,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -5117,6 +5116,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5627,7 +5627,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -5647,6 +5646,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -6157,7 +6157,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -6177,6 +6176,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials

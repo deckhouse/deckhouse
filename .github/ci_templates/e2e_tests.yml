@@ -242,7 +242,8 @@ run: |
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
-  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
+  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready &&\
+  /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
   {!{- end }!}
 
@@ -453,8 +454,8 @@ check_e2e_labels:
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 {!{- end }!}
