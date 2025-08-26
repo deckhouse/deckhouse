@@ -50,7 +50,7 @@ command -v containerd &>/dev/null && cntrd_version_change_check
 
 {{- $containerd := "containerd1727"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd213" }}
+  {{- $containerd = "containerd214" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}"
 {{- end }}
 
