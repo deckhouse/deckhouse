@@ -834,9 +834,7 @@ ENDSSH
        echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
-       echo "ip route del default" >> /etc/network/if-up.d/add-routes
        chmod 0755 /etc/network/if-up.d/add-routes
-       ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
 ENDSSH
@@ -857,9 +855,7 @@ ENDSSH
        echo "#!/bin/sh" > /etc/rc.d/rc.local
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
-       echo "ip route del default" >> /etc/rc.d/rc.local
        chmod 0755 /etc/rc.d/rc.local
-       ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
 ENDSSH
@@ -880,9 +876,7 @@ ENDSSH
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
        chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
 ENDSSH
@@ -903,9 +897,7 @@ ENDSSH
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
        chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
 ENDSSH
@@ -926,9 +918,7 @@ ENDSSH
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
        chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
        ip route add 10.111.0.0/16 dev lo
        ip route add 10.222.0.0/16 dev lo
 ENDSSH

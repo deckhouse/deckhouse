@@ -33,6 +33,8 @@ metadata:
 spec:
   version: 1
   enabled: true
+  settings:
+    debugLogging: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -218,3 +220,116 @@ metadata:
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: '${FOX_DOCKERCFG}'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: watch-pods.sh
+spec:
+  weight: 100
+  bundles:
+  - "*"
+  nodeGroups:
+  - "*"
+  content: |
+    #!/bin/bash
+    
+    # Function to detect the package manager and install inotify-tools
+    install_inotify_tools() {
+        if [ -f /etc/os-release ]; then
+            . /etc/os-release
+            case "$ID" in
+                ubuntu|debian|astra)
+                    echo "Detected Ubuntu/Debian. Installing inotify-tools..."
+                    sudo apt update
+                    sudo apt install -y inotify-tools
+                    ;;
+                rosa)
+                    echo "Detected rosa. Installing inotify-tools..."
+                    # CentOS/RHEL 8 or Fedora
+                        sudo dnf install -y inotify-tools
+                    ;;
+                centos|rhel|fedora)
+                    echo "Detected CentOS/RHEL/Fedora. Installing inotify-tools..."
+                    # CentOS/RHEL 8 or Fedora
+                    if [[ "$VERSION_ID" == 8* ]] || [ "$ID" == "fedora" ]; then
+                        sudo dnf install -y inotify-tools
+                    else
+                        # CentOS/RHEL 7
+                        sudo yum install -y inotify-tools
+                    fi
+                    ;;
+                suse|sles|opensuse)
+                    echo "Detected SUSE/SLES/openSUSE. Installing inotify-tools..."
+                    sudo zypper install -y inotify-tools
+                    ;;
+                arch)
+                    echo "Detected Arch Linux. Installing inotify-tools..."
+                    sudo pacman -Syu inotify-tools --noconfirm
+                    ;;
+                *)
+                    echo "Unsupported Linux distribution. Please install inotify-tools manually."
+                    exit 1
+                    ;;
+            esac
+        else
+            echo "Cannot detect the operating system. Please install inotify-tools manually."
+            exit 1
+        fi
+    }
+    
+    # Run the function
+    install_inotify_tools
+    
+    bb-sync-file /usr/local/bin/watch_pods.sh - << "EOF"
+    #!/bin/bash
+    
+    # Source and target directories
+    SOURCE_DIR="/var/log/pods"
+    TARGET_DIR="/qqq"
+    
+    # Watch for any file creation in SOURCE_DIR
+    inotifywait -m -r -e create --format '%w%f' "$SOURCE_DIR" | while read NEW_FILE
+    do
+        # Check if the new entry is a file
+        if [ -f "$NEW_FILE" ]; then
+            # Get the relative path of the file from SOURCE_DIR
+            REL_PATH="${NEW_FILE#$SOURCE_DIR}"
+            
+            # Create the target directory for the hardlink preserving the structure
+            TARGET_FILE="$TARGET_DIR$REL_PATH"
+            TARGET_FILE_DIR=$(dirname "$TARGET_FILE")
+            mkdir -p "$TARGET_FILE_DIR"
+    
+            # Create a hardlink
+            ln "$NEW_FILE" "$TARGET_FILE"
+            
+            echo "Created hardlink for $NEW_FILE at $TARGET_FILE"
+        fi
+    done
+    EOF
+    
+    chmod +x /usr/local/bin/watch_pods.sh
+    
+    
+    bb-event-on 'bb-sync-file-changed' '_enable_watch_pods_service'
+    function _enable_watch_pods_service() {
+      systemctl daemon-reload
+      systemctl enable watch-pods.service
+      systemctl start watch-pods.service
+    }
+    
+    # Generate kubelet unit asd
+    bb-sync-file /etc/systemd/system/watch-pods.service - << EOF
+    [Unit]
+    Description=Watch /var/log/pods and create hardlinks in /qqq
+    After=network.target
+    
+    [Service]
+    ExecStart=/usr/local/bin/watch_pods.sh
+    Restart=on-failure
+    User=root
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
