@@ -1,4 +1,5 @@
 {{- $required_patches_from_ee_dir_by_versions := dict }}
+{{- $svace_project_name := $.ProjectName }}
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -30,6 +31,8 @@
 
     {{- $_ := set $required_patches_from_ee_dir_by_versions $version $patches_names_for_verification }}
   {{- end }}
+
+  {{- $_ := set $ "ProjectName" (printf "%s-%s" $svace_project_name $version) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $full_version | replace "." "-" }}
 fromImage: common/src-artifact
