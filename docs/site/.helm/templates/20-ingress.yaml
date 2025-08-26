@@ -129,7 +129,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: frontend
+            name: moduleslibrary
             port:
               name: http
       - path: /products/kubernetes-platform/modules
