@@ -124,19 +124,19 @@ layout: sidebar-guides
       <td>Узел мониторинга</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">50 + ?</td>
     </tr>
     <tr>
       <td>Системный узел</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">50 + ?</td>
     </tr>
     <tr>
       <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;">60 + ?</td>
     </tr>
     <tr>
       <td rowspan="6" style="width: 45%;">
@@ -161,21 +161,21 @@ layout: sidebar-guides
     </tr>
     <tr>
       <td>Узел мониторинга</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">6</td>
+      <td style="text-align: center;">12</td>
+      <td style="text-align: center;">50 + ?</td>
     </tr>
     <tr>
       <td>Системный узел</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">12</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">4</td>
+      <td style="text-align: center;">8</td>
+      <td style="text-align: center;">50 + ?</td>
     </tr>
     <tr>
       <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;"><a href="#storage">60 + ?</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
@@ -184,12 +184,12 @@ layout: sidebar-guides
       <td>Master-узел</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;">160</td>
     </tr>
   </tbody>
 </table>
-
-* Характеристики worker-узлов во многом зависят от характера запускаемой на узле (узлах) нагрузки, в таблице указаны минимальные требования.
+* <a name="#storage">Jump to the heading below</a>
+* Характеристики worker-узлов во многом зависят от характера запускаемой на узле (узлах) нагрузки, в таблице указаны минимальные требования. Под системные сервисы (kubelet) и системные поды на worker-узлах требуется заложить как минимум 1 CPU и 2 ГБ памяти.
 * Для всех узлов следует выделять быстрые диски (400+ IOPS).
 
 ### Кластер с одним-единственным master-узлом

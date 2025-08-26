@@ -124,13 +124,13 @@ Features of the configurations listed in the table above:
       <td>Monitoring node</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">50*</td>
     </tr>
     <tr>
       <td>System node</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;">50*</td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
@@ -161,21 +161,21 @@ Features of the configurations listed in the table above:
     </tr>
     <tr>
       <td>Monitoring node</td>
-      <td style="text-align: center;">4</td>
-      <td style="text-align: center;">8</td>
+      <td style="text-align: center;">6</td>
+      <td style="text-align: center;">12</td>
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
       <td>System node</td>
-      <td style="text-align: center;">6</td>
-      <td style="text-align: center;">12</td>
+      <td style="text-align: center;">4</td>
+      <td style="text-align: center;">8</td>
       <td style="text-align: center;">50</td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;"><a href="#storage">60 + ?</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
@@ -184,12 +184,13 @@ Features of the configurations listed in the table above:
       <td>Master node</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;">160</td>
     </tr>
   </tbody>
 </table>
 
-* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements.
+* <a name="#storage">Jump to the heading below</a>
+* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 
 ### Single master node cluster
