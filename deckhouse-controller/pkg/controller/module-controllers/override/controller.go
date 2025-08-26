@@ -189,7 +189,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// module must be enabled
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+	if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
