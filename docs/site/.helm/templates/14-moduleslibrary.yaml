@@ -57,6 +57,13 @@ spec:
               name: modules-docs-ru
             - mountPath: /cache
               name: download-cache
+            #- name: config
+            #  mountPath: /app/config
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - mountPath: /tmp
+              name: web-tmp
         - name: builder
           command:
             - "/app/server"
@@ -110,6 +117,11 @@ spec:
             - mountPath: "/mount/public/ru/modules"
               name: modules-docs-ru
       volumes:
+        - name: nginx-config
+          configMap:
+            name: doc-moduleslibrary-nginx-config
+        - name: web-tmp
+          emptyDir: {}
         - name: modules-docs-en
           emptyDir: {}
         - name: modules-docs-ru
