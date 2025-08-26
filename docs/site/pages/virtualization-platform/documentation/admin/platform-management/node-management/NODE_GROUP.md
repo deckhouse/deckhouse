@@ -366,7 +366,7 @@ Deckhouse tolerates the `dedicated` taints by default,
 so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 
 To use custom keys for taints (for example, `dedicated.client.com`),
-add the key's value to the [`modules.placement.customTolerationKeys`](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys) parameter.
+add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys) parameter.
 This way, Deckhouse can deploy system components (for example, `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 

@@ -47,7 +47,7 @@ You can control which nodes the Deckhouse kernel will run on by using the `spec.
 >       node-role.kubernetes.io/master: master
 > ```
 
-Also, you can list the necessary cluster node taints in ModuleConfig `global` in the array `spec.modules.placement.customTolerationKeys` so that Deckhouse automatically specifies the appropriate tolerance for its components.
+Also, you can list the necessary cluster node taints in ModuleConfig `global` in the array `.spec.settings.modules.placement.customTolerationKeys` so that Deckhouse automatically specifies the appropriate tolerance for its components.
 
 > Example of specifying `customTolerationKeys` for the 'deckhouse` module and the list of tolerations in the `customTolerationKeys` array for the rest of the Deckhouse components to work (do not copy this example without changing your configuration, because you will have other values):
 > ```yaml
