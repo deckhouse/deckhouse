@@ -137,17 +137,6 @@ func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
 	return 0
 }
 
-var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
-var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
-
-func isPatchRelease(a, b *semver.Version) bool {
-	if b.Major() == a.Major() && b.Minor() == a.Minor() && b.Patch() > a.Patch() {
-		return true
-	}
-
-	return false
-}
-
 // calculateReleaseQueueDepthDelta computes the version gap between the currently deployed release
 // and the latest available release. This delta is used for monitoring, alerting, and metrics
 // to understand how far behind the deployed version is from the latest available version.
@@ -232,6 +221,17 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 }
 
 const ltsReleaseChannel = "lts"
+
+var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
+var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
+
+func isPatchRelease(a, b *semver.Version) bool {
+	if b.Major() == a.Major() && b.Minor() == a.Minor() && b.Patch() > a.Patch() {
+		return true
+	}
+
+	return false
+}
 
 // CalculatePendingReleaseTask calculate task with information about current reconcile
 //
