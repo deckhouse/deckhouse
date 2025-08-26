@@ -17,6 +17,215 @@ toc: false
   из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
   поэтому ниже приведены примеры установки для разных вариантов.</p>
 
+<div class="installer_box">
+  <h2>Попробуйте графический установщик Deckhouse Kubernetes Platform! <span class="beta-badge">Beta</span></h2>
+  <div class="installer_two-columns">
+    <div class="column-left">
+      <ol>
+        <li>Запустите docker на вашем компьютере</li>
+        <li>
+          <p>Запустите установщик</p>
+          <div class="tabs">
+            <button class="tab-button active" onclick="openTab(event, 'tab1')">Контейнером</button>
+            <button class="tab-button" onclick="openTab(event, 'tab2')">Скриптом</button>
+            <button class="tab-button" onclick="openTab(event, 'tab3')">Файлом</button>
+          </div>
+          <div id="tab1" class="tab-content active">
+            <p>Выполните команду:</p>
+            <div class="sub-tabs">
+              <button class="sub-tab-button active" onclick="openSubTab(event, 'subtab1')">Linux</button>
+              <button class="sub-tab-button" onclick="openSubTab(event, 'subtab2')">macOS</button>
+              <button class="sub-tab-button" onclick="openSubTab(event, 'subtab3')">Windows</button>
+            </div>
+            <div id="subtab1" class="sub-tab-content active">
+  {% capture command %}
+  ```bash
+  SCRIPT FOR LINUX
+  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+  ```
+  {% endcapture %}
+  {{ command | markdownify }}
+            </div>
+            <div id="subtab2" class="sub-tab-content">
+  {% capture command %}
+  ```bash
+  SCRIPT FOR MACOS
+  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+  ```
+  {% endcapture %}
+  {{ command | markdownify }}
+            </div>
+            <div id="subtab3" class="sub-tab-content">
+  {% capture command %}
+  ```bash
+  SCRIPT FOR WINDOWS
+  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+  ```
+  {% endcapture %}
+  {{ command | markdownify }}
+            </div>
+          </div>
+          <div id="tab2" class="tab-content">
+            <p>Выполните команду:</p>
+  {% capture command %}
+  ```bash
+  curl -sSf https://deckhouse.ru/download/installer | bash
+  ```
+  {% endcapture %}
+  {{ command | markdownify }}
+          </div>
+          <div id="tab3" class="tab-content">
+            <div class="download-container">
+              <h3>Скачать установщик</h3>
+
+              <div class="selector-container">
+                <select id="osSelector">
+                  <option value="macos-arm64">macOS arm64</option>
+                  <option value="macos-amd64">macOS amd64</option>
+                  <option value="linux-amd64">Linux amd64</option>
+                </select>
+
+                <button id="downloadBtn" onclick="downloadFile()">Скачать</button>
+              </div>
+            </div>
+            <script>
+              function detectOS() {
+                  const userAgent = navigator.userAgent.toLowerCase();
+                  const platform = navigator.platform.toLowerCase();
+
+                  let isARM = false;
+                  if (navigator.userAgentData) {
+                      navigator.userAgentData.getHighEntropyValues(["architecture"])
+                          .then(ua => {
+                              isARM = ua.architecture.includes('arm');
+                              selectOSBasedOnDetection(userAgent, platform, isARM);
+                          });
+                  } else {
+                      isARM = platform.includes('arm') ||
+                             userAgent.includes('arm') ||
+                             (typeof navigator.cpuClass === 'string' && navigator.cpuClass.includes('ARM'));
+                      selectOSBasedOnDetection(userAgent, platform, isARM);
+                  }
+              }
+
+              function selectOSBasedOnDetection(userAgent, platform, isARM) {
+                  let detectedOS = '';
+                  let osName = '';
+
+                  if (userAgent.includes('mac') || platform.includes('mac')) {
+                      detectedOS = isARM ? 'macos-arm64' : 'macos-amd64';
+                      osName = `MacOS ${isARM ? 'arm64' : 'amd64'}`;
+                  } else if (userAgent.includes('win') || platform.includes('win')) {
+                      detectedOS = isARM ? 'windows-arm64' : 'windows-amd64';
+                      osName = `Windows ${isARM ? 'arm64' : 'amd64'}`;
+                  } else if (userAgent.includes('linux') || platform.includes('linux')) {
+                      detectedOS = isARM ? 'linux-arm64' : 'linux-amd64';
+                      osName = `Linux ${isARM ? 'arm64' : 'amd64'}`;
+                  } else {
+                      detectedOS = 'windows-amd64';
+                      osName = 'Windows amd64 (по умолчанию)';
+                  }
+
+                  document.getElementById('osSelector').value = detectedOS;
+              }
+
+              function downloadFile() {
+                  const selector = document.getElementById('osSelector');
+                  const selectedValue = selector.value;
+                  const selectedText = selector.options[selector.selectedIndex].text;
+
+                  const downloadUrls = {
+                      'macos-arm64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-arm64',
+                      'macos-amd64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-amd64',
+                      'linux-amd64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-linux-amd64',
+                  };
+
+                  const downloadUrl = downloadUrls[selectedValue];
+
+                  if (downloadUrl) {
+                      const link = document.createElement('a');
+                      link.href = downloadUrl;
+                      link.download = '';
+                      link.style.display = 'none';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+
+                      // window.open(downloadUrl, '_blank');
+
+                      console.log(`Скачивание файла для ${selectedText}`);
+                  } else {
+                      alert('Извините, файл для выбранной платформы временно недоступен.');
+                  }
+              }
+
+              document.addEventListener('DOMContentLoaded', function() {
+                  detectOS();
+              });
+
+              document.getElementById('osSelector').addEventListener('change', function() {
+                  const selectedText = this.options[this.selectedIndex].text;
+                  console.log(`Выбрана платформа: ${selectedText}`);
+              });
+            </script>
+          </div>
+        </li>
+        <li>Откройте <a>http://localhost:8080</a></li>
+      </ol>
+    </div>
+    <div class="column-right">
+      <h3>Поддерживаемые редакции:</h3>
+      <ul>
+        <li>Все от Community Edition до Enterprise Edition</li>
+        <li>И даже Deckhouse Certified Security Edition (bare metal)</li>
+      </ul>
+      <h3>Поддерживаемые платформы:</h3>
+      <ul>
+        <li>Bare metal (выделенные хосты)</li>
+        <li>Yandex Cloud</li>
+        <li>OpenStack</li>
+        <li>Selectel (OpenStack)</li>
+        <li>VK Cloud (OpenStack)</li>
+        <li>VMware vCloud Director</li>
+        <li>VMware vSphere</li>
+      </ul>
+      <b>Остальные скоро подтянутся!</b>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openTab(evt, tabName) {
+      var tabContents = document.getElementsByClassName("tab-content");
+      for (var i = 0; i < tabContents.length; i++) {
+          tabContents[i].classList.remove("active");
+      }
+
+      var tabButtons = document.getElementsByClassName("tab-button");
+      for (var i = 0; i < tabButtons.length; i++) {
+          tabButtons[i].classList.remove("active");
+      }
+
+      document.getElementById(tabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openSubTab(evt, subTabName) {
+      var subTabContents = document.getElementsByClassName("sub-tab-content");
+      for (var i = 0; i < subTabContents.length; i++) {
+          subTabContents[i].classList.remove("active");
+      }
+
+      var subTabButtons = document.getElementsByClassName("sub-tab-button");
+      for (var i = 0; i < subTabButtons.length; i++) {
+          subTabButtons[i].classList.remove("active");
+      }
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+</script>
+
 <h2>Выберите тип инфраструктуры, в которой будет устанавливаться Deckhouse Kubernetes Platform</h2>
 
 <div class="block" style="margin: 0;">
