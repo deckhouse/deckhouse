@@ -32,12 +32,6 @@ function __main__() {
     return
   fi
 
-  if ! values::array_has global.enabledModules "user-authz" ; then
-    echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "'user-authz' module needs to be enabled." > "$MODULE_ENABLED_REASON"
-    return
-  fi
-
   if values::array_has global.enabledModules "user-authn" ; then
     echo "true" > "$MODULE_ENABLED_RESULT"
     return
