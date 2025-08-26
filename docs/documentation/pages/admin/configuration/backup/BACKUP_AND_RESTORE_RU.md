@@ -23,7 +23,7 @@ lang: ru
    etcdutl version
    ```
 
-   Убедитесь, что результат команды `etcdctl version` отображается без ошибок.
+   Убедитесь, что результат команды `etcdutl version` отображается без ошибок.
 
    **При отсутствии** `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
 
@@ -155,191 +155,146 @@ lang: ru
 Чтобы восстановить отдельные объекты кластера (например, конкретные Deployment, Secret или ConfigMap) из резервной копии etcd, выполните следующие шаги:
 
 1. Запустите временный экземпляр etcd. Создайте отдельную копию etcd, которая будет работать независимо от основного кластера.
-1. Загрузите данные из резервного снимка. Используйте существующий файл снимка (snapshot) etcd, чтобы заполнить временный экземпляр нужными данными.
-1. Выгрузите необходимые объекты в формате JSON. Выберите конкретные ресурсы (по их ключам в etcd), а затем сохраните их описания в JSON-файлах.
+1. Загрузите во временный экземпляр etcd данные из [резервной копии](#резервное-копирование-etcd). Используйте существующий файл снимка (snapshot) etcd, чтобы заполнить временный экземпляр нужными данными.
+1. Выгрузите манифесты необходимых объекты в формате YAML.
+1. Восстановите объекты кластера из выгруженных YAML-файлов.
 
-Данные действия можно произвести как [с помощью скрипта](#автоматизированная-выгрузка-объектов), так и [вручную](#ручная-выгрузка-объектов).
+### Пример шагов по восстановлению объектов из резервной копии etcd
 
-### Автоматизированная выгрузка объектов
+В следующем примере `etcd-backup.snapshot` — [резервная копия](#резервное-копирование-etcd) etcd (snapshot), `infra-production` — пространство имен, в котором нужно восстановить объекты.
 
-Чтобы автоматически выгрузить объекты кластера из резервной копии etcd, воспользуйтесь представленным скриптом. Перед запуском убедитесь, что заданы необходимые настройки:  
+- Для выгрузки бинарных данных из etcd потребуется утилита [auger](https://github.com/etcd-io/auger/tree/main). Соберите ее из исходного кода на любой машине с Docker (на узлах кластера это сделать невозможно) с помощью следующих команд:
 
-- Путь до резервного снимка (snapshot) etcd. Укажите в скрипте корректное расположение файла `etcd-backup.snapshot`.
-- Директория для выгружаемых JSON-файлов. Определите, куда именно будут сохраняться выгруженные манифесты объектов кластера.
-- Фильтр отбора объектов (`grep`). При необходимости задайте строку для фильтрации путей в etcd, чтобы выгрузить лишь нужные ресурсы, например по названию пространства имён или типу ресурса.
-
-{% offtopic title="Скрипт выгрузки объектов" %}
-
-```shell
-BACKUP_OUTPUT_DIR="/tmp/etc_restore" # Путь до директории куда будут выгружены объекты (создастся автоматически).
-ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка (snapshot) etcd.
-FILTER="verticalpodautoscalers" # Фильтр отбора объектов (grep) для отбора записей.
-
-IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
-
-d8 k delete po etcd-restore --force || true
-cat <<EOF | d8 k apply -f -
-apiVersion: v1
-kind: Pod
-metadata:
-  name: etcd-restore
-spec:
-  volumes:
-  - name: shared-data
-    emptyDir: {}  
-  - name: etcddir
-    emptyDir: {}
-  containers:
-  - name: etcd
-    image: $IMG
-    volumeMounts:
-    - name: shared-data
-      mountPath: /etcd-backup
-    - name: etcddir
-      mountPath: /default.etcd      
+  ```shell
+  git clone -b v1.0.1 --depth 1 https://github.com/etcd-io/auger
+  cd auger
+  make release
+  build/auger -h
+  ```
   
-  - name: ubuntu
-    image: ubuntu:latest
-    command: ["/bin/sh", "-c", "sleep 100h"]
-    volumeMounts:
-    - name: shared-data
-      mountPath: /etcd-backup
+- Получившийся исполняемый файл `build/auger`, а также `snapshot` из резервной копии etcd загрузите на master-узел, с которого будут выполняться дальнейшие действия.
 
-  restartPolicy: Never
-EOF
+Действия ниже выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
 
-d8 k wait --for=condition=Ready pod etcd-restore
-d8 k cp  $ETCD_SNAPSHOT_PATH etcd-restore:/etcd-backup -c ubuntu
-d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
-d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+1. Установите корректные права доступа для файла с резервной копией:
 
-mkdir -p $BACKUP_OUTPUT_DIR
-files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
-for file in "${files[@]}"
-do
-  OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
-  VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
-  DIR=$(dirname "$file")
-  FILE=$(basename "$file")
-  mkdir -p "$BACKUP_OUTPUT_DIR/$DIR"
-  echo "$VALUE" > "$BACKUP_OUTPUT_DIR/$DIR/$FILE.json"
-  echo $BACKUP_OUTPUT_DIR/$DIR/$FILE.json
-done
-d8 k delete po etcd-restore --force
-```
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
 
-{% endofftopic %}
+1. Установите полный путь до `snapshot` и до утилиты в переменных окружения:
 
-### Ручная выгрузка объектов
+   ```shell
+   SNAPSHOT=/root/etcd-restore/etcd-backup.snapshot
+   AUGER_BIN=/root/auger 
+   chmod +x $AUGER_BIN
+   ```
 
-Нижеописанные шаги позволят вручную запустить временный экземпляр etcd, восстановить в него данные из снапшота (snapshot) и выгрузить в JSON-файлы только те объекты, которые вам необходимы.
+1. Запустите под с временным экземпляром etcd:
 
-1. Подготовьте временный под с контейнерами `etcd` и `ubuntu` с помощью шаблона `etcd.pod.yaml`. Шаблон содержит два контейнера:
-
-   - `etcd` — должен соответствовать версии etcd, из которой был создан резервный снимок (snapshot).
-   - `ubuntu` — вспомогательный контейнер для отладочных целей (в современных образах etcd может отсутствовать оболочка `bash` или `sh`).
-
-     Подставьте в шаблон актуальную версию образа etcd (аналогичную оригинальному кластеру) и создайте под с помощью команды:
+   - Создайте манифест пода. Он будет запускаться именно на текущем master-узле, выбрав его по переменной `$HOSTNAME`, и смонтирует `snapshot` по пути `$SNAPSHOT` для загрузки во временный экземпляр etcd:
 
      ```shell
-     IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
-     sed -i -e "s#ETCD_IMAGE#$IMG#" etcd.pod.yaml
-     d8 k create -f etcd.pod.yaml
-     ```
-
-     Пример шаблона:
-
-     ```yaml
+     cat <<EOF >etcd.pod.yaml 
      apiVersion: v1
      kind: Pod
      metadata:
-       name: etcd-restore
+       name: etcdrestore
+       namespace: default
      spec:
+       nodeName: $HOSTNAME
+       tolerations:
+       - operator: Exists
+       initContainers:
+       - command:
+         - etcdutl
+         - snapshot
+         - restore
+         - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
+         image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+         imagePullPolicy: IfNotPresent
+         name: etcd-snapshot-restore
+         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
+         - name: etcd-snapshot
+           mountPath: /tmp/etcd-snapshot
+           readOnly: true
+       containers:
+       - command:
+         - etcd
+         image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+         imagePullPolicy: IfNotPresent
+         name: etcd-temp
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
        volumes:
-       - name: shared-data
-         emptyDir: {}  
        - name: etcddir
          emptyDir: {}
-       containers:
-       - name: etcd
-         image: ETCD_IMAGE
-         volumeMounts:
-         - name: shared-data
-           mountPath: /etcd-backup
-         - name: etcddir
-           mountPath: /default.etcd      
-  
-       - name: ubuntu
-         image: ubuntu:latest
-         command: ["/bin/sh", "-c", "sleep 100h"]
-         volumeMounts:
-         - name: shared-data
-           mountPath: /etcd-backup
+         # Используйте фрагмент ниже вместо emptyDir: {}, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # emptyDir:
+         #  sizeLimit: 500Mi
+       - name: etcd-snapshot
+         hostPath:
+           path: $SNAPSHOT
+           type: File
+     EOF
+     ```
 
-       restartPolicy: Never
-      ```
+   - Запустите под:
 
-1. Скопируйте резервный снимок etcd в контейнер временного пода. Используйте команду `d8 k cp`, чтобы передать файл снапшота (например, `etcd-snapshot.bin`) в контейнер `ubuntu`:
+     ```shell
+     d8 k create -f etcd.pod.yaml
+     ```
 
-   ```shell
-   d8 k cp etcd-snapshot.bin etcd-restore:/etcd-backup -c ubuntu
-   ```
+1. Установите нужные переменные. В текущем примере:
 
-   Теперь файл резервной копии будет доступен контейнеру etcd.
+   - `infra-production` - пространство имен, в котором мы будем искать ресурсы.
 
-1. Восстановите данные из снапшота в новую директорию. Запустите команду внутри контейнера etcd, указав путь к загруженному файлу и новую директорию для восстановления:
+   - `/root/etcd-restore/output` - каталог для восстановленных манифестов.
 
-   ```shell
-   d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
-   ```
+   - `/root/auger` - путь до исполняемого файла утилиты `auger`:
 
-   По завершении команды данные из снапшота будут развернуты в директории `./default.etcd_new`.
+     ```shell
+     FILTER=infra-production
+     BACKUP_OUTPUT_DIR=/root/etcd-restore/output
+     mkdir -p $BACKUP_OUTPUT_DIR && cd $BACKUP_OUTPUT_DIR
+     ```
 
-1. Запустите дополнительный экземпляр etcd на нестандартном порту на основе восстановленных данных. Чтобы не конфликтовать с основным etcd в кластере, используйте другую директорию данных и порты:
+1. Выполните команды, которые отфильтруют список нужных ресурсов по переменной `$FILTER` и выгрузят их в каталог `$BACKUP_OUTPUT_DIR`:
 
    ```shell
-   d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+   files=($(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
+   for file in "${files[@]}"
+   do
+     OBJECT=$(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
+     FILENAME=$(echo $file | sed -e "s#/registry/##g;s#/#_#g")
+     echo "$OBJECT" > "$BACKUP_OUTPUT_DIR/$FILENAME.yaml"
+     echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml
+   done
    ```
 
-   > **Внимание.** В примере сервис запускается в фоновом режиме напрямую из командной строки. Используйте такой запуск только для процесса восстановления данных.
+1. [Восстановите объекты](#восстановление-объектов-кластера-из-выгруженных-yaml-файлов) кластера из выгруженных YAML-файлов.
 
-1. Выберите и выгрузите нужные объекты кластера:
+1. Удалите под с временным экземпляром etcd:
 
-   - Определите фильтр для `grep`, чтобы выгрузить только нужные ресурсы (например, определённый namespace или тип ресурсов).
-   - Создайте каталог для сохранения JSON-файлов и выгрузите объекты в цикле:
-
-      ```shell
-      FILTER="verticalpodautoscalers"
-      BACKUP_OUTPUT_DIR="/tmp/etc_restore"
-      mkdir -p $BACKUP_OUTPUT_DIR
-      files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
-      for file in "${files[@]}"
-      do
-        OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
-        VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
-        DIR=$(dirname "$file")
-        FILE=$(basename "$file")
-        mkdir -p "$BACKUP_OUTPUT_DIR/$DIR"
-        echo "$VALUE" > "$BACKUP_OUTPUT_DIR/$DIR/$FILE.json"
-        echo $BACKUP_OUTPUT_DIR/$DIR/$FILE.json
-      done
-      ```
-
-   - По завершении в каталоге `$BACKUP_OUTPUT_DIR` появятся выгруженные ресурсы в формате JSON.
-
-1. Удалите вспомогательный под с etcd командой:
-
-   ```shell
-   d8 k delete po etcd-restore --force
+   ```bash
+   d8 k -n default delete pod etcdrestore
    ```
 
-   Под будет остановлен, а ресурсы, выгруженные в JSON-файлы, останутся доступными для дальнейшего восстановления в основном кластере.
-
-### Восстановление объектов кластера из выгруженных JSON-файлов
+### Восстановление объектов кластера из выгруженных YAML-файлов
 
 Для восстановления объектов выполните следующие шаги:
 
-1. Подготовьте JSON-файлы к восстановлению. Перед тем как загружать объекты обратно в кластер, удалите из их описаний технические поля, которые могли устареть или нарушить процесс восстановления:
+1. Подготовьте YAML-файлы к восстановлению. Перед тем как загружать объекты обратно в кластер, удалите из их описаний технические поля, которые могли устареть или нарушить процесс восстановления:
 
    - `creationTimestamp`;
    - `UID`;
@@ -350,7 +305,7 @@ d8 k delete po etcd-restore --force
 1. Создайте объекты в кластере. Для восстановления ресурсов выполните команду:
 
    ```shell
-   d8 k create -f <ПУТЬ_К_ФАЙЛУ>.json
+   d8 k create -f <ПУТЬ_К_ФАЙЛУ>.yaml
    ```
 
    При необходимости можно указать путь к конкретному файлу или каталогу.
@@ -358,14 +313,14 @@ d8 k delete po etcd-restore --force
 1. Если нужно массово восстановить сразу несколько объектов, воспользуйтесь утилитой `find`:
 
    ```shell
-   find $BACKUP_OUTPUT_DIR -type f -name "*.json" -exec kubectl create -f {} \;
+   find $BACKUP_OUTPUT_DIR -type f -name "*.yaml" -exec d8 k create -f {} \;
    ```
 
-   Эта команда найдёт все .json-файлы в заданном каталоге `$BACKUP_OUTPUT_DIR` и поочерёдно применит к ним `d8 k create`.
+   Эта команда найдёт все .yaml-файлы в заданном каталоге `$BACKUP_OUTPUT_DIR` и поочерёдно применит к ним `d8 k create`.
 
-После выполнения этих шагов выбранные объекты будут воссозданы в кластере согласно описаниям из JSON-файлов.
+После выполнения этих шагов выбранные объекты будут воссозданы в кластере согласно описаниям из YAML-файлов.
 
-## Восстановление при смене IP-адреса master-узла
+## Восстановление объектов при смене IP-адреса master-узла
 
 {% alert level="warning" %}
 Этот раздел описывает ситуацию, когда меняется только IP-адрес master-узла, а все остальные объекты в резервной копии etcd (например, CA-сертификаты) остаются валидными. Предполагается, что восстановление выполняется в кластере с одним master-узлом.
@@ -396,6 +351,8 @@ d8 k delete po etcd-restore --force
 
 1. Убедитесь, что версия Kubernetes (`KUBERNETES_VERSION`) совпадает с установленной в кластере. Это необходимо для корректной загрузки соответствующей версии kubeadm.
 
+1. [Скачайте](#восстановление-кластера-с-одним-control-plane-узлом) утилиту `etcdutl`, если она не установлена.
+
 1. После выполнения скрипта необходимо дождаться, пока kubelet обновит свой сертификат, учитывающий новый IP-адрес. Проверить это можно в директории `/var/lib/kubelet/pki/`, где должен появиться новый сертификат.
 
 {% offtopic title="Скрипт для выгрузки объектов" %}
@@ -409,9 +366,9 @@ KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
 
-ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd 
+ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
@@ -457,18 +414,14 @@ systemctl restart kubelet.service
      mv /var/lib/etcd ./etcd_old
      ```
 
-   - Найдите или скачайте утилиту `etcdctl`, если она не установлена, и выполните восстановление из снапшота:
+   - Найдите или скачайте утилиту `etcdutl`, если она не установлена, и выполните восстановление из снапшота:
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до резервного снимка etcd.
-     ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
 
-     ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore \
+     ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \
-       --cacert /etc/kubernetes/pki/etcd/ca.crt \
-       --cert /etc/kubernetes/pki/etcd/ca.crt \
-       --key /etc/kubernetes/pki/etcd/ca.key \
-       --endpoints https://127.0.0.1:2379/ \
        --data-dir=/var/lib/etcd
      ```
 
@@ -565,7 +518,7 @@ d8 backup etcd <путь-до-снапшота> [флаги]
 Пример:
 
 ```shell
-d8 backup etcd mybackup.snapshot
+d8 backup etcd etcd-backup.snapshot
 ```
 
 Пример вывода команды:

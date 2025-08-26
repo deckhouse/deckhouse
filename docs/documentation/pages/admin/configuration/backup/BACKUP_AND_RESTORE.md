@@ -154,191 +154,145 @@ Once you go through these steps, the cluster will be successfully restored in th
 To restore individual cluster objects (e.g., specific Deployments, Secrets, or ConfigMaps) from an etcd snapshot, follow these steps:
 
 1. Launch a temporary etcd instance. Create a separate etcd instance that runs independently from the main cluster.
-1. Load data from the etcd snapshot. Use the existing etcd snapshot file to populate the temporary instance with the necessary data.
-1. Export the required objects in JSON format. Select the specific resources (by their etcd keys), then save their definitions as JSON files.
+1. Load data from [backup copy](#backing-up-etcd) into temporary etcd instance. Use the existing etcd snapshot file to populate the temporary instance with the necessary data.
+1. Unload the manifests of the necessary objects in YAML format.
+1. Restore cluster objects from uploaded YAML files.
 
-You can perform these actions either [using a script](#automated-object-export) or [manually](#manual-object-export).
+#### Example of steps to restore objects from an etcd backup
 
-### Automated object export
+In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#backing-up-etcd), `infra-production` is the namespace in which objects need to be restored.
 
-To automatically export cluster objects from an etcd backup, use the script provided below. Before running it, make sure the following variables are configured:
+- To decode objects from `etcd` you would need [auger](https://github.com/etcd-io/auger/tree/main). It can be built from source on any machine that has Docker installed (it cannot be done on cluster nodes).
 
-- Path to the etcd snapshot file. Set the correct location of `etcd-backup.snapshot` in the script.
-- Directory for exported JSON files. Define where the extracted manifests will be saved.
-- Object filter (`grep`). Optionally set a string to filter etcd paths so that only specific resources are exported, such as those by namespace or resource type.
-
-{% offtopic title="Object export script" %}
-
-```shell
-BACKUP_OUTPUT_DIR="/tmp/etc_restore" # Directory to store exported objects (created automatically).
-ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot file.
-FILTER="verticalpodautoscalers" # Filter for selecting object records.
-
-IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
-
-d8 k delete po etcd-restore --force || true
-cat <<EOF | d8 k apply -f -
-apiVersion: v1
-kind: Pod
-metadata:
-  name: etcd-restore
-spec:
-  volumes:
-  - name: shared-data
-    emptyDir: {}  
-  - name: etcddir
-    emptyDir: {}
-  containers:
-  - name: etcd
-    image: $IMG
-    volumeMounts:
-    - name: shared-data
-      mountPath: /etcd-backup
-    - name: etcddir
-      mountPath: /default.etcd      
+  ```shell
+  git clone -b v1.0.1 --depth 1 https://github.com/etcd-io/auger
+  cd auger
+  make release
+  build/auger -h
+  ```
   
-  - name: ubuntu
-    image: ubuntu:latest
-    command: ["/bin/sh", "-c", "sleep 100h"]
-    volumeMounts:
-    - name: shared-data
-      mountPath: /etcd-backup
+- Resulting executable `build/auger`, and also the `snapshot` from the backup copy of etcd must be uploaded on master-node, on which following actions would be performed.
 
-  restartPolicy: Never
-EOF
+Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
 
-d8 k wait --for=condition=Ready pod etcd-restore
-d8 k cp  $ETCD_SNAPSHOT_PATH etcd-restore:/etcd-backup -c ubuntu
-d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
-d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+1. Set the correct access permissions for the backup file:
 
-mkdir -p $BACKUP_OUTPUT_DIR
-files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
-for file in "${files[@]}"
-do
-  OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
-  VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
-  DIR=$(dirname "$file")
-  FILE=$(basename "$file")
-  mkdir -p "$BACKUP_OUTPUT_DIR/$DIR"
-  echo "$VALUE" > "$BACKUP_OUTPUT_DIR/$DIR/$FILE.json"
-  echo $BACKUP_OUTPUT_DIR/$DIR/$FILE.json
-done
-d8 k delete po etcd-restore --force
-```
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
 
-{% endofftopic %}
+1. Set full path for snapshot file and for the tool into environmental variables:
 
-### Manual object export
+   ```shell
+   SNAPSHOT=/root/etcd-restore/etcd-backup.snapshot
+   AUGER_BIN=/root/auger 
+   chmod +x $AUGER_BIN
+   ```
 
-The steps below describe how to manually launch a temporary etcd instance, restore data from a snapshot into it, and export only the objects you need as JSON files.
-
-1. Prepare a temporary Pod with `etcd` and `ubuntu` containers using the `etcd.pod.yaml` template. The template includes two containers:
-
-   - `etcd`: Must match the version of etcd from which the snapshot was created.
-   - `ubuntu`: An auxiliary container for debugging purposes (modern etcd images may not include a shell like `bash` or `sh`).
-
-     Substitute the actual etcd image version (matching your original cluster) into the template and create the Pod using the following commands:
+1. Run a Pod with temporary instance of `etcd`.
+   - Create Pod manifest. It should schedule on current master node by `$HOSTNAME` variable, and mounts snapshot file by `$SNAPSHOT` variable, which it then restores in temporary `etcd` instance:
 
      ```shell
-     IMG=$(d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
-     sed -i -e "s#ETCD_IMAGE#$IMG#" etcd.pod.yaml
-     d8 k create -f etcd.pod.yaml
-     ```
-
-     Example template:
-
-     ```yaml
+     cat <<EOF >etcd.pod.yaml 
      apiVersion: v1
      kind: Pod
      metadata:
-       name: etcd-restore
+       name: etcdrestore
+       namespace: default
      spec:
+       nodeName: $HOSTNAME
+       tolerations:
+       - operator: Exists
+       initContainers:
+       - command:
+         - etcdutl
+         - snapshot
+         - restore
+         - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
+         image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+         imagePullPolicy: IfNotPresent
+         name: etcd-snapshot-restore
+         # Uncomment the fragment below to set limits for the container if the node does not have enough resources to run it.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
+         - name: etcd-snapshot
+           mountPath: /tmp/etcd-snapshot
+           readOnly: true
+       containers:
+       - command:
+         - etcd
+         image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
+         imagePullPolicy: IfNotPresent
+         name: etcd-temp
+         volumeMounts:
+         - name: etcddir
+           mountPath: /default.etcd
        volumes:
-       - name: shared-data
-         emptyDir: {}  
        - name: etcddir
          emptyDir: {}
-       containers:
-       - name: etcd
-         image: ETCD_IMAGE
-         volumeMounts:
-         - name: shared-data
-           mountPath: /etcd-backup
-         - name: etcddir
-           mountPath: /default.etcd      
-  
-       - name: ubuntu
-         image: ubuntu:latest
-         command: ["/bin/sh", "-c", "sleep 100h"]
-         volumeMounts:
-         - name: shared-data
-           mountPath: /etcd-backup
+         # Use the snippet below instead of emptyDir: {} to set limits for the container if the node's resources are insufficient to run it.
+         # emptyDir:
+         #  sizeLimit: 500Mi
+       - name: etcd-snapshot
+         hostPath:
+           path: $SNAPSHOT
+           type: File
+     EOF
+     ```
 
-       restartPolicy: Never
-      ```
+   - Create Pod from the resulting manifest:
 
-1. Copy the etcd snapshot to the temporary pod container. Use the `d8 k cp` command to upload the snapshot file (e.g., `etcd-snapshot.bin`) to the `ubuntu` container:
+     ```shell
+     kubectl create -f etcd.pod.yaml
+     ```
 
-   ```shell
-   d8 k cp etcd-snapshot.bin etcd-restore:/etcd-backup -c ubuntu
-   ```
+1. Set environment variables. In this example:
 
-   The backup file will now be accessible to the etcd container.
+   - `infra-production` - namespace which we will search resources in.
 
-1. Restore data from the snapshot into a new directory. Run the following command inside the etcd container, specifying the snapshot path and a new data directory:
+   - `/root/etcd-restore/output` - path for outputting recovered resource manifests.
 
-   ```shell
-   d8 k exec -t etcd-restore -c etcd -- etcdctl snapshot restore /etcd-backup/etcd-backup.snapshot --data-dir=./default.etcd_new
-   ```
+   - `/root/auger` - path to `auger` executable.
 
-   After the command completes, the snapshot will be unpacked into the `./default.etcd_new` directory.
+     ```shell
+     FILTER=infra-production
+     BACKUP_OUTPUT_DIR=/root/etcd-restore/output
+     mkdir -p $BACKUP_OUTPUT_DIR && cd $BACKUP_OUTPUT_DIR
+     ```
 
-1. Start a second etcd instance on a non-default port using the restored data. To avoid conflicts with the running etcd instance in the cluster, use a different data directory and ports:
+1. Commands below will filter needed resources by `$FILTER` and output them into `$BACKUP_OUTPUT_DIR` directory:
 
    ```shell
-   d8 k exec -t etcd-restore -c etcd -- etcd   --name temp   --data-dir /default.etcd_new   --advertise-client-urls http://localhost:12379   --listen-client-urls http://localhost:12379 --listen-peer-urls http://localhost:12380 &
+   files=($(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
+   for file in "${files[@]}"
+   do
+     OBJECT=$(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
+     FILENAME=$(echo $file | sed -e "s#/registry/##g;s#/#_#g")
+     echo "$OBJECT" > "$BACKUP_OUTPUT_DIR/$FILENAME.yaml"
+     echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml
+   done
    ```
 
-   > **Warning.** In this example, the etcd process is started in the background directly from the command line. Use this method only for data recovery purposes.
+1. [Restore objects](#restoring-cluster-objects-from-exported-yaml-files) from exported YAML files.
 
-1. Select and export the required cluster objects:
+1. Delete the Pod with a temporary instance of etcd:
 
-   - Define a `grep` filter to extract only the resources you need (e.g., a specific namespace or resource type).
-   - Create a directory for saving the JSON files and export the objects in a loop:
-
-      ```shell
-      FILTER="verticalpodautoscalers"
-      BACKUP_OUTPUT_DIR="/tmp/etc_restore"
-      mkdir -p $BACKUP_OUTPUT_DIR
-      files=($(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get / --prefix --keys-only | grep "$FILTER" )) 
-      for file in "${files[@]}"
-      do
-        OBJECT=$(d8 k exec -t etcd-restore -c etcd  -- etcdctl  --endpoints=localhost:12379 get "$file" --write-out=json)
-        VALUE=$(echo $OBJECT | jq -r '.kvs[0].value' | base64 --decode | jq )
-        DIR=$(dirname "$file")
-        FILE=$(basename "$file")
-        mkdir -p "$BACKUP_OUTPUT_DIR/$DIR"
-        echo "$VALUE" > "$BACKUP_OUTPUT_DIR/$DIR/$FILE.json"
-        echo $BACKUP_OUTPUT_DIR/$DIR/$FILE.json
-      done
-      ```
-
-   - Once completed, the `$BACKUP_OUTPUT_DIR` directory will contain the exported resources in JSON format.
-
-1. Delete the temporary etcd pod:
-
-   ```shell
-   d8 k delete po etcd-restore --force
+   ```bash
+   d8 k -n default delete pod etcdrestore
    ```
 
-   Pod will be stopped, but the exported resources will remain available for further restoration in the main cluster.
+### Restoring cluster objects from exported YAML files
 
-### Restoring cluster objects from exported JSON files
+To restore objects from exported YAML files, follow these steps:
 
-To restore objects from exported JSON files, follow these steps:
-
-1. Prepare the JSON files for restoration. Before applying them to the cluster, remove technical fields that may be outdated or interfere with the recovery process:
+1. Prepare the YAML files for restoration. Before applying them to the cluster, remove technical fields that may be outdated or interfere with the recovery process:
 
    - `creationTimestamp`
    - `UID`
@@ -357,14 +311,14 @@ To restore objects from exported JSON files, follow these steps:
 1. To restore multiple objects at once, use the `find` command:
 
    ```shell
-   find $BACKUP_OUTPUT_DIR -type f -name "*.json" -exec kubectl create -f {} \;
+   find $BACKUP_OUTPUT_DIR -type f -name "*.yaml" -exec kubectl create -f {} \;
    ```
 
-   This will locate all `.json` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `d8 k create`.
+   This will locate all `.yaml` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `d8 k create`.
 
-After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the JSON files.
+After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the YAML files.
 
-## Restoring after changing the master node IP address
+## Restoring objects after changing the master node IP address
 
 {% alert level="warning" %}
 This section describes a scenario where only the IP address of the master node has changed, and all other objects in the etcd backup (such as CA certificates) remain valid. It assumes the restoration is performed in a single-master-node cluster.
@@ -397,9 +351,11 @@ To simplify cluster recovery after the master node's IP address changes, use the
    - `OLD_IP`: The old master node IP address used when the backup was created.
    - `NEW_IP`: The new IP address of the master node.
 
-2. Make sure the Kubernetes version (`KUBERNETES_VERSION`) matches the one used in the cluster. This is necessary for downloading the correct version of kubeadm.
+1. Make sure the Kubernetes version (`KUBERNETES_VERSION`) matches the one used in the cluster. This is necessary for downloading the correct version of kubeadm.
 
-3. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
+1. [Download](#restoring-a-cluster-with-a-single-control-plane-node) `etcdutl` if it is not installed.
+
+1. After running the script, wait for the kubelet to regenerate its certificate with the new IP address. You can verify this in the `/var/lib/kubelet/pki/` directory, where a new certificate should appear.
 
 {% offtopic title="Object extraction script" %}
 
@@ -412,9 +368,9 @@ KUBERNETES_VERSION=1.28.0                   # Kubernetes version.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
 
-ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd 
+ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
 mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 
@@ -460,18 +416,14 @@ If you prefer to manually make changes during cluster recovery after the master 
      mv /var/lib/etcd ./etcd_old
      ```
 
-   - Find or download the `etcdctl` utility if it’s not available, and perform the snapshot restore:
+   - Find or download the `etcdutl` utility if it’s not available, and perform the snapshot restore:
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
-     ETCDCTL_PATH=$(find /var/lib/containerd/ -name etcdctl)
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
 
-     ETCDCTL_API=3 $ETCDCTL_PATH snapshot restore \
+     ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \
-       --cacert /etc/kubernetes/pki/etcd/ca.crt \
-       --cert /etc/kubernetes/pki/etcd/ca.crt \
-       --key /etc/kubernetes/pki/etcd/ca.key \
-       --endpoints https://127.0.0.1:2379/ \
        --data-dir=/var/lib/etcd
      ```
 
@@ -568,7 +520,7 @@ Flags:
 Example:
 
 ```shell
-d8 backup etcd mybackup.snapshot
+d8 backup etcd etcd-backup.snapshot
 ```
 
 Example output:
