@@ -133,7 +133,10 @@ func RegisterController(
 					return true
 				}
 				// handle enable
-				if oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) && newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+				// not found or !true -> true
+				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
+						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 					return true
 				}
 				return false
