@@ -458,6 +458,9 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 	}
 
 	// Test case 1: Multiple releases, all in Deployed status
+	// Expected: MPO should set module version but not change release statuses
+	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// without affecting the existing ModuleRelease statuses
 	suite.Run("MultipleReleasesAllDeployed", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
@@ -485,10 +488,39 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), err)
 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "Module version should be set from MPO")
 
+		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
+		releases := new(v1alpha1.ModuleReleaseList)
+		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
+		require.NoError(suite.T(), err)
+		require.Len(suite.T(), releases.Items, 3, "Should have 3 releases")
+
+		// Check specific statuses for each release to ensure MPO doesn't change them
+		// MPO should only affect module version, not release statuses
+		var deployedCount int
+		for _, release := range releases.Items {
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.0 should remain Deployed")
+				deployedCount++
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.1 should remain Deployed")
+				deployedCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should remain Deployed")
+				deployedCount++
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
+			}
+		}
+		assert.Equal(suite.T(), 3, deployedCount, "Should have 3 deployed releases")
+
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
 
 	// Test case 2: Multiple releases, all Superseded except last in Deployed
+	// Expected: MPO should set module version but not change release statuses
+	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// with mixed release statuses without affecting them
 	suite.Run("MultipleReleasesSupersededExceptLast", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
@@ -516,10 +548,42 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), err)
 		assert.Equal(suite.T(), "v1.0.3", moduleObj.Properties.Version, "Module version should be set from MPO")
 
+		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
+		releases := new(v1alpha1.ModuleReleaseList)
+		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
+		require.NoError(suite.T(), err)
+		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
+
+		// Check specific statuses for each release to ensure MPO doesn't change them
+		var supersededCount, deployedCount int
+		for _, release := range releases.Items {
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should remain Superseded")
+				supersededCount++
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should remain Superseded")
+				supersededCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should remain Superseded")
+				supersededCount++
+			case "v1.0.3":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should remain Deployed")
+				deployedCount++
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
+			}
+		}
+		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
+		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
+
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
 	})
 
 	// Test case 3: Multiple releases, first Superseded, several Deployed
+	// Expected: MPO should set module version but not change release statuses
+	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// with complex release status patterns without affecting them
 	suite.Run("MultipleReleasesMixedStatus", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
@@ -547,20 +611,30 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), err)
 		assert.Equal(suite.T(), "v1.0.2", moduleObj.Properties.Version, "Module version should be set from MPO")
 
-		// Verify the ModuleRelease statuses remain as expected
+		// Verify the ModuleRelease statuses remain unchanged (MPO should not affect release statuses)
 		releases := new(v1alpha1.ModuleReleaseList)
 		err = suite.client.List(context.TODO(), releases, client.MatchingLabels{"module": "test-module"})
 		require.NoError(suite.T(), err)
 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
 
-		// Check that statuses are preserved
+		// Check specific statuses for each release to ensure MPO doesn't change them
 		var supersededCount, deployedCount int
 		for _, release := range releases.Items {
-			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhaseSuperseded:
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should remain Superseded")
 				supersededCount++
-			case v1alpha1.ModuleReleasePhaseDeployed:
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.1 should remain Deployed")
 				deployedCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should remain Deployed")
+				deployedCount++
+			case "v1.0.3":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should remain Deployed")
+				deployedCount++
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
 			}
 		}
 		assert.Equal(suite.T(), 1, supersededCount, "Should have 1 superseded release")
@@ -786,6 +860,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 	// Test case 1: Multiple releases, all in Deployed status
 	// Expected: only the latest version should remain deployed, older versions should become superseded
+	// This test verifies that restoreAbsentModulesFromReleases correctly handles multiple deployed releases
+	// by keeping only the latest version deployed and marking older versions as superseded
 	suite.Run("MultipleReleasesAllDeployed", func() {
 		testModule := moduleSuite{
 			name:          "test-module",
@@ -804,6 +880,16 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), testModule.prepare(true, false))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-all-deployed.yaml")))
+
+		// Verify initial state - all releases should be Deployed
+		initialReleases := new(v1alpha1.ModuleReleaseList)
+		initialErr := suite.client.List(context.TODO(), initialReleases, client.MatchingLabels{"module": "test-module"})
+		require.NoError(suite.T(), initialErr)
+		for _, release := range initialReleases.Items {
+			assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase,
+				"Initial state: %s should be Deployed", release.GetModuleVersion())
+		}
+
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
 		// Check that the module symlink was created
@@ -826,15 +912,22 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), err)
 		require.Len(suite.T(), releases.Items, 3, "Should have 3 releases")
 
-		// Check that only the latest version remains deployed
+		// Check specific statuses for each release to ensure the function correctly
+		// changed the statuses according to its logic (only latest version remains deployed)
 		var deployedCount, supersededCount int
 		for _, release := range releases.Items {
-			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhaseDeployed:
-				deployedCount++
-				assert.Equal(suite.T(), "v1.0.2", release.GetModuleVersion(), "Only v1.0.2 should be deployed")
-			case v1alpha1.ModuleReleasePhaseSuperseded:
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
 				supersededCount++
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
+				supersededCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.2 should be deployed")
+				deployedCount++
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
 			}
 		}
 		assert.Equal(suite.T(), 1, deployedCount, "Should have 1 deployed release")
@@ -885,15 +978,24 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), err)
 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
 
-		// Check statuses remain as expected
+		// Check specific statuses for each release
 		var supersededCount, deployedCount int
 		for _, release := range releases.Items {
-			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhaseSuperseded:
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
 				supersededCount++
-			case v1alpha1.ModuleReleasePhaseDeployed:
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
+				supersededCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should be superseded")
+				supersededCount++
+			case "v1.0.3":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should be deployed")
 				deployedCount++
-				assert.Equal(suite.T(), "v1.0.3", release.GetModuleVersion(), "Only v1.0.3 should be deployed")
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
 			}
 		}
 		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
@@ -944,15 +1046,24 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), err)
 		require.Len(suite.T(), releases.Items, 4, "Should have 4 releases")
 
-		// Check that statuses are correct after processing
+		// Check specific statuses for each release
 		var supersededCount, deployedCount int
 		for _, release := range releases.Items {
-			switch release.Status.Phase {
-			case v1alpha1.ModuleReleasePhaseSuperseded:
+			switch release.GetModuleVersion() {
+			case "v1.0.0":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.0 should be superseded")
 				supersededCount++
-			case v1alpha1.ModuleReleasePhaseDeployed:
+			case "v1.0.1":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.1 should be superseded")
+				supersededCount++
+			case "v1.0.2":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, release.Status.Phase, "v1.0.2 should be superseded")
+				supersededCount++
+			case "v1.0.3":
+				assert.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, release.Status.Phase, "v1.0.3 should be deployed")
 				deployedCount++
-				assert.Equal(suite.T(), "v1.0.3", release.GetModuleVersion(), "Only v1.0.3 should remain deployed")
+			default:
+				suite.T().Fatalf("Unexpected release version: %s", release.GetModuleVersion())
 			}
 		}
 		assert.Equal(suite.T(), 3, supersededCount, "Should have 3 superseded releases")
