@@ -69,6 +69,25 @@ type ModuleUpdate struct {
 	Versions []ModuleUpdateVersion `json:"versions,omitempty" yaml:"versions,omitempty"`
 }
 
+func (a *ModuleUpdate) ToV1Alpha1() *v1alpha1.UpdateSpec {
+	if a == nil {
+		return nil
+	}
+
+	us := new(v1alpha1.UpdateSpec)
+
+	us.Versions = make([]v1alpha1.UpdateConstraint, 0, len(a.Versions))
+
+	for _, ver := range a.Versions {
+		us.Versions = append(us.Versions, v1alpha1.UpdateConstraint{
+			From: ver.From,
+			To:   ver.To,
+		})
+	}
+
+	return us
+}
+
 // ModuleUpdateVersion represents a constraint range.
 // "from" and "to" support major.minor or major.minor.patch.
 // "to" should point to the target release version defined by this module.yaml.

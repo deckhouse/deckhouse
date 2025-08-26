@@ -485,6 +485,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleDefinition.Weight,
 				Changelog:  meta.Changelog,
+				UpdateSpec: meta.ModuleDefinition.Update.ToV1Alpha1(),
 			},
 		}
 
