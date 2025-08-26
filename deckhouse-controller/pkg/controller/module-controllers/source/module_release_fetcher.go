@@ -447,6 +447,8 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 		changeCause += " (" + createProcess + ")"
 	}
 
+	f.logger.Warn("module definition", slog.Any("def", meta.ModuleDefinition))
+
 	release := new(v1alpha1.ModuleRelease)
 	if err := f.k8sClient.Get(ctx, client.ObjectKey{Name: fmt.Sprintf("%s-%s", f.moduleName, meta.ModuleVersion)}, release); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -485,7 +487,6 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
 				Weight:     meta.ModuleDefinition.Weight,
 				Changelog:  meta.Changelog,
-				UpdateSpec: meta.ModuleDefinition.Update.ToV1Alpha1(),
 			},
 		}
 
@@ -497,6 +498,10 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 				},
 				ParentModules: meta.ModuleDefinition.Requirements.ParentModules,
 			}
+		}
+
+		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
+			release.Spec.UpdateSpec = meta.ModuleDefinition.Update.ToV1Alpha1()
 		}
 
 		// if it's a first release for a Module, we have to install it immediately
