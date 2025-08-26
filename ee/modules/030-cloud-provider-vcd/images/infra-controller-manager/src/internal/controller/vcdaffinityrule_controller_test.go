@@ -1,3 +1,8 @@
+/*
+Copyright 2023 Flant JSC
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+*/
+
 package controller
 
 import (
@@ -14,7 +19,7 @@ import (
 	deckhouseiov1alpha1 "infra-controller-manager/api/v1alpha1"
 )
 
-var _ = Describe("Affinity Controller", func() {
+var _ = Describe("VCDAffinityRule Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -24,13 +29,13 @@ var _ = Describe("Affinity Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		affinity := &deckhouseiov1alpha1.Affinity{}
+		vcdaffinityrule := &deckhouseiov1alpha1.VCDAffinityRule{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind Affinity")
-			err := k8sClient.Get(ctx, typeNamespacedName, affinity)
+			By("creating the custom resource for the Kind VCDAffinityRule")
+			err := k8sClient.Get(ctx, typeNamespacedName, vcdaffinityrule)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &deckhouseiov1alpha1.Affinity{
+				resource := &deckhouseiov1alpha1.VCDAffinityRule{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
@@ -43,16 +48,16 @@ var _ = Describe("Affinity Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &deckhouseiov1alpha1.Affinity{}
+			resource := &deckhouseiov1alpha1.VCDAffinityRule{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance Affinity")
+			By("Cleanup the specific resource instance VCDAffinityRule")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
-			controllerReconciler := &AffinityReconciler{
+			controllerReconciler := &VCDAffinityRuleReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
