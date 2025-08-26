@@ -1,3 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-caps-use-legacy-ssh
+  namespace: d8-cloud-instance-manager
+data: {}
 ---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
