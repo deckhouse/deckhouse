@@ -124,19 +124,19 @@ Features of the configurations listed in the table above:
       <td>Monitoring node</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50*</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
     </tr>
     <tr>
       <td>System node</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
-      <td style="text-align: center;">50*</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">60</td>
+      <td style="text-align: center;"><a href="#storage">60 / 160</a></td>
     </tr>
     <tr>
       <td rowspan="6" style="width: 45%;">
@@ -163,19 +163,19 @@ Features of the configurations listed in the table above:
       <td>Monitoring node</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
     </tr>
     <tr>
       <td>System node</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;">50</td>
+      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
     </tr>
     <tr>
       <td>System node <i>(if no dedicated monitoring nodes are running in the cluster</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
-      <td style="text-align: center;"><a href="#storage">60 + ?</a></td>
+      <td style="text-align: center;"><a href="#storage">60 / 160</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
@@ -189,7 +189,7 @@ Features of the configurations listed in the table above:
   </tbody>
 </table>
 
-* <a name="#storage">Jump to the heading below</a>
+* <a name="storage">PVC disk space for system components:</a> If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB
 * The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 
