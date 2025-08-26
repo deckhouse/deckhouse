@@ -18,20 +18,25 @@ package gossh
 
 import (
 	"bytes"
-	"caps-controller-manager/internal/scope"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"strings"
+	"time"
+
+	"caps-controller-manager/internal/scope"
 
 	"golang.org/x/crypto/ssh"
 )
 
 type SSH struct {
 	sshClient *ssh.Client
+	address   string
 }
 
 func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
+	instanceName := instanceScope.InstanceName()
+
 	var signer ssh.Signer
 	var err error
 	var pass string
@@ -46,12 +51,12 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 	if len(instanceScope.Credentials.Spec.PrivateSSHKey) > 0 {
 		privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 		if err != nil {
-			return nil, fmt.Errorf("privateSSHKey must be a valid base64 encoded string")
+			return nil, fmt.Errorf("privateSSHKey must be a valid base64 encoded string for StaticInstance %s", instanceName)
 		}
 
 		signer, err = ssh.ParsePrivateKey(privateSSHKey)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse keys")
+			return nil, fmt.Errorf("cannot parse keys for StaticInstance %s", instanceName)
 		}
 		AuthMethods = append(AuthMethods, ssh.PublicKeys(signer))
 	}
@@ -70,10 +75,10 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to SSH host %s", addr)
+		return nil, fmt.Errorf("cannot connect to SSH host %s for StaticInstance %s: %w", addr, instanceName, err)
 	}
 
-	return &SSH{sshClient: sshClient}, nil
+	return &SSH{sshClient: sshClient, address: addr}, nil
 }
 
 // ExecSSHCommand executes a command on the StaticInstance.
@@ -88,14 +93,14 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	}
 
 	if s.sshClient == nil {
-		return fmt.Errorf("ssh client in nil")
+		return fmt.Errorf("ssh client in nil for command")
 	}
 
 	defer s.sshClient.Close()
 
 	session, err := s.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("cannot create session")
+		return fmt.Errorf("cannot create session for  %s: %w", s.address, err)
 	}
 	defer session.Close()
 
@@ -114,12 +119,12 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 	// Set up a pipe to write to the session's stdin
 	stdin, err := session.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create stdin pipe: %w", err)
+		return fmt.Errorf("failed to create stdin pipe for command for %s: %w", s.address, err)
 	}
 	defer stdin.Close()
 
 	if err := session.Start(command); err != nil {
-		return fmt.Errorf("failed to start command: %w", err)
+		return fmt.Errorf("failed to start command for %s: %w", s.address, err)
 	}
 
 	stderrBuf := stderr.(*bytes.Buffer)
@@ -133,7 +138,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 				if !passwordSent {
 					passwordSent = true
 					if _, err := stdin.Write([]byte(pass + "\n")); err != nil {
-						return fmt.Errorf("failed to write password to stdin: %w", err)
+						return fmt.Errorf("failed to write password to stdin for  %s: %w", s.address, err)
 					}
 				}
 
@@ -142,10 +147,12 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		if len(stdoutBuf.Bytes()) > 0 {
 			break
 		}
+
+		// prevent throttling
+		time.Sleep(50 * time.Millisecond)
 	}
 
-	err = session.Wait()
-	return err
+	return session.Wait()
 }
 
 // ExecSSHCommandToString executes a command on the StaticInstance and returns the output as a string.

@@ -39,9 +39,6 @@ import (
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
-	"caps-controller-manager/internal/ssh"
-	"caps-controller-manager/internal/ssh/clissh"
-	"caps-controller-manager/internal/ssh/gossh"
 )
 
 const RequeueForStaticInstanceBootstrapping = 60 * time.Second
@@ -84,7 +81,12 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		return ctrl.Result{}, errors.Wrap(err, "failed to get bootstrap script")
 	}
 
+	const operation = "bootstrap"
+
+	innerLogger := getLogger(instanceScope, operation)
+
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhasePending {
+		innerLogger.Info("set instance to bootstrapping status", "instance", instanceScope.InstanceName())
 		result, err := c.setStaticInstancePhaseToBootstrapping(ctx, instanceScope)
 		if err != nil {
 			return result, err
@@ -94,49 +96,55 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 		}
 	}
 
-	done := c.bootstrapTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
+	id := taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
+	done := c.bootstrapTaskManager.spawn(id, func() bool {
+		logger := getLogger(instanceScope, operation)
+
+		logger.Info("start new task", "id", id)
+		sshCl, err := CreateSSHClient(instanceScope)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
+			logger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
 			return false
 		}
+
+		logger.Info("exec bootstrap command...")
+
 		data, err := sshCl.ExecSSHCommandToString(instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name, base64.StdEncoding.EncodeToString(bootstrapScript)))
 		if err != nil {
+			logger.Info("bootstrap command failed", "error", err.Error())
+			const alreadyBootstrappedMsg = "Probably instance already bootstrapped, because we got exit status 2"
 			if strings.Contains(err.Error(), "Process exited with status 2") {
+				logger.Info(alreadyBootstrappedMsg)
 				return true
 			}
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
 				if strings.Contains(str, "debug1: Exit status 2") {
+					logger.Info(alreadyBootstrappedMsg)
 					return true
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			instanceScope.Logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
+			logger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
 			return false
 		}
+
+		logger.Info("bootstrap command executed successfully")
 
 		return true
 	})
 	if done == nil || !*done {
-		instanceScope.Logger.Info("Bootstrapping is not finished yet, waiting...")
+		innerLogger.Info("Bootstrapping is not finished yet, waiting...")
 		return ctrl.Result{}, nil
 	}
 
 	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "BootstrapScriptSucceeded", "Bootstrap script executed successfully")
 
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
+		innerLogger.Info("set phase to Running")
 		err := c.setStaticInstancePhaseToRunning(ctx, instanceScope)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -151,19 +159,27 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	delay := c.tcpCheckRateLimiter.When(address)
 
-	done := c.tcpCheckTaskManager.spawn(taskID(address), func() bool {
+	const operation = "setStaticInstancePhaseToBootstrapping"
+
+	listenSSHID := taskID(address)
+
+	done := c.tcpCheckTaskManager.spawn(listenSSHID, func() bool {
+		logger := getLogger(instanceScope, "tryToListenSSHServer")
+
+		logger.Info("start new task", "id", listenSSHID)
+
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
-		instanceScope.Logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
+		logger.Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
 		conn, err := net.DialTimeout("tcp", address, delay)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
+			logger.Error(err, "Failed to connect to instance by TCP", "address", address, "error", err.Error())
 			if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 				c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
-				instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
+				logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
 				conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
 				err2 := instanceScope.Patch(ctx)
 				if err2 != nil {
-					instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+					logger.Error(err, "Failed to set StaticInstance: tcpCheck")
 				}
 			}
 			return false
@@ -173,50 +189,58 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
 			err := instanceScope.Patch(ctx)
 			if err != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
+				logger.Error(err, "Failed to set StaticInstance: tcpCheck")
 			}
 		}
+
+		logger.Info("listen ssh connection finished successfully")
+
 		return true
 	})
 	if done == nil {
 		return ctrl.Result{RequeueAfter: delay}, nil
 	}
+
 	if !*done {
 		err := errors.New("Failed to connect via tcp")
-		instanceScope.Logger.Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
+		getLogger(instanceScope, operation).Error(err, "Failed to connect via tcp to StaticInstance address", "address", address)
 		return ctrl.Result{}, err
 	}
 
 	c.tcpCheckRateLimiter.Forget(address)
 
-	check := c.checkTaskManager.spawn(taskID(address), func() bool {
+	connectWIthCredsID := taskID(address)
+
+	check := c.checkTaskManager.spawn(connectWIthCredsID, func() bool {
+		logger := getLogger(instanceScope, "connectToSSHWIthCreds")
+
+		logger.Info("start new task", "id", connectWIthCredsID)
+
 		status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
+		sshCl, err := CreateSSHClient(instanceScope)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+			logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
 		}
+
+		logger.Info("exec ssh 'echo check_ssh' command...")
+
 		data, err := sshCl.ExecSSHCommandToString(instanceScope, "echo check_ssh")
 		if err != nil {
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
-				if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
+				isTimeout := strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")
+				isPermissionDenied := strings.Contains(str, "Permission denied (publickey).")
+				if isTimeout || isPermissionDenied {
+					logger.Info("failed to connect via ssh", "isTimeout", fmt.Sprintf("%v", isTimeout), "isPermissionDenied", fmt.Sprintf("%v", isPermissionDenied))
 					err := errors.New(str)
 					if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 						c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
-						instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
+						logger.Error(err, "StaticInstance: Failed to connect via ssh. Set condition")
 						conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
 						err2 := instanceScope.Patch(ctx)
 						if err2 != nil {
-							instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+							logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh. Cannot set condition")
 						}
 					}
 				}
@@ -225,11 +249,14 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		}
 		if status == nil || status.Status != corev1.ConditionTrue {
 			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
-			err = instanceScope.Patch(ctx)
+			errPatch := instanceScope.Patch(ctx)
 			if err != nil {
-				instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
+				logger.Error(errPatch, "Failed to set condition to StaticInstance that it was connected: Failed to connect via ssh")
 			}
 		}
+
+		logger.Info("connected to ssh server with credentials finished successfully")
+
 		return true
 	})
 	if check == nil {
@@ -237,7 +264,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	}
 	if !*check {
 		err := errors.New("Failed to connect via ssh")
-		instanceScope.Logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
+		getLogger(instanceScope, operation).Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
 		return ctrl.Result{}, err
 	}
 
@@ -277,7 +304,7 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, instanceSc
 
 	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
 
-	instanceScope.Logger.Info("Node successfully bootstrapped", "node", node.Name)
+	getLogger(instanceScope, "setPhaseToRunning").Info("Node successfully bootstrapped", "node", node.Name)
 
 	instanceScope.MachineScope.StaticMachine.Status.Addresses = mapAddresses(node.Status.Addresses)
 

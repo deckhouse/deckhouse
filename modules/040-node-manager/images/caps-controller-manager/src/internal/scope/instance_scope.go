@@ -86,6 +86,22 @@ func NewInstanceScope(
 	}, nil
 }
 
+func (i *InstanceScope) InstanceName() string {
+	name := "unknown"
+	if i.Instance != nil {
+		name = i.Instance.Name
+	}
+	return name
+}
+
+func (i *InstanceScope) InstanceAddress() string {
+	addr := "unknown"
+	if i.Instance != nil {
+		addr = i.Instance.Spec.Address
+	}
+	return addr
+}
+
 // LoadSSHCredentials loads the SSHCredentials for the InstanceScope.
 func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.Recorder) error {
 	credentials := &deckhousev1.SSHCredentials{}
