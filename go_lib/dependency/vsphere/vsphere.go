@@ -166,7 +166,7 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 		return nil, err
 	}
 
-	result := make([]StoragePolicy, len(profiles))
+	result := make([]StoragePolicy, 0, len(profiles))
 	for _, profile := range profiles {
 		base := profile.GetPbmProfile()
 		result = append(result, StoragePolicy{
