@@ -80,16 +80,6 @@ volumeBindingMode: WaitForFirstConsumer
 
 ### Шаги по настройке
 
-1. Добавьте аннотацию ко всем текущим группам статических узлов (ресурсам NodeGroup), чтобы исключить узлы из процесса удаления Cluster Autoscaler:
-
-   ```yaml
-   metadata:
-    annotations:
-      cluster-autoscaler.kubernetes.io/scale-down-disabled: "true"
-   ```
-
-   Эта аннотация предотвращает добавление taints типа `ToBeDeletedByClusterAutoscaler` и `DeletionCandidateOfClusterAutoscaler` к узлам, которые не управляются `machine-controller-manager` (например, `static` и `CloudPermanent`). [Подробнее](https://github.com/deckhouse/deckhouse/issues/5252).
-
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
    - Назначьте роль `editor`.
