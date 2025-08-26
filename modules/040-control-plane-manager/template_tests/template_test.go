@@ -802,4 +802,61 @@ resources:
 			})
 		})
 	})
+
+	Context("kubeadm config version selection", func() {
+		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
+			testValues := fmt.Sprintf(`
+internal:
+  effectiveKubernetesVersion: "%s"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+`, k8sVersion)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", testValues)
+				f.HelmRender()
+			})
+
+			It(fmt.Sprintf("should use %s for Kubernetes %s", expectedApiVersion, k8sVersion), func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
+
+				if expectedApiVersion == "v1beta3" {
+					var config ClusterConfigurationV3
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				} else {
+					var config ClusterConfigurationV4
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				}
+			})
+		}
+
+		Context("Kubernetes 1.30", func() {
+			testKubeadmVersion("1.30", "v1beta3")
+		})
+
+		Context("Kubernetes 1.31", func() {
+			testKubeadmVersion("1.31", "v1beta4")
+		})
+
+		Context("Kubernetes 1.32", func() {
+			testKubeadmVersion("1.32", "v1beta4")
+		})
+	})
 })
