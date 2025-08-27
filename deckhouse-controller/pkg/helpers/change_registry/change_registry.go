@@ -478,7 +478,6 @@ func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, module
 		return false, fmt.Errorf("failed to decode module JSON: %w", err)
 	}
 
-	enabled := module.ConditionStatus(
-		deckhousev1alpha1.ModuleConditionEnabledByModuleManager)
+	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, v1.ConditionTrue)
 	return enabled, nil
 }
