@@ -11,8 +11,10 @@ spec:
     kind: VCDAffinityRule
     listKind: VCDAffinityRuleList
     plural: vcdaffinityrules
+    shortNames:
+    - vcdar
     singular: vcdaffinityrule
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
@@ -39,17 +41,32 @@ spec:
           spec:
             description: VCDAffinityRuleSpec defines the desired state of VCDAffinityRule.
             properties:
+              nodeLabelSelector:
+                additionalProperties:
+                  type: string
+                description: NodeLabelSelector is TODO
+                type: object
               polarity:
                 description: Polarity is TODO
                 type: string
-              targetNodeGroups:
-                description: TargetNodeGroups is TODO
-                items:
-                  type: string
-                type: array
             type: object
           status:
             description: VCDAffinityRuleStatus defines the observed state of VCDAffinityRule.
+            properties:
+              message:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                type: string
+              nodes:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    providerID:
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true
