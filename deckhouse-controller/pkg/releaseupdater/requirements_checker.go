@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
@@ -137,7 +138,7 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
-			newMigratedModulesCheck(k8sclient, config.logger),
+			newMigratedModulesCheck(k8sclient, metricStorage, config.logger),
 		},
 		logger: config.logger,
 	}, nil
@@ -385,15 +386,17 @@ func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleR
 type migratedModulesCheck struct {
 	name string
 
-	k8sclient client.Client
-	logger    *log.Logger
+	k8sclient     client.Client
+	metricStorage metric.Storage
+	logger        *log.Logger
 }
 
-func newMigratedModulesCheck(k8sclient client.Client, logger *log.Logger) *migratedModulesCheck {
+func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
-		name:      "migrated modules check",
-		k8sclient: k8sclient,
-		logger:    logger,
+		name:          "migrated modules check",
+		k8sclient:     k8sclient,
+		metricStorage: metricStorage,
+		logger:        logger,
 	}
 }
 
@@ -402,6 +405,7 @@ func (c *migratedModulesCheck) GetName() string {
 }
 
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
+	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
@@ -434,6 +438,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 
 	for _, moduleName := range modules {
 		if !moduleConfigs.Has(moduleName) {
+			c.setMigratedModuleNotFoundAlert(moduleName)
 			c.logger.Warn("migrated module has no ModuleConfig", slog.String("module", moduleName))
 			return fmt.Errorf("migrated module %q has no ModuleConfig", moduleName)
 		}
@@ -442,4 +447,16 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	c.logger.Debug("all migrated modules have ModuleConfig")
 
 	return nil
+}
+
+// setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
+func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
+	// Set the metric value to 1 to trigger alert
+	c.metricStorage.Grouped().GaugeSet(
+		metrics.MigratedModuleNotFoundGroup,
+		metrics.MigratedModuleNotFoundMetricName,
+		1,
+		map[string]string{
+			"module_name": moduleName,
+		})
 }
