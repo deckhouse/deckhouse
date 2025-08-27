@@ -137,7 +137,7 @@ func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModu
 			newDeckhouseVersionCheck(enabledModules, exts),
 			newDeckhouseRequirementsCheck(enabledModules, exts),
 			k8sCheck,
-			newMigratedModulesCheck(k8sclient, metricStorage, config.logger),
+			newMigratedModulesCheck(k8sclient, config.logger),
 		},
 		logger: config.logger,
 	}, nil
@@ -389,7 +389,7 @@ type migratedModulesCheck struct {
 	logger    *log.Logger
 }
 
-func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
+func newMigratedModulesCheck(k8sclient client.Client, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
 		name:      "migrated modules check",
 		k8sclient: k8sclient,
