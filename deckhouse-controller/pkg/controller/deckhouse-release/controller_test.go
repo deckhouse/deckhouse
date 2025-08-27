@@ -1166,35 +1166,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("disabled-migrated-module", func() {
+		suite.Run("mc_disabled_not_in_source", func() {
 			suite.setupController("disabled-migrated-module.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "is disabled in ModuleConfig")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("mixed-enabled-disabled", func() {
-			suite.setupController("mixed-enabled-disabled.yaml", initValues, embeddedMUP)
-			dr := suite.getDeckhouseRelease("v1.50.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-			require.NoError(suite.T(), err)
-
-			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
-
-			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "is disabled in ModuleConfig")
-		})
-
-		suite.Run("enabled-module-not-found", func() {
+		suite.Run("mc_enabled_not_in_source", func() {
 			suite.setupController("enabled-module-not-found.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
@@ -1205,22 +1190,20 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
 			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
-		suite.Run("migrated-module-not-enabled", func() {
-			suite.setupController("migrated-module-not-enabled.yaml", initValues, embeddedMUP)
+		suite.Run("mc_enabled_in_source", func() {
+			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 
 			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Deployed", oldRelease.Status.Phase)
+			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
+			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 	})
 }

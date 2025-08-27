@@ -439,25 +439,29 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	}
 
 	for _, moduleName := range modules {
+		foundMS := false
+		foundMC := false
 		// Check if module exists in ModuleConfig and is disabled
 		for _, mc := range mcList.Items {
 			if mc.Name == moduleName && !mc.IsEnabled() {
-				c.logger.Warn("migrated module is disabled in ModuleConfig", slog.String("module", moduleName))
-				return fmt.Errorf("migrated module %q is disabled in ModuleConfig", moduleName)
+				c.logger.Debug("migrated module is disabled in ModuleConfig", slog.String("module", moduleName))
+				foundMC = true
 			}
+		}
+		if foundMC {
+			continue
 		}
 
 		// If module is not in ModuleConfig or is enabled, check ModuleSource
-		found := false
 		for _, source := range moduleSources.Items {
 			if c.isModuleAvailableInSource(moduleName, &source) {
-				found = true
+				foundMS = true
 				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
 				break
 			}
 		}
 
-		if !found {
+		if !foundMS {
 			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
 

@@ -265,12 +265,12 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			release: createDeckhouseRelease("test-release", true, map[string]string{
 				"migratedModules": "disabled-module",
 			}),
-			wantAllowed: false,
-			wantMessage: "requirements not met",
-			description: "Releases with migrated modules that are disabled in ModuleConfig should be rejected",
+			wantAllowed: true,
+			wantMessage: "",
+			description: "Releases with migrated modules that are disabled in ModuleConfig should be allowed (ModuleConfig presence is sufficient)",
 		},
 		{
-			name:           "reject when one migrated module is enabled and another is disabled",
+			name:           "allow when one migrated module is enabled and another is disabled (both present in ModuleConfig)",
 			enabledModules: []string{"enabled-module"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -283,7 +283,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: false,
 			wantMessage: "requirements not met",
-			description: "Releases with mixed enabled/disabled migrated modules should be rejected",
+			description: "Releases with mixed enabled/disabled migrated modules should be rejected (enabled module not found in ModuleSource)",
 		},
 		{
 			name:           "reject when migrated module is not found in ModuleSource",
@@ -301,6 +301,71 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			wantAllowed: false,
 			wantMessage: "requirements not met",
 			description: "Releases with migrated modules that are not found in ModuleSource should be rejected",
+		},
+		{
+			name:           "mc exists disabled; not in source -> allowed",
+			enabledModules: []string{"module-x"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createDisabledModuleConfig("module-x"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-x"}),
+			wantAllowed: true,
+			description: "ModuleConfig disabled bypasses ModuleSource",
+		},
+		{
+			name:           "mc exists enabled; not in source -> reject",
+			enabledModules: []string{"module-y"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("module-y"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-y"}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Enabled ModuleConfig requires ModuleSource",
+		},
+		{
+			name:           "mc exists enabled; in source -> allowed",
+			enabledModules: []string{"module-z"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("module-z"),
+				createModuleSource("src", []string{"module-z"}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-z"}),
+			wantAllowed: true,
+			description: "Enabled ModuleConfig with presence in ModuleSource is OK",
+		},
+		{
+			name:           "no mc; in source -> allowed",
+			enabledModules: []string{"module-a1"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleSource("src", []string{"module-a1"}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-a1"}),
+			wantAllowed: true,
+			description: "Absent ModuleConfig falls back to ModuleSource and passes",
+		},
+		{
+			name:           "no mc; not in source -> reject",
+			enabledModules: []string{"module-a2"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-a2"}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Absent ModuleConfig and absence in ModuleSource rejects",
 		},
 	}
 
