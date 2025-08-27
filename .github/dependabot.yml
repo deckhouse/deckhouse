@@ -322,6 +322,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/check-wg-kernel-compat/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/021-cni-cilium/images/safe-agent-updater/src"
   labels:
   - "type/dependencies"

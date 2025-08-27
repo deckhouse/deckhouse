@@ -59,7 +59,7 @@ spec:
      name: linux-vm
    spec:
      # Название класса ВМ.
-     virtualMachineClassName: host
+     virtualMachineClassName: generic
      # Блок скриптов первичной инициализации ВМ.
      provisioning:
        type: UserData

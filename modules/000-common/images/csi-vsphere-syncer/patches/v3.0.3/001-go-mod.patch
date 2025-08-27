@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index db8c4231..c26c4dc1 100644
+index db8c423..08111cf 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -9,7 +9,7 @@ require (
@@ -85,13 +85,8 @@ index db8c4231..c26c4dc1 100644
  	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
  	google.golang.org/appengine v1.6.7 // indirect
  	google.golang.org/genproto v0.0.0-20220502173005-c8bf987b8c21 // indirect
-@@ -214,3 +214,4 @@ replace (
- 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.25.2
- 	k8s.io/sample-controller => k8s.io/sample-controller v0.25.2
- )
-+
 diff --git a/go.sum b/go.sum
-index df17e99d..1c5f3808 100644
+index df17e99..1c5f380 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -172,15 +172,17 @@ github.com/cpuguy83/go-md2man/v2 v2.0.1/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46t
