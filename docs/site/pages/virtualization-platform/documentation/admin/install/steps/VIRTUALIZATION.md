@@ -63,7 +63,7 @@ vm-route-forge-nq9xr                         1/1     Running   0             10m
 
 How to configure the `virtualization` module in the web interface:
 
-- Go to the "System" tab, then to the `Deckhouse` -> "Modules" section.
+- Go to the "System" tab, then to the "Deckhouse" -> "Modules" section.
 - Select the `virtualization` module from the list.
 - In the pop-up window, select the "Configuration" tab.
 - To display the settings, click the "Advanced settings" switch.
