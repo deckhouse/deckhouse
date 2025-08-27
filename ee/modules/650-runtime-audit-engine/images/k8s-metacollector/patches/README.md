@@ -26,10 +26,3 @@ git diff > patches/001-go-mod.patch
 ### 002-Makefile.patch
 
 Use `go mod download`
-
-### 003-cve.patch
-
-Fixes:
-CVE-2025-22870
-CVE-2025-22872
-CVE-2025-22868
