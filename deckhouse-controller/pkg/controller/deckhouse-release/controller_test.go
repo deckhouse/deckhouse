@@ -1166,8 +1166,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("mc_disabled_not_in_source", func() {
-			suite.setupController("disabled-migrated-module.yaml", initValues, embeddedMUP)
+		suite.Run("mc-disabled-not-in-source", func() {
+			suite.setupController("mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1179,8 +1179,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("mc_enabled_not_in_source", func() {
-			suite.setupController("enabled-module-not-found.yaml", initValues, embeddedMUP)
+		suite.Run("mc-enabled-not-in-source", func() {
+			suite.setupController("mc-enabled-not-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1193,8 +1193,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
-		suite.Run("mc_enabled_in_source", func() {
-			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
+		suite.Run("mc-enabled-in-source", func() {
+			suite.setupController("mc-enabled-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
