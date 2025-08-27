@@ -345,14 +345,6 @@ import:
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/clang
-  to: /usr/local/bin/clang
-  before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/llc
-  to: /usr/local/bin/llc
-  before: install
 - image: libs/zlib-v1.3.1
   add: /usr/lib
   to: /lib64
@@ -494,6 +486,14 @@ import:
 - image: libs/xz-v5.8.1
   add: /usr/lib/libc.so
   to: /lib/x86_64-linux-gnu/libc.so
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/clang
+  to: /usr/local/bin/clang
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/llc
+  to: /usr/local/bin/llc
   before: install
 git:
 {{- include "image mount points" . }}
