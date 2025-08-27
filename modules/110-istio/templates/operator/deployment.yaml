@@ -116,7 +116,7 @@ spec:
         - containerPort: 8383
           name: http-metrics
         {{- end }}
-        protocol: TCP
+          protocol: TCP
         env:
           - name: WATCH_NAMESPACE
             value: d8-{{ $.Chart.Name }}
