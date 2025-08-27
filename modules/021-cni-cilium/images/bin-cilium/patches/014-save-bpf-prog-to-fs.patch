@@ -1,0 +1,94 @@
+From 173a668c6064e42d5a5a463f57ec487bf12d2d91 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Tue, 26 Aug 2025 19:20:59 +0300
+Subject: [PATCH] save bpf prog to fs
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ pkg/bpf/collection.go | 49 ++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 48 insertions(+), 1 deletion(-)
+
+diff --git a/pkg/bpf/collection.go b/pkg/bpf/collection.go
+index a1612476b4..d1c92065cc 100644
+--- a/pkg/bpf/collection.go
++++ b/pkg/bpf/collection.go
+@@ -7,6 +7,7 @@ import (
+ 	"encoding/binary"
+ 	"errors"
+ 	"fmt"
++	"math/rand"
+ 	"os"
+ 	"strings"
+ 
+@@ -268,6 +269,49 @@ type CollectionOptions struct {
+ 	MapRenames map[string]string
+ }
+ 
++const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
++
++func randStringBytes() string {
++	b := make([]byte, 8)
++	for i := range b {
++		b[i] = letterBytes[rand.Intn(len(letterBytes))]
++	}
++	return string(b)
++}
++
++func saveInstructionsToFile(insns asm.Instructions, name string, isLoaded bool) {
++	if name != "tail_nodeport_nat_ingress_ipv4" && isLoaded {
++		return
++	}
++
++	resultPath := "failed_bpf_progs"
++	if isLoaded {
++		resultPath = "loaded_bpf_progs"
++	}
++	path := "/var/run/cilium/state/" + resultPath
++
++	if _, err := os.Stat(path); os.IsNotExist(err) {
++		err = os.Mkdir(path, os.ModeDir)
++		if err != nil {
++			fmt.Printf("DEBUG FAIL CREATE DIR\n")
++			return
++		}
++	}
++
++	name = name + "_" + randStringBytes()
++	f, err := os.Create(path + "/bpf_" + name + ".s")
++	if err != nil {
++		log.WithFields(logrus.Fields{
++			"progInfo": name,
++		}).Debug("Fail create file for invalid bpf prog", err)
++		return
++	}
++	defer f.Close()
++	for _, ins := range insns {
++		fmt.Fprintln(f, ins)
++	}
++}
++
+ // LoadCollection loads the given spec into the kernel with the specified opts.
+ // Returns a function that must be called after the Collection's entrypoints are
+ // attached to their respective kernel hooks. This function commits pending map
+@@ -318,7 +362,6 @@ func LoadCollection(spec *ebpf.CollectionSpec, opts *CollectionOptions) (*ebpf.C
+ 
+ 	// Attempt to load the Collection.
+ 	coll, err := ebpf.NewCollectionWithOptions(spec, opts.CollectionOptions)
+-
+ 	if err == nil {
+ 		for _, prog := range coll.Programs {
+ 			log.WithFields(logrus.Fields{
+@@ -330,6 +373,10 @@ func LoadCollection(spec *ebpf.CollectionSpec, opts *CollectionOptions) (*ebpf.C
+ 		}
+ 	}
+ 
++	for _, prog := range spec.Programs {
++		saveInstructionsToFile(prog.Instructions, prog.Name, err == nil)
++	}
++
+ 	// Collect key names of maps that are not compatible with their pinned
+ 	// counterparts and remove their pinning flags.
+ 	if errors.Is(err, ebpf.ErrMapIncompatible) {
+-- 
+2.34.1
+
