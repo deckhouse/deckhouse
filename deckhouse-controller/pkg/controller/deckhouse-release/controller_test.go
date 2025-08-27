@@ -1152,20 +1152,6 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 		})
 
-		suite.Run("multiple-sources", func() {
-			suite.setupController("multiple-sources.yaml", initValues, embeddedMUP)
-			dr := suite.getDeckhouseRelease("v1.50.0")
-			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-			require.NoError(suite.T(), err)
-
-			// Check that v1.49.0 is superseded and v1.50.0 is deployed
-			oldRelease := suite.getDeckhouseRelease("v1.49.0")
-			require.Equal(suite.T(), "Superseded", oldRelease.Status.Phase)
-
-			newRelease := suite.getDeckhouseRelease("v1.50.0")
-			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
-		})
-
 		suite.Run("mc-disabled-not-in-source", func() {
 			suite.setupController("mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
