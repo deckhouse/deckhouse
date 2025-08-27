@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
@@ -386,19 +385,15 @@ func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleR
 type migratedModulesCheck struct {
 	name string
 
-	k8sclient      client.Client
-	metricStorage  metric.Storage
-	logger         *log.Logger
-	enabledModules set.Set
+	k8sclient client.Client
+	logger    *log.Logger
 }
 
 func newMigratedModulesCheck(k8sclient client.Client, enabledModules []string, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
-		name:           "migrated modules check",
-		k8sclient:      k8sclient,
-		metricStorage:  metricStorage,
-		logger:         logger,
-		enabledModules: set.New(enabledModules...),
+		name:      "migrated modules check",
+		k8sclient: k8sclient,
+		logger:    logger,
 	}
 }
 
@@ -407,8 +402,6 @@ func (c *migratedModulesCheck) GetName() string {
 }
 
 func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.DeckhouseRelease) error {
-	c.metricStorage.Grouped().ExpireGroupMetrics(metrics.MigratedModuleNotFoundGroup)
-
 	requirements := dr.GetRequirements()
 	migratedModules, exists := requirements[MigratedModulesRequirementFieldName]
 	if !exists || migratedModules == "" {
@@ -430,71 +423,23 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 
 	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
 
-	moduleSources := &v1alpha1.ModuleSourceList{}
-	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
-		return fmt.Errorf("failed to list ModuleSources: %w", err)
+	mcList := &v1alpha1.ModuleConfigList{}
+	if err := c.k8sclient.List(ctx, mcList); err != nil {
+		return fmt.Errorf("failed to list ModuleConfigs: %w", err)
 	}
-
-	// Fetch existing modules in the cluster to verify their presence regardless of enabled state
-	moduleList := &v1alpha1.ModuleList{}
-	if err := c.k8sclient.List(ctx, moduleList); err != nil {
-		return fmt.Errorf("failed to list Modules: %w", err)
-	}
-	existingModules := set.New()
-	for _, m := range moduleList.Items {
-		existingModules.Add(m.Name)
+	moduleConfigs := set.New()
+	for _, mc := range mcList.Items {
+		moduleConfigs.Add(mc.Name)
 	}
 
 	for _, moduleName := range modules {
-		// Reject release if migrated module is absent in the cluster - migration cannot occur
-		if !existingModules.Has(moduleName) {
-			c.logger.Warn("migrated module is missing in cluster, cannot migrate", slog.String("module", moduleName))
-			return fmt.Errorf("migrated module %q is not present in the cluster, migration cannot occur", moduleName)
-		}
-
-		found := false
-
-		for _, source := range moduleSources.Items {
-			if c.isModuleAvailableInSource(moduleName, &source) {
-				found = true
-				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
-				break
-			}
-		}
-
-		if !found {
-			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
-			c.setMigratedModuleNotFoundAlert(moduleName)
-
-			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
+		if !moduleConfigs.Has(moduleName) {
+			c.logger.Warn("migrated module has no ModuleConfig", slog.String("module", moduleName))
+			return fmt.Errorf("migrated module %q has no ModuleConfig", moduleName)
 		}
 	}
 
-	c.logger.Debug("all migrated modules found in registries")
+	c.logger.Debug("all migrated modules have ModuleConfig")
 
 	return nil
-}
-
-// isModuleAvailableInSource checks if a module is available in a specific ModuleSource
-func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
-	// Check if module is in the available modules list
-	for _, availableModule := range source.Status.AvailableModules {
-		if availableModule.Name == moduleName {
-			// If there's a pull error, the module is not actually available
-			return availableModule.Error == ""
-		}
-	}
-	return false
-}
-
-// setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
-func (c *migratedModulesCheck) setMigratedModuleNotFoundAlert(moduleName string) {
-	// Set the metric value to 1 to trigger alert
-	c.metricStorage.Grouped().GaugeSet(
-		metrics.MigratedModuleNotFoundGroup,
-		metrics.MigratedModuleNotFoundMetricName,
-		1,
-		map[string]string{
-			"module_name": moduleName,
-		})
 }

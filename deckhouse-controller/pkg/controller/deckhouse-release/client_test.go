@@ -144,6 +144,8 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
 	case "Module":
 		res = unmarshalRelease[v1alpha1.Module](obj, t)
+	case "ModuleConfig":
+		res = unmarshalRelease[v1alpha1.ModuleConfig](obj, t)
 
 	default:
 		require.Fail(t, "unknown Kind:"+typ.Kind)

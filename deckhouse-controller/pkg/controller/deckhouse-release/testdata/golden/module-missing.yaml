@@ -27,7 +27,7 @@ spec:
   version: v1.50.0
 status:
   approved: false
-  message: migrated module "test-module-1" is not present in the cluster, migration cannot occur
+  message: migrated module "test-module-missing" has no ModuleConfig
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---
