@@ -50,7 +50,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/debian-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
@@ -66,9 +66,6 @@ shell:
   beforeInstall:
   {{- include "debian packages proxy" $ | nindent 2 }}
   - apt-get update && apt-get install libseccomp-dev -y
-{{- if eq $.SVACE_ENABLED "true" }}
-  - apt-get update && apt-get install golang-1.24 golang rsync -y
-{{- end }}
   - mkdir -p /out
   install:
   - cd /src
@@ -76,8 +73,9 @@ shell:
   - git config --global user.email "builder@deckhouse.io"
   - |
   {{- $buildContext := deepCopy $ -}}
+  {{- $parted_version := split "." $runc_version -}}
   {{- $_ := set $buildContext "BuildCommand" `make COMMIT="$(cat COMMIT)" static` -}}
-  {{- $_ := set $buildContext "ProjectName" (printf "runc-%s" $runc_version) -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "%s/runc-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
   {{- include "image-build.build" $buildContext | indent 6 }}
   - mv runc /out/runc
   - chown -R 64535:64535 /out
