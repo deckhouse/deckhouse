@@ -444,7 +444,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
 	defer func() {
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
 		r.metricsUpdater.UpdateReleaseMetric(dr.GetName(), metricLabels)
 	}()
