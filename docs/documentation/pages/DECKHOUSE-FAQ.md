@@ -1302,6 +1302,8 @@ Removing this parameter will trigger a check for the presence of critical compon
    To switch to BE/SE/SE+/EE editions:
 
    ```shell
+   DOCKER_CONFIG_JSON=$(echo -n "{\"auths\": {\"registry.deckhouse.io\": {\"username\": \"license-token\", \"password\": \"${LICENSE_TOKEN}\", \"auth\": \"${AUTH_STRING}\"}}}" | base64 -w 0)
+   kubectl --as system:sudouser -n d8-cloud-instance-manager patch secret deckhouse-registry --type merge --patch="{\"data\":{\".dockerconfigjson\":\"$DOCKER_CONFIG_JSON\"}}"  
    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
    ```
 
@@ -1426,16 +1428,48 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 
 ### How do I change container runtime to containerd v2 on nodes?
 
+{% alert level="info" %}
+Deckhouse Kubernetes Platform automatically checks cluster nodes for compliance with the conditions for migration to containerd v2:
+
+* Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
+* The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
+
+If any of the requirements described in the [general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config` is added to it.
+
+If one of these labels is present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
+
+```shell
+kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
+kubectl get node -l node.deckhouse.io/containerd-config
+```
+
+Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
+
+```shell
+uname -r | cut -d- -f1
+stat -f -c %T /sys/fs/cgroup
+systemctl --version | awk 'NR==1{print $2}'
+modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+ls -l /etc/containerd/conf.d
+```
+
+{% endalert %}
+
 You can migrate to containerd v2 in one of the following ways:
 
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
+After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
+
+Example:
+
+```shell
+kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
+
 {% alert level="info" %}
-Migration to containerd v2 is possible if the following conditions are met:
-
-* Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
-* The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+Under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
-
-Migrating to containerd v2 clears the `/var/lib/containerd` folder. For containerd, the `/etc/containerd/conf.d` folder is used. For containerd v2, `/etc/containerd/conf2.d` is used.

@@ -27,13 +27,13 @@ kind: VsphereClusterConfiguration
 sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCxvEtHR2d9rO6F3ooHAWFxIJdMKAgNVGx5cbP3F576ltMsUauBHAC02ti5vCggORHJlq3BmAyrDXLbfDFS+evxL8oOGEVFlp+lHiUSTQZCxAnhJFVkjgJ8poCYno35ZYhlOTZGI6fqIWV2HuHIJSk3fL0rqRwjCVV2pqQniR6SYUNYISN/RmPnchGVFw4mRLo5HxkXHVPBE3OSX7ihODhS09c+8nyErd8iDf8YljFqB8Oepe3f7nwxWQM/mUjsU70hAL4DEuORrtPwSqeLcUrX4uzc3vQFzPR81AdbtAZ8Vh4CbF7v5dLIqKR1AkCGc8nENEGLu/AWbCjyb9epqmbjKpMT+ogyzJZjNlRjJ2PaImIUhGCMQ8wN1W68pB6Kx9rXKYXpK57nwWwbG33JrmMFWZK7Lj4oRNJZjHRRhOGccCT1gXATmTXzCikehBV4KVHfmOjzK1K0lfUb5DihfhXoAQ+YCIwZaUwtL5BBeq6oRuD1UxsNcczfjgZ22bmdDDs= root@04c20a0dffea"
 layout: Standard
 vmFolderPath: 'flant-e2e-tests/${PREFIX}'
-regionTagCategory: k8s-e2e-region
-zoneTagCategory: k8s-e2e-zone
-region: spb5-region
+regionTagCategory: msk1-region
+zoneTagCategory: msk1-zone
+region: e2e-region-msk1
 zones:
-- spb5-zone
+- e2e-zone-msk1
 internalNetworkNames:
-- DPortGroup-lab-vms
+- DPortGroup-MSK1-MGMT-240-VLAN-240-192.168.240.0[24]
 internalNetworkCIDR: 192.168.240.0/24
 baseResourcePool: cloud-layout-tests
 masterNodeGroup:
@@ -41,9 +41,9 @@ masterNodeGroup:
   instanceClass:
     numCPUs: 4
     memory: 8192
-    template: vm-templates/redos8-cloudinit-2cfg
-    mainNetwork: DPortGroup-lab-vms
-    datastore: vsan-spb-5-datastore
+    template: vm-templates/redos8-cloudinit-3cfg
+    mainNetwork: DPortGroup-MSK1-MGMT-240-VLAN-240-192.168.240.0[24]
+    datastore: vsan-msk-1-datastore
     rootDiskSize: 50
     runtimeOptions:
       nestedHardwareVirtualization: false

@@ -28,7 +28,7 @@ For example:
 - Get the `log-shipper-token` token from the `d8-log-shipper` namespace:
 
   ```bash
-  kubectl -n d8-log-shipper get secret log-shipper-token -o jsonpath='{.data.token}' | base64 -d
+  d8 k -n d8-log-shipper get secret log-shipper-token -o jsonpath='{.data.token}' | base64 -d
   ```
 
 - ClusterLogDestination resource with authorization:

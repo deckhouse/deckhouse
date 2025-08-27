@@ -1151,7 +1151,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -1178,7 +1178,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8GrafanaDeprecatedCustomDashboardDefinition
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -1194,7 +1194,7 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8GrafanaPodIsNotReady
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -1204,7 +1204,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8GrafanaPodIsRestartingTooOften
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -1223,7 +1223,7 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: D8GrafanaTargetAbsent
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -1256,7 +1256,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8GrafanaTargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce

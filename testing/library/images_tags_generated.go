@@ -136,12 +136,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"zvirtCsiDriver":         "imageHash-cloudProviderZvirt-zvirtCsiDriver",
 	},
 	"cniCilium": map[string]interface{}{
-		"agentDistroless":    "imageHash-cniCilium-agentDistroless",
-		"checkKernelVersion": "imageHash-cniCilium-checkKernelVersion",
-		"egressGatewayAgent": "imageHash-cniCilium-egressGatewayAgent",
-		"kubeRbacProxy":      "imageHash-cniCilium-kubeRbacProxy",
-		"operator":           "imageHash-cniCilium-operator",
-		"safeAgentUpdater":   "imageHash-cniCilium-safeAgentUpdater",
+		"agentDistroless":     "imageHash-cniCilium-agentDistroless",
+		"checkKernelVersion":  "imageHash-cniCilium-checkKernelVersion",
+		"checkWgKernelCompat": "imageHash-cniCilium-checkWgKernelCompat",
+		"egressGatewayAgent":  "imageHash-cniCilium-egressGatewayAgent",
+		"kubeRbacProxy":       "imageHash-cniCilium-kubeRbacProxy",
+		"operator":            "imageHash-cniCilium-operator",
+		"safeAgentUpdater":    "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
@@ -378,9 +379,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"operator":      "imageHash-operatorTrivy-operator",
 		"reportUpdater": "imageHash-operatorTrivy-reportUpdater",
 		"trivy":         "imageHash-operatorTrivy-trivy",
-	},
-	"podReloader": map[string]interface{}{
-		"podReloader": "imageHash-podReloader-podReloader",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
