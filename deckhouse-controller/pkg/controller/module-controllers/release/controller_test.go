@@ -720,7 +720,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		// 8) Update specis not for constrainted release
-		suite.Run("Different from constrainted release is approved and matches constraint", func() {
+		suite.Run("Different from constrainted release is approved and not matches to constrainted release", func() {
 			testData := suite.fetchTestFileData("from-to-update-spec-not-for-constrainted-release.yaml")
 			suite.setupReleaseController(testData)
 

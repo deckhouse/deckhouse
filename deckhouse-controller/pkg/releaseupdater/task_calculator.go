@@ -394,7 +394,7 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 			continue
 		}
 
-		releaseIndex := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, logEntry)
+		releaseIndex := p.getFirstCompliantRelease(releases, r.GetUpdateSpec().Versions, deployed, r.GetVersion(), logEntry)
 		if releaseIndex > compliantRelease {
 			compliantRelease = releaseIndex
 		}
@@ -407,7 +407,13 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 // Rules:
 // - For the deployed version D and current processing release P, find a constraint where D in range [from, to].
 // - If no endpoint found in current constraints, return -1.
-func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, constraints []v1alpha1.UpdateConstraint, deployed *releaseInfo, logEntry *log.Logger) int {
+func (p *TaskCalculator) getFirstCompliantRelease(
+	releases []v1alpha1.Release,
+	constraints []v1alpha1.UpdateConstraint,
+	deployed *releaseInfo,
+	constraintedReleaseVersion *semver.Version,
+	logEntry *log.Logger,
+) int {
 	bestIdx := -1
 
 	// Check each constraint for inclusion of deployed version
@@ -416,16 +422,27 @@ func (p *TaskCalculator) getFirstCompliantRelease(releases []v1alpha1.Release, c
 			slog.String("from_ver", c.From),
 			slog.String("to_ver", c.To),
 		)
-		fromVer, err := semver.NewVersion(c.From)
-		if err != nil {
-			logEntry.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
-
-			continue
-		}
 
 		toVer, err := semver.NewVersion(c.To)
 		if err != nil {
 			logEntry.Warn("parse semver", slog.String("version_to", c.To), log.Err(err))
+
+			continue
+		}
+
+		if constraintedReleaseVersion.Major() != toVer.Major() ||
+			constraintedReleaseVersion.Minor() != toVer.Minor() {
+			logEntry.Debug("skip constraint because major or minor version does not match to constrainted release version",
+				slog.String("from_ver", c.From),
+				slog.String("to_ver", c.To),
+				slog.String("constrainted_release_version", "v"+constraintedReleaseVersion.String()),
+			)
+			continue
+		}
+
+		fromVer, err := semver.NewVersion(c.From)
+		if err != nil {
+			logEntry.Warn("parse semver", slog.String("version_from", c.From), log.Err(err))
 
 			continue
 		}
