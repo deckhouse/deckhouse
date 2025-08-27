@@ -313,7 +313,7 @@ import:
   to: /pause
   before: install
 - image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/
+  add: /usr/local/bin
   to: /usr/local/bin
   before: install
   includePaths:
