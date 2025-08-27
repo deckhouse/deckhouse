@@ -52,7 +52,7 @@ spec:
     namespaces: ["<your_namespace>"]
     kinds:
     - apiGroups: [""]
-      kinds: ["Pod"] # Запрещено использовать "*" .
+      kinds: ["Pod"] # The use of "*" is not allowed.
   location: "metadata.labels.<your_label_name>"
   parameters:
     assign:
