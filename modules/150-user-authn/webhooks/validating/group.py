@@ -16,7 +16,6 @@
 
 from typing import Optional, Self
 
-import dotmap
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -190,7 +189,7 @@ class GroupTree(list[Group]):
         self.extend(groups)
 
     @classmethod
-    def from_binding_context(cls, target_group: dotmap.DotMap, all_groups: dotmap.DotMap):
+    def from_binding_context(cls, target_group: DotMap, all_groups: DotMap):
         """
         Build a GroupTree from a binding context (target group + all known groups).
 
