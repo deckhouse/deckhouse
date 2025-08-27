@@ -32,11 +32,6 @@ function __main__() {
     return
   fi
 
-  if values::array_has global.enabledModules "user-authn" ; then
-    echo "true" > "$MODULE_ENABLED_RESULT"
-    return
-  fi
-
   if values::has dashboard.auth.externalAuthentication.authSignInURL && \
      values::has dashboard.auth.externalAuthentication.authURL ; then
     echo "true" > "$MODULE_ENABLED_RESULT"
