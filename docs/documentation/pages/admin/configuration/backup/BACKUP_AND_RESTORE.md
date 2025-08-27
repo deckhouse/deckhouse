@@ -250,16 +250,16 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
    - Create Pod from the resulting manifest:
 
      ```shell
-     kubectl create -f etcd.pod.yaml
+     d8 k create -f etcd.pod.yaml
      ```
 
 1. Set environment variables. In this example:
 
-   - `infra-production` - namespace which we will search resources in.
+   - `infra-production` — namespace which we will search resources in.
 
-   - `/root/etcd-restore/output` - path for outputting recovered resource manifests.
+   - `/root/etcd-restore/output` — path for outputting recovered resource manifests.
 
-   - `/root/auger` - path to `auger` executable.
+   - `/root/auger` — path to `auger` executable.
 
      ```shell
      FILTER=infra-production
@@ -311,7 +311,7 @@ To restore objects from exported YAML files, follow these steps:
 1. To restore multiple objects at once, use the `find` command:
 
    ```shell
-   find $BACKUP_OUTPUT_DIR -type f -name "*.yaml" -exec kubectl create -f {} \;
+   find $BACKUP_OUTPUT_DIR -type f -name "*.yaml" -exec d8 k create -f {} \;
    ```
 
    This will locate all `.yaml` files within the specified `$BACKUP_OUTPUT_DIR` and apply them sequentially using `d8 k create`.
