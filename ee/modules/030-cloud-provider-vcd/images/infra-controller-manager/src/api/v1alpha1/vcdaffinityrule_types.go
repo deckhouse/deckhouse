@@ -20,17 +20,25 @@ type VCDAffinityRuleSpec struct {
 	// Polarity is TODO
 	Polarity string `json:"polarity,omitempty"`
 
-	// TargetNodeGroups is TODO
-	TargetNodeGroups []string `json:"targetNodeGroups,omitempty"`
+	// NodeLabelSelector is TODO
+	NodeLabelSelector map[string]string `json:"nodeLabelSelector,omitempty"`
 }
 
 // VCDAffinityRuleStatus defines the observed state of VCDAffinityRule.
 type VCDAffinityRuleStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Message string                      `json:"message,omitempty"`
+	Nodes   []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
+}
+
+type VCDAffinityRuleStatusNode struct {
+	Name       string `json:"name,omitempty"`
+	ProviderID string `json:"providerID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster,shortName=vcdar
 // +kubebuilder:subresource:status
 
 // VCDAffinityRule is the Schema for the vcdaffinityrules API.
