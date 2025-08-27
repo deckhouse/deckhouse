@@ -24,8 +24,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
@@ -269,24 +271,67 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
-		for _, def := range definitions {
-			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
-			module, err := l.processModuleDefinition(ctx, def)
-			if err != nil {
-				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
-			}
 
-			if _, ok := l.modules[def.Name]; ok {
-				l.logger.Warn("module already exists, skip it from path", slog.String("name", def.Name), slog.String("path", def.Path))
+		// Parallelize heavy per-module parsing (values/openapi) to reduce startup latency.
+		type modResult struct {
+			def    *moduletypes.Definition
+			module *moduletypes.Module
+			err    error
+		}
+
+		jobs := make(chan *moduletypes.Definition)
+		results := make(chan modResult, len(definitions))
+		var wg sync.WaitGroup
+
+		workerCount := runtime.NumCPU()
+		if workerCount > len(definitions) {
+			workerCount = len(definitions)
+		}
+		if workerCount < 1 {
+			workerCount = 1
+		}
+
+		for i := 0; i < workerCount; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for d := range jobs {
+					l.logger.Debug("process module definition from the dir", slog.String("name", d.Name), slog.String("path", dir))
+					m, err := l.processModuleDefinition(ctx, d)
+					results <- modResult{def: d, module: m, err: err}
+				}
+			}()
+		}
+
+		for _, d := range definitions {
+			jobs <- d
+		}
+		close(jobs)
+		wg.Wait()
+		close(results)
+
+		// Collect results, stop on first error.
+		collected := make([]modResult, 0, len(definitions))
+		for r := range results {
+			if r.err != nil {
+				return fmt.Errorf("process the '%s' module definition: %w", r.def.Name, r.err)
+			}
+			collected = append(collected, r)
+		}
+
+		// Ensure and store sequentially to avoid concurrent writes to l.modules.
+		for _, r := range collected {
+			if _, ok := l.modules[r.def.Name]; ok {
+				l.logger.Warn("module already exists, skip it from path", slog.String("name", r.def.Name), slog.String("path", r.def.Path))
 				continue
 			}
 
-			l.logger.Debug("ensure module", slog.String("name", def.Name))
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
-				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
+			l.logger.Debug("ensure module", slog.String("name", r.def.Name))
+			if err = l.ensureModule(ctx, r.def, strings.HasPrefix(r.def.Path, embeddedModulesDir)); err != nil {
+				return fmt.Errorf("ensure the '%s' embedded module: %w", r.def.Name, err)
 			}
 
-			l.modules[def.Name] = module
+			l.modules[r.def.Name] = r.module
 		}
 	}
 
@@ -475,6 +520,13 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 	if entry.IsDir() {
 		return name, absPath, nil
 	}
+	// Fast-path: if it's not a symlink, ignore without extra lstat syscall
+	if entry.Type()&fs.ModeSymlink == 0 {
+		if name != addonutils.ValuesFileName {
+			log.Warn("ignore while searching for modules", slog.String("path", absPath))
+		}
+		return "", "", nil
+	}
 	// Check if entry is a symlink to a directory.
 	targetPath, err := resolveSymlinkToDir(dirPath, entry)
 	if err != nil {
@@ -539,15 +591,11 @@ func (l *Loader) moduleDefinitionByDir(moduleName, moduleDir string) (*moduletyp
 // moduleDefinitionByFile returns Definition instance parsed from the module.yaml file
 func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition, error) {
 	path := filepath.Join(absPath, moduletypes.DefinitionFile)
-	if _, err := os.Stat(path); err != nil {
+	f, err := os.Open(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, err
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
