@@ -13,18 +13,10 @@ repo: infra-controller-manager
 resources:
 - api:
     crdVersion: v1
-    namespaced: true
+    namespaced: false
   controller: true
   domain: deckhouse.io
   kind: VCDAffinityRule
   path: infra-controller-manager/api/v1alpha1
-  version: v1alpha1
-- controller: true
-  domain: deckhouse.io
-  kind: InstanceClassAffinity
-  version: v1alpha1
-- controller: true
-  domain: deckhouse.io
-  kind: ProviderClusterConfigurationAffinity
   version: v1alpha1
 version: "3"
