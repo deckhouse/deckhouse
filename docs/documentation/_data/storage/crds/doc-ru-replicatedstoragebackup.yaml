@@ -1,0 +1,19 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Объекты для хранения резервных копий базы данных control-plane.
+          properties:
+            spec:
+              properties:
+                spec:
+                  type: object
+                  description: |
+                    Хранит резервные копии базы данных control-plane.
+                  properties:
+                    data:
+                      type: string
+                      description: |
+                        Часть резервной копии базы данных control-plane в Base64.

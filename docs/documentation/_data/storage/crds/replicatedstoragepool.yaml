@@ -4,7 +4,7 @@ metadata:
   name: replicatedstoragepools.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: sds-replicated-volume
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -23,14 +23,14 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            ReplicatedStoragePool is a Kubernetes Custom Resource that defines a configuration for LINSTOR Storage-pools.
+            ReplicatedStoragePool is a Kubernetes Custom Resource that defines a configuration for Linstor Storage-pools.
           required:
             - spec
           properties:
             spec:
               type: object
               description: |
-                Defines desired rules for LINSTOR's Storage-pools.
+                Defines desired rules for Linstor's Storage-pools.
               required:
                 - type
                 - lvmVolumeGroups
@@ -38,9 +38,9 @@ spec:
                 type:
                   type: string
                   description: |
-                    Defines the volumes type:
-                    - `LVM` — for thick;
-                    - `LVMThin` — for thin.
+                    Defines the volumes type. Might be:
+                    - `LVM`: For Thick volumes.
+                    - `LVMThin`: For Thin volumes.
                   enum:
                     - LVM
                     - LVMThin
@@ -50,9 +50,11 @@ spec:
                 lvmVolumeGroups:
                   type: array
                   description: |
-                    An array of names of LVMVolumeGroup resources, whose Volume Groups/thin pools will be used to allocate the required space.
-
-                    > Note that every LVMVolumeGroup resource has to have the same type thin/thick as it is in current resource's 'Spec.Type' field.
+                    An array of names of LVMVolumeGroup resources, whose Volume Groups/Thin-pools will be used to allocate
+                    the required space.
+                    
+                    > Note that every LVMVolumeGroup resource has to have the same type Thin/Thick 
+                    as it is in current resource's 'Spec.Type' field.
                   items:
                     type: object
                     required:
@@ -67,7 +69,7 @@ spec:
                       thinPoolName:
                         type: string
                         description: |
-                          Selected thin pool name.
+                          Selected Thin-pool name.
             status:
               type: object
               description: |
@@ -76,10 +78,10 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The actual ReplicatedStoragePool resource's state:
-                    - `Completed` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration is up-to-date;
-                    - `Updating` — if the controller received correct resource configuration and LINSTOR Storage-pools configuration needs to be updated;
-                    - `Failed` — if the controller received incorrect resource configuration or an error occurs during the operation.
+                    The actual ReplicatedStoragePool resource's state. Might be: 
+                    - `Completed`: If the controller received correct resource configuration and Linstor Storage-pools configuration is up-to-date.
+                    - `Updating`: If the controller received correct resource configuration and Linstor Storage-pools configuration needs to be updated.
+                    - `Failed`: If the controller received incorrect resource configuration or an error occurs during the operation.
                   enum:
                     - Updating
                     - Failed

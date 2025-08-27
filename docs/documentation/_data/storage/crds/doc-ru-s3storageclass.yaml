@@ -11,28 +11,28 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            S3StorageClass - это пользовательский ресурс Kubernetes, определяющий конфигурацию storage class для S3-объектов.
+            Определяет конфигурацию storage class для S3-объектов.
           properties:
             spec:
-              description: конфигурация S3 Storage Class.
+              description: Конфигурация S3 Storage Class.
               properties:
                 bucketName:
                   description: |
-                    Название bucket в S3-хранилище. Если пустое, новый bucket будет создан для каждого PVC.
-                    Если не пустое, новый каталог (путь) внутри указанного bucket'a будет создан для каждого PVC. Если bucket не существует, он будет создан.
+                    Название bucket в S3-хранилище. Если пустое, новый bucket будет создан для каждого PVC. 
+                    Если не пустое, новый каталог (путь) внутри указанного bucket будет создан для каждого PVC.
                 maxCacheSize:
                   description: Размер кеша монтировщика в памяти в мегабайтах.
                 endpointUrl:
                   description: |
-                    URL S3 API endpoint'a. Для AWS должно быть в формате:
-                    "https://s3.<region>.amazonaws.com" (например "https://s3.eu-central-1.amazonaws.com").
+                    URL S3 API endpoint. Для AWS должно быть в формате:
+                    "https://s3.<region>.amazonaws.com" (например, "https://s3.eu-central-1.amazonaws.com").
                 region:
                   description: |
                     Регион для S3-хранилища. Для AWS указывается через параметр endpointUrl.
                 insecure:
                   description: |
-                    Если выставлен в true, S3 storage class не будет проверять валидность SSL-сертификата S3 endpoint'a.
-                    Этот параметр включает режим игнорирования ошибок сертификата в случае использования с https endpoint'ами.
+                    Если выставлен в true, S3 storage class не будет проверять валидность SSL-сертификата S3 endpoint. 
+                    Этот параметр включает режим игнорирования ошибок сертификата в случае использования с https endpoint.
                     Использование этой опции небезопасно, мы не рекомендуем ее использовать.
                 accessKeyID:
                   description: |
@@ -46,7 +46,7 @@ spec:
               properties:
                 phase:
                   description: |
-                    Текущий статус S3 storage class:
+                    Текущий статус S3 storage class. Может принимать следующие значения:
                     - `Failed` — показывает наличие ошибок конфигурации или установки;
                     - `Created` — показывает, что S3StorageClass был успешно создан.
                 reason:

@@ -4,77 +4,66 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Интерфейс управления Volume Group'ами и thin-пулами на узлах.
-
-            > Этот тип ресурсов может быть создан как самим пользователем, так и контроллером `sds-node-configurator`. Контроллер `sds-node-configurator` автоматически создаст ресурс LVMVolumeGroup в случае, если найдет на узле существующую Volume Group со специальным тегом 'storage.deckhouse.io/enabled=true', при этом контроллер самостоятельно заполнит как `spec`, так и `status` поля.
+            Интерфейс управления Volume Group'ами и Thin pool'ами на узлах.
+            
+            > Этот тип ресурсов может быть создан как самим пользователем, так и контроллером sds-node-configurator. Контроллер sds-node-configurator автоматически создаст ресурс LVMVolumeGroup в случае, если найдет на узле существующую Volume Group со специальным тегом 'storage.deckhouse.io/enabled=true', при этом контроллер самостоятельно заполнит как `spec`, так и `status` поля.
             > Поле `spec.thinPools` нужно заполнить самостоятельно.
           properties:
             spec:
-              description: |
-                Определяет параметры Volume Group.
               properties:
                 type:
                   description: |
-                    Тип Volume Group:
-                    - Local — локальная, если устройства не являются распределенными (не Shared LUN).
+                    Тип Volume Group. Может быть: 
+                    - Local, то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
                 local:
                   description: |
-                    Желаемая конфигурация локальной Volume Group.
+                    Желаемая конфигурация для локальной Volume Group.
                   properties:
                     nodeName:
                       description: |
-                        Имя узла, на котором будет размещена Volume Group.
-
-                        > Неизменяемое поле.
+                        Имя ноды, на которой планируется размещение Volume Group.
                 blockDeviceSelector:
                   description: |
-                    Селектор для выбора устройств BlockDevice.
-                  properties:
-                    matchLabels:
-                      description: |
-                        Карта меток для выбора устройств BlockDevice.
-                    matchExpressions:
-                      description: |
-                        Список выражений для выбора устройств BlockDevice.
+                    Желаемый селектор для выбора BlockDevice ресурсов.
+
+                    > Обратите внимание, что выбранные блок-девайсы должны принадлежать одному узлу для Volume Group с типом 'Local'.
                 actualVGNameOnTheNode:
                   description: |
-                    Желаемое имя Volume Group. Должно быть уникальным в рамках узла.
-
+                    Желаемое имя для Volume Group. Должно быть уникальным в рамках узла, на котором будет располагаться.
+                    
                     > Неизменяемое поле.
                 thinPools:
                   description: |
-                    Конфигурация thin-пулов.
+                    Желаемая конфигурация для Thin-pool'ов текущей Volume Group.
                   items:
                     properties:
                       name:
                         description: |
-                          Имя thin-пула.
-
+                          Желаемое имя thin pool.
+                          
                           > Неизменяемое поле.
                       size:
                         description: |
-                          Размер thin-пула. Может быть указан числом или в процентах от общего объема VG.
-
-                          > Если указан процент, thin-пул будет автоматически расширяться при увеличении VG.
+                          Желаемый размер thin pool. Может быть указан как в численном, так и процентном отношении к общему размеру VG. 
+                          
+                          > Обратите внимание, что при указании размера в процентах thin pool будет автоматически расширен при расширении VG.
                       allocationLimit:
                         description: |
-                          Максимальный лимит oversubscription для thin-пула. По умолчанию 150%.
+                          Максимальная степень расширения thin pool-а. По умолчанию 150%.
             status:
-              description: |
-                Отображает текущее состояние Volume Group.
               properties:
                 thinPoolReady:
                   description: |
-                    Количество исправных thin-пулов относительно общего количества.
+                    Показывает количество здоровых Thin-pool к общему.
                 configurationApplied:
                   description: |
-                    Отображает успешность применения последней конфигурации.
+                    Показывает, была ли успешно применена последняя конфигурация.
                 phase:
                   description: |
-                    Общее состояние ресурса.
+                    Общее состояние ресурса LVMVolumeGroup.
                 conditions:
                   description: |
-                    Текущее состояние ресурса.
+                    Состояния ресурса LVMVolumeGroup.
                   items:
                     properties:
                       type:
@@ -82,62 +71,62 @@ spec:
                           Тип состояния.
                       status:
                         description: |
-                          Текущий статус состояния.
+                          Статус состояния.
                       reason:
                         description: |
-                          Причина текущего состояния.
+                          Причина текущего статуса.
                       message:
                         description: |
-                          Дополнительная информация о текущем состоянии.
+                          Дополнительная информация о текущем состоянии ресурса.
                       lastTransitionTime:
                         description: |
-                          Время последнего изменения состояния.
+                          Время обновления состояния.
                       observedGeneration:
                         description: |
-                          Версия ресурса при установке состояния.
+                          Версия ресурса на момент проставления состояния.
                 vgUUID:
                   description: |
                     Уникальный идентификатор Volume Group.
                 vgSize:
                   description: |
-                    Общая емкость Volume Group.
+                    Ёмкость Volume Group.
                 vgFree:
                   description: |
-                    Свободное место в Volume Group.
+                    Свободное пространство Volume Group.
                 allocatedSize:
                   description: |
-                    Занятое место в Volume Group.
+                    Текущее занятое место на Volume Group.
                 thinPools:
                   description: |
-                    Текущее состояние thin-пулов в Volume Group.
-
-                    > Поле может быть пустым, если в Volume Group нет thin-пулов.
+                    Текущее состояние Thin-pool'ов в Volume Group.
+                    
+                    > Поле может быть пустым в случае отсутствия Thin-pool'ов в Volume Group.
                   items:
                     properties:
                       name:
                         description: |
-                          Имя thin-пула.
+                          Имя Thin-pool.
                       actualSize:
                         description: |
-                          Общий объем thin-пула.
+                          Ёмкость Thin-pool.
                       usedSize:
                         description: |
-                          Используемый объем thin-пула.
+                          Используемый размер Thin-pool.
                       allocatedSize:
                         description: |
-                          Запрошенный объем для LVs в thin-пуле.
+                          Общий размер запрошенных LV в thin-pool.
                       allocationLimit:
                         description: |
-                          Лимит oversubscription для thin-пула. По умолчанию 150%.
+                          Максимальная степень расширения thin pool-а. По умолчанию 150%.
                       availableSpace:
                         description: |
-                          Доступное свободное место в thin-пуле.
+                          Свободное место в Thin-pool.
                       ready:
                         description: |
-                          Состояние исправности thin-пула.
+                          Состояние здоровья Thin-pool.
                       message:
                         description: |
-                          Дополнительная информация о состоянии thin-пула.
+                          Дополнительная информация о состоянии Thin-pool.
                 nodes:
                   description: |
                     Информация об узлах, на которых расположена Volume Group.
@@ -148,21 +137,21 @@ spec:
                           Имя узла.
                       devices:
                         description: |
-                          Список устройств, используемых в Volume Group на узле.
+                          Информация об используемых в Volume Group девайсах на текущем узле.
                         items:
                           properties:
                             path:
                               description: |
-                                Путь к устройству на узле (например, /dev/sda).
+                                Путь девайса на узле (например, /dev/sda).
                             pvSize:
                               description: |
                                 Размер Physical Volume.
                             devSize:
                               description: |
-                                Размер устройства.
+                                Размер девайса.
                             pvUUID:
                               description: |
-                                Уникальный идентификатор Physical Volume.
+                                Уникальный идентификатор LVM Physical Volume.
                             blockDevice:
                               description: |
                                 Имя соответствующего ресурса BlockDevice.

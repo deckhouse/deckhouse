@@ -5,7 +5,8 @@ metadata:
   name: lvmlogicalvolumesnapshots.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: sds-node-configurator
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
   scope: Cluster
@@ -24,7 +25,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            The LVMLogicalVolumeSnapshot resource defines the storage where a VolumeSnapshot will be created in.
+            The LVMLogicalVolumeSnapshot resource defines the storage where a VolumeSnapshot will be created.
           required:
             - spec
           properties:
@@ -57,11 +58,11 @@ spec:
                 nodeName:
                   type: string
                   description: |
-                    The name of the kubernetes node the snapshot resides in.
+                    The name of the Kubernetes node the snapshot resides in.
                 actualVGNameOnTheNode:
                   type: string
                   description: |
-                    The name of the volume group, where the snapshot resides in.
+                    The name of the volume group where the snapshot resides.
                 actualLVNameOnTheNode:
                   type: string
                   description: |
@@ -74,14 +75,14 @@ spec:
                 reason:
                   type: string
                   description: |
-                    The reason of the phase.
+                    The reason for the current phase.
                 size:
                   description: |
-                    Snapshotted LV size on the node.
+                    The size of the snapshotted LV on the node.
                   type: string
                 usedSize:
                   description: |
-                    Snapshot LV size on the node.
+                    The size of the snapshot LV on the node.
                   type: string
       subresources:
         status: {}
@@ -93,7 +94,7 @@ spec:
         - jsonPath: .status.nodeName
           name: NodeName
           type: string
-          description: The name of the kubernetes node the snapshot resides in.
+          description: The name of the Kubernetes node the snapshot resides in.
         - jsonPath: .status.phase
           name: Phase
           type: string

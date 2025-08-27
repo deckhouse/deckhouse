@@ -5,7 +5,7 @@ metadata:
   name: lvmvolumegroupsets.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: sds-node-configurator
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -130,8 +130,8 @@ spec:
                     type:
                       type: string
                       description: |
-                        The type of a VolumeGroup in LVMVolumeGroups:
-                        - `Local` — that is, local if the devices used are not distributed (not Shared LUN).
+                        The type of a VolumeGroup in LVMVolumeGroups. Might be:
+                        - Local, that is, local if the devices used are not distributed (not Shared LUN).
                       enum:
                         - Local
                       x-kubernetes-validations:
@@ -141,7 +141,7 @@ spec:
                       type: string
                       description: |
                         The desired name of a Volume Group in LVMVolumeGroups. Must be unique for the node it is on.
-
+                        
                         > This field is immutable.
                         > Note, that this Volume Group name will be common for every LVMVolumeGroup created by the set.
                       x-kubernetes-validations:
@@ -150,8 +150,8 @@ spec:
                     thinPools:
                       type: array
                       description: |
-                        The desired thin pool configuration in LVMVolumeGroups.
-
+                        The desired Thin-pool configuration in LVMVolumeGroups.
+                        
                         > Note, that the configuration will be common for every LVMVolumeGroup created by the set.
                       items:
                         type: object
@@ -160,14 +160,14 @@ spec:
                             type: string
                             description: |
                               The desired thin pool name.
-
+                              
                               > This field is immutable.
                           size:
                             x-kubernetes-int-or-string: true
                             pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$|^[1-9][0-9]?%$|100%'
                             description: |
                               The desired thin pool size. Might be specified as number or percent size of total VG space.
-
+                              
                               > Note, that if you specify the percent size, the thin pool will be automatically extended when VG is extended.
                           allocationLimit:
                             type: string
@@ -190,8 +190,12 @@ spec:
                     properties:
                       lvmVolumeGroupName:
                         type: string
+                        description: |
+                          The name of the created LVMVolumeGroup resource.
                       nodeName:
                         type: string
+                        description: |
+                          The name of the node where the LVMVolumeGroup was created.
                 currentLVMVolumeGroupsCount:
                   type: integer
                   description: |
@@ -212,9 +216,9 @@ spec:
                 reason:
                   type: string
                   description: |
-                    Shows the reason of the phase.
+                    Shows the reason for the current phase.
       subresources:
-        status: { }
+        status: {}
       additionalPrinterColumns:
         - jsonPath: .spec.strategy
           name: Strategy

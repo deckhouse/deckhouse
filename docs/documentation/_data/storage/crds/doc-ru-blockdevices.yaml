@@ -5,77 +5,99 @@ spec:
         openAPIV3Schema:
           description: |
             Ресурс отображает актуальную информацию о доступных блочных устройствах на узлах, которые могут быть использованы контроллером sds-node-configurator для операций в LVM.
-
+            
             > Ресурс создается и обслуживается только контроллером. Ручное изменение ресурса запрещено.
           properties:
             status:
               properties:
                 type:
                   description: |
-                    Тип девайса (диск, партиция, RAID и другие).
+                    Тип устройства (диск, раздел, RAID и другие).
                 fsType:
                   description: |
-                    Тип файловой системы.
+                    Тип файловой системы устройства.
                 nodeName:
-                  description: |
-                    Имя Kubernetes-узла, на котором находится девайс.
+                  description: |                    
+                    Имя Kubernetes-узла, на котором находится устройство.
                 consumable:
-                  description: |
-                    Флаг, определяющий, может ли данный девайс быть использован контроллером для создания LVM Physical Volume.
+                  description: |                    
+                    Флаг, определяющий, может ли данное устройство быть использовано контроллером для создания LVM Physical Volume.
                 pvUUID:
-                  description: |
+                  description: |                    
                     LVM Physical Volume UUID.
-
-                    > Опциально: присутствует, только если девайс используется как LVM Physical Volume.
+                                        
+                    > Опционально: присутствует только если устройство используется как LVM Physical Volume.
                 vgUUID:
                   description: |
-                    LVM Volume Group UUID, которой принадлежит данный девайс в качестве Physical Volume.
+                    UUID LVM Volume Group, к которой принадлежит данное устройство в качестве Physical Volume.
 
-                    > Опциально: присутствует, только если девайс используется как Physical Volume и включен в Volume Group.
+                    > Опционально: присутствует только если устройство используется как Physical Volume и включено в Volume Group.
                 partUUID:
                   description: |
                     UUID раздела.
 
-                    > Опциально: присутствует, только если девайс является разделом.
+                    > Опционально: присутствует только если устройство является разделом.
                 lvmVolumeGroupName:
                   description: |
                     Имя ресурса LVMVolumeGroup.
-
-                    > Опциально: присутствует, только если девайс используется как Physical Volume, включен в Volume Group и указан в LVMVolumeGroup-ресурсе.
+                    
+                    > Опционально: присутствует только если устройство используется как Physical Volume, включено в Volume Group и указано в ресурсе LVMVolumeGroup.
                 actualVGNameOnTheNode:
                   description: |
-                    Фактическое имя LVM Volume Group на узле, в которую включен девайс.
-
-                    > Опциально: присутствует, только если девайс используется как Physical Volume и включен в Volume Group.
+                    Фактическое имя LVM Volume Group на узле, в которую включено устройство.
+                    
+                    > Опционально: присутствует только если устройство используется как Physical Volume и включено в Volume Group.
                 wwn:
                   description: |
-                    Уникальный идентификатор девайса WWN (World Wide Name).
-
+                    Уникальный идентификатор устройства WWN (World Wide Name).
+                    
                     > Опционально: может отсутствовать, если WWN для данного типа дисков не поддерживается производителем.
                 serial:
                   description: |
-                    Уникальный серийный номер девайса.
+                    Уникальный серийный номер устройства.
                 path:
                   description: |
-                    Путь девайса на узле (/dev/sda).
+                    Путь устройства на узле (/dev/sda).
                 size:
                   description: |
-                    Размер девайса.
+                    Размер устройства.
                 model:
                   description: |
-                    Модель девайса.
-
+                    Модель устройства.
+                    
                     > Опционально: может отсутствовать, если для данного типа дисков не поддерживается производителем.
                 rota:
                   description: |
-                    Медиатип девайса:
-                    - `true` — для HHD;
-                    - `false` — для SSD.
+                    Тип носителя устройства. Может быть:
+                    - `true` - для HDD;
+                    - `false` - для SSD.
                 hotPlug:
                   description: |
-                    Тип подключения девайса:
-                    - `true` — если девайс был подключен как съемный;
-                    - `false` — в иных случаях.
+                    Тип подключения устройства. Может быть:
+                    - `true` - если устройство было подключено как съемное;
+                    - `false` - в иных случаях.
                 machineId:
                   description: |
-                    Уникальный идентификатор узла, на котором располагается девайс (обычно хранится в /etc/machine-id).
+                    Уникальный идентификатор машины, на которой располагается устройство (обычно хранится в /etc/machine-id).
+      additionalPrinterColumns:
+        - jsonPath: .status.nodeName
+          name: Node
+          description: Узел, на котором находится блочное устройство.
+        - jsonPath: .status.consumable
+          name: Consumable
+          description: Определяет, может ли текущее блочное устройство быть использовано sds-node-configurator.
+        - jsonPath: .status.size
+          name: Size
+          description: Размер включенного устройства.
+        - jsonPath: .status.path
+          name: Path
+          description: Фактический путь устройства (имя).
+        - jsonPath: .status.actualVGNameOnTheNode
+          name: VG
+          description: Volume Group, в которой находится блочное устройство.
+        - jsonPath: .status.lvmVolumeGroupName
+          name: LVMVolumeGroup
+          description: Ресурс LVMVolumeGroup, в котором находится блочное устройство.
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          description: Возраст данного ресурса.

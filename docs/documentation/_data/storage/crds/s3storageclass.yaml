@@ -4,7 +4,8 @@ metadata:
   name: s3storageclasses.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: csi-s3
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
   scope: Cluster
@@ -39,7 +40,7 @@ spec:
                 bucketName:
                   type: string
                   description: |
-                    The name of the bucket in S3. If empty, a new bucket will be dynamically created for each PVC.
+                    The name of the bucket in S3. If empty, a new bucket will be dynamically created for each PVC. 
                     If not empty, folders (paths) will be dynamically created within the specified bucket for each PVC.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -63,13 +64,13 @@ spec:
                 region:
                   type: string
                   description: |
-                    Specifies the S3 storage region. For AWS, this can be specified via the endpointUrl parameter
+                    Specifies the S3 storage region. For AWS, this can be specified via the endpointUrl parameter.
                   minLength: 1
                 insecure:
                   type: boolean
                   description: |
                     If set to true, the S3 storage class will not verify the SSL certificate of the S3 endpoint.
-                    It enables ignoring of SSL-certificates erros - we do not recommend to use the option, it's not safe.
+                    It enables ignoring of SSL-certificate errors - we do not recommend using this option as it is not safe.
                   default: false
                 accessKeyID:
                   type: string
@@ -89,9 +90,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of the S3 storage class:
-                    - `Failed` — indicating errors in the configuration or setup;
-                    - `Created` — indicating successful creation and operation.
+                    The current state of the S3 storage class. Might be:
+                    - `Failed`: Indicating errors in the configuration or setup.
+                    - `Created`: Indicating successful creation and operation.
                   enum:
                     - Failed
                     - Created

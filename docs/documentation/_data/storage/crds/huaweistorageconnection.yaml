@@ -5,6 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: csi-huawei
+    backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
   scope: Cluster
@@ -38,6 +39,8 @@ spec:
               properties:
                 storageType:
                   type: string
+                  description: |
+                    Type of Huawei storage system.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: "The storageType field is immutable."
@@ -49,18 +52,35 @@ spec:
                     - FusionStorageNAS
                 pools:
                   type: array
+                  description: |
+                    List of storage pools on the Huawei storage system.
                   items:
                     type: string
                 urls:
                   type: array
+                  description: |
+                    Management addresses for the Huawei storage system.
                   items:
                     type: string
                 login:
                   type: string
+                  description: |
+                    Username for connecting to the Huawei storage system.
                 password:
                   type: string
+                  description: |
+                    Password for connecting to the Huawei storage system.
                 protocol:
                   type: string
+                  description: |
+                    Connection protocol to the Huawei storage system. Might be:
+                    - `ISCSI` — iSCSI protocol.
+                    - `FC` — Fibre Channel protocol.
+                    - `ROCE` — RDMA over Converged Ethernet protocol.
+                    - `FC-NVME` — Fibre Channel NVMe protocol.
+                    - `NFS` — Network File System protocol.
+                    - `DPC` — Direct Protocol Connection.
+                    - `SCSI` — Small Computer System Interface protocol.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: "The protocol field is immutable."
@@ -74,10 +94,14 @@ spec:
                     - SCSI
                 portals:
                   type: array
+                  description: |
+                    Portal addresses of the Huawei storage system.
                   items:
                     type: string
                 maxClientThreads:
                   type: integer
+                  description: |
+                    Maximum number of client connections.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: "The maxClientThreads field is immutable."
@@ -89,8 +113,8 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of resources managed by the HuaweiStorageConnection custom resource:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
+                    The current state of resources managed by the HuaweiStorageConnection custom resource. Might be:
+                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation.
                     - `Created` — if everything went fine.
                   enum:
                     - Failed
@@ -112,4 +136,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource.
+          description: The age of this resource

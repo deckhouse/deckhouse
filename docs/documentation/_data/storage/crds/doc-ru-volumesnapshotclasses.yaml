@@ -1,0 +1,55 @@
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            VolumeSnapshotClass определяет параметры, которые использует основная система хранения при
+            создании снапшота тома. Конкретный VolumeSnapshotClass используется путем указания его
+            имени в объекте VolumeSnapshot.
+            VolumeSnapshotClasses не имеют пространства имен.
+          properties:
+            apiVersion:
+              description: |
+                APIVersion определяет версионированную схему этого представления объекта.
+                Серверы должны преобразовывать распознанные схемы к последнему внутреннему значению и
+                могут отклонять нераспознанные значения.
+                Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            deletionPolicy:
+              description: |
+                deletionPolicy определяет, должен ли VolumeSnapshotContent, созданный через
+                VolumeSnapshotClass, быть удален при удалении связанного VolumeSnapshot.
+                Поддерживаемые значения:
+                `Retain` — VolumeSnapshotContent и его физический снапшот в основной системе хранения сохраняются.
+                `Delete` – VolumeSnapshotContent и его физический снапшот в основной системе хранения удаляются.
+                Обязательное поле.
+            driver:
+              description: |
+                driver — это имя драйвера хранения, который обрабатывает данный VolumeSnapshotClass.
+                Обязательное поле.
+            kind:
+              description: |
+                Строковое значение, представляющее REST-ресурс, который представляет данный объект.
+                Серверы могут выводить это из конечной точки, на которую клиент отправляет запросы.
+                Не может быть обновлено.
+                В CamelCase.
+                Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            parameters:
+              description: |
+                Это карта ключ-значение со специфичными для драйвера хранения параметрами для создания снапшотов.
+                Эти значения непрозрачны для Kubernetes.
+    - name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: VolumeSnapshotClass определяет параметры, которые использует основная система хранения при создании снапшота тома. Конкретный VolumeSnapshotClass используется путем указания его имени в объекте VolumeSnapshot. VolumeSnapshotClasses не имеют пространства имен.
+          properties:
+            apiVersion:
+              description: Определяет версионированную схему этого представления объекта. Серверы должны преобразовывать распознанные схемы к последнему внутреннему значению и могут отклонять нераспознанные значения. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            deletionPolicy:
+              description: Определяет, должен ли VolumeSnapshotContent, созданный через VolumeSnapshotClass, быть удален при удалении связанного VolumeSnapshot. Поддерживаемые значения: "Retain" и "Delete". "Retain" означает, что VolumeSnapshotContent и его физический снапшот в основной системе хранения сохраняются. "Delete" означает, что VolumeSnapshotContent и его физический снапшот в основной системе хранения удаляются. Обязательное поле.
+            driver:
+              description: Имя драйвера хранения, который обрабатывает данный VolumeSnapshotClass. Обязательное поле.
+            kind:
+              description: Строковое значение, представляющее REST-ресурс, который представляет данный объект. Серверы могут выводить это из конечной точки, на которую клиент отправляет запросы. Не может быть обновлено. В CamelCase. Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            parameters:
+              description: `Parameters` — это карта ключ-значение со специфичными для драйвера хранения параметрами для создания снапшотов. Эти значения непрозрачны для Kubernetes.

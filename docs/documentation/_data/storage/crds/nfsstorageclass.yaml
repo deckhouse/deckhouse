@@ -4,7 +4,7 @@ metadata:
   name: nfsstorageclasses.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: csi-nfs
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -29,21 +29,20 @@ spec:
             - spec
           properties:
             spec:
+              type: object
               x-kubernetes-validations:
                 - rule: "!(self.connection.mtls == true) || (self.connection.tls == true)"
                   message: "If mtls is true, tls must also be true."
-              type: object
+                - rule: "self.reclaimPolicy != 'Retain' || !has(self.volumeCleanup)"
+                  message: "If reclaimPolicy is 'Retain', volumeCleanup must be omitted."
+                - rule: "self.connection.nfsVersion == '4.2' || !has(self.volumeCleanup)|| self.volumeCleanup != 'Discard'"
+                  message: "Discard mode is only available when connection.nfsVersion is '4.2'."
               description: |
                 Defines a Kubernetes StorageClass configuration.
               required:
                 - connection
                 - reclaimPolicy
                 - volumeBindingMode
-              x-kubernetes-validations:
-                - rule: "self.reclaimPolicy != 'Retain' || !has(self.volumeCleanup)"
-                  message: "If reclaimPolicy is 'Retain', volumeCleanup must be omitted."
-                - rule: "self.connection.nfsVersion == '4.2' || !has(self.volumeCleanup)|| self.volumeCleanup != 'Discard'"
-                  message: "Discard mode is only available when connection.nfsVersion is '4.2'."
               properties:
                 connection:
                   type: object
@@ -86,7 +85,7 @@ spec:
                         - "4.2"
                     tls:
                       type: boolean
-                      x-doc-d8editions: [se,se-plus,ee,fe]
+                      x-doc-d8editions: [se, se-plus, ee, fe]
                       x-kubernetes-validations:
                         - rule: self == oldSelf
                           message: Value is immutable.
@@ -97,7 +96,7 @@ spec:
                       default: false
                     mtls:
                       type: boolean
-                      x-doc-d8editions: [se,se-plus,ee,fe]
+                      x-doc-d8editions: [se, se-plus, ee, fe]
                       x-kubernetes-validations:
                         - rule: self == oldSelf
                           message: Value is immutable.
@@ -121,12 +120,12 @@ spec:
                     timeout:
                       type: integer
                       description: |
-                        NFS server timeout.
+                        The time in tenths of a second (600 is 60 seconds) during which the NFS client waits for a response before repeating the NFS request.
                       minimum: 1
                     retransmissions:
                       type: integer
                       description: |
-                        NFS retries before fail.
+                        The number of repeated attempts by the NFS client to execute the request before it takes further steps to restore the connection.
                       minimum: 1
                     readOnly:
                       type: boolean
@@ -136,7 +135,7 @@ spec:
                   type: string
                   description: |
                     chmod rights for PVs subdirectory.
-                  pattern: '^[0-7]{3,4}$'
+                  pattern: "^[0-7]{3,4}$"
                 reclaimPolicy:
                   type: string
                   x-kubernetes-validations:
@@ -144,8 +143,8 @@ spec:
                       message: Value is immutable.
                   description: |
                     Defines the behavior when a PersistentVolumeClaim (PVC) is deleted. Two values are allowed:
-                    - `Delete` — when the PVC is deleted, the associated PersistentVolume (PV) and corresponding data on the NFS server are also deleted.
-                    - `Retain` — when the PVC is deleted, the associated PersistentVolume and data on the NFS server are not deleted and require manual removal by the user. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
+                    - `Delete`: When the PVC is deleted, the associated PersistentVolume (PV) and corresponding data on the NFS server are also deleted.
+                    - `Retain`: When the PVC is deleted, the associated PersistentVolume and data on the NFS server are not deleted and require manual removal by the user. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming).
                   enum:
                     - Delete
                     - Retain
@@ -156,8 +155,8 @@ spec:
                       message: Value is immutable.
                   description: |
                     Defines the volume binding mode. The following values are allowed:
-                    - `Immediate` — the volume is provisioned immediately after the PersistentVolumeClaim (PVC) is created.
-                    - `WaitForFirstConsumer` — the volume is provisioned only when the PVC is first used by a pod. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
+                    - `Immediate`: The volume is provisioned immediately after the PersistentVolumeClaim (PVC) is created.
+                    - `WaitForFirstConsumer`: The volume is provisioned only when the PVC is first used by a pod. See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode).
                   enum:
                     - Immediate
                     - WaitForFirstConsumer
@@ -200,17 +199,18 @@ spec:
                                   type: string
                 volumeCleanup:
                   type: string
-                  x-doc-d8editions: [ee,fe]
+                  x-doc-d8editions: [ee, fe]
                   description: |
                     **This feature is available in Enterprise Edition.**
 
-                    Specifies the cleanup method to be applied to the PV’s subdirectory content before deletion.
+                    Specifies the cleanup method to be applied to the PV's subdirectory content before deletion.
                     By default, the NFS CSI driver simply deletes the directory created for the Persistent Volume (PV) on the NFS server without performing any data cleanup.
-                    When volumeCleanup is enabled, the driver will erase each file in the PV directory:
+                    When volumeCleanup is enabled, the driver will erase each file in the PV directory.
 
-                    - `Discard` — uses the filesystem’s discard (trim) functionality to free data blocks. (This option is available only when supported, for example with NFSv4.2).
-                    - `RandomFillSinglePass` — overwrites the content of each file once with random data before deletion. This is implemented by invoking the utility `shred`.
-                    - `RandomFillThreePass` — overwrites the content of each file three times with random data before deletion. This is implemented by invoking the utility `shred`.
+                    Valid options are:
+                    - `Discard`: Uses the filesystem's discard (trim) functionality to free data blocks. This option is available only when supported, for example with NFSv4.2.
+                    - `RandomFillSinglePass`: Overwrites the content of each file once with random data before deletion. This is implemented by invoking the utility `shred`.
+                    - `RandomFillThreePass`: Overwrites the content of each file three times with random data before deletion. This is implemented by invoking the utility `shred`.
                   enum:
                     - Discard
                     - RandomFillSinglePass
@@ -223,9 +223,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The StorageClass current state:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Create` — if everything went fine.
+                    The StorageClass current state. Might be: 
+                    - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: If everything went fine.
                   enum:
                     - Failed
                     - Created

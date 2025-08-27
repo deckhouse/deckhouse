@@ -4,54 +4,40 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            SCSITarget — это пользовательский ресурс Kubernetes, который определяет конфигурацию SCSI-таргета.
+            Определяет конфигурацию для SCSI-цели.
           properties:
             spec:
-              description: |
-                Spec определяет желаемое состояние SCSI-таргета.
+              description: Определяет желаемое состояние цели.
               properties:
                 deviceTemplate:
-                  description: |
-                    DeviceTemplate определяет метаданные для динамически создаваемых устройств.
+                  description: Определяет метаданные для динамически создаваемых устройств.
                   properties:
                     metadata:
-                      description: |
-                        Metadata содержит метаданные, применяемые к устройствам.
+                      description: Указывает метаданные, которые должны быть применены к устройствам.
                       properties:
                         labels:
-                          description: |
-                            Labels — это пары "ключ-значение", которые могут использоваться для выбора устройств.
+                          description: Определяют пары ключ-значение, которые могут использоваться для выбора устройств.
                 fibreChannel:
-                  description: |
-                    FibreChannel определяет конфигурацию Fibre Channel-таргета.
+                  description: Определяет конфигурацию для Fibre Channel цели.
                   properties:
                     WWNs:
-                      description: |
-                        WWNs — это список World Wide Names (WWN) для Fibre Channel-таргета.
+                      description: Определяет список World Wide Names для Fibre Channel цели.
                 iSCSI:
-                  description: |
-                    iSCSI определяет конфигурацию iSCSI-таргета.
+                  description: Определяет конфигурацию для iSCSI цели.
                   properties:
                     auth:
-                      description: |
-                        Auth содержит учетные данные для аутентификации при доступе к iSCSI-таргету.
+                      description: Указывает детали аутентификации для доступа к iSCSI цели.
                       properties:
                         login:
-                          description: |
-                            Login — это имя пользователя, используемое для аутентификации с iSCSI-таргетом.
+                          description: Определяет имя пользователя, используемое для аутентификации с iSCSI целью.
                         password:
-                          description: |
-                            Password — это пароль, используемый для аутентификации с iSCSI-таргетом.
+                          description: Определяет пароль, используемый для аутентификации с iSCSI целью.
                     iqn:
-                      description: |
-                        IQN — это iSCSI Qualified Name (полностью квалифицированное имя) таргета.
+                      description: Определяет iSCSI Qualified Name цели.
                     portals:
-                      description: |
-                        Portals — это список IP-адресов и портов (IP:port) для доступа к iSCSI-таргету.
+                      description: Определяет список адресов порталов (IP:порт) для доступа к iSCSI цели.
             status:
-              description: |
-                Status представляет наблюдаемое состояние SCSI-таргета.
+              description: Представляет наблюдаемое состояние цели.
               properties:
                 conflictMessage:
-                  description: |
-                    ConflictMessage содержит информацию о конфликтах меток, если таковые имеются.
+                  description: Содержит информацию о конфликтах меток, если они есть.
