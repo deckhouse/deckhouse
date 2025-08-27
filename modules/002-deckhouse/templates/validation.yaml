@@ -94,7 +94,6 @@ spec:
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-managed-operators'
       expression: '!(["system:serviceaccount:d8-managed-"].exists(e, (request.userInfo.username.startsWith(e))))'
-
   validations:
     - expression: |
         !(
