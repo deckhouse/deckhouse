@@ -211,9 +211,8 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			enabledModules: []string{"module1", "module2", "migrated-module1", "migrated-module2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"migrated-module1", "migrated-module2"}),
-				createModule("migrated-module1"),
-				createModule("migrated-module2"),
+				createModuleConfig("migrated-module1"),
+				createModuleConfig("migrated-module2"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
