@@ -135,7 +135,7 @@ shell:
   install:
 {{- if and (eq $.Env "CSE") $is_v2 }}
   - echo "Attention! Use integrity patches!"
-  - git clone --depth 1 --branch integrity-check-2.1.4 git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
+  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
   - alias cp='cp'
   - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
