@@ -17,7 +17,7 @@
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
 # from hubble-artifact
@@ -72,10 +72,6 @@ import:
   includePaths:
   - clang
   - llc
-- image: {{ .ModuleName }}/cni-plugins-artifact
-  add: /out/linux/amd64/bin/loopback
-  to: /cni/loopback
-  before: install
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -351,6 +347,10 @@ import:
 - image: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
+  before: install
+- image: {{ .ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
   before: install
 - image: libs/zlib-v1.3.1
   add: /usr/lib
