@@ -15,7 +15,7 @@
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
 {{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
 
-{{- $containerd := "containerd1727"}}
+{{- $containerd := "containerd1728"}}
 {{- if eq .cri "ContainerdV2" }}
   {{- $containerd = "containerdv2211" }}
 {{- end }}
