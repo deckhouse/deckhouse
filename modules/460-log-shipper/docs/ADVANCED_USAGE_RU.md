@@ -29,12 +29,13 @@ spec:
 Для начала получите список подов на желаемом узле.
 
 ```bash
-kubectl -n d8-log-shipper get pods -o wide | grep $node
+d8 k -n d8-log-shipper get pods -o wide | grep $node
 ```
 
 Выберите нужный под и выполните команды напрямую из контейнера.
+
 ```bash
-kubectl -n d8-log-shipper exec $pod -c vector -- ИМЯ_КОМАНДЫ
+d8 k -n d8-log-shipper exec $pod -c vector -- ИМЯ_КОМАНДЫ
 ```
 
 Все следующие команды предполагается запускать передавая их в контейнер.
