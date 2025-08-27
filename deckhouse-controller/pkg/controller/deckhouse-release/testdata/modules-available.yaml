@@ -48,6 +48,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: test-module-1
+spec:
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
@@ -58,6 +60,8 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: test-module-2
+spec:
+  enabled: true
 ---
 apiVersion: apps/v1
 kind: Deployment

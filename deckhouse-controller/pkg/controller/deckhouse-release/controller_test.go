@@ -1177,7 +1177,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "has no ModuleConfig")
+			require.Contains(suite.T(), newRelease.Status.Message, "is disabled in ModuleConfig")
 		})
 
 		suite.Run("mixed-enabled-disabled", func() {
@@ -1191,7 +1191,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "has no ModuleConfig")
+			require.Contains(suite.T(), newRelease.Status.Message, "is disabled in ModuleConfig")
 		})
 
 		suite.Run("enabled-module-not-found", func() {
@@ -1206,7 +1206,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
 			require.Contains(suite.T(), newRelease.Status.Message, "migrated module")
-			require.Contains(suite.T(), newRelease.Status.Message, "has no ModuleConfig")
+			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
 		suite.Run("migrated-module-not-enabled", func() {
@@ -1220,7 +1220,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 			newRelease := suite.getDeckhouseRelease("v1.50.0")
 			require.Equal(suite.T(), "Pending", newRelease.Status.Phase)
-			require.Contains(suite.T(), newRelease.Status.Message, "has no ModuleConfig")
+			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 	})
 }

@@ -103,19 +103,25 @@ func createModuleSource(name string, modules []string) *v1alpha1.ModuleSource {
 }
 
 // nolint:unparam
-func createModule(name string) *v1alpha1.Module {
-	return &v1alpha1.Module{
+func createModuleConfig(name string) *v1alpha1.ModuleConfig {
+	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled: &[]bool{true}[0],
 		},
 	}
 }
 
 // nolint:unparam
-func createModuleConfig(name string) *v1alpha1.ModuleConfig {
+func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled: &[]bool{false}[0],
 		},
 	}
 }
@@ -213,6 +219,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 				createClusterConfigSecret("1.28.0"),
 				createModuleConfig("migrated-module1"),
 				createModuleConfig("migrated-module2"),
+				createModuleSource("test-source", []string{"migrated-module1", "migrated-module2"}),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -248,10 +255,11 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Approved releases with whitespace-only migrated modules should be allowed",
 		},
 		{
-			name:           "reject when migrated module is missing",
+			name:           "reject when migrated module is disabled in ModuleConfig",
 			enabledModules: []string{"module1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
+				createDisabledModuleConfig("disabled-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -259,14 +267,15 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: false,
 			wantMessage: "requirements not met",
-			description: "Releases with migrated modules that are missing in cluster should be rejected",
+			description: "Releases with migrated modules that are disabled in ModuleConfig should be rejected",
 		},
 		{
-			name:           "reject when one migrated module exists and another is missing",
+			name:           "reject when one migrated module is enabled and another is disabled",
 			enabledModules: []string{"enabled-module"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModule("enabled-module"),
+				createModuleConfig("enabled-module"),
+				createDisabledModuleConfig("disabled-module"),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -274,14 +283,16 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: false,
 			wantMessage: "requirements not met",
-			description: "Releases with mixed present/missing migrated modules should be rejected",
+			description: "Releases with mixed enabled/disabled migrated modules should be rejected",
 		},
 		{
-			name:           "reject when migrated module is not present in cluster",
+			name:           "reject when migrated module is not found in ModuleSource",
 			enabledModules: []string{"cert-manager", "prometheus", "dashboard"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("test-source", []string{"cert-manager", "prometheus", "non-enabled-module"}),
+				createModuleConfig("cert-manager"),
+				createModuleConfig("prometheus"),
+				createModuleSource("test-source", []string{"cert-manager", "prometheus"}),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -289,7 +300,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: false,
 			wantMessage: "requirements not met",
-			description: "Releases with migrated modules that are not present in cluster should be rejected",
+			description: "Releases with migrated modules that are not found in ModuleSource should be rejected",
 		},
 	}
 
@@ -395,6 +406,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 				createModuleConfig("module-a"),
 				createModuleConfig("module-b"),
 				createModuleConfig("module-c"),
+				createModuleSource("test-source", []string{"module-a", "module-b", "module-c"}),
 			},
 			wantAllowed: true,
 			description: "DeckhouseRelease with complex migratedModules should be allowed when all modules exist",

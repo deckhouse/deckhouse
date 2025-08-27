@@ -36,6 +36,13 @@ spec:
 status:
   modulesCount: 0
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: enabled-module-not-found
+spec:
+  enabled: true
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

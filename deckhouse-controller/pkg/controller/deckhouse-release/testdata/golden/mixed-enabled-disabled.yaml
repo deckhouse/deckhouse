@@ -27,7 +27,7 @@ spec:
   version: v1.50.0
 status:
   approved: false
-  message: migrated module "enabled-module" has no ModuleConfig
+  message: migrated module "disabled-module" is disabled in ModuleConfig
   phase: Pending
   transitionTime: "2019-10-17T15:33:00Z"
 ---

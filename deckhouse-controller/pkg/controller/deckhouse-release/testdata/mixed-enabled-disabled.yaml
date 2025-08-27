@@ -38,6 +38,20 @@ status:
     - name: enabled-module
   modulesCount: 1
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: enabled-module
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: disabled-module
+spec:
+  enabled: false
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
