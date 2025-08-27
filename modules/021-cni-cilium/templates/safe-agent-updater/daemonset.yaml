@@ -53,6 +53,34 @@ spec:
       - name: deckhouse-registry
       serviceAccountName: safe-agent-updater
       initContainers:
+      - name: check-wg-kernel-compat
+        image: {{ include "helm_lib_module_image" (list . "checkWgKernelCompat") }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: WG_KERNEL_CONSTRAINT
+          value: ">= 6.8"
+        command:
+          - "/check-wg-kernel-compat"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+        securityContext:
+          readOnlyRootFilesystem: true
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+              - SYS_MODULE
+            drop:
+              - ALL
+          privileged: false
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: cni-path
+          mountPath: /hostbin
       {{- include "module_init_container_check_linux_kernel" (tuple . .Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
@@ -135,3 +163,8 @@ spec:
             memory: "1Mi"
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       {{- end }}
+      volumes:
+      - name: cni-path
+        hostPath:
+          path:  "/opt/cni/bin"
+          type: DirectoryOrCreate
