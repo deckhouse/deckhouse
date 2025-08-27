@@ -225,9 +225,30 @@ class GroupTree(list[Group]):
 
         # looking for root nodes
         all_children = {child.name for g in name_to_group.values() for child in g.subgroups}
+        # find root nodes: groups that are never listed as a child of another group
         roots = [g for g in name_to_group.values() if g.name not in all_children]
 
-        # no roots -> means that we are dealing with there cycled graph
+        # DFS helper to collect all reachable groups starting from given roots
+        reachable = set()
+        def dfs(group):
+            if group.name in reachable:
+                return
+            reachable.add(group.name)
+            for sub in group.subgroups:
+                dfs(sub)
+
+        # Explore from all discovered roots
+        for r in roots:
+            dfs(r)
+
+        # Any groups that are not reachable from roots are assumed to be cyclic
+        cyclic_groups = [g for g in name_to_group.values() if g.name not in reachable]
+
+        if cyclic_groups:
+            # Add cyclic groups as separate "roots" so they can still be validated later
+            roots.extend(cyclic_groups)
+
+        # # Fallback: if no roots exist at all, return a tree with the target group only
         if not roots:
             return cls([root_group])
 
