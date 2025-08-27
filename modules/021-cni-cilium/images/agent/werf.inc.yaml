@@ -19,7 +19,7 @@
 # from cni-plugins-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
 # from hubble-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
@@ -75,10 +75,6 @@ import:
 - image: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
-  before: install
-- image: {{ .ModuleName }}/gops-artifact
-  add: /out/linux/amd64/bin/gops
-  to: /bin/gops
   before: install
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
@@ -351,6 +347,10 @@ import:
 - image: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
+  before: install
+- image: {{ .ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
   before: install
 - image: libs/zlib-v1.3.1
   add: /usr/lib
