@@ -11,25 +11,15 @@
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
-# from bpftool-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
-# from cni-plugins-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
-# from gops-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
 # from hubble-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
-# from common/pause
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
-# from /jq
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/jq" }}
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
@@ -65,6 +55,13 @@ import:
   add: /src/binary_replace.sh
   to: /binary_replace.sh
   before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -486,14 +483,6 @@ import:
 - image: libs/xz-v5.8.1
   add: /usr/lib/libc.so
   to: /lib/x86_64-linux-gnu/libc.so
-  before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/clang
-  to: /usr/local/bin/clang
-  before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/llc
-  to: /usr/local/bin/llc
   before: install
 git:
 {{- include "image mount points" . }}
