@@ -431,22 +431,54 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	if err := c.k8sclient.List(ctx, mcList); err != nil {
 		return fmt.Errorf("failed to list ModuleConfigs: %w", err)
 	}
-	moduleConfigs := set.New()
-	for _, mc := range mcList.Items {
-		moduleConfigs.Add(mc.Name)
+
+	moduleSources := &v1alpha1.ModuleSourceList{}
+	if err := c.k8sclient.List(ctx, moduleSources); err != nil {
+		return fmt.Errorf("failed to list ModuleSources: %w", err)
 	}
 
 	for _, moduleName := range modules {
-		if !moduleConfigs.Has(moduleName) {
+		found := false
+		for _, mc := range mcList.Items {
+			if mc.Name == moduleName && mc.IsEnabled() {
+				c.setMigratedModuleNotFoundAlert(moduleName)
+				c.logger.Warn("migrated module has is not found in module source", slog.String("module", moduleName))
+				return fmt.Errorf("migrated module %q is not found in module source", moduleName)
+
+			}
+		}
+
+		for _, source := range moduleSources.Items {
+			if c.isModuleAvailableInSource(moduleName, &source) {
+				found = true
+				c.logger.Debug("migrated module found in source", slog.String("module", moduleName), slog.String("sourceName", source.Name))
+				break
+			}
+		}
+
+		if !found {
+			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
-			c.logger.Warn("migrated module has no ModuleConfig", slog.String("module", moduleName))
-			return fmt.Errorf("migrated module %q has no ModuleConfig", moduleName)
+
+			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
 		}
 	}
 
 	c.logger.Debug("all migrated modules have ModuleConfig")
 
 	return nil
+}
+
+// isModuleAvailableInSource checks if a module is available in a specific ModuleSource
+func (c *migratedModulesCheck) isModuleAvailableInSource(moduleName string, source *v1alpha1.ModuleSource) bool {
+	// Check if module is in the available modules list
+	for _, availableModule := range source.Status.AvailableModules {
+		if availableModule.Name == moduleName {
+			// If there's a pull error, the module is not actually available
+			return availableModule.Error == ""
+		}
+	}
+	return false
 }
 
 // setMigratedModuleNotFoundAlert generates a Prometheus alert for missing migrated module
