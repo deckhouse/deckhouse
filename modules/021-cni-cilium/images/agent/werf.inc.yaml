@@ -11,15 +11,15 @@
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni/loopback" }}
 # from gops-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/bin/gops" }}
 # from hubble-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
@@ -27,9 +27,9 @@
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # from common/pause
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/pause" }}
 # from /jq
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/jq" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/jq" }}
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
@@ -65,25 +65,6 @@ import:
   add: /src/binary_replace.sh
   to: /binary_replace.sh
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/
-  to: /usr/local/bin
-  before: install
-  includePaths:
-  - clang
-  - llc
-- image: {{ .ModuleName }}/bpftool-artifact
-  add: /usr/local/bin/bpftool
-  to: /usr/local/bin/bpftool
-  before: install
-- image: {{ .ModuleName }}/cni-plugins-artifact
-  add: /out/linux/amd64/bin/loopback
-  to: /cni/loopback
-  before: install
-- image: {{ .ModuleName }}/gops-artifact
-  add: /out/linux/amd64/bin/gops
-  to: /bin/gops
-  before: install
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -118,14 +99,6 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
-- image: tools/jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: install
 - image: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
@@ -325,12 +298,56 @@ import:
   - rtstat
 - image: tools/bash-completion-2.16.0
   before: install
-  add: /usr/share/bash-completion
-  to: /usr/share/bash-completion
+  add: /usr/share/bash-completion/bash_completion
+  to: /usr/share/bash-completion/bash_completion
 - image: tools/bash-completion-2.16.0
   before: install
   add: /etc/profile.d/bash_completion.sh
   to: /etc/bashrc.d/bash_completion.sh
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: install
+  includePaths:
+  - clang
+  - llc
+- image: tools/elfutils-elfutils-0.193
+  add: /usr/lib
+  to: /lib64
+  before: install
+  includePaths:
+  - libelf.a
+  - libelf.so
+  - libelf.so.1
+  - libelf-0.193.so
+- image: tools/gcc-12.1.0
+  add: /usr/lib64
+  to: /lib64
+  before: install
+  includePaths:
+  - libstdc++.so.6
+  - libstdc++.so.6.0.30
+  - libgcc_s.so.1
+- image: {{ .ModuleName }}/cni-plugins-artifact
+  add: /out/linux/amd64/bin/loopback
+  to: /cni/loopback
+  before: install
+- image: {{ .ModuleName }}/gops-artifact
+  add: /out/linux/amd64/bin/gops
+  to: /bin/gops
+  before: install
+- image: {{ .ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
+  before: install
 - image: libs/glibc-v2.41
   add: /lib64/libm.so.6
   to: /lib64/libm.so.6
@@ -343,15 +360,6 @@ import:
   add: /lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
-- image: tools/elfutils-elfutils-0.193
-  add: /usr/lib
-  to: /lib64
-  before: install
-  includePaths:
-  - libelf.a
-  - libelf.so
-  - libelf.so.1
-  - libelf-0.193.so
 - image: libs/zlib-v1.3.1
   add: /usr/lib
   to: /lib64
@@ -478,14 +486,6 @@ import:
   add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   before: install
-- image: tools/gcc-12.1.0
-  add: /usr/lib64
-  to: /lib64
-  before: install
-  includePaths:
-  - libstdc++.so.6
-  - libstdc++.so.6.0.30
-  - libgcc_s.so.1
 - image: libs/glibc-v2.41
   add: /lib64/libc.musl-x86_64.so.1
   to: /lib64/libc.musl-x86_64.so.1
