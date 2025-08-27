@@ -54,7 +54,7 @@ func TestLoadConversions(t *testing.T) {
 		{
 			name:        "empty conversions path",
 			modulePath:  "",
-			expectError: false,
+			expectError: true,
 			expectEmpty: true,
 			expectCount: 0,
 		},

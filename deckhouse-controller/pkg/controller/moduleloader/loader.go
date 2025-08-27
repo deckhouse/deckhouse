@@ -68,7 +68,8 @@ var (
 	// validModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
 	validModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
 
-	ErrModuleIsNotFound = errors.New("module is not found")
+	ErrModuleIsNotFound              = errors.New("module is not found")
+	ErrConversionsDirectoryPathEmpty = errors.New("conversions directory path is empty")
 )
 
 var _ loader.ModuleLoader = &Loader{}
@@ -209,6 +210,9 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		// load conversions for settings
 		conversions, err = l.loadConversions(conversionsDir)
 		if err != nil {
+			if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
+				return nil, fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
+			}
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 	} else if !os.IsNotExist(err) {
@@ -603,7 +607,7 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 // loadConversions loads all conversion rules from the module's conversions directory
 func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettingsConversion, error) {
 	if conversionsDir == "" {
-		return nil, nil
+		return nil, ErrConversionsDirectoryPathEmpty
 	}
 
 	// Read all files from conversions directory
