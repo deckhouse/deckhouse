@@ -13,7 +13,7 @@
 # from llvm-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from bpftool-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/bpftool" }}
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from cni-plugins-artifact
@@ -72,10 +72,6 @@ import:
   includePaths:
   - clang
   - llc
-- image: {{ .ModuleName }}/bpftool-artifact
-  add: /usr/local/bin/bpftool
-  to: /usr/local/bin/bpftool
-  before: install
 - image: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
@@ -351,6 +347,10 @@ import:
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
+  before: install
+- image: {{ .ModuleName }}/bpftool-artifact
+  add: /usr/local/bin/bpftool
+  to: /usr/local/bin/bpftool
   before: install
 - image: libs/zlib-v1.3.1
   add: /usr/lib
