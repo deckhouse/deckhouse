@@ -255,7 +255,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Approved releases with whitespace-only migrated modules should be allowed",
 		},
 		{
-			name:           "reject when migrated module is disabled in ModuleConfig",
+			name:           "allow when migrated module is disabled in ModuleConfig",
 			enabledModules: []string{"module1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -300,10 +300,10 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: false,
 			wantMessage: "requirements not met",
-			description: "Releases with migrated modules that are not found in ModuleSource should be rejected",
+			description: "Releases with migrated modules that are not found in ModuleSource and not disabled in MC should be rejected",
 		},
 		{
-			name:           "mc exists disabled; not in source -> allowed",
+			name:           "allow when ModuleConfig exists disabled and not in source",
 			enabledModules: []string{"module-x"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -316,7 +316,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "ModuleConfig disabled bypasses ModuleSource",
 		},
 		{
-			name:           "mc exists enabled; not in source -> reject",
+			name:           "reject when ModuleConfig exists enabled and not in source",
 			enabledModules: []string{"module-y"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -330,7 +330,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Enabled ModuleConfig requires ModuleSource",
 		},
 		{
-			name:           "mc exists enabled; in source -> allowed",
+			name:           "reject when ModuleConfig exists enabled and exists in ModuleSource",
 			enabledModules: []string{"module-z"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -340,10 +340,10 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			operation:   "CREATE",
 			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-z"}),
 			wantAllowed: true,
-			description: "Enabled ModuleConfig with presence in ModuleSource is OK",
+			description: "Enabled ModuleConfig with presence in ModuleSource",
 		},
 		{
-			name:           "no mc; in source -> allowed",
+			name:           "allow when no in ModuleConfig and exists in ModuleSource",
 			enabledModules: []string{"module-a1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
@@ -355,7 +355,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			description: "Absent ModuleConfig falls back to ModuleSource and passes",
 		},
 		{
-			name:           "no mc; not in source -> reject",
+			name:           "reject when no in ModuleConfig and not in ModuleSource",
 			enabledModules: []string{"module-a2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
