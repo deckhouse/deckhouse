@@ -14,21 +14,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import json
-import typing
+import unittest
 
-from group import main
 from deckhouse import hook, tests
 from dotmap import DotMap
 
-def _prepare_validation_binding_context(binding_context_json, new_spec: dict) -> DotMap:
+from group import main
+
+
+def _prepare_validation_binding_context(binding_context_json, new_spec: dict, snapshots: dict) -> DotMap:
     ctx_dict = json.loads(binding_context_json)
     ctx = DotMap(ctx_dict)
     ctx.review.request.object.spec = new_spec
+    ctx.snapshots = snapshots
     return ctx
 
-def _prepare_update_binding_context(new_spec: dict) -> DotMap:
+DEFAULT_UPDATE_SNAPSHOT = {
+    "groups": [
+        {
+            "filterResult": {
+                "groupName": "group-1",
+                "members": [
+                    {
+                        "kind": "User",
+                        "name": "superadmin"
+                    }
+                ],
+                "name": "group-1"
+            }
+        },
+        {
+            "filterResult": {
+                "groupName": "group-2",
+                "members": [
+                    {
+                        "kind": "User",
+                        "name": "test"
+                    },
+                    {
+                        "kind": "Group",
+                        "name": "group-1"
+                    }
+                ],
+                "name": "group-2"
+            }
+        }
+    ],
+    "users": [
+        {
+            "filterResult": {
+                "userName": "superadmin"
+            }
+        },
+        {
+            "filterResult": {
+                "userName": "test"
+            }
+        }
+    ]
+}
+
+def _prepare_update_binding_context(new_spec: dict, snapshots: dict) -> DotMap:
     binding_context_json = """
 {
     "binding": "groups-unique.deckhouse.io",
@@ -97,23 +144,11 @@ def _prepare_update_binding_context(new_spec: dict) -> DotMap:
                             "time": "2024-11-21T14:44:35Z"
                         }
                     ],
-                    "name": "candi-admins",
+                    "name": "group-1",
                     "resourceVersion": "1184522270",
                     "uid": "7820c68b-6423-49f0-b97f-b7e314e23c0b"
                 },
-                "spec": {
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        },
-                        {
-                            "kind": "Group",
-                            "name": "none-exists-2"
-                        }
-                    ],
-                    "name": "candi-admins"
-                }
+                "spec": {}
             },
             "oldObject": {
                 "apiVersion": "deckhouse.io/v1alpha1",
@@ -175,30 +210,80 @@ def _prepare_update_binding_context(new_spec: dict) -> DotMap:
             }
         }
     },
-    "snapshots": {
-        "groups": [
+    "snapshots": {},
+    "type": "Validating"
+}
+"""
+    return _prepare_validation_binding_context(binding_context_json, new_spec, snapshots)
+
+DEFAULT_CREATE_SNAPSHOT = {
+    "groups": [
             {
                 "filterResult": {
-                    "groupName": "candi-admins",
+                    "groupName": "admins",
                     "members": [
                         {
                             "kind": "User",
-                            "name": "superadmin"
+                            "name": "admin"
+                        },
+                        {
+                            "kind": "User",
+                            "name": "weak-admin"
                         }
                     ],
-                    "name": "candi-admins"
+                    "name": "admins"
                 }
             },
             {
                 "filterResult": {
-                    "groupName": "crowd-ro",
+                    "groupName": "group-1",
+                    "members": [
+                        {
+                            "kind": "User",
+                            "name": "superadmin"
+                        },
+                        {
+                            "kind": "Group",
+                            "name": "group-2"
+                        },
+                        {
+                            "kind": "Group",
+                            "name": "new-group"
+                        }
+                    ],
+                    "name": "group-1"
+                }
+            },
+            {
+                "filterResult": {
+                    "groupName": "group-2",
                     "members": [
                         {
                             "kind": "User",
                             "name": "test"
+                        },
+                        {
+                            "kind": "Group",
+                            "name": "new-group"
                         }
                     ],
-                    "name": "crowd-ro"
+                    "name": "group-2"
+                }
+            },
+            {
+                "filterResult": {
+                    "groupName": "group-3",
+                    "members": [
+                        {
+                            "kind": "User",
+                            "name": "test"
+                        },
+                        {
+                            "kind": "Group",
+                            "name": "new-group"
+                        }
+                    ],
+                    "name": "group-3"
                 }
             }
         ],
@@ -214,13 +299,9 @@ def _prepare_update_binding_context(new_spec: dict) -> DotMap:
                 }
             }
         ]
-    },
-    "type": "Validating"
-}
-"""
-    return _prepare_validation_binding_context(binding_context_json, new_spec)
+    }
 
-def _prepare_create_binding_context(new_spec: dict) -> DotMap:
+def _prepare_create_binding_context(new_spec: dict, snapshots: dict) -> DotMap:
     binding_context_json = """
 {
     "binding": "groups-unique.deckhouse.io",
@@ -281,15 +362,7 @@ def _prepare_create_binding_context(new_spec: dict) -> DotMap:
                     "name": "new",
                     "uid": "f43bdc3f-61a2-4957-ae5a-241972717118"
                 },
-                "spec": {
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        }
-                    ],
-                    "name": "new-group"
-                }
+                "spec": {}
             },
             "oldObject": null,
             "dryRun": false,
@@ -301,209 +374,138 @@ def _prepare_create_binding_context(new_spec: dict) -> DotMap:
             }
         }
     },
-    "snapshots": {
-        "groups": [
-            {
-                "filterResult": {
-                    "groupName": "candi-admins",
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        },
-                        {
-                            "kind": "Group",
-                            "name": "none-exists-2"
-                        }
-                    ],
-                    "name": "candi-admins"
-                }
-            },
-            {
-                "filterResult": {
-                    "groupName": "crowd-ro",
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "test"
-                        }
-                    ],
-                    "name": "crowd-ro"
-                }
-            }
-        ],
-        "users": [
-            {
-                "filterResult": {
-                    "userName": "superadmin"
-                }
-            },
-            {
-                "filterResult": {
-                    "userName": "test"
-                }
-            }
-        ]
-    },
+    "snapshots": {},
     "type": "Validating"
 }
 """
-    return _prepare_validation_binding_context(binding_context_json, new_spec)
+    return _prepare_validation_binding_context(binding_context_json, new_spec, snapshots)
 
-def _prepare_delete_binding_context(delete_spec: dict, has_member : bool) -> DotMap:
-    binding_context_json = """
-{
-    "binding": "groups-unique.deckhouse.io",
-    "review": {
-        "request": {
-            "uid": "d47e6935-8e58-4270-b193-c4a8e2626ba1",
-            "kind": {
-                "group": "deckhouse.io",
-                "version": "v1alpha1",
-                "kind": "Group"
-            },
-            "resource": {
-                "group": "deckhouse.io",
-                "version": "v1alpha1",
-                "resource": "groups"
-            },
-            "requestKind": {
-                "group": "deckhouse.io",
-                "version": "v1alpha1",
-                "kind": "Group"
-            },
-            "requestResource": {
-                "group": "deckhouse.io",
-                "version": "v1alpha1",
-                "resource": "groups"
-            },
-            "name": "new",
-            "operation": "DELETE",
-            "userInfo": {
-                "username": "kubernetes-admin",
-                "groups": [
-                    "system:masters",
-                    "system:authenticated"
-                ]
-            },
-            "object": null,
-            "oldObject": {
-                "apiVersion": "deckhouse.io/v1alpha1",
-                "kind": "Group",
-                "metadata": {
-                    "creationTimestamp": "2024-11-22T08:00:33Z",
-                    "generation": 1,
-                    "managedFields": [
-                        {
-                            "apiVersion": "deckhouse.io/v1alpha1",
-                            "fieldsType": "FieldsV1",
-                            "fieldsV1": {
-                                "f:spec": {
-                                    ".": {},
-                                    "f:members": {},
-                                    "f:name": {}
-                                }
-                            },
-                            "manager": "kubectl-create",
-                            "operation": "Update",
-                            "time": "2024-11-22T08:00:33Z"
-                        }
-                    ],
-                    "name": "new",
-                    "resourceVersion": "1185233604",
-                    "uid": "f43bdc3f-61a2-4957-ae5a-241972717118"
+
+class TestGroupCycleValidationWebhook(unittest.TestCase):
+    def test_create_group_should_fail_with_cycle_detected(self):
+        ctx = _prepare_create_binding_context({
+            "members": [
+                {
+                    "kind": "User",
+                    "name": "test"
                 },
-                "spec": {
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        }
-                    ],
+                {
+                    "kind": "Group",
+                    "name": "group-2"
+                }
+            ],
+            "name": "new-group"
+        }, DEFAULT_CREATE_SNAPSHOT)
+        out = hook.testrun(main, [ctx])
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("group-1" -> "group-2" -> '
+                   '"new-group" -> "group-2"). Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
+
+    def test_create_group_should_fail_with_cycle_detected_2(self):
+        ctx = _prepare_create_binding_context({
+            "members": [
+                {
+                    "kind": "User",
+                    "name": "test"
+                },
+                {
+                    "kind": "Group",
                     "name": "new-group"
                 }
-            },
-            "dryRun": false,
-            "options": {
-                "kind": "DeleteOptions",
-                "apiVersion": "meta.k8s.io/v1",
-                "propagationPolicy": "Background"
-            }
-        }
-    },
-    "snapshots": {
-        "groups": [
-            {
-                "filterResult": {
-                    "groupName": "candi-admins",
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        },
-                        {
-                            "kind": "Group",
-                            "name": "none-exists-2"
-                        }
-                    ],
-                    "name": "candi-admins"
-                }
-            },
-            {
-                "filterResult": {
-                    "groupName": "crowd-ro",
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "test"
-                        }
-                    ],
-                    "name": "crowd-ro"
-                }
-            },
-            {
-                "filterResult": {
-                    "groupName": "new-group",
-                    "members": [
-                        {
-                            "kind": "User",
-                            "name": "superadmin"
-                        }
-                    ],
-                    "name": "new"
-                }
-            }
-        ],
-        "users": [
-            {
-                "filterResult": {
-                    "userName": "superadmin"
-                }
-            },
-            {
-                "filterResult": {
-                    "userName": "test"
-                }
-            }
-        ]
-    },
-    "type": "Validating"
-}
-"""
-    ctx_dict = json.loads(binding_context_json)
-    ctx = DotMap(ctx_dict)
-    ctx.review.request.oldObject.spec = delete_spec
-    if has_member:
-        snp_dict = DotMap({
-            "kind": "Group",
-            "name": "new",
-        })
-        ctx.snapshots.groups[0].filterResult.members.append(snp_dict)
-        ctx.snapshots.groups[1].filterResult.members.append(snp_dict)
-    return ctx
+            ],
+            "name": "new-group"
+        }, DEFAULT_CREATE_SNAPSHOT)
+        out = hook.testrun(main, [ctx])
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("group-1" -> "group-2" -> '
+                   '"new-group" -> "new-group"). Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
 
-class TestGroupValidationWebhook(unittest.TestCase):
-    def test_should_update(self):
+    def test_create_group_should_fail_with_cycle_detected_3(self):
+        ctx = _prepare_create_binding_context({
+            "members": [
+                {
+                    "kind": "User",
+                    "name": "test"
+                },
+                {
+                    "kind": "Group",
+                    "name": "new-group"
+                }
+            ],
+            "name": "new-group"
+        },
+        {
+            "groups": [
+                {
+                    "filterResult": {
+                        "groupName": "admins",
+                        "members": [
+                            {
+                                "kind": "User",
+                                "name": "admin"
+                            },
+                            {
+                                "kind": "User",
+                                "name": "weak-admin"
+                            }
+                        ],
+                        "name": "admins"
+                    }
+                }
+            ]
+        })
+        out = hook.testrun(main, [ctx])
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("new-group" -> "new-group"). '
+                   'Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
+
+    def test_update_group_should_fail_with_cycle_detected(self):
+        ctx = _prepare_update_binding_context({
+            "members": [
+                {
+                    "kind": "User",
+                    "name": "superadmin"
+                },
+                {
+                    "kind": "Group",
+                    "name": "group-2"
+                },
+                {
+                    "kind": "User",
+                    "name": "not-exists"
+                }
+            ],
+            "name": "group-1"
+        }, DEFAULT_UPDATE_SNAPSHOT)
+        out = hook.testrun(main, [ctx])
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("group-1" -> "group-2" -> '
+                   '"group-1"). Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
+
+    def test_update_group_should_fail_with_cycle_detected_2(self):
+        ctx = _prepare_update_binding_context({
+            "members": [
+                {
+                    "kind": "User",
+                    "name": "superadmin"
+                },
+                {
+                    "kind": "Group",
+                    "name": "group-1"
+                },
+                {
+                    "kind": "User",
+                    "name": "not-exists"
+                }
+            ],
+            "name": "group-1"
+        }, DEFAULT_UPDATE_SNAPSHOT)
+        out = hook.testrun(main, [ctx])
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("group-2" -> "group-1" -> '
+                   '"group-1"). Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
+
+    def test_update_group_should_fail_with_cycle_detected_3(self):
         ctx = _prepare_update_binding_context({
             "members": [
                 {
@@ -512,164 +514,53 @@ class TestGroupValidationWebhook(unittest.TestCase):
                 },
                 {
                     "kind": "Group",
-                    "name": "candi-admins-2"
+                    "name": "new-group"
                 }
             ],
-            "name": "candi-admins"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_should_update_with_warning_with_new_group_member_not_exists_group(self):
-        ctx = _prepare_update_binding_context({
-            "members": [
+            "name": "new-group"
+        },
+        {
+            "groups": [
                 {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-                {
-                    "kind": "Group",
-                    "name": "none-exists-2"
+                    "filterResult": {
+                        "groupName": "admins",
+                        "members": [
+                            {
+                                "kind": "User",
+                                "name": "admin"
+                            },
+                            {
+                                "kind": "User",
+                                "name": "weak-admin"
+                            }
+                        ],
+                        "name": "admins"
+                    }
                 }
-            ],
-            "name": "candi-admins"
+            ]
         })
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, 'groups.deckhouse.io "none-exists-2" not exist')
-
-    def test_should_update_with_warning_new_group_member_not_exists_user(self):
-        ctx = _prepare_update_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-                {
-                    "kind": "User",
-                    "name": "not-exists"
-                }
-            ],
-            "name": "candi-admins"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, 'users.deckhouse.io "not-exists" not exist')
-
-    def test_should_update_with_warnings_new_group_member_not_exists_user_and_group(self):
-        ctx = _prepare_update_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-                {
-                    "kind": "Group",
-                    "name": "none-exists-2"
-                },
-                {
-                    "kind": "User",
-                    "name": "not-exists"
-                }
-            ],
-            "name": "candi-admins"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "none-exists-2" not exist',
-            'users.deckhouse.io "not-exists" not exist'
-        ))
+        err_msg = (f'Invalid group hierarchy: cycle detected! Path: groups.deckhouse.io("new-group" -> "new-group"). '
+                'Groups must form a tree without circular references.')
+        tests.assert_validation_deny(self, out, err_msg)
 
     def test_should_create_group(self):
         ctx = _prepare_create_binding_context({
             "members": [
                 {
                     "kind": "User",
-                    "name": "superadmin"
-                },
-            ],
-            "name": "new-group"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_create_group_with_warnings_with_not_exists_user_and_group(self):
-        ctx = _prepare_create_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
+                    "name": "test"
                 },
                 {
                     "kind": "Group",
-                    "name": "none-exists-2"
-                },
-                {
-                    "kind": "User",
-                    "name": "not-exists"
+                    "name": "some-none-exists-group"
                 }
             ],
             "name": "new-group"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "none-exists-2" not exist',
-            'users.deckhouse.io "not-exists" not exist'
-        ))
-
-    def test_create_should_fail_with_already_exist_group(self):
-        ctx = _prepare_create_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-            ],
-            "name": "candi-admins"
-        })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_deny(self, out, 'groups.deckhouse.io "candi-admins" already exists')
-
-    def test_create_should_fail_with_system_group(self):
-        ctx = _prepare_create_binding_context({
-                "members": [
-                    {
-                        "kind": "User",
-                        "name": "superadmin"
-                    },
-                ],
-                "name": "system:new-group"
-            })
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_deny(self, out, 'groups.deckhouse.io "system:new-group" must not start with the "system:" prefix')
-
-    def test_delete(self):
-        ctx = _prepare_delete_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-            ],
-            "name": "new"
-        }, False)
+        }, DEFAULT_CREATE_SNAPSHOT)
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
 
-
-    def test_delete_with_warnings_if_(self):
-        ctx = _prepare_delete_binding_context({
-            "members": [
-                {
-                    "kind": "User",
-                    "name": "superadmin"
-                },
-            ],
-            "name": "new"
-        }, True)
-        out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, (
-            'groups.deckhouse.io "candi-admins" contains groups.deckhouse.io "new"',
-            'groups.deckhouse.io "crowd-ro" contains groups.deckhouse.io "new"'
-        ))
 
 if __name__ == '__main__':
     unittest.main()
