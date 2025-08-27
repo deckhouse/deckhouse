@@ -447,7 +447,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 			}
 		}
 
-		// If module is not in ModuleConfig or is enabled, check ModuleSource (old logic)
+		// If module is not in ModuleConfig or is enabled, check ModuleSource
 		found := false
 		for _, source := range moduleSources.Items {
 			if c.isModuleAvailableInSource(moduleName, &source) {
