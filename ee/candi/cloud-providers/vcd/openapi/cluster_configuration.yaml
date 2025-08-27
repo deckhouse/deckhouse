@@ -440,9 +440,6 @@ apiVersions:
             server:
               type: string
               description: The host or the IP address of the VCD server.
-              x-kubernetes-validations:
-                - rule: "!(self.endsWith('/'))"
-                  message: "The 'server' field must not end with a slash '/'."
             username:
               type: string
               description: The login ID.
