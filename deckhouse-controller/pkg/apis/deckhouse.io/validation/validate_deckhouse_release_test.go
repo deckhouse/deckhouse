@@ -111,6 +111,15 @@ func createModule(name string) *v1alpha1.Module {
 	}
 }
 
+// nolint:unparam
+func createModuleConfig(name string) *v1alpha1.ModuleConfig {
+	return &v1alpha1.ModuleConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+}
+
 func createAdmissionReview(operation string, obj, oldObj interface{}) *admissionv1.AdmissionReview {
 	review := &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
@@ -384,11 +393,9 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			enabledModules: []string{"module-a", "module-b", "module-c"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"module-a", "module-b"}),
-				createModuleSource("source2", []string{"module-c"}),
-				createModule("module-a"),
-				createModule("module-b"),
-				createModule("module-c"),
+				createModuleConfig("module-a"),
+				createModuleConfig("module-b"),
+				createModuleConfig("module-c"),
 			},
 			wantAllowed: true,
 			description: "DeckhouseRelease with complex migratedModules should be allowed when all modules exist",
@@ -401,8 +408,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			enabledModules: []string{"module1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"available-module"}),
-				createModule("available-module"),
+				createModuleConfig("available-module"),
 			},
 			wantAllowed: false,
 			description: "DeckhouseRelease with partially available migratedModules should be rejected",
