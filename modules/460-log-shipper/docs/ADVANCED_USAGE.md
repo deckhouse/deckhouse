@@ -28,6 +28,7 @@ To begin with, retrieve the list of pods on the desired node.
 ```bash
 kubectl -n d8-log-shipper get pods -o wide | grep $node
 ```
+
 Select the appropriate pod and execute commands directly from the container.
 
 ```bash

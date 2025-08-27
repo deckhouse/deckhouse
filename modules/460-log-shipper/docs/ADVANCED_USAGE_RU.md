@@ -33,6 +33,7 @@ kubectl -n d8-log-shipper get pods -o wide | grep $node
 ```
 
 Выберите нужный под и выполните команды напрямую из контейнера.
+
 ```bash
 kubectl -n d8-log-shipper exec $pod -c vector -- ИМЯ_КОМАНДЫ
 ```
