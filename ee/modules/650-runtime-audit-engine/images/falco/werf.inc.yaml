@@ -25,14 +25,6 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: builder/src
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  includePaths:
-    - '**/*.patch'
-  stageDependencies:
-    install:
-      - '**/*.patch'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -45,7 +37,6 @@ shell:
   - cd /src/falcoctl
   - git rev-parse HEAD > RELEASE
   - git rev-parse HEAD > COMMIT
-  - git apply /patches/falcoctl/*.patch --verbose
   - rm -rf /src/falco/.git
   - rm -rf /src/plugins/.git
   - rm -rf /src/falcoctl/.git
