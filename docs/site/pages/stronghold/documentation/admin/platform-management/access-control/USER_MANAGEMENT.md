@@ -112,7 +112,7 @@ spec:
     clientSecret: plainstring
 ```
 
-In a [GitHub organization](https://docs.github.com/ru/organizations), create a new application:
+In a [GitHub organization](https://docs.github.com/en/organizations), create a new application:
 
 1. Go to **Settings** → **Developer settings** → **OAuth Apps** → **Register a new OAuth application**.
 1. In the **Authorization callback URL** field, enter:
