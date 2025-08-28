@@ -68,3 +68,7 @@ Slightly tunes some logic related to validating ingress objects.
 ### 013-verbose-maxmind-logs.patch
 
 Added additional logging when downloading GeoIP databases from the MaxMind service.
+
+### 014-disable-error-logs.patch
+
+Disabling log messages such as "Error obtaining Endpoints for Service...".
