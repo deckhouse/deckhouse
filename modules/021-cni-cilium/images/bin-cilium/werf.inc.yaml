@@ -84,4 +84,7 @@ shell:
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
   #
   - rm -rf /src/cilium/vendor
+  # fix compatibility with the new version of bash_completion
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/cilium-dbg
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/hubble
 ---

@@ -15,11 +15,11 @@
 # from cilium-envoy-artifact
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from hubble-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
@@ -66,21 +66,6 @@ import:
   add: /iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
-- image: {{ .ModuleName }}/cilium-artifact
-  add: /tmp/install
-  to: /
-  before: install
-  includePaths:
-  - cni-uninstall.sh
-  - init-container.sh
-  - install-plugin.sh
-  - LICENSE.all
-  - etc/bash_completion.d/cilium-dbg
-  - opt/cni/bin/cilium-cni
-  - usr/bin/cilium*
-  - var/lib/cilium/bpf
-  - usr/bin/hubble
-  - etc/bash_completion.d/hubble
 - image: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
@@ -98,9 +83,6 @@ shell:
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   - /binary_replace.sh -i "/etc/localtime" -o /relocate
   # copy self built binaries and deps
-  # fix compatibility with the new version of bash_completion
-  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/cilium-dbg
-  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /etc/bash_completion.d/hubble
   - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate for iptables
   - |
@@ -335,11 +317,26 @@ import:
 - image: {{ .ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
-  before: install
+  before: setup
   includePaths:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
+- image: {{ .ModuleName }}/cilium-artifact
+  add: /tmp/install
+  to: /
+  before: setup
+  includePaths:
+  - cni-uninstall.sh
+  - init-container.sh
+  - install-plugin.sh
+  - LICENSE.all
+  - etc/bash_completion.d/cilium-dbg
+  - opt/cni/bin/cilium-cni
+  - usr/bin/cilium*
+  - var/lib/cilium/bpf
+  - usr/bin/hubble
+  - etc/bash_completion.d/hubble
 - image: libs/zlib-v1.3.1
   add: /usr/lib
   to: /lib64
