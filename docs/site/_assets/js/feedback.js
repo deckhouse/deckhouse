@@ -5,11 +5,55 @@ document.addEventListener('DOMContentLoaded', function () {
     const formModal = document.querySelector('.window__feedback--form');
     const moreDetailed = formModal.querySelector('.button');
     const closeBtn = document.querySelectorAll('.modal-window__close-btn');
+    const detailedInput = document.querySelector('.more-detailed');
+    const currentUrl = window.location.href;
+    const cookieUserIp = 'user_ip';
 
     let accessModalTimeout;
+    let cookieUserData = getCookie(cookieUserIp) || { user_ip: generateUUID(), pages: {}};
+    console.log(cookieUserData)
+    setCookie(cookieUserIp, cookieUserData, 365);
+
+    function setCookie(ip, value, days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        const expires = 'expires=' + date.toUTCString();
+        document.cookie = ip + '=' + encodeURIComponent(JSON.stringify(value)) + ';' + expires + ';path=/';
+    }
+
+    function getCookie(name) {
+        const cookieName = name + '=';
+        const decode = decodeURIComponent(document.cookie);
+        const cookieArray = decode.split(';');
+
+        for(let i = 0; i < cookieArray.length; i++) {
+            let cookie = cookieArray[i];
+            while (cookie.charAt(0) === ' ') {
+                cookie = cookie.substring(1);
+            }
+            if(cookie.indexOf(cookieName) === 0) {
+                try {
+                    return JSON.parse(cookie.stringify(cookieName.length, cookie.length));
+                } catch(error) {
+                    // console.error(error);
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.floor(Math.random() * 16);
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
 
     function showAccessModal() {
         accessModal.style.display = 'flex';
+        clearTimeout(accessModalTimeout);
         accessModalTimeout = setTimeout(hideAccessModal, 10000);
     }
 
@@ -17,18 +61,79 @@ document.addEventListener('DOMContentLoaded', function () {
         accessModal.style.display = 'none';
     }
 
-    likeIcon.addEventListener('click', function() {
-        likeIcon.classList.add('active');
-        dislikeIcon.classList.remove('active');
+    function showFormModal() {
+        formModal.style.display = 'flex';
+    }
 
-        showAccessModal();
+    function hideFormModal() {
+        formModal.style.display = 'none';
+        formModal.querySelectorAll('.checkbox').forEach(checkbox => checkbox.checked = false);
+        if(detailedInput) detailedInput.value = '';
+    }
+
+    function buttonState() {
+        const feedbackPage = cookieUserData.pages[currentUrl];
+        if(feedbackPage) {
+            if(feedbackPage.result === true) {
+                likeIcon.classList.add('active');
+                dislikeIcon.classList.remove('active');
+            } else if(feedbackPage.result === false) {
+                dislikeIcon.classList.add('active');
+                likeIcon.classList.remove('active');
+            }
+        } else {
+            dislikeIcon.classList.remove('active');
+            likeIcon.classList.remove('active');
+        }
+    }
+
+    async function sendFeedback(result, reasons = [], detailed_reason = '') {
+        try {
+            const feedbackData = {
+                feedback_url: currentUrl,
+                user_ip: cookieUserData.user_ip,
+                result: result,
+                reasons: reasons,
+                detailed_reason: detailed_reason
+            };
+
+            const response = await fetch('/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=utf-8',
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(feedbackData)
+            });
+
+            if(!response.ok) {
+                throw new Error(response.status);
+            }
+
+            cookieUserData.pages[currentUrl] = {result: result, reasons: reasons, detailed_reason: detailed_reason};
+            setCookie(cookieUserIp, cookieUserData, 365);
+
+            if(result === true) {
+                likeIcon.classList.add('active');
+                dislikeIcon.classList.remove('active');
+            } else {
+                likeIcon.classList.remove('active');
+                dislikeIcon.classList.add('active');
+            }
+
+            showAccessModal();
+        } catch(error) {
+            // console.error(error);
+            buttonState();
+        }
+    }
+
+    likeIcon.addEventListener('click', async function() {
+        await sendFeedback(true);
     })
 
     dislikeIcon.addEventListener('click', function() {
-        dislikeIcon.classList.add('active');
-        likeIcon.classList.remove('active');
-
-        formModal.style.display = 'flex';
+        showFormModal();
     })
 
     closeBtn.forEach(btn => {
@@ -39,19 +144,24 @@ document.addEventListener('DOMContentLoaded', function () {
         })
     })
 
-    moreDetailed.addEventListener('click', function(e) {
+    moreDetailed.addEventListener('click', async function(e) {
         e.preventDefault();
-        const checkbox = formModal.querySelectorAll('.checkbox:checked');
-        if(checkbox) {
-            console.log(checkbox.values);
-        } else {
-            console.log('не выбран');
+        const reasons = [];
+        formModal.querySelectorAll('.checkbox:checked').forEach(checkbox => {
+            reasons.push(checkbox.value);
+        })
+        const detailedReason = detailedInput.value.trim();
+
+        if(reasons.length === 0 && detailedReason === '') {
+            alert('Выберите хотя бы одну причину')
             return;
         }
 
-        formModal.style.display = 'none';
-        showAccessModal();
+        hideFormModal();
+        await sendFeedback(false, reasons, detailedReason)
     })
+
+    buttonState();
 
     window.addEventListener('beforeunload', function() {
         this.clearTimeout(accessModalTimeout);
