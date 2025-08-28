@@ -188,8 +188,8 @@ import:
   before: install
 - image: tools/coreutils-v9.7
   before: setup
-  add: /usr/bin
-  to: /usr/bin
+  add: /usr/bin/
+  to: /usr/bin/
   includePaths:
   - env
   - ls
@@ -219,8 +219,8 @@ import:
   to: /usr/bin/curl
 - image: tools/bash-v5.2.37
   before: setup
-  add: /usr/bin
-  to: /usr/bin
+  add: /usr/bin/
+  to: /usr/bin/
   includePaths:
   - bash
   - sh
@@ -229,8 +229,8 @@ import:
   add: /usr/bin/find
 - image: tools/gawk-v5.3.2
   before: setup
-  add: /usr/bin
-  to: /usr/bin
+  add: /usr/bin/
+  to: /usr/bin/
   includePaths:
   - awk
   - gawk
