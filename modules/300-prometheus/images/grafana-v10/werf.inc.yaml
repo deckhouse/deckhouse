@@ -48,6 +48,7 @@ shell:
   - apt-get -y --no-install-recommends install gcc musl musl-tools git
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   - git clone --depth 1 --branch v0.6.0 $(cat /run/secrets/SOURCE_REPO)/google/wire.git /src/wire
+  - sed -i 's/^go 1\.12/go 1.24.6/' /src/wire/go.mod
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
   - go work use -go=1.24.6
