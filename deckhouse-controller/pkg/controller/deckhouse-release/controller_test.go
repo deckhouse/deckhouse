@@ -1096,8 +1096,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Migrated Modules", func() {
-		suite.Run("no-migrated-modules", func() {
-			suite.setupController("no-migrated-modules.yaml", initValues, embeddedMUP)
+		suite.Run("No migrated modules", func() {
+			suite.setupController("migrated-modules-no-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1110,8 +1110,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("empty-migrated-modules", func() {
-			suite.setupController("empty-migrated-modules.yaml", initValues, embeddedMUP)
+		suite.Run("Empty migrated modules", func() {
+			suite.setupController("migrated-modules-empty-migrated-modules.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1124,8 +1124,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("modules-available", func() {
-			suite.setupController("modules-available.yaml", initValues, embeddedMUP)
+		suite.Run("Modules available", func() {
+			suite.setupController("migrated-modules-modules-available.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1138,22 +1138,22 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("module-missing", func() {
-			suite.setupController("module-missing.yaml", initValues, embeddedMUP)
+		suite.Run("Module missing", func() {
+			suite.setupController("migrated-modules-module-missing.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 
-		suite.Run("module-pull-error", func() {
-			suite.setupController("module-pull-error.yaml", initValues, embeddedMUP)
+		suite.Run("Module pull error", func() {
+			suite.setupController("migrated-modules-module-pull-error.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
 		})
 
-		suite.Run("mc-disabled-not-in-source", func() {
-			suite.setupController("mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
+		suite.Run("MC disabled not in source", func() {
+			suite.setupController("migrated-modules-mc-disabled-not-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1165,8 +1165,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), "Deployed", newRelease.Status.Phase)
 		})
 
-		suite.Run("mc-enabled-not-in-source", func() {
-			suite.setupController("mc-enabled-not-in-source.yaml", initValues, embeddedMUP)
+		suite.Run("MC enabled not in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-not-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
@@ -1179,8 +1179,8 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.Contains(suite.T(), newRelease.Status.Message, "not found in any ModuleSource registry")
 		})
 
-		suite.Run("mc-enabled-in-source", func() {
-			suite.setupController("mc-enabled-in-source.yaml", initValues, embeddedMUP)
+		suite.Run("MC enabled in source", func() {
+			suite.setupController("migrated-modules-mc-enabled-in-source.yaml", initValues, embeddedMUP)
 			dr := suite.getDeckhouseRelease("v1.50.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
