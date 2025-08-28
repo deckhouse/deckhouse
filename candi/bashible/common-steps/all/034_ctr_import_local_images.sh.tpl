@@ -21,7 +21,7 @@ ctr_import_image() {
   local image_name="$1"
   local image_path="$2"
 
-  ctr -n k8s.io images import --index-name "$image_name" "$image_path"
+  ctr -n k8s.io images import "$image_path"
   ctr -n k8s.io images label "$image_name" io.cri-containerd.pinned=pinned
 }
 
@@ -36,7 +36,7 @@ post-install-import() {
   fi
 
   if [[ "${PACKAGE}" == "kubernetes-api-proxy" ]]; then
-    ctr_import_image {{ $kubernetes_api_proxy_image }} "/opt/deckhouse/images/kubernetes-api-proxy.tar"
+    ctr_import_image "/opt/deckhouse/images/kubernetes-api-proxy.tar"
     return 0
   fi
 }
