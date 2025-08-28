@@ -66,7 +66,7 @@ data:
 
         root   /app;
         index  index.html readme.html;
-        error_page 403 404 /404.html;
+        error_page 403 404 /$lang/404.html;
 
         charset utf-8;
         access_log     /dev/stdout json_combined;
@@ -119,14 +119,12 @@ data:
             set $channel "$2";
             set $module_doc "$3";
 
-            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.*)$ /modules-web-test2/$channel/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /modules-web-test2/$channel/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /modules-web-test2/$channel/$lang/modules/$module/$module_doc break;
             #rewrite ^/(.+) /modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/$lang/$1 break;
 
             #try_files @s3 =404;
             #try_files /$lang/embedded-modules/$1 /$lang/embedded-modules/$1/index.html /$lang/embedded-modules/$1/ /$lang/modules/$1 /$lang/modules/$1/index.html /$lang/modules/$1/ =404;
-        #}
-
-        #location @s3 {
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
             proxy_cache_key         $uri;

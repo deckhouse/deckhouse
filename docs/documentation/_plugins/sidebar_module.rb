@@ -92,8 +92,8 @@ module Jekyll
 
       lang = @context.registers[:page]['lang']
       moduleName = entry['moduleName']
-      entry_with_lang = "/%s%s" % [lang, entry['url']]
-      page_url = @context.registers[:page]['url'].sub(/\/index.html?$/, '/')
+      page_url = @context.registers[:page]['url'].sub(%r{\/index.html$}, '/').sub(%r{^/?modules/[^/]+/},'')
+      entry_url_without_module_path = entry['url'].sub(%r{^/?modules/[^/]+/},'')
 
       if entry['url'].end_with?('/')
         sidebarItemTitle = @context.registers[:site].data['modules']['sidebar']['titles']['overview'][lang]
@@ -134,14 +134,16 @@ module Jekyll
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['external_url'] }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
       elsif !external_url.nil? && external_url.size > 0
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
-      elsif page_url == entry['url'] or page_url == entry_with_lang
+      elsif page_url == entry_url_without_module_path
         #or sidebar_group_page == entry['url']
-        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{sidebarItemTitle}</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ entry['url'] }'>#{sidebarItemTitle}</a></li>")
       else
         if @context.registers[:page]['url'] == '404.md'
-          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + getTrueRelativeUrl(entry['url']) }'>#{sidebarItemTitle}</a></li>))
+          # There is no sidebar on 404 page yet.
+          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + entry['url'] }'>#{sidebarItemTitle}</a></li>))
         else
-          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ getTrueRelativeUrl(entry['url']) }'>#{sidebarItemTitle}</a></li>))
+          # Unknown case.
+          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['url'] }'>#{sidebarItemTitle}</a></li>))
         end
       end
 
