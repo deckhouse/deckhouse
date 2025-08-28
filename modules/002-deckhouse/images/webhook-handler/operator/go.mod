@@ -4,10 +4,13 @@ go 1.23.8
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250825145639-a11cd86c59d0
+	github.com/stretchr/testify v1.9.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.30.11
 	k8s.io/apimachinery v0.30.11
 	k8s.io/client-go v0.30.11
 	sigs.k8s.io/controller-runtime v0.18.7
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -46,6 +49,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
@@ -78,7 +82,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.30.1 // indirect
 	k8s.io/apiserver v0.30.1 // indirect
 	k8s.io/component-base v0.30.1 // indirect
@@ -88,5 +91,4 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.29.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
