@@ -24,4 +24,4 @@ d8 k get nodes
 
 ## Remote Connection to the Platform
 
-You can set up a remote connection to the cluster. To do this, follow the steps on your personal computer as described in [the instructions](../../platform-management/access-control/user_management.html).
+You can set up a remote connection to the cluster. To do this, follow the steps on your personal computer as described in [the instructions](../../platform-management/access-control/user-management.html#create-a-configuration-file-for-remote-access).
