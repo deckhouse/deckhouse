@@ -55,6 +55,7 @@ shell:
   - rm -rf /src/wire
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
+  - go mod tidy
   - go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
