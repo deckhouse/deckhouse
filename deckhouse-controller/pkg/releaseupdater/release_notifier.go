@@ -22,7 +22,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -125,7 +127,11 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 	buf := bytes.NewBuffer(nil)
 
-	_, err := retry(5, 2*time.Second, func() (*http.Response, error) {
+	retryBackoff := 2 * time.Second
+	if config.RetryMinTime.Duration > 0 {
+		retryBackoff = config.RetryMinTime.Duration
+	}
+	_, err := retry(5, retryBackoff, func() (*http.Response, error) {
 		defer buf.Reset()
 
 		err := json.NewEncoder(buf).Encode(data)
@@ -145,6 +151,12 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
+		}
+
+		defer resp.Body.Close()
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
+			bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+			return nil, fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
 		}
 
 		return resp, nil
@@ -181,6 +193,7 @@ type NotificationConfig struct {
 	WebhookURL              string          `json:"webhook"`
 	SkipTLSVerify           bool            `json:"tlsSkipVerify"`
 	MinimalNotificationTime libapi.Duration `json:"minimalNotificationTime"`
+	RetryMinTime            libapi.Duration `json:"retryMinTime"`
 	Auth                    *Auth           `json:"auth,omitempty"`
 	ReleaseType             ReleaseType     `json:"releaseType"`
 }
