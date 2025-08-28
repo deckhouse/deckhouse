@@ -58,19 +58,36 @@ func GetPrivateKeys(keyPath string) (*session.AgentPrivateKey, error) {
 		var passphraseMissingError *ssh.PassphraseMissingError
 		switch {
 		case errors.As(err, &passphraseMissingError):
-			if len(passphrase) == 0 {
-				passphraseFromStdin, err := terminal.AskPassword(
-					fmt.Sprintf("Enter passphrase for ssh key %q: ", keyPath),
-				)
-				if err != nil {
-					return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", keyPath, err)
+			attempt := 0
+			for {
+				if attempt == 5 {
+					return nil, fmt.Errorf("too many attempts for ssh private key passphrase")
 				}
-				passphrase = passphraseFromStdin
+				passphrase, err = askPassword(keyPath)
+				if err != nil {
+					return nil, err
+				}
+				_, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, passphrase)
+				if err == nil {
+					break
+				}
+				attempt++
 			}
+
 		default:
 			return nil, fmt.Errorf("parsing private key %q: %w", keyPath, err)
 		}
 	}
 
 	return &session.AgentPrivateKey{Key: keyPath, Passphrase: string(passphrase)}, nil
+}
+
+func askPassword(path string) ([]byte, error) {
+	passphraseFromStdin, err := terminal.AskPassword(
+		fmt.Sprintf("Enter passphrase for ssh key %q: ", path),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting passphrase for ssh key %q: %w", path, err)
+	}
+	return passphraseFromStdin, nil
 }
