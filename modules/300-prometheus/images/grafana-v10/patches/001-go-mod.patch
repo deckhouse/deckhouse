@@ -1,0 +1,12 @@
+diff --git a/go.mod b/go.mod
+index 548aeed3..2315fbb5 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,6 +1,6 @@
+ module github.com/grafana/grafana
+ 
+-go 1.24.3
++go 1.24.6
+ 
+ // Override docker/docker to avoid:
+ // go: github.com/drone-runners/drone-runner-docker@v1.8.2 requires

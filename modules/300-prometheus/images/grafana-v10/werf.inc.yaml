@@ -10,11 +10,18 @@ fromImage: common/src-artifact
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
+git:
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
   - mkdir -p /usr/src/app
   - cd /usr/src/app
   - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana.git .
+  - git apply /patches/*.patch --verbose
   - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /grafana-public
   - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /grafana-plugins
   - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git
