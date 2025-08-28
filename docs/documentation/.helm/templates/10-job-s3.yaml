@@ -6,6 +6,10 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Chart.Name }}-s3-upload-{{ .VersionDNSNormalized }}
+  annotations:
+    werf.io/skip-logs: "false"
+    werf.io/show-logs-only-for-containers: "s3-loader"
+    werf.io/show-service-messages: "true"
 spec:
   ttlSecondsAfterFinished: 1
   template:
