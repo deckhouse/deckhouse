@@ -28,7 +28,29 @@ set -Eeo pipefail
 
 
 function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+  local kubeconfig="/etc/kubernetes/kubelet.conf"
+  local args=""
+
+  local kube_server
+  kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
+  if [[ -n "$kube_server" ]]; then
+    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
+    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
+    # checking local kubernetes-api-proxy availability
+    if ! (echo > /dev/tcp/"$host"/"$port") 2>/dev/null; then
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        host=$(echo "$server" | cut -d: -f1)
+        port=$(echo "$server" | cut -d: -f2)
+        # select the first available control plane
+        if (echo > /dev/tcp/"$host"/"$port") 2>/dev/null; then
+          args="--server=https://$server"
+          break
+        fi
+      done
+    fi
+  fi
+
+  kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
 }
 
 function bb-event-error-create() {
