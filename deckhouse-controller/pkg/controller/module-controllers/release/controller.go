@@ -1390,12 +1390,14 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{}, err
 	}
 
-	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
+	symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.GetWeight(), release.GetModuleName()))
+	if _, err := os.Stat(symlinkPath); err == nil {
 		r.exts.DeleteConstraints(release.GetModuleName())
+		if err = os.RemoveAll(symlinkPath); err != nil {
+			if os.IsNotExist(err) {
 
-		symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.GetWeight(), release.GetModuleName()))
-		if err := os.RemoveAll(symlinkPath); err != nil {
-			r.log.Error("failed to remove module in downloaded symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
+			}
+			r.log.Error("failed to remove module in symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
 			return ctrl.Result{}, err
 		}
 		// TODO(yalosev): we have to disable module here somehow.
