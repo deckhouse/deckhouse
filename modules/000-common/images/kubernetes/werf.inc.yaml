@@ -102,7 +102,7 @@ shell:
   - go mod vendor
 
 {{- if eq $.SVACE_ENABLED "true" }}
-# we need stat analyse only one kube-api-server.
+# we need stat analyse only one kube-api-server
   - |
   {{- $buildContext := deepCopy $ -}}
   {{- $_ := set $buildContext "BuildCommand" `make all WHAT=cmd/kube-apiserver GOLDFLAGS="-s -w -extldflags \"-static\"" KUBE_STATIC_OVERRIDES="kubelet"` -}}
