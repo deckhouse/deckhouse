@@ -30,7 +30,7 @@ set -Eeo pipefail
 function kubectl_exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local args=""
-
+{{ if eq .runType "Normal" }}
   local kube_server
   kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
   if [[ -n "$kube_server" ]]; then
@@ -49,7 +49,7 @@ function kubectl_exec() {
       done
     fi
   fi
-
+{{ end }}
   kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
 }
 
