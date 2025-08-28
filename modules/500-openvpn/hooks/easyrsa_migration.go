@@ -111,23 +111,32 @@ func migration(input *go_hook.HookInput) error {
 	// TODO Handle as v0->v1 conversion on migrating to DeckhouseConfig objects in PR#1729.
 	// input.ConfigValues.Remove("openvpn.storageClass")
 
-	migrated := len(input.Snapshots["easyrsa_migrated"]) > 0
+	migrated := len(input.NewSnapshots.Get("easyrsa_migrated")) > 0
 
 	// if pvc does not exist then no migration is required
-	if len(input.Snapshots["openvpn_pvc"]) == 0 {
+	if len(input.NewSnapshots.Get("openvpn_pvc")) == 0 {
 		migrated = true
 	} else {
 		// if pvc exists, then get storageClassName from it and set effectiveStorageClass
-		pvc := input.Snapshots["openvpn_pvc"][0].(string)
+		var pvc string
+		err := input.NewSnapshots.Get("openvpn_pvc")[0].UnmarshalTo(&pvc)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal pvc: %w", err)
+		}
 		input.Values.Set("openvpn.internal.effectiveStorageClass", pvc)
 	}
 
-	statefulsets := input.Snapshots["openvpn_sts"]
+	statefulsets := input.NewSnapshots.Get("openvpn_sts")
 
 	if len(statefulsets) > 0 {
-		if migrated && statefulsets[0].(string) != "true" {
+		var sts string
+		err := statefulsets[0].UnmarshalTo(&sts)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal openvpn_sts: %w", err)
+		}
+		if migrated && sts != "true" {
 			input.PatchCollector.Delete("apps/v1", "StatefulSet", "d8-openvpn", "openvpn")
-			input.Logger.Info("statefulset/openvpn deleted", slog.Bool("migrated", migrated), slog.String("sts", statefulsets[0].(string)))
+			input.Logger.Info("statefulset/openvpn deleted", slog.Bool("migrated", migrated), slog.String("sts", sts))
 		}
 	}
 
