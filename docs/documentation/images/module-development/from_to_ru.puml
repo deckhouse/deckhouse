@@ -1,0 +1,39 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam DefaultTextAlignment center
+skinparam ArrowFontStyle italic
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+if (Заданы правила from-to?) then (Нет)
+  :Обновление по порядку;
+  stop
+else (Да)
+  if (Текущая версия модуля\nниже значения from?) then (Да)
+    :Обновление по порядку;
+    stop
+  else (Нет)
+    :Если правил несколько —\nиспользуется значение to с наибольшей версией;
+
+    if (Для этой версии есть\nupdate-настройки (параметр update.versions) ?) then (Нет)
+      :Обновление по порядку;
+      stop
+    else (Да)
+      :Устанавливается последняя доступная\nверсия модуля в пределах значения to;
+
+      :Ожидается подтверждение выбора релиза с аннотацией\nmodules.deckhouse.io/approved="true";
+
+      :Промежуточные релизы пропускаются (Skipped);
+      :Установлена последняя доступная\nверсия модуля в пределах значения to (Deployed);
+      stop
+    endif
+  endif
+endif
+
+@enduml
+
+
