@@ -50,6 +50,7 @@ shell:
   - git clone --depth 1 --branch v0.6.0 $(cat /run/secrets/SOURCE_REPO)/google/wire.git /src/wire
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64 CC=/usr/bin/musl-gcc
+  - go work use -go=1.24.6
   - cd /src/wire/cmd/wire && go install
   - rm -rf /src/wire
   - cd /usr/src/app
