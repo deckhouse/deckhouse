@@ -91,17 +91,21 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	if !ctx.CommanderMode() {
 		availableHosts := ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts()
 
+		needReconnect := false
 		for _, host := range availableHosts {
 			for _, dhost := range nodesToDeleteInfo {
 				if host.Name == dhost.name {
 					ctx.KubeClient().NodeInterfaceAsSSHClient().Session().RemoveAvailableHosts(host)
+					if host.Host == ctx.KubeClient().NodeInterfaceAsSSHClient().Session().Host() {
+						needReconnect = true
+					}
 				}
 			}
 		}
 
 		log.DebugF("list of available host: %-v\n", ctx.KubeClient().NodeInterfaceAsSSHClient().Session().AvailableHosts())
 
-		if len(nodesToDeleteInfo) > 0 {
+		if len(nodesToDeleteInfo) > 0 && needReconnect {
 			err = retry.NewSilentLoop("reconnecting to SSH", 10, 10).Run(func() error {
 				ctx.KubeClient().NodeInterfaceAsSSHClient().Stop()
 				err = ctx.KubeClient().NodeInterfaceAsSSHClient().Start()
