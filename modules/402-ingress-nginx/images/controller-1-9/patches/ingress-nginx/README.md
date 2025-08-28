@@ -74,3 +74,7 @@ Added additional logging when downloading GeoIP databases from the MaxMind servi
 This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
 
 https://github.com/kubernetes/ingress-nginx/pull/13830
+
+### 015-disable-error-logs.patch
+
+Disabling log messages such as "Error obtaining Endpoints for Service...".
