@@ -325,7 +325,7 @@ import:
 - image: {{ .ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
-  before: setup
+  before: install
   includePaths:
   - cni-uninstall.sh
   - init-container.sh
