@@ -102,7 +102,6 @@ func createModuleSource(name string, modules []string) *v1alpha1.ModuleSource {
 	}
 }
 
-// nolint:unparam
 func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
@@ -114,7 +113,6 @@ func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 	}
 }
 
-// nolint:unparam
 func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{
 		ObjectMeta: metav1.ObjectMeta{
