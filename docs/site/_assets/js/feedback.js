@@ -10,8 +10,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const cookieUserIp = 'user_ip';
 
     let accessModalTimeout;
+
     let cookieUserData = getCookie(cookieUserIp) || { user_ip: generateUUID(), pages: {}};
-    console.log(cookieUserData)
+    // console.log(cookieUserData)
     setCookie(cookieUserIp, cookieUserData, 365);
 
     function setCookie(ip, value, days) {
@@ -153,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const detailedReason = detailedInput.value.trim();
 
         if(reasons.length === 0 && detailedReason === '') {
-            alert('Выберите хотя бы одну причину')
+            // console.log('надо хотя бы одну причину')
             return;
         }
 
