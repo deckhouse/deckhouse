@@ -211,8 +211,11 @@ import:
   - stat
   - tail
   - timeout
-  - true
   - wc
+- image: tools/coreutils-v9.7
+  before: setup
+  add: /usr/bin/true
+  to: /usr/bin/true
 - image: registrypackages/d8-curl-artifact-8-9-1
   before: setup
   add: /d8-curl
