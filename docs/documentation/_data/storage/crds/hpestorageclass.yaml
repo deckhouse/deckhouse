@@ -80,9 +80,9 @@ spec:
                     - ext4
                 reclaimPolicy:
                   description: |
-                    The storage class's reclaim policy.
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
-                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
+                    The storage class's reclaim policy. Might be:
+                    - `Delete`: If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Retain`: If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   type: string
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -98,9 +98,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The Storage class current state:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Created` — if everything went fine.
+                    The Storage class current state. Might be: 
+                    - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: If everything went fine.
                   enum:
                     - Failed
                     - Created
@@ -121,4 +121,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource.
+          description: The age of this resource

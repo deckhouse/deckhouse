@@ -10,37 +10,44 @@ spec:
               properties:
                 storageType:
                   description: |
-                    Тип СХД.
+                    Тип СХД Huawei.
                 pools:
                   description: |
-                    Список пулов хранения на СХД.
+                    Список пулов хранения на СХД Huawei.
                 urls:
                   description: |
-                    Адрес управления.
+                    Адреса управления СХД Huawei.
                 login:
                   description: |
-                    Имя пользователя для подключения к СХД.
+                    Имя пользователя для подключения к СХД Huawei.
                 password:
                   description: |
-                    Пароль пользователя для подключения к СХД.
+                    Пароль пользователя для подключения к СХД Huawei.
                 protocol:
                   description: |
-                    Протокол подключения к СХД.
+                    Протокол подключения к СХД Huawei. Может принимать следующие значения:
+                    - `ISCSI` — протокол iSCSI.
+                    - `FC` — протокол Fibre Channel.
+                    - `ROCE` — протокол RDMA over Converged Ethernet.
+                    - `FC-NVME` — протокол Fibre Channel NVMe.
+                    - `NFS` — протокол Network File System.
+                    - `DPC` — протокол Direct Protocol Connection.
+                    - `SCSI` — протокол Small Computer System Interface.
                 portals:
                   description: |
-                    Адреса порталов СХД.
+                    Адреса порталов СХД Huawei.
                 maxClientThreads:
                   description: |
-                    Максимум клиентских подключений.
+                    Максимальное количество клиентских подключений.
             status:
               description: |
-                Отображает текущую информацию о ресурсах.
+                Отображает текущую информацию о ресурсах, управляемых пользовательским ресурсом HuaweiStorageConnection.
               properties:
                 phase:
                   description: |
-                    Текущее состояние ресурсов:
-                    - `Failed` — если контроллер получил некорректную конфигурацию ресурсов или возникли ошибки в процессе выполнения операции;
+                    Текущее состояние ресурсов, управляемых пользовательским ресурсом HuaweiStorageConnection. Может принимать следующие значения:
+                    - `Failed` — если контроллер получил некорректную конфигурацию ресурсов или возникли ошибки в процессе выполнения операции.
                     - `Created` — если все прошло успешно.
                 reason:
                   description: |
-                    Дополнительная информация о текущем состоянии ресурсов.
+                    Дополнительная информация о ресурсах, управляемых пользовательским ресурсом HuaweiStorageConnection.

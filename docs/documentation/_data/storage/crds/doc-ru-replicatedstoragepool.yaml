@@ -4,37 +4,37 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Интерфейс для управления Storage Pool в бэкенде LINSTOR.
+            ReplicatedStoragePool — это Kubernetes Custom Resource, который определяет конфигурацию для Linstor Storage-pools.
           properties:
             spec:
-              description: |
-                Определяет желаемые правила для Storage-пулов LINSTOR.
               properties:
                 type:
                   description: |
-                    Определяет тип Volume'ов:
-                    - `LVM` — для классических LVM-томов;
-                    - `LVMThin` — для thin-томов.
+                    Определяет тип томов. Может быть:
+                    - `LVM` — для Thick томов;
+                    - `LVMThin` — для Thin томов.
                 lvmVolumeGroups:
                   description: |
-                    Список LVMVolumeGroup-ресурсов, Volume Group'ы/thin-пулы которых будут использованы для создания Storage-pool'ов в бэкенде LINSTOR.
-
-                    > Обратите внимание, что каждый LVMVolumeGroup-ресурс обязан иметь тот же тип (thin/thick), что указан в поле 'Spec.Type' текущего ресурса.
+                    Массив имен ресурсов LVMVolumeGroup, чьи Volume Groups/Thin-pools будут использованы для выделения
+                    необходимого пространства.
+                    
+                    > Обратите внимание, что каждый ресурс LVMVolumeGroup должен иметь тот же тип Thin/Thick,
+                    что указан в поле 'Spec.Type' текущего ресурса.
                   items:
                     properties:
                       name:
                         description: |
-                          Имя ресурса LVMVolumeGroup.
+                          Имя выбранного ресурса LVMVolumeGroup.
                       thinPoolName:
                         description: |
-                          Имя выбранного thin-пул в рамках указанного LVMVolumeGroup. Обязательное поле если вы создаёте ReplicatedStoragePool с типом LVMThin.
+                          Имя выбранного Thin-pool в рамках указанного LVMVolumeGroup. Обязательное поле если вы создаёте ReplicatedStoragePool с типом LVMThin.
             status:
               properties:
                 phase:
                   description: |
-                    Текущее состояние ReplicatedStoragePool-ресурса:
-                    - `Completed` — если контроллер получил корректную конфигурацию ресурса и конфигурация Storage-pool'ов в LINSTOR обновлена;
-                    - `Updating` — если контроллер получил корректную конфигурацию ресурса и конфигурация Storage-pool'ов в LINSTOR обновляется;
+                    Текущее состояние ресурса ReplicatedStoragePool. Может быть:
+                    - `Completed` — если контроллер получил корректную конфигурацию ресурса и конфигурация Storage-pools в Linstor обновлена;
+                    - `Updating` — если контроллер получил корректную конфигурацию ресурса и конфигурация Storage-pools в Linstor обновляется;
                     - `Failed` — если контроллер получил некорректную конфигурацию ресурса или во время операции возникла ошибка.
                 reason:
                   description: |

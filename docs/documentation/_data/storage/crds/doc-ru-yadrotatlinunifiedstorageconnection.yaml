@@ -4,11 +4,9 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Настройки подключения к СХД TATLIN.UNIFIED (Yadro).
+            Настройки подключения к СХД Yadro.
           properties:
             spec:
-              description: |
-                Настройки подключения к TATLIN.UNIFIED (Yadro).
               properties:
                 controlPlane:
                   description: |
@@ -25,10 +23,27 @@ spec:
                         Пароль для подключения в Base64.
                     ca:
                       description: |
-                        CA сертификаты, для случаев использования самоподписанных сертификатов.
+                        CA сертификаты для случаев использования самоподписанных сертификатов.
                     skipCertificateValidation:
                       description: |
                         Не проверять сертификаты при подключении к СХД.
+                    nodeSelector:
+                      description: |
+                        Селектор узлов, имеющих сетевой доступ к API **каждого** массива Tatlin,
+                        описанного объектами YadroTatlinUnifiedStorageConnection.
+                        Контроллер CSI развёртывается в одном экземпляре (leader), поэтому он
+                        может быть запланирован только на узел, удовлетворяющий _пересечению_
+                        всех таких селекторов. Убедитесь, что хотя бы один узел кластера
+                        попадает под все nodeSelector-ы, иначе pod контроллера не сможет быть
+                        запущен. Если параметр опущен, контроллер может быть запланирован на
+                        любой узел с ОС Linux.
+                      properties:
+                        matchLabels:
+                          description: |
+                            Карта меток, которые должны точно совпадать с метками узла. Узлы, которые не соответствуют хотя бы одной из указанных меток, будут исключены.
+                        matchExpressions:
+                          description: |
+                            Список сложных условий выбора узлов. Каждое условие задаёт ключ, оператор и, при необходимости, значения для фильтрации узлов на основе их меток или других полей.
                 dataPlane:
                   description: |
                     Настройки подключения data plane.
@@ -42,11 +57,47 @@ spec:
                       properties:
                         volumeExportPort:
                           description: |
-                            Порты volume export для подключения.
+                            Volume export ports для соединения.
                     fc:
                       description: |
-                        Настройки Fibre Channel (FC) для подключения.
+                        Настройки FC для подключения.
                       properties:
                         volumeExportPort:
                           description: |
-                            Порты volume export для подключения.
+                            Volume export ports для соединения.
+                    nodeSelector:
+                      description: |
+                        Селектор нод, на которых разрешено подключать тома (iSCSI / FC),
+                        экспортируемые **данным** массивом Tatlin. Ограничение действует
+                        **только** для этого подключения; другие объекты
+                        YadroTatlinUnifiedStorageConnection могут задавать собственные
+                        селекторы.
+
+                        На всех узлах, удовлетворяющих **хотя бы одному** селектору из всех
+                        YadroTatlinUnifiedStorageConnection, будут:
+
+                          • развёрнуты pod-ы `csi-node` (DaemonSet) — по одному экземпляру  
+                          • установлены пакеты для работы с multipath и iSCSI  
+                          • запущены сервисы `multipathd` и `iscsid`
+
+                        Если параметр не указан, тома можно монтировать на любой Linux-ноде,
+                        и `csi-node` будет развернут на всём кластере.
+                      properties:
+                        matchLabels:
+                          description: |
+                            Карта меток, которые должны точно совпадать с метками узла. Узлы, которые не соответствуют хотя бы одной из указанных меток, будут исключены.
+                        matchExpressions:
+                          description: |
+                            Список сложных условий выбора узлов. Каждое условие задаёт ключ, оператор и, при необходимости, значения для фильтрации узлов на основе их меток или других полей.
+            status:
+              description: |
+                Отображает текущую информацию о ресурсах, управляемых YadroTatlinUnifiedClusterConnection.
+              properties:
+                phase:
+                  description: |
+                    Текущее состояние ресурсов, управляемых YadroTatlinUnifiedClusterConnection. Может принимать следующие значения:
+                    - `Failed` — если контроллер получил некорректную конфигурацию ресурса или возникли ошибки в процессе выполнения операции.
+                    - `Created` — если все прошло успешно.
+                reason:
+                  description: |
+                    Дополнительная информация о ресурсах, управляемых YadroTatlinUnifiedClusterConnection.
