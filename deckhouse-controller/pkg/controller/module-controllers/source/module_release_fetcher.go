@@ -172,12 +172,15 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
-	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
-	if err != nil {
-		return fmt.Errorf("download module definition: %w", err)
-	}
+	// Only download image info if not already obtained from release channel
+	if !wasDownloadedFromChannel(f.targetReleaseMeta) {
+		imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
+		if err != nil {
+			return fmt.Errorf("download module definition: %w", err)
+		}
 
-	f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
+		f.targetReleaseMeta.ModuleDefinition = imageInfo.ModuleDefinition
+	}
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.ModuleRelease](releasesInCluster))
@@ -288,11 +291,21 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		ensureErr := func() error {
 			logger.Debug("ensure module release", slog.String("version", ver.String()))
 
-			m, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
-			if err != nil {
-				f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
+			var m *downloader.ModuleDownloadResult
+			var err error
 
-				return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
+			// Check if this is the target version that was already obtained from release channel
+			if wasDownloadedFromChannel(f.targetReleaseMeta) && "v"+ver.String() == f.targetReleaseMeta.ModuleVersion {
+				// Use the already downloaded metadata instead of making another request
+				m = f.targetReleaseMeta
+			} else {
+				// Download metadata for intermediate versions or when not from release channel
+				m, err = f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, "v"+ver.String())
+				if err != nil {
+					f.logger.Error("download metadata by version", slog.String("module_name", f.moduleName), slog.String("module_version", "v"+ver.String()), log.Err(err))
+
+					return fmt.Errorf("download metadata by version: %w, %w", err, ErrModuleIsCorrupted)
+				}
 			}
 
 			err = f.ensureModuleRelease(ctx, m, "step-by-step")
@@ -425,8 +438,13 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 			Spec: v1alpha1.ModuleReleaseSpec{
 				ModuleName: f.moduleName,
 				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  meta.Changelog,
+				Weight: func() uint32 {
+					if meta.ModuleDefinition != nil {
+						return meta.ModuleDefinition.Weight
+					}
+					return 900 // default weight
+				}(),
+				Changelog: meta.Changelog,
 			},
 		}
 
@@ -479,8 +497,13 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 	release.Spec = v1alpha1.ModuleReleaseSpec{
 		ModuleName: f.moduleName,
 		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  meta.Changelog,
+		Weight: func() uint32 {
+			if meta.ModuleDefinition != nil {
+				return meta.ModuleDefinition.Weight
+			}
+			return 900 // default weight
+		}(),
+		Changelog: meta.Changelog,
 	}
 
 	if err := f.k8sClient.Update(ctx, release); err != nil {
@@ -605,4 +628,10 @@ func isVersionGreaterThanTarget(ver, target *semver.Version) bool {
 	return ver.Major() > target.Major() ||
 		(ver.Major() == target.Major() && ver.Minor() > target.Minor()) ||
 		(ver.Major() == target.Major() && ver.Minor() == target.Minor() && ver.Patch() > target.Patch())
+}
+
+// wasDownloadedFromChannel returns true if the metadata was obtained from a release channel
+// (not by specific version) and contains complete metadata
+func wasDownloadedFromChannel(meta *downloader.ModuleDownloadResult) bool {
+	return meta.ChannelTag != ""
 }

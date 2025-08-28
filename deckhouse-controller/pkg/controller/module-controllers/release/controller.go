@@ -1046,7 +1046,8 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	}()
 
 	options := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, logger)
-	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, logger.Named("downloader"), options)
+	globalCache := downloader.GetGlobalReleaseImageInfoCache()
+	md := downloader.NewModuleDownloader(r.dependencyContainer, tmpDir, source, logger.Named("downloader"), options, globalCache)
 
 	downloadStatistic, err := md.DownloadByModuleVersion(ctx, release.GetModuleName(), release.GetVersion().String())
 	if err != nil {

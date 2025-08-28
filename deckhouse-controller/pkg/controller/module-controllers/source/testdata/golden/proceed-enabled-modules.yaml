@@ -80,6 +80,39 @@ metadata:
     modules.deckhouse.io/change-cause: check release (no releases in cluster)
   creationTimestamp: null
   labels:
+    module: disabledmodule
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: disabledmodule-v1.2.3
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: disabledmodule
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.2.3
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/change-cause: check release (no releases in cluster)
+  creationTimestamp: null
+  labels:
     module: enabledmodule
     modules.deckhouse.io/update-policy: ""
     release-checksum: 1beb143dffb1b662137094e7faea1e17

@@ -170,6 +170,9 @@ func (suite *ModuleLoaderTestSuite) SetupSuite() {
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+
+	// Satisfy regCli.Digest(...) calls used by downloader
+	dependency.TestDC.CRClient.DigestMock.Return("sha256:", nil)
 }
 
 func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
@@ -240,6 +243,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 				dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 					ManifestStub: manifestStub,
 					LayersStub:   tc.layersStab,
+					DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 				}, nil)
 			}
 
@@ -286,9 +290,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	suite.Run("NoSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -320,9 +323,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	suite.Run("NoDownloadedModule", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(false, false))
@@ -349,9 +351,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	suite.Run("ExtraSymlinks", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -401,9 +402,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	suite.Run("WrongSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -458,9 +458,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 	suite.Run("NoSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -488,9 +487,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 	suite.Run("NoDownloadedModule", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(false, false))
@@ -513,9 +511,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 	suite.Run("ExtraSymlinks", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -562,9 +559,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 	suite.Run("Old version symlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))
@@ -590,9 +586,8 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 	suite.Run("WrongSymlink", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
 			ManifestStub: manifestStub,
-			LayersStub: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
-			},
+			LayersStub:   func() ([]crv1.Layer, error) { return []crv1.Layer{&utils.FakeLayer{}}, nil },
+			DigestStub:   func() (crv1.Hash, error) { return crv1.Hash{Algorithm: "sha256"}, nil },
 		}, nil)
 
 		require.NoError(suite.T(), module.prepare(true, false))

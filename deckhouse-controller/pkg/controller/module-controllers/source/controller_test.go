@@ -287,6 +287,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("source with pull error", func() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"enabledmodule", "errormodule"}, nil)
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:", nil)
 		dependency.TestDC.CRClient.ImageMock.Set(func(_ context.Context, tag string) (crv1.Image, error) {
 			if tag == "alpha" {
 				return nil, errors.New("GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:\n      MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]")
@@ -529,6 +530,9 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 	for _, module := range modules {
 		moduleVersionsMock := cr.NewClientMock(t)
 
+		// Return digest that matches FakeImage.Digest() String() format
+		moduleVersionsMock.DigestMock.Optional().Return("sha256:", nil)
+
 		if len(tags) > 0 {
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
@@ -580,6 +584,9 @@ accessibility:
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
+
+	// Align top-level digest to match FakeImage Digest format
+	dc.CRClient.DigestMock.Return("sha256:", nil)
 
 	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
 		ManifestStub: manifestStub,
