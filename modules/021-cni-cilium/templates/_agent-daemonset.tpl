@@ -273,6 +273,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -305,6 +306,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           capabilities:
             add:
               - NET_ADMIN
@@ -364,6 +366,7 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -394,6 +397,7 @@ spec:
           rm /hostbin/cilium-sysctlfix
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: s0
@@ -423,6 +427,7 @@ spec:
         - --
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: true
         volumeMounts:
         - name: bpf-maps
@@ -459,6 +464,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -508,6 +514,7 @@ spec:
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
