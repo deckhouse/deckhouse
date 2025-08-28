@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.24.6
+go 1.23.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -259,7 +259,7 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/image v0.21.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
