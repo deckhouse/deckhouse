@@ -41,6 +41,57 @@ spec:
           spec:
             description: spec defines the desired state of ValidationWebhook
             properties:
+              context:
+                items:
+                  properties:
+                    kubernetes:
+                      properties:
+                        apiVersion:
+                          type: string
+                        foo:
+                          type: string
+                        jqFilter:
+                          properties:
+                            nodeName:
+                              type: string
+                          required:
+                          - nodeName
+                          type: object
+                        kind:
+                          type: string
+                        labelSelector:
+                          additionalProperties:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          type: object
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        matchNames:
+                          items:
+                            type: string
+                          type: array
+                        nameSelector:
+                          additionalProperties:
+                            items:
+                              type: string
+                            type: array
+                          type: object
+                        namespaceSelector:
+                          additionalProperties:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          type: object
+                      type: object
+                    name:
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               foo:
                 type: string
               handler:
@@ -52,7 +103,7 @@ spec:
                     description: this is a python script handler for object
                     type: string
                 type: object
-              webhook:
+              validationObject:
                 description: ValidatingWebhook describes an webhook and the resources
                   and operations it applies to.
                 properties:

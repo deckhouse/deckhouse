@@ -10,7 +10,7 @@ import (
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 )
 
-func Test(t *testing.T) {
+func TestTemplateNoError(t *testing.T) {
 	// hooks/002-deckhouse/webhooks/validating
 	// os.MkdirAll("/hooks/"+vh.Name+"/webhooks/validating/", 0777)
 
@@ -28,7 +28,19 @@ func Test(t *testing.T) {
 	}
 
 	templateFile := "templates/webhook.tpl"
+
 	tpl, err := template.ParseFiles(templateFile)
+	// template.
+	// Funcs(template.FuncMap{
+	// 	"toYaml": func(str string) string {
+	// 		res, err := yaml.Marshal(str)
+	// 		if err != nil {
+	// 			return err.Error()
+	// 		}
+	// 		return string(res)
+	// 	},
+	// }).
+
 	if err != nil {
 		fmt.Println(err.Error())
 		t.FailNow()
