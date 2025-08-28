@@ -11,19 +11,19 @@ To install the platform, you need to prepare a YAML configuration file for insta
 
 The YAML installation configuration file includes parameters for several resources (manifests):
 
-- [InitConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) — initial parameters for the platform configuration.
-  The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to start and operate correctly, such as [component placement parameters](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the used [StorageClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), [container registry](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) access settings, the [template for DNS names](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and others.
+- [InitConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration) — initial parameters for the platform configuration.
+  The platform will launch after installation with this configuration. This resource specifies parameters necessary for the platform to start and operate correctly, such as [component placement parameters](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), the used [StorageClass](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-storageclass), [container registry](/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration-deckhouse-registrydockercfg) access settings, the [template for DNS names](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate), and others.
 
-- [ClusterConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration) — general parameters of the cluster, such as control plane version, network parameters, CRI settings, etc.
 
   > You need to use the `ClusterConfiguration` resource only if you need to pre-deploy a Kubernetes cluster during the platform installation. `ClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
-- [StaticClusterConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#staticclusterconfiguration) — parameters for a Kubernetes cluster deployed on bare metal servers or virtual machines in unsupported clouds.
   > Similar to `ClusterConfiguration`, `StaticClusterConfiguration` is not needed if the platform is installed in an existing Kubernetes cluster.
 
 - ModuleConfig — a set of resources containing configuration parameters for built-in platform modules.
 
-  If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-nodeselector) parameter).
+  If the cluster is initially created with nodes designated for specific types of workloads (system nodes, monitoring nodes, etc.), it is recommended to explicitly specify the corresponding nodeSelector in the module configuration for modules using persistent storage volumes (e.g., for the `prometheus` module, this would be the [nodeSelector](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html#parameters-nodeselector) parameter).
 
 <!-- TODO: fix the manifests -->
 

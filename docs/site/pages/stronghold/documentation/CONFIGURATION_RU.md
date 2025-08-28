@@ -46,7 +46,7 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 ## Получение доступа к сервису
 
 Доступ к сервису осуществляется через инлеты. Инлет - это источник входных данных для пода. В примере доступен один инлет - `Ingress`
-Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
+Адрес веб-интерфейса Stronghold формируется следующим образом: в шаблоне [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобального параметра конфигурации Deckhouse ключ `%s` заменяется на `stronghold`.
 
 Например, если `publicDomainTemplate` установлен как `%s-kube.mycompany.tld`, веб-интерфейс Stronghold будет доступен по адресу `stronghold-kube.cmycompany.tld`.
 
@@ -61,10 +61,12 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 
 ## Управление доступами
 
-В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/).
-Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](https://deckhouse.ru/products/kubernetes-platform/modules/secrets-store-integration/stable/).
+В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](
+  /products/kubernetes-platform/modules/secrets-store-integration/stable/).
+  /products/kubernetes-platform/modules/observability/stable/
 
-Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](https://deckhouse.ru/documentation/v1/modules/150-user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
+Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
