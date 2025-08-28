@@ -1,6 +1,5 @@
 ---
 title: "Классы виртуальных машин"
-title: "Классы машин"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html
 lang: ru
 ---
@@ -10,7 +9,7 @@ lang: ru
 Помимо этого, [VirtualMachineClass](../../../../reference/cr/virtualmachineclass.html) обеспечивает управление размещением виртуальных машин по узлам платформы.
 Это позволяет администраторам эффективно управлять ресурсами платформы виртуализации и оптимально размещать виртуальные машины на узлах платформы.
 
-По умолчанию автоматически создается один ресурс VirtualMachineClass `generic`, который представляет универсальную модель CPU, использующую достаточно старую, но поддерживаемую большинством современных процессоров модель Nehalem. Это позволяет запускать ВМ на любых узлах кластера с возможностью «живой» миграции.
+Во время установки автоматически создаётся ресурс VirtualMachineClass с именем `generic`. Он представляет собой универсальный тип процессора на основе более старой, но широко поддерживаемой архитектуры Nehalem. Это позволяет запускать виртуальные машины на любых узлах кластера и поддерживает их живую миграцию.
 
 {% alert level="info" %}
 Рекомендуется создать как минимум один ресурс VirtualMachineClass в кластере с типом `Discovery` сразу после того, как все узлы будут настроены и добавлены в кластер.
@@ -45,6 +44,57 @@ spec:
   ...
 ```
 
+### VirtualMachineClass по умолчанию
+
+Для удобства можно назначить VirtualMachineClass по умолчанию. Этот класс будет использоваться в поле `spec.virtualMachineClassName`, если оно не указано в манифесте виртуальной машины.
+
+VirtualMachineClass по умолчанию задаётся с помощью аннотации `virtualmachineclass.virtualization.deckhouse.io/is-default-class`. В кластере может быть только один класс по умолчанию. Класс по умолчанию изменяется снятием аннотации с одного класса и добавлением её к другому.
+
+Не рекомендуется ставить аннотацию на класс `generic`, так как при обновлении она может пропасть. Рекомендуется создать собственный класс и назначить его классом по умолчанию.
+
+Чтобы вывести список всех ресурсов VirtualMachineClass, выполните команду:
+
+```shell
+d8 k get virtualmachineclass
+```
+
+Пример вывода (без класса по умолчанию):
+
+```console
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready               1d
+```
+
+Чтобы назначить класс по умолчанию, выполните:
+
+```shell
+d8 k annotate vmclass host-passthrough-custom virtualmachineclass.virtualization.deckhouse.io/is-default-class=true
+```
+
+Пример вывода:
+
+```console
+virtualmachineclass.virtualization.deckhouse.io/host-passthrough-custom annotated
+```
+
+После назначения класса по умолчанию снова выведите список всех ресурсов VirtualMachineClass:
+
+```shell
+d8 k get vmclass
+```
+
+Пример вывода (с классом по умолчанию):
+
+```console
+$ d8 k get vmclass 
+NAME                                    PHASE   ISDEFAULT   AGE
+generic                                 Ready               1d
+host-passthrough-custom                 Ready   true        1d
+```
+
+При создании ВМ без указания значения для поля `spec.virtualMachineClassName` в него будет подставлено имя `host-passthrough-custom`.
+
 ## Настройки VirtualMachineClass
 
 Структура ресурса `VirtualMachineClass` выглядит следующим образом:
@@ -54,16 +104,17 @@ apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachineClass
 metadata:
   name: <vmclass-name>
+  # (опционально) Класс по умолчанию.
+  # annotations:
+  #   virtualmachineclass.virtualization.deckhouse.io/is-default-class: "true"
 spec:
   # Блок описывает параметры виртуального процессора для виртуальных машин.
-  # После создания блока его изменение невозможно.
+  # Изменять данный блок нельзя после создания ресурса.
   cpu: ...
-
-  # (Опциональный блок) Описывает правила размещения виртуальных машин на узлах.
+  # (опциональный блок) Описывает правила размещения виртуальных машины по узлам.
   # При изменении автоматически применяется ко всем виртуальных машинам, использующим данный VirtualMachineClass.
   nodeSelector: ...
-
-  # (Опциональный блок) Описывает политику настройки ресурсов виртуальных машин.
+  # (опциональный блок) Описывает политику настройки ресурсов виртуальных машин.
   # При изменении автоматически применяется ко всем виртуальных машинам, использующим данный VirtualMachineClass.
   sizingPolicies: ...
 ```

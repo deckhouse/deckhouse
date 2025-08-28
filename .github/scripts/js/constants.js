@@ -39,9 +39,6 @@ const labels = {
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.26': { type: 'e2e-use', ver: '1.26' },
-  'e2e/use/k8s/1.27': { type: 'e2e-use', ver: '1.27' },
-  'e2e/use/k8s/1.28': { type: 'e2e-use', ver: '1.28' },
   'e2e/use/k8s/1.29': { type: 'e2e-use', ver: '1.29' },
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
