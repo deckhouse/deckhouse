@@ -165,3 +165,38 @@ requirements:
     node-local-dns: '>= 0.0.0'
     operator-trivy: '> v1.64.0'
 ```
+
+#### Optional module requirements
+
+Use this when your module works alone, but integrates with another module **if it is present**.
+
+**Syntax**
+
+Append `!optional` to the version constraint:
+
+```yaml
+requirements:
+  modules:
+    test1: ">v0.22.1 !optional"
+```
+
+**Rules**
+
+- If `test1` is **enabled**, its version **must** satisfy the constraint.
+- If `test1` is **disabled**, the constraint is ignored and your module can install and upgrade.
+- If you later enable `test1` with a non‑matching version, the enable is denied and the module stays disabled.
+
+**Quick examples**
+
+- `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → install fails with unmet dependency.
+- `test1` disabled + `>v0.22.1 !optional` → install succeeds; the optional requirement is skipped.
+- `test` disabled, `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → enabling `test` is denied.
+- `test` enabled with a requirement on `test1`; enabling `test1` at a non‑matching version is denied and `test1` remains disabled.
+
+{% alert level="warning" %}
+Enabling or disabling modules may take longer because of extra extender checks.
+{% endalert %}
+
+{% alert level="warning" %}
+Known limitation: during reconciliation the list of enabled modules may be briefly empty. Rarely this can let an optional check pass incorrectly.
+{% endalert %}
