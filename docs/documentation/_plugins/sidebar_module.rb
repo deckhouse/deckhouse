@@ -92,8 +92,8 @@ module Jekyll
 
       lang = @context.registers[:page]['lang']
       moduleName = entry['moduleName']
-      page_url = @context.registers[:page]['url'].sub(%r{\/index.html$}, '/').sub(%r{^/?modules/[^/]+/},'')
-      entry_url_without_module_path = entry['url'].sub(%r{^/?modules/[^/]+/},'')
+      page_url = @context.registers[:page]['url'].sub(%r{/index.html$}, '/').sub(%r{^/?(en/|/ru/)?modules/[^/]+/},'./')
+      entry_url_without_module_path = entry['url'].sub(%r{^/?modules/[^/]+/},'./')
 
       if entry['url'].end_with?('/')
         sidebarItemTitle = @context.registers[:site].data['modules']['sidebar']['titles']['overview'][lang]
@@ -136,14 +136,13 @@ module Jekyll
         result.push("<li class='#{ parameters['item_entry_class']}'><a href='#{ external_url }' target='_blank'>#{sidebarItemTitle} ↗</a></li>")
       elsif page_url == entry_url_without_module_path
         #or sidebar_group_page == entry['url']
-        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ entry['url'] }'>#{sidebarItemTitle}</a></li>")
+        result.push("<li class='#{ parameters['item_entry_class']} active'><a href='#{ entry_url_without_module_path }'>#{sidebarItemTitle}</a></li>")
       else
         if @context.registers[:page]['url'] == '404.md'
           # There is no sidebar on 404 page yet.
           result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a data-proofer-ignore href='#{ @context.registers[:site].config['canonical_url_prefix_documentation'] + entry['url'] }'>#{sidebarItemTitle}</a></li>))
         else
-          # Unknown case.
-          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ entry['url'] }'>#{sidebarItemTitle}</a></li>))
+          result.push(%Q(<li class='#{ parameters['item_entry_class']}'><a href='#{ entry_url_without_module_path }'>#{sidebarItemTitle}</a></li>))
         end
       end
 
