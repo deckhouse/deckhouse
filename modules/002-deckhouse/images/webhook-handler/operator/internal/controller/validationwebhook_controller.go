@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"text/template"
@@ -115,13 +116,50 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	// hooks/002-deckhouse/webhooks/validating
 	os.MkdirAll("/hooks/"+vh.Name+"/webhooks/validating/", 0777)
 
-	templateFile := "templates/webhook.tpl"
-	tpl, err := template.ParseFiles(templateFile)
+	tplt := `
+#!/usr/bin/python3
+from typing import Optional
+
+from deckhouse import hook
+from dotmap import DotMap
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+
+config = """
+configVersion: v1
+kubernetesValidating:
+- name: {{ .Name }}.deckhouse.io
+  group: main
+#\{\{ .Spec.Webhook }}
+kubernetes:
+- name: {{ .Name }}
+  group: main
+#\{\{ .Spec.Context }}
+"""
+
+def main(ctx: hook.Context):
+    try:
+        # DotMap is a dict with dot notation
+        binding_context = DotMap(ctx.binding_context)
+        validate(binding_context, ctx.output.validations)
+    except Exception as e:
+        ctx.output.validations.error(str(e))
+
+{{ .Spec.Handler.Python }}
+
+if __name__ == "__main__":
+    hook.run(main, config=config)
+`
+
+	tpl, err := template.New("test").Parse(tplt)
 	if err != nil {
-		// TODO: do something
+		return res, fmt.Errorf("template parse: %w", err)
 	}
 
-	tpl.Execute(os.Stdout, vh)
+	err = tpl.Execute(os.Stdout, vh)
+	if err != nil {
+		return res, fmt.Errorf("template execute: %w", err)
+	}
 
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(vh, "some finalizer") {
