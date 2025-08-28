@@ -12,3 +12,4 @@ dirs:
   - /var/lib/cilium/tls/hubble
   - /hostproc
   - /hostbin
+  - /root/.config
