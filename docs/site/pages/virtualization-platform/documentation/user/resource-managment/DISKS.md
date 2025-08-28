@@ -53,7 +53,7 @@ Deckhouse Virtualization Platform also allows you to set individual settings for
 
 How to find out the available storage options on the platform in the web interface:
 
-- Go to the "System" tab, then to the "Storage" section -> "Storage Classes".
+- Go to the "System" tab, then to the "Storage" section → "Storage Classes".
 
 ## Storage class settings for disks
 
@@ -141,7 +141,7 @@ blank-disk   Ready     100Mi      1m2s
 How to create an empty disk in the web interface (this step can be skipped and performed when creating a VM):
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "VM Disks" section.
+- Go to the "Virtualization" → "VM Disks" section.
 - Click "Create Disk".
 - In the form that opens, enter `blank-disk` in the "Disk Name" field.
 - In the "Size" field, set the size with the measurement units `100Mi`.
@@ -233,7 +233,7 @@ linux-vm-root-2  Ready   2590Mi     7m15s
 How to create a disk from an image in the web interface (this step can be skipped and performed when creating a VM):
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "VM Disks" section.
+- Go to the "Virtualization" → "VM Disks" section.
 - Click "Create Disk".
 - In the form that opens, enter `linux-vm-root` in the "Disk Name" field.
 - In the "Source" field, make sure that the "Project" checkbox is selected.
@@ -284,7 +284,7 @@ How to change the disk size in the web interface:
 Method #1:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "VM Disks" section.
+- Go to the "Virtualization" → "VM Disks" section.
 - Select the desired disk and click on the pencil icon in the "Size" column.
 - In the pop-up window, you can change the size to a larger one.
 - Click on the "Apply" button.
@@ -293,7 +293,7 @@ Method #1:
 Method #2:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "VM Disks" section.
+- Go to the "Virtualization" → "VM Disks" section.
 - Select the desired disk and click on its name.
 - In the form that opens, on the "Configuration" tab, in the "Size" field, you can change the size to a larger one.
 - Click on the "Save" button that appears.

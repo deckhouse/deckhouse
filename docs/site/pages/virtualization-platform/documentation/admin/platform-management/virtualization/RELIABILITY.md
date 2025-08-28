@@ -78,7 +78,7 @@ The following is an example of migrating a selected virtual machine.
 How to start VM migration in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the desired virtual machine from the list and click the ellipsis button.
 - Select `Migrate` from the pop-up menu.
 - Confirm or cancel the migration in the pop-up window.
@@ -113,7 +113,7 @@ d8 k uncordon <nodename>
 
 How to perform the operation in the web interface:
 
-- Go to the "System" tab, then to the "Nodes" section -> "Nodes of all groups".
+- Go to the "System" tab, then to the "Nodes" section→ "Nodes of all groups".
 - Select the desired node from the list and click the "Cordon + Drain" button.
 - To remove it from maintenance mode, click the "Uncordon" button.
 

@@ -193,7 +193,7 @@ d8 k describe cvi ubuntu-22-04
 
 How to create an image from an HTTP server in the web interface:
 
-- Go to the "System" tab, then to the "Virtualization" -> "Cluster Images" section.
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
 - Click "Create Image", then select "Load data from link (HTTP)" from the drop-down menu.
 - Enter the image name in the "Image Name" field.
 - Specify the link to the image in the "URL" field.
@@ -249,7 +249,7 @@ An image stored in a container registry has a specific format. Let’s consider 
 
 How to create an image from the container registry in the web interface:
 
-- Go to the "System" tab, then to the "Virtualization" -> "Cluster Images" section.
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
 - Click "Create Image", then select "Load data from container image" from the drop-down list.
 - Enter the image name in the "Image Name" field.
 - Specify the link to the image in the "Image in Container Registry" field.
@@ -321,7 +321,7 @@ some-image   Ready   false   100%       1m
 
 How to perform the operation in the web interface:
 
-- Go to the "System" tab, then to the "Virtualization" -> "Cluster Images" section.
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
 - Click "Create Image", then select "Upload from Computer" from the drop-down menu.
 - Enter the image name in the "Image Name" field.
 - In the "Upload File" field, click the "Select a file on your computer" link.

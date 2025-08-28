@@ -162,7 +162,7 @@ In addition to VM sizing, the policy also helps enforce the desired maximum CPU 
 How to create a virtual machine in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Click "Create".
 - In the form that opens, enter `linux-vm` in the "Name" field.
 - In the "Machine Parameters" section, set `1` in the "Cores" field.
@@ -436,7 +436,7 @@ d8 v ssh cloud@linux-vm --local-ssh
 How to connect to a virtual machine in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - In the form that opens, go to the "TTY" tab to work with the serial console.
 - In the form that opens, go to the "VNC" tab to connect via VNC.
@@ -454,7 +454,7 @@ The startup policy of a virtual machine is designed for automated management of 
 How to select a VM startup policy in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the desired VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Additional Settings" section.
 - Select the desired policy from the Startup Policy combo box.
@@ -507,7 +507,7 @@ The possible operations:
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the desired virtual machine from the list and click the ellipsis button.
 - In the pop-up menu, you can select possible operations for the VM.
 
@@ -538,7 +538,7 @@ If the virtual machine is running (`.status.phase: Running`), the method of appl
 How to change the VM configuration in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - You are now on the "Configuration" tab, where you can make changes.
 - The list of changed parameters and a warning if the VM needs to be restarted are displayed at the top of the page.
@@ -646,7 +646,7 @@ spec:
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Additional Settings" section.
 - Enable the "Auto-apply changes" switch.
@@ -759,7 +759,7 @@ When changing placement parameters:
 How to manage VM placement parameters by nodes in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Placement" section.
 
@@ -779,7 +779,7 @@ In this example, there are three nodes in the cluster: two with fast disks (`dis
 
 How to perform the operation in the web interface in the [Placement section](#placement-of-vms-by-nodes):
 
-- Click "Add" in the "Run on nodes" -> "Select nodes by labels" block.
+- Click "Add" in the "Run on nodes" → "Select nodes by labels" block.
 - In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.nodeSelector` settings.
 - To confirm the key parameters, click the "Enter" button.
 - Click the "Save" button that appears.
@@ -876,7 +876,7 @@ In this example, the created virtual machine will not be placed on the same node
 
 How to configure VM AntiAffinity on nodes in the web interface in the [Placement section](#placement-of-vms-by-nodes):
 
-- Click "Add" in the "Identify similar VMs by labels" -> "Select labels" block.
+- Click "Add" in the "Identify similar VMs by labels" → "Select labels" block.
 - In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.affinity.virtualMachineAndPodAntiAffinity` settings.
 - To confirm the key parameters, click the "Enter" button.
 - Check the boxes next to the labels you want to use in the placement settings.
@@ -915,7 +915,7 @@ name: <virtual-image-name>
 How to work with static block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
 - You can add, extract, delete, resize, and reorder static block devices in the "Boot Disks" section.
@@ -1006,7 +1006,7 @@ EOF
 How to work with dynamic block devices in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
 - You can add, extract, delete, and resize dynamic block devices in the "Additional Disks" section.
@@ -1048,7 +1048,7 @@ virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 How to add labels and annotations to VMs in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the desired VM from the list and click on its name.
 - Go to the "Meta" tab.
 - You can add labels in the "Labels" section.
@@ -1105,7 +1105,7 @@ EOF
 How to perform the operation in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Network" -> "Services" section.
+- Go to the "Network" → "Services" section.
 - In the window that opens, configure the service settings.
 - Click on the "Create" button.
 
@@ -1219,7 +1219,7 @@ EOF
 How to publish a VM service using Ingress in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Network" -> "Ingresses" section.
+- Go to the "Network" → "Ingresses" section.
 - Click the "Create Ingress" button.
 - In the window that opens, configure the service settings.
 - Click the "Create" button.
@@ -1339,7 +1339,7 @@ You can interrupt any live migration while it is in the `Pending`, `InProgress` 
 How to view active operations in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - Go to the "Events" tab.
 
@@ -1408,7 +1408,7 @@ d8 v evict <vm-name>
 How to perform a live VM migration in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Virtual Machines" section.
+- Go to the "Virtualization" → "Virtual Machines" section.
 - Select the desired virtual machine from the list and click the ellipsis button.
 - Select "Migrate" from the pop-up menu.
 - Confirm or cancel the migration in the pop-up window.

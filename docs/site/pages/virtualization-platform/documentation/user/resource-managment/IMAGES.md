@@ -126,7 +126,7 @@ d8 k describe vi ubuntu-22-04
 How to create an image from an HTTP server in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Disk Images" section.
+- Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Load data from link (HTTP)" from the list.
 - In the form that opens, enter the image name in the "Image name" field.
@@ -174,7 +174,7 @@ If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified
 How to create an image and store it in PVC in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Disk Images" section.
+- Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Load data from link (HTTP)" from the list.
 - In the form that opens, enter the image name in the "Image name" field.
@@ -235,7 +235,7 @@ EOF
 How to create an image from Container Registry in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Disk Images" section.
+- Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Upload data from container image" from the list.
 - In the form that opens, enter the image name in the "Image Name" field.
@@ -308,7 +308,7 @@ some-image   Ready   false   100%       1m
 How to upload an image from the command line in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Disk Images" section.
+- Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image" then select "Upload from computer" from the drop-down menu.
 - Enter the image name in the "Image Name" field.
 - In the "Upload File" field, click the "Choose a file from your computer" link.
@@ -344,7 +344,7 @@ EOF
 How to create an image from a disk in the web interface:
 
 - Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" -> "Disk Images" section.
+- Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Write data from disk" from the list.
 - In the form that opens, enter `linux-vm-root` in the "Image Name" field.

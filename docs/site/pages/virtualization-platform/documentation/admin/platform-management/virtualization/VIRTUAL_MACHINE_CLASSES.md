@@ -64,7 +64,7 @@ sizingPolicies: ...
 
 How to configure VirtualMachineClass in the web interface:
 
-- Go to the "System" tab, then to the "Virtualization" -> "VM Classes" section.
+- Go to the "System" tab, then to the "Virtualization" → "VM Classes" section.
 - Click the "Create" button.
 - In the window that opens, enter a name for the VM class in the "Name" field.
 
@@ -112,7 +112,7 @@ Examples of the `.spec.cpu` block settings:
   How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
   - In the "CPU Settings" block, select `Discovery` in the "Type" field.
-  - Click "Add" in the "Conditions for creating a universal processor" -> "Labels and expressions" block.
+  - Click "Add" in the "Conditions for creating a universal processor" → "Labels and expressions" block.
   - In the pop-up window, you can set the "Key", "Operator" and "Value" of the key that corresponds to the `spec.cpu.discovery.nodeSelector` settings.
   - To confirm the key parameters, click the "Enter" button.
   - To create a VM class, click the "Create" button.
@@ -206,7 +206,7 @@ Since changing the `.spec.nodeSelector` parameter affects all virtual machines u
 
 How to perform the operation in the web interface in the [VM class creation form](#virtualmachineclass-settings):
 
-- Click "Add" in the "VM scheduling conditions on nodes" -> "Labels and expressions" block.
+- Click "Add" in the "VM scheduling conditions on nodes" → "Labels and expressions" block.
 - In the pop-up window, you can set the "Key", "Operator" and "Value" of the key that corresponds to the `spec.nodeSelector` settings.
 - To confirm the key parameters, click the "Enter" button.
 - To create a VM class, click the "Create" button.
