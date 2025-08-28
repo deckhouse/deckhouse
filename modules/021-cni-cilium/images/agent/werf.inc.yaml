@@ -11,7 +11,7 @@
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from llvm-artifact
-{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
+# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
 # from cilium-envoy-artifact
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from hubble-artifact
@@ -55,13 +55,6 @@ import:
   add: /src/binary_replace.sh
   to: /binary_replace.sh
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/local/bin/
-  to: /usr/local/bin
-  before: install
-  includePaths:
-  - clang
-  - llc
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
   to: /sbin
@@ -340,6 +333,13 @@ import:
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: setup
+- image: {{ .ModuleName }}/llvm-artifact
+  add: /usr/local/bin/
+  to: /usr/local/bin
+  before: setup
+  includePaths:
+  - clang
+  - llc
 - image: libs/zlib-v1.3.1
   add: /usr/lib
   to: /lib64
