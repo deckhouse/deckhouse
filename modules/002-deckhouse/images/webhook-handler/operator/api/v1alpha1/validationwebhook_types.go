@@ -35,34 +35,33 @@ type ValidationWebhookSpec struct {
 
 	// ValidatingWebhook describes an webhook and the resources and operations it applies to.
 	// +optional
-	Webhook *admissionregistrationv1.ValidatingWebhook `json:"webhook,omitempty"`
+	Webhook *admissionregistrationv1.ValidatingWebhook `json:"validationObject,omitempty"`
 
-	// Context []Context `json:"context,omitempty"`
+	Context []Context `json:"context,omitempty"`
 
 	Handler Handler `json:"handler,omitempty"`
 }
 
-// type ContextName struct {
-// 	Name string `yaml:"name"`
-// }
+type Context struct {
+	Name       string            `json:"name"`
+	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
+}
 
-// type JqFilter struct {
-// 	NodeName string `yaml:"nodeName"`
-// }
+type KubernetesContext struct {
+	APIVersion        string                       `json:"apiVersion,omitempty"`
+	Kind              string                       `json:"kind,omitempty"`
+	NameSelector      map[string][]string          `json:"nameSelector,omitempty"`
+	MatchNames        []string                     `json:"matchNames,omitempty"`
+	LabelSelector     map[string]map[string]string `json:"labelSelector,omitempty"`
+	MatchLabels       map[string]string            `json:"matchLabels,omitempty"`
+	Foo               string                       `json:"foo,omitempty"`
+	NamespaceSelector map[string]map[string]string `json:"namespaceSelector,omitempty"`
+	JqFilter          JqFilter                     `json:"jqFilter,omitempty"`
+}
 
-// type Context struct {
-// 	Context           []ContextName `yaml:"context"`
-// 	Kubernetes        interface{}   `yaml:"kubernetes"`
-// 	APIVersion        string        `yaml:"apiVersion"`
-// 	Kind              string        `yaml:"kind"`
-// 	NameSelector      interface{}   `yaml:"nameSelector"`
-// 	MatchNames        []string      `yaml:"matchNames"`
-// 	LabelSelector     interface{}   `yaml:"labelSelector"`
-// 	MatchLabels       interface{}   `yaml:"matchLabels"`
-// 	Foo               string        `yaml:"foo"`
-// 	NamespaceSelector interface{}   `yaml:"namespaceSelector"`
-// 	JqFilter          JqFilter      `yaml:"jqFilter"`
-// }
+type JqFilter struct {
+	NodeName string `json:"nodeName"`
+}
 
 type Handler struct {
 	// this is a python script handler for object

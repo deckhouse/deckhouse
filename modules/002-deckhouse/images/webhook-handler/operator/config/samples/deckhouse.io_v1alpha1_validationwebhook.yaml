@@ -7,12 +7,19 @@ metadata:
   name: validationwebhook-sample
 spec:
   validationObject: # 1-в-1 из validationwebhookconfiguration
+    name: test
     rules:
       - apiGroups: ["apps"]
         apiVersions: ["v1", "v1beta1"]
         operations: ["CREATE", "UPDATE"]
         resources: ["deployments", "replicasets"]
         scope: "Namespaced"
+    clientConfig:
+      service:
+        namespace: "example-namespace"
+        name: "example-service"
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
     objectSelector:
       matchLabels: # matchExpressions
         foo: bar
