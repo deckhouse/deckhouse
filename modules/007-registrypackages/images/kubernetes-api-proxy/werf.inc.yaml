@@ -1,4 +1,4 @@
-{{- $version := "08.04.25" }}
+{{- $version := "28.08.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/scratch
@@ -46,12 +46,7 @@ shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
   - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
-  - /crane pull $IMAGE_REPO@$IMAGE_DIGEST $param /kubernetes-api-proxy.tar
+  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
   - rm -f ~/.docker/config.json
-  - mkdir /tmp/kubernetes-api-proxy
-  - tar -xf /kubernetes-api-proxy.tar -C /tmp/kubernetes-api-proxy
-  - cd /tmp/kubernetes-api-proxy
-  - sed -i 's/"RepoTags":\["[^"]*"\]/"RepoTags":[]/' manifest.json
-  - rm /kubernetes-api-proxy.tar
-  - tar -cvf /kubernetes-api-proxy.tar ./
-  - rm -rf /tmp/kubernetes-api-proxy
+  - tar -C /tmp/image -cf /kubernetes-api-proxy.tar .
+  - rm -rf /tmp/image
