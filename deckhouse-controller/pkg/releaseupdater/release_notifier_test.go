@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
 func TestSendWebhookNotification(t *testing.T) {
@@ -87,10 +88,12 @@ func TestSendWebhookNotification(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			attemptCount := 0
-			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				attemptCount++
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.responseBody))
+				if _, err := w.Write([]byte(tt.responseBody)); err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			}))
 			defer svr.Close()
 
@@ -130,14 +133,18 @@ func TestSendWebhookNotification(t *testing.T) {
 func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 	t.Run("4 failures then success", func(t *testing.T) {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 5 {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Server Error"))
+				if _, err := w.Write([]byte("Server Error")); err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			} else {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Success"))
+				if _, err := w.Write([]byte("Success")); err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			}
 		}))
 		defer svr.Close()
@@ -161,7 +168,7 @@ func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 
 	t.Run("Network error then success", func(t *testing.T) {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 3 {
 				// Simulate network error by closing connection
@@ -173,7 +180,9 @@ func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 				}
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Success"))
+			if _, err := w.Write([]byte("Success")); err != nil {
+				t.Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -197,9 +206,11 @@ func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 
 func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 	t.Run("No RetryMinTime set - should use default", func(t *testing.T) {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Success"))
+			if _, err := w.Write([]byte("Success")); err != nil {
+				t.Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -225,14 +236,18 @@ func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 
 	t.Run("Custom RetryMinTime set", func(t *testing.T) {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 3 {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Server Error"))
+				if _, err := w.Write([]byte("Server Error")); err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			} else {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Success"))
+				if _, err := w.Write([]byte("Success")); err != nil {
+					t.Fatalf("failed to write response: %v", err)
+				}
 			}
 		}))
 		defer svr.Close()

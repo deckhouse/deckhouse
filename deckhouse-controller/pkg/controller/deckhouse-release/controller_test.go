@@ -1295,10 +1295,12 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 
 	suite.Run("Webhook returns 500 error - should block release", func() {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server Error"))
+			if _, err := w.Write([]byte("Internal Server Error")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1308,7 +1310,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.Mode = embeddedMUP.Update.Mode
 		ds.Update.Windows = embeddedMUP.Update.Windows
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond} // Fast retry for testing
+		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
 		suite.setupControllerSettings("webhook-500-error.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
@@ -1328,24 +1330,34 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 
 	suite.Run("Webhook returns 4 bad status codes then succeeds", func() {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			switch attemptCount {
 			case 1:
 				w.WriteHeader(http.StatusBadRequest)
-				w.Write([]byte("Bad Request"))
+				if _, err := w.Write([]byte("Bad Request")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
 			case 2:
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte("Unauthorized"))
+				if _, err := w.Write([]byte("Unauthorized")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
 			case 3:
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte("Forbidden"))
+				if _, err := w.Write([]byte("Forbidden")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
 			case 4:
 				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("Not Found"))
+				if _, err := w.Write([]byte("Not Found")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
 			default:
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("Success"))
+				if _, err := w.Write([]byte("Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
 			}
 		}))
 		defer svr.Close()
@@ -1369,9 +1381,11 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 
 	suite.Run("Webhook returns 404 with large body - should block release", func() {
 		largeBody := string(make([]byte, 5000)) // 5KB body
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(largeBody))
+			if _, err := w.Write([]byte(largeBody)); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1402,7 +1416,9 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 			data, _ := io.ReadAll(r.Body)
 			httpBody = string(data)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Success"))
+			if _, err := w.Write([]byte("Success")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1423,9 +1439,11 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 	})
 
 	suite.Run("Webhook returns 201 - should succeed (2xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("Created"))
+			if _, err := w.Write([]byte("Created")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1445,9 +1463,11 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 	})
 
 	suite.Run("Webhook returns 299 - should succeed (2xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(299) // Custom 2xx status
-			w.Write([]byte("Custom Success"))
+			if _, err := w.Write([]byte("Custom Success")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1467,9 +1487,11 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 	})
 
 	suite.Run("Webhook returns 300 - should block release (3xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusMultipleChoices)
-			w.Write([]byte("Multiple Choices"))
+			if _, err := w.Write([]byte("Multiple Choices")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
@@ -1496,7 +1518,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 
 	suite.Run("Webhook network error - should retry and fail", func() {
 		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 3 {
 				// Simulate network error by closing connection
@@ -1508,7 +1530,9 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 				}
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Success after retries"))
+			if _, err := w.Write([]byte("Success after retries")); err != nil {
+				suite.T().Fatalf("failed to write response: %v", err)
+			}
 		}))
 		defer svr.Close()
 
