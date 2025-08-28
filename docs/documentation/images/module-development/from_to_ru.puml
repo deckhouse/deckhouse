@@ -1,7 +1,6 @@
 @startuml
 !theme bluegray
 skinparam DefaultFontSize 16
-skinparam handwritten false
 skinparam DefaultTextAlignment center
 skinparam ArrowFontStyle italic
 skinparam backgroundColor transparent
