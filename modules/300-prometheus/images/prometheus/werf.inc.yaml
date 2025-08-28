@@ -83,7 +83,7 @@ shell:
   - go build -ldflags="-s -w" -o promu ./main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -104,7 +104,8 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /src
   - go generate -tags plugins ./plugins
-  - /bin/promu build --prefix /src
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `/bin/promu build --prefix /src`) | indent 6 }}
   - mkdir -p /empty
   - chown 64535:64535 /src/prometheus /src/promtool
   - chmod 0700 /src/prometheus /src/promtool
