@@ -3,7 +3,7 @@ title: Managing the internal container image registry
 permalink: en/admin/configuration/registry/internal.html
 ---
 
-The ability to use internal registry is implemented by the [`registry`](../../../../../../../modules/registry/) module.
+The ability to use internal registry is implemented by the [`registry`](/modules/registry/) module.
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
@@ -18,6 +18,29 @@ The `registry` module, which implements internal storage, operates in the follow
 {% alert level="info" %}
 - The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](../../../installing/configuration.html#clusterconfiguration).
 {% endalert %}
+
+## Restrictions on working with the internal registry
+
+Working with the internal registry using the `registry` module has a number of limitations and restrictions concerning installation, operating conditions, and mode switching.
+
+### Cluster installation limitations
+
+Bootstrapping a DKP cluster with `Direct` mode enabled is not supported. The cluster is deployed with settings for `Unmanaged` mode.
+
+### Operating conditions restrictions
+
+The module works under the following conditions:
+
+- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](../../../installing/configuration.html#clusterconfiguration-defaultcri) configuration.
+- The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
+
+### Mode switching restrictions
+
+Mode switching restrictions are as follows:
+
+- Switching to `Direct` mode is possible if there are no [user registry configurations](/modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) on the nodes.
+- Switching to `Unmanaged` mode is only available from `Direct` mode.
+- In `Unmanaged` mode, changing registry settings is not supported. To change settings, you need to switch to `Direct` mode, make the necessary changes, and then switch back to `Unmanaged` mode.
 
 ## Examples of switching
 
@@ -71,7 +94,7 @@ To switch an already running cluster to `Direct` mode, follow these steps:
    registry   38     ...  Ready   True                         True
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](../../../../../../../modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [deckhouse](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -224,12 +247,12 @@ Example hosts.toml configuration:
       auth = "<base64>"
 ```
 
-Before switching, make sure there are no [custom authorization configurations](../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with containerd V1 in the `/etc/containerd/conf.d` directory.
+Before switching, make sure there are no [custom authorization configurations](/modules/node-manager/faq.html#how-to-add-additional-registry-auth) present on nodes with containerd V1 in the `/etc/containerd/conf.d` directory.
 
 If such configurations exist:
 
 {% alert level="danger" %}
-- After deleting [custom authorization configurations](../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
+- After deleting [custom authorization configurations](/modules/node-manager/faq.html#how-to-add-additional-registry-auth) from the `/etc/containerd/conf.d` directory, the containerd service will be restarted. The removed configurations will no longer work.
 - New Mirror Auth configurations added to `/etc/containerd/registry.d` will only take effect after switching to `Direct` mode.
 {% endalert %}
 
@@ -284,7 +307,7 @@ If such configurations exist:
 {% alert level="danger" %}
 - This switch is only possible from the `Unmanaged` mode.
 - When switching to the legacy containerd v1 auth configuration, any custom configurations in `/etc/containerd/registry.d` will stop working.
-- [Custom auth configurations](/../../../../../../../modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
+- [Custom auth configurations](/modules/node-manager/faq.html#how-to-add-additional-registry-auth) for the legacy auth format (using `/etc/containerd/conf.d`) can only be applied after switching to the legacy mode.
 {% endalert %}
 
 1. Switch the registry mode to `Unmanaged`.
