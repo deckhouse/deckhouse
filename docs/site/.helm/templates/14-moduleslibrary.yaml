@@ -4,6 +4,7 @@ metadata:
   name: moduleslibrary
   annotations:
     "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
   labels:
     service: moduleslibrary
     app.kubernetes.io/part-of: deckhouse-docs
