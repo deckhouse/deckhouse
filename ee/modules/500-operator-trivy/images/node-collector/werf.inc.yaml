@@ -51,7 +51,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -67,6 +67,8 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go`) | indent 6 }}
   - chown root:root /node-collector
   - chmod 0700 /node-collector
