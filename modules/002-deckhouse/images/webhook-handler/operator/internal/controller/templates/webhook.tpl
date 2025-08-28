@@ -11,7 +11,7 @@ configVersion: v1
 kubernetesValidating:
 - name: {{ .Name }}.deckhouse.io
   group: main
-# \{\{ .Spec.Webhook }}
+{{ toYaml .Spec.Webhook }}
 kubernetes:
 - name: {{ .Name }}
   group: main

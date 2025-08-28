@@ -17,13 +17,16 @@ limitations under the License.
 package controller
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"text/template"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -100,6 +103,28 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return res, nil
 }
 
+// toYAML takes an interface, marshals it to yaml, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+//
+// This is designed to be called from a template.
+func toYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+func indent(spaces int, s string) string {
+	pad := strings.Repeat(" ", spaces)
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = pad + line
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
@@ -114,7 +139,10 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	// 6) kill shell-operator binary (we can start shell operator as library too?)
 
 	// hooks/002-deckhouse/webhooks/validating
-	os.MkdirAll("/hooks/"+vh.Name+"/webhooks/validating/", 0777)
+	err := os.MkdirAll("hooks/"+vh.Name+"/webhooks/validating/", 0777)
+	if err != nil {
+		log.Error("create dir: %w", err)
+	}
 
 	tplt := `
 #!/usr/bin/python3
@@ -128,13 +156,12 @@ from cryptography.hazmat.backends import default_backend
 config = """
 configVersion: v1
 kubernetesValidating:
-- name: {{ .Name }}.deckhouse.io
-  group: main
-#\{\{ .Spec.Webhook }}
+- group: main
+{{ toYaml .Spec.Webhook | indent 2 }}
 kubernetes:
 - name: {{ .Name }}
   group: main
-#\{\{ .Spec.Context }}
+{{ toYaml .Spec.Context | indent 2 }}
 """
 
 def main(ctx: hook.Context):
@@ -151,14 +178,26 @@ if __name__ == "__main__":
     hook.run(main, config=config)
 `
 
-	tpl, err := template.New("test").Parse(tplt)
+	tpl, err := template.New("test").Funcs(template.FuncMap{
+		"toYaml": toYAML,
+		"indent": indent,
+	}).Parse(tplt)
 	if err != nil {
 		return res, fmt.Errorf("template parse: %w", err)
 	}
 
-	err = tpl.Execute(os.Stdout, vh)
+	var buf bytes.Buffer
+
+	err = tpl.Execute(&buf, vh)
 	if err != nil {
 		return res, fmt.Errorf("template execute: %w", err)
+	}
+	// log.Info("template", slog.String("template", buf.String()))
+	fmt.Println(buf.String())
+
+	err = os.WriteFile("hooks/"+vh.Name+"/webhooks/validating/"+vh.Name+".py", buf.Bytes(), 0755)
+	if err != nil {
+		log.Error("create file: %w", err)
 	}
 
 	// add finalizer

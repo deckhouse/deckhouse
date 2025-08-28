@@ -1,56 +1,37 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"os"
 	"testing"
-	"text/template"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/yaml"
 )
 
 func TestTemplateNoError(t *testing.T) {
 	// hooks/002-deckhouse/webhooks/validating
 	// os.MkdirAll("/hooks/"+vh.Name+"/webhooks/validating/", 0777)
 
+	r := &ValidationWebhookReconciler{
+		Logger: log.NewLogger(log.WithLevel(slog.LevelDebug)),
+	}
+
 	sampleFile, err := os.ReadFile("testdata/sample.yaml")
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	assert.NoError(t, err)
+
+	jsonData, err := yaml.YAMLToJSON(sampleFile)
+	assert.NoError(t, err)
+	// fmt.Println(string(jsonData))
+
 	var vh *deckhouseiov1alpha1.ValidationWebhook
-	err = json.Unmarshal(sampleFile, &vh)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-		return
-	}
+	err = json.Unmarshal(jsonData, &vh)
+	assert.NoError(t, err)
 
-	templateFile := "templates/webhook.tpl"
-
-	tpl, err := template.ParseFiles(templateFile)
-	// template.
-	// Funcs(template.FuncMap{
-	// 	"toYaml": func(str string) string {
-	// 		res, err := yaml.Marshal(str)
-	// 		if err != nil {
-	// 			return err.Error()
-	// 		}
-	// 		return string(res)
-	// 	},
-	// }).
-
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-		return
-	}
-
-	err = tpl.Execute(os.Stdout, vh)
-	if err != nil {
-		fmt.Println(err.Error())
-		t.FailNow()
-		return
-	}
+	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	assert.NoError(t, err)
 }
