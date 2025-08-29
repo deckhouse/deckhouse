@@ -10,7 +10,8 @@ shell:
   - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
 git:
   - url: https://github.com/flant/web-router.git
-    tag: v1.0.14
+    #tag: v1.0.14
+    tag: v1.0.15-dev
     add: /
     to: /go/src/app
     stageDependencies:
