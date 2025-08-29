@@ -58,7 +58,7 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
 	)
 
-	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
+	//log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
 
 	return cmd
 }
