@@ -15,7 +15,6 @@
 # from cilium-artifact
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
@@ -103,8 +102,6 @@ shell:
       done
     done
   # additional relocate from cilium
-  - mkdir -p /relocate/var/lib/cilium
-  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   # additional relocate for fix locale
