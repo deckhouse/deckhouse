@@ -11,10 +11,11 @@
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
 # from hubble-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/cni-uninstall.sh /init-container.sh /install-plugin.sh" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/LICENSE.all /etc/bash_completion.d/cilium-dbg" }}
+{{ $selfBuiltBinaries := cat $selfBuiltBinaries "/opt/cni/bin/cilium-cni /usr/bin/cilium*" }}
 # for check and cleaning unnecessary iptables
 {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/check-n-cleaning-iptables.sh" }}
 # iptables and dependencies
@@ -61,6 +62,21 @@ import:
   add: /iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
+- image: {{ .ModuleName }}/cilium-artifact
+  add: /tmp/install
+  to: /
+  before: install
+  includePaths:
+  - cni-uninstall.sh
+  - init-container.sh
+  - install-plugin.sh
+  - LICENSE.all
+  - etc/bash_completion.d/cilium-dbg
+  - opt/cni/bin/cilium-cni
+  - usr/bin/cilium*
+  - var/lib/cilium/bpf
+  - usr/bin/hubble
+  - etc/bash_completion.d/hubble
 - image: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
@@ -103,6 +119,7 @@ shell:
     done
   # additional relocate from cilium
   - mkdir -p /relocate/var/lib/cilium
+  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   # additional relocate for fix locale
@@ -263,19 +280,19 @@ import:
   to: /etc/bashrc.d/bash_completion.sh
 - image: libs/glibc-v2.41
   add: /lib64/libm.so.6
-  to: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
   before: setup
 - image: libs/glibc-v2.41
   add: /lib64/libc.so.6
-  to: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
   before: setup
 - image: libs/glibc-v2.41
   add: /lib64/ld-linux-x86-64.so.2
-  to: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
   before: setup
 - image: tools/elfutils-elfutils-0.193
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libelf.a
@@ -317,24 +334,9 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- image: {{ .ModuleName }}/cilium-artifact
-  add: /tmp/install
-  to: /
-  before: install
-  includePaths:
-  - cni-uninstall.sh
-  - init-container.sh
-  - install-plugin.sh
-  - LICENSE.all
-  - etc/bash_completion.d/cilium-dbg
-  - opt/cni/bin/cilium-cni
-  - usr/bin/cilium*
-  - var/lib/cilium/bpf
-  - usr/bin/hubble
-  - etc/bash_completion.d/hubble
 - image: libs/zlib-v1.3.1
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libz.a
@@ -343,7 +345,7 @@ import:
   - libz.so.1.3.1
 - image: libs/libcap-v1.2.69
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libcap.a
@@ -352,7 +354,7 @@ import:
   - libcap.so.2.69
 - image: libs/zstd-v1.5.7
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libzstd.a
@@ -361,7 +363,7 @@ import:
   - libzstd.so.1.5.6
 - image: libs/libxml2-v2.13.8
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libxml2.a
@@ -372,7 +374,7 @@ import:
   - libxml2.so.2.13.8
 - image: libs/libffi-v3.4.8
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libffi.a
@@ -382,7 +384,7 @@ import:
   - libffi.so.8.1.4
 - image: libs/xz-v5.8.1
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libc.so
@@ -394,7 +396,7 @@ import:
   - liblzma.so.5.8.1
 - image: libs/libedit-v20250104.3.1
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libedit.a
@@ -405,7 +407,7 @@ import:
   - libedit.so.3
 - image: libs/ncurses-v6.5
   add: /usr/lib
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libcurses.a
@@ -452,7 +454,7 @@ import:
   - libtinfo.so.6
 - image: {{ .ModuleName }}/llvm-artifact
   add: /lib64/libLLVM.so.19.1
-  to: /lib64/libLLVM.so.19.1
+  to: /usr/lib64/libLLVM.so.19.1
   before: setup
 - image: {{ .ModuleName }}/llvm-artifact
   add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
@@ -460,7 +462,7 @@ import:
   before: setup
 - image: tools/gcc-12.1.0
   add: /usr/lib64
-  to: /lib64
+  to: /usr/lib64
   before: setup
   includePaths:
   - libstdc++.so.6
@@ -468,7 +470,7 @@ import:
   - libgcc_s.so.1
 - image: libs/glibc-v2.41
   add: /lib64/libc.musl-x86_64.so.1
-  to: /lib64/libc.musl-x86_64.so.1
+  to: /usr/lib64/libc.musl-x86_64.so.1
   before: setup
 - image: libs/xz-v5.8.1
   add: /usr/lib/libc.so
