@@ -17,6 +17,7 @@ package tofu
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,6 +60,27 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 	)
 
 	log.DebugF("Tofu Command envs:\n %s\n", "TEST")
+	s := strings.Join(cmd.Env, " ")
+
+	f, err := os.CreateTemp("", "")
+	if err != nil {
+		log.DebugF("Failed to create temporary file: %v", err)
+	}
+	defer f.Close()
+
+	log.DebugF("Created temporary file: %s", f.Name())
+	_, err = f.Write([]byte(s))
+	if err != nil {
+		log.DebugF("Failed to write temporary file: %v", err)
+	}
+
+	slog.Info("[SLOG!!!] Tofu Command output:\n %s\n", strings.Join(cmd.Args, " "))
+
+	log.DebugF("======")
+	log.DebugF("ENVS: %v\n", len(s))
+	log.DebugF("ENVS: %v\n", cmd.Env)
+	log.DebugF("ENVS: %v\n", s)
+	log.DebugF("======")
 
 	return cmd
 }
