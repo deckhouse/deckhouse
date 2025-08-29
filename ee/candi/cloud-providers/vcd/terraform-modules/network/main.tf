@@ -28,6 +28,18 @@ resource "vcd_network_routed_v2" "network" {
   prefix_length = tonumber(split("/", var.internal_network_cidr)[1])
   dns1          = length(var.internal_network_dns_servers) > 0 ? var.internal_network_dns_servers[0] : null
   dns2          = length(var.internal_network_dns_servers) > 1 ? var.internal_network_dns_servers[1] : null
+
+  dynamic "metadata_entry" {
+    for_each = var.metadata
+
+    content {
+      type        = "MetadataStringValue"
+      is_system   = false
+      user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
+    }
+  }
 }
 
 resource "vcd_nsxt_network_dhcp" "pools" {
