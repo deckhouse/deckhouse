@@ -774,3 +774,15 @@ func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
 
 	return nil
 }
+
+func validateVCDServerNoTrailingSlash(server string) error {
+	server = strings.TrimSpace(server)
+	if server == "" {
+		return nil
+	}
+	if strings.HasSuffix(server, "/") {
+		return fmt.Errorf("provider.server must not end with a slash '/'")
+	}
+
+	return nil
+}

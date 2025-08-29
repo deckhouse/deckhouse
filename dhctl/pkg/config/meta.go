@@ -734,6 +734,10 @@ func (m *MetaConfig) discoverVCDApi() (any, error) {
 		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
+	if err := validateVCDServerNoTrailingSlash(providerConfiguration.Server); err != nil {
+		return nil, err
+	}
+
 	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
