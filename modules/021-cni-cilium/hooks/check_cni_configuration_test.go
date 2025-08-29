@@ -172,7 +172,6 @@ data:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=true and metric=0 and should not create desired mc", func() {
@@ -223,7 +222,6 @@ data:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=true and metric=0 and create MC directly", func() {
@@ -254,7 +252,6 @@ data:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully and do nothing", func() {
@@ -381,7 +378,6 @@ data:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully, set req=false and metric=1 and create desired mc", func() {
@@ -535,7 +531,6 @@ status:
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
-
 		})
 
 		It("Should execute successfully with warnings, set req=true and metric=0 and should not create desired mc", func() {
