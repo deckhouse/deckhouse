@@ -403,7 +403,7 @@ status:
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
-				cniSecretYAML(cni, `{"mode": "DirectWithNodeRutes", "masqueradeMode": "Netfilter"}`),
+				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`),
 				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
@@ -423,7 +423,7 @@ status:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown cilium mode DirectWithNodeRutes`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`unknown cilium mode DirectWithNodeRoutes`))
 		})
 	})
 
