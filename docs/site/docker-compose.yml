@@ -13,14 +13,15 @@ services:
       VROUTER_LISTEN_PORT: "8080"
       VROUTER_LOG_LEVEL: "debug"
       VROUTER_PATH_STATIC: "/app/root"
-      VROUTER_PATH_CHANNELS_FILE: "releasedata/channels.yaml"
+      VROUTER_PATH_CHANNELS_FILE: "/app/root/en/includes/release-channels/channels.yaml"
       VROUTER_I18N_TYPE: "separate-domain"
       VROUTER_LOCATION_VERSIONS: "/products/kubernetes-platform/documentation"
       VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
     networks:
       - deckhouse
     volumes:
-      - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
+      - ".helm/channels.yaml:/app/root/en/includes/release-channels/channels.yaml:ro"
+      - ".helm/channels.yaml:/app/root/ru/includes/release-channels/channels.yaml:ro"
     working_dir: "/app"
   front:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
