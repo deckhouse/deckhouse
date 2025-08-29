@@ -34,6 +34,12 @@ type FlannelConfig struct {
 	PodNetworkMode string `json:"podNetworkMode"`
 }
 
+type resultStruct struct {
+	desiredCniConfigSourcePriorityFlagExists bool
+	desiredCniConfigSourcePriority           string
+	cniConfigFromSecret                      FlannelConfig
+}
+
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
@@ -41,16 +47,30 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 		return nil, fmt.Errorf("cannot convert incoming object to Secret: %v", err)
 	}
 
-	var flannelConfig FlannelConfig
-	flannelConfigJSON, ok := secret.Data["flannel"]
-	if ok {
-		err = json.Unmarshal(flannelConfigJSON, &flannelConfig)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal flannel config json: %v", err)
-		}
+	if string(secret.Data["cni"]) != "flannel" {
+		return nil, nil
 	}
 
-	return flannelConfig, nil
+	var flannelConfig FlannelConfig
+	flannelConfigJSON, ok := secret.Data["flannel"]
+	if !ok {
+		return nil, nil
+	}
+
+	err = json.Unmarshal(flannelConfigJSON, &flannelConfig)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal flannel config json: %v", err)
+	}
+
+	cniConfigSourcePriorityFlagExists := false
+	cniConfigSourcePriority := ""
+	cniConfigSourcePriority, cniConfigSourcePriorityFlagExists = secret.Annotations[cniConfigSourcePriorityAnnotation]
+
+	return resultStruct{
+		desiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
+		desiredCniConfigSourcePriority:           cniConfigSourcePriority,
+		cniConfigFromSecret:                      flannelConfig,
+	}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -75,32 +95,44 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setPodNetworkMode)
 
 func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
-	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.Snapshots, "cni_configuration_secret")
+	clusterIsBootstrapped := input.Values.Get("global.clusterIsBootstrapped").Bool()
+
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[resultStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal cni_configuration_secret to FlannelConfig: %w", err)
 	}
 
-	var flannelConfig FlannelConfig
+	cniConfigSourcePriority := "ModuleConfig"
 	if len(cniConfigurationSecrets) > 0 {
-		flannelConfig = cniConfigurationSecrets[0]
+		if cniConfigurationSecrets[0].desiredCniConfigSourcePriorityFlagExists {
+			if cniConfigurationSecrets[0].desiredCniConfigSourcePriority != "ModuleConfig" {
+				cniConfigSourcePriority = "Secret"
+			}
+		} else if clusterIsBootstrapped {
+			cniConfigSourcePriority = "Secret"
+		}
 	}
+	input.Logger.Info("The priority parameter source for the CNI configuration has been identified", "priority source", cniConfigSourcePriority)
 
-	podNetworkMode := "host-gw"
-
-	if input.ConfigValues.Exists("cniFlannel.podNetworkMode") {
-		configPodNetworkMode := input.ConfigValues.Get("cniFlannel.podNetworkMode").String()
-		switch configPodNetworkMode {
-		case "HostGW":
-			podNetworkMode = "host-gw"
-		case "VXLAN":
-			podNetworkMode = "vxlan"
+	switch cniConfigSourcePriority {
+	case "Secret":
+		flannelConfig := cniConfigurationSecrets[0].cniConfigFromSecret
+		if flannelConfig.PodNetworkMode != "" {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", flannelConfig.PodNetworkMode)
+		}
+		return nil
+	case "ModuleConfig":
+		value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
+		if ok {
+			switch value.String() {
+			case "HostGW":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
+			case "VXLAN":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
+			}
 		}
 	}
 
-	if flannelConfig.PodNetworkMode != "" {
-		podNetworkMode = flannelConfig.PodNetworkMode
-	}
-
-	input.Values.Set("cniFlannel.internal.podNetworkMode", podNetworkMode)
+	// default_podNetworkMode = HostGW
 	return nil
 }
