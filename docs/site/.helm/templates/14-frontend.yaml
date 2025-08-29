@@ -84,7 +84,9 @@ spec:
             {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - name: release-channels
-              mountPath: /app/release-channels
+              mountPath: /app/root/en/includes/release-channels
+            - name: release-channels
+              mountPath: /app/root/ru/includes/release-channels
       volumes:
         - name: download-cache
           emptyDir: {}
