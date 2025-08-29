@@ -128,7 +128,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
 		}
 
-		err = makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
+		err = makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups, make(map[string]bool))
 		if err != nil {
 			return fmt.Errorf("error while make user groups map for group %s: %v", group.Spec.Name, err)
 		}
@@ -226,10 +226,22 @@ func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {
 	return nil, nil
 }
 
-func makeUserGroupsMap(groups []pkg.Snapshot, targetGroup string, accumulatedGroupList []string, mapOfUsersToGroups map[string]map[string]bool) error {
+func makeUserGroupsMap(
+	groups []pkg.Snapshot,
+	targetGroup string,
+	accumulatedGroupList []string,
+	mapOfUsersToGroups map[string]map[string]bool,
+	visited map[string]bool,
+) error {
 	if len(groups) == 0 {
 		return nil
 	}
+	// If this group has already been visited, exit to prevent infinite recursion
+	if visited[targetGroup] {
+		return nil
+	}
+	visited[targetGroup] = true
+
 	group, err := findGroup(groups, targetGroup)
 	if err != nil {
 		return fmt.Errorf("error while find group %s: %v", targetGroup, err)
@@ -257,7 +269,7 @@ func makeUserGroupsMap(groups []pkg.Snapshot, targetGroup string, accumulatedGro
 				mapOfUsersToGroups[member.Name][g] = true
 			}
 		case "Group":
-			err := makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
+			err := makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups, visited)
 			if err != nil {
 				return fmt.Errorf("error while make user groups map for group %s: %v", member.Name, err)
 			}

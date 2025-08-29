@@ -213,9 +213,3 @@ restricted in the credentials they are allowed to read.
 
 If you get stuck at any time, simply run `d8 stronghold path-help pki` or with a
 subpath for interactive help output.
-
-## API
-
-The PKI secrets engine has a full HTTP API. Please see the
-[PKI secrets engine API](/api-docs/secret/pki) for more
-details.

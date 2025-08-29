@@ -1,0 +1,9 @@
+files:
+- /etc/vector/default/defaults.json
+- /etc/localtime
+dirs:
+- /var/log
+- /var/lib
+- /vector-data
+- /etc/vector/dynamic
+- /opt/vector

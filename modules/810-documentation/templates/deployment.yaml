@@ -16,6 +16,7 @@ spec:
     metadata:
       labels:
         app: documentation
+        app.kubernetes.io/part-of: deckhouse-docs
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -83,6 +84,9 @@ spec:
         ports:
           - containerPort: 8081
             name: builder-http
+            protocol: TCP
+          - containerPort: 9090
+            name: http-metrics
             protocol: TCP
         livenessProbe:
           httpGet:

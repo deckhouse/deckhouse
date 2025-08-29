@@ -1,0 +1,147 @@
+diff --git a/tsdb/wlog/watcher.go b/tsdb/wlog/watcher.go
+index ac5041e87..4dc8b9acf 100644
+--- a/tsdb/wlog/watcher.go
++++ b/tsdb/wlog/watcher.go
+@@ -30,6 +30,8 @@ import (
+
+ 	"github.com/prometheus/prometheus/model/labels"
+ 	"github.com/prometheus/prometheus/model/timestamp"
++	"github.com/prometheus/prometheus/tsdb/chunks"
++	"github.com/prometheus/prometheus/tsdb/encoding"
+ 	"github.com/prometheus/prometheus/tsdb/record"
+ )
+
+@@ -86,6 +88,7 @@ type Watcher struct {
+ 	writer         WriteTo
+ 	logger         log.Logger
+ 	walDir         string
++	chunkDir       string
+ 	lastCheckpoint string
+ 	sendExemplars  bool
+ 	sendHistograms bool
+@@ -182,6 +185,7 @@ func NewWatcher(metrics *WatcherMetrics, readerMetrics *LiveReaderMetrics, logge
+ 		metrics:        metrics,
+ 		readerMetrics:  readerMetrics,
+ 		walDir:         filepath.Join(dir, "wal"),
++		chunkDir:       dir,
+ 		name:           name,
+ 		sendExemplars:  sendExemplars,
+ 		sendHistograms: sendHistograms,
+@@ -274,6 +278,8 @@ func (w *Watcher) Run() error {
+ 	// Run will be called again if there was a failure to read the WAL.
+ 	w.sendSamples = false
+
++	w.loadSnapshot()
++
+ 	level.Info(w.logger).Log("msg", "Replaying WAL", "queue", w.name)
+
+ 	// Backfill from the checkpoint first if it exists.
+@@ -316,6 +322,105 @@ func (w *Watcher) Run() error {
+ 	return nil
+ }
+
++func (w *Watcher) loadSnapshot() {
++	level.Info(w.logger).Log("msg", "Chunk snapshot is enabled, replaying from the snapshot")
++	dir, _, err := LastChunkSnapshot(w.chunkDir)
++	if err != nil {
++		if errors.Is(err, record.ErrNotFound) {
++			level.Info(w.logger).Log("msg", "Chunk snapshot not found")
++			return
++		}
++		level.Error(w.logger).Log("msg", "Failed to load snapshot", "error", err)
++		return
++	}
++
++	sr, err := NewSegmentsReader(dir)
++	if err != nil {
++		level.Error(w.logger).Log("msg", "Failed to open snapshot", "error", err)
++		return
++	}
++	defer func() {
++		if err := sr.Close(); err != nil {
++			level.Error(w.logger).Log("msg", "Failed to close snapshot", "error", err)
++		}
++	}()
++
++	r := NewReader(sr)
++	var (
++		syms = labels.NewSymbolTable() // New table for the whole snapshot.
++		d    = record.NewDecoder(syms)
++	)
++
++	seriesMap := make(map[chunks.HeadSeriesRef]labels.Labels)
++	for r.Next() {
++		rec := r.Record()
++		if rec[0] != 1 {
++			continue
++		}
++		dec := encoding.Decbuf{B: rec}
++		_ = dec.Byte()
++		ref := chunks.HeadSeriesRef(dec.Be64())
++		lset := d.DecodeLabels(&dec)
++		seriesMap[ref] = lset
++	}
++	series := make([]record.RefSeries, 0, len(seriesMap))
++	for ref, lset := range seriesMap {
++		series = append(series, record.RefSeries{
++			Ref:    ref,
++			Labels: lset,
++		})
++	}
++	w.writer.StoreSeries(series, math.MaxInt)
++}
++
++const chunkSnapshotPrefix = "chunk_snapshot."
++
++// LastChunkSnapshot returns the directory name and index of the most recent chunk snapshot.
++// If dir does not contain any chunk snapshots, ErrNotFound is returned.
++func LastChunkSnapshot(dir string) (string, int, error) {
++	files, err := os.ReadDir(dir)
++	if err != nil {
++		return "", 0, err
++	}
++	maxIdx, maxOffset := -1, -1
++	maxFileName := ""
++	for i := 0; i < len(files); i++ {
++		fi := files[i]
++
++		if !strings.HasPrefix(fi.Name(), chunkSnapshotPrefix) {
++			continue
++		}
++		if !fi.IsDir() {
++			return "", 0, fmt.Errorf("chunk snapshot %s is not a directory", fi.Name())
++		}
++
++		splits := strings.Split(fi.Name()[len(chunkSnapshotPrefix):], ".")
++		if len(splits) != 2 {
++			// Chunk snapshots is not in the right format, we do not care about it.
++			continue
++		}
++
++		idx, err := strconv.Atoi(splits[0])
++		if err != nil {
++			continue
++		}
++
++		offset, err := strconv.Atoi(splits[1])
++		if err != nil {
++			continue
++		}
++
++		if idx > maxIdx || (idx == maxIdx && offset > maxOffset) {
++			maxIdx, maxOffset = idx, offset
++			maxFileName = filepath.Join(dir, fi.Name())
++		}
++	}
++	if maxFileName == "" {
++		return "", 0, record.ErrNotFound
++	}
++	return maxFileName, maxIdx, nil
++}
++
+ // findSegmentForIndex finds the first segment greater than or equal to index.
+ func (w *Watcher) findSegmentForIndex(index int) (int, error) {
+ 	refs, err := listSegments(w.walDir)
+--
+2.34.1
+

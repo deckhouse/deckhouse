@@ -484,40 +484,32 @@ spec:
                   description: |
                     Максимальная продолжительность периода (в секундах), в течение которого контроллер будет пытаться переселить поды на новую машину в процессе выполнения drain на узле.
                 gpu:
-                  type: object
                   description: |
                     Параметры GPU.
                   properties:
                     sharing:
-                      type: string
                       description: |
-                        Стратегия разделения GPU.
-                      enum:
-                        - TimeSlicing
-                        - Mig
-                        - Exclusive
+                        Стратегия разделения GPU:
+                        - `Exclusive` — без разделения (каждый GPU полностью выделяется одному поду).
+                        - `TimeSlicing` — разделение GPU по времени (несколько подов могут одновременно использовать один GPU, поочередно получая доступ к его вычислительным ресурсам).
+                        - `MIG` — разделение одного GPU на несколько экземпляров (технология NVIDIA MIG, при наличии поддержки).
                     mig:
-                      type: object
+                      description: |
+                        Параметры для стратегии `MIG`.
                       properties:
                         partedConfig:
-                          type: string
                           description: |
-                            Выбранная конфигурация разделения MIG.
-                          x-doc-default: all-1g.5gb
+                            Имя используемой конфигурация MIG.
                     timeSlicing:
                       description: |
-                        Параметры Time-slicing.
-                      type: object
+                        Параметры для стратегии `TimeSlicing`.
                       properties:
-                        gpuPartitionCount:
-                          type: integer
+                        partitionCount:
                           description: |
-                            Количество партиций на GPU с TimeSlicing.
-                          x-doc-default: 4
+                            Количество разделов (виртуальных GPU) на один физический GPU.
                     exclusive:
-                      type: object
                       description: |
-                        Без разделения GPU.
+                        Режим без разделения GPU.
                 cri:
                   type: object
                   description: |
@@ -551,7 +543,8 @@ spec:
 
                         - поддержка `CgroupsV2`;
                         - ядро Linux версии `5.8` и новее;
-                        - systemd версии `244` и новее.
+                        - systemd версии `244` и новее;
+                        - поддержка модуля ядра `erofs`.
                       properties:
                         maxConcurrentDownloads:
                           description: |

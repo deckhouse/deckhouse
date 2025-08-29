@@ -4,12 +4,25 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - git clone --depth 1 --branch v{{ $dcgm_version }} $(cat /run/secrets/SOURCE_REPO)/NVIDIA/DCGM.git /src/DCGM
+  - cd /src/DCGM
+  - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
@@ -56,8 +69,8 @@ import:
   add: /src
   before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
-  add: /opt/cross/
-  to: /opt/cross/
+  add: /opt/cross
+  to: /opt/cross
   before: install
 shell:
   beforeInstall:
@@ -70,6 +83,7 @@ shell:
   install:
   - mkdir -p /tmp/scripts
   - cp -a /src/DCGM/dcgmbuild/scripts/host /tmp/scripts/host
+  - cp /src/scripts/llvm.sh /tmp/scripts/
   - |
     set -ex
     find /tmp/scripts/host -name '*.sh' | sort | while read -r SCRIPT
@@ -135,7 +149,7 @@ import:
   before: install
 - image: libs/glibc
   add: /
-  to: /tmp/glibc/
+  to: /tmp/glibc
   includePaths:
   - usr/*
   - lib64/*

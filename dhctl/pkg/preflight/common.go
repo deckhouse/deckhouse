@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -47,7 +48,12 @@ func setupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tu
 			port = "443"
 		}
 	}
-	tunnel := strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
+	var tunnel string
+	if app.SSHLegacyMode {
+		tunnel = strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
+	} else {
+		tunnel = strings.Join([]string{proxyUrl.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")
+	}
 	log.DebugF("tunnel string: %s", tunnel)
 	tun := sshCl.Tunnel(tunnel)
 	err := tun.Up()

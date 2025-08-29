@@ -18,12 +18,14 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -34,6 +36,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
+)
+
+var (
+	ErrRequireResync = errors.New("require resync")
 )
 
 func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, moduleName string) error {
@@ -50,7 +56,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules without sources, it seems impossible, but just in case
 			if len(module.Properties.AvailableSources) == 0 {
 				// don`t delete enabled module
-				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				return nil
@@ -59,7 +65,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules with this source as the last source
 			if len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName {
 				// don`t delete enabled module
-				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				module.Properties.AvailableSources = []string{}
@@ -167,13 +173,14 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 
 // needToEnsureRelease checks that the module enabled, the source is the active source,
 // release exists, and checksum not changed.
-func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
+func (r *reconciler) needToEnsureRelease(
+	source *v1alpha1.ModuleSource,
 	module *v1alpha1.Module,
 	sourceModule v1alpha1.AvailableModule,
 	meta *downloader.ModuleDownloadResult,
 	releaseExists bool) bool {
 	// check the active source
-	if module.Properties.Source != source.Name {
+	if module.Properties.Source != "" && module.Properties.Source != source.Name {
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
 			slog.String("name", module.Name))
@@ -181,10 +188,22 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 		return false
 	}
 
-	// check the module enabled
-	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
+	//  not found or unknown
+	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) || module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+		enabledByBundle := false
+		if meta.ModuleDefinition != nil {
+			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
+		}
 
+		if !enabledByBundle {
+			return false
+		}
+
+		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
+			return false
+		}
+	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+		// disabled by module config
 		return false
 	}
 
@@ -192,11 +211,15 @@ func (r *reconciler) needToEnsureRelease(source *v1alpha1.ModuleSource,
 }
 
 func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
+	var requireResync bool
+
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
+
+		requireResync = true
 
 		module = &v1alpha1.Module{
 			TypeMeta: metav1.TypeMeta{
@@ -234,12 +257,19 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
 		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
 			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
+			requireResync = true
 		}
+
 		module.Properties.ReleaseChannel = releaseChannel
+
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
+	}
+
+	if requireResync {
+		return nil, ErrRequireResync
 	}
 
 	return module, nil

@@ -59,17 +59,17 @@ The following are the steps for restoring a cluster to a previous state from a b
 
 To correctly recover a cluster with one master node, follow these steps:
 
-1. Download the [etcdctl](https://github.com/etcd-io/etcd/releases) utility to the server (it is desirable that its version is the same as the etcd version in the cluster).
+1. Download the [etcdutl](https://github.com/etcd-io/etcd/releases) utility to the server (it is desirable that its version is the same as the etcd version in the cluster).
 
     ```shell
-    wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-    tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
+    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+    tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
     ```
 
     You can check the etcd version in your cluster by running the following command:
 
     ```shell
-    d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+    d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
     ```
 
 1. Stop etcd.
@@ -89,7 +89,7 @@ To correctly recover a cluster with one master node, follow these steps:
 1. Clean up the etcd directory.
 
     ```shell
-    rm -rf /var/lib/etcd/member/
+    rm -rf /var/lib/etcd
     ```
 
 1. Place the etcd backup in `~/etcd-backup.snapshot`.
@@ -97,8 +97,7 @@ To correctly recover a cluster with one master node, follow these steps:
 1. Restore the etcd database.
 
     ```shell
-     ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+     ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
      ```
 
 1. Start etcd.
@@ -344,8 +343,8 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -444,8 +443,8 @@ The steps described below must be performed from the first in order of the maste
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```

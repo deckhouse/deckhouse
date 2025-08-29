@@ -48,6 +48,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
   detect_editions:
@@ -188,7 +192,7 @@ jobs:
     steps:
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.ref_name }}
           ci_commit_hash: ${{ github.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"

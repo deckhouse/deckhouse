@@ -27,8 +27,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -89,8 +89,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -207,8 +207,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -561,7 +561,7 @@ spec:
 Начиная с релиза Deckhouse Kubernetes Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
@@ -605,27 +605,27 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления выполните следующие шаги на master-узле:
 
-1. Найдите утилиту `etcdctl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-   etcdctl version
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   etcdutl version
    ```
 
-   Должен отобразиться корректный вывод `etcdctl version` без ошибок.
+   Должен отобразиться корректный вывод `etcdutl version` без ошибок.
 
-   Также вы можете загрузить исполняемый файл [etcdctl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdctl` была такая же, как и версия etcd в кластере):
+   Также вы можете загрузить исполняемый файл [etcdutl](https://github.com/etcd-io/etcd/releases) на сервер (желательно, чтобы версия `etcdutl` была такая же, как и версия etcd в кластере):
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
    Проверить версию etcd в кластере можно выполнив следующую команду (команда может не сработать, если etcd и Kubernetes API недоступны):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
 1. Остановите etcd.
@@ -643,7 +643,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Очистите директорию etcd.
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
 1. Положите резервную копию etcd в файл `~/etcd-backup.snapshot`.
@@ -651,15 +651,26 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Восстановите базу данных etcd.
 
    ```shell
-   MASTER_IP=$(cat /var/lib/bashible/discovered-node-ip)
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd --initial-advertise-peer-urls="https://$MASTER_IP:2380" --initial-cluster="$HOSTNAME=https://$MASTER_IP:2380" --name="$HOSTNAME"
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
 1. Запустите etcd. Запуск может занять некоторое время.
 
    ```shell
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
+      ```
+
+   Чтобы убедиться, что etcd запущена, воспользуйтесь командой:
+
+   ```shell
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Пример вывода:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
    ```
 
 1. Перезапустите master-узел.
@@ -717,6 +728,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Данные действия выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
 
+1. Установите корректные права доступа для файла с резервной копией:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Установите полный путь до `snapshot` и до утилиты в переменных окружения:
 
    ```shell
@@ -742,13 +759,20 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -767,6 +791,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        volumes:
        - name: etcddir
          emptyDir: {}
+         # Используйте фрагмент ниже вместо emptyDir: {}, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # emptyDir:
+         #  sizeLimit: 500Mi
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT

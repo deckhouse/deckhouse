@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -48,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -76,6 +78,7 @@ var ErrSettingsNotChanged = errors.New("settings not changed")
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	edition *d8edition.Edition,
 	dc dependency.Container,
 	metricStorage metric.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
@@ -87,6 +90,7 @@ func RegisterController(
 		dc:                   dc,
 		logger:               logger,
 		moduleManager:        mm,
+		edition:              edition,
 		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
@@ -129,7 +133,10 @@ func RegisterController(
 					return true
 				}
 				// handle enable
-				if !oldMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && newMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+				// not found or !true -> true
+				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
+						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 					return true
 				}
 				return false
@@ -155,6 +162,7 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
+	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
 }
@@ -282,6 +290,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
+
 		return ctrl.Result{}, err
 	}
 
@@ -299,7 +308,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 	sort.Strings(pulledModules)
 
 	availableModules := make([]v1alpha1.AvailableModule, 0)
-	var pullErrorsExist bool
+	var errorsExist bool
 
 	for _, moduleName := range pulledModules {
 		logger := r.logger.With(slog.String("module_name", moduleName))
@@ -322,7 +331,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		// clear pull error
+		// clear process error
+		availableModule.Error = ""
+
+		// TODO: remove this emptify after 1.75
+		// nolint: staticcheck
 		availableModule.PullError = ""
 
 		// clear overridden
@@ -331,7 +344,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// get update policy
 		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
-			return fmt.Errorf("get update policy for the '%s' module: %w", moduleName, err)
+			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
 
 		availableModule.Policy = policy.Name
@@ -341,14 +359,31 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
+			// skip modules that require resync
+			if errors.Is(err, ErrRequireResync) {
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
+			logger.Warn("failed to ensure module, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
 
 		logger = logger.With(slog.String("source_name", source.Name))
 
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
-			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
+			logger.Warn("failed to get module pull override, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
 
 		// skip overridden module
@@ -365,10 +400,10 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
-				availableModule.PullError = err.Error()
-				pullErrorsExist = true
+				availableModule.Error = err.Error()
+				errorsExist = true
 
 				metricLabels := map[string]string{
 					"module":   moduleName,
@@ -388,7 +423,12 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// check if release exists
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
-			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
+			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
 
 		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
@@ -403,15 +443,35 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+				logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+
+			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+				module.Properties.Source = source.Name
+
+				return nil
+			})
+			if err != nil {
+				logger.Error("failed to update module before fetch, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
 			}
 
 			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
-				availableModule.PullError = err.Error()
+				availableModule.Error = err.Error()
 				// wipe checksum to trigger meta downloading
 				meta.Checksum = ""
+				errorsExist = true
 			}
 		}
 
@@ -429,8 +489,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		source.Status.ModulesCount = len(availableModules)
 		source.Status.Message = ""
 
-		if pullErrorsExist {
-			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
+		if errorsExist {
+			source.Status.Message = v1alpha1.ModuleSourceMessageErrors
 		}
 
 		return nil

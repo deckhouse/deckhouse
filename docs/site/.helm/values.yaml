@@ -9,18 +9,6 @@ observability:
     web-production: true
     web-stage: true
 
-  podMonitor:
-    # if it true - create podMonitor resource
-    # if it false - create service with label "prometheus.deckhouse.io/custom-target"
-    enable:
-      _default: true
-
-    # podMonitor will be deployed to namespace d8-monitoring
-    # if there is multiple releases of modules-watcher, using the same name may cause errors
-    nameTemplate: 
-      _default: registry-modules-watcher-{{ .Release.Namespace }}
-      web-production: registry-modules-watcher
-
 ingressClass:
   _default: nginx
   prod-25: nginx

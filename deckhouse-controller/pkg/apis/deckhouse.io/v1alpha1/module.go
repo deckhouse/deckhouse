@@ -213,12 +213,50 @@ func (m *Module) IsEmbedded() bool {
 	return m.Properties.Source == ModuleSourceEmbedded
 }
 
-func (m *Module) ConditionStatus(condName string) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return cond.Status == corev1.ConditionTrue
+// IsEnabledByBundle checks if the module enabled in the specific edition and bundle
+func (m *Module) IsEnabledByBundle(editionName, bundleName string) bool {
+	if m.Properties.Accessibility == nil {
+		return false
+	}
+
+	access := m.Properties.Accessibility
+
+	if len(access.Editions) == 0 {
+		return false
+	}
+
+	// check edition‑specific bundles first
+	if edition, ok := access.Editions[editionName]; ok && isEnabledInBundle(edition.EnabledInBundles, bundleName) {
+		return true
+	}
+
+	// check the default settings
+	defaultSettings, ok := access.Editions["_default"]
+	if !ok {
+		return false
+	}
+
+	// fallback to the default
+	return isEnabledInBundle(defaultSettings.EnabledInBundles, bundleName)
+}
+
+func isEnabledInBundle(bundles []string, requested string) bool {
+	for _, bundle := range bundles {
+		if bundle == requested {
+			return true
 		}
 	}
+
+	return false
+}
+
+func (m *Module) IsCondition(condName string, status corev1.ConditionStatus) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == status
+		}
+	}
+
 	return false
 }
 
@@ -246,7 +284,7 @@ func (m *Module) SetConditionTrue(condName string, opts ...ConditionOption) {
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status == corev1.ConditionFalse {
+			if cond.Status != corev1.ConditionTrue {
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionTrue
 			}
@@ -277,7 +315,7 @@ func (m *Module) SetConditionFalse(condName, reason, message string, opts ...Con
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status == corev1.ConditionTrue {
+			if cond.Status != corev1.ConditionFalse {
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionFalse
 			}
@@ -313,7 +351,7 @@ func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...C
 	for idx, cond := range m.Status.Conditions {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status == corev1.ConditionTrue {
+			if cond.Status != corev1.ConditionUnknown {
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionUnknown
 			}
@@ -343,6 +381,7 @@ func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
 			return time.Since(cond.LastTransitionTime.Time) >= timeout
 		}
 	}
+
 	return false
 }
 

@@ -1,3 +1,41 @@
+## Версия 1.72
+
+### Обратите внимание
+
+- В процессе обновления будут перезапущены все компоненты DKP.
+- Теперь, чтобы использовать [экспериментальные модули](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/module-development/versioning/#жизненный-цикл-модуля) в кластере, необходимо явно дать разрешение (параметр [allowExperimentalModules](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules)). По умолчанию использование экспериментальных модулей отключено. Уже включенные перед обновлением DKP экспериментальные модули отключены не будут. В случае ручного отключения включенного при обновлении DKP экспериментального модуля, для возможности его повторного включения необходимо дать разрешение на использование экспериментальных модулей.
+- Если на узлах кластера присутствуют WireGuard-интерфейсы, необходимо обновить ядро Linux до версии не ниже 6.8.
+
+### Основные изменения
+
+- Добавлен новый [модуль registry](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/registry/) и возможность менять параметры работы с container registry без перезапуска всех компонентов DKP. Теперь доступно [два режима работы](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-registry-mode) с container registry в DKP: `Unmanaged` (способ, доступный в предыдущих версиях) и `Direct` (новый способ). В режиме `Direct` DKP создает в кластере виртуальный адрес container registry, через который осуществляется работа всех компонентов DKP. Изменение адреса container registry (например, переключение на другой container registry или изменение редакции DKP в кластере) в этом случае не приводит к безусловному перезапуску всех компонентов DKP. 
+
+- Добавлена возможность использования рекурсивных DNS-серверов (управляется секцией параметров [recursiveSettings](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/cert-manager/configuration.html#parameters-recursivesettings) модуля `cert-manager`), которые применяются для проверки существования записи в DNS перед запуском процесса подтверждения владения доменом методом ACME DNS-01. Это актуально, если один и тот же домен используется как публично, так и внутри кластера, а также, если для домена существуют выделенные авторитетные DNS-серверы.
+
+- Введено разделение модулей на критические и функциональные с помощью флага `critical` в `module.yaml`. Критические модули запускаются первыми, а функциональные — после завершения bootstrap-процесса, при этом их задачи выполняются параллельно и не блокируют очередь в случае сбоя. Это ускоряет установку кластера и повышает отказоустойчивость при запуске модулей.
+
+- Добавлена возможность включения логирования всех DNS-запросов (параметр [enableLogs](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/node-local-dns/configuration.html#parameters-enablelogs) модуля `node-local-dns`).
+
+- В модуле `cloud-provider-vcd` добавлена новая [схема размещения WithNAT](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-vcd/layouts.html#withnat) для развертывания кластера. Она автоматически настраивает NAT и, при необходимости, правила брандмауэра для доступа к узлам через узел-бастион, а также поддерживает работу как с `NSX-T`, так и с `NSX-V`. Это позволяет развёртывать кластер в VMware Cloud Director без предварительной настройки окружения (в отличие от схемы размещения `Standard`).
+
+### Безопасность
+
+- К [событиям аудита](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/control-plane-manager/#аудит) (Kubernetes audit log) добавлены поля `user-authn.deckhouse.io/name` и `user-authn.deckhouse.io/preferred_username` для вывода информации о claim пользователя от OIDC-провайдера. Это улучшает контроль и отладку процессов аутентификации.
+
+- Версии Kubernetes 1.30–1.33 обновлены до последних патч-версий.
+
+- Для провайдера AWS добавлена возможность отключить создание групп безопасности по умолчанию (параметр [disableDefaultSecurityGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup)). В этом случае группы безопасности необходимо создать вручную и указать явно в AWSClusterConfiguration, AWSInstanceClass и NodeGroup. Новая возможность расширяет контроль над настройками безопасности.
+
+- Реализована поддержка политики паролей для локальных пользователей (управляется в секции параметров [passwordPolicy](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.72/modules/user-authn/configuration.html#parameters-passwordpolicy)). Теперь можно настраивать минимальный уровень сложности пароля, срок его действия и обязательную ротацию, предотвращать повторное использование старых паролей, а также блокировать аккаунт после заданного числа неудачных попыток входа. Эти изменения позволяют администраторам кластера централизованно применять требования к паролям и повышают уровень безопасности.
+
+### Обновление версий компонентов
+
+Обновлены следующие компоненты DKP:
+
+- Kubernetes control plane: 1.30.14, 1.31.11, 1.32.7, 1.33.3
+- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.6.0
+- `node-manager capi-controller-manager`: 1.10.4
+
 ## Версия 1.71
 
 ### Обратите внимание
@@ -18,6 +56,8 @@
 
 - Добавлена возможность включения обязательного использования двухфакторной аутентификации для статических пользователей. Управляется секцией параметров [`staticUsers2FA`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) модуля `user-authn`.
 
+- Добавлена поддержка GPU на узлах. Доступно управление тремя режимами разделения ресурсов GPU: `Exclusive` (без разделения), `TimeSlicing` (разделение по времени), `MIG` (разделение одного GPU на несколько экземпляров). Для управления режимом разделения ресурсов GPU используется секция параметров [spec.gpu](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) в NodeGroup. Использование GPU на узле возможно после установки NVIDIA Container Toolkit и драйвера GPU.
+
 - При включении модуля (`d8 platform module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
 
 - Улучшена обработка ошибок конфигурации модулей. Теперь ошибки при работе модуля не блокируют работу DKP, а отображаются в статусах объектов Module и ModuleRelease.
@@ -37,7 +77,7 @@
 
 - В документацию добавлена [справка](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/deckhouse-cli/reference/) по командам и параметрам Deckhouse CLI (утилита `d8`).
 
-- При использовании кодирования CEF при сборе логов из [Apache Kafka](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) или из сокета, появилась возможность настраивать служебные поля формата, такие как Device Product, Device Vendor и Device ID.
+- При использовании кодирования CEF при сборе логов из [Apache Kafka](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) или [из сокета](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef), появилась возможность настраивать служебные поля формата, такие как Device Product, Device Vendor и Device ID.
 
 - Поле [`passwordHash`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodeuser-v1-spec-passwordhash) в ресурсе NodeUser больше не является обязательным. Это позволяет создавать пользователей без пароля, например, в кластерах с внешними системами аутентификации (например, PAM, LDAP).
 
@@ -61,14 +101,20 @@
 
 - Исправлена логика определения готовности сервиса (ресурс [ServiceWithHealthcheck](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/service-with-healthchecks/cr.html#servicewithhealthchecks)). Ранее поды без IP-адреса (например, находящихся в состоянии `Pending`) могли ошибочно попадать в список балансировки.
 
-- Добавлена поддержка алгоритма балансировки нагрузки least-conn для сервисов. Алгоритм least-conn направляет трафик на бэкенд сервиса с наименьшим числом активных подключений, что повышает производительность приложений с большим количеством соединений (например, WebSocket). Чтобы управлять алгоритмом балансировки, необходимо включить параметр [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) в настройках модуля `cni-cilium`, и использовать на уровне сервиса аннотацию `cilium.io/bpf-lb-algorithm`, выбрав поддерживаемый алгоритм (random, maglev или least-conn).
+- Добавлена поддержка алгоритма балансировки нагрузки least-conn для сервисов. Алгоритм least-conn направляет трафик на бэкенд сервиса с наименьшим числом активных подключений, что повышает производительность приложений с большим количеством соединений (например, WebSocket). Чтобы управлять алгоритмом балансировки, необходимо включить параметр [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) в настройках модуля `cni-cilium`, и использовать на уровне сервиса аннотацию `service.cilium.io/lb-algorithm`, выбрав поддерживаемый алгоритм (random, maglev или least-conn).
 
 - В Cilium 1.17 исправлена ошибка в `cilium-operator`, из-за которой IP-адреса могли не переиспользоваться после удаления `CiliumEndpoint`. Это происходило из-за некорректной очистки фильтра приоритетов, что могло привести к исчерпанию IP-пула в больших кластерах.
 
 - Детализирован [список портов, используемых при сетевом взаимодействии](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
   - Добавлено и обновлено:
     - `4287/UDP` — порт WireGuard для шифрования трафика в CNI Cilium.
-    - Вместо портов `4298/UDP`, `4299/UDP` теперь используется диапазон `4295–4299/UDP` — для VXLAN-инкапсуляции трафика между подами.
+    - `4295-4297/UDP` — порт используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации — когда DKP с включенным модулем `virtualization` развернут внутри виртуальных машин, также созданных в DKP с включенным модулем `virtualization`.
+    - `4298/UDP` — порт используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`).
+    - `4299/UDP` — порт **для кластеров, развернутых на DKP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`. **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт на `4298/UDP`.
+    - `8469/UDP` — порт **для кластеров, развернутых на DKP версии 1.63 и ниже с модулем `virtualization`, включенным до DKP версии 1.63.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт.
+    - `8472/UDP` — порт **для кластеров, развернутых на DKP версии 1.63 и ниже.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`. **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт:
+      - включение модуля `virtualization` на DKP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DKP.
+      - включение модуля `virtualization` на DKP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DKP.
   - Удалено:
     - `49152`, `49153/TCP` — порты использовались для live-миграции виртуальных машин (модуль `virtualization`). Теперь миграция работает через сеть подов.  
 

@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/deckhouse/deckhouse v0.0.0
 	github.com/golangci/golangci-lint v1.40.1
-	github.com/iancoleman/strcase v0.2.0
+	github.com/iancoleman/strcase v0.3.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/yuin/goldmark v1.4.13
 	gopkg.in/yaml.v2 v2.4.0
@@ -168,7 +168,7 @@ require (
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/oauth2 v0.25.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.30.0 // indirect
@@ -200,6 +200,9 @@ replace (
 	github.com/deckhouse/deckhouse/dhctl => ../dhctl
 	github.com/deckhouse/deckhouse/egress-gateway-agent => ../ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent/src
 	github.com/deckhouse/deckhouse/go_lib/cloud-data => ../go_lib/cloud-data
+	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../go_lib/dependency/k8s/drain
+	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ../go_lib/dependency/vsphere
+	github.com/deckhouse/deckhouse/go_lib/registry => ../go_lib/registry
 )
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0

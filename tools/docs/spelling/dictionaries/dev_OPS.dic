@@ -1,4 +1,4 @@
-2422
+2440
 1GB
 2GB
 5XX
@@ -183,6 +183,8 @@ Changelog
 cheatsheet
 checkbox
 CheckFunc
+checkmark
+checkmarks
 chmod
 chrony
 Chrony
@@ -307,6 +309,7 @@ CSI
 CSR
 css
 csv
+CUDA
 CurrentChannel
 CurrentGroup
 CurrentPageURL
@@ -357,6 +360,7 @@ Datastores
 Datastream
 datastreams
 Datastreams
+DCGM
 DDTHH
 de
 Debian
@@ -412,6 +416,7 @@ DoesNotExist
 DOMAINNAME
 DoNotNeed
 downcase
+downsampling
 drbd
 DRBD
 DRBDv
@@ -423,6 +428,7 @@ DSL
 DSR
 dst
 DVCR
+dvp
 DVP
 Dynamix
 DynamiX
@@ -530,6 +536,7 @@ Gemfile
 geo
 geohash
 GeoIP
+GFD
 ghcr
 Gi
 GiB
@@ -930,6 +937,7 @@ NetworkPolicy
 nexthop
 nexthops
 nf
+NFD
 NG
 nginx
 NGINX’s
@@ -1396,6 +1404,7 @@ ThinLVM
 Thymeleaf
 TiB
 timeframe
+TimeSlicing
 timeslot
 timestamp
 TLF
@@ -1453,6 +1462,7 @@ vCloud
 vCPU
 vCPUs
 ve
+vectoradd
 Venafi
 versioned
 versioning
@@ -1697,6 +1707,7 @@ ZvirtInstanceClass
 версионированной
 версионировать
 Визуализировать
+визуализируются
 виртуализацией
 виртуализации
 виртуализацию
@@ -1736,8 +1747,10 @@ ZvirtInstanceClass
 гуглить
 д
 дeплой
+даунсемплинга
 дашборд
 дашборда
+дашбордами
 дашбордов
 дашборды
 двухфакторная
@@ -1829,7 +1842,9 @@ ZvirtInstanceClass
 кастомными
 кастомных
 Катастрофоустойчивость
+кешей
 кеширование
+кеширования
 кеширующий
 киберугроз
 коммит
@@ -1925,6 +1940,7 @@ ZvirtInstanceClass
 межкластерных
 межузловой
 мейнтейнер
+Меньшеe
 менятьcя
 меняться
 мержит
@@ -2116,6 +2132,7 @@ ZvirtInstanceClass
 предзагрузки
 преднастроенные
 преднастроенный
+преднастроенными
 преднастроенных
 Преднастройка
 предпросмотр
@@ -2332,6 +2349,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+трендов
 тренды
 триал
 триальной

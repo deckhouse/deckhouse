@@ -726,7 +726,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
-			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth)
+			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
 		r.metricsUpdater.UpdateReleaseMetric(release.GetName(), metricLabels)
 	}()
@@ -1078,6 +1078,7 @@ func (r *reconciler) loadModule(ctx context.Context, release *v1alpha1.ModuleRel
 	configConfigurationErrorMetricsLabels := map[string]string{
 		"version": release.GetVersion().String(),
 		"module":  release.GetModuleName(),
+		"error":   "",
 	}
 
 	if err = def.Validate(values, logger); err != nil {

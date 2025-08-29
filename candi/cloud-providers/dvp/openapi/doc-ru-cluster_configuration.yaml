@@ -108,6 +108,8 @@ apiVersions:
                     storageClass:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
+
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
                     image:
                       description: |
                         Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
@@ -129,6 +131,8 @@ apiVersions:
                     storageClass:
                       description: |
                         Имя существующего StorageClass будет использоваться для создания диска данных etcd.
+
+                        Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-modules-storageclass).
                 additionalLabels:
                   description: |
                     Дополнительные метки.
@@ -180,15 +184,15 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее о возможных схемах размещения провайдера.](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-dvp/layouts.html).
+            [Подробнее о возможных схемах размещения провайдера](../cloud-provider-dvp/layouts.html).
         region:
           description: |
             Название региона.
 
             Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
-            [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            [Подробнее о топологических метках](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по  NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           description: |
             Набор зон, в которых могут быть созданы узлы.

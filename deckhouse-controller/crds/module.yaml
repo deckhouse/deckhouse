@@ -98,7 +98,7 @@ spec:
                   properties:
                     editions:
                       type: object
-                      description: Module availability in Deckhouse editions.
+                      description: Module operation settings in Deckhouse editions.
                       additionalProperties:
                         type: object
                         properties:
@@ -108,10 +108,6 @@ spec:
                             type: array
                             items:
                               type: string
-                              enum:
-                                - Default
-                                - Minimal
-                                - Managed
             status:
               type: object
               properties:

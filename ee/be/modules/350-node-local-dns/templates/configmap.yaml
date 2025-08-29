@@ -29,6 +29,9 @@ data:
       }
       reload 2s
       loop
+{{- if .Values.nodeLocalDns.enableLogs }}
+      log
+{{- end }}
 
 
 {{- if not (.Values.global.enabledModules | has "cni-cilium") }}

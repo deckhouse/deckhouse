@@ -1,4 +1,42 @@
-## Version 1.70
+## Version 1.72
+
+### Important
+
+- All DKP components will be restarted during the update.
+- To use [experimental modules](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/module-development/versioning/#module-lifecycle) in the cluster, you now need to explicitly enable the [allowExperimentalModules](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter. By default, experimental modules are disabled. Modules that were enabled before the update will not be automatically disabled. However, if an experimental module enabled prior to the update is manually disabled during the update process, you will need to grant permission to use experimental modules again in order to re-enable it.
+- If there are WireGuard interfaces on the cluster nodes, you must update the Linux kernel to version 6.8 or higher.
+
+### Major changes
+
+- Added a new [registry module](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/registry/) and the ability to adjust container registry parameters without restarting all DKP components. [Two modes](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-registry-mode) for working with the container registry are now available in DKP: `Unmanaged` (the approach used in previous versions) and `Direct` (a new mode). In `Direct` mode, DKP creates a virtual container registry address in the cluster that all DKP components use. Changing the container registry address (for example, switching to a different registry or changing the DKP edition in the cluster) in this mode does not trigger a forced restart of all DKP components.
+
+- Added support for recursive DNS servers (configured via the [recursiveSettings](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/cert-manager/configuration.html#parameters-recursivesettings) section of the `cert-manager` module). They are used to verify the existence of a DNS record before starting the ACME DNS-01 domain ownership validation process. This is useful if the same domain is used both publicly and within the cluster, or if the domain has dedicated authoritative DNS servers.
+
+- Introduced separation of modules into critical and functional using the `critical` flag in `module.yaml`. Critical modules are started first. Functional modules are started after the bootstrap process is complete. Their tasks run in parallel and do not block the queue in case of failure. This speeds up cluster installation and improves fault tolerance when starting modules.
+
+- You can now enable logging of all DNS queries (the [enableLogs](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/node-local-dns/configuration.html#parameters-enablelogs) parameter of the `node-local-dns` module).
+
+- In the `cloud-provider-vcd` module, a new [WithNAT layout](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-vcd/layouts.html#withnat) has been added for cluster deployment. It automatically configures NAT and, if necessary, firewall rules for accessing nodes through a bastion host. It also supports both `NSX-T` and `NSX-V`. This makes it possible to deploy a cluster in VMware Cloud Director without pre-configuring the environment (unlike the `Standard` layout).
+
+### Security
+
+- Added the fields `user-authn.deckhouse.io/name` and `user-authn.deckhouse.io/preferred_username` to [Kubernetes audit log events](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/control-plane-manager/#auditing). These fields display user claims from the OIDC provider, improving authentication monitoring and troubleshooting.
+
+- Kubernetes versions 1.30–1.33 have been updated to the latest patch releases.
+
+- For the AWS provider, added the ability to disable the creation of default security groups (the [disableDefaultSecurityGroup](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter). When disabled, security groups must be created manually and explicitly specified in AWSClusterConfiguration, AWSInstanceClass, and NodeGroup. This new feature provides greater control over security settings.
+
+- Added support for password policies for local users (configured in the [passwordPolicy](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/user-authn/configuration.html#parameters-passwordpolicy) section). You can now enforce a minimum password complexity, set password expiration, require password rotation, prevent reuse of old passwords, and lock accounts after a specified number of failed login attempts. These changes allow administrators to centrally enforce password requirements and improve cluster security.
+
+### Component version updates
+
+The following DKP components have been updated:
+
+- Kubernetes control plane: 1.30.14, 1.31.11, 1.32.7, 1.33.3
+- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.6.0
+- `node-manager capi-controller-manager`: 1.10.4
+
+## Version 1.71
 
 ### Important
 
@@ -17,6 +55,8 @@
 ### Major changes
 
 - You can now enforce two-factor authentication for static users. This is configured via the [`staticUsers2FA`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter section of the `user-authn` module.
+
+- Added support for GPUs on nodes. Three GPU resource sharing modes are now available: Exclusive (no sharing), TimeSlicing (time-based sharing), and MIG (a single GPU split into multiple instances). The NodeGroup [spec.gpu](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter section is used to configure the GPU resource sharing mode. Using a GPU on a node requires installing the NVIDIA Container Toolkit and the GPU driver.
 
 - When enabling a module (with `d8 platform module enable`) or editing a ModuleConfig resource, a warning is now displayed if multiple module sources are found. In such a case, explicitly specify the module source using the [source](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) parameter in the module’s configuration.
 
@@ -37,7 +77,7 @@
 
 - The documentation now includes a [reference for the Deckhouse CLI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/deckhouse-cli/reference/) (`d8` utility) commands and parameters.
 
-- When using CEF encoding for collecting logs from [Apache Kafka](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) or [socket](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef) sources, you can now configure auxiliary CEF fields such as Device Product, Device Vendor, and Device ID.
+- When using CEF encoding for collecting logs from [Apache Kafka](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-kafka-encoding-cef) or [socket](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-socket-encoding-cef) sources, you can now configure auxiliary CEF fields such as Device Product, Device Vendor, and Device ID.
 
 - The [`passwordHash`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodeuser-v1-spec-passwordhash) field in the NodeUser resource is no longer required. This allows you to create users without passwords — for example, in clusters that use external authentication systems (such as PAM or LDAP).
 
@@ -61,16 +101,22 @@
 
 - Fixed the logic for determining service readiness in the [ServiceWithHealthcheck](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/service-with-healthchecks/cr.html#servicewithhealthchecks) resource. Previously, Pods without an IP address (for example, in `Pending` state) could be mistakenly included in the load balancing list.
 
-- Added support for the least-conn load balancing algorithm. This algorithm directs traffic to the service backend with the fewest active connections, improving performance for connection-heavy applications (such as WebSocket services). To use this algorithm, enable the [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter in the `cni-cilium` module settings and use the `cilium.io/bpf-lb-algorithm` annotation on the service and set it to a supported value: random, maglev, or least-conn.
+- Added support for the least-conn load balancing algorithm. This algorithm directs traffic to the service backend with the fewest active connections, improving performance for connection-heavy applications (such as WebSocket services). To use this algorithm, enable the [`extraLoadBalancerAlgorithmsEnabled`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/cni-cilium/configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter in the `cni-cilium` module settings and use the `service.cilium.io/lb-algorithm` annotation on the service and set it to a supported value: random, maglev, or least-conn.
 
 - Fixed an issue in Cilium 1.17 `cilium-operator` where IP addresses were not reused after a `CiliumEndpoint` was deleted. The issue was caused by improper cleanup of priority filters, which could lead to IP pool exhaustion in large clusters.
 
 - Refined the [list of ports used for networking](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/network_security_setup.html):
   - Added and updated:
     - `4287/UDP`: WireGuard port used for CNI Cilium traffic encryption.
-    - Instead of `4298/UDP` and `4299/UDP`, the range `4295–4299/UDP` is now used for VXLAN traffic encapsulation between Pods.
+    - `4295-4297/UDP`: Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DKP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DKP with the `virtualization` module enabled.
+    - `4298/UDP`: Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`).
+    - `4299/UDP`: Port **for clusters deployed on DKP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the port used unless the `virtualization` module is enabled.
+    - `8469/UDP`: Port **for clusters deployed on DKP version 1.63 and below with the `virtualization` module enabled prior to DKP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port
+    - `8472/UDP`: Port **for clusters deployed on DKP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port if the `virtualization` module is not enabled. **Note** that in such clusters, enabling the `virtualization` module on DKP before version 1.70 changes the port:
+      - Enabling the `virtualization` module on DKP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DKP updates
+      - Enabling the `virtualization` module on DKP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DKP updates
   - Removed:
-    - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the virtualization module). Migration now occurs over the Pod network.
+    - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the `virtualization` module). Migration now occurs over the Pod network.
 
 ### Component version updates
 
@@ -313,7 +359,7 @@ The following DKP components have been updated:
   Previously, these addresses were determined automatically;
   however, in some configurations, they could not be resolved.
 
-- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
+- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
   that controls high availability mode.
   In high availability mode, multiple replicas of the authenticator are launched.
   Previously, high availability mode of all authenticators was determined by a [global parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/deckhouse-configure-global.html#parameters-highavailability)

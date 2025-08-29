@@ -1,2 +1,5 @@
 prometheus:
   longtermRetentionDays: 5
+  internal:
+    grafana:
+      enabled: true

@@ -2,6 +2,18 @@
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
+{% if page.ee_only == true and page.se_support == nil %}
+{% alert level="warning" %}
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
+
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Installation of {{ page.title_main }} is only possible in the Standard Edition+ and Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
+
 The minimal preset will be used during the installation:
 {%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
 <div id="preset_minimal" markdown="1">
@@ -22,6 +34,13 @@ The `{{ layout.name }}` layout will be used during the installation.
 {%- endunless %}
 
 {% if include.presentation -%}
+
+{% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere'%}
+{% alert level="warning" %}
+The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
+
 The presentation contains an overview of the actions required to install Deckhouse.
 
 <div data-presentation="{{ include.presentation }}"></div>
@@ -130,7 +149,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - access to the default package repositories for the operating system you are using;
    {%- endif %}
    - SSH key access from the **personal computer** (section 1)
-   - network access from the **personal computer** (section 1) via port <code>22322/TCP</code>
+   - network access from the **personal computer** (section 1) via port <code>22/TCP</code>
    - container runtime packages, such as containerd or docker, should not be installed on the node
    {% endofftopic %}
 {%- endif %}

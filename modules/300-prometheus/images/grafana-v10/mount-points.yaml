@@ -1,0 +1,9 @@
+files:
+- /etc/grafana/provisioning/dashboards/d8-custom.yaml
+dirs:
+- /var/lib/grafana/data
+- /var/lib/grafana/data/alerting
+- /etc/grafana/provisioning/datasources
+- /etc/grafana/provisioning/notifiers
+- /etc/grafana/dashboards
+- /etc/grafana/plugins

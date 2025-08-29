@@ -1204,7 +1204,6 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
-              featureStatus: experimental
               folders:
                 - title:
                     en: Description
@@ -1278,8 +1277,8 @@ entries:
                     ru: Настройки
                   url: /modules/prometheus-pushgateway/configuration.html
             - title:
-                en: upmeter
-                ru: upmeter
+                en: Cluster SLA Monitoring
+                ru: Мониторинг SLA кластера
               moduleName: upmeter
               folders:
                 - title:
@@ -1411,23 +1410,6 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/flow-schema/faq.html
-            - title:
-                en: pod-reloader
-                ru: pod-reloader
-              moduleName: pod-reloader
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/pod-reloader/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/pod-reloader/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/pod-reloader/configuration.html
     - title:
         en: Security
         ru: Безопасность

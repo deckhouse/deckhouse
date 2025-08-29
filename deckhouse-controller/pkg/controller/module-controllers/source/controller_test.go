@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -114,7 +115,11 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
 		logger:               log.NewNop(),
-		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		edition: &d8edition.Edition{
+			Name:   "fe",
+			Bundle: "Default",
+		},
+		metricStorage: metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -261,10 +266,21 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 	suite.Run("proceed enabled modules", func() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.2.3",
-			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule"},
+			[]string{"enabledmodule", "disabledmodule", "withpolicymodule", "notthissourcemodule", "bundlenabledmodule"},
 			// versions differ only in patch and we don't have requests to registry
 			[]string{})
 		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("proceed enabled modules without default", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.3",
+			[]string{"enabledmodule", "notthissourcemodule", "bundlenabledmodule"},
+			// versions differ only in patch and we don't have requests to registry
+			[]string{})
+		suite.setupTestController(string(suite.parseTestdata("proceed-enabled-modules-without-default.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
@@ -504,8 +520,6 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 }
 
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modules, tags []string) *dependency.MockedContainer {
-	moduleVersionsMock := cr.NewClientMock(t)
-
 	dc := dependency.NewMockedContainer()
 
 	dc.CRClientMap = map[string]cr.Client{
@@ -513,11 +527,13 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 	}
 
 	for _, module := range modules {
+		moduleVersionsMock := cr.NewClientMock(t)
+
 		if len(tags) > 0 {
-			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Return(tags, nil)
+			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
 
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel
@@ -533,6 +549,17 @@ disable:
   confirmation: true
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
 `
+
+			if module == "bundlenabledmodule" {
+				moduleYaml += `
+accessibility:
+   editions:
+      fe:
+         available: true
+         enabledInBundles:
+            - Default
+`
+			}
 
 			return &crfake.FakeImage{
 				ManifestStub: manifestStub,

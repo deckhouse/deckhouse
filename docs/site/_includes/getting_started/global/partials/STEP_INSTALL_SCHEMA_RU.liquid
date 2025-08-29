@@ -8,6 +8,18 @@
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
+{% if page.ee_only == true and page.se_support == nil %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% endif %}
+
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Standard Edition+ и Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% endif %}
+
 Для развертывания будет использован минимальный набор узлов:
 {%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
 <div id="preset_minimal" markdown="1">
@@ -28,6 +40,13 @@
 {%- endunless %}
 
 {% if include.presentation -%}
+
+{% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} в редакции Community Edition недоступна. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% endif %}
+
 Презентация содержит основные этапы установки, которые предстоит пройти.
 
 <div data-presentation="{{ include.presentation }}"></div>
@@ -128,7 +147,7 @@
    - **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - наличие одного из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`).
 
-     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому при необходимости их следует установить;
+     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их следует заранее установить;
    - установленный Python;
    {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
@@ -140,7 +159,7 @@
    - доступ к стандартным для используемой ОС репозиториям пакетов;
    {%- endif %}
    - SSH-доступ от **персонального компьютера** (см. п.1) по ключу;
-   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22322/TCP</code>;
+   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22/TCP</code>;
    - на узле не должно быть установлено пакетов container runtime, например containerd или Docker.
    {% endofftopic %}
 {%- endif %}

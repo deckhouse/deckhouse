@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -212,7 +213,7 @@ func NewDeckhouseController(
 		}
 
 		// set some version for the modules overridden by mpos
-		if module.ConditionStatus(v1alpha1.ModuleConditionIsOverridden) {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
 			return "v2.0.0", nil
 		}
 
@@ -269,12 +270,12 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
@@ -301,6 +302,7 @@ func NewDeckhouseController(
 		configtools.NewValidator(operator.ModuleManager),
 		loader,
 		operator.MetricStorage,
+		config.NewSchemaStore(),
 		settingsContainer,
 		exts,
 	)

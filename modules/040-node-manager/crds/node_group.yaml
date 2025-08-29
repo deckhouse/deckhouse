@@ -1506,6 +1506,8 @@ spec:
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
                 gpu:
+                  x-doc-d8Editions:
+                    - ee
                   type: object
                   description: |
                     GPU parameters.
@@ -1513,29 +1515,34 @@ spec:
                     sharing:
                       type: string
                       description: |
-                        GPU sharing strategy.
+                        GPU sharing strategy:
+                        - `Exclusive` — no sharing (each GPU is fully allocated to a single Pod).
+                        - `TimeSlicing` — time-sliced sharing (multiple Pods can share one GPU concurrently by splitting GPU time).
+                        - `MIG` — use NVIDIA Multi-Instance GPU (MIG) to split each GPU into multiple instances (if supported by hardware).
                       enum:
                         - TimeSlicing
                         - MIG
                         - Exclusive
                     mig:
                       type: object
+                      description: |
+                        `MIG` sharing strategy parameters.
                       properties:
                         partedConfig:
                           type: string
                           pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
                           description: |
-                            Selected parted-config for MIG.
+                            MIG configuration name.
                           x-doc-default: all-1g.5gb
                     timeSlicing:
                       description: |
-                        Time-slicing parameters.
+                        `TimeSlicing` sharing strategy parameters.
                       type: object
                       properties:
                         partitionCount:
                           type: number
                           description: |
-                            Count of partition per GPU with TimeSlicing.
+                            Count of partition per GPU.
                           x-doc-default: 4
                           minimum: 1
                           maximum: 100
@@ -1600,6 +1607,7 @@ spec:
                         - Support for `CgroupsV2`.
                         - Linux kernel version `5.8` or newer.
                         - Systemd version `244` or newer.
+                        - Support for `erofs` kernel module.
                       properties:
                         maxConcurrentDownloads:
                           type: integer

@@ -1,9 +1,15 @@
 # Changelog v1.71
 
+## [MALFORMED]
+
+
+ - #13874 unknown section "pod-reloader"
+
 ## Know before update
 
 
  - All Prometheuses pods will be restarted
+ - If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
  - Prometheus is replaced by the Deckhouse Prom++ by default in all editions of the Deckhouse Kubernetes Platform
  - Snapshot-controller module will be restarted while Deckhouse updating.
  - The minimum supported version of Kubernetes is now 1.29. All control plane components will restart.
@@ -32,6 +38,8 @@
  - **[deckhouse-tools]** yq [#14147](https://github.com/deckhouse/deckhouse/pull/14147)
  - **[dhctl]** new registry bashible context model [#14147](https://github.com/deckhouse/deckhouse/pull/14147)
  - **[dhctl]** Added detailed phase/sub-phase progress reporting with JSONL file output or RPC updates from dhctl-server. [#13412](https://github.com/deckhouse/deckhouse/pull/13412)
+ - **[docs]** Added descriptions of the problem of using Cilium and Elastic together [#14830](https://github.com/deckhouse/deckhouse/pull/14830)
+    low
  - **[docs]** Added documentation for integrating with the DVP cloud provider. [#13380](https://github.com/deckhouse/deckhouse/pull/13380)
  - **[istio]** Images for 1.21 were refactored to achieve distroless. [#14228](https://github.com/deckhouse/deckhouse/pull/14228)
  - **[istio]** Added Istio version `1.25` (1.25.2). Ambient mesh isn't supported yet. [#12356](https://github.com/deckhouse/deckhouse/pull/12356)
@@ -57,7 +65,12 @@
  - **[cloud-provider-aws]** Fix root_block_device converge. [#14764](https://github.com/deckhouse/deckhouse/pull/14764)
  - **[cloud-provider-dynamix]** Fixed `sshPublicKey` absence on CloudEphemeral nodes. [#13907](https://github.com/deckhouse/deckhouse/pull/13907)
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
+ - **[cloud-provider-vsphere]** ignore ept_rvi_mode and hv_mode [#14882](https://github.com/deckhouse/deckhouse/pull/14882)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** Add a compatibility check for the Cilium version and the kernel version, if WireGuard is installed on the node [#15155](https://github.com/deckhouse/deckhouse/pull/15155)
+    If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
+ - **[cni-cilium]** Added a migration mechanism, which was implemented through the node group disruptive updates with approval. [#14977](https://github.com/deckhouse/deckhouse/pull/14977)
+ - **[cni-cilium]** fixed invalid annotation name for lb-algorithm in docs [#14947](https://github.com/deckhouse/deckhouse/pull/14947)
  - **[cni-cilium]** fixed hostPort workability with extraLoadBalancerAlgorithmsEnabled. [#14766](https://github.com/deckhouse/deckhouse/pull/14766)
  - **[cni-cilium]** Fixed least-conn logs when feature is disabled [#14572](https://github.com/deckhouse/deckhouse/pull/14572)
  - **[cni-cilium]** Fix cilium least-conn lb algorithm bugs [#14356](https://github.com/deckhouse/deckhouse/pull/14356)
@@ -73,6 +86,9 @@
  - **[deckhouse-controller]** Prevented module configuration errors from blocking the entire Deckhouse queue. [#13730](https://github.com/deckhouse/deckhouse/pull/13730)
  - **[dhctl]** Fix false-positive staticinstance ip duplication preflight checks fails. [#14163](https://github.com/deckhouse/deckhouse/pull/14163)
  - **[dhctl]** Added local registry configuration check to installation process. [#13645](https://github.com/deckhouse/deckhouse/pull/13645)
+ - **[docs]** Added steps that patch secret and prevented the image pull fail. [#15166](https://github.com/deckhouse/deckhouse/pull/15166)
+ - **[docs]** Add containerv2 additional registry examples [#15100](https://github.com/deckhouse/deckhouse/pull/15100)
+ - **[docs]** Fix D8KubernetesStaleTokensDetected alert description. [#14913](https://github.com/deckhouse/deckhouse/pull/14913)
  - **[docs]** Correction of KeyCloak documentation in d8-user-authn [#14755](https://github.com/deckhouse/deckhouse/pull/14755)
     Users will know how to configure KeyCloak and dexProvider to get user rights in dashboard and console.
  - **[extended-monitoring]** Fixed CVEs vulnerabilities x509-certificate-exporter. [#13804](https://github.com/deckhouse/deckhouse/pull/13804)
@@ -99,7 +115,8 @@
  - **[openvpn]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[operator-prometheus]** Fixed CVEs vulnerabilities operator-prometheus. [#13792](https://github.com/deckhouse/deckhouse/pull/13792)
  - **[operator-trivy]** Added startup probe to trivy-server. [#13731](https://github.com/deckhouse/deckhouse/pull/13731)
- - **[pod-reloader]** Added probes for `kube-rbac-proxy` in pod-reloader components. [#13874](https://github.com/deckhouse/deckhouse/pull/13874)
+ - **[prometheus]** fix securityContext indentation in the Prometheus main and longterm resources [#15116](https://github.com/deckhouse/deckhouse/pull/15116)
+    main and longterm Prometheuses will be rollout-restarted
  - **[prometheus]** use the "deckhouse" ModuleSource as the default for the prompp ModuleConfig [#14612](https://github.com/deckhouse/deckhouse/pull/14612)
     if there are several ModuleSources with the prompp module available, the "deckhouse" ModuleSource will be used.
  - **[prometheus]** Fixed CVEs vulnerabilities mimir. [#14287](https://github.com/deckhouse/deckhouse/pull/14287)
@@ -152,6 +169,7 @@
     Snapshot-controller module will be restarted while Deckhouse updating.
  - **[deckhouse-controller]** The static-routing-manager module is deleted from the list of embedded modules in favor of downloadable module. [#13433](https://github.com/deckhouse/deckhouse/pull/13433)
     The static-routing-manager module is migrated to provisioning via the deckhouse module source (downloading from the registry).
+ - **[docs]** Add containerv2 additional registry examples. [#15081](https://github.com/deckhouse/deckhouse/pull/15081)
  - **[docs]** Added reference for Deckhouse CLI (d8) to the documentation. [#14309](https://github.com/deckhouse/deckhouse/pull/14309)
  - **[docs]** Actualize used port list. [#14271](https://github.com/deckhouse/deckhouse/pull/14271)
  - **[ingress-nginx]** A patch has been added that adds additional logs when downloading GeoIP databases. [#14326](https://github.com/deckhouse/deckhouse/pull/14326)
@@ -159,6 +177,7 @@
  - **[istio]** The .enableHTTP10 and .proxyConfig fields have been moved to the .dataPlane section in the ModuleConfig. [#13435](https://github.com/deckhouse/deckhouse/pull/13435)
  - **[log-shipper]** Added extralabels to log and CEF device info into CRD. [#13997](https://github.com/deckhouse/deckhouse/pull/13997)
  - **[monitoring-ping]** Garbage collecting legacy metrics from node-exporter was moved to init-container. [#13542](https://github.com/deckhouse/deckhouse/pull/13542)
+ - **[node-manager]** usage Instance in update_approval [#14754](https://github.com/deckhouse/deckhouse/pull/14754)
  - **[node-manager]** Set status value to false for GracefulShutdownPostpone condition on start. [#14636](https://github.com/deckhouse/deckhouse/pull/14636)
  - **[node-manager]** Add profiling for bashible-apiserver [#14465](https://github.com/deckhouse/deckhouse/pull/14465)
  - **[node-manager]** Allowed creating NodeUser CR without passwordHash field. [#13623](https://github.com/deckhouse/deckhouse/pull/13623)
