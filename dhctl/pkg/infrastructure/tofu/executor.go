@@ -74,7 +74,8 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 		log.DebugF("Failed to write temporary file: %v", err)
 	}
 
-	slog.Info("[SLOG!!!] Tofu Command output:\n %s\n", strings.Join(cmd.Args, " "))
+	//slog.Info("[SLOG!!!] Tofu Command output", strings.Join(cmd.Env, " "))
+	slog.Info(fmt.Sprintf("[SLOG!!!] Tofu Command output %s", strings.Join(cmd.Env, " ")))
 
 	log.DebugF("======")
 	log.DebugF("ENVS: %v\n", len(s))
