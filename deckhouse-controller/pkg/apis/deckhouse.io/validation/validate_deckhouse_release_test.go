@@ -102,6 +102,28 @@ func createModuleSource(name string, modules []string) *v1alpha1.ModuleSource {
 	}
 }
 
+func createModuleConfig(name string) *v1alpha1.ModuleConfig {
+	return &v1alpha1.ModuleConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled: &[]bool{true}[0],
+		},
+	}
+}
+
+func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
+	return &v1alpha1.ModuleConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled: &[]bool{false}[0],
+		},
+	}
+}
+
 func createAdmissionReview(operation string, obj, oldObj interface{}) *admissionv1.AdmissionReview {
 	review := &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
@@ -190,10 +212,12 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 		},
 		{
 			name:           "allow approved release with migrated modules found",
-			enabledModules: []string{"module1", "module2"},
+			enabledModules: []string{"module1", "module2", "migrated-module1", "migrated-module2"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"migrated-module1", "migrated-module2"}),
+				createModuleConfig("migrated-module1"),
+				createModuleConfig("migrated-module2"),
+				createModuleSource("test-source", []string{"migrated-module1", "migrated-module2"}),
 			},
 			operation: "CREATE",
 			release: createDeckhouseRelease("test-release", true, map[string]string{
@@ -227,6 +251,119 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			}),
 			wantAllowed: true,
 			description: "Approved releases with whitespace-only migrated modules should be allowed",
+		},
+		{
+			name:           "allow when migrated module is disabled in ModuleConfig",
+			enabledModules: []string{"module1"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createDisabledModuleConfig("disabled-module"),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "disabled-module",
+			}),
+			wantAllowed: true,
+			wantMessage: "",
+			description: "Releases with migrated modules that are disabled in ModuleConfig should be allowed (ModuleConfig presence is sufficient)",
+		},
+		{
+			name:           "allow when one migrated module is enabled and another is disabled (both present in ModuleConfig)",
+			enabledModules: []string{"enabled-module"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("enabled-module"),
+				createDisabledModuleConfig("disabled-module"),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "enabled-module, disabled-module",
+			}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Releases with mixed enabled/disabled migrated modules should be rejected (enabled module not found in ModuleSource)",
+		},
+		{
+			name:           "reject when migrated module is not found in ModuleSource",
+			enabledModules: []string{"cert-manager", "prometheus", "dashboard"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("cert-manager"),
+				createModuleConfig("prometheus"),
+				createModuleSource("test-source", []string{"cert-manager", "prometheus"}),
+			},
+			operation: "CREATE",
+			release: createDeckhouseRelease("test-release", true, map[string]string{
+				"migratedModules": "cert-manager, prometheus, non-enabled-module",
+			}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Releases with migrated modules that are not found in ModuleSource and not disabled in MC should be rejected",
+		},
+		{
+			name:           "allow when ModuleConfig exists disabled and not in source",
+			enabledModules: []string{"module-x"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createDisabledModuleConfig("module-x"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-x"}),
+			wantAllowed: true,
+			description: "ModuleConfig disabled bypasses ModuleSource",
+		},
+		{
+			name:           "reject when ModuleConfig exists enabled and not in source",
+			enabledModules: []string{"module-y"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("module-y"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-y"}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Enabled ModuleConfig requires ModuleSource",
+		},
+		{
+			name:           "reject when ModuleConfig exists enabled and exists in ModuleSource",
+			enabledModules: []string{"module-z"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleConfig("module-z"),
+				createModuleSource("src", []string{"module-z"}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-z"}),
+			wantAllowed: true,
+			description: "Enabled ModuleConfig with presence in ModuleSource",
+		},
+		{
+			name:           "allow when no in ModuleConfig and exists in ModuleSource",
+			enabledModules: []string{"module-a1"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleSource("src", []string{"module-a1"}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-a1"}),
+			wantAllowed: true,
+			description: "Absent ModuleConfig falls back to ModuleSource and passes",
+		},
+		{
+			name:           "reject when no in ModuleConfig and not in ModuleSource",
+			enabledModules: []string{"module-a2"},
+			kubernetesObjs: []client.Object{
+				createClusterConfigSecret("1.28.0"),
+				createModuleSource("src", []string{}),
+			},
+			operation:   "CREATE",
+			release:     createDeckhouseRelease("test-release", true, map[string]string{"migratedModules": "module-a2"}),
+			wantAllowed: false,
+			wantMessage: "requirements not met",
+			description: "Absent ModuleConfig and absence in ModuleSource rejects",
 		},
 	}
 
@@ -326,11 +463,13 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			release: createDeckhouseRelease("test-release", true, map[string]string{
 				"migratedModules": "module-a, module-b , module-c",
 			}),
-			enabledModules: []string{"module1"},
+			enabledModules: []string{"module-a", "module-b", "module-c"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"module-a", "module-b"}),
-				createModuleSource("source2", []string{"module-c"}),
+				createModuleConfig("module-a"),
+				createModuleConfig("module-b"),
+				createModuleConfig("module-c"),
+				createModuleSource("test-source", []string{"module-a", "module-b", "module-c"}),
 			},
 			wantAllowed: true,
 			description: "DeckhouseRelease with complex migratedModules should be allowed when all modules exist",
@@ -343,7 +482,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			enabledModules: []string{"module1"},
 			kubernetesObjs: []client.Object{
 				createClusterConfigSecret("1.28.0"),
-				createModuleSource("source1", []string{"available-module"}),
+				createModuleConfig("available-module"),
 			},
 			wantAllowed: false,
 			description: "DeckhouseRelease with partially available migratedModules should be rejected",
