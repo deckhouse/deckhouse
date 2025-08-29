@@ -15,7 +15,7 @@ git:
 shell:
   install:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
-    - git apply /patches/*.patch --verbose
+    - git -C /src apply /patches/*.patch --verbose
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
