@@ -10,72 +10,47 @@ from cryptography.hazmat.backends import default_backend
 config = """
 configVersion: v1
 kubernetesValidating:
-- group: main
-  name: test
-  clientconfig:
-      url: null
-      service:
-          namespace: example-namespace
-          name: example-service
-          path: null
-          port: null
-      cabundle: []
+- matchConditions:
+  - expression: request.resource.group != "rbac.authorization.k8s.io"
+    name: yyyy
+  namespaceSelector:
+    matchExpressions:
+    - key: runlevel
+      operator: NotIn
+      values:
+      - "0"
+      - "1"
+  objectSelector:
+    matchLabels:
+      foo: bar
   rules:
-      - operations:
-          - CREATE
-          - UPDATE
-        rule:
-          apigroups:
-              - apps
-          apiversions:
-              - v1
-              - v1beta1
-          resources:
-              - deployments
-              - replicasets
-          scope: Namespaced
-  failurepolicy: null
-  matchpolicy: null
-  namespaceselector:
-      matchlabels: {}
-      matchexpressions:
-          - key: runlevel
-            operator: NotIn
-            values:
-              - "0"
-              - "1"
-  objectselector:
-      matchlabels:
-          foo: bar
-      matchexpressions: []
-  sideeffects: None
-  timeoutseconds: null
-  admissionreviewversions:
-      - v1
-  matchconditions:
-      - name: yyyy
-        expression: request.resource.group != "rbac.authorization.k8s.io"
+  - apiGroups:
+    - apps
+    apiVersions:
+    - v1
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - deployments
+    - replicasets
+    scope: Namespaced
 kubernetes:
-- name: validationwebhook-sample
-  group: main
-  - name: some_node
-    kubernetes:
-      apiversion: v1
-      kind: Node
-      nameselector:
-          matchNames:
-              - global
-      matchnames: []
-      labelselector:
-          matchLabels:
-              foo: bar
-      matchlabels: {}
-      foo: ""
-      namespaceselector:
-          matchLabels:
-              bar: foo
-      jqfilter:
-          nodename: .metadata.name
+- name: some_node
+  apiVersion: v1
+  jqFilter:
+    nodeName: .metadata.name
+  kind: Node
+  labelSelector:
+    matchLabels:
+      foo: bar
+  nameSelector:
+    matchNames:
+    - global
+  namespaceSelector:
+    matchLabels:
+      bar: foo
 """
 
 def main(ctx: hook.Context):

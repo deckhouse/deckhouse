@@ -17,64 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	v1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// ValidationWebhookSpec defines the desired state of ValidationWebhook
-type ValidationWebhookSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
-
-	Foo *string `json:"foo,omitempty"`
-
-	// ValidatingWebhook describes an webhook and the resources and operations it applies to.
-	// +optional
-	Webhook *admissionregistrationv1.ValidatingWebhook `json:"validationObject,omitempty"`
-
-	Context []Context `json:"context,omitempty"`
-
-	Handler Handler `json:"handler,omitempty"`
-}
-
-type Context struct {
-	Name       string            `json:"name"`
-	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
-}
-
-type KubernetesContext struct {
-	APIVersion        string                       `json:"apiVersion,omitempty"`
-	Kind              string                       `json:"kind,omitempty"`
-	NameSelector      map[string][]string          `json:"nameSelector,omitempty"`
-	MatchNames        []string                     `json:"matchNames,omitempty"`
-	LabelSelector     map[string]map[string]string `json:"labelSelector,omitempty"`
-	MatchLabels       map[string]string            `json:"matchLabels,omitempty"`
-	Foo               string                       `json:"foo,omitempty"`
-	NamespaceSelector map[string]map[string]string `json:"namespaceSelector,omitempty"`
-	JqFilter          JqFilter                     `json:"jqFilter,omitempty"`
-}
-
-type JqFilter struct {
-	NodeName string `json:"nodeName"`
-}
-
-type Handler struct {
-	// this is a python script handler for object
-	Python string `json:"python,omitempty"`
-	// this is a cel rules handler for object
-	CEL string `json:"cel,omitempty"`
-}
-
-// ValidationWebhookStatus defines the observed state of ValidationWebhook.
-type ValidationWebhookStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
+// Important: Run "make" to regenerate code after modifying this file
+// NOTE: json tags are required.
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
@@ -88,13 +36,79 @@ type ValidationWebhook struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
-	// spec defines the desired state of ValidationWebhook
+	// +optional
+	Foo *string `json:"foo,omitempty"`
+
+	// ValidatingWebhook describes an webhook and the resources and operations it applies to.
 	// +required
-	Spec ValidationWebhookSpec `json:"spec"`
+	ValidatingWebhook *KubernetesAdmissionConfigV1 `json:"validationObject,omitempty"`
+
+	// +optional
+	Context []Context `json:"context,omitempty"`
+
+	// TODO: doc description
+	// +required
+	Handler Handler `json:"handler"`
 
 	// status defines the observed state of ValidationWebhook
 	// +optional
 	Status ValidationWebhookStatus `json:"status,omitempty,omitzero"`
+}
+
+type Context struct {
+	Name       string            `json:"name"`
+	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
+}
+
+type KubernetesContext struct {
+	APIVersion        string                `json:"apiVersion,omitempty"`
+	Kind              string                `json:"kind,omitempty"`
+	NameSelector      *NameSelector         `json:"nameSelector,omitempty"`
+	LabelSelector     *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	JqFilter          JqFilter              `json:"jqFilter,omitempty"`
+}
+
+type NameSelector struct {
+	MatchNames []string `json:"matchNames"`
+}
+
+type JqFilter struct {
+	NodeName string `json:"nodeName"`
+}
+
+type Handler struct {
+	// this is a python script handler for object
+	Python string `json:"python,omitempty"`
+
+	// this is a cel rules handler for object
+	// TODO: CEL support
+	CEL string `json:"cel,omitempty"`
+}
+
+// version 1 of kubernetes validation configuration
+type KubernetesAdmissionConfigV1 struct {
+	Name                 string                  `json:"name,omitempty"`
+	IncludeSnapshotsFrom []string                `json:"includeSnapshotsFrom,omitempty"`
+	Group                string                  `json:"group,omitempty"`
+	Rules                []v1.RuleWithOperations `json:"rules,omitempty"`
+	FailurePolicy        *v1.FailurePolicyType   `json:"failurePolicy,omitempty"`
+	LabelSelector        *metav1.LabelSelector   `json:"labelSelector,omitempty"`
+	ObjectSelector       *metav1.LabelSelector   `json:"objectSelector,omitempty"`
+	NamespaceSelector    *metav1.LabelSelector   `json:"namespaceSelector,omitempty"`
+	SideEffects          *v1.SideEffectClass     `json:"sideEffects,omitempty"`
+	TimeoutSeconds       *int32                  `json:"timeoutSeconds,omitempty"`
+	MatchConditions      []v1.MatchCondition     `json:"matchConditions,omitempty"`
+}
+
+type NamespaceSelector struct {
+	NameSelector  *NameSelector         `json:"nameSelector,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// ValidationWebhookStatus defines the observed state of ValidationWebhook.
+type ValidationWebhookStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 }
 
 // +kubebuilder:object:root=true

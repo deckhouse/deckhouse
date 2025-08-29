@@ -19,6 +19,7 @@ package controller
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,12 +27,12 @@ import (
 	"text/template"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/yaml"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 )
@@ -108,11 +109,18 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 //
 // This is designed to be called from a template.
 func toYAML(v interface{}) string {
-	data, err := yaml.Marshal(v)
+	data, err := json.Marshal(v)
 	if err != nil {
 		// Swallow errors inside of a template.
 		return ""
 	}
+
+	data, err = yaml.JSONToYAML(data)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+
 	return strings.TrimSuffix(string(data), "\n")
 }
 
@@ -123,6 +131,10 @@ func indent(spaces int, s string) string {
 		lines[i] = pad + line
 	}
 	return strings.Join(lines, "\n")
+}
+
+func list(objs ...any) []any {
+	return objs
 }
 
 func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
@@ -156,12 +168,14 @@ from cryptography.hazmat.backends import default_backend
 config = """
 configVersion: v1
 kubernetesValidating:
-- group: main
-{{ toYaml .Spec.Webhook | indent 2 }}
+{{ list .ValidatingWebhook | toYaml }}
+{{- if (ge (len .Context) 1) }}
 kubernetes:
+{{- range .Context}}
 - name: {{ .Name }}
-  group: main
-{{ toYaml .Spec.Context | indent 2 }}
+{{ toYaml .Kubernetes | indent 2 }}
+{{- end }}
+{{- end }}
 """
 
 def main(ctx: hook.Context):
@@ -172,7 +186,7 @@ def main(ctx: hook.Context):
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-{{ .Spec.Handler.Python }}
+{{ .Handler.Python }}
 
 if __name__ == "__main__":
     hook.run(main, config=config)
@@ -181,6 +195,7 @@ if __name__ == "__main__":
 	tpl, err := template.New("test").Funcs(template.FuncMap{
 		"toYaml": toYAML,
 		"indent": indent,
+		"list":   list,
 	}).Parse(tplt)
 	if err != nil {
 		return res, fmt.Errorf("template parse: %w", err)
