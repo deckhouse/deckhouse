@@ -24,7 +24,7 @@ shell:
   - git apply /patches/*.patch --verbose
   - git clone --depth 1 --branch v{{ $grafanaVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-deps.git /grafana-public
   - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/grafana/grafana-plugins.git /grafana-plugins
-  - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git /usr/src/app/scripts
+  - rm -rf /usr/src/app/.git /grafana-public/.git /grafana-plugins/.git /src/wire/.git /usr/src/app/scripts /usr/src/app/devenv/docker
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-go-builder
 final: false
