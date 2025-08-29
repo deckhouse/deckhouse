@@ -28,6 +28,13 @@ import (
 	eeCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
+type CiliumNode struct {
+	// +deepequal-gen=false
+	metav1.TypeMeta `json:",inline"`
+	// +deepequal-gen=false
+	metav1.ObjectMeta `json:"metadata"`
+}
+
 const (
 	cniNamespace          = "d8-cni-cilium"
 	memberNodeLabelKey    = "egress-gateway.network.deckhouse.io/member"
@@ -61,6 +68,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Node",
 			FilterFunc: applyNodeFilter,
+		},
+		{
+			Name:       "cilium_nodes",
+			ApiVersion: "cilium.io/v2",
+			Kind:       "CiliumNode",
+			FilterFunc: applyCiliumNodeFilter,
 		},
 		{
 			Name:       "cilium_agent_pods",
@@ -143,6 +156,19 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 		IsDeleted:       !egi.GetDeletionTimestamp().IsZero(),
 		OwnerReferences: egi.GetOwnerReferences(),
 		Conditions:      egi.Status.Conditions,
+	}, nil
+}
+
+func applyCiliumNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node CiliumNode
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return nil, err
+	}
+
+	return NodeInfo{
+		Name:   node.Name,
+		Labels: node.Labels,
 	}, nil
 }
 
@@ -238,6 +264,12 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 
 	nodesToLabel := make(map[string][]string)
 	nodesToUnlabel := make(map[string][]string)
+
+	input.Logger.Debug("DEBUG cilium_nodes !!!!!!!!!!")
+	_, cil_err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "cilium_nodes")
+	if cil_err != nil {
+		return fmt.Errorf("failed to unmarshal cilium_nodes snapshot")
+	}
 
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
 	if err != nil {
