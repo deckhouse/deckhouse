@@ -93,9 +93,13 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		}
 	}()
 
+	log.DebugF("WG WAIT 1\n")
 	wg.Wait()
+	log.DebugF("WG WAIT 2\n")
 
+	log.DebugF("CMD WAIT 1\n")
 	err = cmd.Wait()
+	log.DebugF("CMD WAIT 2\n")
 
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != hasChangesExitCode {
