@@ -7,7 +7,11 @@ layout: sidebar-guides
 ---
 
 {% alert level="warning" %}
-В инструкции рассматривается преимущественно EE-редакция.
+В материале рассматривается EE-редакция, но механизмы аналогичны для других редакций.
+{% endalert %}
+
+{% alert level="info"}
+В статье используется стороняя утилита [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) для анализа Container Registy 
 {% endalert %}
 
 ## Механика обновление самой платформы
@@ -24,6 +28,166 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
 
 В registry лежит image всегда с одинаковым именем release-channel и тегом по имени канала, который указывает на image уже конкретной версии deckhouse (при выпуске новой версии платформы данный image заменяется на новый):
 
+Рассмотрим образ:
+
+```bash
+crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -tf
+```
+
+Пример:
+
+```bash
+~$ crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -tf -
+changelog.yaml
+version.json
+.werf
+.werf/stapel
+.werf/tmp
+.werf/tmp/ssh-auth-sock
+```
+
+Основные файлы в образе `changelog.yaml` и `version.json`. Просмотрим их содержимое:
+
+```bash
+crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq
+crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - changelog.yaml | yq
+```
+
+Пример `crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq`:
+
+```json
+~$ crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq
+{
+  "canary": {
+    "alpha": {
+      "enabled": true,
+      "waves": 2,
+      "interval": "5m"
+    },
+    "beta": {
+      "enabled": false,
+      "waves": 1,
+      "interval": "1m"
+    },
+    "early-access": {
+      "enabled": true,
+      "waves": 6,
+      "interval": "30m"
+    },
+    "stable": {
+      "enabled": true,
+      "waves": 6,
+      "interval": "30m"
+    },
+    "rock-solid": {
+      "enabled": false,
+      "waves": 5,
+      "interval": "5m"
+    }
+  },
+  "requirements": {
+    "k8s": "1.29",
+    "disabledModules": "delivery,l2-load-balancer,ceph-csi",
+    "migratedModules": "",
+    "autoK8sVersion": "1.31",
+    "ingressNginx": "1.9",
+    "nodesMinimalOSVersionUbuntu": "18.04",
+    "nodesMinimalOSVersionDebian": "10",
+    "istioMinimalVersion": "1.19",
+    "metallbHasStandardConfiguration": "true",
+    "unmetCloudConditions": "true",
+    "nodesMinimalLinuxKernelVersion": "5.8.0"
+  },
+  "disruptions": {
+    "1.36": [
+      "ingressNginx"
+    ]
+  },
+  "version": "v1.71.5"
+}
+```
+
+Пример `crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - changelog.yaml | yq`:
+
+```yaml
+~$ crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - changelog.yaml | yq
+
+candi:
+  fixes:
+    - summary: Changed ExecStartPre in d8-shutdown-inhibitor.service
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15134
+    - summary: >-
+        Added warnings to the VMware Cloud Director environment documentation about Edge requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14994
+cni-cilium:
+  fixes:
+    - summary: >-
+        Add a compatibility check for the Cilium version and the kernel version, if WireGuard is installed on the node
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15155
+      impact: >-
+        If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
+    - summary: >-
+        Added a migration mechanism, which was implemented through the node group disruptive updates with approval.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14977
+    - summary: fixed invalid annotation name for lb-algorithm in docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14947
+deckhouse-controller:
+  fixes:
+    - summary: fix module config ensure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15203
+docs:
+  fixes:
+    - summary: Fix relative links in the multitenancy-manager module documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15187
+    - summary: Added steps that patch secret and prevented the image pull fail.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15166
+    - summary: Add containerv2 additional registry examples
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15100
+    - summary: Add new requirement and commands to meet containerdv2
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15095
+    - summary: Fixed command syntax for Docker container run in documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15066
+    - summary: Add new requirement and commands to meet containerdv2 requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14959
+    - summary: Fix D8KubernetesStaleTokensDetected alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14913
+    - summary: There should be one disk in the template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14906
+    - summary: Updates for Observability docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+log-shipper:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+loki:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-custom:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-kubernetes:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-ping:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+prometheus:
+  fixes:
+    - summary: fix securityContext indentation in the Prometheus main and longterm resources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15116
+      impact: main and longterm Prometheuses will be rollout-restarted
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+upmeter:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+```
+
 На примере EE редакции и релизного канала alpha выполним просмотр содержимого образа:
 
 ```bash
@@ -31,7 +195,14 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
 v1.71.5
 ```
 
-Либо чуть подробнее:
+Пример:
+
+```bash
+~$ crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -xOf - version.json | jq -r '.version'
+v1.71.5
+```
+
+Подробнее:
 
 Создадим временную папку и распакуем в эту папку содержимое образа:
 
