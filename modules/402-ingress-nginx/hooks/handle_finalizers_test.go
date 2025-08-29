@@ -313,6 +313,17 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
+	Context("An empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set()
+			f.RunGoHook()
+		})
+
+		It("hook must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
 	Context("Given an IngressNginxController with existing child resources, a finalizer must be added.", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + loadBalancerServiceController + controllerDaemonSet + admissionService + validationMain))
