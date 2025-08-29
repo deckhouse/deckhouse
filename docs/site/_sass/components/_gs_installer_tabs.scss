@@ -1,0 +1,159 @@
+.installer_box {
+  max-width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #e9ecef;
+  padding: 20px;
+}
+
+.installer_two-columns {
+  display: flex;
+  gap: 20px;
+  max-width: 100%;
+  margin: 20px auto;
+}
+
+.column-left {
+  flex: 2;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.column-right {
+  flex: 1;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  #margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  background-color: #f1f1f1;
+  margin-right: 5px;
+  border-radius: 5px 5px 0 0;
+}
+
+.tab-button.active {
+  background-color: #fff;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+
+.tab-content {
+  display: none;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 0 5px 5px 5px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.sub-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  #margin-bottom: 15px;
+}
+
+.sub-tab-button {
+  padding: 8px 15px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  background-color: #e9e9e9;
+  margin-right: 3px;
+  border-radius: 3px 3px 0 0;
+  font-size: 14px;
+}
+
+.sub-tab-button.active {
+  background-color: #fff;
+  border-bottom: 1px solid #fff;
+  margin-bottom: -1px;
+}
+
+.sub-tab-content {
+  display: none;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 0 3px 3px 3px;
+  background-color: #fafafa;
+}
+
+.sub-tab-content.active {
+  display: block;
+}
+
+.download-container {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.selector-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+select {
+  padding: 12px 15px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+select:focus {
+  outline: none;
+  border-color: #002cca;
+}
+
+#downloadBtn {
+  padding: 12px 25px;
+  background-color: #0064ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+#downloadBtn:hover {
+  background-color: #002cca;
+}
+
+#downloadBtn:active {
+  transform: translateY(1px);
+}
+
+.detected-os {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #0064ff;
+  border-radius: 5px;
+  color: #2e7d32;
+  font-size: 14px;
+}
