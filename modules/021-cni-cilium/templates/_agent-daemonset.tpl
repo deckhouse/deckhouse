@@ -109,6 +109,7 @@ spec:
               command:
               - /cni-uninstall.sh
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -349,6 +350,7 @@ spec:
         - name: tmp
           mountPath: /tmp
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
         resources:
           requests:
