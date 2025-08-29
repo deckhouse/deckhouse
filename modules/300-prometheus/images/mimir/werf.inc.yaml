@@ -19,7 +19,6 @@ shell:
     - git apply /patches/*.patch --verbose
     - rm -rf .git ./operations
 ---
-
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false

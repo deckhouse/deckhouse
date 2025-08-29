@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 0631611..602715b 100644
+index 0631611..e88039f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,8 +1,8 @@
@@ -13,6 +13,15 @@ index 0631611..602715b 100644
  
  require (
  	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0
+@@ -18,7 +18,7 @@ require (
+ 	github.com/cespare/xxhash/v2 v2.3.0
+ 	github.com/dennwc/varint v1.0.0
+ 	github.com/digitalocean/godo v1.122.0
+-	github.com/docker/docker v27.2.0+incompatible
++	github.com/docker/docker v28.0.0+incompatible
+ 	github.com/edsrzf/mmap-go v1.1.0
+ 	github.com/envoyproxy/go-control-plane v0.13.0
+ 	github.com/envoyproxy/protoc-gen-validate v1.1.0
 @@ -75,10 +75,10 @@ require (
  	go.uber.org/automaxprocs v1.5.3
  	go.uber.org/goleak v1.3.0
@@ -55,9 +64,20 @@ index 0631611..602715b 100644
  	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 0246a37..5733045 100644
+index 0246a37..928f1b4 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -149,8 +149,8 @@ github.com/distribution/reference v0.5.0 h1:/FUIFXtfc/x2gpa5/VGfiGLuOIdYa1t65IKK
+ github.com/distribution/reference v0.5.0/go.mod h1:BbU0aIcezP1/5jX/8MP0YiH4SdvB5Y4f/wlDRiLyi3E=
+ github.com/dnaeon/go-vcr v1.2.0 h1:zHCHvJYTMh1N7xnV7zf1m1GPBF9Ad0Jk/whtQ1663qI=
+ github.com/dnaeon/go-vcr v1.2.0/go.mod h1:R4UdLID7HZT3taECzJs4YgbbH6PIGXB6W/sc5OLb6RQ=
+-github.com/docker/docker v27.2.0+incompatible h1:Rk9nIVdfH3+Vz4cyI/uhbINhEZ/oLmc+CBXmH6fbNk4=
+-github.com/docker/docker v27.2.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
++github.com/docker/docker v28.0.0+incompatible h1:Olh0KS820sJ7nPsBKChVhk5pzqcwDR15fumfAd/p9hM=
++github.com/docker/docker v28.0.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+ github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
+ github.com/docker/go-connections v0.4.0/go.mod h1:Gbd7IOopHjR8Iph03tsViu4nIes5XhDvyHbTtUxmeec=
+ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4=
 @@ -248,11 +248,11 @@ github.com/gogo/protobuf v1.2.0/go.mod h1:r8qH/GZQm5c6nD/R0oafs1akxWv10x8SbQlK7a
  github.com/gogo/protobuf v1.2.1/go.mod h1:hp+jE20tsWTFYpLwKvXlhS1hjn+gTNwPg2I6zVXpSg4=
  github.com/gogo/protobuf v1.3.2 h1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=
