@@ -149,7 +149,7 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/15066
     - summary: Add new requirement and commands to meet containerdv2 requirements
       pull_request: https://github.com/deckhouse/deckhouse/pull/14959
-    - summary: Fix D8KubernetesStaleTokensDetected description.
+    - summary: Fix D8KubernetesStaleTokensDetected alert description.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14913
     - summary: There should be one disk in the template.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14906
