@@ -587,12 +587,8 @@ func (p *TaskCalculator) findConstraintEndpointIndex(releases []v1alpha1.Release
 	compliantRelease := -1
 
 	// Pick constraints from the highest pending release that has them.
-	for i := len(releases) - 1; i >= 0; i-- {
-		// compliant release can not be lower or equal deployed
-		if i <= deployed.IndexInReleaseList {
-			break
-		}
-
+	// compliant release can not be lower or equal deployed
+	for i := len(releases) - 1; i > deployed.IndexInReleaseList; i-- {
 		r := releases[i]
 
 		if r.GetPhase() != v1alpha1.ModuleReleasePhasePending {
@@ -707,21 +703,17 @@ func (p *TaskCalculator) getFirstCompliantRelease(
 		}
 
 		// Find highest patch within target minor/major
-		for idx, r := range releases {
-			if idx <= deployed.IndexInReleaseList {
+		for i := deployed.IndexInReleaseList; i < len(releases); i++ {
+			if bestIdx >= i {
 				continue
 			}
 
-			if bestIdx >= idx {
-				continue
-			}
-
-			rv := r.GetVersion()
+			rv := releases[i].GetVersion()
 
 			// trying to get first version with the same Major and Minor version as "to" constraint
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
-				if bestIdx == -1 || bestIdx < idx {
-					bestIdx = idx
+				if bestIdx == -1 || bestIdx < i {
+					bestIdx = i
 					logEntry.Debug("found most suitable index for from-to releaseleap",
 						slog.String("suitable_version", "v"+releases[bestIdx].GetVersion().String()),
 						slog.String("from_ver", c.From),
