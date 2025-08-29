@@ -11,7 +11,7 @@
 #######################################################################
 {{ $baseImagesBinaries := "" }}
 # from coreutils-v9.7
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/coreutils /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/coreutils /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc /usr/bin/true" }}
 # from d8-curl-artifact-8-9-1
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/curl" }}
 # from bash-v5.2.37
@@ -188,7 +188,7 @@ import:
   to: /from_common_distroless/group
   before: install
 - image: tools/coreutils-v9.7
-  before: install
+  before: setup
   add: /usr/bin/
   to: /usr/bin/
   includePaths:
@@ -213,49 +213,53 @@ import:
   - tail
   - timeout
   - wc
+- image: tools/coreutils-v9.7
+  before: setup
+  add: /usr/bin/true
+  to: /usr/bin/true
 - image: registrypackages/d8-curl-artifact-8-9-1
-  before: install
+  before: setup
   add: /d8-curl
   to: /usr/bin/curl
 - image: tools/bash-v5.2.37
-  before: install
+  before: setup
   add: /usr/bin/
   to: /usr/bin/
   includePaths:
   - bash
   - sh
 - image: tools/findutils-v4.10.0
-  before: install
+  before: setup
   add: /usr/bin/find
 - image: tools/gawk-v5.3.2
-  before: install
+  before: setup
   add: /usr/bin/
   to: /usr/bin/
   includePaths:
   - awk
   - gawk
 - image: tools/grep-grep-3.11
-  before: install
+  before: setup
   add: /usr/bin/grep
 - image: tools/sed-v4.9
-  before: install
+  before: setup
   add: /usr/bin/sed
 - image: tools/tar-v1.35
-  before: install
+  before: setup
   add: /usr/bin/tar
 - image: tools/util-linux-v2.41
-  before: install
+  before: setup
   add: /usr/bin/nsenter
 - image: tools/util-linux-v2.41
-  before: install
+  before: setup
   add: /bin/mount
   to: /usr/bin/mount
 - image: tools/ipset-v7.22
-  before: install
+  before: setup
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
 - image: tools/kmod-v33
-  before: install
+  before: setup
   add: /bin/
   to: /usr/sbin/
   includePaths:
@@ -268,7 +272,7 @@ import:
   - modprobe
   - rmmod
 - image: tools/iproute2-v6.12.0
-  before: install
+  before: setup
   add: /sbin/
   to: /usr/sbin/
   includePaths:
@@ -289,33 +293,33 @@ import:
   - ctstat
   - rtstat
 - image: tools/bash-completion-2.16.0
-  before: install
+  before: setup
   add: /usr/share/bash-completion
   to: /usr/share/bash-completion
 - image: tools/bash-completion-2.16.0
-  before: install
+  before: setup
   add: /etc/profile.d/bash_completion.sh
   to: /etc/bashrc.d/bash_completion.sh
 - image: libs/glibc-v2.41
   add: /lib64/libm.so.6
   to: /usr/lib64/libm.so.6
-  before: install
+  before: setup
 - image: libs/glibc-v2.41
   add: /lib64/libc.so.6
   to: /usr/lib64/libc.so.6
-  before: install
+  before: setup
 - image: libs/glibc-v2.41
   add: /lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
-  before: install
+  before: setup
 - image: libs/glibc-v2.41
   add: /lib64/libc.musl-x86_64.so.1
   to: /usr/lib64/libc.musl-x86_64.so.1
-  before: install
+  before: setup
 - image: tools/elfutils-elfutils-0.193
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libelf.a
   - libelf.so
@@ -324,15 +328,15 @@ import:
 - image: common/pause
   add: /pause
   to: /pause
-  before: install
+  before: setup
 - image: tools/jq
   add: /usr/bin/jq
   to: /usr/bin/jq
-  before: install
+  before: setup
 - image: libs/zlib-v1.3.1
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libz.a
   - libz.so
@@ -341,7 +345,7 @@ import:
 - image: libs/libcap-v1.2.69
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libcap.a
   - libcap.so
@@ -350,7 +354,7 @@ import:
 - image: libs/zstd-v1.5.7
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libzstd.a
   - libzstd.so
@@ -359,7 +363,7 @@ import:
 - image: libs/libxml2-v2.13.8
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libxml2.a
   - libxml2.la
@@ -370,7 +374,7 @@ import:
 - image: libs/libffi-v3.4.8
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libffi.a
   - libffi.la
@@ -380,7 +384,7 @@ import:
 - image: libs/xz-v5.8.1
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libc.so
   - liblzma.a
@@ -392,7 +396,7 @@ import:
 - image: libs/libedit-v20250104.3.1
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libedit.a
   - libedit.la
@@ -403,7 +407,7 @@ import:
 - image: libs/ncurses-v6.5
   add: /usr/lib
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libcurses.a
   - libcurses.so
@@ -450,7 +454,7 @@ import:
 - image: tools/gcc-12.1.0
   add: /usr/lib64
   to: /usr/lib64
-  before: install
+  before: setup
   includePaths:
   - libstdc++.so.6
   - libstdc++.so.6.0.30
@@ -458,7 +462,7 @@ import:
 - image: libs/xz-v5.8.1
   add: /usr/lib/libc.so
   to: /lib/x86_64-linux-gnu/libc.so
-  before: install
+  before: setup
 shell:
   install:
   - chown root:root /usr/sbin/iptables-wrapper
