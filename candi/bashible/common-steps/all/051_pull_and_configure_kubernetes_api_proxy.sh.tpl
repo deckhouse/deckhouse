@@ -48,7 +48,7 @@ spec:
         - DAC_OVERRIDE
         - SETGID
         - SETUID
-      readOnlyRootFilesystem: false
+      readOnlyRootFilesystem: true
       runAsGroup: 0
       runAsNonRoot: false
       runAsUser: 0
@@ -66,8 +66,6 @@ spec:
       readOnly: true
     - mountPath: /tmp
       name: tmp
-    securityContext:
-      readOnlyRootFilesystem: true
   - name: kubernetes-api-proxy-reloader
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
@@ -82,7 +80,7 @@ spec:
         - DAC_OVERRIDE
         - SETGID
         - SETUID
-      readOnlyRootFilesystem: false
+      readOnlyRootFilesystem: true
       runAsGroup: 0
       runAsNonRoot: false
       runAsUser: 0
@@ -94,11 +92,8 @@ spec:
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
-      readOnly: true
     - mountPath: /tmp
       name: tmp
-    securityContext:
-      readOnlyRootFilesystem: true
   priorityClassName: system-node-critical
   priority: 2000001000
   volumes:
