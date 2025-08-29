@@ -50,6 +50,7 @@ masterNodeGroup:
     sizingPolicy: 4cpu8ram
     rootDiskSizeGb: 20
     etcdDiskSizeGb: 20
+    systemRegistryDiskSizeGb: 40
     storageProfile: nvme
 nodeGroups:
 - name: worker

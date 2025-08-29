@@ -32,7 +32,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
 	sigs.k8s.io/controller-runtime v0.14.7
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (

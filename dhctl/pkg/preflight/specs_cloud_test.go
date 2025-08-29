@@ -47,6 +47,7 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "happy path",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: validPCC,
+				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
 			}},
 			wantErr: assert.NoError,
 		},
@@ -54,6 +55,7 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "invalid ProviderClusterConfiguration",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: invalidPCC,
+				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.ErrorContains(t, err, "expected at least")
@@ -63,6 +65,7 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "malformed ProviderClusterConfiguration",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: malformedPCC,
+				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.ErrorContains(t, err, "malformed provider cluster configuration")

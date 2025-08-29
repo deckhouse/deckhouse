@@ -14,7 +14,10 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
+)
 
 const (
 	CloudClusterType  = "Cloud"
@@ -76,7 +79,7 @@ type TerraNodeGroupSpec struct {
 	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
 }
 
-type DeckhouseClusterConfig struct {
+type DeckhouseClusterConfigOld struct {
 	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch         string                 `json:"devBranch,omitempty"`
 	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
@@ -86,6 +89,39 @@ type DeckhouseClusterConfig struct {
 	RegistryCA        string                 `json:"registryCA,omitempty"`
 	RegistryScheme    string                 `json:"registryScheme,omitempty"`
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
+}
+
+type DeckhouseClusterConfig struct {
+	ReleaseChannel  string                 `json:"releaseChannel,omitempty"` // Deprecated
+	DevBranch       string                 `json:"devBranch,omitempty"`
+	Bundle          string                 `json:"bundle,omitempty"`   // Deprecated
+	LogLevel        string                 `json:"logLevel,omitempty"` // Deprecated
+	ConfigOverrides map[string]interface{} `json:"configOverrides"`    // Deprecated
+}
+
+type RegistryClusterConfig struct {
+	Mode                   string                          `json:"mode,omitempty"`
+	DirectModeProperties   *RegistryDirectModeProperties   `json:"direct,omitempty"`
+	DetachedModeProperties *RegistryDetachedModeProperties `json:"detached,omitempty"`
+	ProxyModeProperties    *RegistryProxyModeProperties    `json:"proxy,omitempty"`
+}
+
+type RegistryDirectModeProperties struct {
+	ImagesRepo string `json:"imagesRepo,omitempty"`
+	Username   string `json:"username,omitempty"`
+	Password   string `json:"password,omitempty"`
+	DockerCfg  string `json:"dockerCfg,omitempty"`
+	CA         string `json:"ca,omitempty"`
+	Scheme     string `json:"scheme,omitempty"`
+}
+
+type RegistryProxyModeProperties struct {
+	RegistryDirectModeProperties
+	TTL util_time.Duration `json:"ttl,omitempty"`
+}
+
+type RegistryDetachedModeProperties struct {
+	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
 }
 
 type VCDProviderConfig struct {
