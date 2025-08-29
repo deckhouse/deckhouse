@@ -22,3 +22,7 @@ Migrate to a structured config (alpha config): https://oauth2-proxy.github.io/oa
 ### 004-add-redis-retries.patch
 
 Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time. Adds a loop to retry sendRedisConnectionTest.
+
+### 005-fix-cves.patch
+
+Fixes CVE-2025-30204 CVE-2025-22868 CVE-2024-28180
