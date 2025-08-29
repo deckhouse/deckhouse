@@ -10,10 +10,6 @@
 ---
 #####################################################################
 {{ $selfBuiltBinaries := "" }}
-# from llvm-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/local/bin/clang /usr/local/bin/llc" }}
-# from cilium-envoy-artifact
-# {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/cilium-envoy /usr/lib/libcilium.so" }}
 # from hubble-artifact
 # {{ $selfBuiltBinaries := cat $selfBuiltBinaries "/usr/bin/hubble /etc/bash_completion.d/hubble" }}
 # from cilium-artifact
