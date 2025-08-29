@@ -35,6 +35,12 @@ type CiliumConfigStruct struct {
 	MasqueradeMode string `json:"masqueradeMode,omitempty"`
 }
 
+type resultStruct struct {
+	desiredCniConfigSourcePriorityFlagExists bool
+	desiredCniConfigSourcePriority           string
+	cniConfigFromSecret                      CiliumConfigStruct
+}
+
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
@@ -56,7 +62,16 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal cilium config json: %v", err)
 	}
-	return ciliumConfig, nil
+
+	cniConfigSourcePriorityFlagExists := false
+	cniConfigSourcePriority := ""
+	cniConfigSourcePriority, cniConfigSourcePriorityFlagExists = secret.Annotations[cniConfigSourcePriorityAnnotation]
+
+	return resultStruct{
+		desiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
+		desiredCniConfigSourcePriority:           cniConfigSourcePriority,
+		cniConfigFromSecret:                      ciliumConfig,
+	}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -81,14 +96,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, setCiliumMode)
 
 func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
-	// if secret exists, use it
-	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.Snapshots, "cni_configuration_secret")
+	clusterIsBootstrapped := input.Values.Get("global.clusterIsBootstrapped").Bool()
+
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[resultStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
+	cniConfigSourcePriority := "ModuleConfig"
 	if len(cniConfigurationSecrets) > 0 {
-		ciliumConfig := cniConfigurationSecrets[0]
+		if cniConfigurationSecrets[0].desiredCniConfigSourcePriorityFlagExists {
+			if cniConfigurationSecrets[0].desiredCniConfigSourcePriority != "ModuleConfig" {
+				cniConfigSourcePriority = "Secret"
+			}
+		} else if clusterIsBootstrapped {
+			cniConfigSourcePriority = "Secret"
+		}
+	}
+	input.Logger.Info("The priority parameter source for the CNI configuration has been identified", "priority source", cniConfigSourcePriority)
+
+	switch cniConfigSourcePriority {
+	case "Secret":
+		ciliumConfig := cniConfigurationSecrets[0].cniConfigFromSecret
 		if ciliumConfig.Mode != "" {
 			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
 		}
@@ -96,38 +125,35 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 			input.Values.Set("cniCilium.internal.masqueradeMode", ciliumConfig.MasqueradeMode)
 		}
 		return nil
-	}
+	case "ModuleConfig":
+		value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
+		if ok {
+			input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
+		}
+		value, ok = input.ConfigValues.GetOk("cniCilium.tunnelMode")
+		if ok {
+			switch value.String() {
+			case "VXLAN":
+				input.Values.Set("cniCilium.internal.mode", "VXLAN")
+				return nil
+			case "Disabled":
+				// to recover the default value if it was discovered before
+				input.Values.Set("cniCilium.internal.mode", "Direct")
+			}
+		}
+		value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
+		if ok && value.Bool() {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
+		}
 
-	value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
-	if ok {
-		input.Values.Set("cniCilium.internal.masqueradeMode", value.String())
-	}
-
-	value, ok = input.ConfigValues.GetOk("cniCilium.tunnelMode")
-	if ok {
-		switch value.String() {
-		case "VXLAN":
-			input.Values.Set("cniCilium.internal.mode", "VXLAN")
-			return nil
-		case "Disabled":
-			// to recover default value if it was discovered before
-			input.Values.Set("cniCilium.internal.mode", "Direct")
+		// for static clusters we should use DirectWithNodeRoutes mode
+		value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
+		if ok && value.String() == "Static" {
+			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 		}
 	}
 
-	value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
-	if ok && value.Bool() {
-		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-	}
-
-	// for static clusters we should use DirectWithNodeRoutes mode
-	value, ok = input.Values.GetOk("global.clusterConfiguration.clusterType")
-	if ok && value.String() == "Static" {
-		input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
-	}
-
-	// default
-	// mode = Direct
-	// masqueradeMode = BPF
+	// default_mode = Direct
+	// default_masqueradeMode = BPF
 	return nil
 }
