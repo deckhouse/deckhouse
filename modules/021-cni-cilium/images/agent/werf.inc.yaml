@@ -102,6 +102,7 @@ shell:
       done
     done
   # additional relocate from cilium
+  - mkdir -p /relocate/var/lib/cilium
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   # additional relocate for fix locale
@@ -141,7 +142,7 @@ shell:
 ---
 image: {{ .ModuleName }}/agent-distroless
 fromImage: common/distroless
-fromCacheVersion: "2025-08-29.01"
+fromCacheVersion: "2025-08-29.02"
 import:
 - image: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
