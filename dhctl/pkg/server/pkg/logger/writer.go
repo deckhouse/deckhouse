@@ -15,7 +15,9 @@
 package logger
 
 import (
+	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 )
 
@@ -68,8 +70,9 @@ func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
 type DebugLogWriter struct {
 	l *slog.Logger
 
-	m    sync.Mutex
-	prev []byte
+	m     sync.Mutex
+	prev  []byte
+	lines []string
 }
 
 func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
@@ -79,17 +82,25 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
 	w.m.Lock()
-	defer w.m.Unlock()
 
-	var lines []string
+	fmt.Fprintln(os.Stderr, "Locked debug log writer. Closed channel to finish monitor. Defer to unlock")
+
+	defer func() {
+		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
+		w.m.Unlock()
+		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
+	}()
+
+	fmt.Fprintf(os.Stderr, "Split log %s by line\n", string(p))
 
 	for _, b := range p {
 		switch b {
 		case '\n', '\r':
 			s := string(w.prev)
 			if s != "" {
-				lines = append(lines, s)
+				w.lines = append(w.lines, s)
 			}
 			w.prev = []byte{}
 		default:
@@ -97,11 +108,22 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 		}
 	}
 
-	if len(lines) > 0 {
-		for _, line := range lines {
-			w.l.Debug(line)
+	fmt.Fprintf(os.Stderr, "Splited log %s by line; lines %d\n", string(p), len(w.lines))
+
+	if len(w.lines) > 0 {
+		for _, line := range w.lines {
+			fmt.Fprintf(os.Stderr, "debudlogwriter: write to sterr: %s\n", line)
+			//w.l.Debug(line)
+			//fmt.Fprintf(os.Stderr, "debudlogwriter: sent to logger: %s\n", line)
 		}
 	}
 
-	return len(p), nil
+	fmt.Fprintf(os.Stderr, "debudlogwriter: starting getting len of bufffer\n")
+
+	llen := len(p)
+
+	fmt.Fprintf(os.Stderr, "debudlogwriter: got len of buffer. Set lines to nil %d\n", llen)
+	w.lines = nil
+
+	return llen, nil
 }
