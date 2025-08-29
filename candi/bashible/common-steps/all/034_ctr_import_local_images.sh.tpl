@@ -36,7 +36,7 @@ post-install-import() {
   fi
 
   if [[ "${PACKAGE}" == "kubernetes-api-proxy" ]]; then
-    ctr_import_image "/opt/deckhouse/images/kubernetes-api-proxy.tar"
+    ctr_import_image {{ $kubernetes_api_proxy_image }} "/opt/deckhouse/images/kubernetes-api-proxy.tar"
     return 0
   fi
 }
