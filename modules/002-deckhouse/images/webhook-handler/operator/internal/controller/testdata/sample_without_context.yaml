@@ -23,20 +23,6 @@ validationObject: # 1-в-1 из validationwebhookconfiguration
   matchConditions:
     - name: yyyy
       expression: 'request.resource.group != "rbac.authorization.k8s.io"'
-context:
-  - name: some_node
-    kubernetes:
-      apiVersion: v1
-      kind: Node
-      nameSelector: # oneOf с labelSelector
-        matchNames: ["global"]
-      labelSelector:
-        matchLabels:
-          foo: bar
-      namespaceSelector:
-        matchLabels: # matchExpressions, matchNames
-          bar: foo
-      jqFilter: { "nodeName": .metadata.name }
 handler:
   cel: |
     TODO: сейчас не делаем
