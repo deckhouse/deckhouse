@@ -341,6 +341,94 @@ serviceSubnetCIDR: 10.232.0.0/16
 			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
+
+	Context("Static cluster with tunnelMode VXLAN configured (priority test)", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("tunnelMode VXLAN should take priority over Static cluster default", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("Static cluster with createNodeRoutes false (should not override default)", func() {
+		BeforeEach(func() {
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("Static cluster type takes priority over createNodeRoutes false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("Priority annotation with value Secret", func() {
+		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "Direct", "Netfilter", map[string]string{
+			"network.deckhouse.io/cni-configuration-source-priority": "Secret",
+		})
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("should use secret values even when MC differs", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
+	Context("Priority annotation with non-standard value", func() {
+		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "Direct", "Netfilter", map[string]string{
+			"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
+		})
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			f.RunHook()
+		})
+		It("should treat non-ModuleConfig value as Secret priority", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
 })
 
 func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {

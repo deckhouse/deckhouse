@@ -159,6 +159,8 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeFalse())
 		})
 	})
 
@@ -181,6 +183,10 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -202,6 +208,10 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -226,6 +236,10 @@ data:
 			Expect(cm.Exists()).To(BeFalse())
 			mc := f.KubernetesResource("ModuleConfig", "", cniName)
 			Expect(mc.Exists()).To(BeTrue())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -250,6 +264,9 @@ data:
 			Expect(len(f.MetricsCollector.CollectedMetrics())).To(Equal(1)) // only expire
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
 		})
 	})
 
@@ -278,6 +295,10 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -305,6 +326,10 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -332,6 +357,10 @@ data:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -383,6 +412,9 @@ status:
   message: ""
   version: ""
 `))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
 		})
 	})
 
@@ -431,6 +463,9 @@ status:
   message: ""
   version: ""
 `))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
 		})
 	})
 
@@ -479,6 +514,9 @@ status:
   message: ""
   version: ""
 `))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
 		})
 	})
 
@@ -510,6 +548,10 @@ status:
 			Expect(cm.Exists()).To(BeFalse())
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("unknown cilium mode"))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("unknown cilium masqueradeMode"))
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 
@@ -537,6 +579,79 @@ status:
 			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
 			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
 			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
+		})
+	})
+
+	Context("Cluster has cni secret with annotation having non-standard priority value", func() {
+		BeforeEach(func() {
+			secretData := make(map[string][]byte)
+			secretData["cni"] = []byte(cni)
+			secretData[cni] = []byte(`{"mode": "VXLAN", "masqueradeMode": "BPF"}`)
+			s := &v1core.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "d8-cni-configuration",
+					Namespace: "kube-system",
+					Annotations: map[string]string{
+						"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
+					},
+				},
+				Data: secretData,
+			}
+			marshaled, _ := yaml.Marshal(s)
+			f.KubeStateSet(string(marshaled))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("CustomValue"))
+		})
+	})
+
+	Context("Cluster has cni secret, MC enabled=nil (implicitly enabled)", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "BPF"}`),
+				cniMCYAML(cniName, nil, v1alpha1.SettingsValues{
+					"tunnelMode": "VXLAN",
+				}),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should detect mismatch, set req=false and metric=1 and create desired mc", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("false"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 1.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", desiredCNIModuleConfigName)
+			Expect(cm.Exists()).To(BeTrue())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
 		})
 	})
 })
