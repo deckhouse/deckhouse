@@ -10,7 +10,7 @@ layout: sidebar-guides
 В материале рассматривается EE-редакция, но механизмы аналогичны для других редакций.
 {% endalert %}
 
-{% alert level="info"}
+{% alert level="info" %}
 В статье используется стороняя утилита [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) для анализа Container Registy
 {% endalert %}
 
