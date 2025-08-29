@@ -149,10 +149,6 @@ func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
 	}
-	// ignore only explicitly disabled modules.
-	if mc.Spec.Enabled != nil && !*mc.Spec.Enabled {
-		return nil, nil
-	}
 
 	return mc, nil
 }
@@ -281,7 +277,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	// If MC exist, but is explicitly disabled, it means that CNI is in the process of disabling, there is nothing to do.
-	if len(cniModuleConfigs) != 0 && cniModuleConfigs[0].Spec.Enabled == nil || !*cniModuleConfigs[0].Spec.Enabled {
+	if cniModuleConfigs[0].Spec.Enabled != nil && !*cniModuleConfigs[0].Spec.Enabled {
 		return nil
 	}
 
@@ -350,7 +346,7 @@ func annotateSecret(input *go_hook.HookInput) {
 			},
 		},
 	}
-	input.PatchCollector.PatchWithMerge(secretPatch, "v1", "Secret", "kube-system", "d8-cluster-configuration")
+	input.PatchCollector.PatchWithMerge(secretPatch, "v1", "Secret", "kube-system", "d8-cni-configuration")
 }
 
 func createDesiredModuleConfig(input *go_hook.HookInput, desiredCNIModuleConfig *v1alpha1.ModuleConfig) {
