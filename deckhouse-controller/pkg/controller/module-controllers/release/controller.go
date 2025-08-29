@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -67,7 +68,7 @@ import (
 const (
 	controllerName = "d8-module-release-controller"
 
-	delayTimer = 3 * time.Second
+	delayTimer = 15 * time.Second
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
@@ -97,7 +98,7 @@ func RegisterController(
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
-		delayTimer:           time.NewTimer(delayTimer),
+		delayTicker:          time.NewTicker(delayTimer),
 		dependencyContainer:  dc,
 		exts:                 exts,
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
@@ -109,6 +110,8 @@ func RegisterController(
 	if err := runtimeManager.Add(manager.RunnableFunc(r.preflight)); err != nil {
 		return fmt.Errorf("add preflight: %w", err)
 	}
+
+	r.restartCooldown.Store(1)
 
 	releaseController, err := controller.New(controllerName, runtimeManager, controller.Options{
 		MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -145,10 +148,12 @@ type reconciler struct {
 	metricStorage        metric.Storage
 	downloadedModulesDir string
 	symlinksDir          string
-	restartReason        string
 	clusterUUID          string
-	mtx                  sync.Mutex
-	delayTimer           *time.Timer
+	delayTicker          *time.Ticker
+
+	activeApplyCount   atomic.Int32
+	hasAppliedReleases atomic.Bool
+	restartCooldown    atomic.Int32
 
 	metricsUpdater MetricsUpdater
 }
@@ -199,29 +204,29 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 func (r *reconciler) restartLoop(ctx context.Context) {
 	for {
-		r.mtx.Lock()
 		select {
-		case <-r.delayTimer.C:
-			if r.restartReason != "" {
-				r.log.Info("restart Deckhouse", slog.String("reason", r.restartReason))
+		case <-r.delayTicker.C:
+			if r.activeApplyCount.Load() > 0 {
+				r.restartCooldown.Store(1)
+			}
+
+			if r.restartCooldown.Load() == 0 {
+				r.log.Info("restarting Deckhouse...")
 				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
 					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
 				}
+				r.hasAppliedReleases.Store(false)
+				return
 			}
-			r.delayTimer.Reset(delayTimer)
+
+			if r.hasAppliedReleases.Load() && r.activeApplyCount.Load() == 0 {
+				r.restartCooldown.Store(0)
+			}
 
 		case <-ctx.Done():
 			return
 		}
-		r.mtx.Unlock()
 	}
-}
-
-func (r *reconciler) emitRestart(msg string) {
-	r.mtx.Lock()
-	r.delayTimer.Reset(delayTimer)
-	r.restartReason = msg
-	r.mtx.Unlock()
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -366,18 +371,8 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleDeployedRelease")
 	defer span.End()
-
-	res := ctrl.Result{}
-
 	var needsUpdate bool
-
-	var modulesChangedReason string
-	defer func() {
-		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
-		}
-	}()
-
+	res := ctrl.Result{}
 	moduleReleases := new(v1alpha1.ModuleReleaseList)
 	labelSelector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelSource: release.GetModuleSource(), v1alpha1.ModuleReleaseLabelModule: release.GetModuleName()}
 
@@ -410,7 +405,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 			return res, fmt.Errorf("run release deploy: %w", err)
 		}
 
-		modulesChangedReason = "module release reloaded"
+		r.log.Info("module release reloaded, waiting for Deckhouse restart", slog.String("release", release.GetName()))
 
 		return res, nil
 	}
@@ -566,13 +561,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("handle pending release")
 
-	var modulesChangedReason string
-	defer func() {
-		if modulesChangedReason != "" {
-			r.emitRestart(modulesChangedReason)
-		}
-	}()
-
 	var (
 		policy *v1alpha2.ModuleUpdatePolicy
 		err    error
@@ -646,7 +634,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
-		modulesChangedReason = "a new module release deployed"
+		r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
 
 		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
@@ -783,7 +771,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return ctrl.Result{}, nil
 	}
 
-	modulesChangedReason = "a new module release deployed"
+	r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
 
 	logger.Debug("module release deployed")
 
@@ -859,6 +847,12 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleRelease, task *releaseUpdater.Task) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "applyRelease")
 	defer span.End()
+
+	r.activeApplyCount.Add(1)
+	defer func() {
+		r.activeApplyCount.Add(-1)
+		r.hasAppliedReleases.Store(true)
+	}()
 
 	var dri *releaseUpdater.ReleaseInfo
 
@@ -1400,10 +1394,6 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		}
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
-
-		// restart controller for completely remove module
-		// TODO: we need another solution for remove module from modulemanager
-		r.emitRestart("a module release was removed")
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
