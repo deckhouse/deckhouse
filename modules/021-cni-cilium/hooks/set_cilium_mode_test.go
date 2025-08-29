@@ -81,6 +81,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
@@ -97,11 +98,12 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(cniSecret)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.RunHook()
 		})
-		It("hook should run successfully, cilium mode should be set to `VXLAN`", func() {
+		It("hook should run successfully, cilium mode should be set to `DirectWithNodeRoutes`", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
 			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
@@ -261,9 +263,91 @@ serviceSubnetCIDR: 10.232.0.0/16
 			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
+
+	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=ModuleConfig, cilium mode = VXLAN", func() {
+		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "VXLAN", "BPF", map[string]string{
+			"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
+		})
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes` from MC, not secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=Secret, cilium mode = VXLAN", func() {
+		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "VXLAN", "Netfilter", map[string]string{
+			"network.deckhouse.io/cni-configuration-source-priority": "Secret",
+		})
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `VXLAN` from secret, not MC", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration without annotation, cluster is not bootstrapped", func() {
+		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "Netfilter")
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be from MC (DirectWithNodeRoutes), not secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("kube-system/d8-cni-configuration without annotation, cluster is bootstrapped", func() {
+		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "Netfilter")
+		BeforeEach(func() {
+			f.KubeStateSet(cniSecret)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be from secret (VXLAN), not MC", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
 })
 
 func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {
+	return generateCniConfigurationSecretWithAnnotations(cni, mode, masqueradeMode, nil)
+}
+
+func generateCniConfigurationSecretWithAnnotations(cni string, mode string, masqueradeMode string, annotations map[string]string) string {
 	var (
 		secretTemplate = `
 ---
@@ -271,9 +355,17 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: d8-cni-configuration
-  namespace: kube-system
-type: Opaque`
+  namespace: kube-system`
 	)
+
+	if len(annotations) > 0 {
+		secretTemplate += "\n  annotations:"
+		for key, value := range annotations {
+			secretTemplate += fmt.Sprintf("\n    %s: %s", key, value)
+		}
+	}
+
+	secretTemplate += "\ntype: Opaque"
 
 	jsonByte, _ := generateJSONCiliumConf(mode, masqueradeMode)
 	secretTemplate = fmt.Sprintf("%s\ndata:\n  cni: %s", secretTemplate, base64.StdEncoding.EncodeToString([]byte(cni)))
