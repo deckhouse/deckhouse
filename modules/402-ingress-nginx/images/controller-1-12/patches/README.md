@@ -87,3 +87,7 @@ Slightly tunes some logic related to validating ingress objects.
 ### 014-verbose-maxmind-logs.patch
 
 Added additional logging when downloading GeoIP databases from the MaxMind service.
+
+### 015-maxmind-alerts.patch
+
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
