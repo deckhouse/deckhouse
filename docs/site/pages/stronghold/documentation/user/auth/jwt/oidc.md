@@ -9,18 +9,8 @@ description: >-
 
 ### JWT/OIDC auth method
 
-{% alert level="warning" %}
-
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
 The `jwt` auth method can be used to authenticate with Stronghold using
-[OIDC](https://en.wikipedia.org/wiki/OpenID_Connect) or by providing a
-[JWT](https://en.wikipedia.org/wiki/JSON_Web_Token).
+OIDC or by providing a JWT.
 
 The OIDC method allows authentication via a configured OIDC provider using the
 user's web browser. This method may be initiated from the Stronghold UI or the
@@ -35,8 +25,7 @@ examples of OIDC and JWT usage.
 
 ## OIDC authentication
 
-This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
-refer to the [JWT Authentication](/docs/auth/jwt#jwt-authentication) section below. Basic
+This section covers the setup and use of OIDC roles. Basic
 familiarity with [OIDC concepts](https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1)
 is assumed. The Authorization Code flow makes use of the Proof Key for Code
 Exchange (PKCE) extension.
@@ -72,17 +61,7 @@ of the configured redirected URIs. These same URIs must be added to the provider
 
 ### Stronghold UI
 
-Logging in via the Stronghold UI requires a redirect URI of the form:
-
-`https://{host:port}/ui/vault/auth/{path}/oidc/callback`
-
-The "host:port" must be correct for the Stronghold server, and "path" must match the path the JWT
-backend is mounted at (e.g. "oidc" or "jwt").
-
-If the [oidc_response_mode](/api-docs/auth/jwt#oidc_response_mode) is set to `form_post`, then
-logging in via the Stronghold UI requires a redirect URI of the same form as the direct callback mode:
-
-`https://{host:port}/v1/auth/{path}/oidc/callback`
+Logging in using Deckhouse Stronghold doesn't require manually configuring the UI. It's configured automatically when Deckhouse Stronghold is enabled.
 
 ### OIDC login (Stronghold UI)
 
@@ -129,9 +108,7 @@ not required to be set:
 ### OIDC provider configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
-guide to configuring OAuth/OIDC applications is beyond the scope of Stronghold documentation, but a
-collection of provider configuration steps has been collected to help get started:
-[OIDC Provider Setup](/docs/auth/jwt/oidc-providers)
+guide to configuring OAuth/OIDC applications is beyond the scope of Stronghold documentation.
 
 ### OIDC configuration troubleshooting
 
@@ -177,12 +154,8 @@ EOF
 
   `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
 
-- The [`verbose_oidc_logging`](/api-docs/auth/jwt#verbose_oidc_logging) role
+- The `verbose_oidc_logging` role
   option is available which will log the received OIDC token to the _server_ logs if debug-level logging is enabled. This can
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
   used in production.
-
-- Azure requires some additional configuration when a user is a member of more
-  than 200 groups, described in [Azure-specific handling
-  configuration](/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)

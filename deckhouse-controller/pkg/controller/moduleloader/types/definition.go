@@ -148,10 +148,6 @@ type ModuleDescriptions struct {
 }
 
 func (d *Definition) Validate(values addonutils.Values, logger *log.Logger) error {
-	if d.Weight < 900 || d.Weight > 999 {
-		return errors.New("external module weight must be between 900 and 999")
-	}
-
 	if d.Path == "" {
 		return errors.New("cannot validate module without path. Path is required to load openapi specs")
 	}

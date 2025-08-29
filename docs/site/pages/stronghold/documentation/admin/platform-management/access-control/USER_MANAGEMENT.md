@@ -112,7 +112,7 @@ spec:
     clientSecret: plainstring
 ```
 
-In a [GitHub organization](https://docs.github.com/ru/organizations), create a new application:
+In a [GitHub organization](https://docs.github.com/en/organizations), create a new application:
 
 1. Go to **Settings** → **Developer settings** → **OAuth Apps** → **Register a new OAuth application**.
 1. In the **Authorization callback URL** field, enter:
@@ -310,7 +310,7 @@ spec:
 #### Blitz Identity Provider
 
 When [registering an application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with Blitz Identity Provider, specify the URL to redirect users after authorization.
-When using `DexProvider`, specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster DNS name template [configured](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+When using `DexProvider`, specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster DNS name template [configured](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 Example of a manifest for configuring a provider to integrate with Blitz Identity Provider:
 

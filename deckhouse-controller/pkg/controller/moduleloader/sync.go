@@ -145,7 +145,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		}
 
 		// module must be enabled
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
