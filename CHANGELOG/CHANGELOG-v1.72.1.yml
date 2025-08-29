@@ -1,0 +1,31 @@
+control-plane-manager:
+  fixes:
+    - summary: Promoted etcd member if needed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15011
+deckhouse:
+  fixes:
+    - summary: Fix source creating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14989
+deckhouse-controller:
+  features:
+    - summary: ignore migrate module if disabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15145
+dhctl:
+  fixes:
+    - summary: Fix legacy SSH tunnel preflight check panic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15104
+docs:
+  fixes:
+    - summary: Updated table with revision comparison.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15017
+metallb:
+  fixes:
+    - summary: >-
+        Fixed the Deckhouse controller queue freezing issue that occurs when Service was deleted,
+        but child resource L2LBService wasn't.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14966
+node-manager:
+  fixes:
+    - summary: capi rbac fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15012
+
