@@ -26,8 +26,8 @@ set -Eeo pipefail
 `
 (index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
 
-{{- if $bb := .Files.Get "/deckhouse/candi/bashible/bb_kubectl_exec.sh.tpl" -}}
-  {{- tpl ( $bb ) . | nindent 0 }}
+{{- if $bbke := .Files.Get "/deckhouse/candi/bashible/bashbooster/59_kubectl_exec.sh.tpl" -}}
+  {{- tpl ( $bbke ) . | nindent 0 }}
 {{- end }}
 
 function bb-event-error-create() {

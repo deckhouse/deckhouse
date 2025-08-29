@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if $bb := .Files.Get "/deckhouse/candi/bashible/bb_kubectl_exec.sh.tpl" -}}
-  {{- tpl ( $bb ) . | nindent 0 }}
-{{- end }}
-
 bb-kubectl() {
   kubectl --request-timeout 60s ${@}
 }
