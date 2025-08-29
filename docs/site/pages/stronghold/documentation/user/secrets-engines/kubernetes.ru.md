@@ -5,8 +5,8 @@ lang: ru
 ---
 
 Kubernetes Secrets Engine для Stronghold генерирует токены для учетной записи сервиса Kubernetes
-(не путать с [токенами Stronghold](../../concepts/tokens/)), а также, по желанию, сами объекты учетной записи сервиса `ServiceAccount`,
-роли `Role` и привязку роли к учетной записи сервиса `RoleBinding`. Созданные токены имеют настраиваемый [срок жизни (TTL)](#token-ttl), а все созданные объекты автоматически удаляются по истечении срока [аренды (lease)](../../concepts/lease/) Stronghold.
+(не путать с [токенами Stronghold](../concepts/tokens.html)), а также, по желанию, сами объекты учетной записи сервиса `ServiceAccount`,
+роли `Role` и привязку роли к учетной записи сервиса `RoleBinding`. Созданные токены имеют настраиваемый [срок жизни (TTL)](#token-ttl), а все созданные объекты автоматически удаляются по истечении срока [аренды (lease)](../concepts/lease.html) Stronghold.
 
 На каждую аренду Stronghold создает токен под конкретную учетную запись сервиса. Токен возвращается вызывающей стороне.
 
@@ -14,7 +14,7 @@ Kubernetes Secrets Engine для Stronghold генерирует токены д
 и [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/).
 
 {% alert level="warning" %}
-Мы не рекомендуем использовать токены, созданные механизмом секретов Kubernetes, для аутентификации с помощью [Kubernetes Auth Method](../../auth/kubernetes). Это приведет к созданию множества уникальных идентификаторов в Stronghold, которыми будет сложно управлять.
+Мы не рекомендуем использовать токены, созданные механизмом секретов Kubernetes, для аутентификации с помощью [Kubernetes Auth Method](../auth/kubernetes.html). Это приведет к созданию множества уникальных идентификаторов в Stronghold, которыми будет сложно управлять.
 {% endalert %}
 
 ## Настройка
@@ -233,7 +233,7 @@ $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.serv
 }
 ```
 
-После истечения срока [аренды](../../concepts/lease/), можно удостовериться, что токен был отозван и больше не может быть использован для запросов к Kubernetes API.
+После истечения срока [аренды](../concepts/lease.html), можно удостовериться, что токен был отозван и больше не может быть использован для запросов к Kubernetes API.
 
 ```shell-session
 $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
