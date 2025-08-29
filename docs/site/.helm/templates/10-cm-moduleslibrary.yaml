@@ -81,16 +81,13 @@ data:
             return 200;
         }
 
+        # Redirect to stable version for module.
+        rewrite ^/modules/([^/]+)/(?!(rock-solid|stable|early-access|beta|alpha|latest|v1\.[0-9]+))(.*)$ /modules/$2/stable/$3$is_args$args redirect;
+
         # Modules library root folder
         location ~* ^/modules/$  {
             try_files /$lang/modules/index.html =404;
         }
-
-        #location ~* ^/modules/code/(.+)  {
-        #    try_files /$lang/modules/code/alpha/$1 =404;
-        #}
-
-        #location ~* ^/modules/(.+)$  {
 
         # Internal redirect to serve module docs from sources
         location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {

@@ -10,7 +10,11 @@
           {% unless site.mode == 'module' %}
           <!-- module-version-badge -->
           <div id="doc-versions-menu" class="channel-menu submenu-parent">
+          {% if page.sidebar == 'embedded-modules' %}
+            <!--#include virtual="/includes/channel-menu-modules.html" -->
+          {% else %}
             <!--#include virtual="/includes/channel-menu-v2.html" -->
+          {% endif %}
           </div>
           {% endunless %}
       </div>
