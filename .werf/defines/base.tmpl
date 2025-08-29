@@ -141,7 +141,6 @@ import:
   - usr/bin/cut
   - usr/bin/date
   - usr/bin/dd
-  - usr/bin/diff
   - usr/bin/df
   - usr/bin/dir
   - usr/bin/dircolors
@@ -181,7 +180,6 @@ import:
   - usr/bin/paste
   - usr/bin/pathchk
   - usr/bin/pinky
-  - usr/bin/ps
   - usr/bin/pr
   - usr/bin/printenv
   - usr/bin/printf
@@ -258,6 +256,14 @@ import:
 - image: tools/util-linux
   add: /usr/bin/rev
   to: /usr/bin/rev
+  before: install
+- image: tools/diffutils
+  add: /usr/bin/diff
+  to: /usr/bin/diff
+  before: install
+- image: tools/procps
+  add: /usr/bin/ps
+  to: /usr/bin/ps
   before: install
 shell:
   install:
