@@ -702,17 +702,19 @@ func (p *TaskCalculator) getFirstCompliantRelease(
 			continue
 		}
 
-		// Find highest patch within target minor/major
-		for i := deployed.IndexInReleaseList; i < len(releases); i++ {
-			if bestIdx >= i {
-				continue
-			}
+		// starting scan index must be more than deployed index and already calculated compliant index
+		startScanIdx := deployed.IndexInReleaseList
+		if startScanIdx < bestIdx {
+			startScanIdx = bestIdx
+		}
 
+		// Find highest patch within target minor/major
+		for i := startScanIdx; i < len(releases); i++ {
 			rv := releases[i].GetVersion()
 
 			// trying to get first version with the same Major and Minor version as "to" constraint
 			if rv.Major() == toVer.Major() && rv.Minor() == toVer.Minor() {
-				if bestIdx == -1 || bestIdx < i {
+				if bestIdx < i {
 					bestIdx = i
 					logEntry.Debug("found most suitable index for from-to releaseleap",
 						slog.String("suitable_version", "v"+releases[bestIdx].GetVersion().String()),
