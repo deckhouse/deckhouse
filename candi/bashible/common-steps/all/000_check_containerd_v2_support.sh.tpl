@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 MIN_KERNEL="5.8"
 MIN_SYSTEMD="244"
 MAX_RETRIES=10
@@ -57,16 +53,16 @@ function set_labels() {
 
   while true; do
     if (( unsupported )); then
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported="
     else
-      kubectl_exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
+      bb-kubectl-exec label node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-unsupported-"
     fi
     local label_status=$?
 
     if [[ -n $errs ]]; then
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err=$errs"
     else
-      kubectl_exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
+      bb-kubectl-exec annotate node "$(bb-d8-node-name)" --overwrite "node.deckhouse.io/containerd-v2-err-"
     fi
     local annotate_status=$?
 

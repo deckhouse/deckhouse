@@ -109,6 +109,7 @@ spec:
               command:
               - /cni-uninstall.sh
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -150,6 +151,14 @@ spec:
             drop:
               - ALL
         volumeMounts:
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features.h
+          name: bpf-features
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_skb.h
+          name: bpf-features-skb
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_xdp.h
+          name: bpf-features-xdp
+        - name: tmp
+          mountPath: /root/.config
         - mountPath: /sys/fs/bpf
           mountPropagation: HostToContainer
           name: bpf-maps
@@ -187,7 +196,7 @@ spec:
         resources:
         {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4241"
@@ -273,6 +282,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -305,6 +315,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           capabilities:
             add:
               - NET_ADMIN
@@ -339,6 +350,7 @@ spec:
         - name: tmp
           mountPath: /tmp
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
         resources:
           requests:
@@ -364,6 +376,7 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -394,6 +407,7 @@ spec:
           rm /hostbin/cilium-sysctlfix
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: s0
@@ -423,6 +437,7 @@ spec:
         - --
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: true
         volumeMounts:
         - name: bpf-maps
@@ -459,6 +474,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -508,6 +524,7 @@ spec:
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -522,6 +539,18 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
+      - hostPath:
+          path: /tmp/features.h
+          type: FileOrCreate
+        name: bpf-features
+      - hostPath:
+          path: /tmp/features_skb.h
+          type: FileOrCreate
+        name: bpf-features-skb
+      - hostPath:
+          path: /tmp/features_xdp.h
+          type: FileOrCreate
+        name: bpf-features-xdp
       - name: tmp
         emptyDir: {}
       - name: host-proc-sys-net

@@ -58,6 +58,7 @@
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse](#helm_lib_module_pod_security_context_run_as_user_deckhouse) |
 | [helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
 | [helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted) |
+| [helm_lib_module_container_security_context_pss_restricted_flexible](#helm_lib_module_container_security_context_pss_restricted_flexible) |
 | [helm_lib_module_pod_security_context_run_as_user_root](#helm_lib_module_pod_security_context_run_as_user_root) |
 | [helm_lib_module_pod_security_context_runtime_default](#helm_lib_module_pod_security_context_runtime_default) |
 | [helm_lib_module_container_security_context_not_allow_privilege_escalation](#helm_lib_module_container_security_context_not_allow_privilege_escalation) |
@@ -645,6 +646,20 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_container_security_context_pss_restricted_flexible
+
+ SecurityContext for Deckhouse UID/GID 64535, PSS Restricted 
+ Optional keys: 
+ .ro   – bool, read-only root FS (default true) 
+ .caps – []string, capabilities.add (default empty) 
+ .uid  – int, runAsUser/runAsGroup (default 64535) 
+
+#### Usage
+
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001) `
+
 
 
 ### helm_lib_module_pod_security_context_run_as_user_root
