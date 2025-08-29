@@ -16,6 +16,16 @@ metadata:
 spec:
   containers:
     - name: etcd
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        seccompProfile:
+          type: RuntimeDefault
       image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "etcd") }}
     {{- end }}
   {{- end }}
@@ -58,14 +68,3 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: etcd
-  namespace: kube-system
-spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
