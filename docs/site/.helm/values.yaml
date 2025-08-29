@@ -53,12 +53,12 @@ vrouter:
   locationVersions: "/products/kubernetes-platform/documentation"
   logLevel:
     web-stage: trace
-    _default: debug
+    _default: trace
     web-production: info
   pathStatic:
     _default: root
   pathChannelsFile:
-    _default: /app/release-channels/channels.yaml
+    _default: /app/root/en/includes/release-channels/channels.yaml
   pathTpls:
     _default: /includes
   urlValidation:
