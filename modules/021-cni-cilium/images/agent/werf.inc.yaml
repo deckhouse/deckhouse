@@ -11,7 +11,7 @@
 #######################################################################
 {{ $baseImagesBinaries := "" }}
 # from coreutils-v9.7
-{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/coreutils /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc /usr/bin/true" }}
+{{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/env /usr/bin/ls /usr/bin/sleep /usr/bin/basename /usr/bin/cat /usr/bin/cp /usr/bin/coreutils /usr/bin/cut /usr/bin/echo /usr/bin/groups /usr/bin/head /usr/bin/ln /usr/bin/mkdir /usr/bin/mv /usr/bin/od /usr/bin/printf /usr/bin/rm /usr/bin/stat /usr/bin/tail /usr/bin/timeout /usr/bin/wc" }}
 # from d8-curl-artifact-8-9-1
 {{ $baseImagesBinaries := cat $baseImagesBinaries "/usr/bin/curl" }}
 # from bash-v5.2.37
@@ -213,10 +213,6 @@ import:
   - tail
   - timeout
   - wc
-- image: tools/coreutils-v9.7
-  before: install
-  add: /usr/bin/true
-  to: /usr/bin/true
 - image: registrypackages/d8-curl-artifact-8-9-1
   before: install
   add: /d8-curl
