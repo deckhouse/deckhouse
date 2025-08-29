@@ -66,6 +66,7 @@ git:
     beforeSetup:
     - "*"
   includePaths:
+  - bashbooster
   - bundles
   - common-steps
   - bootstrap
