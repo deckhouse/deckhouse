@@ -18,7 +18,7 @@ metadata:
 spec:
   version: v1.50.0
   requirements:
-    migratedModules: "test-module-1, test-module-missing"
+    migratedModules: "enabled-module-not-found"
 status:
   approved: false
   message: ""
@@ -34,9 +34,14 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  modules:
-    - name: test-module-1
-  modulesCount: 1
+  modulesCount: 0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: enabled-module-not-found
+spec:
+  enabled: true
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -18,7 +18,7 @@ metadata:
 spec:
   version: v1.50.0
   requirements:
-    migratedModules: "test-module-1, test-module-2"
+    migratedModules: "test-module-1, test-module-missing"
 status:
   approved: false
   message: ""
@@ -36,8 +36,19 @@ spec:
 status:
   modules:
     - name: test-module-1
-    - name: test-module-2
-  modulesCount: 2
+  modulesCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module-1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module-1
+spec:
+  enabled: true
 ---
 apiVersion: apps/v1
 kind: Deployment
