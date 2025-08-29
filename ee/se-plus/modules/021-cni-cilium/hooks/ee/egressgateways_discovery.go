@@ -268,7 +268,8 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	input.Logger.Debug("DEBUG cilium_nodes !!!!!!!!!!")
 	_, cil_err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "cilium_nodes")
 	if cil_err != nil {
-		return fmt.Errorf("failed to unmarshal cilium_nodes snapshot")
+		input.Logger.Debug("DEBUG cilium_nodes fail UnmarshalToStruct !!!!!!!!!!")
+		// return fmt.Errorf("failed to unmarshal cilium_nodes snapshot")
 	}
 
 	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
