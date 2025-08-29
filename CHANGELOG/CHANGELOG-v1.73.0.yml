@@ -1,0 +1,68 @@
+ci:
+  features:
+    - summary: Remove unsupported k8s version from workflow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15216
+    - summary: Disable copying modules in e2e testing
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15014
+  fixes:
+    - summary: Make Render workflow dependent on receiving PR information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15016
+    - summary: Set DCGM imports to the same stage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14960
+cloud-provider-vcd:
+  fixes:
+    - summary: Fix fetching VM templates from organization catalogs without direct access to organizastion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14980
+deckhouse-controller:
+  features:
+    - summary: add new objects to debug archive
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15047
+    - summary: task queue performance improvements with linked list implementation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14962
+    - summary: handle errors while processing source modules
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14953
+    - summary: add tracing to dependency container http client
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14298
+  fixes:
+    - summary: fixed bug with re-enabled module using old values
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15045
+    - summary: Implement structured releaseQueueDepth calculation with hierarchical version delta tracking
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15031
+      impact: >-
+        The releaseQueueDepth metric now accurately reflects actionable release gaps with patch
+        version normalization; major version tracking added for future alerting
+docs:
+  features:
+    - summary: add module.yaml metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15078
+  fixes:
+    - summary: Fixed note about yum and which in RED OS in the requirements section of GS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15259
+    - summary: Added a note about the OS based on Red Hat in The Getting Started step 5.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15188
+    - summary: Fixed the local launch of documentation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15162
+documentation:
+  features:
+    - summary: add backend timeout metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15050
+node-manager:
+  features:
+    - summary: Add integrity patch for CSE
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15077
+  fixes:
+    - summary: change base image for d8-shutdown-inhibitor artifact
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15086
+registry-packages-proxy:
+  fixes:
+    - summary: small fix of erofs installation script
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15067
+runtime-audit-engine:
+  fixes:
+    - summary: Fix containerd socket mountpoint (change its type from dir to file).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15040
+user-authn:
+  fixes:
+    - summary: User now can't create groups with  recursive loops in nested group's hierarchy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15139
+
