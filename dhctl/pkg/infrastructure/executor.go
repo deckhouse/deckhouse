@@ -39,6 +39,11 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		Setpgid: true,
 	}
 
+	log.DebugF("EXEC STARTED\n")
+	defer func() {
+		log.DebugF("EXEC FINISHED\n")
+	}()
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return 1, fmt.Errorf("stdout pipe: %v", err)

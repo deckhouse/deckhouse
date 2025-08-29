@@ -140,6 +140,11 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 
 	e.cmd = tofuCmd(ctx, e.workingDir, args...)
 
+	log.DebugF("PLAN BEFORE EXEC\n")
+	defer func() {
+		log.DebugF("PLAN AFTER EXEC\n")
+	}()
+
 	return infrastructure.Exec(ctx, e.cmd, e.logger)
 }
 
