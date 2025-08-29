@@ -85,6 +85,12 @@ func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
 	}
 
 	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+
+	log.DebugF("INIT BEFORE EXEC\n")
+	defer func() {
+		log.DebugF("INIT AFTER EXEC\n")
+	}()
+
 	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
 
 	return err
