@@ -183,6 +183,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
+	log.InfoF("DEV BRANCH! test/dhctl-for-commander, 13775\n")
 	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
 
 	var (
