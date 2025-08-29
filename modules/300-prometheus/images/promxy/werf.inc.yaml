@@ -6,16 +6,9 @@ final: false
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
-git:
-- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 shell:
   install:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
-    - git -C /src apply /patches/*.patch --verbose
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
