@@ -19,9 +19,10 @@ configVersion: 1
 {{- include "parse_base_images_map" . }}
 ---
 {{- $context := . }}
-{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{- $_ := set $context "BuildModules" false }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
 ---
+{{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}
