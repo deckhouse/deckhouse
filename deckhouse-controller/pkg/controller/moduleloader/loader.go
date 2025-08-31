@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
@@ -219,6 +220,11 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
 	}
 
+	// ensure module
+	if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, embeddedModulesDir)); err != nil {
+		return nil, fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
+	}
+
 	return module, nil
 }
 
@@ -243,7 +249,7 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 }
 
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
-	modules := []string{}
+	modules := make([]string, 0, len(l.modules))
 	for _, module := range l.modules {
 		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
@@ -254,6 +260,13 @@ func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
 
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		l.logger.Info("LoadModulesFromFS completed",
+			slog.Duration("took", time.Since(start)),
+			slog.Int("modules", len(l.modules)),
+		)
+	}()
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
@@ -272,15 +285,15 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		}
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
 
-		// Parallelize heavy per-module parsing (values/openapi) to reduce startup latency.
-		type modResult struct {
-			def    *moduletypes.Definition
-			module *moduletypes.Module
-			err    error
+		type modIOResult struct {
+			def                  *moduletypes.Definition
+			moduleStaticValues   addonutils.Values
+			rawConfig, rawValues []byte
+			err                  error
 		}
 
 		jobs := make(chan *moduletypes.Definition)
-		results := make(chan modResult, len(definitions))
+		results := make(chan modIOResult, len(definitions))
 		var wg sync.WaitGroup
 
 		workerCount := runtime.NumCPU()
@@ -296,9 +309,9 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			go func() {
 				defer wg.Done()
 				for d := range jobs {
-					l.logger.Debug("process module definition from the dir", slog.String("name", d.Name), slog.String("path", dir))
-					m, err := l.processModuleDefinition(ctx, d)
-					results <- modResult{def: d, module: m, err: err}
+					l.logger.Debug("read module files from the dir", slog.String("name", d.Name), slog.String("path", dir))
+					mv, cb, vb, err := l.readModuleData(d)
+					results <- modIOResult{def: d, moduleStaticValues: mv, rawConfig: cb, rawValues: vb, err: err}
 				}
 			}()
 		}
@@ -310,8 +323,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		wg.Wait()
 		close(results)
 
-		// Collect results, stop on first error.
-		collected := make([]modResult, 0, len(definitions))
+		collected := make([]modIOResult, 0, len(definitions))
 		for r := range results {
 			if r.err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", r.def.Name, r.err)
@@ -319,11 +331,36 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			collected = append(collected, r)
 		}
 
-		// Ensure and store sequentially to avoid concurrent writes to l.modules.
+		// Sequential phase: construct modules, update conversions/extenders/settings, ensure and store.
 		for _, r := range collected {
 			if _, ok := l.modules[r.def.Name]; ok {
 				l.logger.Warn("module already exists, skip it from path", slog.String("name", r.def.Name), slog.String("path", r.def.Path))
 				continue
+			}
+
+			module, err := moduletypes.NewModule(r.def, r.moduleStaticValues, r.rawConfig, r.rawValues, l.logger.Named("module"))
+			if err != nil {
+				return fmt.Errorf("build %q module: %w", r.def.Name, err)
+			}
+
+			// load conversions
+			if _, err = os.Stat(filepath.Join(r.def.Path, "openapi", "conversions")); err == nil {
+				l.logger.Debug("conversions for the module found", slog.String("name", r.def.Name))
+				if err = conversion.Store().Add(r.def.Name, filepath.Join(r.def.Path, "openapi", "conversions")); err != nil {
+					return fmt.Errorf("load conversions for the %q module: %w", r.def.Name, err)
+				}
+			} else if !os.IsNotExist(err) {
+				return fmt.Errorf("load conversions for the %q module: %w", r.def.Name, err)
+			}
+
+			// load constraints
+			if err = l.exts.AddConstraints(r.def.Name, r.def.Critical, r.def.Accessibility, r.def.Requirements); err != nil {
+				return fmt.Errorf("load constraints for the %q module: %w", r.def.Name, err)
+			}
+
+			// ensure settings
+			if err = l.ensureModuleSettings(ctx, r.def.Name, r.rawConfig); err != nil {
+				return fmt.Errorf("ensure the %q module settings: %w", r.def.Name, err)
 			}
 
 			l.logger.Debug("ensure module", slog.String("name", r.def.Name))
@@ -331,7 +368,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 				return fmt.Errorf("ensure the '%s' embedded module: %w", r.def.Name, err)
 			}
 
-			l.modules[r.def.Name] = r.module
+			l.modules[r.def.Name] = module
 		}
 	}
 
@@ -375,6 +412,31 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// readModuleData performs IO-bound per-module file reads and light processing only; no side effects.
+func (l *Loader) readModuleData(def *moduletypes.Definition) (addonutils.Values, []byte, []byte, error) {
+	if err := validateModuleName(def.Name); err != nil {
+		return nil, nil, nil, fmt.Errorf("invalid name: %w", err)
+	}
+
+	valuesModuleName := addonutils.ModuleNameToValuesKey(def.Name)
+
+	moduleStaticValues, err := addonutils.LoadValuesFileFromDir(def.Path, app.StrictModeEnabled)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("load values file from the %q dir: %w", def.Path, err)
+	}
+
+	if moduleStaticValues.HasKey(valuesModuleName) {
+		moduleStaticValues = moduleStaticValues.GetKeySection(valuesModuleName)
+	}
+
+	rawConfig, rawValues, err := addonutils.ReadOpenAPIFiles(filepath.Join(def.Path, "openapi"))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("read openapi files: %w", err)
+	}
+
+	return moduleStaticValues, rawConfig, rawValues, nil
 }
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
