@@ -25,7 +25,7 @@ spec:
         args:
           - s3
           - sync
-          - /modules-embedded
+          - /embedded-modules
           - s3://{{ .Values.global.doc_s3_bucket }}/modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/
           - --ca-bundle
           - /.aws/s3-root.crt

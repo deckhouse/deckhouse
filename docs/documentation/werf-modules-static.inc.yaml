@@ -145,7 +145,7 @@ git:
     - documentation
   excludePaths:
     - '**/werf*.yaml'
-    - '**/docker-compose.yml'
+    - '**/docker-compose*.yml'
     - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
@@ -190,5 +190,5 @@ from: amazon/aws-cli:2.28.16
 import:
 - image: {{ .ModuleName }}/modules-embeded/static-artifact
   add: /app/_site/
-  to: /modules-embedded
+  to: /embedded-modules
   before: setup

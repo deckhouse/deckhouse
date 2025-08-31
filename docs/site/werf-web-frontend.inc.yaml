@@ -156,4 +156,11 @@ import:
   excludePaths:
   - en/includes/
   - ru/includes/
+{{- if or (eq $.Env "development") (eq $.Env "local") }}
+- image: {{ .ModuleName }}/modules-embeded/static-artifact
+  add: /app/_site/
+  to: /app/embedded-modules
+  before: setup
 ---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+{{- end }}
