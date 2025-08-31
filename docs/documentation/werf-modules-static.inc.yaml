@@ -134,14 +134,14 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-{{ if eq .ModuleName "documentation" }}
+# if eq .ModuleName "documentation"
     - site/_config.yml
     - site/_includes/head.html
     - site/Gemfile
     - site/Gemfile.lock
-{{ else }}
-    - site
-{{ end }}
+#{ else
+#    - site
+# end
     - documentation
   excludePaths:
     - '**/werf*.yaml'
