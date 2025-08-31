@@ -2,6 +2,7 @@
 {{- $lang := .Language.Lang }}
 <html lang="{{- $lang }}">
   <head>
+    <meta name="page:module:type" content="from-source">
   {{- partial "head" . }}
   {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
   </head>
