@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"sync"
 	"time"
@@ -286,7 +287,7 @@ func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
 		o := fmt.Sprintf(format, a...)
 		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
 		if err != nil {
-			d.logboekLogger.Info().LogF("cannot write debug log (%s): %v", o, err)
+			fmt.Fprintf(os.Stderr, "cannot write debug log (%s): %v", o, err)
 		}
 	}
 
