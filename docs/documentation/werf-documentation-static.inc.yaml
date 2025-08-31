@@ -186,7 +186,7 @@ git:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if ne .ModuleName "website-docs" }}
-- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
   to: /srv/jekyll-data/site/_includes/footer.html
   stageDependencies:
     setup:

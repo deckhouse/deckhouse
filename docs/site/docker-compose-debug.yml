@@ -31,7 +31,7 @@ services:
   front:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
     volumes:
-      - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
+      - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
       - "./backends/docs-builder-template/public/en:/app/en:ro"
       - "./backends/docs-builder-template/public/ru:/app/ru:ro"
     ports:
