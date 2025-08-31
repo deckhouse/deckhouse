@@ -26,9 +26,33 @@ set -Eeo pipefail
 `
 (index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
 
-{{- if $bbke := .Files.Get "/deckhouse/candi/bashible/bashbooster/59_kubectl_exec.sh.tpl" -}}
-  {{- tpl ( $bbke ) . | nindent 0 }}
-{{- end }}
+bb-kubectl-exec() {
+  local kubeconfig="/etc/kubernetes/kubelet.conf"
+  local args=""
+{{ if eq .runType "Normal" }}
+  local kube_server
+  kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
+  if [[ -n "$kube_server" ]]; then
+    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
+    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
+    # checking local kubernetes-api-proxy availability
+    if ! (echo > /dev/tcp/"$host"/"$port") 2>/dev/null; then
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        host=$(echo "$server" | cut -d: -f1)
+        port=$(echo "$server" | cut -d: -f2)
+        # select the first available control plane
+        if (echo > /dev/tcp/"$host"/"$port") 2>/dev/null; then
+          args="--server=https://$server"
+          break
+        fi
+      done
+    fi
+  fi
+{{ end }}
+  kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
+}
+# make the function available in $step
+export -f bb-kubectl-exec
 
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
