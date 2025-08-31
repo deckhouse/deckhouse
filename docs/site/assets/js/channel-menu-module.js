@@ -55,7 +55,6 @@ function updateCurrentVersion() {
 // Use the JSON structure in your logic
 function renderMenu(settings) {
     const menuContainer = document.getElementById('doc-versions-menu');
-    console.debug('Channels data:', settings);
 
     if (!menuContainer) {
         console.error('Channel menu container not found');
@@ -99,14 +98,14 @@ function renderMenu(settings) {
 
         // Generate channel URL according to the rules
         let channelUrl = '#';
-        
+
         // Check page type from meta tag
         const pageTypeMeta = document.querySelector('meta[name="page:module:type"]');
         const isFromSource = pageTypeMeta && pageTypeMeta.getAttribute('content') === 'from-source';
-        
+
         if (channel.version) {
             const currentUrl = window.location.pathname;
-            
+
             if (isFromSource) {
                 // For modules from source use channel name instead of channel version in the link
                 const channelName = channel.name;
