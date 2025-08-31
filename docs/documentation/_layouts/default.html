@@ -2,6 +2,9 @@
 <html lang="{{ page.lang }}">
 
 <head>
+  {% if page.sidebar == 'embedded-modules' %}
+    <meta name="page:module:type" content="embedded">
+  {% endif %}
   {%- if page.anchors_disabled == true %}
     <script>
         window.anchors_disabled = true;
