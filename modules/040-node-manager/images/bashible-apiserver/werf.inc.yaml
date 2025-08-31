@@ -65,7 +65,7 @@ git:
   stageDependencies:
     beforeSetup:
     - "*"
-  includePaths
+  includePaths:
   - bundles
   - common-steps
   - bootstrap
