@@ -2,12 +2,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -41,7 +35,7 @@ shell:
     - go mod edit -replace=github.com/deckhouse/coredns-kubeforward=./coredns-kubeforward # hack
     - go mod edit -require=github.com/deckhouse/coredns-kubeforward@v0.1.0 # hack
     - go generate
-    - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.0' -o /coredns
+    - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.3' -o /coredns
     - chown 64535:64535 /coredns
     - chmod 0700 /coredns
 ---
