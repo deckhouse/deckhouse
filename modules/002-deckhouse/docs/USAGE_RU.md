@@ -56,6 +56,7 @@ spec:
             - Tue
             - Sat
 ```
+
 <details>
 
 <summary>Минимальный пример с Webhook (Go)</summary>
