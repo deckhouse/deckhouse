@@ -1,7 +1,6 @@
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
   {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
     {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-    {{- $fullVersion := get $versionInfo "fullVersion" }}
     {{- $revision := get $versionInfo "revision" }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -19,7 +18,7 @@ spec:
     matchNames:
     - d8-{{ $.Chart.Name }}
   podMetricsEndpoints:
-    {{- if (hasPrefix "1.25" $fullVersion) }}
+    {{- if eq $version "1.25" }}
   - port: https-metrics
     scheme: https
     bearerTokenSecret:
