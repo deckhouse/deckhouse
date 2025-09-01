@@ -3910,22 +3910,6 @@ alerts:
         The BTF module required for ebpf_exporter is missing from the kernel.
       severity: "8"
       markupFormat: markdown
-    - name: ExtendedMonitoringDeprecatatedAnnotation
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/deprecated-annotation.yaml
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the deprecated annotation `extended-monitoring.flant.com/enabled` is used in the cluster.
-
-        Steps to resolve:
-
-        1. Check the `d8_deprecated_legacy_annotation` metric in Prometheus for a list of all detected usages.
-        1. Migrate to the `extended-monitoring.deckhouse.io/enabled` label.
-      summary: |
-        Deprecated annotation is used in the cluster.
-      severity: "4"
-      markupFormat: markdown
     - name: ExtendedMonitoringTargetDown
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/self.yaml
       moduleUrl: 340-extended-monitoring
