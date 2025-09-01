@@ -17,6 +17,7 @@ package releaseupdater
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -286,5 +287,52 @@ func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 		assert.Equal(t, 3, attemptCount)
 		// Should take at least 50ms + 100ms (exponential backoff)
 		assert.GreaterOrEqual(t, duration, 150*time.Millisecond)
+	})
+}
+
+func TestWebhookError(t *testing.T) {
+	t.Run("WebhookError structure and methods", func(t *testing.T) {
+		webhookErr := &WebhookError{
+			StatusCode: 404,
+			Message:    "Not Found",
+			Body:       "Resource not found",
+		}
+
+		errorMsg := webhookErr.Error()
+		expectedMsg := "webhook responded with status 404: Not Found"
+		assert.Equal(t, expectedMsg, errorMsg)
+
+		jsonData, err := json.Marshal(webhookErr)
+		require.NoError(t, err)
+
+		var unmarshaled WebhookError
+		err = json.Unmarshal(jsonData, &unmarshaled)
+		require.NoError(t, err)
+
+		assert.Equal(t, webhookErr.StatusCode, unmarshaled.StatusCode)
+		assert.Equal(t, webhookErr.Message, unmarshaled.Message)
+		assert.Equal(t, webhookErr.Body, unmarshaled.Body)
+	})
+
+	t.Run("WebhookError with empty body", func(t *testing.T) {
+		webhookErr := &WebhookError{
+			StatusCode: 500,
+			Message:    "Internal Server Error",
+		}
+
+		errorMsg := webhookErr.Error()
+		expectedMsg := "webhook responded with status 500: Internal Server Error"
+		assert.Equal(t, expectedMsg, errorMsg)
+
+		jsonData, err := json.Marshal(webhookErr)
+		require.NoError(t, err)
+
+		var unmarshaled WebhookError
+		err = json.Unmarshal(jsonData, &unmarshaled)
+		require.NoError(t, err)
+
+		assert.Equal(t, webhookErr.StatusCode, unmarshaled.StatusCode)
+		assert.Equal(t, webhookErr.Message, unmarshaled.Message)
+		assert.Empty(t, unmarshaled.Body)
 	})
 }

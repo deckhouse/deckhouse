@@ -118,6 +118,8 @@ After a new minor Deckhouse version appears on the selected update channel, but 
 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
+**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential backoff. If all attempts fail, the release will be blocked until the webhook becomes available again. The error response from your webhook should include a structured error message in the response body for better debugging.
+
 Example:
 
 ```yaml
@@ -159,6 +161,13 @@ type WebhookData struct {
 	Message       string            `json:"message"`
 }
 
+// Error response structure that Deckhouse expects when webhook fails
+type WebhookError struct {
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+	Body       string `json:"body,omitempty"`
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -180,8 +189,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Example conditional logic: fail intentionally for testing
 	if data.Version == "v0.0.0-fail" {
+		// Return structured error response
+		errorResp := WebhookError{
+			StatusCode: http.StatusInternalServerError,
+			Message:    "intentional failure for testing",
+			Body:       "This is a test failure",
+		}
+		
 		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte("intentional failure for testing"))
+		json.NewEncoder(w).Encode(errorResp)
 		return
 	}
 
