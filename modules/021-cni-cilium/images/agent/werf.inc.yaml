@@ -179,10 +179,6 @@ import:
   add: /lib64/libLLVM.so.19.1
   to: /usr/lib64/libLLVM.so.19.1
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
-  add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
-  to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
-  before: install
 - image: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
@@ -475,6 +471,7 @@ shell:
   - mkdir -p /relocate
   - ln -snf /usr/share/zoneinfo/Etc/UTC /etc/localtime
   - /binary_replace.sh -i "/etc/localtime" -o /relocate
+  - mkdir -p /usr/lib/llvm-19.1/lib64/ && ln -snf /usr/lib64/libLLVM.so.19.1 /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   # copy self built binaries and deps
   - /binary_replace.sh -i "{{ $selfBuiltBinaries }}" -o /relocate
   # additional relocate for iptables
