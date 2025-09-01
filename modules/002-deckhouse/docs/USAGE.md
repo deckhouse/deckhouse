@@ -145,10 +145,10 @@ spec:
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
+  "encoding/json"
+  "fmt"
+  "log"
+  "net/http"
 )
 
 // Payload structure Deckhouse sends in POST body.
