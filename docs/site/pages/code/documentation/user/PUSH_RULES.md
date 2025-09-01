@@ -26,15 +26,16 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 
 - ***Prevent secret leaks***  
 
-  Any attempt to commit files that match the following patterns will be rejected:  
-  - `aws/credentials`  
-  - `ssh/personal_rsa`, `ssh/personal_dsa`, `ssh/personal_ed25519`, `ssh/personal_ecdsa`, `ssh/personal_ecdsa_sk`, `ssh/personal_ed25519_sk`  
-  - `ssh/server_rsa`, `ssh/server_dsa`, `ssh/server_ed25519`, `ssh/server_ecdsa`, `ssh/server_ecdsa_sk`, `ssh/server_ed25519_sk`  
-  - `id_rsa`, `id_dsa`, `id_ed25519`, `id_ecdsa`, `id_ecdsa_sk`, `id_ed25519_sk`  
-  - files with extensions `.pem` or `.key`  
-  - files `.history` or `_history`  
-  - files with extensions `.keystore` or `.jks`  
-  - `keystore.p12`, `keystore.pfx`  
+  Any attempt to commit files that match the following patterns will be rejected:
+  
+  - `aws/credentials`,
+  - `ssh/personal_rsa`, `ssh/personal_dsa`, `ssh/personal_ed25519`, `ssh/personal_ecdsa`, `ssh/personal_ecdsa_sk`, `ssh/personal_ed25519_sk`,
+  - `ssh/server_rsa`, `ssh/server_dsa`, `ssh/server_ed25519`, `ssh/server_ecdsa`, `ssh/server_ecdsa_sk`, `ssh/server_ed25519_sk`,
+  - `id_rsa`, `id_dsa`, `id_ed25519`, `id_ecdsa`, `id_ecdsa_sk`, `id_ed25519_sk`,
+  - files with extensions `.pem` or `.key`,
+  - files `.history` or `_history`,
+  - files with extensions `.keystore` or `.jks`,
+  - `keystore.p12`, `keystore.pfx`.
 
 - ***Require GPG signature***  
 
@@ -74,15 +75,15 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 
 ## Enabling push rules
 
-To configure push rules for a project, open the project page and go to **Settings → Repository → Push Rules**.  
+To configure push rules for a project, open the project page and go to "Settings → Repository → Push Rules".  
 
 Only users with the *Maintainer* or *Owner* role can configure push rules.  
 
 ## Configuring push rules at group or instance level
 
-To configure push rules at the group level, open the group page and go to **Settings → Repository → Push Rules**. This option is available to users with the *Owner* role.  
+To configure push rules at the group level, open the group page and go to "Settings → Repository → Push Rules". This option is available to users with the *Owner* role.  
 
-To configure push rules at the instance level, go to **Admin → Settings → Repository → Push Rules**. This option is available only to administrators.  
+To configure push rules at the instance level, go to "Admin → Settings → Repository → Push Rules". This option is available only to administrators.  
 
 Rules defined at the group or instance level are used as default settings for projects. When a project is created, it inherits the rules from its parent group or from the instance (if created in a personal namespace).  
 
