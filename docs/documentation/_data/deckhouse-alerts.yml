@@ -2385,18 +2385,6 @@ alerts:
         node-local-dns success cache is being frequently evicted.
       severity: "6"
       markupFormat: markdown
-    - name: D8NodeLocalDNSUpstreamHealthcheckFailed
-      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
-      moduleUrl: 350-node-local-dns
-      module: node-local-dns
-      edition: be
-      description: |
-        The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
-        As a result, all upstreams were considered unhealthy.
-      summary: |
-        Too many upstream health check failures in forward plugin.
-      severity: "5"
-      markupFormat: default
     - name: D8NodeLocalDNSForwardMaxConcurrentRejects
       sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
       moduleUrl: 350-node-local-dns
@@ -2421,6 +2409,18 @@ alerts:
       summary: |
         High DNS request latency in kubeforward (p95 &gt; 300ms).
       severity: "4"
+      markupFormat: default
+    - name: D8NodeLocalDNSUpstreamHealthcheckFailed
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
+        As a result, all upstreams were considered unhealthy.
+      summary: |
+        Too many upstream health check failures in forward plugin.
+      severity: "5"
       markupFormat: default
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
