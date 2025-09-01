@@ -29,12 +29,13 @@ type VCDAffinityRuleStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	Message string                      `json:"message,omitempty"`
+	RuleID  string                      `json:"ruleID,omitempty"`
 	Nodes   []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
 }
 
 type VCDAffinityRuleStatusNode struct {
-	Name       string `json:"name,omitempty"`
-	ProviderID string `json:"providerID,omitempty"`
+	Name string `json:"name,omitempty"`
+	ID   string `json:"providerID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
