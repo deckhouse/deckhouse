@@ -119,6 +119,7 @@ spec:
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
+            readOnlyRootFilesystem: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}

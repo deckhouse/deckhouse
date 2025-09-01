@@ -20,6 +20,8 @@ import:
   add: /relocate
   to: /
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]
