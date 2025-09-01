@@ -70,8 +70,12 @@ spec:
                   properties:
                     versions:
                       description: |
-                        List of rules for transitioning between versions, allowing to skip incremental updates.
-                        If the currently deployed version is in the given `from`→`to` range, the controller will skip intermediate releases and treat the release with the `to` version as a minor update. 
+                        List of `from`→`to` transition rules that allow skipping step-by-step updates.
+                        If the current installed module version (status `Deployed`) is not lower than `from`, and the cluster has a release
+                        whose version matches `to`, the controller will skip intermediate releases and update the module to the version from `to`.
+                        The `to` value can specify a minor line (`X.Y` — the latest available `X.Y.Z` will be selected)
+                        or a full version (`X.Y.Z` — that exact release will be selected).
+                        The rule is specified in the constrained release — the one whose version matches `to`. 
                       type: array
                       items:
                         type: object
@@ -79,10 +83,10 @@ spec:
                         properties:
                           from:
                             type: string
-                            description: The minimum version from which the transition is allowed (in the format `X.Y` or `X.Y`).
+                            description: The minimum version from which the transition is allowed (format `X.Y`).
                           to:
                             type: string
-                            description: The target version of the end of the range to jump to (in `X.Y` or `X.Y` format).
+                            description: The end version of the range — a minor line (`X.Y`) or a full version (`X.Y.Z`).
                 changelog:
                   type: object
                   description: Release's changelog for the module.
