@@ -7,6 +7,7 @@ package ee
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -51,8 +52,8 @@ func filterNodeLabels(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}
 
 	for k := range node.Labels {
-		if len(k) > len(activeNodeLabelPrefix) && k[:len(activeNodeLabelPrefix)] == activeNodeLabelPrefix {
-			info.ActiveForEGs = append(info.ActiveForEGs, k[len(activeNodeLabelPrefix):])
+		if strings.HasPrefix(k, activeNodeLabelPrefix) {
+			info.ActiveForEGs = append(info.ActiveForEGs, strings.TrimPrefix(k, activeNodeLabelPrefix))
 		}
 	}
 
