@@ -72,3 +72,5 @@ Added additional logging when downloading GeoIP databases from the MaxMind servi
 ### 014-fix-success-reload-metric.patch
 
 This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
+
+*⚠️ Remove this patch once updated to upstream v1.12.6 or v1.13.2, as it has been merged to upstream.*
