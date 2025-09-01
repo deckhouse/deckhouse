@@ -54,7 +54,7 @@
   {{- $semver_constraint := index . 1  -}} {{- /* Semver constraint */ -}}
 - name: check-linux-kernel
   image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+  {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" $context | nindent 2 }}
   env:
   - name: KERNEL_CONSTRAINT
     value: {{ $semver_constraint | quote }}
