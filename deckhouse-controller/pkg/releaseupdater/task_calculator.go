@@ -83,7 +83,7 @@ type Task struct {
 	IsLatest bool
 
 	DeployedReleaseInfo *ReleaseInfo
-	QueueDepth          int
+	QueueDepth          *ReleaseQueueDepthDelta
 }
 
 type ReleaseInfo struct {
@@ -243,7 +243,6 @@ const ltsReleaseChannel = "lts"
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
 
-// isPatchRelease returns true if b is greater only in terms of the patch versions.
 func isPatchRelease(a, b *semver.Version) bool {
 	if b.Major() == a.Major() && b.Minor() == a.Minor() && b.Patch() > a.Patch() {
 		return true
@@ -397,10 +396,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 		return a.GetVersion().Compare(b)
 	})
 
-	// max value for release queue depth is 3 due to the alert's logic, having queue depth greater than 3 breaks this logic
-	// compute depth including current release (off-by-one fix): len(releases) - releaseIdx
-	queueDepthDelta := min(len(releases)-releaseIdx, 3)
-	isLatestRelease := queueDepthDelta == 0
+	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
+	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
 	isPatch := true
 
 	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
