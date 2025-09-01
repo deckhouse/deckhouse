@@ -35,9 +35,9 @@ type CiliumConfigStruct struct {
 }
 
 type resultStruct struct {
-	desiredCniConfigSourcePriorityFlagExists bool
-	desiredCniConfigSourcePriority           string
-	cniConfigFromSecret                      CiliumConfigStruct
+	DesiredCniConfigSourcePriorityFlagExists bool
+	DesiredCniConfigSourcePriority           string
+	CniConfigFromSecret                      CiliumConfigStruct
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -67,9 +67,9 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	cniConfigSourcePriority, cniConfigSourcePriorityFlagExists = secret.Annotations[cniConfigSourcePriorityAnnotation]
 
 	return resultStruct{
-		desiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
-		desiredCniConfigSourcePriority:           cniConfigSourcePriority,
-		cniConfigFromSecret:                      ciliumConfig,
+		DesiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
+		DesiredCniConfigSourcePriority:           cniConfigSourcePriority,
+		CniConfigFromSecret:                      ciliumConfig,
 	}, nil
 }
 
@@ -104,8 +104,8 @@ func setCiliumMode(input *go_hook.HookInput) error {
 
 	cniConfigSourcePriority := "ModuleConfig"
 	if len(cniConfigurationSecrets) > 0 {
-		if cniConfigurationSecrets[0].desiredCniConfigSourcePriorityFlagExists {
-			if cniConfigurationSecrets[0].desiredCniConfigSourcePriority != "ModuleConfig" {
+		if cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists {
+			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority != "ModuleConfig" {
 				cniConfigSourcePriority = "Secret"
 			}
 		} else if clusterIsBootstrapped {
@@ -116,7 +116,7 @@ func setCiliumMode(input *go_hook.HookInput) error {
 
 	switch cniConfigSourcePriority {
 	case "Secret":
-		ciliumConfig := cniConfigurationSecrets[0].cniConfigFromSecret
+		ciliumConfig := cniConfigurationSecrets[0].CniConfigFromSecret
 		if ciliumConfig.Mode != "" {
 			input.Values.Set("cniCilium.internal.mode", ciliumConfig.Mode)
 		}
