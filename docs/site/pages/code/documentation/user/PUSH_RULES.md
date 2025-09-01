@@ -88,7 +88,7 @@ Rules defined at the group or instance level are used as default settings for pr
 
 ## Restricting rule overrides
 
-You can prevent overriding of rules in child projects or groups. To do this, uncheck the option "Allow override at group/project level”.  
+You can prevent overriding of rules in child projects or groups. To do this, uncheck the option "Allow override at group/project level".  
 
 If a rule is enforced at the group or instance level and overriding is disabled:  
 - the rule is automatically applied to all child projects and subgroups;  
@@ -96,10 +96,10 @@ If a rule is enforced at the group or instance level and overriding is disabled:
 
 **Examples:**  
 
-1. If you enable the *"Verify committer email”* rule at the group level and disable overriding, this rule will be active in all projects of that group and its subgroups, with no option to disable it.  
+1. If you enable the *"Verify committer email"* rule at the group level and disable overriding, this rule will be active in all projects of that group and its subgroups, with no option to disable it.  
 1. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
 1. If overriding is allowed, the rule itself will not change in child groups or projects, but they will gain the ability to configure it.  
-   - For example, if the *"Verify committer email”* rule is enabled at the instance level with overriding disabled, all child groups and projects will have it enforced.  
+   - For example, if the *"Verify committer email"* rule is enabled at the instance level with overriding disabled, all child groups and projects will have it enforced.  
    - If overriding is later enabled at the instance level, the rule will remain active everywhere, but groups will now be able to adjust it.  
    - If overriding is also enabled at the group level, then projects within that group will gain the ability to configure it individually.  
 
