@@ -190,14 +190,14 @@ func setInternalValues(input *go_hook.HookInput) error {
 			"controller_version": version,
 		})
 
-		nginxEnabledMemoryProfiling, found, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
+		nginxEnabledMemoryProfiling, npeFound, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
 
 		if err != nil {
 			input.Logger.Error(fmt.Sprintf("cannot get nginxProfilingEnabled from ingress controller spec: %v", err))
 			continue
 		}
 
-		if found && nginxEnabledMemoryProfiling {
+		if npeFound && nginxEnabledMemoryProfiling {
 			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
 				"controller_name": controller.Name,
 			})

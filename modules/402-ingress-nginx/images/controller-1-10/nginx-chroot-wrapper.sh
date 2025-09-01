@@ -16,7 +16,7 @@
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
 
-if [[ "$PROFILING" == "true" ]]; then
+if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
   echo "Profiling enabled"
   timestamp=$(date +%Y%m%d_%H%M%S)
   logfile="/var/log/valgrind/memcheck.${timestamp}.log"

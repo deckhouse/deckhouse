@@ -1272,7 +1272,7 @@ spec:
 
                     > **Caution**. Enabling this option significantly increases memory usage and slows down HTTP/HTTPS request handling by the NGINX process.
 
-                    > **Be aware.** When the option under Ingress is enabled, the IngressNginxController starts in privileged mode.
+                    > **Be aware.** When the option is enabled, the ingress-nginx controller pod starts in privileged mode.
               oneOf:
                 - properties:
                     inlet:

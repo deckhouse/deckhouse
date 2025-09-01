@@ -196,7 +196,7 @@ spec:
           value: "true"
         {{- end }}
         {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        - name: PROFILING
+        - name: NGINX_PROFILING_ENABLED
           value: "true"
         {{- end }}
         livenessProbe:
