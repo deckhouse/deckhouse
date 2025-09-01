@@ -1,4 +1,3 @@
-
 #!/usr/bin/python3
 from typing import Optional
 
@@ -39,7 +38,8 @@ kubernetesValidating:
 kubernetes:
 - name: some_node
   apiVersion: v1
-  jqFilter: '{ "nodeName": .metadata.name }'
+  jqFilter: |
+    { "nodeName": .metadata.name }
   kind: Node
   labelSelector:
     matchLabels:
@@ -63,7 +63,6 @@ def main(ctx: hook.Context):
 def validate(request: admission.Request, context: []Object || Context) -> tuple[Optional[str], bool]:
   // logic here
   return "message", True
-
 
 if __name__ == "__main__":
     hook.run(main, config=config)

@@ -203,6 +203,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	tpl, err := os.ReadFile("internal/controller/templates/webhook.tpl")
+	if err != nil {
+		setupLog.Error(err, "unable to read template file")
+		os.Exit(1)
+	}
+
 	if err := (&controller.ValidationWebhookReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -210,6 +216,7 @@ func main() {
 			log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 			log.WithHandlerType(log.TextHandlerType),
 		),
+		Template: string(tpl),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ValidationWebhook")
 		os.Exit(1)

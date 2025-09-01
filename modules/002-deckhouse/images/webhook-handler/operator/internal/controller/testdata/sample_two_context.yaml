@@ -36,7 +36,8 @@ context:
       namespaceSelector:
         matchLabels: # matchExpressions, matchNames
           bar: foo
-      jqFilter: { "nodeName": .metadata.name }
+      jqFilter: |
+        { "nodeName": .metadata.name }
   - name: some_node
     kubernetes:
       apiVersion: v1
@@ -49,7 +50,8 @@ context:
       namespaceSelector:
         matchLabels: # matchExpressions, matchNames
           bar: foo
-      jqFilter: { "nodeName": .metadata.name }
+      jqFilter: |
+        { "nodeName": .metadata.name }
 handler:
   cel: |
     TODO: сейчас не делаем
