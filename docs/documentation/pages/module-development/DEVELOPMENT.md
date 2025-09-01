@@ -182,9 +182,7 @@ update:
       to:   "2.0" # Transitions between major versions are specified in the X.Y format.
 ```
 
-{% alert level="info" %}
-A constrained release is a module release whose `module.yaml` contains the [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
-{% endalert %}
+> A constrained release is a module release whose `module.yaml` contains the [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
 
 Conditions for applying `from-to`:
 
@@ -193,8 +191,8 @@ Conditions for applying `from-to`:
 - If multiple releases match at the same time, the option with the largest `to` is chosen (the rules may reside in different ModuleRelease objects of the same module).
 - If no release meets these conditions, the update proceeds as usual — without skipping intermediate versions.
 
-{% alert level="info" %}
-If a release with [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
+{% alert level="warning" %}
+If a release with [update.versions](../../cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
 {% endalert %}
 
 ![From-to mechanism logic](../../images/module-development/from_to.svg)
