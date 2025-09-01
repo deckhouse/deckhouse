@@ -149,45 +149,42 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 }
 
 func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []cloudDataV1.VsphereDatastore, storagePolicies []cloudDataV1.VsphereStoragePolicy) {
-	storageClassStorageDomain := make(map[string]cloudDataV1.VsphereDatastore)
-
-	for _, ds := range zonedDataStores {
-		storageClassStorageDomain[getStorageClassName(ds.Name)] = ds
-	}
-
-	classExcludes, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.exclude")
-	if ok {
-		for _, esc := range classExcludes.Array() {
-			rg := regexp.MustCompile("^(" + esc.String() + ")$")
-			for class := range storageClassStorageDomain {
-				if rg.MatchString(class) {
-					delete(storageClassStorageDomain, class)
-				}
-			}
-		}
-	}
+	classExcludes := input.Values.Get("cloudProviderVsphere.storageClass.exclude")
 
 	lenStorageClasses := len(zonedDataStores)
 	if len(storagePolicies) > 0 {
 		lenStorageClasses *= len(storagePolicies)
 	}
 	storageClasses := make([]storageClass, 0, lenStorageClasses)
-	for name, domain := range storageClassStorageDomain {
+
+	for _, ds := range zonedDataStores {
+		var excluded bool
+		for _, esc := range classExcludes.Array() {
+			rg := regexp.MustCompile("^(" + esc.String() + ")$")
+			if rg.MatchString(getStorageClassName(ds.Name)) {
+				excluded = true
+				break
+			}
+		}
+		if excluded {
+			continue
+		}
+
 		storageClasses = append(storageClasses, storageClass{
-			Name:          name,
-			Path:          domain.InventoryPath,
-			Zones:         domain.Zones,
-			DatastoreType: domain.DatastoreType,
-			DatastoreURL:  domain.DatastoreURL,
+			Name:          getStorageClassName(ds.Name),
+			Path:          ds.InventoryPath,
+			Zones:         ds.Zones,
+			DatastoreType: ds.DatastoreType,
+			DatastoreURL:  ds.DatastoreURL,
 		})
 
 		for _, sp := range storagePolicies {
 			storageClasses = append(storageClasses, storageClass{
-				Name:              fmt.Sprintf("%s-%s", name, sp.Name),
-				Path:              domain.InventoryPath,
-				Zones:             domain.Zones,
-				DatastoreType:     domain.DatastoreType,
-				DatastoreURL:      domain.DatastoreURL,
+				Name:              getStorageClassName(fmt.Sprintf("%s-%s", ds.Name, sp.Name)),
+				Path:              ds.InventoryPath,
+				Zones:             ds.Zones,
+				DatastoreType:     ds.DatastoreType,
+				DatastoreURL:      ds.DatastoreURL,
 				StoragePolicyName: sp.Name,
 			})
 		}

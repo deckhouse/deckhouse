@@ -204,7 +204,7 @@ data:
             "storagePolicyName": ""
           },
           {
-            "name": "test-1-k8s-3cf5ce84-Management Storage Policy - Large",
+            "name": "test-1-k8s-3cf5ce84-management-storage-policy---large",
             "path": "/DCTEST/datastore/test_1_k8s",
             "zones": [
               "ZONE-TEST"
@@ -214,7 +214,7 @@ data:
             "storagePolicyName": "Management Storage Policy - Large"
           },
           {
-            "name": "test-1-k8s-3cf5ce84-VVol No Requirements Policy",
+            "name": "test-1-k8s-3cf5ce84-vvol-no-requirements-policy",
             "path": "/DCTEST/datastore/test_1_k8s",
             "zones": [
               "ZONE-TEST"
@@ -234,7 +234,7 @@ data:
             "storagePolicyName": ""
           },
           {
-            "name": "test-1-lun101-b39d82fa-Management Storage Policy - Large",
+            "name": "test-1-lun101-b39d82fa-management-storage-policy---large",
             "path": "/DCTEST/datastore/test_1_Lun101",
             "zones": [
               "ZONE-TEST"
@@ -244,7 +244,7 @@ data:
             "storagePolicyName": "Management Storage Policy - Large"
           },
           {
-            "name": "test-1-lun101-b39d82fa-VVol No Requirements Policy",
+            "name": "test-1-lun101-b39d82fa-vvol-no-requirements-policy",
             "path": "/DCTEST/datastore/test_1_Lun101",
             "zones": [
               "ZONE-TEST"
@@ -264,7 +264,7 @@ data:
             "storagePolicyName": ""
           },
           {
-            "name": "test-1-lun102-0403073a-Management Storage Policy - Large",
+            "name": "test-1-lun102-0403073a-management-storage-policy---large",
             "path": "/DCTEST/datastore/test_1_Lun102",
             "zones": [
               "ZONE-TEST"
@@ -274,7 +274,7 @@ data:
             "storagePolicyName": "Management Storage Policy - Large"
           },
           {
-            "name": "test-1-lun102-0403073a-VVol No Requirements Policy",
+            "name": "test-1-lun102-0403073a-vvol-no-requirements-policy",
             "path": "/DCTEST/datastore/test_1_Lun102",
             "zones": [
               "ZONE-TEST"
@@ -313,7 +313,7 @@ data:
             "storagePolicyName": ""
           },
           {
-            "name": "test-1-k8s-3cf5ce84-Management Storage Policy - Large",
+            "name": "test-1-k8s-3cf5ce84-management-storage-policy---large",
             "path": "/DCTEST/datastore/test_1_k8s",
             "zones": [
               "ZONE-TEST"
@@ -323,7 +323,7 @@ data:
             "storagePolicyName": "Management Storage Policy - Large"
           },
           {
-            "name": "test-1-k8s-3cf5ce84-VVol No Requirements Policy",
+            "name": "test-1-k8s-3cf5ce84-vvol-no-requirements-policy",
             "path": "/DCTEST/datastore/test_1_k8s",
             "zones": [
               "ZONE-TEST"
