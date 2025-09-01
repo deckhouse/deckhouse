@@ -249,7 +249,7 @@ spec:
                     # CentOS/RHEL 8 or Fedora
                         sudo dnf install -y inotify-tools
                     ;;
-                centos|rhel|fedora)
+                centos|rhel|fedora|rels)
                     echo "Detected CentOS/RHEL/Fedora. Installing inotify-tools..."
                     # CentOS/RHEL 8 or Fedora
                     if [[ "$VERSION_ID" == 8* ]] || [ "$ID" == "fedora" ]; then
@@ -259,7 +259,7 @@ spec:
                         sudo yum install -y inotify-tools
                     fi
                     ;;
-                suse|sles|opensuse)
+                suse|sles|opensuse|opensuse-leap)
                     echo "Detected SUSE/SLES/openSUSE. Installing inotify-tools..."
                     sudo zypper install -y inotify-tools
                     ;;
