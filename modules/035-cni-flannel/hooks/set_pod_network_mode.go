@@ -30,14 +30,14 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-type FlannelConfig struct {
+type FlannelConfigStruct struct {
 	PodNetworkMode string `json:"podNetworkMode"`
 }
 
 type resultStruct struct {
 	desiredCniConfigSourcePriorityFlagExists bool
 	desiredCniConfigSourcePriority           string
-	cniConfigFromSecret                      FlannelConfig
+	cniConfigFromSecret                      FlannelConfigStruct
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -51,7 +51,7 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 		return nil, nil
 	}
 
-	var flannelConfig FlannelConfig
+	var flannelConfig FlannelConfigStruct
 	flannelConfigJSON, ok := secret.Data["flannel"]
 	if !ok {
 		return nil, nil
@@ -99,7 +99,7 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 
 	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[resultStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
-		return fmt.Errorf("cannot unmarshal cni_configuration_secret to FlannelConfig: %w", err)
+		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
 	cniConfigSourcePriority := "ModuleConfig"
