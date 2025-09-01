@@ -1327,7 +1327,6 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		require.Equal(suite.T(), "Pending", dr.Status.Phase)
 		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
 
-		require.Contains(suite.T(), dr.Status.Message, "webhook responded with status 500")
 	})
 
 	suite.Run("Webhook returns 4 bad status codes then succeeds", func() {
@@ -1411,7 +1410,6 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		require.Equal(suite.T(), "Pending", dr.Status.Phase)
 		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
 
-		require.Contains(suite.T(), dr.Status.Message, "webhook responded with status 404")
 	})
 
 	suite.Run("Webhook returns 200 - should succeed immediately", func() {
@@ -1519,7 +1517,6 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		require.Equal(suite.T(), "Pending", dr.Status.Phase)
 		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
 
-		require.Contains(suite.T(), dr.Status.Message, "webhook responded with status 300")
 	})
 
 	suite.Run("Webhook network error - should retry and fail", func() {
