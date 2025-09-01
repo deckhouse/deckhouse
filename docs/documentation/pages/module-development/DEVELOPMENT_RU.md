@@ -131,6 +131,8 @@ accessibility:
 В данном примере модуль будет доступен в редакции `ee` (DKP Enterprise Edition)
 и может быть включен через объект ModuleConfig, а также будет по умолчанию включен в составе набора модулей `Default`.
 
+{% endraw %}
+
 {% alert level="warning" %}
 
 * Чтобы использовать этот механизм, файл `module.yaml` должен быть включён в релизный образ.
@@ -139,6 +141,8 @@ accessibility:
   (например, при установке `available: false` в соответствующей редакции).
 
 {% endalert %}
+
+{% raw %}
 
 ## Логика автообновления модулей
 
@@ -574,3 +578,5 @@ crane export <REGISTRY_URL>/<MODULE_SOURCE>/<MODULE_NAME>/release:alpha - | tar 
 $ crane export registry.example.io/modules-source/module-1/release:alpha - | tar -Oxf - version.json
 {"version":"v1.23.2"}
 ```
+
+{}

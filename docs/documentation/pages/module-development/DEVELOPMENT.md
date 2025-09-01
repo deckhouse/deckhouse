@@ -131,6 +131,8 @@ accessibility:
 In this configuration, the module will be available in `ee` (DKP Enterprise Edition)  
 and can be enabled using the ModuleConfig object, and will be enabled by default in the `Default` bundle.
 
+{% endraw %}
+
 {% alert level="warning" %}
 
 * To use this mechanism, the `module.yaml` file must be included in the release image.
@@ -139,6 +141,8 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
   (for example, by setting `available: false` in the corresponding edition).
 
 {% endalert %}
+
+{% raw %}
 
 ## Module auto-update logic
 
