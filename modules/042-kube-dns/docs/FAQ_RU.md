@@ -66,7 +66,7 @@ search: DNS, domain, домен, clusterdomain
    ```bash
    d8 platform edit cluster-configuration
    ```
-   
+
 1. Перезапустите поды deckhouse:
 
    ```bash
@@ -82,7 +82,7 @@ search: DNS, domain, домен, clusterdomain
 
 {% alert level="warning" %}
 
-**Важно!** Если необходимо убрать старый домен из `clusterDomainAliases` в moduleconfig kube-dns, необходимо пересоздать все поды в кластере, чтобы они запустились с новым search domain в `/etc/resolv.conf`. Это приведет к недоступности сервисов кластера, пока поды не перезапустятся.
+**Важно!** Если необходимо убрать старый домен из `clusterDomainAliases` в конфигурации kube-dns, необходимо пересоздать все поды в кластере, чтобы они запустились с новым search domain в `/etc/resolv.conf`. Это приведет к недоступности сервисов кластера, пока поды не перезапустятся.
 
 ```bash
 kubectl delete pods --all-namespaces --all

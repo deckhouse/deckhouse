@@ -66,7 +66,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
    ```bash
    d8 platform edit cluster-configuration
    ```
-   
+
 1. Restart deckhouse pods:
 
    ```bash
@@ -82,7 +82,7 @@ After 48 minutes (80% of 3607 seconds), Kubernetes will begin to refresh the iss
 
 {% alert level="warning" %}
 
-**Important!** In case you need to remove old domain from `clusterDomainAliases` in moduleconfig kube-dns, recreation of all pods in cluster is required, so new pods will have correct search domain in `/etc/resolv.conf` file. This will lead to service downtime until pods are restarted.
+**Important!** In case you need to remove old domain from `clusterDomainAliases` in kube-dns configuration, recreation of all pods in cluster is required, so new pods will have correct search domain in `/etc/resolv.conf` file. This will lead to service downtime until pods are restarted.
 
 ```bash
 kubectl delete pods --all-namespaces --all
