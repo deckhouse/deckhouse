@@ -532,7 +532,7 @@ shell:
   - ln -f -s /run/lock "/relocate/var/lock"
   #
   # copy base images binaries
-  - /binary_replace.sh -i "{{ $baseImagesBinaries }}" -o /relocate
+  - echo "{{ $baseImagesBinaries }}" | xargs cp -t /relocate/
   - mkdir -p /relocate/home/cilium
   - mkdir -p /relocate/etc
   - cp -a /from_common_distroless/group /relocate/etc/group
