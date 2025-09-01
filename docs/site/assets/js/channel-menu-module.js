@@ -55,6 +55,10 @@ function updateCurrentVersion() {
 // Use the JSON structure in your logic
 function renderMenu(settings) {
     const menuContainer = document.getElementById('doc-versions-menu');
+    // Check page type from meta tag
+    const pageTypeMeta = document.querySelector('meta[name="page:module:type"]');
+    // isFromSource is false for embedded modules, true for modules from source
+    const isFromSource = pageTypeMeta && pageTypeMeta.getAttribute('content') === 'from-source';
 
     if (!menuContainer) {
         console.error('Channel menu container not found');
@@ -81,6 +85,11 @@ function renderMenu(settings) {
         return bStability - aStability;
     });
 
+    if (!isFromSource) {
+        // For embedded modules, add latest channel to the end of the channel list
+        sortedChannels.push({ name: 'latest', version: 'latest' });
+    }
+
     // Create submenu container
     const submenuContainer = document.createElement('div');
     submenuContainer.className = 'submenu-container';
@@ -99,10 +108,6 @@ function renderMenu(settings) {
         // Generate channel URL according to the rules
         let channelUrl = '#';
 
-        // Check page type from meta tag
-        const pageTypeMeta = document.querySelector('meta[name="page:module:type"]');
-        const isFromSource = pageTypeMeta && pageTypeMeta.getAttribute('content') === 'from-source';
-
         if (channel.version) {
             const currentUrl = window.location.pathname;
 
@@ -119,9 +124,9 @@ function renderMenu(settings) {
             } else {
                 // For embedded modules, use channel version in the link
                 const urlVersion = `${channel.version}`;
-                if (currentUrl.match(/\/modules\/[^\/]+\/v[0-9]+\.[0-9]+\//)) {
+                if (currentUrl.match(/\/modules\/([^\/]+\/v[0-9]+\.[0-9]+|latest)\//)) {
                     // Current URL has version, replace it with channel version
-                    channelUrl = currentUrl.replace(/\/v[0-9]+\.[0-9]+\//, `/${urlVersion}/`);
+                    channelUrl = currentUrl.replace(/\/(v[0-9]+\.[0-9]+|latest)\//, `/${urlVersion}/`);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add version
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
@@ -167,7 +172,6 @@ function renderMenu(settings) {
 
     submenuContainer.appendChild(submenu);
     menuContainer.appendChild(submenuContainer);
-    console.debug('Menu container after rendering:', menuContainer);
 }
 
 // Initialize the app when the page loads
