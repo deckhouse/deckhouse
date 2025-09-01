@@ -1,0 +1,9 @@
+---
+title: Modules library search
+layout: none
+searchable: false
+sitemap_include: false
+permalink: en/search-embedded-modules-index.json
+---
+
+{%- include search-modules.liquid %}
