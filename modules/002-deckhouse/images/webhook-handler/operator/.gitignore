@@ -15,6 +15,7 @@ Dockerfile.cross
 
 # Go workspace file
 go.work
+hooks
 
 # Kubernetes Generated files - skip generated files, except for vendored files
 !vendor/**/zz_generated.*

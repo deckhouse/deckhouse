@@ -43,6 +43,8 @@ type ValidationWebhookReconciler struct {
 	Scheme *runtime.Scheme
 	// init logger as in docs builder (watcher)
 	Logger *log.Logger
+	// Go template with python webhook
+	Template string
 }
 
 // +kubebuilder:rbac:groups=deckhouse.io,resources=validationwebhooks,verbs=get;list;watch;create;update;patch;delete
@@ -156,47 +158,11 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		log.Error("create dir: %w", err)
 	}
 
-	tplt := `
-#!/usr/bin/python3
-from typing import Optional
-
-from deckhouse import hook
-from dotmap import DotMap
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-
-config = """
-configVersion: v1
-kubernetesValidating:
-{{ list .ValidatingWebhook | toYaml }}
-{{- if (ge (len .Context) 1) }}
-kubernetes:
-{{- range .Context}}
-- name: {{ .Name }}
-{{ toYaml .Kubernetes | indent 2 }}
-{{- end }}
-{{- end }}
-"""
-
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
-
-{{ .Handler.Python }}
-
-if __name__ == "__main__":
-    hook.run(main, config=config)
-`
-
 	tpl, err := template.New("test").Funcs(template.FuncMap{
 		"toYaml": toYAML,
 		"indent": indent,
 		"list":   list,
-	}).Parse(tplt)
+	}).Parse(r.Template)
 	if err != nil {
 		return res, fmt.Errorf("template parse: %w", err)
 	}
