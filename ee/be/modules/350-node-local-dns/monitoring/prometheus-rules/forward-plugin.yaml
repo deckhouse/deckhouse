@@ -1,6 +1,6 @@
 - name: d8.node-local-dns.forward
   rules:
-    - alert: D8NodeLocalDNSForwardHealthcheckBrokenSpike
+    - alert: D8NodeLocalDNSUpstreamHealthcheckFailed
       expr: increase(coredns_forward_healthcheck_broken_total{job="node-local-dns"}[5m]) > 10
       for: 2m
       labels:

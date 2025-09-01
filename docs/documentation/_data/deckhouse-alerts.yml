@@ -2385,7 +2385,7 @@ alerts:
         node-local-dns success cache is being frequently evicted.
       severity: "6"
       markupFormat: markdown
-    - name: D8NodeLocalDNSForwardHealthcheckBrokenSpike
+    - name: D8NodeLocalDNSUpstreamHealthcheckFailed
       sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
       moduleUrl: 350-node-local-dns
       module: node-local-dns
