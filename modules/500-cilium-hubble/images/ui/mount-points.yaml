@@ -1,5 +1,4 @@
 dirs:
- - /opt/nginx-static/conf/nginx.conf
  - /tmp
  - /var/cache/nginx
  - /var/run
