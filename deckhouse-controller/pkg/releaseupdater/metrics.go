@@ -53,11 +53,12 @@ const (
 	DisruptionApprovalRequired = "disruptionApproval"
 	RequirementsNotMet         = "requirementsNotMet"
 	ReleaseQueueDepth          = "releaseQueueDepth"
+	MajorReleaseDepth          = "majorReleaseDepth"
 	NotificationNotSent        = "notificationNotSent"
 )
 
 func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
-	labels := make(MetricLabels, 6)
+	labels := make(MetricLabels, 7)
 
 	labels["name"] = release.GetName()
 
@@ -67,6 +68,7 @@ func NewReleaseMetricLabels(release v1alpha1.Release) MetricLabels {
 	labels.SetFalse(NotificationNotSent)
 
 	labels[ReleaseQueueDepth] = "nil"
+	labels[MajorReleaseDepth] = "nil"
 
 	if _, ok := release.(*v1alpha1.ModuleRelease); ok {
 		labels["moduleName"] = release.GetModuleName()

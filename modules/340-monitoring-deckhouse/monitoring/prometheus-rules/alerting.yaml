@@ -387,3 +387,26 @@
         and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
       summary: |
         Deckhouse memory usage is too high.
+
+  - alert: D8ModuleOutdatedByMajorVersion
+    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", majorReleaseDepth!~"(nil|0)"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name"
+      summary: |
+        Module `{{ $labels.moduleName }}` has major version updates available.
+      description: |
+        Module `{{ $labels.moduleName }}` is running behind on major version releases and requires manual approval.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To approve the module release update, run the following command:
+
+        ```bash
+        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```
