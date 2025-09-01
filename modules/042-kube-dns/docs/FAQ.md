@@ -96,7 +96,7 @@ kubectl delete pods --all-namespaces --all
 
 {% endalert %}
 
-## How to Increase the Number of kube-dns pods?
+## How to scale-up kube-dns replicas?
 
 Deckhouse distributes kube-dns pods based on the following principles. It searches for nodes with the labels `node-role.deckhouse.io/` and `node-role.kubernetes.io/`, then applies the following rules:
 
