@@ -19,6 +19,8 @@ import:
     before: setup
     includePaths:
     - 'libproc2.so.0*'
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]
