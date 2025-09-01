@@ -17,14 +17,9 @@ limitations under the License.
 package controller
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
-	"strings"
-	"text/template"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,9 +27,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/yaml"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
+	"deckhouse.io/webhook/internal/templater"
 )
 
 // ValidationWebhookReconciler reconciles a ValidationWebhook object
@@ -106,39 +101,6 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return res, nil
 }
 
-// toYAML takes an interface, marshals it to yaml, and returns a string. It will
-// always return a string, even on marshal error (empty string).
-//
-// This is designed to be called from a template.
-func toYAML(v interface{}) string {
-	data, err := json.Marshal(v)
-	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
-	}
-
-	data, err = yaml.JSONToYAML(data)
-	if err != nil {
-		// Swallow errors inside of a template.
-		return ""
-	}
-
-	return strings.TrimSuffix(string(data), "\n")
-}
-
-func indent(spaces int, s string) string {
-	pad := strings.Repeat(" ", spaces)
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		lines[i] = pad + line
-	}
-	return strings.Join(lines, "\n")
-}
-
-func list(objs ...any) []any {
-	return objs
-}
-
 func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
@@ -152,30 +114,21 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	// 5) write finalizer
 	// 6) kill shell-operator binary (we can start shell operator as library too?)
 
-	// hooks/002-deckhouse/webhooks/validating
+	// hooks/002-deckhouse/webhooks/validating/
 	err := os.MkdirAll("hooks/"+vh.Name+"/webhooks/validating/", 0777)
 	if err != nil {
 		log.Error("create dir: %w", err)
+		// TODO: requeue and wrap error
+		return res, err
 	}
 
-	tpl, err := template.New("test").Funcs(template.FuncMap{
-		"toYaml": toYAML,
-		"indent": indent,
-		"list":   list,
-	}).Parse(r.Template)
+	buf, err := templater.RenderTemplate(r.Template, vh)
 	if err != nil {
-		return res, fmt.Errorf("template parse: %w", err)
+		// TODO: wrap error
+		return res, err
 	}
 
-	var buf bytes.Buffer
-
-	err = tpl.Execute(&buf, vh)
-	if err != nil {
-		return res, fmt.Errorf("template execute: %w", err)
-	}
-	// log.Info("template", slog.String("template", buf.String()))
-	fmt.Println(buf.String())
-
+	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py
 	err = os.WriteFile("hooks/"+vh.Name+"/webhooks/validating/"+vh.Name+".py", buf.Bytes(), 0755)
 	if err != nil {
 		log.Error("create file: %w", err)

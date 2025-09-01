@@ -91,35 +91,6 @@ type KubernetesContext struct {
 	Group                        string                `json:"group,omitempty"`
 }
 
-type WatchEventType string
-
-const (
-	WatchEventAdded    WatchEventType = "Added"
-	WatchEventModified WatchEventType = "Modified"
-	WatchEventDeleted  WatchEventType = "Deleted"
-)
-
-type KubeEventMode string
-
-const (
-	ModeV0          KubeEventMode = "v0"          // No first Synchronization, only Event.
-	ModeIncremental KubeEventMode = "Incremental" // Send Synchronization with existed object and Event for each followed event.
-)
-
-type FieldSelectorRequirement struct {
-	Field    string `json:"field"`
-	Operator string `json:"operator"`
-	Value    string `json:"value,omitempty"`
-}
-
-type FieldSelector struct {
-	MatchExpressions []FieldSelectorRequirement `json:"matchExpressions"`
-}
-
-type NameSelector struct {
-	MatchNames []string `json:"matchNames"`
-}
-
 type JqFilter struct {
 	NodeName string `json:"nodeName"`
 }
@@ -146,11 +117,6 @@ type KubernetesAdmissionConfigV1 struct {
 	SideEffects          *v1.SideEffectClass     `json:"sideEffects,omitempty"`
 	TimeoutSeconds       *int32                  `json:"timeoutSeconds,omitempty"`
 	MatchConditions      []v1.MatchCondition     `json:"matchConditions,omitempty"`
-}
-
-type NamespaceSelector struct {
-	NameSelector  *NameSelector         `json:"nameSelector,omitempty"`
-	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
 // ValidationWebhookStatus defines the observed state of ValidationWebhook.
