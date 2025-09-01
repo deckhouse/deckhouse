@@ -48,7 +48,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       # could be run as not root, but, in the first place, a way of setting file capabilities for binaries in distroless images must be developed
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-        readOnlyRootFilesystem: true
       automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -58,6 +57,7 @@ spec:
       containers:
       - name: stale-dns-connections-cleaner
         {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "staleDnsConnectionsCleaner") }}
         command: ["/stale-dns-connections-cleaner"]
         args:
