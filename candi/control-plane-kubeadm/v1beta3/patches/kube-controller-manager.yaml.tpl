@@ -91,6 +91,13 @@ spec:
     runAsGroup: 0
     seccompProfile:
       type: RuntimeDefault
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
   containers:
     - name: kube-controller-manager
       securityContext:
