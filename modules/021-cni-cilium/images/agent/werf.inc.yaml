@@ -534,11 +534,9 @@ shell:
   # copy base images binaries
   - |
     echo "{{ $baseImagesBinaries }}" | tr ' ' '\n' | sort -u | while read -r file; do
-    if [ -f "$file" ]; then
-        dir="/relocate/$(dirname "$file")"
-        mkdir -p "$dir"
-        cp "$file" "$dir/"
-    fi
+      if [ -e "$file" ]; then
+        rsync -R "$file" /relocate/
+      fi
     done
   - mkdir -p /relocate/home/cilium
   - mkdir -p /relocate/etc
