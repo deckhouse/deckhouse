@@ -3,6 +3,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
+{{- include "image mount points" . }}
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
   stageDependencies:
@@ -20,8 +21,6 @@ import:
   add: /relocate
   to: /
   before: setup
-git:
-{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]
