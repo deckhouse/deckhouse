@@ -2385,6 +2385,43 @@ alerts:
         node-local-dns success cache is being frequently evicted.
       severity: "6"
       markupFormat: markdown
+    - name: D8NodeLocalDNSForwardMaxConcurrentRejects
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        More than 20 queries were rejected within the last 5 minutes on node `{{$labels.node}}`
+        because the max concurrent query limit was reached.
+      summary: |
+        The forward plugin is rejecting DNS queries due to max concurrency limit.
+      severity: "5"
+      markupFormat: default
+    - name: D8NodeLocalDNSKubeforwardRequestLatencyP95High
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/kubeforward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
+        exceeded 300 milliseconds over the last 5 minutes.
+        This may indicate slow upstreams, network issues, or DNS overload on this node.
+      summary: |
+        High DNS request latency in kubeforward (p95 &gt; 300ms).
+      severity: "4"
+      markupFormat: default
+    - name: D8NodeLocalDNSUpstreamHealthcheckFailed
+      sourceFile: ee/be/modules/350-node-local-dns/monitoring/prometheus-rules/forward-plugin.yaml
+      moduleUrl: 350-node-local-dns
+      module: node-local-dns
+      edition: be
+      description: |
+        The health check system of the `forward` plugin failed more than 10 times within 5 minutes on node `{{$labels.node}}`.
+        As a result, all upstreams were considered unhealthy.
+      summary: |
+        Too many upstream health check failures in forward plugin.
+      severity: "5"
+      markupFormat: default
     - name: D8NodeUpdateStuckWaitingForDisruptionApproval
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
