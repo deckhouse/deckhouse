@@ -532,12 +532,7 @@ shell:
   - ln -f -s /run/lock "/relocate/var/lock"
   #
   # copy base images binaries
-  - |
-    echo "{{ $baseImagesBinaries }}" | tr ' ' '\n' | sort -u | while read -r item; do
-    if [ -f "$item" ]; then
-        cp "$item" /relocate/
-    fi
-    done
+  - echo "{{ $baseImagesBinaries }}" | tr ' ' '\n' | sort -u | xargs -I {} cp --parents {} /relocate/
   - mkdir -p /relocate/home/cilium
   - mkdir -p /relocate/etc
   - cp -a /from_common_distroless/group /relocate/etc/group
