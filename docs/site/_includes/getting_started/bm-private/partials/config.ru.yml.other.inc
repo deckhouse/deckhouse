@@ -45,6 +45,20 @@ deckhouse:
   # [<ru>] Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
   registryCA: <REGISTRY_CA>
 ---
+# [<en>] Configuration to automatically remove the taint from the master node for single-node cluster operation.
+# [<ru>] Конфигурация для автоматической снятия *taint* c мастер узла кластера для работы в режиме одного узла.
+# apiVersion: deckhouse.io/v1
+# kind: NodeGroup
+# metadata:
+#  name: master
+# spec:
+#  nodeType: Static
+#  nodeTemplate:
+#    labels:
+#      node-role.kubernetes.io/control-plane: ""
+#      node-role.kubernetes.io/master: ""
+#    taints: []
+---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
