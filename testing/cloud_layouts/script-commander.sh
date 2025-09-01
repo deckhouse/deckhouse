@@ -206,12 +206,20 @@ function prepare_environment() {
     ;;
 
   "OpenStack")
-    # shellcheck disable=SC2016
-    env OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="redos"
+    cluster_template_id="cb79a126-4234-4dac-a01e-2d3804266e3e"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"osPassword\": \"${LAYOUT_OS_PASSWORD}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
     ;;
 
   "vSphere")
