@@ -78,7 +78,7 @@ func validateDeckhouseReleaseApproval(
 	}
 
 	// If the DeckhouseRelease is not approved, allow it
-	if !dr.Approved {
+	if !dr.GetManuallyApproved() {
 		return allowResult(nil)
 	}
 
