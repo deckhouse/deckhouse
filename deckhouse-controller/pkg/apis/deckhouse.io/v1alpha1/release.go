@@ -42,6 +42,7 @@ type Release interface {
 	GetManuallyApproved() bool
 	GetMessage() string
 	GetNotified() bool
+	GetUpdateSpec() *UpdateSpec
 }
 
 type Changelog map[string]any
