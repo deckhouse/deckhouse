@@ -144,6 +144,139 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
 
 {% raw %}
 
+## How ModulePullOverride works
+
+After creating ModulePullOverride, the corresponding module will not consider ModuleUpdatePolicy, and will also not load and create ModuleRelease objects. The module will be loaded upon every change of the `imageDigest` parameter, after which it will be applied in the cluster. The ModuleSource status will have `overridden: true`, which indicates that ModulePullOverride is being used instead of ModuleUpdatePolicy. Also, the corresponding Module object will have an `IsOverridden` field in its status, and the module version from `imageTag`.
+
+An example:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 16
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: example
+  resourceVersion: "230347744"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+  - example
+  releaseChannel: Stable
+  requirements:
+    deckhouse: '> v1.63.0'
+    kubernets: '> v1.30.0'
+  source: example
+  version: mpo-tag
+  weight: 910
+status:
+  conditions:
+  - lastProbeTime: "2024-12-03T15:57:20Z"
+    lastTransitionTime: "2024-12-03T15:57:20Z"
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:57:26Z"
+    status: "True"
+    type: EnabledByModuleManager
+  - lastProbeTime: "2024-12-03T15:59:58Z"
+    lastTransitionTime: "2024-12-03T15:56:23Z"
+    status: "True"
+    type: IsReady
+  - lastProbeTime: "2024-12-03T15:59:48Z"
+    lastTransitionTime: "2024-12-03T15:56:47Z"
+    status: "True"
+    type: IsOverridden
+  phase: Ready
+```
+
+The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
+
+### An example
+
+1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](../../cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: test
+   spec:
+     registry:
+       ca: ""
+       dockerCfg: someBase64String==
+       repo: registry.example.com/deckhouse/modules
+       scheme: HTTPS
+   status:
+     modules:
+     - name: echo
+       policy: test-alpha
+     - name: hello-world
+       policy: test-alpha
+     modulesCount: 2
+   ```
+
+1. Enable the module and create [ModulePullOverride](../../cr.html#modulepulloverride) for the `echo` module:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha2
+   kind: ModulePullOverride
+   metadata:
+     name: echo
+   spec:
+     imageTag: main-patch-03354
+   ```
+
+  After creating ModulePullOverride, the image tag `registry.example.com/deckhouse/modules/echo:main-patch-03354` will be used for the module (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
+
+1. The ModulePullOverride will change with each update of the module:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha2
+   kind: ModulePullOverride
+   metadata:
+     name: echo
+   spec:
+     imageTag: main-patch-03354
+     scanInterval: 15s
+   status:
+     imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
+     message: "Ready"
+     updatedAt: "2023-12-07T08:41:21Z"
+   ```
+
+   where:
+   - `imageDigest` is the unique identifier of the container image that was pulled.
+   - `lastUpdated` is the time when the image was last pulled.
+
+1. In this case, ModuleSource would look as follows:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleSource
+   metadata:
+     name: test
+   spec:
+     registry:
+       ca: ""
+       dockerCfg: someBase64String==
+       repo: registry.example.com/deckhouse/modules
+       scheme: HTTPS
+   status:
+     modules:
+     - name: echo
+       overridden: true
+     - name: hello-world
+       policy: test-alpha
+     modulesCount: 2
+   ```
+
+{% endraw %}
+
+{% raw %}
+
 ## Module auto-update logic
 
 ![Module auto-update logic](../../images/module-development/module_update_flow.svg)
@@ -317,135 +450,6 @@ update:
   - from: "1.67"
     to:   "1.74"   # 'to' does not equal this release version (1.75.25) → the rule is ignored.
 ```
-
-## How it works
-
-After creating ModulePullOverride, the corresponding module will not consider ModuleUpdatePolicy, and will also not load and create ModuleRelease objects. The module will be loaded upon every change of the `imageDigest` parameter, after which it will be applied in the cluster. The ModuleSource status will have `overridden: true`, which indicates that ModulePullOverride is being used instead of ModuleUpdatePolicy. Also, the corresponding Module object will have an `IsOverridden` field in its status, and the module version from `imageTag`.
-
-An example:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  creationTimestamp: "2024-11-18T15:34:15Z"
-  generation: 16
-  labels:
-    deckhouse.io/epoch: "1326105356"
-  name: example
-  resourceVersion: "230347744"
-  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
-properties:
-  availableSources:
-  - example
-  releaseChannel: Stable
-  requirements:
-    deckhouse: '> v1.63.0'
-    kubernets: '> v1.30.0'
-  source: example
-  version: mpo-tag
-  weight: 910
-status:
-  conditions:
-  - lastProbeTime: "2024-12-03T15:57:20Z"
-    lastTransitionTime: "2024-12-03T15:57:20Z"
-    status: "True"
-    type: EnabledByModuleConfig
-  - lastProbeTime: "2024-12-03T15:59:58Z"
-    lastTransitionTime: "2024-12-03T15:57:26Z"
-    status: "True"
-    type: EnabledByModuleManager
-  - lastProbeTime: "2024-12-03T15:59:58Z"
-    lastTransitionTime: "2024-12-03T15:56:23Z"
-    status: "True"
-    type: IsReady
-  - lastProbeTime: "2024-12-03T15:59:48Z"
-    lastTransitionTime: "2024-12-03T15:56:47Z"
-    status: "True"
-    type: IsOverridden
-  phase: Ready
-```
-
-The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
-
-### An example
-
-1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](../../cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleSource
-   metadata:
-     name: test
-   spec:
-     registry:
-       ca: ""
-       dockerCfg: someBase64String==
-       repo: registry.example.com/deckhouse/modules
-       scheme: HTTPS
-   status:
-     modules:
-     - name: echo
-       policy: test-alpha
-     - name: hello-world
-       policy: test-alpha
-     modulesCount: 2
-   ```
-
-1. Enable the module and create [ModulePullOverride](../../cr.html#modulepulloverride) for the `echo` module:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha2
-   kind: ModulePullOverride
-   metadata:
-     name: echo
-   spec:
-     imageTag: main-patch-03354
-   ```
-
-  After creating ModulePullOverride, the image tag `registry.example.com/deckhouse/modules/echo:main-patch-03354` will be used for the module (`ms:spec.registry.repo/mpo:metadata.name:mpo:spec.imageTag`).
-
-1. The ModulePullOverride will change with each update of the module:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha2
-   kind: ModulePullOverride
-   metadata:
-     name: echo
-   spec:
-     imageTag: main-patch-03354
-     scanInterval: 15s
-   status:
-     imageDigest: sha256:ed958cc2156e3cc363f1932ca6ca2c7f8ae1b09ffc1ce1eb4f12478aed1befbc
-     message: "Ready"
-     updatedAt: "2023-12-07T08:41:21Z"
-   ```
-
-   where:
-   - `imageDigest` is the unique identifier of the container image that was pulled.
-   - `lastUpdated` is the time when the image was last pulled.
-
-1. In this case, ModuleSource would look as follows:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleSource
-   metadata:
-     name: test
-   spec:
-     registry:
-       ca: ""
-       dockerCfg: someBase64String==
-       repo: registry.example.com/deckhouse/modules
-       scheme: HTTPS
-   status:
-     modules:
-     - name: echo
-       overridden: true
-     - name: hello-world
-       policy: test-alpha
-     modulesCount: 2
-   ```
 
 {% endraw %}
 
