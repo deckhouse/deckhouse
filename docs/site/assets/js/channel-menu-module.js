@@ -124,11 +124,14 @@ function renderMenu(settings) {
             } else {
                 // For embedded modules, use channel version in the link
                 const urlVersion = `${channel.version}`;
-                if (currentUrl.match(/\/modules\/([^\/]+\/v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
+                if (currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
                     // Current URL has version, replace it with channel version
                     channelUrl = currentUrl.replace(/\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `/${urlVersion}/`);
+                    console.log('Current URL has version, replace it with channel version');
+                    console.log('Replaced URL:', channelUrl);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add version
+                    console.log('Current URL is /modules/MODULE/, add version');
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
                 }
             }
