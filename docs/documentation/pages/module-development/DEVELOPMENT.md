@@ -197,7 +197,7 @@ Conditions for applying `from-to`:
 If a release with [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
 {% endalert %}
 
-![From-to mechanism logic](../../images/module-development/from_to.png)
+![From-to mechanism logic](../../images/module-development/from_to.svg)
 
 Check available releases (ModuleRelease) with:
 
