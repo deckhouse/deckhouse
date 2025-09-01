@@ -1009,6 +1009,13 @@ spec:
                   type: object
                   description: GeoIP2 activation options.
                   properties:
+                    accountID:
+                      type: integer
+                      description: |
+                        MaxMind Account ID used to authenticate GeoIP2 database downloads.
+
+                        Required when `licenseKey` is set. If provided, downloads are performed
+                        using the official library `geoipupdate`.
                     maxmindLicenseKey:
                       type: string
                       description: |
