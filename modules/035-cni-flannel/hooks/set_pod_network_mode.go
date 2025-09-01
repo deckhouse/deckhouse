@@ -35,9 +35,9 @@ type FlannelConfigStruct struct {
 }
 
 type resultStruct struct {
-	desiredCniConfigSourcePriorityFlagExists bool
-	desiredCniConfigSourcePriority           string
-	cniConfigFromSecret                      FlannelConfigStruct
+	DesiredCniConfigSourcePriorityFlagExists bool
+	DesiredCniConfigSourcePriority           string
+	CniConfigFromSecret                      FlannelConfigStruct
 }
 
 func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -67,9 +67,9 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	cniConfigSourcePriority, cniConfigSourcePriorityFlagExists = secret.Annotations[cniConfigSourcePriorityAnnotation]
 
 	return resultStruct{
-		desiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
-		desiredCniConfigSourcePriority:           cniConfigSourcePriority,
-		cniConfigFromSecret:                      flannelConfig,
+		DesiredCniConfigSourcePriorityFlagExists: cniConfigSourcePriorityFlagExists,
+		DesiredCniConfigSourcePriority:           cniConfigSourcePriority,
+		CniConfigFromSecret:                      flannelConfig,
 	}, nil
 }
 
@@ -104,8 +104,8 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 
 	cniConfigSourcePriority := "ModuleConfig"
 	if len(cniConfigurationSecrets) > 0 {
-		if cniConfigurationSecrets[0].desiredCniConfigSourcePriorityFlagExists {
-			if cniConfigurationSecrets[0].desiredCniConfigSourcePriority != "ModuleConfig" {
+		if cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists {
+			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority != "ModuleConfig" {
 				cniConfigSourcePriority = "Secret"
 			}
 		} else if clusterIsBootstrapped {
@@ -116,7 +116,7 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 
 	switch cniConfigSourcePriority {
 	case "Secret":
-		flannelConfig := cniConfigurationSecrets[0].cniConfigFromSecret
+		flannelConfig := cniConfigurationSecrets[0].CniConfigFromSecret
 		if flannelConfig.PodNetworkMode != "" {
 			input.Values.Set("cniFlannel.internal.podNetworkMode", flannelConfig.PodNetworkMode)
 		}
