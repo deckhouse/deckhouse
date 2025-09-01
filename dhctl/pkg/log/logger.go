@@ -106,8 +106,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	// todo: add simple logger when our slog implementation will be support not only json formatter
 	// case "simple":
 	// 	defaultLogger = NewSimpleLogger(opts)
-	case "json":
-		l = NewJSONLogger(opts)
+	// case "json":
+	// 	l = NewJSONLogger(opts)
 	case "silent":
 		l = emptyLogger
 	default:
