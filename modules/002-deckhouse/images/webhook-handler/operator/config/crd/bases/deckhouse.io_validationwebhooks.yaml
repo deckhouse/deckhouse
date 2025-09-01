@@ -33,15 +33,45 @@ spec:
               properties:
                 kubernetes:
                   properties:
+                    allowFailure:
+                      type: boolean
                     apiVersion:
                       type: string
-                    jqFilter:
+                    executeHookOnEvent:
+                      items:
+                        type: string
+                      type: array
+                    executeHookOnSynchronization:
+                      type: string
+                    fieldSelector:
                       properties:
-                        nodeName:
-                          type: string
+                        matchExpressions:
+                          items:
+                            properties:
+                              field:
+                                type: string
+                              operator:
+                                type: string
+                              value:
+                                type: string
+                            required:
+                            - field
+                            - operator
+                            type: object
+                          type: array
                       required:
-                      - nodeName
+                      - matchExpressions
                       type: object
+                    group:
+                      type: string
+                    includeSnapshotsFrom:
+                      items:
+                        type: string
+                      type: array
+                    jqFilter:
+                      type: string
+                    keepFullObjectsInMemory:
+                      type: string
                     kind:
                       type: string
                     labelSelector:
@@ -93,6 +123,10 @@ spec:
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
+                    mode:
+                      type: string
+                    name:
+                      type: string
                     nameSelector:
                       properties:
                         matchNames:
@@ -151,6 +185,16 @@ spec:
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
+                    queue:
+                      type: string
+                    resynchronizationPeriod:
+                      type: string
+                    waitForSynchronization:
+                      type: string
+                    watchEvent:
+                      items:
+                        type: string
+                      type: array
                   type: object
                 name:
                   type: string
