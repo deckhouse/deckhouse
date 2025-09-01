@@ -1,0 +1,43 @@
+diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+index 1a094ba47..a789e0a30 100644
+--- a/internal/nginx/maxmind.go
++++ b/internal/nginx/maxmind.go
+@@ -35,6 +35,9 @@ import (
+ 	klog "k8s.io/klog/v2"
+ )
+ 
++// MaxmindSkipVerifyTLS disables TLS certificate verification for mirror downloads.
++var MaxmindSkipVerifyTLS bool
++
+ // MaxmindLicenseKey maxmind license key to download databases
+ var MaxmindLicenseKey = ""
+ 
+@@ -181,7 +184,15 @@ func downloadDatabase(dbName string) error {
+ 		return err
+ 	}
+ 
+-	resp, err := http.DefaultClient.Do(req)
++	transport := http.DefaultTransport.(*http.Transport).Clone()
++
++	if MaxmindMirror != "" && strings.EqualFold(req.URL.Scheme, "https") {
++		transport.TLSClientConfig.InsecureSkipVerify = MaxmindSkipVerifyTLS
++	}
++
++	cli := &http.Client{Transport: transport}
++
++	resp, err := cli.Do(req)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
+index ce24160fd..6b1c2f064 100644
+--- a/pkg/flags/flags.go
++++ b/pkg/flags/flags.go
+@@ -241,6 +241,7 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+ 	flags.StringVar(&nginx.MaxmindEditionIDs, "maxmind-edition-ids", "GeoLite2-City,GeoLite2-ASN", `Maxmind edition ids to download GeoLite2 Databases.`)
+ 	flags.IntVar(&nginx.MaxmindRetriesCount, "maxmind-retries-count", 1, "Number of attempts to download the GeoIP DB.")
+ 	flags.DurationVar(&nginx.MaxmindRetriesTimeout, "maxmind-retries-timeout", time.Second*0, "Maxmind downloading delay between 1st and 2nd attempt, 0s - do not retry to download if something went wrong.")
++	flags.BoolVar(&nginx.MaxmindSkipVerifyTLS, "maxmind-skip-tls-verification", false, "TLS verification is being forcibly skipped.")
+ 
+ 	flags.AddGoFlagSet(flag.CommandLine)
+ 	if err := flags.Parse(os.Args); err != nil {

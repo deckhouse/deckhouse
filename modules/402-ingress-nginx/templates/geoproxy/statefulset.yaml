@@ -1,0 +1,195 @@
+{{- define "geoproxy_resources" -}}
+cpu: 10m
+memory: 30Mi
+{{- end -}}
+
+{{- $context := . }}
+{{- $controllers := .Values.ingressNginx.internal.ingressControllers | default (list) -}}
+{{- $licenseMap := include "geoip_collect_license_editions" (dict "controllers" $controllers) | fromJson -}}
+
+{{- if gt (len $licenseMap) 0 }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: geoproxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "geoproxy")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: StatefulSet
+    name: geoproxy
+  updatePolicy:
+    updateMode: "Auto"
+resourcePolicy:
+  containerPolicies:
+    - containerName: geoproxy
+      minAllowed:
+        {{- include "geoproxy_resources" . | nindent 10 }}
+      maxAllowed:
+        cpu: 200m
+        memory: 100Mi
+  {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+{{- end }}
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: geoproxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "geoproxy")) | nindent 2 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: geoproxy
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: geoproxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "geoproxy")) | nindent 2 }}
+spec:
+  serviceName: geoproxy
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: geoproxy
+  template:
+    metadata:
+      labels:
+        app: geoproxy
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "geoproxy")) | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse_with_writable_fs" . | nindent 6 }}
+      automountServiceAccountToken: true
+      imagePullSecrets:
+        - name: deckhouse-registry
+      containers:
+        - image: {{ include "helm_lib_module_image" (list . "geoproxy") }}
+          name: geoproxy
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: geo-data
+              mountPath: /data
+              readOnly: false
+          args:
+            - "--server-port=127.0.0.1:8080"
+            - "--prometheus-port=127.0.0.1:9090"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: INTERVAL_UPDATE
+              value: "24h"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 7475
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 7475
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "geoproxy_resources" . | nindent 14 }}
+{{- end }}
+
+        - name: kube-rbac-proxy
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
+          args:
+            - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7475"
+            - "--v=2"
+            - "--logtostderr=true"
+            - "--stale-cache-interval=1h30m"
+            - "--livez-path=/livez"
+          ports:
+            - containerPort: 7475
+              name: https
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 7475
+              scheme: HTTPS
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 7475
+              scheme: HTTPS
+          env:
+            - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KUBE_RBAC_PROXY_CONFIG
+              value: |
+                excludePaths:
+                - /healthz
+                - /readyz
+                - /download/*.tar.gz
+                upstreams:
+                - upstream: http://127.0.0.1:8080
+                  path: /
+                - upstream: http://127.0.0.1:9090/metrics
+                  path: /metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-{{ .Chart.Name }}
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: statefulsets
+                      subresource: prometheus-metrics
+                      name: geoproxy
+
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
+              {{- include "geoproxy_resources" . | nindent 14 }}
+{{- end }}
+      serviceAccountName: geoproxy
+      terminationGracePeriodSeconds: 0
+
+{{- $storageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
+{{- if not $storageClass }}
+      volumes:
+        - name: geo-data
+          emptyDir: {}
+{{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: geo-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: {{ $storageClass }}
+{{- end }}
+{{- end }}
