@@ -135,6 +135,7 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 
 	for i := range egi.Status.Conditions {
 		egi.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+		egi.Status.Conditions[i].LastTransitionTime = metav1.Time{}
 	}
 
 	return EgressGatewayInstanceInfo{
