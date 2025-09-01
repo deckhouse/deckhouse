@@ -1312,7 +1312,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-500-error.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1372,7 +1372,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond} // Fast retry for testing
 
-		suite.setupControllerSettings("webhook-4-bad-then-success.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-4-bad-then-success.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1382,7 +1382,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 	})
 
 	suite.Run("Webhook returns 404 with large body - should block release", func() {
-		largeBody := string(make([]byte, 5000)) // 5KB body
+		largeBody := string(make([]byte, 5000))
 		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			if _, err := w.Write([]byte(largeBody)); err != nil {
@@ -1399,7 +1399,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-404-large-body.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-404-large-body.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1434,7 +1434,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-200-success.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-200-success.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1459,7 +1459,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-201-success.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-201-success.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1483,7 +1483,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-299-success.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-299-success.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1507,7 +1507,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-300-fail.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-300-fail.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
@@ -1550,7 +1550,7 @@ func (suite *ControllerTestSuite) TestWebhookStatusCodes() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		suite.setupControllerSettings("webhook-network-error.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-network-error.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
