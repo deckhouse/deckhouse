@@ -10,19 +10,19 @@ weight: 50
 
 Code provides a set of push rules to enforce specific policies on commits and Git pushes. These rules help maintain repository integrity, improve code quality, and ensure compliance with your organization’s security standards.
 
-### Available Rules
+### Available rules
 
 - ***Verify committer email***  
 
-  Committer email must be verified.  
+  Committer email must be verified in the Code profile.
 
 - ***Prevent tag deletion***  
 
   Tags cannot be deleted via git push. Deletion through the Web UI is available.  
 
-- ***Member check***  
+- ***Member check***
 
-  Author must be a Code member.  
+  Commit author must be a Code member.
 
 - ***Prevent secret leaks***  
 
@@ -72,13 +72,13 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 
   Files larger than the specified size (in megabytes) will be rejected. To disable this rule, set the value to `0`.  
 
-## Enabling Push Rules
+## Enabling push rules
 
 To configure push rules for a project, open the project page and go to **Settings → Repository → Push Rules**.  
 
 Only users with the *Maintainer* or *Owner* role can configure push rules.  
 
-## Configuring Push Rules at Group or Instance Level
+## Configuring push rules at group or instance level
 
 To configure push rules at the group level, open the group page and go to **Settings → Repository → Push Rules**. This option is available to users with the *Owner* role.  
 
@@ -86,9 +86,9 @@ To configure push rules at the instance level, go to **Admin → Settings → Re
 
 Rules defined at the group or instance level are used as default settings for projects. When a project is created, it inherits the rules from its parent group or from the instance (if created in a personal namespace).  
 
-## Restricting Rule Overrides
+## Restricting rule overrides
 
-You can prevent overriding of rules in child projects or groups. To do this, uncheck the option **“Allow override at group/project level”**.  
+You can prevent overriding of rules in child projects or groups. To do this, uncheck the option "Allow override at group/project level”.  
 
 If a rule is enforced at the group or instance level and overriding is disabled:  
 - the rule is automatically applied to all child projects and subgroups;  
@@ -96,10 +96,10 @@ If a rule is enforced at the group or instance level and overriding is disabled:
 
 **Examples:**  
 
-1. If you enable the *“Verify committer email”* rule at the group level and disable overriding, this rule will be active in all projects of that group and its subgroups, with no option to disable it.  
-2. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
-3. If overriding is allowed, the rule itself will not change in child groups or projects, but they will gain the ability to configure it.  
-   - For example, if the *“Verify committer email”* rule is enabled at the instance level with overriding disabled, all child groups and projects will have it enforced.  
+1. If you enable the *"Verify committer email”* rule at the group level and disable overriding, this rule will be active in all projects of that group and its subgroups, with no option to disable it.  
+1. If you disable the same rule at the group level and disallow overriding, it will be disabled in all projects of that group and its subgroups, with no option to enable it.  
+1. If overriding is allowed, the rule itself will not change in child groups or projects, but they will gain the ability to configure it.  
+   - For example, if the *"Verify committer email”* rule is enabled at the instance level with overriding disabled, all child groups and projects will have it enforced.  
    - If overriding is later enabled at the instance level, the rule will remain active everywhere, but groups will now be able to adjust it.  
    - If overriding is also enabled at the group level, then projects within that group will gain the ability to configure it individually.  
 
