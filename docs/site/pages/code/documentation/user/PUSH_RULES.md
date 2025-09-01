@@ -77,11 +77,11 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
 
 To configure push rules for a project, open the project page and go to "Settings → Repository → Push Rules".  
 
-Only users with the *Maintainer* or *Owner* role can configure push rules.  
+Only users with the `Maintainer*` or `Owner` role can configure push rules.  
 
 ## Configuring push rules at group or instance level
 
-To configure push rules at the group level, open the group page and go to "Settings → Repository → Push Rules". This option is available to users with the *Owner* role.  
+To configure push rules at the group level, open the group page and go to "Settings → Repository → Push Rules". This option is available to users with the `Owner` role.  
 
 To configure push rules at the instance level, go to "Admin → Settings → Repository → Push Rules". This option is available only to administrators.  
 
