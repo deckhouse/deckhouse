@@ -76,7 +76,10 @@ spec:
         - --update-status=true
         - --shutdown-grace-period=60
         - --controller-class=ingress-nginx.deckhouse.io/test
-        - --maxmind-license-key=abc12345
+        - --maxmind-mirror=https://geoproxy:4250/download
+        - --maxmind-skip-tls-verification=true
+        - --maxmind-retries-count=5
+        - --maxmind-retries-timeout=10s
         - --maxmind-edition-ids=GeoIPTest,GeoIPTest2
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-test

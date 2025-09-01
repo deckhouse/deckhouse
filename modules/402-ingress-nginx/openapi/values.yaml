@@ -8,6 +8,11 @@ properties:
     x-required-for-helm:
       - ingressControllers
     properties:
+      effectiveStorageClass:
+        default: false
+        oneOf:
+          - type: string
+          - type: boolean
       admissionCertificate:
         type: object
         default: {}
@@ -221,6 +226,8 @@ properties:
                       type: array
                       items:
                         type: string
+                    accountID:
+                      type: integer
                 legacySSL:
                   type: boolean
                 disableHTTP2:
