@@ -60,13 +60,60 @@ type Context struct {
 	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
 }
 
+// type KubernetesContext struct {
+// 	APIVersion        string                `json:"apiVersion,omitempty"`
+// 	Kind              string                `json:"kind,omitempty"`
+// 	NameSelector      *NameSelector         `json:"nameSelector,omitempty"`
+// 	LabelSelector     *metav1.LabelSelector `json:"labelSelector,omitempty"`
+// 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+// 	JqFilter          JqFilter              `json:"jqFilter,omitempty"`
+// }
+
 type KubernetesContext struct {
-	APIVersion        string                `json:"apiVersion,omitempty"`
-	Kind              string                `json:"kind,omitempty"`
-	NameSelector      *NameSelector         `json:"nameSelector,omitempty"`
-	LabelSelector     *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
-	JqFilter          JqFilter              `json:"jqFilter,omitempty"`
+	Name                         string                `json:"name,omitempty"`
+	WatchEventTypes              []WatchEventType      `json:"watchEvent,omitempty"`
+	ExecuteHookOnEvents          []WatchEventType      `json:"executeHookOnEvent,omitempty"`
+	ExecuteHookOnSynchronization string                `json:"executeHookOnSynchronization,omitempty"`
+	WaitForSynchronization       string                `json:"waitForSynchronization,omitempty"`
+	KeepFullObjectsInMemory      string                `json:"keepFullObjectsInMemory,omitempty"`
+	Mode                         KubeEventMode         `json:"mode,omitempty"`
+	ApiVersion                   string                `json:"apiVersion,omitempty"`
+	Kind                         string                `json:"kind,omitempty"`
+	NameSelector                 *NameSelector         `json:"nameSelector,omitempty"`
+	LabelSelector                *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	FieldSelector                *FieldSelector        `json:"fieldSelector,omitempty"`
+	NamespaceSelector            *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	JqFilter                     string                `json:"jqFilter,omitempty"`
+	AllowFailure                 bool                  `json:"allowFailure,omitempty"`
+	ResynchronizationPeriod      string                `json:"resynchronizationPeriod,omitempty"`
+	IncludeSnapshotsFrom         []string              `json:"includeSnapshotsFrom,omitempty"`
+	Queue                        string                `json:"queue,omitempty"`
+	Group                        string                `json:"group,omitempty"`
+}
+
+type WatchEventType string
+
+const (
+	WatchEventAdded    WatchEventType = "Added"
+	WatchEventModified WatchEventType = "Modified"
+	WatchEventDeleted  WatchEventType = "Deleted"
+)
+
+type KubeEventMode string
+
+const (
+	ModeV0          KubeEventMode = "v0"          // No first Synchronization, only Event.
+	ModeIncremental KubeEventMode = "Incremental" // Send Synchronization with existed object and Event for each followed event.
+)
+
+type FieldSelectorRequirement struct {
+	Field    string `json:"field"`
+	Operator string `json:"operator"`
+	Value    string `json:"value,omitempty"`
+}
+
+type FieldSelector struct {
+	MatchExpressions []FieldSelectorRequirement `json:"matchExpressions"`
 }
 
 type NameSelector struct {

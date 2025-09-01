@@ -39,8 +39,7 @@ kubernetesValidating:
 kubernetes:
 - name: some_node
   apiVersion: v1
-  jqFilter:
-    nodeName: .metadata.name
+  jqFilter: '{ "nodeName": .metadata.name }'
   kind: Node
   labelSelector:
     matchLabels:
