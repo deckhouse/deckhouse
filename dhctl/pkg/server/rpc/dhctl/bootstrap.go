@@ -22,6 +22,8 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"runtime"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -304,7 +306,45 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		KubernetesInitParams:       nil,
 	})
 
+	stopCh := make(chan struct{}, 1)
+
+	go func() {
+		timer := time.NewTicker(5 * time.Second)
+
+		reason := "unknown"
+
+		defer func() {
+			timer.Stop()
+			fmt.Fprintf(os.Stderr, "Stack gorutines posted stopped: %s\n", reason)
+		}()
+
+		fmt.Fprintf(os.Stderr, "Stack gorutines started!\n")
+
+		for {
+			select {
+			case <-stopCh:
+				reason = "finished"
+				return
+			case <-ctx.Done():
+				reason = "canceled"
+				return
+			case <-timer.C:
+				fmt.Fprintln(os.Stderr, "---Gorutines in running---")
+				// 30 mb
+				buf := make([]byte, 31457280)  // Allocate a buffer for the stack trace
+				nn := runtime.Stack(buf, true) // Pass 'true' to get all goroutine stack traces
+				fmt.Fprintf(os.Stderr, "%s", buf[:nn])
+				fmt.Fprintf(os.Stderr, "\n---\n")
+
+				buf = nil
+			}
+		}
+	}()
+
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
+
+	stopCh <- struct{}{}
+
 	state, stateErr := extractLastState()
 	err = errors.Join(bootstrapErr, stateErr)
 
