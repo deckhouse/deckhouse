@@ -86,4 +86,10 @@ Added additional logging when downloading GeoIP databases from the MaxMind servi
 
 ### 014-go-mod.patch
 
-Go mod patches for ingress-nginx-controller
+Go mod patches for ingress-nginx-controller.
+
+### 015-fix-success-reload-metric.patch
+
+This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
+
+https://github.com/kubernetes/ingress-nginx/pull/13830
