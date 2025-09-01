@@ -29,13 +29,14 @@ import (
 	"infra-controller-manager/api/v1alpha1"
 	"infra-controller-manager/internal/controller"
 	"infra-controller-manager/internal/logr"
+	"infra-controller-manager/internal/vcd"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	// +kubebuilder:scaffold:imports
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme    = runtime.NewScheme()
 	globalLog = log.Default().Named("icm")
 )
 
@@ -110,10 +111,7 @@ func main() {
 			filepath.Join(webhookCertPath, webhookCertKey),
 		)
 		if err != nil {
-			setupLog.Error(
-				"Failed to initialize webhook certificate watcher",
-				slog.String("error", err.Error()),
-			)
+			setupLog.Error("Failed to initialize webhook certificate watcher", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 
@@ -194,10 +192,13 @@ func main() {
 		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
-		setupLog.Error(
-			"unable to start manager",
-			slog.String("error", err.Error()),
-		)
+		setupLog.Error("unable to start manager", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	vcdConfig, err := vcd.NewConfigFromEnv()
+	if err != nil {
+		setupLog.Error("unable to create vcd config", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -205,12 +206,9 @@ func main() {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 		Logger: globalLog.Named("vcdaffinityrule"),
+		Config: vcdConfig,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(
-			"unable to create controller",
-			slog.String("controller", "VCDAffinityRule"),
-			slog.String("error", err.Error()),
-		)
+		setupLog.Error("unable to create controller", slog.String("controller", "VCDAffinityRule"), slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -219,10 +217,7 @@ func main() {
 	if metricsCertWatcher != nil {
 		setupLog.Info("Adding metrics certificate watcher to manager")
 		if err := mgr.Add(metricsCertWatcher); err != nil {
-			setupLog.Error(
-				"unable to add metrics certificate watcher to manager",
-				slog.String("error", err.Error()),
-			)
+			setupLog.Error("unable to add metrics certificate watcher to manager", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 	}
@@ -230,35 +225,23 @@ func main() {
 	if webhookCertWatcher != nil {
 		setupLog.Info("Adding webhook certificate watcher to manager")
 		if err := mgr.Add(webhookCertWatcher); err != nil {
-			setupLog.Error(
-				"unable to add webhook certificate watcher to manager",
-				slog.String("error", err.Error()),
-			)
+			setupLog.Error("unable to add webhook certificate watcher to manager", slog.String("error", err.Error()))
 			os.Exit(1)
 		}
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(
-			"unable to set up health check",
-			slog.String("error", err.Error()),
-		)
+		setupLog.Error("unable to set up health check", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(
-			"unable to set up ready check",
-			slog.String("error", err.Error()),
-		)
+		setupLog.Error("unable to set up ready check", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(
-			"problem running manager",
-			slog.String("error", err.Error()),
-		)
+		setupLog.Error("problem running manager", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }
