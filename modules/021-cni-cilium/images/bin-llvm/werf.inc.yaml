@@ -72,3 +72,5 @@ shell:
   - strip bin/llc
   - strip bin/llvm-objcopy
   - cp bin/clang bin/llc bin/llvm-objcopy /usr/local/bin
+  - echo "=================================DEBUG==============================="
+  - ls -la /usr/lib64/
