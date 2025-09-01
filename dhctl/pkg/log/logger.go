@@ -102,7 +102,7 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 	l := defaultLogger
 	switch loggerType {
 	case "pretty":
-		l = NewPrettyLogger(opts)
+		l = NewJSONLogger(opts)
 	// todo: add simple logger when our slog implementation will be support not only json formatter
 	// case "simple":
 	// 	defaultLogger = NewSimpleLogger(opts)
@@ -205,6 +205,8 @@ type PrettyLogger struct {
 }
 
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
+	panic("Pretty logger not allowed")
+
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
 			"common":           {"🎈 ~ Common: %s", CommonOptions},
@@ -355,8 +357,9 @@ func prettyJSON(content []byte) string {
 }
 
 type SimpleLogger struct {
-	logger  *log.Logger
-	isDebug bool
+	logger         *log.Logger
+	debugLogWriter *debugLogWriter
+	isDebug        bool
 }
 
 func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
@@ -371,6 +374,7 @@ func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 		logger:  l,
 		isDebug: opts.IsDebug,
 	}
+
 }
 
 func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
@@ -381,10 +385,16 @@ func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
 		l.SetOutput(opts.OutStream)
 	}
 
-	return &SimpleLogger{
+	res := &SimpleLogger{
 		logger:  l,
 		isDebug: opts.IsDebug,
 	}
+
+	if opts.DebugStream != nil && !reflect.ValueOf(opts.DebugStream).IsNil() {
+		res.debugLogWriter = &debugLogWriter{DebugStream: opts.DebugStream}
+	}
+
+	return res
 }
 
 func (d *SimpleLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -427,12 +437,28 @@ func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintf(format, a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logger.Debugf(format, a...)
 	}
 }
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintln(a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logger.Debugf("%v", a)
 	}
