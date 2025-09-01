@@ -67,6 +67,8 @@ spec:
                       type: string
                   type: object
                 type: array
+              ruleID:
+                type: string
             type: object
         type: object
     served: true
