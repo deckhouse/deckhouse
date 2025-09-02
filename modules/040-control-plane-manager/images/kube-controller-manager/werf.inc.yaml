@@ -19,6 +19,8 @@ import:
   add: /src/_output/bin/kube-controller-manager
   to: /usr/bin/kube-controller-manager
   before: setup
+git:
+{{- include "image mount points" $ }}
 mount:
 {{ include "mount points for golang builds" $ }}
 imageSpec:
