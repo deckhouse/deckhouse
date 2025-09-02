@@ -87,4 +87,13 @@ shell:
   # fix compatibility with the new version of bash_completion
   - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/cilium-dbg
   - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/hubble
+  # trying reduce size of binaries
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-agent
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-bugtool
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-dbg
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health 
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health-responder
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-mount
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-sysctlfix
+  - objcopy --strip-all /tmp/install/usr/bin/hubble
 ---
