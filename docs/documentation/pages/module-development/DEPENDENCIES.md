@@ -170,9 +170,7 @@ requirements:
 
 Use this when your module works alone, but integrates with another module **if it is present**.
 
-**Syntax**
-
-Append `!optional` to the version constraint:
+To mark a requirement as optional, add `!optional` to the version constraint string:
 
 ```yaml
 requirements:
@@ -180,23 +178,20 @@ requirements:
     test1: ">v0.22.1 !optional"
 ```
 
-**Rules**
+Rules:
 
-- If `test1` is **enabled**, its version **must** satisfy the constraint.
-- If `test1` is **disabled**, the constraint is ignored and your module can install and upgrade.
-- If you later enable `test1` with a non‑matching version, the enable is denied and the module stays disabled.
+- If `test1` is **enabled**, its version **must** meet the requirement.
+- If `test1` is **disabled**, the requirement is ignored, and the module can be installed or updated.
+- If `test1` is later enabled with an incompatible version, the enabling will be rejected, and the module will remain disabled.
 
-**Quick examples**
+Quick examples:
 
-- `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → install fails with unmet dependency.
+- `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → the installation fails due to an unmet dependency.
 - `test1` disabled + `>v0.22.1 !optional` → install succeeds; the optional requirement is skipped.
 - `test` disabled, `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → enabling `test` is denied.
 - `test` enabled with a requirement on `test1`; enabling `test1` at a non‑matching version is denied and `test1` remains disabled.
 
 {% alert level="warning" %}
-Enabling or disabling modules may take longer because of extra extender checks.
-{% endalert %}
-
-{% alert level="warning" %}
-Known limitation: during reconciliation the list of enabled modules may be briefly empty. Rarely this can let an optional check pass incorrectly.
+- Enabling or disabling modules may take longer because of extra extender checks.
+- Known limitation: during reconciliation the list of enabled modules may briefly be empty, which in rare cases lets an optional dependency check pass incorrectly. If this happens, retry the operation.
 {% endalert %}
