@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -54,6 +55,23 @@ type WebhookData struct {
 
 	ApplyTime string `json:"applyTime,omitempty"`
 	Message   string `json:"message"`
+}
+
+//	{
+//	  "success": true,
+//	  "message": "Notification processed successfully",
+//	  "data": {
+//	    "processedAt": "2023-12-01T10:00:00Z",
+//	    "id": "notification-123"
+//	  }
+//	}
+type WebhookResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message,omitempty"`
+	Data    *struct {
+		ProcessedAt string `json:"processedAt,omitempty"`
+		ID          string `json:"id,omitempty"`
+	} `json:"data,omitempty"`
 }
 
 type WebhookError struct {
@@ -127,7 +145,7 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
 	}
 
-	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
+	webhookResp, err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
 	if err != nil {
 		if webhookErr, ok := err.(*WebhookError); ok {
 			return webhookErr
@@ -135,10 +153,14 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		return fmt.Errorf("send webhook notification: %w", err)
 	}
 
+	if webhookResp != nil {
+		log.Printf("Release notification sent successfully. Webhook response: %+v", webhookResp)
+	}
+
 	return nil
 }
 
-func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) error {
+func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) (*WebhookResponse, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
@@ -152,7 +174,7 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 	if config.RetryMinTime.Duration > 0 {
 		retryBackoff = config.RetryMinTime.Duration
 	}
-	_, err := retry(5, retryBackoff, func() (*http.Response, error) {
+	webhookResp, err := retry(5, retryBackoff, func() (*WebhookResponse, error) {
 		defer buf.Reset()
 
 		err := json.NewEncoder(buf).Encode(data)
@@ -184,11 +206,26 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 				Body:       body,
 			}
 		}
+		bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
 
-		return resp, nil
+		var webhookResp WebhookResponse
+		if err := json.Unmarshal(bodyBytes, &webhookResp); err != nil {
+			return nil, fmt.Errorf("failed to parse webhook response: %w", err)
+		}
+
+		if !webhookResp.Success {
+			return nil, fmt.Errorf("webhook service reported failure: %s", webhookResp.Message)
+		}
+
+		log.Printf("Webhook notification sent successfully. Response: %+v", webhookResp)
+
+		return &webhookResp, nil
 	})
 
-	return err
+	return webhookResp, err
 }
 
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {
