@@ -576,10 +576,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		if notifyErr != nil {
 			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
 
-			message := msgReleaseIsBlockedByNotification
-			if webhookErr, ok := notifyErr.(*releaseUpdater.WebhookError); ok {
-				message = fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, webhookErr.Error())
-			}
+			message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
 
 			return &TimeResult{
 				ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
@@ -624,10 +621,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if notifyErr != nil {
 		r.logger.Warn("send minor release notification", log.Err(notifyErr))
 
-		message := msgReleaseIsBlockedByNotification
-		if webhookErr, ok := notifyErr.(*releaseUpdater.WebhookError); ok {
-			message = fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, webhookErr.Error())
-		}
+		message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
 
 		return &TimeResult{
 			ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{

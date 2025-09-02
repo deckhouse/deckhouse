@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -57,31 +56,32 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-//	{
-//	  "success": true,
-//	  "message": "Notification processed successfully",
-//	  "data": {
-//	    "processedAt": "2023-12-01T10:00:00Z",
-//	    "id": "notification-123"
-//	  }
-//	}
 type WebhookResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
-	Data    *struct {
-		ProcessedAt string `json:"processedAt,omitempty"`
-		ID          string `json:"id,omitempty"`
-	} `json:"data,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Code    string `json:"code,omitempty"`
 }
 
-type WebhookError struct {
-	StatusCode int    `json:"statusCode"`
-	Message    string `json:"message"`
-	Body       string `json:"body,omitempty"`
-}
+const (
+	WebhookErrorCodeInvalidData        = "INVALID_DATA"
+	WebhookErrorCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
+	WebhookErrorCodeAuthFailed         = "AUTH_FAILED"
+	WebhookErrorCodeRateLimited        = "RATE_LIMITED"
+	WebhookErrorCodeInternalError      = "INTERNAL_ERROR"
+)
 
-func (e *WebhookError) Error() string {
-	return fmt.Sprintf("webhook responded with status %d: %s", e.StatusCode, e.Message)
+func validateWebhookResponse(resp *WebhookResponse) error {
+	if resp == nil {
+		return fmt.Errorf("webhook response is nil")
+	}
+
+	if !resp.Success {
+		if resp.Error == "" && resp.Message == "" {
+			return fmt.Errorf("webhook returned unsuccessful response without error description")
+		}
+	}
+	return nil
 }
 
 // SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
@@ -96,11 +96,6 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, rele
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
 			metricLabels.SetTrue(NotificationNotSent)
-
-			// Check if it's a webhook error and return it as is
-			if webhookErr, ok := err.(*WebhookError); ok {
-				return webhookErr
-			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -119,11 +114,6 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
 			metricLabels.SetTrue(NotificationNotSent)
-
-			// Check if it's a webhook error and return it as is
-			if webhookErr, ok := err.(*WebhookError); ok {
-				return webhookErr
-			}
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
@@ -145,22 +135,15 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
 	}
 
-	webhookResp, err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
+	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
 	if err != nil {
-		if webhookErr, ok := err.(*WebhookError); ok {
-			return webhookErr
-		}
 		return fmt.Errorf("send webhook notification: %w", err)
-	}
-
-	if webhookResp != nil {
-		log.Printf("Release notification sent successfully. Webhook response: %+v", webhookResp)
 	}
 
 	return nil
 }
 
-func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) (*WebhookResponse, error) {
+func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
@@ -174,58 +157,59 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 	if config.RetryMinTime.Duration > 0 {
 		retryBackoff = config.RetryMinTime.Duration
 	}
-	webhookResp, err := retry(5, retryBackoff, func() (*WebhookResponse, error) {
+
+	_, err := retry(5, retryBackoff, func() (*http.Response, error) {
 		defer buf.Reset()
 
 		err := json.NewEncoder(buf).Encode(data)
 		if err != nil {
 			return nil, err
 		}
-
 		var req *http.Request
 		req, err = http.NewRequestWithContext(ctx, http.MethodPost, config.WebhookURL, buf)
 		if err != nil {
 			return nil, err
 		}
-
 		req.Header.Add("Content-Type", "application/json")
 		config.Auth.Fill(req)
-
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
 
 		defer resp.Body.Close()
-		if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
-			bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-			body := strings.TrimSpace(string(bodyBytes))
-			return nil, &WebhookError{
-				StatusCode: resp.StatusCode,
-				Message:    body,
-				Body:       body,
-			}
+
+		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", readErr)
 		}
-		bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", err)
+
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
 		}
 
 		var webhookResp WebhookResponse
-		if err := json.Unmarshal(bodyBytes, &webhookResp); err != nil {
-			return nil, fmt.Errorf("failed to parse webhook response: %w", err)
+		if len(bodyBytes) > 0 {
+			if err := json.Unmarshal(bodyBytes, &webhookResp); err != nil {
+				return resp, nil
+			}
+
+			if err := validateWebhookResponse(&webhookResp); err != nil {
+				return nil, fmt.Errorf("webhook response validation failed: %w", err)
+			}
+
+			if !webhookResp.Success {
+				if webhookResp.Error != "" {
+					return nil, fmt.Errorf("webhook service error: %s (code: %s)", webhookResp.Error, webhookResp.Code)
+				}
+				return nil, fmt.Errorf("webhook service returned unsuccessful response: %s", webhookResp.Message)
+			}
 		}
 
-		if !webhookResp.Success {
-			return nil, fmt.Errorf("webhook service reported failure: %s", webhookResp.Message)
-		}
-
-		log.Printf("Webhook notification sent successfully. Response: %+v", webhookResp)
-
-		return &webhookResp, nil
+		return resp, nil
 	})
 
-	return webhookResp, err
+	return err
 }
 
 func retry[T any](attempts int, sleep time.Duration, f func() (T, error)) (T, error) {

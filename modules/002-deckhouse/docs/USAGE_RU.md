@@ -16,7 +16,15 @@ title: "Модуль deckhouse: примеры конфигурации"
 - в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
 - в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов.
 
-**Важно**: когда ваш веб-хук возвращает код статуса ошибки (4xx или 5xx), Deckhouse повторяет попытку отправки уведомления до 5 раз с экспоненциальным отступом. Если все попытки заканчиваются неудачей, выпуск будет заблокирован до тех пор, пока веб-хук не станет доступным снова. Ответ на ошибку от вашего веб-хука должен содержать структурированное сообщение об ошибке в теле ответа для более эффективной отладки.
+**Важно**: когда ваш веб-хук возвращает код статуса ошибки (4xx или 5xx), Deckhouse повторяет попытку отправки уведомления до 5 раз с экспоненциальным отступом. Если все попытки заканчиваются неудачей, выпуск будет заблокирован до тех пор, пока веб-хук не станет доступным снова.
+
+Для лучшей обработки ошибок и отладки ваш веб-хук должен возвращать JSON-ответ со следующей структурой:
+- `success`: булево значение, указывающее на успешность обработки уведомления
+- `message`: опциональное информационное сообщение
+- `error`: опциональное описание ошибки (когда success равно false)
+- `code`: опциональный код ошибки для программной обработки
+
+Если ваш веб-хук возвращает успешный HTTP-статус (2xx), но с `success: false` в JSON-ответе, Deckhouse также будет рассматривать это как ошибку и повторит попытку отправки уведомления.
 
 Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
@@ -81,11 +89,12 @@ type WebhookData struct {
   Message       string            `json:"message"`
 }
 
-// Error response structure that Deckhouse expects when webhook fails
-type WebhookError struct {
-  StatusCode int    `json:"statusCode"`
-  Message    string `json:"message"`
-  Body       string `json:"body,omitempty"`
+// Response structure that Deckhouse expects from webhook
+type WebhookResponse struct {
+  Success bool   `json:"success"`
+  Message string `json:"message,omitempty"`
+  Error   string `json:"error,omitempty"`
+  Code    string `json:"code,omitempty"`
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -110,19 +119,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
   // Example conditional logic: fail intentionally for testing
   if data.Version == "v0.0.0-fail" {
     // Return structured error response
-    errorResp := WebhookError{
-      StatusCode: http.StatusInternalServerError,
-      Message:    "intentional failure for testing",
-      Body:       "This is a test failure",
+    errorResp := WebhookResponse{
+      Success: false,
+      Error:   "intentional failure for testing",
+      Code:    "TEST_FAILURE",
     }
 
-    w.WriteHeader(http.StatusInternalServerError)
+    w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(errorResp)
     return
   }
 
+  // Return success response
+  successResp := WebhookResponse{
+    Success: true,
+    Message: "Notification processed successfully",
+  }
+
   w.WriteHeader(http.StatusOK)
-  _, _ = w.Write([]byte("ok"))
+  json.NewEncoder(w).Encode(successResp)
 }
 
 func main() {

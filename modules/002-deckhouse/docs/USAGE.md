@@ -118,7 +118,15 @@ After a new minor Deckhouse version appears on the selected update channel, but 
 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
-**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential backoff. If all attempts fail, the release will be blocked until the webhook becomes available again. The error response from your webhook should include a structured error message in the response body for better debugging.
+**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential backoff. If all attempts fail, the release will be blocked until the webhook becomes available again. 
+
+For better error handling and debugging, your webhook should return a JSON response with the following structure:
+- `success`: boolean indicating whether the notification was processed successfully
+- `message`: optional informational message
+- `error`: optional error description (when success is false)
+- `code`: optional error code for programmatic handling
+
+If your webhook returns a successful HTTP status (2xx) but with `success: false` in the JSON response, Deckhouse will also treat this as a failure and retry the notification.
 
 Example:
 
@@ -161,11 +169,12 @@ type WebhookData struct {
   Message       string            `json:"message"`
 }
 
-// Error response structure that Deckhouse expects when webhook fails
-type WebhookError struct {
-  StatusCode int    `json:"statusCode"`
-  Message    string `json:"message"`
-  Body       string `json:"body,omitempty"`
+// Response structure that Deckhouse expects from webhook
+type WebhookResponse struct {
+  Success bool   `json:"success"`
+  Message string `json:"message,omitempty"`
+  Error   string `json:"error,omitempty"`
+  Code    string `json:"code,omitempty"`
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -190,19 +199,25 @@ func handler(w http.ResponseWriter, r *http.Request) {
   // Example conditional logic: fail intentionally for testing
   if data.Version == "v0.0.0-fail" {
     // Return structured error response
-    errorResp := WebhookError{
-      StatusCode: http.StatusInternalServerError,
-      Message:    "intentional failure for testing",
-      Body:       "This is a test failure",
+    errorResp := WebhookResponse{
+      Success: false,
+      Error:   "intentional failure for testing",
+      Code:    "TEST_FAILURE",
     }
 
-    w.WriteHeader(http.StatusInternalServerError)
+    w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(errorResp)
     return
   }
 
+  // Return success response
+  successResp := WebhookResponse{
+    Success: true,
+    Message: "Notification processed successfully",
+  }
+
   w.WriteHeader(http.StatusOK)
-  _, _ = w.Write([]byte("ok"))
+  json.NewEncoder(w).Encode(successResp)
 }
 
 func main() {
