@@ -65,7 +65,6 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-  - _assets/js/lunr*.js
   - _assets/js/search.js
   - _data/rbac/
   - _includes/rbac/

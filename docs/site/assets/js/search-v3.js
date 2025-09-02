@@ -1,5 +1,5 @@
 class ModuleSearch {
-  constructor() {
+  constructor(options = {}) {
     this.searchInput = document.getElementById('search-input');
     this.searchResults = document.getElementById('search-results');
     this.searchIndex = null;
@@ -15,8 +15,75 @@ class ModuleSearch {
       other: 5
     };
     this.isDataLoaded = false;
+    
+    // Configuration options
+    this.options = {
+      searchIndexPath: '/modules/search-embedded-modules-index.json',
+      ...options
+    };
+    
+    // Initialize i18n
+    this.initI18n();
 
     this.init();
+  }
+
+    initI18n() {
+    // Get current page language from HTML lang attribute
+    this.currentLang = document.documentElement.lang || 'en';
+
+    // i18n dictionary for Russian and English
+    this.i18n = {
+      en: {
+        api: 'API',
+        documentation: 'Documentation',
+        showMore: 'Show more',
+        loading: 'Loading search index...',
+        ready: 'What are we looking for?',
+        noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
+        error: 'An error occurred during search.',
+        showMorePattern: 'Show {count} more'
+      },
+      ru: {
+        api: 'API',
+        documentation: 'Документация',
+        showMore: 'Показать еще',
+        loading: 'Загрузка поискового индекса...',
+        ready: 'Что ищем?',
+        noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
+        error: 'An error occurred during search.',
+        showMorePattern: 'Показать еще {count}'
+      }
+    };
+
+    // Default to English if language not supported
+    if (!this.i18n[this.currentLang]) {
+      this.currentLang = 'en';
+    }
+  }
+
+    // Get translated text
+  t(key, params = {}) {
+    let text = this.i18n[this.currentLang][key] || this.i18n.en[key] || key;
+
+    // Replace parameters in the text
+    Object.keys(params).forEach(param => {
+      text = text.replace(`{${param}}`, params[param]);
+    });
+
+    return text;
+  }
+
+  // Refresh language detection
+  refreshLanguageDetection() {
+    // Re-check language from HTML lang attribute only
+    const htmlLang = document.documentElement.lang;
+
+    if (htmlLang === 'ru') {
+      this.currentLang = 'ru';
+    } else if (htmlLang === 'en') {
+      this.currentLang = 'en';
+    }
   }
 
   async init() {
@@ -26,7 +93,38 @@ class ModuleSearch {
     this.searchResults.style.display = 'none';
   }
 
-  setupEventListeners() {
+    setupEventListeners() {
+    // Load search index on focus
+    this.searchInput.addEventListener('focus', () => {
+      this.loadSearchIndex();
+      // Show search results container when focused (even if empty)
+      this.searchResults.style.display = 'flex';
+    });
+
+    // Hide results when input loses focus (unless clicking on results)
+    this.searchInput.addEventListener('blur', (e) => {
+      // Use setTimeout to allow click events on results to fire first
+      setTimeout(() => {
+        // Check if the user clicked on search results or if focus is still within search area
+        const activeElement = document.activeElement;
+        const isClickingOnSearch = this.searchResults.contains(activeElement) ||
+                                  this.searchInput.contains(activeElement) ||
+                                  activeElement.closest('.searchV3');
+
+        // Also check if the blur was caused by clicking on search elements
+        const relatedTarget = e.relatedTarget;
+        const isBlurToSearch = relatedTarget && (
+          this.searchResults.contains(relatedTarget) ||
+          this.searchInput.contains(relatedTarget) ||
+          relatedTarget.closest('.searchV3')
+        );
+
+        if (!isClickingOnSearch && !isBlurToSearch) {
+          this.searchResults.style.display = 'none';
+        }
+      }, 150);
+    });
+
     this.searchInput.addEventListener('input', (e) => {
       const query = e.target.value.trim();
       if (query.length > 0) {
@@ -80,6 +178,10 @@ class ModuleSearch {
           e.target.closest('.tile__pagination') ||
           e.target.closest('.more-button')) {
         e.stopPropagation();
+        e.preventDefault();
+
+        // Keep focus on search input to prevent blur from hiding results
+        this.searchInput.focus();
       }
     });
   }
@@ -92,15 +194,22 @@ class ModuleSearch {
     try {
       this.showLoading();
 
-      const response = await fetch('/modules/search-embedded-modules-index.json');
+      const response = await fetch(this.options.searchIndexPath);
       if (!response.ok) {
         throw new Error(`Failed to load search index: ${response.status}`);
       }
 
-      this.searchData = await response.json();
+            this.searchData = await response.json();
+
+      // Refresh language detection before building index
+      this.refreshLanguageDetection();
+
       this.buildLunrIndex();
       this.isDataLoaded = true;
       this.hideLoading();
+
+      // Show message that search index is loaded and ready
+      this.showMessage(this.t('ready'));
     } catch (error) {
       console.error('Error loading search index:', error);
       this.showError('Failed to load search index. Please try again later.');
@@ -110,46 +219,95 @@ class ModuleSearch {
   buildLunrIndex() {
     const searchData = this.searchData;
 
-    this.lunrIndex = lunr(function() {
-      this.use(lunr.multiLanguage('en', 'ru'))
-      this.field('title', { boost: 10 });
-      this.field('keywords', { boost: 8 });
-      this.field('summary', { boost: 5 });
-      this.field('content', { boost: 1 });
-      this.ref('id');
+    // Use multilingual support for Russian, default for English
+    if (this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined') {
+      // Use Russian language support with lunr.multiLanguage
+      this.lunrIndex = lunr(function() {
+        this.use(lunr.multiLanguage('en', 'ru'));
+        this.field('title', { boost: 10 });
+        this.field('keywords', { boost: 8 });
+        this.field('summary', { boost: 5 });
+        this.field('content', { boost: 1 });
+        this.ref('id');
 
-      // Add documents from the documents array
-      if (searchData.documents) {
-        searchData.documents.forEach((doc, index) => {
-          this.add({
-            id: `doc_${index}`,
-            title: doc.title || '',
-            keywords: doc.keywords || '',
-            summary: doc.summary || '',
-            content: doc.content || '',
-            url: doc.url || '',
-            module: doc.module || '',
-            type: 'document'
+        // Add documents from the documents array
+        if (searchData.documents) {
+          searchData.documents.forEach((doc, index) => {
+            this.add({
+              id: `doc_${index}`,
+              title: doc.title || '',
+              keywords: doc.keywords || '',
+              summary: doc.summary || '',
+              content: doc.content || '',
+              url: doc.url || '',
+              module: doc.module || '',
+              type: 'document'
+            });
           });
-        });
-      }
+        }
 
-      // Add parameters from the parameters array
-      if (searchData.parameters) {
-        searchData.parameters.forEach((param, index) => {
-          this.add({
-            id: `param_${index}`,
-            title: param.name || '',
-            keywords: param.keywords || '',
-            resName: param.resName || '',
-            content: param.content || '',
-            url: param.url || '',
-            module: param.module || '',
-            type: 'parameter'
+        // Add parameters from the parameters array
+        if (searchData.parameters) {
+          searchData.parameters.forEach((param, index) => {
+            this.add({
+              id: `param_${index}`,
+              title: param.name || '',
+              keywords: param.keywords || '',
+              resName: param.resName || '',
+              content: param.content || '',
+              url: param.url || '',
+              module: param.module || '',
+              type: 'parameter'
+            });
           });
-        });
-      }
-    });
+        }
+      });
+
+      console.log('Built search index with Russian multilingual support');
+    } else {
+      // Use default English language support
+      this.lunrIndex = lunr(function() {
+        this.field('title', { boost: 10 });
+        this.field('keywords', { boost: 8 });
+        this.field('summary', { boost: 5 });
+        this.field('content', { boost: 1 });
+        this.ref('id');
+
+        // Add documents from the documents array
+        if (searchData.documents) {
+          searchData.documents.forEach((doc, index) => {
+            this.add({
+              id: `doc_${index}`,
+              title: doc.title || '',
+              keywords: doc.keywords || '',
+              summary: doc.summary || '',
+              content: doc.content || '',
+              url: doc.url || '',
+              module: doc.module || '',
+              type: 'document'
+            });
+          });
+        }
+
+        // Add parameters from the parameters array
+        if (searchData.parameters) {
+          searchData.parameters.forEach((param, index) => {
+            this.add({
+              id: `param_${index}`,
+              title: param.name || '',
+              keywords: param.keywords || '',
+              resName: param.resName || '',
+              content: param.content || '',
+              url: param.url || '',
+              module: param.module || '',
+              type: 'parameter'
+            });
+          });
+        }
+      });
+
+      console.log('Built search index with default English support');
+    }
   }
 
   async handleSearch(query) {
@@ -266,7 +424,7 @@ class ModuleSearch {
     if (this.currentResults.config.length > 0) {
       resultsHtml += `
         <div class="results-group">
-          <div class="results-group-header">{{< translate "api" >}}</div>
+          <div class="results-group-header">${this.t('api')}</div>
           ${this.renderResultGroup(this.currentResults.config, this.lastQuery, 'config')}
         </div>
       `;
@@ -276,7 +434,7 @@ class ModuleSearch {
     if (this.currentResults.other.length > 0) {
       resultsHtml += `
         <div class="results-group">
-          <div class="results-group-header">{{< translate "Documentation" >}}</div>
+          <div class="results-group-header">${this.t('documentation')}</div>
           ${this.renderResultGroup(this.currentResults.other, this.lastQuery, 'other')}
         </div>
       `;
@@ -312,15 +470,20 @@ class ModuleSearch {
       if (groupType === 'config') {
         // For configuration results (parameters)
         title = this.highlightText(doc.name || '', query);
-        summary = this.highlightText(doc.resName || '', query);
+        // summary = this.highlightText(doc.resName || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        description = this.highlightText(doc.content || '', query);
+        if (doc.resName != doc.name) {
+          module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
+        }
+        // description = this.highlightText(doc.content || '', query);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       } else {
         // For other documentation
         title = this.highlightText(doc.title || '', query);
-        summary = this.highlightText(doc.summary || '', query);
+        // summary = this.highlightText(doc.summary || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        description = summary || this.getRelevantContentSnippet(doc.content || '', query);
+        // description = summary || this.getRelevantContentSnippet(doc.content || '', query);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       }
 
       html += `
@@ -336,7 +499,7 @@ class ModuleSearch {
     if (displayedCount < results.length) {
       html += `
         <button class="tile__pagination" onclick="window.moduleSearch.loadMore('${groupType}')">
-          <p class="tile__pagination--descr">${"show_more_pattern".replace("%s", Math.min(5, results.length - displayedCount))}</p>
+          <p class="tile__pagination--descr">${this.t('showMorePattern', { count: Math.min(5, results.length - displayedCount) })}</p>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
           </svg>
@@ -364,6 +527,22 @@ class ModuleSearch {
   getRelevantContentSnippet(content, query) {
     if (!content || !query) return '';
 
+    // Helper function to truncate text without cutting words
+    const truncateText = (text, maxLength) => {
+      if (text.length <= maxLength) return text;
+
+      // Find the last space before maxLength
+      let truncated = text.substring(0, maxLength);
+      const lastSpaceIndex = truncated.lastIndexOf(' ');
+
+      if (lastSpaceIndex > 0) {
+        // Truncate at the last complete word
+        truncated = truncated.substring(0, lastSpaceIndex);
+      }
+
+      return truncated + '...';
+    };
+
     // Split content into sentences or paragraphs
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
 
@@ -376,7 +555,7 @@ class ModuleSearch {
       // Take the first relevant sentence and truncate if too long
       let snippet = relevantSentences[0].trim();
       if (snippet.length > 200) {
-        snippet = snippet.substring(0, 200) + '...';
+        snippet = truncateText(snippet, 200);
       }
       return this.highlightText(snippet, query);
     }
@@ -399,7 +578,7 @@ class ModuleSearch {
       scoredSentences.sort((a, b) => b.score - a.score);
       let snippet = scoredSentences[0].sentence.trim();
       if (snippet.length > 200) {
-        snippet = snippet.substring(0, 200) + '...';
+        snippet = truncateText(snippet, 200);
       }
       return this.highlightText(snippet, query);
     }
@@ -408,7 +587,7 @@ class ModuleSearch {
     if (sentences.length > 0) {
       let snippet = sentences[0].trim();
       if (snippet.length > 200) {
-        snippet = snippet.substring(0, 200) + '...';
+        snippet = truncateText(snippet, 200);
       }
       return snippet;
     }
@@ -425,7 +604,7 @@ class ModuleSearch {
 
   showLoading() {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = '<div class="search-loading">Loading search index...</div>';
+    this.searchResults.innerHTML = `<div class="loading">${this.t('loading')}</div>`;
   }
 
   hideLoading() {
@@ -434,25 +613,31 @@ class ModuleSearch {
 
   showMessage(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
+    this.searchResults.innerHTML = `<div class="loading">${message}</div>`;
   }
 
   showNoResults(query) {
     this.searchResults.style.display = 'flex';
     this.searchResults.innerHTML = `
       <div class="no-results">
-        No modules found for "${query}". Try different keywords or check your spelling.
+        ${this.t('noResults', { query: query })}
       </div>
     `;
   }
 
   showError(message) {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="no-results">${message}</div>`;
+    this.searchResults.innerHTML = `<div class="no-results">${this.t('error')}</div>`;
   }
 }
 
 // Initialize search when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-  window.moduleSearch = new ModuleSearch();
+  // Check if there's a data attribute on the search input for custom search index path
+  const searchInput = document.getElementById('search-input');
+  const searchIndexPath = searchInput?.dataset.searchIndexPath;
+  
+  // Create search instance with custom search index path if specified
+  const options = searchIndexPath ? { searchIndexPath } : {};
+  window.moduleSearch = new ModuleSearch(options);
 });

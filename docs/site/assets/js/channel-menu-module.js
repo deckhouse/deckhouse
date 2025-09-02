@@ -131,7 +131,7 @@ function renderMenu(settings) {
                     console.log('Replaced URL:', channelUrl);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add version
-                    console.log('Current URL is /modules/MODULE/, add version');
+                     console.log('Current URL is /modules/MODULE/, add version');
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
                 }
             }

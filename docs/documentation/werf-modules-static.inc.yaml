@@ -85,7 +85,7 @@ shell:
 {{ if eq .ModuleName "documentation" }}
         # Syncing file from the documentation to the main site...
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
-        cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
+        cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
