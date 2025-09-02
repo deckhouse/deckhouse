@@ -92,5 +92,6 @@ func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
 		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
 	}()
 
+	fmt.Fprintf(os.Stderr, "log string len: %d", len(string(p)))
 	return fmt.Fprintf(os.Stderr, "Print to stderr %s", p)
 }
