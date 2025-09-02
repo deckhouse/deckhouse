@@ -17,6 +17,12 @@ type VCDAffinityRuleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// Enabled is TODO
+	Enabled bool `json:"enabled,omitempty"`
+
+	// Mandatory is TODO
+	Mandatory bool `json:"mandatory,omitempty"`
+
 	// Polarity is TODO
 	Polarity string `json:"polarity,omitempty"`
 
@@ -28,14 +34,22 @@ type VCDAffinityRuleSpec struct {
 type VCDAffinityRuleStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Message string                      `json:"message,omitempty"`
-	RuleID  string                      `json:"ruleID,omitempty"`
-	Nodes   []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
+
+	// Message is TODO
+	Message string `json:"message,omitempty"`
+
+	// Rule ID is TODO
+	RuleID string `json:"ruleID,omitempty"`
+
+	// Nodes is TODO
+	Nodes []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
 }
 
 type VCDAffinityRuleStatusNode struct {
+	// Name is TODO
 	Name string `json:"name,omitempty"`
-	ID   string `json:"providerID,omitempty"`
+	// ID is TODO
+	ID string `json:"ID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
