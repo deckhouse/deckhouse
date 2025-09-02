@@ -397,7 +397,7 @@ List of checks performed by the installer before starting Deckhouse installation
    - DNS must resolve `localhost` to IP address 127.0.0.1.
    - The user has `sudo` privileges on the server (VM).
    - Required ports for the installation must be open:
-     - port 22322/TCP between the host running the installer and the server;
+     - port 22/TCP between the host running the installer and the server;
      - no port conflicts with those used by the installation process.
    - The server (VM) has the correct time.
    - The user `deckhouse` must not exist on the server (VM).
