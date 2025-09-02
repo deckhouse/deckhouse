@@ -26,148 +26,91 @@ toc: false
         <li>
           <p>Запустите установщик</p>
           <div class="tabs">
-            <button class="tab-button active" onclick="openTab(event, 'tab1')">Контейнером</button>
-            <button class="tab-button" onclick="openTab(event, 'tab2')">Скриптом</button>
-            <button class="tab-button" onclick="openTab(event, 'tab3')">Файлом</button>
+            <button id="tab-button-mac" class="tab-button active" onclick="openTab(event, 'tab-mac'); openMacTab(event, 'tab-mac-content-container'); openMacDefaultTab();">macOS</button>
+            <button id="tab-button-linux" class="tab-button" onclick="openTab(event, 'tab-linux'); openLinuxTab(event, 'tab-linux-content-container'); openLinuxDefaultTab();">Linux</button>
+            <button id="tab-button-windows" class="tab-button" onclick="openTab(event, 'tab-windows')">Windows</button>
           </div>
-          <div id="tab1" class="tab-content active">
+          <div id="tab-mac" class="tab-content active">
+            <div class="tabs">
+              <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Контейнером</button>
+              <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-script')">Скриптом</button>
+              <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
+            </div>
+            <div id="tab-mac-content-container" class="tab-content active">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+docker run --privileged --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-mac-content-script" class="tab-content">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+curl -sSf https://deckhouse.ru/download/installer | bash
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-mac-content-file" class="tab-content">
+              <p>Скачайте установщик: <a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-arm64" class="download-btn">d8install-darwin-arm64</a><a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-amd64" class="download-btn">d8install-darwin-amd64</a></p>
+              <p>Запустите его, выполнив команды ниже. Например, для архитектуры arm64:</p>
+{% capture command %}
+```bash
+chmod +x d8install-darwin-arm64
+xattr -c d8install-darwin-arm64
+./d8install-darwin-arm64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+          </div>
+          <div id="tab-linux" class="tab-content">
+            <div class="tabs">
+              <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Контейнером</button>
+              <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-script')">Скриптом</button>
+              <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">Файлом</button>
+            </div>
+            <div id="tab-linux-content-container" class="tab-content active">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+docker run --privileged --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-linux-content-script" class="tab-content">
+              <p>Выполните команду:</p>
+{% capture command %}
+```bash
+curl -sSf https://deckhouse.ru/download/installer | bash
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+            <div id="tab-linux-content-file" class="tab-content">
+              <p>Скачайте установщик: <a href="https://installer.ui.foxtrot-dev.ru/v0.3.0/d8install-linux-amd64" class="download-btn">d8install-linux-amd64</a></p>
+              <p>Запустите его, выполнив команды:</p>
+{% capture command %}
+```bash
+chmod +x d8install-linux-amd64
+./d8install-linux-amd64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
+            </div>
+          </div>
+          <div id="tab-windows" class="tab-content">
             <p>Выполните команду:</p>
-            <div class="sub-tabs">
-              <button class="sub-tab-button active" onclick="openSubTab(event, 'subtab1')">Linux</button>
-              <button class="sub-tab-button" onclick="openSubTab(event, 'subtab2')">macOS</button>
-              <button class="sub-tab-button" onclick="openSubTab(event, 'subtab3')">Windows</button>
-            </div>
-            <div id="subtab1" class="sub-tab-content active">
-  {% capture command %}
-  ```bash
-  SCRIPT FOR LINUX
-  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
-  ```
-  {% endcapture %}
-  {{ command | markdownify }}
-            </div>
-            <div id="subtab2" class="sub-tab-content">
-  {% capture command %}
-  ```bash
-  SCRIPT FOR MACOS
-  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
-  ```
-  {% endcapture %}
-  {{ command | markdownify }}
-            </div>
-            <div id="subtab3" class="sub-tab-content">
-  {% capture command %}
-  ```bash
-  SCRIPT FOR WINDOWS
-  docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
-  ```
-  {% endcapture %}
-  {{ command | markdownify }}
-            </div>
-          </div>
-          <div id="tab2" class="tab-content">
-            <p>Выполните команду:</p>
-  {% capture command %}
-  ```bash
-  curl -sSf https://deckhouse.ru/download/installer | bash
-  ```
-  {% endcapture %}
-  {{ command | markdownify }}
-          </div>
-          <div id="tab3" class="tab-content">
-            <div class="download-container">
-              <h3>Скачать установщик</h3>
-
-              <div class="selector-container">
-                <select id="osSelector">
-                  <option value="macos-arm64">macOS arm64</option>
-                  <option value="macos-amd64">macOS amd64</option>
-                  <option value="linux-amd64">Linux amd64</option>
-                </select>
-
-                <button id="downloadBtn" onclick="downloadFile()">Скачать</button>
-              </div>
-            </div>
-            <script>
-              function detectOS() {
-                  const userAgent = navigator.userAgent.toLowerCase();
-                  const platform = navigator.platform.toLowerCase();
-
-                  let isARM = false;
-                  if (navigator.userAgentData) {
-                      navigator.userAgentData.getHighEntropyValues(["architecture"])
-                          .then(ua => {
-                              isARM = ua.architecture.includes('arm');
-                              selectOSBasedOnDetection(userAgent, platform, isARM);
-                          });
-                  } else {
-                      isARM = platform.includes('arm') ||
-                             userAgent.includes('arm') ||
-                             (typeof navigator.cpuClass === 'string' && navigator.cpuClass.includes('ARM'));
-                      selectOSBasedOnDetection(userAgent, platform, isARM);
-                  }
-              }
-
-              function selectOSBasedOnDetection(userAgent, platform, isARM) {
-                  let detectedOS = '';
-                  let osName = '';
-
-                  if (userAgent.includes('mac') || platform.includes('mac')) {
-                      detectedOS = isARM ? 'macos-arm64' : 'macos-amd64';
-                      osName = `MacOS ${isARM ? 'arm64' : 'amd64'}`;
-                  } else if (userAgent.includes('win') || platform.includes('win')) {
-                      detectedOS = isARM ? 'windows-arm64' : 'windows-amd64';
-                      osName = `Windows ${isARM ? 'arm64' : 'amd64'}`;
-                  } else if (userAgent.includes('linux') || platform.includes('linux')) {
-                      detectedOS = isARM ? 'linux-arm64' : 'linux-amd64';
-                      osName = `Linux ${isARM ? 'arm64' : 'amd64'}`;
-                  } else {
-                      detectedOS = 'windows-amd64';
-                      osName = 'Windows amd64 (по умолчанию)';
-                  }
-
-                  document.getElementById('osSelector').value = detectedOS;
-              }
-
-              function downloadFile() {
-                  const selector = document.getElementById('osSelector');
-                  const selectedValue = selector.value;
-                  const selectedText = selector.options[selector.selectedIndex].text;
-
-                  const downloadUrls = {
-                      'macos-arm64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-arm64',
-                      'macos-amd64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-amd64',
-                      'linux-amd64': 'https://installer.ui.foxtrot-dev.ru/latest/d8install-linux-amd64',
-                  };
-
-                  const downloadUrl = downloadUrls[selectedValue];
-
-                  if (downloadUrl) {
-                      const link = document.createElement('a');
-                      link.href = downloadUrl;
-                      link.download = '';
-                      link.style.display = 'none';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-
-                      // window.open(downloadUrl, '_blank');
-
-                      console.log(`Скачивание файла для ${selectedText}`);
-                  } else {
-                      alert('Извините, файл для выбранной платформы временно недоступен.');
-                  }
-              }
-
-              document.addEventListener('DOMContentLoaded', function() {
-                  detectOS();
-              });
-
-              document.getElementById('osSelector').addEventListener('change', function() {
-                  const selectedText = this.options[this.selectedIndex].text;
-                  console.log(`Выбрана платформа: ${selectedText}`);
-              });
-            </script>
+{% capture command %}
+```bash
+docker run --privileged --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/c/Users/%USERNAME%/.d8installer
+```
+{% endcapture %}
+{{ command | markdownify }}
           </div>
         </li>
         <li>Откройте <a>http://localhost:8080</a></li>
@@ -201,29 +144,47 @@ toc: false
           tabContents[i].classList.remove("active");
       }
 
-      var tabButtons = document.getElementsByClassName("tab-button");
-      for (var i = 0; i < tabButtons.length; i++) {
-          tabButtons[i].classList.remove("active");
-      }
+      document.getElementById("tab-button-mac").classList.remove("active");
+      document.getElementById("tab-button-linux").classList.remove("active");
+      document.getElementById("tab-button-windows").classList.remove("active");
 
       document.getElementById(tabName).classList.add("active");
       evt.currentTarget.classList.add("active");
   }
 
-  function openSubTab(evt, subTabName) {
-      var subTabContents = document.getElementsByClassName("sub-tab-content");
-      for (var i = 0; i < subTabContents.length; i++) {
-          subTabContents[i].classList.remove("active");
-      }
+  function openMacTab(evt, subTabName) {
+      document.getElementById("tab-mac-content-container").classList.remove("active");
+      document.getElementById("tab-mac-content-script").classList.remove("active");
+      document.getElementById("tab-mac-content-file").classList.remove("active");
 
-      var subTabButtons = document.getElementsByClassName("sub-tab-button");
-      for (var i = 0; i < subTabButtons.length; i++) {
-          subTabButtons[i].classList.remove("active");
-      }
+      document.getElementById("tab-buttons-mac-container").classList.remove("active");
+      document.getElementById("tab-buttons-mac-script").classList.remove("active");
+      document.getElementById("tab-buttons-mac-file").classList.remove("active");
 
       document.getElementById(subTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
   }
+
+  function openLinuxTab(evt, subTabName) {
+      document.getElementById("tab-linux-content-container").classList.remove("active");
+      document.getElementById("tab-linux-content-script").classList.remove("active");
+      document.getElementById("tab-linux-content-file").classList.remove("active");
+
+      document.getElementById("tab-buttons-linux-container").classList.remove("active");
+      document.getElementById("tab-buttons-linux-script").classList.remove("active");
+      document.getElementById("tab-buttons-linux-file").classList.remove("active");
+
+      document.getElementById(subTabName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+  }
+
+  function openLinuxDefaultTab() {
+      document.getElementById("tab-buttons-linux-container").classList.add("active");
+  }
+  function openMacDefaultTab() {
+      document.getElementById("tab-buttons-mac-container").classList.add("active");
+  }
+
 </script>
 
 <h2>Выберите тип инфраструктуры, в которой будет устанавливаться Deckhouse Kubernetes Platform</h2>
