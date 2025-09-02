@@ -30,7 +30,7 @@ status:
   approved: false
   message: 'Release is blocked, failed to send release notification: send release
     notification: send webhook notification: after 5 attempts, last error: webhook
-    returned error status 404'
+    response with status code 404'
   phase: Pending
   transitionTime: null
 ---

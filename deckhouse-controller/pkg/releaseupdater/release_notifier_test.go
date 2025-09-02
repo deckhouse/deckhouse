@@ -70,7 +70,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			responseBody:    `{"code": "INVALID_DATA", "message": "Invalid request data"}`,
 			contentLength:   60,
 			expectError:     true,
-			expectedError:   "webhook error [INVALID_DATA]: Invalid request data",
+			expectedError:   "webhook response with status code 400, service code: INVALID_DATA, msg: Invalid request data",
 			expectedRetries: 5,
 		},
 		{
@@ -79,7 +79,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			responseBody:    `{"message": "Invalid request data"}`,
 			contentLength:   35,
 			expectError:     true,
-			expectedError:   "webhook error: Invalid request data",
+			expectedError:   "webhook response with status code 400, msg: Invalid request data",
 			expectedRetries: 5,
 		},
 		{
@@ -88,7 +88,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			responseBody:    "",
 			contentLength:   0,
 			expectError:     true,
-			expectedError:   "webhook returned error status 404",
+			expectedError:   "webhook response with status code 404",
 			expectedRetries: 5,
 		},
 		{
@@ -97,7 +97,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			responseBody:    `{"invalid": json}`,
 			contentLength:   20,
 			expectError:     true,
-			expectedError:   "webhook returned error status 500",
+			expectedError:   "webhook response with status code 500",
 			expectedRetries: 5,
 		},
 		{
@@ -106,7 +106,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			responseBody:    "Multiple Choices",
 			contentLength:   -1,
 			expectError:     true,
-			expectedError:   "webhook returned error status 300",
+			expectedError:   "webhook response with status code 300",
 			expectedRetries: 5,
 		},
 	}

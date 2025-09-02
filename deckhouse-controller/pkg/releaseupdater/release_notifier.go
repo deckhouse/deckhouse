@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -165,16 +166,24 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		if resp.ContentLength > 0 && resp.ContentLength <= MaxContentLen {
 			decoder := json.NewDecoder(resp.Body)
 			if err := decoder.Decode(&responseError); err != nil {
-				return nil, fmt.Errorf("webhook returned error status %d", resp.StatusCode)
+				return nil, fmt.Errorf("webhook response with status code %d", resp.StatusCode)
 			}
+
+			var errorParts []string
+			errorParts = append(errorParts, fmt.Sprintf("webhook response with status code %d", resp.StatusCode))
 
 			if responseError.Code != "" {
-				return nil, fmt.Errorf("webhook error [%s]: %s", responseError.Code, responseError.Message)
+				errorParts = append(errorParts, fmt.Sprintf("service code: %s", responseError.Code))
 			}
-			return nil, fmt.Errorf("webhook error: %s", responseError.Message)
+
+			if responseError.Message != "" {
+				errorParts = append(errorParts, fmt.Sprintf("msg: %s", responseError.Message))
+			}
+
+			return nil, fmt.Errorf("%s", strings.Join(errorParts, ", "))
 		}
 
-		return nil, fmt.Errorf("webhook returned error status %d", resp.StatusCode)
+		return nil, fmt.Errorf("webhook response with status code %d", resp.StatusCode)
 	})
 
 	return err
