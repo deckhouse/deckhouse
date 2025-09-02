@@ -118,6 +118,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: kruise
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
+            readOnlyRootFilesystem: true
           env:
             - name: KUBE_CACHE_MUTATION_DETECTOR
               value: "true"

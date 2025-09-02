@@ -85,6 +85,8 @@ spec:
       containers:
         - name: validator
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
+          securityContext:
+            readOnlyRootFilesystem: true
           env:
             - name: POD_NAME
               valueFrom:

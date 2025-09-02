@@ -37,7 +37,7 @@ spec:
         name: failover-cleaner
         # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
-          readOnlyRootFilesystem: false # Need for symlink iptables-wrap
+          readOnlyRootFilesystem: true
           capabilities:
             add:
             - NET_RAW
