@@ -41,6 +41,12 @@ spec:
           spec:
             description: VCDAffinityRuleSpec defines the desired state of VCDAffinityRule.
             properties:
+              enabled:
+                description: Enabled is TODO
+                type: boolean
+              mandatory:
+                description: Mandatory is TODO
+                type: boolean
               nodeLabelSelector:
                 additionalProperties:
                   type: string
@@ -54,20 +60,22 @@ spec:
             description: VCDAffinityRuleStatus defines the observed state of VCDAffinityRule.
             properties:
               message:
-                description: |-
-                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-                  Important: Run "make" to regenerate code after modifying this file
+                description: Message is TODO
                 type: string
               nodes:
+                description: Nodes is TODO
                 items:
                   properties:
-                    name:
+                    ID:
+                      description: ID is TODO
                       type: string
-                    providerID:
+                    name:
+                      description: Name is TODO
                       type: string
                   type: object
                 type: array
               ruleID:
+                description: Rule ID is TODO
                 type: string
             type: object
         type: object
