@@ -9,12 +9,9 @@ The `cilium-hubble` module provides visualization of the cluster network stack i
 
 ## Requirements
 
-The module requires eBPF support in the Linux kernel.
-In addition, for Hubble to function properly, the BPF Type Format (BTF) metadata format must be supported.
+The following is required for the `cilium-hubble` module:
 
-Requirements for the `cilium-hubble` module:
-
-- Linux kernel version >= 5.8.
+- Linux kernel version >= 5.8 with eBPF support.
 - [BPF Type Format (BTF)](https://www.kernel.org/doc/html/v5.8/bpf/btf.html) support enabled. You can verify it as follows:
   - Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, BTF is supported.
   - Run `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — if the parameter is enabled, BTF is supported.
