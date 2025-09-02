@@ -233,6 +233,10 @@ func (l *LeaseLock) createLease(ctx context.Context) (lease *coordinationv1.Leas
 }
 
 func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, force bool) (*coordinationv1.Lease, error) {
+	if lease == nil {
+		return nil, fmt.Errorf("Lease is nil")
+	}
+
 	if *lease.Spec.HolderIdentity != l.config.Identity {
 		return nil, getCurrentLockerError(lease)
 	}
