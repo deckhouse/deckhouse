@@ -20,9 +20,9 @@ title: "Модуль deckhouse: примеры конфигурации"
 
 Для лучшей обработки ошибок и отладки ваш веб-хук должен возвращать JSON-ответ со следующей структурой:
 - `success`: булево значение, указывающее на успешность обработки уведомления
-- `message`: опциональное информационное сообщение
-- `error`: опциональное описание ошибки (когда success равно false)
-- `code`: опциональный код ошибки для программной обработки
+- `message`: необязательное информационное сообщение
+- `error`: необязательное описание ошибки (когда success равно false)
+- `code`: необязательный код ошибки для программной обработки
 
 Если ваш веб-хук возвращает успешный HTTP-статус (2xx), но с `success: false` в JSON-ответе, Deckhouse также будет рассматривать это как ошибку и повторит попытку отправки уведомления.
 
@@ -38,7 +38,7 @@ spec:
   settings:
     releaseChannel: EarlyAccess
     update:
-      windows: 
+      windows:
         - from: "8:00"
           to: "10:00"
         - from: "20:00"
@@ -57,7 +57,7 @@ spec:
   settings:
     releaseChannel: Stable
     update:
-      windows: 
+      windows:
         - from: "18:00"
           to: "19:30"
           days:
@@ -112,7 +112,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Print payload fields
-  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v", 
+  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v",
     data.Subject, data.Version, data.ApplyTime, data.ChangelogLink, data.Requirements)
   log.Printf("message=%s", data.Message)
 
@@ -160,7 +160,6 @@ func main() {
 - Включен режим подтверждения обновлений Deckhouse.
 
   Это значит, что параметр [settings.update.mode](configuration.html#parameters-update-mode) ModuleConfig `deckhouse` установлен в `Manual` (подтверждение как patch-версии, так и минорной версии Deckhouse) или в `AutoPatch` (подтверждение минорной версии Deckhouse).
-  
   Для подтверждения обновления выполните следующую команду (укажите необходимую версию Deckhouse):
 
   ```shell
@@ -172,7 +171,6 @@ func main() {
   Это значит, что у NodeGroup, соответствующего группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`.
 
   Для обновления **каждого** узла в такой группе на узел нужно установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
-  
   Пример:
 
   ```shell

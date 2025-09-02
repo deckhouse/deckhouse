@@ -26,7 +26,7 @@ spec:
   settings:
     releaseChannel: EarlyAccess
     update:
-      windows: 
+      windows:
         - from: "8:00"
           to: "10:00"
         - from: "20:00"
@@ -45,7 +45,7 @@ spec:
   settings:
     releaseChannel: Stable
     update:
-      windows: 
+      windows:
         - from: "18:00"
           to: "19:30"
           days:
@@ -61,7 +61,6 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
 - The Deckhouse update confirmation mode is enabled.
 
   This means that the parameter [settings.update.mode](configuration.html#parameters-update-mode) in the ModuleConfig `deckhouse` is set to `Manual` (confirmation for both patch and minor versions of Deckhouse) or `AutoPatch` (confirmation for the minor version of Deckhouse).
-  
   Run the following command to confirm the update (use the corresponding Deckhouse version):
 
   ```shell
@@ -73,7 +72,6 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
   This means that the corresponding NodeGroup has the parameter [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) set to `Manual`.
 
   For updating **each** node in such a group, the node must have `update.node.deckhouse.io/disruption-approved=` annotation.
-  
   Example:
 
   ```shell
@@ -84,7 +82,7 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
 
 In the `Auto` update mode, you can [configure](configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor Deckhouse version update.
 
-In addition, notifications are generated not only for Deckhouse updates but also for updates of any modules, including their individual updates.  
+In addition, notifications are generated not only for Deckhouse updates but also for updates of any modules, including their individual updates.
 In some cases, the system may initiate the sending of multiple notifications at once (10–20 notifications) at approximately 15-second intervals.
 
 {% alert %}
@@ -118,7 +116,7 @@ After a new minor Deckhouse version appears on the selected update channel, but 
 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
-**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential backoff. If all attempts fail, the release will be blocked until the webhook becomes available again. 
+**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential back-off. If all attempts fail, the release will be blocked until the webhook becomes available again.
 
 For better error handling and debugging, your webhook should return a JSON response with the following structure:
 - `success`: boolean indicating whether the notification was processed successfully
@@ -192,7 +190,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
   }
 
   // Print payload fields
-  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v", 
+  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v",
     data.Subject, data.Version, data.ApplyTime, data.ChangelogLink, data.Requirements)
   log.Printf("message=%s", data.Message)
 
