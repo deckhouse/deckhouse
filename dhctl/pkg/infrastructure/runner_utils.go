@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	infra "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/stretchr/testify/assert/yaml"
 )
@@ -129,10 +129,10 @@ func getCloudNameToUseOpentofuMap(filename string) (map[string]struct{}, error) 
 }
 
 func NeedToUseOpentofu(metaConfig *config.MetaConfig) bool {
-	useTofuMap, err := getCloudNameToUseOpentofuMap(infrastructure.InfrastructureVersions)
-	if err != nil {
-		panic(fmt.Errorf("Cannot get use tofu map: %v", err))
-	}
+    useTofuMap, err := getCloudNameToUseOpentofuMap(infra.InfrastructureVersions)
+    if err != nil {
+        panic(fmt.Errorf("Cannot get use tofu map: %v", err))
+    }
 
 	provider := strings.ToLower(metaConfig.ProviderName)
 

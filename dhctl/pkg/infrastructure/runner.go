@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	infra "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -99,8 +100,8 @@ type Runner struct {
 	allowedCachedState     bool
 	changesInPlan          int
 	planDestructiveChanges *PlanDestructiveChanges
-	hasMasterDestruction bool
-	stateCache state.Cache
+	hasMasterDestruction   bool
+	stateCache             state.Cache
 
 	stateSaver   *StateSaver
 	stateChecker StateChecker
@@ -258,6 +259,7 @@ func (r *Runner) WithAutoDismissDestructiveChanges(flag bool) *Runner {
 	r.changeSettings.AutoDismissDestructive = flag
 	return r
 }
+
 func (r *Runner) WithAutoDismissChanges(flag bool) *Runner {
 	r.changeSettings.AutoDismissChanges = flag
 	return r
@@ -471,7 +473,6 @@ func (r *Runner) Apply(ctx context.Context) error {
 
 				return r.stateChecker(st)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -567,7 +568,6 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		result = res
 		return 0, nil
 	})
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -606,7 +606,6 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 		return 0, err
 	})
-
 	if err != nil {
 		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
 	}
@@ -734,7 +733,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	var providerName string
 	var hasMasterInstanceDestructiveChanges bool
 
-	resTypeMap, err := r.LoadProviderVMTypesFromYAML(infrastructure.InfrastructureVersions)
+	resTypeMap, err := r.LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
 	if err != nil {
 		return nil, err
 	}
@@ -794,7 +793,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	}
 
 	return &DestructiveChangesReport{
-		Changes:          destructiveChanges,
+		Changes:              destructiveChanges,
 		hasMasterDestruction: hasMasterInstanceDestructiveChanges,
 	}, nil
 }
