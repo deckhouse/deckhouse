@@ -7,9 +7,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const closeBtn = document.querySelectorAll('.modal-window__close-btn');
     const detailedInput = document.querySelector('.more-detailed');
     const currentUrl = window.location.href;
-    const cookieUserIp = 'user_ip';
+    let cookieUserIp = '';
 
     let accessModalTimeout;
+
+    async function getUserId() {
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            cookieUserIp = data.ip;
+            return cookieUserIp;
+        } catch(error) {
+            return null;
+        }
+    }
+
+    getUserId();
 
     function setCookie(ip, value, days) {
         const date = new Date();
@@ -49,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let cookieUserData = getCookie(cookieUserIp);
     if(!cookieUserData) {
-        cookieUserData = { user_ip: generateUUID(), pages: {} }
+        cookieUserData = { cookieUserId: generateUUID(), pages: {} }
     }
 
     function showAccessModal() {
@@ -78,46 +91,53 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         const feedbackPage = cookieUserData.pages[currentUrl];
-        dislikeIcon.classList.remove('active');
-        likeIcon.classList.remove('active');
+        // dislikeIcon.classList.remove('active');
+        // likeIcon.classList.remove('active');
 
         if(feedbackPage) {
             if(feedbackPage.result === true) {
                 likeIcon.classList.add('active');
+                dislikeIcon.classList.remove('active');
             } else if(feedbackPage.result === false) {
                 dislikeIcon.classList.add('active');
+                likeIcon.classList.remove('active');
             }
         }
 
         setCookie(cookieUserIp, cookieUserData, 365);
     }
 
-    async function sendFeedback(result, reasons = [], detailed_reason = '') {
+    async function sendFeedback(result, reasons = []) {
         const lastFeedback = cookieUserData.pages[currentUrl];
         if(lastFeedback) {
             const blockingFeedback = 5 * 60 * 1000;
             const timeSinceLastFeedback = Date.now() - lastFeedback.presentTime;
             if(timeSinceLastFeedback < blockingFeedback) {
-                alert('Вы уже оставляли ос, попробуйте позже');
-                return
+                alert('Вы уже оставляли обратную связь, попробуйте позже');
+                return;
             }
         }
+
+        const jsonReasons = JSON.stringify(reasons);
+
         try {
             const feedbackData = {
                 feedback_url: currentUrl,
-                user_ip: cookieUserData.user_ip,
+                cookieUserId: cookieUserData.cookieUserId,
                 result: result,
-                reasons: reasons,
-                detailed_reason: detailed_reason
+                reasons: jsonReasons
             };
-
-            const response = await fetch('/feedback', {
+            
+            let url = 'https://deckhouse.ru/wp-json/articles-feedback/v1/feedback';
+            // // let url = '/wp-json/articles-feedback/v1/feedback';
+            url = url + '?user_ip=' + cookieUserIp +'&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons;
+            
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json;charset=utf-8',
                     Accept: "application/json",
-                },
-                body: JSON.stringify(feedbackData)
+                }
             });
 
             if(!response.ok) {
@@ -140,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     likeIcon.addEventListener('click', async function() {
         showAccessModal();
-        await sendFeedback(true, [], '');
+        await sendFeedback(true, []);
     })
 
     dislikeIcon.addEventListener('click', function() {
@@ -162,13 +182,16 @@ document.addEventListener('DOMContentLoaded', function () {
             reasons.push(checkbox.value);
         })
         const detailedReason = detailedInput.value.trim();
+        if(detailedReason.length > 0) {
+            reasons.push(detailedReason);
+        }
 
         if(reasons.length === 0 && detailedReason === '') {
             return;
         }
 
         hideFormModal();
-        await sendFeedback(false, reasons, detailedReason)
+        await sendFeedback(false, reasons)
     })
 
     buttonState();
