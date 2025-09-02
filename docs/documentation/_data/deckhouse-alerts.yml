@@ -2092,16 +2092,16 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Module `{{ $labels.moduleName }}` is running behind on major version releases and requires manual approval.
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
         Major version updates may contain breaking changes and require immediate attention and careful planning.
 
-        To approve the module release update, run the following command:
+        To check the module release status, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        kubectl get mr {{ $labels.name }} -o yaml
         ```
       summary: |
-        Module {{ $labels.moduleName }} has major version updates available.
+        Module {{ $labels.moduleName }} is running {{ $labels.majorReleaseDepth }} major versions behind.
       severity: "9"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes

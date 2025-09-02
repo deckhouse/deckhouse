@@ -389,7 +389,7 @@
         Deckhouse memory usage is too high.
 
   - alert: D8ModuleOutdatedByMajorVersion
-    expr: sum by (name, moduleName) (d8_module_release_info{manualApproval="true", majorReleaseDepth!~"(nil|0)"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, moduleName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -400,13 +400,13 @@
       plk_protocol_version: "1"
       plk_ignore_labels: "name"
       summary: |
-        Module `{{ $labels.moduleName }}` has major version updates available.
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind.
       description: |
-        Module `{{ $labels.moduleName }}` is running behind on major version releases and requires manual approval.
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
         Major version updates may contain breaking changes and require immediate attention and careful planning.
 
-        To approve the module release update, run the following command:
+        To check the module release status, run the following command:
 
         ```bash
-        kubectl annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        kubectl get mr {{ $labels.name }} -o yaml
         ```
