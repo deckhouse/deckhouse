@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/stretchr/testify/assert/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -733,7 +732,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	var providerName string
 	var hasMasterInstanceDestructiveChanges bool
 
-	resTypeMap, err := r.LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
+	resTypeMap, err := LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
 	if err != nil {
 		return nil, err
 	}
@@ -796,34 +795,6 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		Changes:              destructiveChanges,
 		hasMasterDestruction: hasMasterInstanceDestructiveChanges,
 	}, nil
-}
-
-func (r *Runner) LoadProviderVMTypesFromYAML(path string) (map[string]string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var raw map[string]any
-	if err := yaml.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
-	resTypeMap := make(map[string]string)
-	for _, v := range raw {
-
-		m, ok := v.(map[string]any)
-		if !ok {
-			continue
-		}
-		ns, _ := m["namespace"].(string)
-		typ, _ := m["type"].(string)
-		vm, _ := m["vmResourceType"].(string)
-		if ns != "" && typ != "" && vm != "" {
-			resTypeMap[ns+"/"+typ] = vm
-		}
-	}
-	return resTypeMap, nil
 }
 
 func hasAction(actions []string, findAction string) bool {
