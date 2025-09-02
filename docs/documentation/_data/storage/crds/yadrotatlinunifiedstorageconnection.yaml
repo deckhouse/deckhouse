@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            TATLIN.UNIFIED (Yadro) storage connection parameters.
+            Yadro storage connection parameters.
           required:
             - spec
           properties:
@@ -34,7 +34,7 @@ spec:
               properties:
                 controlPlane:
                   description: |
-                    Properties of control plane connection.
+                    Properties of control plane connection for Yadro storage.
                   type: object
                   required:
                     - address
@@ -43,28 +43,73 @@ spec:
                   properties:
                     address:
                       description: |
-                        Storage address.
+                        Yadro storage address.
                       type: string
                     username:
                       description: |
-                        Storage username.
+                        Yadro storage username.
                       type: string
                     password:
                       description: |
-                        Storage password, Base64 encoded.
+                        Yadro storage password, Base64 encoded.
                       type: string
                     ca:
                       description: |
-                        CA certificate, in case of self-signed SSL certificates.
+                        Yadro CA certificate, in case of self-signed SSL certificates.
                       type: string
                     skipCertificateValidation:
                       description: |
-                        Skip storage certificate check.
+                        Skip Yadro storage certificate check.
                       type: boolean
+                    nodeSelector:
+                      type: object
+                      minProperties: 1
+                      description: |
+                        Node selector for nodes that have network connectivity to the API of
+                        **each** Tatlin array described by YadroTatlinUnifiedStorageConnection
+                        objects. The CSI controller runs as a single leader instance, so it can
+                        be scheduled only on a node that satisfies the _intersection_ of all
+                        these selectors. Ensure that at least one cluster node matches every
+                        nodeSelector; otherwise, the controller pod cannot be started. If the
+                        field is omitted, the controller may be scheduled on any Linux node.
+                      properties:
+                        matchLabels:
+                          type: object
+                          description: |
+                            A map of labels that must match exactly with the labels of a node. Nodes that do not match any of the specified labels will be excluded.
+                          additionalProperties:
+                            type: string
+                        matchExpressions:
+                          type: array
+                          description: |
+                            A list of advanced node selector requirements. Each requirement specifies a key, an operator, and optional values for filtering nodes based on their labels or other fields.
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string
                 dataPlane:
                   description: |
-                    Properties of data plane connection for storage.
+                    Properties of data plane connection for Yadro storage.
                   type: object
+                  x-kubernetes-validations:
+                    - rule: |
+                        (self.protocol == "iscsi" && has(self.iscsi) && !has(self.fc)) || self.protocol != "iscsi"
+                      message: "Field 'iscsi' is required for 'protocol' 'iscsi', and 'fc' field is forbidden for this protocol."
+                    - rule: |
+                        (self.protocol == "fc" && has(self.fc) && !has(self.iscsi)) || self.protocol != "fc"
+                      message: "Field 'fc' is required for 'protocol' 'fc', and 'iscsi' field is forbidden for this protocol."
                   required:
                     - protocol
                   properties:
@@ -100,6 +145,52 @@ spec:
                           description: |
                             Volume export ports for connection.
                           type: string
+                    nodeSelector:
+                      type: object
+                      minProperties: 1
+                      description: |
+                        Node selector that defines where the iSCSI / FC volumes exported by
+                        **this** Tatlin array may be attached. The restriction applies only to
+                        this connection; other YadroTatlinUnifiedStorageConnection objects can
+                        specify their own selectors.
+
+                        Every node that matches **at least one** selector from all existing
+                        YadroTatlinUnifiedStorageConnection objects will automatically:
+
+                          • run exactly one `csi-node` pod (DaemonSet)  
+                          • have the user-space packages required for multipath and iSCSI installed  
+                          • keep the `multipathd` and `iscsid` services running  
+
+                        If the field is omitted, volumes can be mounted on any Linux node in
+                        the cluster and the `csi-node` DaemonSet will be scheduled
+                        cluster-wide.
+                      properties:
+                        matchLabels:
+                          type: object
+                          description: |
+                            A map of labels that must match exactly with the labels of a node. Nodes that do not match any of the specified labels will be excluded.
+                          additionalProperties:
+                            type: string
+                        matchExpressions:
+                          type: array
+                          description: |
+                            A list of advanced node selector requirements. Each requirement specifies a key, an operator, and optional values for filtering nodes based on their labels or other fields.
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                              operator:
+                                type: string
+                                enum:
+                                  - In
+                                  - NotIn
+                                  - Exists
+                                  - DoesNotExist
+                              values:
+                                type: array
+                                items:
+                                  type: string
             status:
               type: object
               description: |
@@ -108,9 +199,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of resources managed by the YadroTatlinUnifiedClusterConnection custom resource:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Created` — if everything went fine.
+                    The current state of resources managed by the YadroTatlinUnifiedClusterConnection custom resource. Might be:
+                    - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: If everything went fine.
                   enum:
                     - Failed
                     - Created

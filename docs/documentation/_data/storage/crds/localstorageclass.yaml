@@ -43,9 +43,9 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The storage class's reclaim policy:
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
-                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
+                    The storage class's reclaim policy. Might be:
+                    - `Delete`: If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Retain`: If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   enum:
                     - Delete
                     - Retain
@@ -55,9 +55,9 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   description: |
-                    The Storage class's binding mode:
-                    - `Immediate` — creates a PV as a PVC requested;
-                    - `WaitForFirstConsumer` — creates a PV after a Pod consumes PVC.
+                    The Storage class's binding mode. Might be:
+                    - `Immediate`: Creates a PV as a PVC requested.
+                    - `WaitForFirstConsumer`: Creates a PV after a Pod consumes PVC.
                   enum:
                     - Immediate
                     - WaitForFirstConsumer
@@ -71,7 +71,7 @@ spec:
                   x-kubernetes-validations:
                     - rule: |
                         (self.type == "Thin" && !has(self.thick)) || self.type != "Thin"
-                      message: Field spec.lvm.thick is forbidden for thin type.
+                      message: Field spec.lvm.thick is forbidden for Thin type.
                     - rule: |
                         (!has(self.thick) || !has(self.thick.contiguous) || (has(self.thick.contiguous) && self.thick.contiguous == oldSelf.thick.contiguous))
                       message: "Field 'contiguous' is immutable and cannot be added if not specified at creation."
@@ -108,6 +108,18 @@ spec:
                               message: Value is immutable.
                           description: |
                             If true, the Logical Volume will be created with the contiguous flag. Note: This flag should be used with caution because it may lead to poor scheduling of pods using the Persistent Volume. Our scheduler checks the free space in VG and selects nodes with the most free space for pods. However, it cannot determine the maximum amount of sequential free space available. Consequently, there may be situations where a pod is scheduled to a node, but the volume cannot be created due to insufficient contiguous free space. If such a situation arises, manual intervention will be required.
+                    volumeCleanup:
+                      type: string
+                      enum: [RandomFillThreePass, RandomFillSinglePass, Discard]
+                      description: |
+                        The volume cleanup method after the PV is deleted.
+                        If this parameter is not set, there's no guarantee that the data will be completely deleted.
+
+                        Allowed values:
+
+                        - `RandomFillSinglePass`: The volume will be overwritten with random data once before deletion. This option is not recommended for solid-state drives (SSDs), as overwriting reduces the drive's lifespan.
+                        - `RandomFillThreePass`: The volume will be overwritten with random data three times before deletion. This option is also not recommended for SSDs, as overwriting reduces the drive's lifespan.
+                        - `Discard`: Before deletion, all blocks of the volume will be marked as free using the `discard` system call. This option is applicable only to SSDs.
                     lvmVolumeGroups:
                       type: array
                       description: |
@@ -153,9 +165,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The Storage class current state:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Create` — if everything went fine.
+                    The Storage class current state. Might be: 
+                    - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Create`: If everything went fine.
                   enum:
                     - Failed
                     - Created

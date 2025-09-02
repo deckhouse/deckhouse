@@ -4,17 +4,66 @@ spec:
       schema:
         openAPIV3Schema:
           description: |-
-            SCSIDevice определяет конфигурацию для одного SCSI-устройства.
-            Этот объект используется для управления SCSI-устройствами и их хранилищем на узлах Kubernetes.
+            Определяет конфигурацию для одного SCSI-устройства. Этот объект используется для управления SCSI-устройствами и их хранилищем на узлах Kubernetes.
           properties:
             apiVersion:
               description: |-
-                APIVersion определяет версионную схему этого объекта.
+                Определяет версионную схему этого объекта.
                 Серверы должны конвертировать распознанные схемы в последнюю внутреннюю версию и могут отклонять нераспознанные значения.
                 Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             kind:
               description: |-
-                Kind — это строковое значение, представляющее REST-ресурс, который описывает этот объект.
+                Строковое значение, представляющее REST-ресурс, который описывает этот объект.
                 Серверы могут определять его на основе конечной точки, к которой клиент отправляет запросы.
                 Не может быть изменено. Записывается в CamelCase.
                 Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            status:
+              description: Текущее наблюдаемое состояние SCSI-устройства.
+              properties:
+                aggregatedStatus:
+                  description: Общий статус устройства на основе условий.
+                  type: string
+                conditions:
+                  description: Последнее наблюдаемое состояние устройства.
+                  items:
+                    description: Наблюдаемое состояние ресурса в определенный момент времени.
+                    properties:
+                      lastTransitionTime:
+                        description: Последний раз, когда условие перешло из одного статуса в другой.
+                      message:
+                        description: Человекочитаемое объяснение, содержащее детали о переходе.
+                      reason:
+                        description: Краткое машиночитаемое объяснение последнего перехода условия.
+                      status:
+                        description: Статус условия, один из True, False, Unknown.
+                      type:
+                        description: Определяет тип условия, например, Ready, Bound и т.д.
+                message:
+                  description: Дополнительные детали о текущем состоянии устройства, если доступно.
+                nodeName:
+                  description: Определяет имя узла Kubernetes, где расположено SCSI-устройство.
+                path:
+                  description: Путь файловой системы устройства.
+                phase:
+                  description: Указывает текущую фазу жизненного цикла устройства.
+                pvName:
+                  description: Имя PersistentVolume, связанного с SCSI-устройством.
+                scsiTargets:
+                  description: Представляет несколько SCSI-целей, связанных с устройством.
+                  items:
+                    description: Представляет одну SCSI-цель, связанную с устройством.
+                    properties:
+                      lun:
+                        description: Определяет логический номер устройства для цели.
+                      name:
+                        description: Определяет имя SCSI-цели.
+                      size:
+                        description: Определяет размер цели в человекочитаемом формате (например, "1Gi").
+                      status:
+                        description: Определяет текущее состояние цели (например, Bound, Available, Failed).
+                size:
+                  description: |-
+                    Определяет размер SCSI-устройства. Размер должен быть представлен как Quantity (например, "10Gi" для 10 GiB).
+                wwid:
+                  description: |-
+                    Определяет всемирный идентификатор SCSI-устройства. Это уникально идентифицирует устройство.

@@ -5,7 +5,7 @@ metadata:
   name: lvmlogicalvolumes.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: sds-node-configurator
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -24,26 +24,29 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
-          description: |
-            The LVMLogicalVolume resource defines the storage where a PV will be created in.
+          description: | 
+            The LVMLogicalVolume resource defines the storage where a PV will be created.
           required:
             - spec
           properties:
             spec:
               type: object
               x-kubernetes-validations:
-                - rule: |
+                - rule: |                  
                     (self.type == "Thin" && has(self.thin) && !has(self.thick)) || self.type != "Thin"
                   message: "Field 'thin' is required and field 'thick' is forbidden when 'type' is 'Thin'."
                 - rule: >
                     (
-                      (!has(self.thick) || !has(self.thick.contiguous)) &&
+                      (!has(self.thick) || !has(self.thick.contiguous)) && 
                       (!has(oldSelf.thick) || !has(oldSelf.thick.contiguous))
                     ) || (
                       has(self.thick) && has(self.thick.contiguous) &&
                       has(oldSelf.thick) && has(oldSelf.thick.contiguous)
                     )
                   message: "Field 'contiguous' is immutable and cannot be added if not specified at creation."
+                - rule: |
+                    self.type == "Thick" || !has(self.volumeCleanup) || self.volumeCleanup != "Discard"
+                  message: "'volumeCleanup: Discard' is supported only for 'Thick' volumes"
               required:
                 - actualLVNameOnTheNode
                 - type
@@ -53,7 +56,7 @@ spec:
                 actualLVNameOnTheNode:
                   type: string
                   description: |
-                    Actual LV name on the node.
+                    LV name on the node.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: Value is immutable.
@@ -62,7 +65,7 @@ spec:
                 type:
                   type: string
                   description: |
-                    LV type.
+                    LV type: Thick or Thin.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: Value is immutable.
@@ -70,24 +73,36 @@ spec:
                 size:
                   x-kubernetes-int-or-string: true
                   description: |
-                    The desired LV size. Might be specified as number or percent size of total VG or thin pool space (for thin pool total space is counted by actual thin pool size multiply by allocationLimit value).
-
-                    > Note, that if you specify the percent size, the LV will be automatically extended when VG, thin pool or thin pool's allocationLimit value is extended.
+                   The desired LV size. It can be specified as a numerical value or percentage of the total VG or thin pool space. For thin pools, the total space is calculated as the actual thin pool size multiplied by the `allocationLimit` value.
+                    
+                   > Note that if you specify a percentage, the LV will be automatically extended when VG, thin pool, or thin pool's `allocationLimit` value is increased.
                   minLength: 1
                   pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$|^[1-9][0-9]?%$|100%'
                 lvmVolumeGroupName:
                   type: string
                   description: |
-                    LVMVolumeGroup resource's name which VG will be used for LV creation.
+                    The name of a LVMVolumeGroup resource whose VG will be used for LV creation.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   minLength: 1
                   pattern: '^[a-z0-9]([a-z0-9-.]{0,251}[a-z0-9])?$'
+                volumeCleanup:
+                  type: string
+                  enum: [RandomFillThreePass, RandomFillSinglePass, Discard]
+                  description: |
+                    The volume cleanup method after the PV is deleted.
+                    If this parameter is not set, there's no guarantee that the data will be completely deleted.
+
+                    Allowed values:
+
+                    - `RandomFillSinglePass`: The volume will be overwritten with random data once before deletion. This option is not recommended for solid-state drives (SSDs), as overwriting reduces the drive's lifespan. For thin volumes, only the space in use at the moment of volume deletion will be overwritten.
+                    - `RandomFillThreePass`: The volume will be overwritten with random data three times before deletion. This option is also not recommended for SSDs, as overwriting reduces the drive's lifespan. For thin volumes, only the space in use at the moment of volume deletion will be overwritten.
+                    - `Discard`: Before deletion, all blocks of the volume will be marked as free using the `discard` system call. This option is applicable only to SSDs and thick volumes.
                 thin:
                   type: object
                   description: |
-                    Specifies used ThinPool. Needs only if LV has thin type.
+                    Defines the used thin pool. Required only for Thin LV.
                   x-kubernetes-validations:
                     - rule: self == oldSelf
                       message: Value is immutable.
@@ -97,11 +112,13 @@ spec:
                     poolName:
                       type: string
                       description: |
-                        Used thin pool name.
+                        Name of the used thin pool.
                       minLength: 1
                       pattern: ^.*$
                 thick:
                   type: object
+                  description: |
+                    Defines the used thick pool settings.
                   x-kubernetes-validations:
                     - rule: |
                         (!has(oldSelf.contiguous) || has(self.contiguous))
@@ -113,16 +130,9 @@ spec:
                         - rule: 'self == oldSelf'
                           message: Value is immutable.
                       description: |
-                        If true, the Logical Volume will be created with the contiguous flag. Use it carefully as LV might not be created even if there is enough space in VG.
-                    volumeCleanup:
-                      type: string
-                      enum: [RandomFillThreePass, RandomFillSinglePass, Discard]
-                      description: |
-                        The method of the volume cleanup before deletion.
-                        If the parameter is not set, after deleting the PV, the data may be deleted or it may remain. There is no guarantee of deletion or non-deletion:
-                        - `RandomFillSinglePass` — the volume will be overwritten with random data once before deletion. This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
-                        - `RandomFillThreePass` — the volume will be overwritten with random data three times before deletion. This option is also not recommended for solid-state drives, as it reduces the lifespan of the drive.
-                        - `Discard` — all blocks of the volume will be marked as free using the `discard`` system call before deletion. This option is only applicable to solid-state drives.
+                        If set to `true`, the logical volume will be created with the `contiguous` attribute.
+                        
+                        > Use this attribute carefully, as it may prevent from LV creation even if there is enough space for it.
                 source:
                   type: object
                   description: |
@@ -131,25 +141,25 @@ spec:
                     - rule: self == oldSelf
                       message: Value is immutable.
                   required:
-                    - kind
-                    - name
+                    - kind                  
+                    - name                  
                   properties:
                     kind:
                       type: string
                       enum: [LVMLogicalVolume, LVMLogicalVolumeSnapshot]
                       description: |
-                        Kind of the source. Kind LVMLogicalVolume means that current resource is clone. Kind LVMLogicalVolumeSnapshot means that current resource is a restored volume.
+                        Kind of the source. The LVMLogicalVolume kind means that the current resource is a clone. The LVMLogicalVolumeSnapshot kind means that the current resource is a restored volume.
                       x-kubernetes-validations:
                         - rule: self == oldSelf
-                          message: Value is immutable.
+                          message: Value is immutable.                      
                     name:
                       type: string
                       description: |
-                        The name of the resource current resource is created from.
+                        Name of the resource from which the current resource is created.
                       x-kubernetes-validations:
                         - rule: self == oldSelf
                           message: Value is immutable.
-                      minLength: 1
+                      minLength: 1                    
             status:
               type: object
               description: |
@@ -170,7 +180,7 @@ spec:
                   type: string
                 contiguous:
                   description: |
-                    Shows if the thick LV is contiguous.
+                    Shows if the created LV has the `contiguous` attribute.
                   type: boolean
       subresources:
         status: {}
@@ -198,4 +208,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource
+          description: The age of this resource.
