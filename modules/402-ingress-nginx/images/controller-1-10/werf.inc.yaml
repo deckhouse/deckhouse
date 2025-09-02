@@ -327,6 +327,8 @@ import:
   add: /src/rootfs/etc
   to: /src/rootfs/etc
   before: setup
+git:
+{{- include "image mount points" . }}
 shell:
   setup:
   - export PATH="$PATH:/usr/local/luajit/bin:/usr/local/nginx/sbin:/usr/local/nginx/bin"

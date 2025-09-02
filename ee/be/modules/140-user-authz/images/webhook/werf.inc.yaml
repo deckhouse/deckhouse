@@ -10,6 +10,8 @@ import:
     add: /src/healthcheck
     to: /healthcheck
     before: setup
+git:
+{{- include "image mount points" . }}
 mount:
 {{ include "mount points for golang builds" . }}
 imageSpec:

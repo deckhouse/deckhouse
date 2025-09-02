@@ -1,0 +1,8 @@
+dirs:
+ - /chroot/etc/nginx/ssl
+ - /chroot/tmp/nginx
+ - /chroot/var/lib/nginx/body
+ - /chroot/var/lib/nginx/fastcgi
+ - /chroot/var/lib/nginx/proxy
+ - /chroot/var/lib/nginx/scgi
+ - /chroot/var/lib/nginx/uwsgi

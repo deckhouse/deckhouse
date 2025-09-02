@@ -144,6 +144,9 @@ spec:
             httpGet:
               path: readyz
               port: 8000
+          volumeMounts:
+          - mountPath: /tmp/kruise-webhook-certs
+            name: tmp-webhook-certs
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
@@ -233,6 +236,9 @@ spec:
       hostNetwork: false
       terminationGracePeriodSeconds: 10
       serviceAccountName: kruise
+      volumes:
+      - name: tmp-webhook-certs
+        emptyDir: {}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
