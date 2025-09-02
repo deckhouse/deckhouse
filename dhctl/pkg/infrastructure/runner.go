@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -31,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
-	infra "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -117,7 +117,10 @@ type Runner struct {
 	infraExecutor                       Executor
 	infraExecutorProvider               ExecutorProvider
 
-	hook InfraActionHook
+    hook InfraActionHook
+
+    vmTypeMu  sync.Mutex
+    vmTypeMap map[string]string
 }
 
 func NewRunner(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
@@ -373,7 +376,7 @@ func (r *Runner) Init(ctx context.Context) error {
 }
 
 func (r *Runner) stateName() string {
-	return fmt.Sprintf("%s.tfstate", r.name)
+    return fmt.Sprintf("%s.tfstate", r.name)
 }
 
 func (r *Runner) getHook() InfraActionHook {
@@ -732,10 +735,10 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	var providerName string
 	var hasMasterInstanceDestructiveChanges bool
 
-	resTypeMap, err := LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
-	if err != nil {
-		return nil, err
-	}
+    resTypeMap, err := r.getProviderVMTypes()
+    if err != nil {
+        return nil, err
+    }
 
 	_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		res, err := r.infraExecutor.Show(ctx, planFile)

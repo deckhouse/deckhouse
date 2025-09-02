@@ -153,29 +153,43 @@ func IsMasterInstanceDestructiveChanged(_ context.Context, rc ResourceChange, rm
 }
 
 func LoadProviderVMTypesFromYAML(path string) (map[string]string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, err
+    }
+    var raw map[string]any
+    if err := yaml.Unmarshal(data, &raw); err != nil {
+        return nil, err
+    }
+    resTypeMap := make(map[string]string)
+    for _, v := range raw {
+        m, ok := v.(map[string]any)
+        if !ok {
+            continue
+        }
+        ns, _ := m["namespace"].(string)
+        typ, _ := m["type"].(string)
+        vm, _ := m["vmResourceType"].(string)
+        if ns != "" && typ != "" && vm != "" {
+            resTypeMap[ns+"/"+typ] = vm
+        }
+    }
+    return resTypeMap, nil
+}
 
-	var raw map[string]any
-	if err := yaml.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
-	resTypeMap := make(map[string]string)
-	for _, v := range raw {
-
-		m, ok := v.(map[string]any)
-		if !ok {
-			continue
-		}
-		ns, _ := m["namespace"].(string)
-		typ, _ := m["type"].(string)
-		vm, _ := m["vmResourceType"].(string)
-		if ns != "" && typ != "" && vm != "" {
-			resTypeMap[ns+"/"+typ] = vm
-		}
-	}
-	return resTypeMap, nil
+func (r *Runner) getProviderVMTypes() (map[string]string, error) {
+    if r.vmTypeMap != nil {
+        return r.vmTypeMap, nil
+    }
+    r.vmTypeMu.Lock()
+    defer r.vmTypeMu.Unlock()
+    if r.vmTypeMap != nil {
+        return r.vmTypeMap, nil
+    }
+    m, err := LoadProviderVMTypesFromYAML(infra.InfrastructureVersions)
+    if err != nil {
+        return nil, err
+    }
+    r.vmTypeMap = m
+    return r.vmTypeMap, nil
 }
