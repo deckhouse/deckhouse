@@ -15,10 +15,23 @@
   </div>
 
   <!--start search-->
-  <div class="search">
-      <form action='{{ "search.html" | true_relative_url }}' method="get">
-      <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
-      </form>
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+        {%- if page.sidebar == 'embedded-modules' %}
+        data-search-index-path="/modules/search-embedded-modules-index.json"
+        {%- else %}
+        data-search-index-path="{{ '/search.json' | true_relative_url }}"
+        {%- endif -%}
+        >
+        <div id="search-results" class="results"></div>
+      </div>
+    </div>
   </div>
   <!--end search-->
+  <!--loading search JS-->
+  {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+  <!--end loading search JS-->
 </div>
