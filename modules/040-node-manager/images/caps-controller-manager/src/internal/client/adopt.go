@@ -29,9 +29,6 @@ import (
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/providerid"
 	"caps-controller-manager/internal/scope"
-	"caps-controller-manager/internal/ssh"
-	"caps-controller-manager/internal/ssh/clissh"
-	"caps-controller-manager/internal/ssh/gossh"
 )
 
 func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
@@ -82,41 +79,48 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 }
 
 func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, error) {
-	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
-		var sshCl ssh.SSH
-		var err error
-		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
-			sshCl, err = clissh.CreateSSHClient(instanceScope)
-		} else {
-			instanceScope.Logger.Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(instanceScope)
-		}
+	const operation = "adoptStaticInstance"
 
+	id := taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID)
+
+	done := c.adoptTaskManager.spawn(id, func() bool {
+		logger := getLogger(instanceScope, operation)
+
+		logger.Info("start new task", "id", id)
+
+		sshCl, err := CreateSSHClient(instanceScope)
 		if err != nil {
-			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
+			logger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
 			return false
 		}
+
+		logger.Info("exec adopt ssh command...")
+
 		data, err := sshCl.ExecSSHCommandToString(instanceScope,
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name",
 				instanceScope.MachineScope.StaticMachine.Spec.ProviderID, instanceScope.MachineScope.Machine.Name))
 		if err != nil {
+			logger.Info("failed to exec adopt ssh command", "err", err.Error())
+
 			scanner := bufio.NewScanner(strings.NewReader(data))
 			for scanner.Scan() {
 				str := scanner.Text()
 				if strings.Contains(str, "debug1: Exit status 2") {
+					logger.Info("Probably instance already adopted because we get exit status 2")
 					return true
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			instanceScope.Logger.Error(err, "Failed to adopt StaticInstance: failed to exec ssh command")
+			logger.Error(err, "Failed to adopt StaticInstance: failed to exec ssh command")
 			return false
 		}
+
+		logger.Info("Adopt command executed successfully")
 
 		return true
 	})
 	if done == nil || !*done {
-		instanceScope.Logger.Info("Adopting is not finished yet, waiting...")
+		getLogger(instanceScope, operation).Info("Adopting is not finished yet, waiting...")
 		return false, nil
 	}
 
