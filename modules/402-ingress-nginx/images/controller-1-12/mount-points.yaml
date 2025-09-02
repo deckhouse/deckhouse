@@ -6,3 +6,4 @@ dirs:
  - /chroot/var/lib/nginx/proxy
  - /chroot/var/lib/nginx/scgi
  - /chroot/var/lib/nginx/uwsgi
+ - /chroot/etc/nginx/webhook-ssl

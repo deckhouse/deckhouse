@@ -84,6 +84,8 @@ spec:
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
+        - name: tmp-nginx
+          emptyDir: {}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: controller
@@ -118,6 +120,8 @@ spec:
           - name: additional-config
             mountPath: "/opt/nginx-static/additional-conf"
             readOnly: true
+          - mountPath: /opt/nginx-static/conf/
+            name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:
