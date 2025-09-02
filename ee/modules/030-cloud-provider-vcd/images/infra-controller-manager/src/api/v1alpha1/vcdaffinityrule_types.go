@@ -43,6 +43,9 @@ type VCDAffinityRuleStatus struct {
 
 	// Nodes is TODO
 	Nodes []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
+
+	// NodeCount is TODO
+	NodeCount int `json:"nodeCount,omitempty"`
 }
 
 type VCDAffinityRuleStatusNode struct {
@@ -55,6 +58,8 @@ type VCDAffinityRuleStatusNode struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=vcdar
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="NodeCount",type=integer,JSONPath=`.status.nodeCount`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 
 // VCDAffinityRule is the Schema for the vcdaffinityrules API.
 type VCDAffinityRule struct {

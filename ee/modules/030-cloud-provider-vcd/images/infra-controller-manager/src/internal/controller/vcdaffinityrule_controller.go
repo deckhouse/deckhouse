@@ -14,9 +14,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"infra-controller-manager/api/v1alpha1"
 	"infra-controller-manager/internal/vcd"
@@ -35,12 +39,85 @@ type VCDAffinityRuleReconciler struct {
 }
 
 var (
-	finalizer = "vcdaffinityrule.deckhouse.io"
+	finalizer = "vcdaffinityrule.deckhouse.io/finalizer"
 )
 
 // +kubebuilder:rbac:groups=deckhouse.io,resources=vcdaffinityrules,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=deckhouse.io,resources=vcdaffinityrules/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=deckhouse.io,resources=vcdaffinityrules/finalizers,verbs=update
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	nodePredicate := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode := e.ObjectOld.(*corev1.Node)
+			newNode := e.ObjectNew.(*corev1.Node)
+			return oldNode.Spec.ProviderID != newNode.Spec.ProviderID
+		},
+	}
+
+	enqueueOnlyRelevantResources := func(ctx context.Context, a client.Object) []reconcile.Request {
+		node, ok := a.(*corev1.Node)
+		if !ok {
+			return nil
+		}
+
+		var vcdAffinityRulesList v1alpha1.VCDAffinityRuleList
+		var requests []reconcile.Request
+
+		// Получение всех MyResource
+		if err := r.Client.List(ctx, &vcdAffinityRulesList); err != nil {
+			return nil
+		}
+
+		for _, item := range vcdAffinityRulesList.Items {
+			if satisfiesNodeSelector(node, item.Spec.NodeLabelSelector) {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: client.ObjectKey{
+						Namespace: item.Namespace,
+						Name:      item.Name,
+					},
+				})
+			}
+		}
+		return requests
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.VCDAffinityRule{}).
+		WithEventFilter(predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			predicate.AnnotationChangedPredicate{},
+			predicate.LabelChangedPredicate{},
+		)).
+		Named("vcdaffinityrule").
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(enqueueOnlyRelevantResources),
+			builder.WithPredicates(
+				predicate.Or(
+					predicate.LabelChangedPredicate{},
+					nodePredicate,
+				)),
+		).
+		Complete(r)
+}
+
+func satisfiesNodeSelector(node *corev1.Node, nodeSelector map[string]string) bool {
+    nodeLabels := node.GetLabels()
+    for key, value := range nodeSelector {
+        if nodeLabels[key] != value {
+            return false
+        }
+    }
+    return true
+}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -64,18 +141,21 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Add finalizer first if not exist to avoid the race condition between init and delete
-	if !controllerutil.ContainsFinalizer(vcdaffinityrule, finalizer) {
+	if !controllerutil.ContainsFinalizer(vcdaffinityrule, finalizer) && vcdaffinityrule.DeletionTimestamp.IsZero() {
 		r.Logger.Info("adding finalizer")
 
 		controllerutil.AddFinalizer(vcdaffinityrule, finalizer)
-		r.Update(ctx, vcdaffinityrule)
+
+		if err := r.Update(ctx, vcdaffinityrule); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update vcdaffinityrule with finalizer: %w", err)
+		}
+
 		return ctrl.Result{RequeueAfter: 1}, nil
 	}
 
 	var nodes corev1.NodeList
 	if err := r.Client.List(ctx, &nodes, client.MatchingLabels(vcdaffinityrule.Spec.NodeLabelSelector)); err != nil {
-		r.Logger.Error("failed to list nodes for node group", slog.String("error", err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
 	nodeStatus := make([]v1alpha1.VCDAffinityRuleStatusNode, 0, len(nodes.Items))
@@ -86,29 +166,29 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		})
 	}
 	vcdaffinityrule.Status.Nodes = nodeStatus
+	vcdaffinityrule.Status.NodeCount = len(nodeStatus)
 
 	vdcClient, err := r.Config.NewVDCClient()
 	if err != nil {
-		r.Logger.Error("failed to create vdc client", slog.String("error", err.Error()))
 		return ctrl.Result{}, fmt.Errorf("failed to create vdc client: %w", err)
 	}
 
 	vappClient, err := r.Config.NewVAppClientFromVDCClient(vdcClient)
 	if err != nil {
-		r.Logger.Error("failed to create vapp client", slog.String("error", err.Error()))
 		return ctrl.Result{}, fmt.Errorf("failed to create vapp client: %w", err)
 	}
 
-	if !vcdaffinityrule.DeletionTimestamp.IsZero() {
+	if !vcdaffinityrule.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(vcdaffinityrule, finalizer) {
 
 		err := r.deleteVmAffinityRule(vcdaffinityrule, vdcClient)
 		if err != nil {
-			r.Logger.Error("failed to delete vm affinity rule", slog.String("error", err.Error()))
 			return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 		}
 
 		controllerutil.RemoveFinalizer(vcdaffinityrule, finalizer)
-		r.Update(ctx, vcdaffinityrule)
+		if err := r.Update(ctx, vcdaffinityrule); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from vcdaffinityrule: %w", err)
+		}
 
 		return ctrl.Result{}, nil
 	}
@@ -127,33 +207,37 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			vcdaffinityrule.Status.RuleID = ""
 		}
 
-		r.Status().Update(ctx, vcdaffinityrule)
+		if err := r.Status().Update(ctx, vcdaffinityrule); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update vcdaffinityrule status: %w", err)
+		}
+
 		return ctrl.Result{}, nil
 	}
 
 	vmAffinityRuleDefinition, err := r.buildVmAffinityRule(vcdaffinityrule, vappClient)
 	if err != nil {
-		r.Logger.Error("failed to build vm affinity rule", slog.String("error", err.Error()))
 		return ctrl.Result{}, fmt.Errorf("failed to build vm affinity rule: %w", err)
 	}
 
 	if vcdaffinityrule.Status.RuleID == "" {
 		vmAffinityRule, err := vdcClient.CreateVmAffinityRule(vmAffinityRuleDefinition)
 		if err != nil {
-			r.Logger.Error("failed to create vm affinity rule", slog.String("error", err.Error()))
 			vcdaffinityrule.Status.Message = fmt.Sprintf("Failed to create affinity rule in VCD: %s", err.Error())
-			r.Status().Update(ctx, vcdaffinityrule)
+			if err := r.Status().Update(ctx, vcdaffinityrule); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to update vcdaffinityrule status: %w", err)
+			}
 			return ctrl.Result{}, fmt.Errorf("failed to create vm affinity rule: %w", err)
 		}
 
 		vcdaffinityrule.Status.RuleID = vmAffinityRule.VmAffinityRule.ID
 		vcdaffinityrule.Status.Message = "VM affinity rule is up to date"
-		r.Status().Update(ctx, vcdaffinityrule)
+		if err := r.Status().Update(ctx, vcdaffinityrule); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to update vcdaffinityrule status: %w", err)
+		}
 
 	} else {
 		vmAffinityRule, err := vdcClient.GetVmAffinityRuleById(vcdaffinityrule.Status.RuleID)
 		if err != nil {
-			r.Logger.Error("failed to get vm affinity rule by id", slog.String("error", err.Error()))
 			return ctrl.Result{}, fmt.Errorf("failed to get vm affinity rule by id: %w", err)
 		}
 
@@ -163,27 +247,12 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		vmAffinityRule.VmAffinityRule.IsMandatory = vmAffinityRuleDefinition.IsMandatory
 		vmAffinityRule.VmAffinityRule.VmReferences = vmAffinityRuleDefinition.VmReferences
 
-		err = vmAffinityRule.Update()
-		if err != nil {
-			r.Logger.Error("failed to update vm affinity rule", slog.String("error", err.Error()))
+		if err = vmAffinityRule.Update(); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update vm affinity rule: %w", err)
 		}
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.VCDAffinityRule{}).
-		WithEventFilter(predicate.Or(
-			predicate.GenerationChangedPredicate{},
-			predicate.AnnotationChangedPredicate{},
-			predicate.LabelChangedPredicate{},
-		)).
-		Named("vcdaffinityrule").
-		Complete(r)
 }
 
 func (r *VCDAffinityRuleReconciler) buildVmAffinityRule(resource *v1alpha1.VCDAffinityRule, vapp *govcd.VApp) (*types.VmAffinityRule, error) {
@@ -196,7 +265,6 @@ func (r *VCDAffinityRuleReconciler) buildVmAffinityRule(resource *v1alpha1.VCDAf
 
 		vm, err := vapp.GetVMById(node.ID, false)
 		if err != nil {
-			r.Logger.Error("failed to get vm by id", slog.String("error", err.Error()))
 			return nil, err
 		}
 
@@ -228,13 +296,11 @@ func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDA
 		vmAffinityRule, err := vdc.GetVmAffinityRuleById(resource.Status.RuleID)
 
 		if err != nil {
-			r.Logger.Error("failed to get vm affinity rule by id", slog.String("error", err.Error()))
 			return fmt.Errorf("failed to get vm affinity rule by id: %w", err)
 		}
 
 		err = vmAffinityRule.Delete()
 		if err != nil {
-			r.Logger.Error("failed to delete vm affinity rule", slog.String("error", err.Error()))
 			return fmt.Errorf("failed to delete vm affinity rule: %w", err)
 		}
 
@@ -245,7 +311,6 @@ func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDA
 
 	vmAffinityRules, err := vdc.GetVmAffinityRulesByName(resource.GetName(), resource.Spec.Polarity)
 	if err != nil {
-		r.Logger.Error("failed to get vm affinity rule by name and polarity", slog.String("error", err.Error()))
 		return fmt.Errorf("failed to get vm affinity rule by name and polarity: %w", err)
 	}
 
@@ -261,8 +326,7 @@ func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDA
 
 		err := vmAffinityRules[0].Delete()
 		if err != nil {
-			r.Logger.Error("failed to delete vm affinity rule", slog.String("error", err.Error()))
-			return err
+			return fmt.Errorf("failed to delete vm affinity rule: %w", err)
 		}
 
 		return nil
