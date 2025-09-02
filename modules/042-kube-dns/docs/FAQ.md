@@ -58,7 +58,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
 1. Wait until the `kube-apiserver` has restarted.
 
    ```bash
-   kubectl -n kube-system get pods -l component=kube-apiserver
+   d8 k -n kube-system get pods -l component=kube-apiserver
    ```
 
 1. Replace the previous `clusterDomain` with the new one. Run this command to edit cluster configuration:
@@ -75,7 +75,7 @@ Add a new domain and retain the previous one. To do this, modify the configurati
 
 {% alert level="warning" %}
 
-**Important!** In kubernetes, controllers in the cluster use [advanced ServiceAccount tokens](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) to interact with API server. These tokens have extra fields `iss:` and `aud:` that contain `clusterDomain` (e.g. `"iss": "https://kubernetes.default.svc.cluster.local"`). After changing the clusterDomain, the API server will start issuing tokens with the new service-account-issuer, but thanks to the configuration of additionalAPIAudiences and additionalAPIIssuers, the apiserver will continue to accept the old tokens.
+**Important.** In kubernetes, controllers in the cluster use [advanced ServiceAccount tokens](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) to interact with API server. These tokens have extra fields `iss:` and `aud:` that contain `clusterDomain` (e.g. `"iss": "https://kubernetes.default.svc.cluster.local"`). After changing the clusterDomain, the API server will start issuing tokens with the new service-account-issuer, but thanks to the configuration of additionalAPIAudiences and additionalAPIIssuers, the apiserver will continue to accept the old tokens.
 After 48 minutes (80% of 3607 seconds), Kubernetes will begin to refresh the issued tokens, and the new service-account-issuer will be used for the updated tokens. After 90 minutes (3607 seconds plus a short buffer) following the kube-apiserver restart, you can remove the serviceAccount configuration from the control-plane-manager configuration.
 
 {% endalert %}
