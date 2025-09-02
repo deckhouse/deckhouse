@@ -29,16 +29,6 @@ metadata:
 spec:
   containers:
     - name: etcd
-      securityContext:
-        runAsNonRoot: false
-        runAsUser: 0
-        runAsGroup: 0
-        capabilities:
-          drop:
-          - ALL
-        readOnlyRootFilesystem: true
-        seccompProfile:
-          type: RuntimeDefault
       readinessProbe:
         httpGet:
           host: 127.0.0.1
@@ -82,13 +72,15 @@ metadata:
   name: etcd
   namespace: kube-system
 spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
-    capabilities:
-      drop:
-      - ALL
-    readOnlyRootFilesystem: true
-    seccompProfile:
-      type: RuntimeDefault
+  containers:
+    - name: etcd
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        seccompProfile:
+          type: RuntimeDefault
