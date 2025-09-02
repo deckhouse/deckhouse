@@ -134,7 +134,7 @@ bastion:
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
-    mainNetworkIPAddress: 10.1.4.10
+    mainNetworkIPAddress: 192.168.199.10
 edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
   type: "NSX-T"
@@ -229,7 +229,7 @@ spec:
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
-  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -д '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   password: <GENERATED_PASSWORD_HASH>
