@@ -983,7 +983,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -1013,7 +1013,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
    Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Example output:
@@ -1043,14 +1043,14 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 
    ```shell
    DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $2}')
-   kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
+   d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
    ```
 
 1. Once the pod is in `Running` state, execute the following commands:
 
    ```shell
    NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
 
@@ -1089,7 +1089,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 1. Check if there are any pods with the DKP old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Delete temporary files, the NodeGroupConfiguration resource, and variables:
@@ -1097,9 +1097,9 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
-   kubectl delete ngc containerd-$NEW_EDITION-config.sh
-   kubectl delete pod $NEW_EDITION-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-$NEW_EDITION-config.sh
+   d8 k delete pod $NEW_EDITION-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -1120,5 +1120,5 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
    After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
    ```
