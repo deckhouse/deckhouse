@@ -77,11 +77,10 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 
 func updateIngressAddress(input *go_hook.HookInput) error {
 	snaps := input.NewSnapshots.Get("ingress-loadbalancer-service")
-	for snap, err := range sdkobjectpatch.SnapshotIter[loadBalancerService](snaps) {
+	for svc, err := range sdkobjectpatch.SnapshotIter[loadBalancerService](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ingress-loadbalancer-service' snapshots: %w", err)
 		}
-		svc := snap
 		patch := map[string]interface{}{
 			"status": map[string]interface{}{
 				"loadBalancer": map[string]interface{}{

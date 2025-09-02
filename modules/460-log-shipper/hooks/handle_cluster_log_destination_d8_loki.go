@@ -79,11 +79,10 @@ func handleClusterLogDestinationD8Loki(input *go_hook.HookInput) error {
 
 	input.MetricsCollector.Expire(lokiAuthorizationRequiredGroup)
 
-	for destinationSnapshot, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLogDestination](destinationSnapshots) {
+	for destination, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLogDestination](destinationSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'cluster_log_destination' snapshots: %w", err)
 		}
-		destination := destinationSnapshot
 
 		if destination.Name == "d8-loki" {
 			continue

@@ -50,20 +50,18 @@ func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDesti
 		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}
 
-	for s, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLoggingConfig](sourceSnap) {
+	for src, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLoggingConfig](sourceSnap) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over 'cluster_log_source' snapshots: %w", err)
 		}
-		src := s
 		res.Source = append(res.Source, src)
 		customResourceMetric(input, "ClusterLoggingConfig", src.Name, src.Namespace, src.Spec.Type)
 	}
 
-	for ns, err := range sdkobjectpatch.SnapshotIter[v1alpha1.PodLoggingConfig](namespacedSourceSnap) {
+	for src, err := range sdkobjectpatch.SnapshotIter[v1alpha1.PodLoggingConfig](namespacedSourceSnap) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over 'namespaced_log_source' snapshots: %w", err)
 		}
-		src := ns
 		res.Source = append(res.Source, v1alpha1.NamespacedToCluster(src))
 		customResourceMetric(input, "PodLoggingConfig", src.Name, src.Namespace, v1alpha1.SourceKubernetesPods)
 	}
