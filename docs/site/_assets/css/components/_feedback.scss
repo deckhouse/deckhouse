@@ -49,6 +49,12 @@
                     transform: scale(0.95);
                     transition: transform 0.2 ease-in-out;
                 }
+
+                &.active {
+                    path {
+                        stroke: #0064FF;
+                    }
+                }
             }
 
         }

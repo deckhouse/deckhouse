@@ -11,10 +11,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let accessModalTimeout;
 
-    let cookieUserData = getCookie(cookieUserIp) || { user_ip: generateUUID(), pages: {}};
-    // console.log(cookieUserData)
-    setCookie(cookieUserIp, cookieUserData, 365);
-
     function setCookie(ip, value, days) {
         const date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
@@ -34,9 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if(cookie.indexOf(cookieName) === 0) {
                 try {
-                    return JSON.parse(cookie.stringify(cookieName.length, cookie.length));
+                    return JSON.parse(cookie.substring(cookieName.length, cookie.length));
                 } catch(error) {
-                    // console.error(error);
                     return null;
                 }
             }
@@ -50,6 +45,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
+    }
+
+    let cookieUserData = getCookie(cookieUserIp);
+    if(!cookieUserData) {
+        cookieUserData = { user_ip: generateUUID(), pages: {} }
     }
 
     function showAccessModal() {
@@ -73,22 +73,35 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buttonState() {
+        if(!cookieUserData.pages) {
+            cookieUserData.pages = {};
+        }
+
         const feedbackPage = cookieUserData.pages[currentUrl];
+        dislikeIcon.classList.remove('active');
+        likeIcon.classList.remove('active');
+
         if(feedbackPage) {
             if(feedbackPage.result === true) {
                 likeIcon.classList.add('active');
-                dislikeIcon.classList.remove('active');
             } else if(feedbackPage.result === false) {
                 dislikeIcon.classList.add('active');
-                likeIcon.classList.remove('active');
             }
-        } else {
-            dislikeIcon.classList.remove('active');
-            likeIcon.classList.remove('active');
         }
+
+        setCookie(cookieUserIp, cookieUserData, 365);
     }
 
     async function sendFeedback(result, reasons = [], detailed_reason = '') {
+        const lastFeedback = cookieUserData.pages[currentUrl];
+        if(lastFeedback) {
+            const blockingFeedback = 5 * 60 * 1000;
+            const timeSinceLastFeedback = Date.now() - lastFeedback.presentTime;
+            if(timeSinceLastFeedback < blockingFeedback) {
+                alert('Вы уже оставляли ос, попробуйте позже');
+                return
+            }
+        }
         try {
             const feedbackData = {
                 feedback_url: currentUrl,
@@ -111,26 +124,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(response.status);
             }
 
-            cookieUserData.pages[currentUrl] = {result: result, reasons: reasons, detailed_reason: detailed_reason};
+            cookieUserData.pages[currentUrl] = {
+                result: result,
+                presentTime: Date.now()
+            };
+
             setCookie(cookieUserIp, cookieUserData, 365);
 
-            if(result === true) {
-                likeIcon.classList.add('active');
-                dislikeIcon.classList.remove('active');
-            } else {
-                likeIcon.classList.remove('active');
-                dislikeIcon.classList.add('active');
-            }
-
+            buttonState();
             showAccessModal();
         } catch(error) {
-            // console.error(error);
             buttonState();
         }
     }
 
     likeIcon.addEventListener('click', async function() {
-        await sendFeedback(true);
+        showAccessModal();
+        await sendFeedback(true, [], '');
     })
 
     dislikeIcon.addEventListener('click', function() {
@@ -154,7 +164,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const detailedReason = detailedInput.value.trim();
 
         if(reasons.length === 0 && detailedReason === '') {
-            // console.log('надо хотя бы одну причину')
             return;
         }
 
