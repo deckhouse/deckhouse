@@ -370,11 +370,9 @@ data:
 ## Local Authentication
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
-The implementation complies OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
 
----
-
-### How to Create a User
+### Creating a user
 
 Create a password and enter its hash encoded in base64 in the `password` field.
 
@@ -412,9 +410,9 @@ spec:
 
 {% endraw %}
 
-### How to Add a User to a Group
+### Adding a user to a group
 
-Users can be grouped to manage access rights. Example CR for a group:
+Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -432,11 +430,11 @@ spec:
 
 {% endraw %}
 
-* **members** — list of users belonging to the group.
+Where `members` is a list of users belonging to the group.
 
-### Password Policy
+### Password policy
 
-Password policy settings allow controlling password complexity, rotation, and lockout:
+Password policy settings allow controlling password complexity, rotation, and user lockout:
 
 {% raw %}
 
@@ -461,17 +459,19 @@ spec:
 
 {% endraw %}
 
-* **complexityLevel** — password complexity level.
-* **passwordHistoryLimit** - the number of previous passwords stored to prevent reuse.
-* **lockout** — lockout settings after exceeding the maximum failed attempts:
-  * **lockout.maxAttempts** — maximum allowed failed login attempts.
-  * **lockout.lockDuration** — duration of user lockout.
-* **rotation** — password rotation settings:
-  * **rotation.interval** — period for mandatory password change.
+Field description:
 
-### Two-Factor Authentication (2FA)
+* `complexityLevel`: Password complexity level.
+* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
+* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
+  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
+  * `lockout.lockDuration`: User lockout duration.
+* `rotation`: Password rotation settings:
+  * `rotation.interval`: Period for mandatory password change.
 
-2FA increases security by requiring a code from a TOTP application (e.g., Google Authenticator) during login.
+### Two-factor authentication (2FA)
+
+2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
 
 {% raw %}
 
@@ -491,10 +491,14 @@ spec:
 
 {% endraw %}
 
-* **enabled** — enables or disables 2FA for all static users.
-* **issuerName** — name displayed in the TOTP application when adding an account.
+Field description:
 
-_Note_: after enabling 2FA, each user must complete the second-factor registration during their first login.
+* `enabled`: Enables or disables 2FA for all static users.
+* `issuerName`: Name displayed in the authenticator application when adding an account.
+
+{% alert level="info" %}
+After enabling 2FA, each user must register in the authenticator application during their first login.
+{% endalert %}
 
 ## How to set permissions for a user or group
 
