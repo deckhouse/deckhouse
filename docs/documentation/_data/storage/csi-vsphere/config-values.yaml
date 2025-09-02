@@ -1,0 +1,88 @@
+type: object
+required:
+  - host
+  - username
+  - password
+  - vmFolderPath
+  - regionTagCategory
+  - zoneTagCategory
+  - region
+  - zones
+properties:
+  host:
+    type: string
+    description: |
+      The domain of the vCenter server.
+    x-examples:
+      - myhost
+  username:
+    type: string
+    description: |
+      The login ID.
+    x-examples:
+      - myuname
+  password:
+    type: string
+    description: |
+      The user's password.
+    x-examples:
+      - myPaSsWd
+  insecure:
+    type: boolean
+    description: |
+      Set to `true` if vCenter has a self-signed certificate.
+  vmFolderPath:
+    type: string
+    description: |
+      The path to the VirtualMachine Folder where the cloned VMs will be created.
+    x-examples:
+      - dev/test
+  regionTagCategory:
+    type: string
+    description: |
+      The name of the tag category used to identify the region (vSphere Datacenter).
+    x-examples:
+      - myregtagcat
+  zoneTagCategory:
+    type: string
+    description: |
+      The name of the tag category used to identify the region (vSphere Cluster).
+    x-examples:
+      - myzonetagcat
+  disableTimesync:
+    type: boolean
+    description: |
+      Disable time synchronization on the vSphere side.
+      > **Caution.** This parameter will not disable the NTP daemons in the guest OS, but only disable the time correction on the part of ESXi.
+  region:
+    type: string
+    description: |
+      Is a tag added to the vSphere Datacenter where all actions will occur: provisioning VirtualMachines, storing virtual disks on datastores, connecting to the network.
+    x-examples:
+      - myreg
+  zones:
+    type: array
+    items:
+      type: string
+    description: |
+      The globally restricted set of zones that this Cloud Provider works with.
+    x-examples:
+      - ["zonea", "zoneb"]
+  storageClass:
+    type: object
+    properties:
+      exclude:
+        type: array
+        items:
+          type: string
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        x-examples:
+          - [".*-lun101-.*", "slow-lun103-1c280603"]
+      compatibilityFlag:
+        type: string
+        enum: ["Legacy", "Migration"]
+        description: |
+          A flag allowing the use of the old CSI version:
+            * `Legacy` — use the old version of the driver. FCD discs only, no online-resizing;
+            * `Migration` — in this case, both drivers will be available in the cluster at the same time. This mode is used to migrate from an old driver.

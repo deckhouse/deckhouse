@@ -115,6 +115,14 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
   },
+  "csi-vsphere": {
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/documentation/v1/storage/admin/external/vsphere.html"
+  },
   "csi-hpe": {
     "editions": [
       "ee"

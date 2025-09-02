@@ -1,0 +1,13 @@
+{{- if ne .Values.csiVsphere.internal.compatibilityFlag "Legacy" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: csi-controller-internal-feature-states
+  namespace: d8-csi-vsphere
+  {{- include "helm_lib_module_labels" (list . (dict "app" "csi-controller")) | nindent 2 }}
+data:
+  "csi-migration": "false"
+  "csi-auth-check": "true"
+  "online-volume-extend": "true"
+  "use-csinode-id": "true"
+{{- end }}
