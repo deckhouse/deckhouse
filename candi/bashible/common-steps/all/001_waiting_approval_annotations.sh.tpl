@@ -12,17 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 {{ if eq .runType "Normal" }}
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   >&2 echo "Setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node..."
   attempt=0
   until
     node_data="$(
-      kubectl_exec get node $(bb-d8-node-name) -o json | jq '
+      bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq '
       {
         "resourceVersion": .metadata.resourceVersion,
         "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -36,7 +32,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
       >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
       exit 1
     fi
-    kubectl_exec annotate node $(bb-d8-node-name) \
+    bb-kubectl-exec annotate node $(bb-d8-node-name) \
       --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
       update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
       || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
@@ -45,7 +41,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
   attempt=0
   until
-    kubectl_exec get node $(bb-d8-node-name) -o json | \
+    bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
     jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
     attempt=$(( attempt + 1 ))
