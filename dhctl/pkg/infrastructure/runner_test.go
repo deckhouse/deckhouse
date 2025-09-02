@@ -366,3 +366,38 @@ var destructiveChangesReportWithoutVM = &DestructiveChangesReport{
 	Changes:              destructivelyChangedWithoutVM,
 	hasMasterDestruction: false,
 }
+
+func TestNeedToUseOpentofu(t *testing.T) {
+	metaConfig := &config.MetaConfig{}
+
+	metaConfig.ProviderName = "Yandex"
+	require.True(t, NeedToUseOpentofu(metaConfig))
+
+	notTofuProviders := []string{
+		"OpenStack",
+		"AWS",
+		"GCP",
+		"vSphere",
+		"Azure",
+		"VCD",
+		"Huaweicloud",
+	}
+
+	for _, provider := range notTofuProviders {
+		conf := &config.MetaConfig{}
+		conf.ProviderName = provider
+
+		require.False(t, NeedToUseOpentofu(conf))
+	}
+}
+
+func TestGetCloudsUseOpentofu(t *testing.T) {
+	m, err := getCloudNameToUseOpentofuMap(config.InfrastructureVersions)
+	require.NoError(t, err)
+
+	require.Len(t, m, 4)
+	require.Contains(t, m, "yandex")
+	require.Contains(t, m, "dynamix")
+	require.Contains(t, m, "zvirt")
+	require.Contains(t, m, "dvp")
+}
