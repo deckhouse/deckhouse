@@ -66,7 +66,7 @@ type cniSecretStruct struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9}, // before set_cilium_mode.go
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9}, // not essential, a copy-paste from cni-cilium module
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cni_configuration_secret",
