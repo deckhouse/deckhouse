@@ -174,11 +174,6 @@ defaults:
     values:
       featureStatus: experimental
   - scope:
-      path: "*/650-runtime-audit-engine"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
       path: "*/500-okmeter"
       type: "pages"
     values:
