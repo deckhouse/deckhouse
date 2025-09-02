@@ -99,7 +99,6 @@ func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, rele
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
-
 	return nil
 }
 
@@ -109,7 +108,7 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 	}
 
 	if !u.settings.NotificationConfig.IsEmpty() {
-		metricLabels.SetTrue(NotificationNotSent)
+		metricLabels.SetFalse(NotificationNotSent)
 
 		err := u.sendReleaseNotification(ctx, release, applyTime)
 		if err != nil {
@@ -117,7 +116,6 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 			return fmt.Errorf("send release notification: %w", err)
 		}
 	}
-
 	return nil
 }
 
