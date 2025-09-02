@@ -18,6 +18,7 @@ package releaseupdater
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,6 +40,7 @@ func TestSendWebhookNotification(t *testing.T) {
 		name            string
 		statusCode      int
 		responseBody    string
+		contentLength   int64
 		expectError     bool
 		expectedError   string
 		expectedRetries int
@@ -47,36 +49,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			name:            "200 OK - should succeed",
 			statusCode:      http.StatusOK,
 			responseBody:    "Success",
-			expectError:     false,
-			expectedRetries: 1,
-		},
-		{
-			name:            "200 OK with JSON success response - should succeed",
-			statusCode:      http.StatusOK,
-			responseBody:    `{"success": true, "message": "Notification sent successfully"}`,
-			expectError:     false,
-			expectedRetries: 1,
-		},
-		{
-			name:            "200 OK with JSON error response - should fail",
-			statusCode:      http.StatusOK,
-			responseBody:    `{"success": false, "error": "Invalid data", "code": "INVALID_DATA"}`,
-			expectError:     true,
-			expectedError:   "webhook service error: Invalid data (code: INVALID_DATA)",
-			expectedRetries: 5,
-		},
-		{
-			name:            "200 OK with JSON unsuccessful response - should fail",
-			statusCode:      http.StatusOK,
-			responseBody:    `{"success": false, "message": "Processing failed"}`,
-			expectError:     true,
-			expectedError:   "webhook service returned unsuccessful response: Processing failed",
-			expectedRetries: 5,
-		},
-		{
-			name:            "200 OK with invalid JSON - should succeed (backward compatibility)",
-			statusCode:      http.StatusOK,
-			responseBody:    `{"invalid": json}`,
+			contentLength:   -1,
 			expectError:     false,
 			expectedRetries: 1,
 		},
@@ -84,6 +57,7 @@ func TestSendWebhookNotification(t *testing.T) {
 			name:            "201 Created - should succeed",
 			statusCode:      http.StatusCreated,
 			responseBody:    "Created",
+			contentLength:   -1,
 			expectError:     false,
 			expectedRetries: 1,
 		},
@@ -91,47 +65,53 @@ func TestSendWebhookNotification(t *testing.T) {
 			name:            "299 Custom - should succeed",
 			statusCode:      299,
 			responseBody:    "Custom Success",
+			contentLength:   -1,
 			expectError:     false,
 			expectedRetries: 1,
 		},
 		{
-			name:            "400 Bad Request - should fail after retries",
+			name:            "400 Bad Request with JSON error - should parse error",
 			statusCode:      http.StatusBadRequest,
-			responseBody:    "Bad Request",
+			responseBody:    `{"code": "INVALID_DATA", "message": "Invalid request data"}`,
+			contentLength:   60,
 			expectError:     true,
-			expectedError:   "webhook responded with status 400",
+			expectedError:   "webhook error [INVALID_DATA]: Invalid request data",
 			expectedRetries: 5,
 		},
 		{
-			name:            "404 Not Found - should fail after retries",
+			name:            "400 Bad Request with JSON error without code - should parse error",
+			statusCode:      http.StatusBadRequest,
+			responseBody:    `{"message": "Invalid request data"}`,
+			contentLength:   35,
+			expectError:     true,
+			expectedError:   "webhook error: Invalid request data",
+			expectedRetries: 5,
+		},
+		{
+			name:            "404 Not Found with no content - should return standard error",
 			statusCode:      http.StatusNotFound,
-			responseBody:    "Not Found",
+			responseBody:    "",
+			contentLength:   0,
 			expectError:     true,
-			expectedError:   "webhook responded with status 404",
+			expectedError:   "webhook returned error status 404",
 			expectedRetries: 5,
 		},
 		{
-			name:            "500 Internal Server Error - should fail after retries",
+			name:            "500 Internal Server Error with invalid JSON - should return standard error",
 			statusCode:      http.StatusInternalServerError,
-			responseBody:    "Internal Server Error",
+			responseBody:    `{"invalid": json}`,
+			contentLength:   20,
 			expectError:     true,
-			expectedError:   "webhook responded with status 500",
+			expectedError:   "webhook returned error status 500",
 			expectedRetries: 5,
 		},
 		{
 			name:            "300 Multiple Choices - should fail after retries",
 			statusCode:      http.StatusMultipleChoices,
 			responseBody:    "Multiple Choices",
+			contentLength:   -1,
 			expectError:     true,
-			expectedError:   "webhook responded with status 300",
-			expectedRetries: 5,
-		},
-		{
-			name:            "Large response body - should truncate",
-			statusCode:      http.StatusNotFound,
-			responseBody:    string(make([]byte, 10000)),
-			expectError:     true,
-			expectedError:   "webhook responded with status 404",
+			expectedError:   "webhook returned error status 300",
 			expectedRetries: 5,
 		},
 	}
@@ -141,6 +121,9 @@ func TestSendWebhookNotification(t *testing.T) {
 			attemptCount := 0
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				attemptCount++
+				if tt.contentLength >= 0 {
+					w.Header().Set("Content-Length", fmt.Sprintf("%d", tt.contentLength))
+				}
 				w.WriteHeader(tt.statusCode)
 				if _, err := w.Write([]byte(tt.responseBody)); err != nil {
 					t.Fatalf("failed to write response: %v", err)
@@ -165,12 +148,6 @@ func TestSendWebhookNotification(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedError)
 				assert.Equal(t, tt.expectedRetries, attemptCount)
-
-				if len(tt.responseBody) > 4096 {
-					assert.Less(t, len(err.Error()), len(tt.responseBody)+len(tt.expectedError)+len(": "))
-				} else if !isJSONResponse(tt.responseBody) {
-					assert.Contains(t, err.Error(), tt.responseBody)
-				}
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectedRetries, attemptCount)
@@ -220,7 +197,7 @@ func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 3 {
-				// Simulate network error by closing connection
+
 				hj, ok := w.(http.Hijacker)
 				if ok {
 					conn, _, _ := hj.Hijack()
@@ -265,7 +242,6 @@ func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 
 		config := NotificationConfig{
 			WebhookURL: svr.URL,
-			// RetryMinTime not set - should use default 2 seconds
 		}
 
 		data := &WebhookData{
@@ -279,7 +255,7 @@ func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 		duration := time.Since(start)
 
 		require.NoError(t, err)
-		// Should complete quickly since it succeeds on first try
+
 		assert.Less(t, duration, 100*time.Millisecond)
 	})
 
@@ -318,123 +294,42 @@ func TestSendWebhookNotification_DefaultRetryTime(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, 3, attemptCount)
-		// Should take at least 50ms + 100ms (exponential backoff)
+
 		assert.GreaterOrEqual(t, duration, 150*time.Millisecond)
 	})
 }
 
-func TestValidateWebhookResponse(t *testing.T) {
-	tests := []struct {
-		name        string
-		response    *WebhookResponse
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name:        "nil response - should error",
-			response:    nil,
-			expectError: true,
-			errorMsg:    "webhook response is nil",
-		},
-		{
-			name: "successful response - should pass",
-			response: &WebhookResponse{
-				Success: true,
-				Message: "Success",
-			},
-			expectError: false,
-		},
-		{
-			name: "unsuccessful response with error - should pass",
-			response: &WebhookResponse{
-				Success: false,
-				Error:   "Something went wrong",
-				Code:    "INTERNAL_ERROR",
-			},
-			expectError: false,
-		},
-		{
-			name: "unsuccessful response with message - should pass",
-			response: &WebhookResponse{
-				Success: false,
-				Message: "Processing failed",
-			},
-			expectError: false,
-		},
-		{
-			name: "unsuccessful response without error or message - should error",
-			response: &WebhookResponse{
-				Success: false,
-			},
-			expectError: true,
-			errorMsg:    "webhook returned unsuccessful response without error description",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateWebhookResponse(tt.response)
-
-			if tt.expectError {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errorMsg)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestWebhookResponse(t *testing.T) {
-	t.Run("WebhookResponse JSON marshaling", func(t *testing.T) {
-		resp := &WebhookResponse{
-			Success: true,
-			Message: "Notification sent",
-			Error:   "",
-			Code:    "",
-		}
-
-		jsonData, err := json.Marshal(resp)
-		require.NoError(t, err)
-
-		var unmarshaled WebhookResponse
-		err = json.Unmarshal(jsonData, &unmarshaled)
-		require.NoError(t, err)
-
-		assert.Equal(t, resp.Success, unmarshaled.Success)
-		assert.Equal(t, resp.Message, unmarshaled.Message)
-		assert.Equal(t, resp.Error, unmarshaled.Error)
-		assert.Equal(t, resp.Code, unmarshaled.Code)
-	})
-
-	t.Run("WebhookResponse with error", func(t *testing.T) {
-		resp := &WebhookResponse{
-			Success: false,
-			Message: "",
-			Error:   "Invalid data",
+func TestResponseError(t *testing.T) {
+	t.Run("ResponseError JSON marshaling", func(t *testing.T) {
+		resp := &ResponseError{
 			Code:    "INVALID_DATA",
+			Message: "Invalid request data",
 		}
 
 		jsonData, err := json.Marshal(resp)
 		require.NoError(t, err)
 
-		var unmarshaled WebhookResponse
+		var unmarshaled ResponseError
 		err = json.Unmarshal(jsonData, &unmarshaled)
 		require.NoError(t, err)
 
-		assert.Equal(t, resp.Success, unmarshaled.Success)
-		assert.Equal(t, resp.Message, unmarshaled.Message)
-		assert.Equal(t, resp.Error, unmarshaled.Error)
 		assert.Equal(t, resp.Code, unmarshaled.Code)
+		assert.Equal(t, resp.Message, unmarshaled.Message)
 	})
-}
 
-func TestWebhookErrorCodes(t *testing.T) {
-	t.Run("Error codes are defined correctly", func(t *testing.T) {
-		assert.Equal(t, "INVALID_DATA", WebhookErrorCodeInvalidData)
-		assert.Equal(t, "SERVICE_UNAVAILABLE", WebhookErrorCodeServiceUnavailable)
-		assert.Equal(t, "AUTH_FAILED", WebhookErrorCodeAuthFailed)
-		assert.Equal(t, "RATE_LIMITED", WebhookErrorCodeRateLimited)
-		assert.Equal(t, "INTERNAL_ERROR", WebhookErrorCodeInternalError)
+	t.Run("ResponseError without code", func(t *testing.T) {
+		resp := &ResponseError{
+			Message: "Service unavailable",
+		}
+
+		jsonData, err := json.Marshal(resp)
+		require.NoError(t, err)
+
+		var unmarshaled ResponseError
+		err = json.Unmarshal(jsonData, &unmarshaled)
+		require.NoError(t, err)
+
+		assert.Equal(t, "", unmarshaled.Code)
+		assert.Equal(t, resp.Message, unmarshaled.Message)
 	})
 }

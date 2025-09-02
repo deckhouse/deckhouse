@@ -22,9 +22,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -56,35 +54,15 @@ type WebhookData struct {
 	Message   string `json:"message"`
 }
 
-type WebhookResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-	Error   string `json:"error,omitempty"`
+type ResponseError struct {
 	Code    string `json:"code,omitempty"`
+	Message string `json:"message"`
 }
 
 const (
-	WebhookErrorCodeInvalidData        = "INVALID_DATA"
-	WebhookErrorCodeServiceUnavailable = "SERVICE_UNAVAILABLE"
-	WebhookErrorCodeAuthFailed         = "AUTH_FAILED"
-	WebhookErrorCodeRateLimited        = "RATE_LIMITED"
-	WebhookErrorCodeInternalError      = "INTERNAL_ERROR"
+	MaxContentLen = 4096
 )
 
-func validateWebhookResponse(resp *WebhookResponse) error {
-	if resp == nil {
-		return fmt.Errorf("webhook response is nil")
-	}
-
-	if !resp.Success {
-		if resp.Error == "" && resp.Message == "" {
-			return fmt.Errorf("webhook returned unsuccessful response without error description")
-		}
-	}
-	return nil
-}
-
-// SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
 func (u *ReleaseNotifier) SendPatchReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time, metricLabels MetricLabels) error {
 	if release.GetNotified() {
 		return nil
@@ -177,34 +155,27 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		defer resp.Body.Close()
 
-		bodyBytes, readErr := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		if readErr != nil {
-			return nil, fmt.Errorf("failed to read response body: %w", readErr)
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return resp, nil
 		}
 
-		if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
-			return nil, fmt.Errorf("webhook responded with status %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+		var responseError ResponseError
+
+		if resp.ContentLength > 0 && resp.ContentLength <= MaxContentLen {
+
+			decoder := json.NewDecoder(resp.Body)
+			if err := decoder.Decode(&responseError); err != nil {
+
+				return nil, fmt.Errorf("webhook returned error status %d", resp.StatusCode)
+			}
+
+			if responseError.Code != "" {
+				return nil, fmt.Errorf("webhook error [%s]: %s", responseError.Code, responseError.Message)
+			}
+			return nil, fmt.Errorf("webhook error: %s", responseError.Message)
 		}
 
-		var webhookResp WebhookResponse
-		if len(bodyBytes) > 0 {
-			if err := json.Unmarshal(bodyBytes, &webhookResp); err != nil {
-				return resp, nil
-			}
-
-			if err := validateWebhookResponse(&webhookResp); err != nil {
-				return nil, fmt.Errorf("webhook response validation failed: %w", err)
-			}
-
-			if !webhookResp.Success {
-				if webhookResp.Error != "" {
-					return nil, fmt.Errorf("webhook service error: %s (code: %s)", webhookResp.Error, webhookResp.Code)
-				}
-				return nil, fmt.Errorf("webhook service returned unsuccessful response: %s", webhookResp.Message)
-			}
-		}
-
-		return resp, nil
+		return nil, fmt.Errorf("webhook returned error status %d", resp.StatusCode)
 	})
 
 	return err

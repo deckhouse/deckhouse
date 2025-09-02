@@ -30,7 +30,7 @@ status:
   approved: false
   message: 'Release is blocked, failed to send release notification: send release
     notification: send webhook notification: after 5 attempts, last error: webhook
-    responded with status 500: Internal Server Error'
+    returned error status 500'
   phase: Pending
   transitionTime: null
 ---

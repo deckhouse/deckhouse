@@ -16,15 +16,7 @@ title: "Модуль deckhouse: примеры конфигурации"
 - в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
 - в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов.
 
-**Важно**: когда ваш веб-хук возвращает код статуса ошибки (4xx или 5xx), Deckhouse повторяет попытку отправки уведомления до 5 раз с экспоненциальным отступом. Если все попытки заканчиваются неудачей, выпуск будет заблокирован до тех пор, пока веб-хук не станет доступным снова.
 
-Для лучшей обработки ошибок и отладки ваш веб-хук должен возвращать JSON-ответ со следующей структурой:
-- `success`: булево значение, указывающее на успешность обработки уведомления
-- `message`: необязательное информационное сообщение
-- `error`: необязательное описание ошибки (когда success равно false)
-- `code`: необязательный код ошибки для программной обработки
-
-Если ваш веб-хук возвращает успешный HTTP-статус (2xx), но с `success: false` в JSON-ответе, Deckhouse также будет рассматривать это как ошибку и повторит попытку отправки уведомления.
 
 Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
@@ -89,17 +81,15 @@ type WebhookData struct {
   Message       string            `json:"message"`
 }
 
-// Response structure that Deckhouse expects from webhook
-type WebhookResponse struct {
-  Success bool   `json:"success"`
-  Message string `json:"message,omitempty"`
-  Error   string `json:"error,omitempty"`
+// Response structure that Deckhouse expects from webhook on error
+type ResponseError struct {
   Code    string `json:"code,omitempty"`
+  Message string `json:"message"`
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
   if r.Method != http.MethodPost {
-  w.WriteHeader(http.StatusMethodNotAllowed)
+    w.WriteHeader(http.StatusMethodNotAllowed)
     return
   }
   defer r.Body.Close()
@@ -118,26 +108,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
   // Example conditional logic: fail intentionally for testing
   if data.Version == "v0.0.0-fail" {
-    // Return structured error response
-    errorResp := WebhookResponse{
-      Success: false,
-      Error:   "intentional failure for testing",
+    // Return structured error response with error status code
+    errorResp := ResponseError{
       Code:    "TEST_FAILURE",
+      Message: "intentional failure for testing",
     }
 
-    w.WriteHeader(http.StatusOK)
+    w.WriteHeader(http.StatusBadRequest)
     json.NewEncoder(w).Encode(errorResp)
     return
   }
 
-  // Return success response
-  successResp := WebhookResponse{
-    Success: true,
-    Message: "Notification processed successfully",
-  }
-
+  // Return success response with 2xx status code
   w.WriteHeader(http.StatusOK)
-  json.NewEncoder(w).Encode(successResp)
+  w.Write([]byte("Notification processed successfully"))
 }
 
 func main() {
@@ -214,6 +198,14 @@ spec:
 После появления новой минорной версии Deckhouse на используемом канале обновлений, но до момента применения ее в кластере на адрес вебхука будет выполнен [POST-запрос](configuration.html#parameters-update-notification-webhook).
 
 Параметр [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) позволяет отложить установку обновления на заданный период, обеспечивая время для реакции на оповещение с учётом окон обновлений. Если при этом вебхук недоступен, каждая неудачная попытка отправки будет сдвигать время применения на ту же величину, что может привести к бесконечному откладыванию обновления.
+
+**Важно**: когда ваш веб-хук возвращает код статуса ошибки (4xx или 5xx), Deckhouse повторяет попытку отправки уведомления до 5 раз с экспоненциальным отступом. Если все попытки заканчиваются неудачей, выпуск будет заблокирован до тех пор, пока веб-хук не станет доступным снова.
+
+Для лучшей обработки ошибок и отладки ваш веб-хук должен возвращать JSON-ответ со следующей структурой при возврате кодов ошибок:
+- `code`: необязательный внутренний код ошибки для программной обработки
+- `message`: сообщение об ошибке, описывающее что пошло не так
+
+Если ваш веб-хук возвращает успешный HTTP-статус (2xx), Deckhouse будет считать уведомление успешным независимо от содержимого тела ответа.
 
 Пример:
 
