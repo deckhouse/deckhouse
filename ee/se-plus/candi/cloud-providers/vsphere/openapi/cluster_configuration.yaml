@@ -367,7 +367,7 @@ apiVersions:
       storagePolicyID:
         type: string
         description: |
-          ID of the VM Storage Policy (optional)
+          ID of the SPBM (Storage Policy Based Management) storage policy.
       vmFolderExists:
         type: boolean
         default: false
