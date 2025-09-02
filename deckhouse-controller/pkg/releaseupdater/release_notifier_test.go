@@ -30,11 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 )
 
-func isJSONResponse(s string) bool {
-	var js json.RawMessage
-	return json.Unmarshal([]byte(s), &js) == nil
-}
-
 func TestSendWebhookNotification(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -197,7 +192,6 @@ func TestSendWebhookNotification_RetryBehavior(t *testing.T) {
 		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			attemptCount++
 			if attemptCount < 3 {
-
 				hj, ok := w.(http.Hijacker)
 				if ok {
 					conn, _, _ := hj.Hijack()

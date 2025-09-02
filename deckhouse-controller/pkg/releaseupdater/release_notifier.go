@@ -162,10 +162,8 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		var responseError ResponseError
 
 		if resp.ContentLength > 0 && resp.ContentLength <= MaxContentLen {
-
 			decoder := json.NewDecoder(resp.Body)
 			if err := decoder.Decode(&responseError); err != nil {
-
 				return nil, fmt.Errorf("webhook returned error status %d", resp.StatusCode)
 			}
 
