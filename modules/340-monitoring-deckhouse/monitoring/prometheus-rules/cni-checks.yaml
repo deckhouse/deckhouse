@@ -45,6 +45,6 @@
 
           3. Once the parameters in "ModuleConfig" match those used in the cluster:
                - this alert will be resolved,
-               - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source.
+               - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source of truth.
 
           4. After that, you can add the desired parameters to the ModuleConfig CNI and they will be applied immediately.
