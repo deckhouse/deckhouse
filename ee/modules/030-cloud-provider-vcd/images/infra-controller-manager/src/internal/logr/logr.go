@@ -1,6 +1,8 @@
 package logr
 
 import (
+	"log/slog"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/go-logr/logr"
 )
@@ -23,13 +25,13 @@ func (l *LogrAdapter) Info(level int, msg string, args ...any) {
 	switch {
 	case level <= 0:
 		l.logger.With("severity", level).Info(msg, args...)
-    case level >= 3:
+	case level >= 3:
 		l.logger.With("severity", level).Debug(msg, args...)
 	}
 }
 
 func (l *LogrAdapter) Error(err error, msg string, args ...any) {
-	l.logger.Error(msg, append(args, err.Error())...)
+	l.logger.Error(msg, slog.String("error", err.Error()))
 }
 
 func (l *LogrAdapter) WithValues(args ...any) logr.LogSink {

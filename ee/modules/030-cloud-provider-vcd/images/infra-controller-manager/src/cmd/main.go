@@ -84,7 +84,7 @@ func main() {
 	// - https://github.com/advisories/GHSA-4374-p667-p6c8
 
 	setupLog := globalLog.Named("setup")
-	ctrl.SetLogger(logr.NewLogrAdapter(setupLog.Named("controller-runtime")))
+	ctrl.SetLogger(logr.NewLogrAdapter(globalLog.Named("controller-runtime")))
 
 	disableHTTP2 := func(c *tls.Config) {
 		setupLog.Info("disabling http/2")
