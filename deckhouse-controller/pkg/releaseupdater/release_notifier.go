@@ -97,6 +97,7 @@ func (u *ReleaseNotifier) SendMinorReleaseNotification(ctx context.Context, rele
 	return nil
 }
 
+// SendPatchReleaseNotification sending patch notification (only if notification config has release type "All")
 func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v1alpha1.Release, applyTime time.Time) error {
 	if u.settings.NotificationConfig.WebhookURL == "" {
 		return nil
