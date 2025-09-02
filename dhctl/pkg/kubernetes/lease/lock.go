@@ -272,7 +272,7 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 }
 
 func (l *LeaseLock) isStillLocked(lease *coordinationv1.Lease) bool {
-	if lease.Spec.HolderIdentity == nil {
+	if lease == nil || lease.Spec.HolderIdentity == nil {
 		return false
 	}
 
