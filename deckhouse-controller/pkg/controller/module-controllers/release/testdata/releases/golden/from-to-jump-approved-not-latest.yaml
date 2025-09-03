@@ -54,6 +54,7 @@ metadata:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
+    status: skipped
   name: demo-1.75.1
   resourceVersion: "1003"
 spec:
@@ -66,8 +67,8 @@ spec:
   weight: 900
 status:
   approved: false
-  message: minor version is greater than deployed 1.67.5 by one
-  phase: Pending
+  message: ""
+  phase: Skipped
   pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
@@ -82,8 +83,9 @@ metadata:
     module: demo
     modules.deckhouse.io/update-policy: demo
     source: test-source
+    status: skipped
   name: demo-1.75.2
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: demo
   update:
@@ -94,11 +96,11 @@ spec:
   weight: 900
 status:
   approved: true
-  message: awaiting for v1.75.1 release to be deployed
-  phase: Pending
+  message: ""
+  phase: Skipped
   pullDuration: 0s
   size: 0
-  transitionTime: null
+  transitionTime: "2019-10-17T15:33:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease

@@ -609,7 +609,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		// 2.1) Jump through n versions, but approved not latest
-		suite.Run("Jump through n versions", func() {
+		suite.Run("Jump through n versions approved not latest", func() {
 			testData := suite.fetchTestFileData("from-to-jump-approved-not-latest.yaml")
 			suite.setupReleaseController(testData)
 
