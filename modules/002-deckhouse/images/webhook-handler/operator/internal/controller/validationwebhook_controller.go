@@ -68,6 +68,7 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	webhook := new(deckhouseiov1alpha1.ValidationWebhook)
 	err := r.Client.Get(ctx, req.NamespacedName, webhook)
 	if err != nil {
+		r.Logger.Warn("error get resource", slog.String("name", req.Name))
 		// resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
@@ -80,13 +81,14 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// resource marked as "to delete"
+	r.Logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
 	if !webhook.DeletionTimestamp.IsZero() {
 		// TODO: finalizer deletion logic
-		r.Logger.Debug("release deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
+		r.Logger.Debug("validating webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
 		res, err := r.handleDeleteValidatingWebhook(ctx, webhook)
 		if err != nil {
-			r.Logger.Warn("bla bla", log.Err(err))
+			r.Logger.Warn("delete validating webhook", log.Err(err))
 
 			return res, err
 		}
@@ -137,8 +139,14 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	}
 
 	// add finalizer
-	if !controllerutil.ContainsFinalizer(vh, "some finalizer") {
-		controllerutil.AddFinalizer(vh, "some finalizer")
+	if !controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
+		r.Logger.Debug("add finalizer")
+		controllerutil.AddFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
+
+		err = r.Client.Update(ctx, vh)
+		if err != nil {
+			log.Warn("add finalizer err", slog.String("err", err.Error()))
+		}
 	}
 
 	r.IsReloadShellNeed.Store(true)
@@ -154,10 +162,24 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 	// logic for processing validation webhook deletion
 	// 1) delete file
 
-	// add finalizer
-	if controllerutil.ContainsFinalizer(vh, "some finalizer") {
-		controllerutil.RemoveFinalizer(vh, "some finalizer")
+	err := os.Remove("hooks/" + vh.Name + "/webhooks/validating/" + vh.Name + ".py")
+	if err != nil {
+		log.Error("error delete file for webhook %s: %w", vh.Name, err)
+		return res, err
 	}
+
+	// remove finalizer
+	if controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
+		r.Logger.Debug("remove finalizer")
+		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
+
+		err = r.Client.Update(ctx, vh)
+		if err != nil {
+			log.Warn("remove finalizer err", slog.String("err", err.Error()))
+		}
+	}
+
+	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }
