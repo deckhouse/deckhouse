@@ -1,4 +1,4 @@
-{{- $version := "fix/metadata-querying-timeout" }}
+{{- $version := "v0.15.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
