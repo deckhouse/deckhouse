@@ -795,7 +795,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
-	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, logger)
+	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculatorWithChannel(r.client, logger, policy.Spec.ReleaseChannel)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {

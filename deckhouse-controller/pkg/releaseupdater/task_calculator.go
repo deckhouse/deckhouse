@@ -67,6 +67,15 @@ func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger)
 	}
 }
 
+func NewModuleReleaseTaskCalculatorWithChannel(k8sclient client.Client, logger *log.Logger, releaseChannel string) *TaskCalculator {
+	return &TaskCalculator{
+		k8sclient:      k8sclient,
+		listFunc:       listModuleReleases,
+		log:            logger,
+		releaseChannel: releaseChannel,
+	}
+}
+
 type TaskType int
 
 const (

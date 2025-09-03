@@ -1105,7 +1105,7 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			dr := suite.getDeckhouseRelease("v1.20.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 			require.NoError(suite.T(), err)
-			// Should be blocked due to 20 minor version jump (1.0.0 -> 1.20.0)
+			// Should be blocked due to 20 minor version jump (1.0.0 -> 1.20.0) for Deckhouse releases in LTS channel
 			require.Equal(suite.T(), "Pending", dr.Status.Phase)
 			require.Contains(suite.T(), dr.Status.Message, "minor version is greater than deployed")
 		})

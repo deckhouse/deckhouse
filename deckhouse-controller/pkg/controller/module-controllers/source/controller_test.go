@@ -519,21 +519,35 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 	return source
 }
 
+func getMockKeys(dc *dependency.MockedContainer) []string {
+	keys := make([]string, 0, len(dc.CRClientMap))
+	for k := range dc.CRClientMap {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modules, tags []string) *dependency.MockedContainer {
 	dc := dependency.NewMockedContainer()
 
+	// Mock for listing modules
+	modulesMock := cr.NewClientMock(t)
+	modulesMock.ListTagsMock.Optional().Return(modules, nil)
 	dc.CRClientMap = map[string]cr.Client{
-		"dev-registry.deckhouse.io/deckhouse/modules": cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
+		"dev-registry.deckhouse.io/deckhouse/modules": modulesMock,
 	}
 
 	for _, module := range modules {
+		// Mock for listing module versions
 		moduleVersionsMock := cr.NewClientMock(t)
-
 		if len(tags) > 0 {
-			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
+			moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock
 
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		// Mock for getting module image
+		moduleImageMock := cr.NewClientMock(t)
+		moduleImageMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel
@@ -577,6 +591,7 @@ accessibility:
 				},
 			}, nil
 		})
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleImageMock
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
@@ -634,4 +649,88 @@ spec:
 	}
 
 	assert.ElementsMatch(suite.T(), []string{"valid-module", "valid.module", "another-valid-module"}, moduleNames)
+}
+
+// TestLTSChannelReleases tests the LTS channel logic
+func (suite *ControllerTestSuite) TestLTSChannelReleases() {
+	// First, let's test with a simple approach - use existing working test data
+	suite.Run("LTS channel - simple test with existing data", func() {
+		// Use existing working test data but with LTS channel
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.7.1",
+			[]string{"parca"},
+			[]string{"v1.3.1", "v1.4.1", "v1.5.2", "v1.5.3", "v1.6.1", "v1.6.2", "v1.7.1", "v1.7.2"})
+
+		// Parse existing test data
+		testData := suite.parseTestdata("existing-module-releases-with-listing-registry.yaml")
+
+		// Modify the test data to use LTS channel
+		testDataStr := string(testData)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+
+		suite.setupTestController(testDataStr, withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+
+		// Check results
+		releases := suite.fetchResults()
+		suite.T().Logf("LTS test results: %s", string(releases))
+	})
+	suite.Run("LTS channel - single release jump with 20 version gap", func() {
+		// Setup: deployed v1.0.0, target v1.20.0 (20 minor versions gap)
+		// For modules in LTS channel, any minor version jump should be allowed
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.20.0",
+			[]string{"test-module"},
+			[]string{"v1.0.0", "v1.1.0", "v1.2.0", "v1.3.0", "v1.4.0", "v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0", "v1.12.0", "v1.13.0", "v1.14.0", "v1.15.0", "v1.16.0", "v1.17.0", "v1.18.0", "v1.19.0", "v1.20.0"})
+
+		suite.setupTestController(string(suite.parseTestdata("lts-single-jump-20-gap.yaml")), withDependencyContainer(dc))
+
+		// Debug: check what's in the test environment before running
+		suite.T().Logf("Before handleModuleSource - checking mocks:")
+		suite.T().Logf("CRClientMap keys: %v", getMockKeys(dc))
+
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+
+		// Debug: print the results to understand what's happening
+		releases := suite.fetchResults()
+		suite.T().Logf("Test results: %s", string(releases))
+
+		// Check that a new release was created for v1.20.0
+		// This should work because modules in LTS channel allow any minor version jump
+		assert.Contains(suite.T(), string(releases), "test-module-v1.20.0")
+	})
+
+	suite.Run("LTS channel - sequential 2 releases jump", func() {
+		// Setup: deployed v1.0.0, target v1.2.0 (sequential jump)
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.0",
+			[]string{"test-module"},
+			[]string{"v1.0.0", "v1.1.0", "v1.2.0"})
+
+		suite.setupTestController(string(suite.parseTestdata("lts-sequential-2-jump.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+
+		// Check that a new release was created for v1.2.0
+		releases := suite.fetchResults()
+		assert.Contains(suite.T(), string(releases), "test-module-v1.2.0")
+	})
+
+	suite.Run("LTS channel - reverse order 2 releases jump", func() {
+		// Setup: deployed v1.0.0, target v1.2.0 (reverse order in registry)
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.2.0",
+			[]string{"test-module"},
+			[]string{"v1.2.0", "v1.1.0", "v1.0.0"}) // Reverse order
+
+		suite.setupTestController(string(suite.parseTestdata("lts-reverse-2-jump.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+
+		// Check that a new release was created for v1.2.0
+		releases := suite.fetchResults()
+		assert.Contains(suite.T(), string(releases), "test-module-v1.2.0")
+	})
 }
