@@ -116,13 +116,13 @@ When you change the CRI in the cluster, complete several additional steps for th
 1. Deckhouse updates nodes in the master NodeGroup one by one, so to find out which node is currently being updated, run the following command:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Confirm the disruption of the master node you found in the previous step:
 
    ```shell
-   kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <master node name> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Wait for the updated master node to switch to the `Ready` state.

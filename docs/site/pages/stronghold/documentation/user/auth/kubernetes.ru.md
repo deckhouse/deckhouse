@@ -67,7 +67,7 @@ $ curl \
 d8 stronghold auth enable kubernetes
 ```
 
-1. Используйте эндпоинт `/config`, чтобы настроить Stronghold на взаимодействие с новым кластером Kubernetes. Используйте `d8 kubectl cluster-info` для получения адреса хоста Kubernetes и TCP-порта.
+1. Используйте эндпоинт `/config`, чтобы настроить Stronghold на взаимодействие с новым кластером Kubernetes. Используйте `d8 k cluster-info` для получения адреса хоста Kubernetes и TCP-порта.
 
 ```bash
 d8 stronghold write auth/kubernetes/config \
@@ -139,7 +139,7 @@ API Kubernetes `TokenReview`. Вам также необходимо устан�
 Stronghold. Каждому клиенту Stronghold потребуется кластерная роль `system:auth-delegator:
 
 ```bash
-kubectl create clusterrolebinding myapp-client-auth-delegator \
+d8 k create clusterrolebinding myapp-client-auth-delegator \
   --clusterrole=system:auth-delegator \
   --group=group1 \
   --serviceaccount=default:svcaccount1 \
@@ -153,7 +153,7 @@ kubectl create clusterrolebinding myapp-client-auth-delegator \
 потребуется кластерная роль `system:auth-delegator:
 
 ```bash
-kubectl apply -f - <<EOF
+d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:

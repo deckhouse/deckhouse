@@ -661,7 +661,7 @@ annotations:
 Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 19), выполните команду:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

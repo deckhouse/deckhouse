@@ -183,14 +183,14 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 - Установите актуальное имя образа etcd:
 
   ```shell
-  IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
+  IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
   sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
   ```
 
 - Создайте под:
 
   ```shell
-  kubectl create -f etcd.pod.yaml
+  d8 k create -f etcd.pod.yaml
   ```
 
 Скопируйте `etcdhelper` и снимок etcd в контейнер пода.
@@ -200,8 +200,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 Пример:
 
 ```shell
-kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+d8 k cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 ```
 
 В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
@@ -209,7 +209,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```console
-~ # kubectl -n default exec -it etcdrestore -- sh
+~ # d8 k -n default exec -it etcdrestore -- sh
 / # chmod +x /usr/bin/etcdhelper
 / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
 / # etcd &
@@ -220,7 +220,7 @@ kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
 Пример:
 
 ```console
-~ # kubectl -n default exec -it etcdrestore -- sh
+~ # d8 k -n default exec -it etcdrestore -- sh
 / # mkdir /tmp/restored_yaml
 / # cd /tmp/restored_yaml
 /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
