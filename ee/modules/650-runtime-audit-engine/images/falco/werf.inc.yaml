@@ -53,7 +53,7 @@ shell:
   - rm -rf /src/falcoctl/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-falcoctl-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -67,13 +67,20 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "true" }}
+  - apt-get update
+  - apt-get install -y make bash
+{{- else }}
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
+{{- end }}
   install:
   - cd /src
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)" make falcoctl
+  - export RELEASE="$(cat RELEASE)" COMMIT="$(cat COMMIT)"
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make falcoctl`) | indent 6 }}
   - mkdir -p /out
   - cp falcoctl /out
   - chown 64535:64535 /out/falcoctl

@@ -31,7 +31,7 @@ shell:
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -45,11 +45,18 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "true" }}
+  - apt-get update
+  - apt-get install -y make bash
+{{- else }}
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make bash
+{{- end }}
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - RELEASE="$(cat GIT_VERSION)" COMMIT="$(cat GIT_HASH)" make build
+  - export RELEASE="$(cat GIT_VERSION)" COMMIT="$(cat GIT_HASH)"
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make build`) | indent 6 }}
   - chown 64535:64535 manager
   - chmod 0755 manager
