@@ -109,6 +109,7 @@ msg    successfully updated config
 | LIST   | /sys/storage/raft/snapshot-auto/config |
 
 Used to get a list of names of all existing automatic snapshots
+
 ### Example
 
 `d8 stronghold list sys/storage/raft/snapshot-auto/config`
