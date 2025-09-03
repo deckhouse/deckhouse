@@ -637,6 +637,8 @@ annotations:
 * Запустить прикладной init-контейнер от пользователя с uid `1337`. Запросы данного пользователя не перехватываются под управление Istio.
 * Исключить IP-адрес или порт сервиса из-под контроля Istio с помощью аннотаций `traffic.sidecar.istio.io/excludeOutboundIPRanges` или `traffic.sidecar.istio.io/excludeOutboundPorts`.
 
+{% alert level="warning" %}Стоит отметить, что каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
+
 ## Обновление Istio
 
 ## Обновление control plane Istio
