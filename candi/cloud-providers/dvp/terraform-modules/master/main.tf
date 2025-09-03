@@ -34,14 +34,14 @@ resource "kubernetes_secret" "cloudinit-secret" {
 
 locals {
   additional_block_refs = tolist([
-    for k in sort(keys(module.additional_disk)) : {
+    for d in var.additional_disks : {
       "kind" = "VirtualDisk"
-      "name" = module.additional_disk[k].name
+      "name" = d.name
     }
   ])
 
   additional_disks_hashes = [
-    for k in sort(keys(module.additional_disk)) : module.additional_disk[k].hash
+    for d in var.additional_disks : d.hash
   ]
 
   spec = merge(
