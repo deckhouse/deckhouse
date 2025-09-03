@@ -91,8 +91,8 @@ Features of the configurations listed in the table above:
       <th>Requirement level</th>
       <th>Node type</th>
       <th style="text-align: center;">CPU (pcs)</th>
-      <th style="text-align: center;">RAM ()</th>
-      <th style="text-align: center;">Disk space ()</th>
+      <th style="text-align: center;">RAM (GB)</th>
+      <th style="text-align: center;">Disk space (GB)</th>
     </tr>
   </thead>
   <tbody>
