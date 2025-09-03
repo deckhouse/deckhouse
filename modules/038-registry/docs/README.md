@@ -5,7 +5,7 @@ description: ""
 
 ## Description
 
-The module manages the configuration of the Deckhouse components' registry and implements an internal container image storage (container registry, registry).
+The module manages the configuration of theregistry of Deckhouse components and provides an internal container image storage (container registry, registry).
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
@@ -14,7 +14,7 @@ The module can operate in the following modes:
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
 - `Unmanaged` — operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
-  - Configurable — a mode managed via the registry module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
+  - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
   - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](../../deckhouse-faq.html#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry) using the (deprecated) `helper change registry` command.
 
 {% alert level="info" %}

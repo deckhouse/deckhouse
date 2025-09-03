@@ -5,17 +5,17 @@ description: ""
 
 ## Как мигрировать на модуль registry?
 
-Во время миграции, для Containerd v1 будет выполнен переход на новую схему конфигурации registry.
-Containerd v2 использует новую схему по-умолчанию. Подробнее можно ознакомиться в разделе ["добавление пользовательской конфигурации реестра"](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
+Во время миграции, для containerd v1 будет выполнен переход на новую схему конфигурации registry.
+containerd v2 использует новую схему по умолчанию. Подробнее можно ознакомиться в разделе ["добавление пользовательской конфигурации реестра"](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry)
 
-### Для Containerd v2
+### Для containerd v2
 
-1. Выполните переключение на использование модуля Registry. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
    Посмотреть текущие настройки реестра можно с помощью команды:
 
    ```bash
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Данные настройки укажите при конфигурации `Unmanaged` режима:
@@ -52,7 +52,7 @@ Containerd v2 использует новую схему по-умолчанию
    target_mode: Unmanaged
    ```
 
-### Для Containerd v1
+### Для containerd v1
 
 {% alert level="danger" %}
 - Во время переключения containerd v1 сервис будет перезапущен.
@@ -62,7 +62,7 @@ Containerd v2 использует новую схему по-умолчанию
 
 1. Убедитесь, что на узлах с containerd v1 отсутствуют [пользовательские конфигурации реестра](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry), расположенные в директории `/etc/containerd/conf.d`.
 
-1. Если конфигурации присутствуют, необходимо выполнить миграцию на новый формат конфигурации registry в containerd. Для этого, необходимо добавить новые конфигурации в директорию `/etc/containerd/registry.d`. Данные конфигурации вступят в силу после переключения на модуль registry. Для добавления конфигураций подготовьте `NodeGroupConfiguration`, подробнее в разделе ["добавления пользовательской конфигурации реестра"](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry). Пример:
+1. Если конфигурации присутствуют, необходимо выполнить миграцию на новый формат конфигурации registry в containerd. Для этого, необходимо добавить новые конфигурации в директорию `/etc/containerd/registry.d`. Данные конфигурации вступят в силу после переключения на модуль `registry`. Для добавления конфигураций подготовьте `NodeGroupConfiguration`, подробнее в разделе ["добавления пользовательской конфигурации реестра"](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry). Пример:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -116,12 +116,12 @@ Containerd v2 использует новую схему по-умолчанию
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Выполните переключение на использование модуля Registry. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
    Посмотреть текущие настройки реестра можно с помощью команды:
 
    ```bash
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller global values | yq e '.modulesImages.registry' -
    ```
 
    Данные настройки укажите при конфигурации `Unmanaged` режима:
@@ -163,7 +163,7 @@ Containerd v2 использует новую схему по-умолчанию
 
    Данное сообщение означает, что на узлах имеются старые конфигурации реестров, расположенные в директории `/etc/containerd/conf.d`. И в данный момент переключение на новую конфигурацию containerd заблокировано. Для того, чтобы разрешить переключение, необходимо удалить старые конфигурационные файлы.
 
-1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль registry. Для этого создайте `NodeGroupConfiguration`, пример:
+1. Удалите старые конфигурационные файлы, чтобы разрешить переключение на модуль `registry`. Для этого создайте `NodeGroupConfiguration`, пример:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -370,7 +370,7 @@ Containerd v2 использует новую схему по-умолчанию
 
 1. Если используется containerd v1, примените заготовленные этапом ранее `NodeGroupConfiguration` с пользовательскими конфигурациями registry.
 
-1. Отключите модуль registry. Пример:
+1. Отключите модуль `registry`. Пример:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1

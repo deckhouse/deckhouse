@@ -10,19 +10,19 @@ Deckhouse is configured using global settings, module settings, and various cust
 1. Display global Deckhouse settings:
 
    ```shell
-   kubectl get mc global -o yaml
+   d8 k get mc global -o yaml
    ```
 
 1. List the status of all modules (available for Deckhouse version 1.47+):
 
    ```shell
-   kubectl get modules
+   d8 k get modules
    ```
 
 1. Display the settings of the `user-authn` module configuration:
 
    ```shell
-   kubectl get moduleconfigs user-authn -o yaml
+   d8 k get moduleconfigs user-authn -o yaml
    ```
 
 ## How do I find the documentation for the version installed?
@@ -40,7 +40,7 @@ Documentation is available when the [documentation](modules/documentation/) modu
 You can view the cluster update mode in the [configuration](modules/deckhouse/configuration.html) of the `deckhouse` module. To do this, run the following command:
 
 ```shell
-kubectl get mc deckhouse -oyaml
+d8 k get mc deckhouse -oyaml
 ```
 
 Example of the output:
@@ -117,7 +117,7 @@ To apply an update immediately, set the `release.deckhouse.io/apply-now : "true"
 An example of a command to set the annotation to skip the update windows for version `v1.56.2`:
 
 ```shell
-kubectl annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
+d8 k annotate deckhousereleases v1.56.2 release.deckhouse.io/apply-now="true"
 ```
 
 An example of a resource with the update window skipping annotation in place:
@@ -153,7 +153,7 @@ If the `DeckhouseUpdating` alert is resolved, then the update is complete.
 You can also check the status of Deckhouse [releases](cr.html#deckhouserelease) by running the following command:
 
 ```bash
-kubectl get deckhouserelease
+d8 k get deckhouserelease
 ```
 
 Example output:
@@ -171,7 +171,7 @@ The `Deployed` status of the corresponding version indicates that the switch to 
 Check the status of the Deckhouse Pod:
 
 ```shell
-kubectl -n d8-system get pods -l app=deckhouse
+d8 k -n d8-system get pods -l app=deckhouse
 ```
 
 Example output:
@@ -191,7 +191,7 @@ Possible options for action if something went wrong:
 1. Check Deckhouse logs using the following command:
 
    ```shell
-   kubectl -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
+   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
    ```
 
 1. [Collect debugging information](modules/deckhouse/faq.html#how-to-collect-debug-info) and contact technical support.
@@ -203,7 +203,7 @@ Possible options for action if something went wrong:
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 
 - The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-- There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
+- There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `d8 k get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
   - Manual update mode is set (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
   - The automatic update mode is set, and the [update windows](modules/deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
   - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
@@ -231,7 +231,7 @@ After creating a `DeckhouseRelease` custom resource in a cluster, Deckhouse upda
 To get list and status of all releases use the following command:
 
 ```shell
-kubectl get deckhousereleases
+d8 k get deckhousereleases
 ```
 
 {% alert level="warning" %}
@@ -274,7 +274,7 @@ Starting from DKP 1.70 patch releases (e.g., an update from version `1.70.1` to 
    To retrieve the IP address of the Deckhouse container registry in a pod, run the following command:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- getent ahosts registry.deckhouse.io
    ```
 
    Example output:
@@ -313,7 +313,7 @@ On the other hand, when accessing `registry.deckhouse.io` **from a Kubernetes po
 To view the status of all Deckhouse job queues, run the following command:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
 Example of the output (queues are empty):
@@ -328,7 +328,7 @@ Summary:
 To view the status of the `main` Deckhouse task queue, run the following command:
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
 ```
 
 Example of the output (38 tasks in the `main` queue):
@@ -745,7 +745,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
   * Example:
 
     ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
+    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
     ```
 
   * If the registry uses a self-signed certificate, put the root CA certificate that validates the registry's HTTPS certificate to file `/tmp/ca.crt` in the Deckhouse Pod and add the `--ca-file /tmp/ca.crt` option to the script or put the content of CA into a variable as follows:
@@ -760,13 +760,13 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
     -----END CERTIFICATE-----
     EOF
     )
-    kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
+    d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- bash -c "echo '$CA_CONTENT' > /tmp/ca.crt && deckhouse-controller helper change-registry --ca-file /tmp/ca.crt --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee"
     ```
 
   * To view the list of available keys of the `deckhouse-controller helper change-registry` command, run the following command:
 
     ```shell
-    kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
+    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --help
     ```
 
     Example output:
@@ -799,7 +799,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
 * Check if there are Pods with original registry in cluster (if there are — restart them):
 
   ```shell
-  kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+  d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
     | select(.image | startswith("registry.deckhouse"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
   ```
 
@@ -817,7 +817,7 @@ If you want to install Deckhouse with automatic updates disabled:
 
 If you want to disable automatic updates for an already installed Deckhouse (including patch release updates), remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
-### Using a proxy server
+### How do I use a proxy server?
 
 {% alert level="warning" %}
 This feature is available in the following editions: BE, SE, SE+, EE.
@@ -885,7 +885,7 @@ proxy:
 
 {% raw %}
 
-### Autoloading proxy variables for users at CLI
+### How do I set up proxy variable autoloading in the CLI?
 
 Since DKP v1.67, the file `/etc/profile.d/d8-system-proxy.sh`, which sets proxy variables for users, is no longer configurable. To autoload proxy variables for users at the CLI, use the `NodeGroupConfiguration` resource:
 
@@ -954,7 +954,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -964,7 +964,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
@@ -1004,20 +1004,20 @@ If the cluster is not managed by the registry module, proceed to the section bel
    for the CE edition:
 
    ```shell
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-   kubectl run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   d8 k run $NEW_EDITION-image --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
 
    for other editions:
 
    ```shell
-   kubectl create secret docker-registry $NEW_EDITION-image-pull-secret \
+   d8 k create secret docker-registry $NEW_EDITION-image-pull-secret \
     --docker-server=registry.deckhouse.ru \
     --docker-username=license-token \
     --docker-password=${LICENSE_TOKEN}
 
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-   kubectl run $NEW_EDITION-image \
+   DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   d8 k run $NEW_EDITION-image \
     --image=registry.deckhouse.ru/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION \
     --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"$NEW_EDITION-image-pull-secret\"}]}}" \
     --command sleep -- infinity
@@ -1026,8 +1026,8 @@ If the cluster is not managed by the registry module, proceed to the section bel
    Once the pod is in `Running` state, execute the following commands:
 
    ```shell
-   NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
 
@@ -1050,8 +1050,8 @@ If the cluster is not managed by the registry module, proceed to the section bel
 1. Delete the created Secret and Pod:
 
    ```shell
-   kubectl delete pod/$NEW_EDITION-image
-   kubectl delete secret/$NEW_EDITION-image-pull-secret
+   d8 k delete pod/$NEW_EDITION-image
+   d8 k delete secret/$NEW_EDITION-image-pull-secret
    ```
 
 1. Perform the switch to the new edition. To do this, specify the following parameter in the `deckhouse` ModuleConfig. For detailed configuration, refer to the [deckhouse](modules/deckhouse/) module documentation.
@@ -1153,7 +1153,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    for Unmanaged mode:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.ru/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
    For other modes that use a fixed registry address.  
@@ -1161,11 +1161,11 @@ Removing this parameter will trigger a check for the presence of critical compon
 
    ```shell
    # Get the list of valid digest values from the images_digests.json file inside Deckhouse
-   IMAGES_DIGESTS=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Check for Pods using Deckhouse images from `registry.d8-system.svc:5001/system/deckhouse`
    # with a digest that is NOT present in the list of valid digest values (IMAGES_DIGESTS)
-   kubectl get pods -A -o json |
+   d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
      | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
@@ -1183,7 +1183,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 
 #### How to switch without using the Registry module?  
 
-1. Before you begin, disable the Registry module by following [this instruction](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
+1. Before you begin, disable the Registry module by following [instruction](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
 
 1. Prepare variables for the license token and new edition name:
 
@@ -1210,7 +1210,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
-   kubectl apply -f - <<EOF
+   d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
@@ -1240,7 +1240,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    Wait for the `/etc/containerd/conf.d/$NEW_EDITION-registry.toml` file to appear on the nodes and for bashible synchronization to complete. To track the synchronization status, check the `UPTODATE` value (the number of nodes in this status should match the total number of nodes (`NODES`) in the group):
 
    ```shell
-   kubectl get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
    ```
 
    Example output:
@@ -1269,15 +1269,15 @@ Removing this parameter will trigger a check for the presence of critical compon
 1. Start a temporary pod for the new Deckhouse edition to obtain current digests and a list of modules:
 
    ```shell
-   DECKHOUSE_VERSION=$(kubectl -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
-   kubectl run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
+   DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   d8 k run $NEW_EDITION-image --image=registry.deckhouse.io/deckhouse/$NEW_EDITION/install:$DECKHOUSE_VERSION --command sleep --infinity
    ```
 
 1. Once the pod is in `Running` state, execute the following commands:
 
    ```shell
-   NEW_EDITION_MODULES=$(kubectl exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
-   USED_MODULES=$(kubectl get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   NEW_EDITION_MODULES=$(d8 k exec $NEW_EDITION-image -- ls -l deckhouse/modules/ | grep -oE "\d.*-\w*" | awk {'print $9'} | cut -c5-)
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
    MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $NEW_EDITION_MODULES | tr ' ' '\n'))
    ```
 
@@ -1302,19 +1302,19 @@ Removing this parameter will trigger a check for the presence of critical compon
    To switch to BE/SE/SE+/EE editions:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user=license-token --password=$LICENSE_TOKEN --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/$NEW_EDITION
    ```
 
    To switch to CE edition:
 
    ```shell
-   kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
+   d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --new-deckhouse-tag=$DECKHOUSE_VERSION registry.deckhouse.io/deckhouse/ce
    ```
 
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
    ```shell
-   kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[] | select(.image | contains("deckhouse.io/deckhouse/<YOUR-PREVIOUS-EDITION>"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
    ```
 
 1. Delete temporary files, the `NodeGroupConfiguration` resource, and variables:
@@ -1322,9 +1322,9 @@ Removing this parameter will trigger a check for the presence of critical compon
    > Skip this step if switching to Deckhouse CE.
 
    ```shell
-   kubectl delete ngc containerd-$NEW_EDITION-config.sh
-   kubectl delete pod $NEW_EDITION-image
-   kubectl apply -f - <<EOF
+   d8 k delete ngc containerd-$NEW_EDITION-config.sh
+   d8 k delete pod $NEW_EDITION-image
+   d8 k apply -f - <<EOF
        apiVersion: deckhouse.io/v1alpha1
        kind: NodeGroupConfiguration
        metadata:
@@ -1345,7 +1345,518 @@ Removing this parameter will trigger a check for the presence of critical compon
    After the bashible synchronization completes (synchronization status on the nodes is shown by the `UPTODATE` value in NodeGroup), delete the created NodeGroupConfiguration resource:
 
    ```shell
-   kubectl delete ngc del-temp-config.sh
+   d8 k delete ngc del-temp-config.sh
+   ```
+
+### How to switch Deckhouse EE to CSE?
+
+{% alert level="warning" %}
+- The instructions assume the use of the public address of the container registry: `registry-cse.deckhouse.ru`. If you use a different address of the container registry, change the commands or use the [instructions for switching Deckhouse to use a third-party registry](#how-do-i-switch-a-running-deckhouse-cluster-to-use-a-third-party-registry).
+- Deckhouse CSE does not support cloud clusters and some modules. For more information about supported modules, see the [comparison of editions](revision-comparison.html) page.
+- Migration to Deckhouse CSE is only possible from Deckhouse EE 1.58, 1.64 or 1.67.
+- Current versions of Deckhouse CSE: 1.58.2 for release 1.58, 1.64.1 for release 1.64 and 1.67.0 for release 1.67. These versions will need to be used later to specify the `DECKHOUSE_VERSION` variable.
+- The transition is only supported between the same minor versions, for example, from Deckhouse EE 1.64 to Deckhouse CSE 1.64. The transition from EE 1.58 to CSE 1.67 will require an intermediate migration: first to EE 1.64, then to EE 1.67, and only then to CSE 1.67. Attempts to upgrade the version to several releases at once may lead to cluster inoperability.
+- Deckhouse CSE 1.58 and 1.64 support Kubernetes version 1.27, Deckhouse CSE 1.67 supports Kubernetes versions 1.27 and 1.29.
+- When switching to Deckhouse CSE, temporary unavailability of cluster components is possible.
+  {% endalert %}
+
+To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, follow these steps (all commands are executed on the cluster master node as a user with the `kubectl` context configured, or as the superuser):
+
+#### How to switch using the Registry module?
+
+1. Make sure that the cluster has been switched to use the [registry module](modules/registry/faq.html#how-to-migrate-to-the-registry-module). If the module is not used, go to the [instructions](#how-to-switch-without-using-registry-module).
+1. Configure the cluster to use the desired Kubernetes version (information on versioning is provided in the [How to switch Deckhouse EE to CSE](#how-to-switch-deckhouse-ee-to-cse) section). To do this:
+   1. Run the command:
+
+      ```shell
+      d8 platform edit cluster-configuration
+      ```
+
+   1. Change the `kubernetesVersion` parameter to the required value, for example, `"1.27"` (in quotation marks) for Kubernetes 1.27.
+   1. Save the changes. The cluster nodes will start updating sequentially.
+   1. Wait for the update to complete. You can track the update progress with the `d8 k get no` command. The update can be considered complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
+
+1. Prepare variables with license token:
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   ```
+
+1. Run a temporary pod of the new edition of Deckhouse to get the latest digests and a list of modules:
+
+   ```shell
+   d8 k create secret docker-registry cse-image-pull-secret \
+    --docker-server=registry-cse.deckhouse.ru \
+    --docker-username=license-token \
+    --docker-password=${LICENSE_TOKEN}
+
+   DECKHOUSE_VERSION=$(d8 k -n d8-system get deploy deckhouse -ojson | jq -r '.spec.template.spec.containers[] | select(.name == "deckhouse") | .image' | awk -F: '{print $NF}')
+   d8 k run cse-image \
+    --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION \
+    --overrides="{\"spec\": {\"imagePullSecrets\":[{\"name\": \"cse-image-pull-secret\"}]}}" \
+    --command sleep -- infinity
+   ```
+
+   Once the pod has entered the `Running` status, run the following commands:
+
+   ```shell
+   CSE_MODULES=$(d8 k exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   ```
+
+1. Make sure that the modules used in the cluster are supported in Deckhouse CSE.
+   For example, Deckhouse CSE 1.58 and 1.64 do not have the cert-manager module. Therefore, before disabling the cert-manager module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
+
+   You can display a list of modules that are not supported in Deckhouse CSE and will be disabled using the following command:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Check the list and make sure that the functionality of the specified modules is not used in the cluster and you are ready to disable them.
+
+   Disable modules not supported in Deckhouse CSE:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   Deckhouse CSE does not support the earlyOOM feature. Disable it using [setting](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Wait for the Deckhouse pod to become `Ready` and all queued tasks to complete.
+
+   ```shell
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Check that disabled modules have moved to the `Disabled` state.
+
+   ```shell
+   d8 k get modules
+   ```
+
+1. Delete the created secret and pod:
+
+   ```shell
+   d8 k delete pod/cse-image
+   d8 k delete secret/cse-image-pull-secret
+   ```
+
+1. Switch to the new edition. To do this, specify the following parameters in ModuleConfig `deckhouse` (for detailed settings, see the [deckhouse](modules/deckhouse/) module configuration):
+
+   ```yaml
+   ---
+   # Example for Direct mode
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Direct
+         direct:
+           # Relax mode is used to check if the current version of Deckhouse is in the specified registry.
+           # To switch between editions, you must use this registry check mode.
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Specify your <LICENSE_TOKEN> parameter.
+           license: <LICENSE_TOKEN>
+   ---
+   # Example for Unmanaged mode.
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Unmanaged
+         unmanaged:
+           # Relax mode is used to check if the current version of Deckhouse is in the specified registry.
+           # To switch between editions, you must use this check mode.
+           checkMode: Relax
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
+           scheme: HTTPS
+           # Specify your <LICENSE_TOKEN> parameter.
+           license: <LICENSE_TOKEN>
+   ```
+
+1. Wait for the registry to switch. To check if the switch has been completed, use the [instructions](modules/registry/faq.html#how-to-check-the-registry-mode-switch-status).
+
+   Example output:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Relax
+         registry-cse.deckhouse.ru: all 1 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. After switching, remove the `checkMode: Relax` parameter from the `deckhouse` ModuleConfig to enable the default check. Removing it will start checking for critical components in the registry.
+
+1. Wait until the check is completed. The registry mode switching status can be obtained using [instructions](modules/registry/faq.html#how-to-check-the-registry-mode-switch-status).
+
+   Example output:
+
+   ```yaml
+   conditions:
+     - lastTransitionTime: "..."
+       message: |-
+         Mode: Default
+         registry-cse.deckhouse.ru: all 155 items are checked
+       reason: Ready
+       status: "True"
+       type: RegistryContainsRequiredImages
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   ```
+
+1. Check if there are any pods left in the cluster with the registry address for Deckhouse EE:
+
+   For Unmanaged mode:
+
+   ```shell
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   For other modes using a fixed address (this check does not take into account external modules):
+
+   ```shell
+   # Get a list of current digests from the images_digests.json file inside Deckhouse.
+   IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
+
+   # Check if there are Pods using Deckhouse images at `registry.d8-system.svc:5001/system/deckhouse`
+   # with a digest that is not in the list of current digests from IMAGES_DIGESTS.
+   d8 k get pods -A -o json |
+   jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
+     .items[]
+     | {name: .metadata.name, namespace: .metadata.namespace, containers: .spec.containers}
+     | select(.containers != null)
+     | select(
+         .containers[]
+         | select(.image | test("registry.d8-system.svc:5001/system/deckhouse") and test("@sha256:"))
+         | .image as $img
+         | ($img | split("@") | last) as $digest
+         | ($digest | IN($digests[]) | not)
+       )
+     | .namespace + "\t" + .name
+   ' | sort -u
+   ```
+
+   If the output contains `chrony` module pods, re-enable this module (in Deckhouse CSE this module is disabled by default):
+
+   ```shell
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+#### How to switch without using the Registry module?
+
+1. Before you begin, disable the Registry module using the [instructions](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
+
+1. Configure the cluster to use the required Kubernetes version (information on versioning is provided in the section [How to switch Deckhouse EE to CSE](#how-to-switch-deckhouse-ee-to-cse)). To do this:
+  1. Run the command:
+
+     ```shell
+     d8 platform edit cluster-configuration
+     ```
+
+  1. Change the `kubernetesVersion` parameter to the desired value, for example `"1.27"` (in quotes) for Kubernetes 1.27.
+  1. Save the changes. The cluster nodes will begin to be updated sequentially.
+  1. Wait for the update to complete. You can track the update progress using the `d8 k get no` command. The update is complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
+
+1. Prepare variables with the license token and create a NodeGroupConfiguration for transient authorization in `registry-cse.deckhouse.ru`:
+
+   > Before creating a resource, please read the section [How to add a configuration for an additional registry](modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+
+   ```shell
+   LICENSE_TOKEN=<PUT_YOUR_LICENSE_TOKEN_HERE>
+   AUTH_STRING="$(echo -n license-token:${LICENSE_TOKEN} | base64 )"
+   d8 k apply -f - <<EOF
+   ---
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-cse-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 30
+     content: |
+       _on_containerd_config_changed() {
+         bb-flag-set containerd-need-restart
+       }
+       bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/cse-registry.toml - containerd-config-file-changed << "EOF_TOML"
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry]
+             [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry-cse.deckhouse.ru"]
+             endpoint = ["https://registry-cse.deckhouse.ru"]
+           [plugins."io.containerd.grpc.v1.cri".registry.configs]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs."registry-cse.deckhouse.ru".auth]
+               auth = "$AUTH_STRING"
+       EOF_TOML
+   EOF
+   ```
+
+   Wait for synchronization to complete and for the `/etc/containerd/conf.d/cse-registry.toml` file to appear on the nodes.
+
+   The synchronization status can be tracked by the `UPTODATE` value (the displayed number of nodes in this status should match the total number of nodes (`NODES`) in the group):
+
+   ```shell
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+   Example output:
+
+   ```console
+   NAME     NODES   READY   UPTODATE
+   master   1       1       1
+   worker   2       2       2
+   ```
+
+   The bashible systemd service log should show the message `Configuration is in sync, nothing to do` as a result of running the following command:
+
+   ```shell
+   journalctl -u bashible -n 5
+   ```
+
+   Example output:
+
+   ```console
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Successful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Run the following commands to start a temporary Deckhouse CSE pod to get up-to-date digests and a list of modules:
+
+   ```shell
+   DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
+   # For example, DECKHOUSE_VERSION=v1.58.2.
+   d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
+   ```
+
+   Once the pod has entered the `Running` status, run the following commands:
+
+   ```shell
+   CSE_SANDBOX_IMAGE=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep pause | grep -oE 'sha256:\w*')
+   CSE_K8S_API_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | grep kubernetesApiProxy | grep -oE 'sha256:\w*')
+   CSE_MODULES=$(d8 k exec cse-image -- ls -l deckhouse/modules/ | awk {'print $9'} |grep -oP "\d.*-\w*" | cut -c5-)
+   USED_MODULES=$(d8 k get modules -o custom-columns=NAME:.metadata.name,SOURCE:.properties.source,STATE:.properties.state,ENABLED:.status.phase | grep Embedded | grep -E 'Enabled|Ready' | awk {'print $1'})
+   MODULES_WILL_DISABLE=$(echo $USED_MODULES | tr ' ' '\n' | grep -Fxv -f <(echo $CSE_MODULES | tr ' ' '\n'))
+   CSE_DECKHOUSE_KUBE_RBAC_PROXY=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.kubeRbacProxy")
+   ```
+
+   > An additional command that is only needed when switching to Deckhouse CSE version 1.64:
+   >
+   > ```shell
+   > CSE_DECKHOUSE_INIT_CONTAINER=$(d8 k exec cse-image -- cat deckhouse/candi/images_digests.json | jq -r ".common.init")
+   > ```
+
+1. Make sure that the modules used in the cluster are supported by Deckhouse CSE.
+   For example, Deckhouse CSE 1.58 and 1.64 do not have the cert-manager module. Therefore, before disabling the cert-manager module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
+
+   You can display a list of modules that are not supported in Deckhouse CSE and will be disabled using the following command:
+   
+   ```shell
+   echo $MODULES_WILL_DISABLE
+   ```
+
+   > Check the list and make sure that the functionality of the specified modules is not used in the cluster and you are ready to disable them.
+
+   Disable modules not supported in Deckhouse CSE:
+
+   ```shell
+   echo $MODULES_WILL_DISABLE | 
+     tr ' ' '\n' | awk {'print "d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module disable",$1'} | bash
+   ```
+
+   Deckhouse CSE does not support the earlyOOM feature. Disable it using [setting](modules/node-manager/configuration.html#parameters-earlyoomenabled).
+
+   Wait until the Deckhouse pod becomes `Ready` and all queued tasks are completed.
+
+   ```shell
+   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   ```
+
+   Check that disabled modules have moved to the `Disabled` state.
+
+   ```shell
+   d8 k get modules
+   ```
+
+1. Create a NodeGroupConfiguration:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: cse-set-sha-images.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 50
+     content: |
+        _on_containerd_config_changed() {
+          bb-flag-set containerd-need-restart
+        }
+        bb-event-on 'containerd-config-file-changed' '_on_containerd_config_changed'
+
+        bb-sync-file /etc/containerd/conf.d/cse-sandbox.toml - containerd-config-file-changed << "EOF_TOML"
+        [plugins]
+          [plugins."io.containerd.grpc.v1.cri"]
+            sandbox_image = "registry-cse.deckhouse.ru/deckhouse/cse@$CSE_SANDBOX_IMAGE"
+        EOF_TOML
+
+        sed -i 's|image: .*|image: registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+        sed -i 's|crictl pull .*|crictl pull registry-cse.deckhouse.ru/deckhouse/cse@$CSE_K8S_API_PROXY|' /var/lib/bashible/bundle_steps/051_pull_and_configure_kubernetes_api_proxy.sh
+   EOF
+   ```
+
+   Wait for bashible to complete synchronization on all nodes.
+
+   The synchronization status can be tracked by the `UPTODATE` status value (the displayed number of nodes in this status should match the total number of nodes (`NODES`) in the group):
+
+   ```shell
+   d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate -w
+   ```
+
+   The bashible systemd service log on the nodes should show the message `Configuration is in sync, nothing to do` as a result of running the following command:
+
+   ```shell
+   journalctl -u bashible -n 5
+   ```
+
+   Example output:
+
+   ```console
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Configuration is in sync, nothing to do.
+   Aug 21 11:04:28 master-ee-to-cse-0 bashible.sh[53407]: Annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 bashible.sh[53407]: Successful annotate node master-ee-to-cse-0 with annotation node.deckhouse.io/configuration-checksum=9cbe6db6c91574b8b732108a654c99423733b20f04848d0b4e1e2dadb231206a
+   Aug 21 11:04:29 master-ee-to-cse-0 systemd[1]: bashible.service: Deactivated successfully.
+   ```
+
+1. Update the Deckhouse CSE registry access secret by running the following command:
+
+   ```shell
+   d8 k -n d8-system create secret generic deckhouse-registry \
+     --from-literal=".dockerconfigjson"="{\"auths\": { \"registry-cse.deckhouse.ru\": { \"username\": \"license-token\", \"password\": \"$LICENSE_TOKEN\", \"auth\": \"$AUTH_STRING\" }}}" \
+     --from-literal="address"=registry-cse.deckhouse.ru \
+     --from-literal="path"=/deckhouse/cse \
+     --from-literal="scheme"=https \
+     --type=kubernetes.io/dockerconfigjson \
+     --dry-run='client' \
+     -o yaml | d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- d8 k replace -f -
+   ```
+
+1. Change the Deckhouse image to the Deckhouse CSE image:
+
+   Command for Deckhouse CSE version 1.58:
+
+   ```shell
+   d8 k -n d8-system set image deployment/deckhouse kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
+
+   Command for Deckhouse CSE version 1.64 and 1.67:
+
+   ```shell
+   d8 k -n d8-system set image deployment/deckhouse init-downloaded-modules=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry-cse.deckhouse.ru/deckhouse/cse@$CSE_DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry-cse.deckhouse.ru/deckhouse/cse:$DECKHOUSE_VERSION
+   ```
+
+1. Wait for the Deckhouse pod to become `Ready` and [all tasks in the queue have completed](#how-to-check-the-job-queue-in-deckhouse). If an `ImagePullBackOff` error occurs during the process, wait for the pod to automatically restart.
+
+   View Deckhouse pod status:
+
+   ```shell
+   d8 k -n d8-system get po -l app=deckhouse
+   ```
+
+   Check the status of the Deckhouse queue:
+
+   ```shell
+   d8 k -n d8-system exec deploy/deckhouse -c deckhouse -- deckhouse-controller queue list
+   ```
+
+1. Check if there are any pods left in the cluster with the registry address for Deckhouse EE:
+
+   ```shell
+   d8 k get pods -A -o json | jq -r '.items[] | select(.spec.containers[]
+     | select(.image | contains("deckhouse.ru/deckhouse/ee"))) | .metadata.namespace + "\t" + .metadata.name' | sort | uniq
+   ```
+
+   If the output contains `chrony` module pods, re-enable this module (in Deckhouse CSE this module is disabled by default):
+
+   ```shell
+   d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
+   ```
+
+1. Clean up temporary files, `NodeGroupConfiguration` resource and variables:
+
+   ```shell
+   rm /tmp/cse-deckhouse-registry.yaml
+
+   d8 k delete ngc containerd-cse-config.sh cse-set-sha-images.sh
+
+   d8 k delete pod cse-image
+
+   d8 k apply -f - <<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: del-temp-config.sh
+   spec:
+     nodeGroups:
+     - '*'
+     bundles:
+     - '*'
+     weight: 90
+     content: |
+       if [ -f /etc/containerd/conf.d/cse-registry.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-registry.toml
+       fi
+       if [ -f /etc/containerd/conf.d/cse-sandbox.toml ]; then
+         rm -f /etc/containerd/conf.d/cse-sandbox.toml
+       fi
+   EOF
+   ```
+
+   After synchronization (the synchronization status on the nodes can be tracked by the `UPTODATE` value of the NodeGroup), delete the created NodeGroupConfiguration resource:
+
+   ```shell
+   d8 k delete ngc del-temp-config.sh
    ```
 
 ### How do I get access to Deckhouse controller in multimaster cluster?
@@ -1353,10 +1864,10 @@ Removing this parameter will trigger a check for the presence of critical compon
 In clusters with multiple master nodes Deckhouse runs in high availability mode (in several instances). To access the active Deckhouse controller, you can use the following command (as an example of the command `deckhouse-controller queue list`):
 
 ```shell
-kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
 ```
 
-## How do I upgrade the Kubernetes version in a cluster?
+### How do I upgrade the Kubernetes version in a cluster?
 
 To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](installing/configuration.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure by making the following steps:
 
@@ -1368,7 +1879,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 
 1. Change the `kubernetesVersion` field.
 1. Save the changes. Cluster nodes will start updating sequentially.
-1. Wait for the update to finish. You can track the progress of the update using the `kubectl get no` command. The update is completed when the new version appears in the command's output for each cluster node in the `VERSION` column.
+1. Wait for the update to finish. You can track the progress of the update using the `d8 k get no` command. The update is completed when the new version appears in the command's output for each cluster node in the `VERSION` column.
 
 ### How do I run Deckhouse on a particular node?
 

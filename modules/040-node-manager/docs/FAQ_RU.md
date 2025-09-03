@@ -87,13 +87,13 @@ search: добавить ноду в кластер, добавить узел �
 1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер:
 
    ```shell
-   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
    Проверьте версию K8s. Если версия >= 1.25, создайте токен `node-group`:
 
    ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
    Сохраните полученный токен, и добавьте в поле `token:` playbook'а Ansible на дальнейших шагах.
@@ -101,7 +101,7 @@ search: добавить ноду в кластер, добавить узел �
 1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount'а, которым управляет Deckhouse:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+   d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
@@ -209,8 +209,8 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Применение изменений потребует некоторого времени.
@@ -226,8 +226,8 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Запустите на узле скрипт очистки:
@@ -240,7 +240,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Как понять, что что-то пошло не так?
 
-Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
+Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `d8 k get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
 Чтобы проверить логи сервиса `bashible`, выполните на узле следующую команду:
 
@@ -263,26 +263,26 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 1. Найдите узел, который находится в стадии бутстрапа:
 
    ```shell
-   kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances | grep Pending
+   $ d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
 1. Получите информацию о параметрах подключения для просмотра логов:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   $ d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -519,7 +519,7 @@ capiEmergencyBrake: true
 Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением Deckhouse выполнить команду:
 
 ```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
+d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
@@ -562,13 +562,13 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -590,15 +590,15 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 Если необходимо, чтобы отдельные NodeGroup использовали другой CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
@@ -615,13 +615,13 @@ spec:
 1. Чтобы определить, какой узел в текущий момент обновляется в master NodeGroup, используйте следующую команду:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Подтвердите остановку (disruption) для master-узла, полученного на предыдущем шаге:
 
    ```shell
-   kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Дождитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
@@ -734,7 +734,7 @@ cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
 {% endalert %}
 
 {% alert level="info" %}
-Используется в containerd v1, если Deckhouse не управляется [модулем Registry](../registry).
+Используется в containerd v1, если Deckhouse не управляется с помощью модуля [registry](../registry).
 {% endalert %}
 
 Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
@@ -928,7 +928,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через [модуль Registry](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [registry](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1454,7 +1454,7 @@ metadata:
    Поды NVIDIA в `d8-nvidia-gpu`:
 
    ```bash
-   kubectl -n d8-nvidia-gpu get pod
+   d8 k -n d8-nvidia-gpu get pod
    ```
 
    **Ожидаемый корректный вывод (пример):**
@@ -1470,7 +1470,7 @@ metadata:
    Поды NFD в `d8-cloud-instance-manager`:
 
    ```bash
-   kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
    ```
 
    **Ожидаемый корректный вывод (пример):**
@@ -1485,7 +1485,7 @@ metadata:
    Публикация ресурсов на узле:
 
    ```bash
-   kubectl describe node <имя-ноды>
+   d8 k describe node <имя-ноды>
    ```
 
    **Фрагмент вывода (пример):**
@@ -1531,7 +1531,7 @@ metadata:
    Проверьте логи командой:
 
    ```bash
-   kubectl logs job/nvidia-cuda-test
+   d8 k logs job/nvidia-cuda-test
    ```
 
    Пример вывода:
@@ -1585,7 +1585,7 @@ metadata:
    Проверьте логи командой:
 
    ```shell
-   kubectl logs job/gpu-operator-test
+   d8 k logs job/gpu-operator-test
    ```
 
    Пример вывода:
@@ -1620,7 +1620,7 @@ Deckhouse Kubernetes Platform автоматически устанавлива�
 Предустановленные профили находятся в ConfigMap `mig-parted-config` в пространстве имен `d8-nvidia-gpu`. Для их просмотра используйте команду:
 
 ```bash
-kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
 ```
 
 В разделе mig-configs вы увидите конкретные модели ускорителей (по PCI-ID) и список совместимых MIG-профилей для каждой из них.
@@ -1652,7 +1652,7 @@ kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config
 1. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
 
    ```bash
-   kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
+   d8 k -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
    nvidia-smi -L
    ```
 
