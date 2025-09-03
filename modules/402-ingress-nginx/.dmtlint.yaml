@@ -14,6 +14,12 @@ linters-settings:
         - kind: DaemonSet
           name: failover-cleaner
           container: failover-cleaner
+        - kind: Deployment
+          name: kruise-controller-manager
+          container: kruise
+        - kind: Deployment
+          name: kruise-controller-manager
+          container: kruise-state-metrics
   templates:
     exclude-rules:
       vpa:

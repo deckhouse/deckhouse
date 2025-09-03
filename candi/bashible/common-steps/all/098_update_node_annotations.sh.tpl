@@ -12,16 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 {{- if hasKey .nodeGroup "staticInstances" }}
 if [[ -f /var/lib/bashible/node-spec-provider-id ]]; then
-  PROVIDER_ID="$( kubectl_exec get no $(bb-d8-node-name) -o json | jq -r '.spec.providerID' )"
+  PROVIDER_ID="$( bb-kubectl-exec get no $(bb-d8-node-name) -o json | jq -r '.spec.providerID' )"
 
   if [[ "${PROVIDER_ID}" == "static://" ]]; then
-    kubectl_exec annotate node $(bb-d8-node-name) node.deckhouse.io/provider-id="$(cat /var/lib/bashible/node-spec-provider-id)"
+    bb-kubectl-exec annotate node $(bb-d8-node-name) node.deckhouse.io/provider-id="$(cat /var/lib/bashible/node-spec-provider-id)"
   fi
 fi
 {{- end }}
@@ -30,4 +26,4 @@ fi
   This annotation is required by the registry module to track which 
   version of the registry configuration is currently applied on the node.
 */}}
-kubectl_exec annotate node $(bb-d8-node-name) registry.deckhouse.io/version={{ .registry.version | quote }} --overwrite
+bb-kubectl-exec annotate node $(bb-d8-node-name) registry.deckhouse.io/version={{ .registry.version | quote }} --overwrite

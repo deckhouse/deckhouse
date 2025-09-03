@@ -11,8 +11,8 @@ spec:
       default:
         memory: "1Gi"
       defaultRequest:
-        memory: "50Mi"
+        memory: "10Mi"
       max:
         memory: "1Gi"
       min:
-        memory: "50Mi"
+        memory: "10Mi"

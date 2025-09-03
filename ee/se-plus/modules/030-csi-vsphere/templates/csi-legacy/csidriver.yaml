@@ -1,0 +1,11 @@
+{{- if ne .Values.csiVsphere.internal.compatibilityFlag "none" }}
+---
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: vsphere.csi.vmware.com
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  attachRequired: true
+  podInfoOnMount: false
+{{- end }}
