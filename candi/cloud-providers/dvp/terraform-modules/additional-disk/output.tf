@@ -13,7 +13,7 @@
 # limitations under the License.
 
 output "name" {
-  value = kubernetes_manifest.additional-disk.manifest.metadata.name
+  value = kubernetes_manifest.additional_disk.manifest.metadata.name
 }
 
 output "hash" {
@@ -21,5 +21,5 @@ output "hash" {
 }
 
 output "md5_id" {
-  value = md5(data.kubernetes_resource.additional-disk.object.metadata.uid)
+  value = md5(data.kubernetes_resource.additional_disk.object.metadata.uid)
 }
