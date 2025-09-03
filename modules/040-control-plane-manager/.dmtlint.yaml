@@ -33,6 +33,28 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-apiserver-healthcheck
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-controller-manager
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-kube-scheduler
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: image-holder-etcd
       readiness-probe:
         - kind: DaemonSet
           name: d8-control-plane-manager

@@ -9,6 +9,7 @@
 
 {{- define "image-build.build" }}
 {{-   if eq $.SVACE_ENABLED "true" }}
+echo "Using svace for build"
 svace build --init --clear-build-dir {{ .BuildCommand }}
 attempt=0
 retries=5

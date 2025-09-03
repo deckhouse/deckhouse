@@ -7,3 +7,9 @@ linters-settings:
       ingress:
         - kind: Ingress
           name: deckhouse-tools
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: deckhouse-tools
+          container: web

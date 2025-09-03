@@ -18,4 +18,4 @@ DVP components can update either automatically or upon manual confirmation as up
 
 For information about the versions available in update channels, visit [releases.deckhouse.io](https://releases.deckhouse.io/).
 
-For details on configuring update channels, refer to [Platform update](./update/update.html).
+For details on configuring update channels, refer to [Platform update](../admin/update/update.html).

@@ -29,7 +29,7 @@ const (
 	ModuleSourcePhaseActive      = "Active"
 	ModuleSourcePhaseTerminating = "Terminating"
 
-	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
+	ModuleSourceMessageErrors = "Some errors occurred. Inspect status for details"
 
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
@@ -106,10 +106,12 @@ type ModuleSourceStatus struct {
 }
 
 type AvailableModule struct {
-	Name       string `json:"name"`
-	Version    string `json:"version,omitempty"`
-	Policy     string `json:"policy,omitempty"`
-	Checksum   string `json:"checksum,omitempty"`
+	Name     string `json:"name"`
+	Version  string `json:"version,omitempty"`
+	Policy   string `json:"policy,omitempty"`
+	Checksum string `json:"checksum,omitempty"`
+	Error    string `json:"error,omitempty"`
+	// Deprecated: use Error instead
 	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
 }

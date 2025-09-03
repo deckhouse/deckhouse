@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" -}!}
 {!{- if eq $provider "aws" }!}
   LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
   LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
@@ -242,7 +242,8 @@ run: |
   -v ${TMP_DIR_PATH}:/tmp \
   ${TERRAFORM_IMAGE_NAME} \
   bash -c "/deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_deckhouse_ready && \
-  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready"
+  /deckhouse/testing/cloud_layouts/{!{ $script_eks }!} wait_cluster_ready &&\
+  /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
   {!{- end }!}
 
@@ -403,7 +404,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
@@ -453,8 +454,8 @@ check_e2e_labels:
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
+{!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
   {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 {!{- end }!}
@@ -769,7 +770,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" -}!}
 {!{- if eq $ctx.provider "vsphere"  -}!}
 {!{-   $runsOnLabel = "e2e-vsphere" -}!}
 {!{- end -}!}

@@ -120,7 +120,7 @@ To apply new parameters after modifying the configuration file, you need to rest
 
 * `introspection_endpoint` — optional boolean parameter. Activates the `sys/internal/inspect` endpoint, which allows inspection of specific subsystems within Stronghold by users with root token or sudo privileges. By default, `false`.
 
-* `ui` — optional boolean parameter. Activates the built-in web user interface, available on all listeners (address + port) at the path `/ui`. When browsers access the default Stronghold API address, they will automatically be redirected to the UI. By default, `false`. Details are in the [ui section](#ui).
+* `ui` — optional boolean parameter. Activates the built-in web user interface, available on all listeners (address + port) at the path `/ui`. When browsers access the default Stronghold API address, they will automatically be redirected to the UI. By default, `false`. Details are in the [ui section](#ui-section).
 
 * `pid_file` — optional string parameter. Specifies the path to the file where the Stronghold process ID (PID) should be stored.
 
@@ -723,7 +723,7 @@ Additionally, when using the integrated storage backend, you cannot declare a se
 
   If the connection parameters for all nodes in the cluster are known in advance, these sections can be enabled. In this case, once one node is initialized as the leader, the others will use their `retry_join` configuration to find the leader and join the cluster. Note that when using Shamir Secret Sharing, the joined nodes will need to be manually unlocked.
 
-  For more information on the `retry_join` section parameters, see [retry_join section parameters](#retry_join-section-parameters).
+  For more information on the `retry_join` section parameters, see [retry_join section parameters](#parameters-for-retry_join-section).
 
 * `retry_join_as_non_voter` — boolean parameter. When set to `true`, any `retry_join` configuration will join the Raft cluster as a non-voting member. The node will not participate in the Raft quorum but will receive the data replication stream. This allows the cluster to scale reading.
 

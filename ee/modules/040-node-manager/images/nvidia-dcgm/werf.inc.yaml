@@ -8,7 +8,7 @@ git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
-    setup:
+    install:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches

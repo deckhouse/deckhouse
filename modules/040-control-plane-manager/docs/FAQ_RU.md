@@ -27,8 +27,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -89,8 +89,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -207,8 +207,8 @@ title: "Управление control plane: FAQ"
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -561,7 +561,7 @@ spec:
 Начиная с релиза Deckhouse Kubernetes Platform v1.65, стала доступна утилита `d8 backup etcd`, которая предназначена для быстрого создания снимков состояния etcd.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Используя bash (Deckhouse Kubernetes Platform v1.64 и старше)
@@ -728,6 +728,12 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Данные действия выполняются на master-узле в кластере, на который предварительно был загружен файл `snapshot` и утилита `auger`:
 
+1. Установите корректные права доступа для файла с резервной копией:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Установите полный путь до `snapshot` и до утилиты в переменных окружения:
 
    ```shell
@@ -753,13 +759,20 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+         # Раскоментируйте фрагмент ниже, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -778,6 +791,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
        volumes:
        - name: etcddir
          emptyDir: {}
+         # Используйте фрагмент ниже вместо emptyDir: {}, чтобы задать лимиты для контейнера, если ресурсов узла недостаточно для его запуска.
+         # emptyDir:
+         #  sizeLimit: 500Mi
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT

@@ -162,7 +162,7 @@
         List of unavailable pods:
 
         ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
 
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
@@ -190,7 +190,7 @@
         List of unavailable pods:
 
         ```text
-        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_ready{namespace=\"%s\", condition!=\"true\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        {{range $index, $result := (printf "(max by (namespace, pod) (kube_pod_status_phase{namespace=\"%s\", phase!~\"Running|Succeeded\"} == 1)) * on (namespace, pod) kube_controller_pod{namespace=\"%s\", controller_type=\"DaemonSet\", controller_name=\"%s\"}" $labels.namespace $labels.namespace $labels.daemonset | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
         ```
 
         If you know where the DaemonSet should be scheduled, run the command below to identify the problematic nodes. Use a label selector for pods, if needed.
@@ -247,3 +247,21 @@
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+  - alert: NginxIngressProfilingIsEnabled
+    expr: |
+      d8_ingress_nginx_controller_profiling_enabled == 1
+    for: 3m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        Warning: Profiling mode is enabled in the NGINX Ingress Controller "{{ $labels.controller_name }}".
+      description: |-
+        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        This may increase memory consumption, slow down request processing, and the process may run as root.
+        It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
+        To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+

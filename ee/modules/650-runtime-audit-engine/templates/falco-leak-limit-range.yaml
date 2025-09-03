@@ -1,3 +1,4 @@
+{{/*# If removing that, also restore the falco VPA in daemonset.yaml*/}}
 apiVersion: v1
 kind: LimitRange
 metadata:
@@ -10,8 +11,8 @@ spec:
       default:
         memory: "1Gi"
       defaultRequest:
-        memory: "50Mi"
+        memory: "10Mi"
       max:
         memory: "1Gi"
       min:
-        memory: "50Mi"
+        memory: "10Mi"
