@@ -19,9 +19,12 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -31,7 +34,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	soapp "github.com/flant/shell-operator/pkg/app"
-	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -234,10 +236,20 @@ func main() {
 	// cctx, cancel := context.WithCancel(context.Background())
 
 	setupLog.Info("starting shell-operator")
-	so, err := shell_operator.Init(logger)
+	// sudo go run ./cmd/shell-operator/ start --hooks-dir $(PWD)/hooks --tmp-dir $(PWD)/tmp --log-type color
+	// cmd := exec.Command("ls", "-l")
+	// syncronous run
+	cmd := exec.Command("./shell-operator")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Start()
 	if err != nil {
-		logger.Fatal("init shell", log.Err(err))
+		setupLog.Error(err, "unable to start shell-operator")
+		os.Exit(1)
 	}
+	logger.Info("new shell-operator PID",
+		slog.Int("PID", cmd.Process.Pid),
+	)
 	// non-blocking sync variable to know that we need to reload shell-operator
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
@@ -245,21 +257,42 @@ func main() {
 	// go-routine that reloads shell-operator no more than once in 30s
 	go func() {
 		ticker := time.NewTicker(10 * time.Second)
-		go so.Start()
+
 		for range ticker.C {
 			if isReloadShellNeed.Load() {
+				logger.Info("restarting shell-operator")
 				isReloadShellNeed.Store(false)
 
-				so.Shutdown()
-				so.Stop()
-
-				// reinit
-				time.Sleep(10 * time.Second)
-				// so, err = shell_operator.Init(logger)
+				err := cmd.Process.Signal(syscall.SIGTERM)
+				if err != nil {
+					log.Error("sigterm shell-operator: %w", err)
+				}
+				// err = cmd.Process.Kill()
 				// if err != nil {
-				// 	logger.Fatal("init shell", log.Err(err))
+				// 	log.Error("kill shell-operator: %w", err)
 				// }
-				go so.Start()
+
+				err = cmd.Wait()
+				if err != nil {
+					log.Error("wait shell-operator: %w", err)
+				}
+				logger.Info("killed shell-operator",
+					slog.Int("PID", cmd.Process.Pid),
+					slog.Bool("exited", cmd.ProcessState.Exited()),
+					slog.Int("exitcode", cmd.ProcessState.ExitCode()),
+				)
+
+				// start new shell-operator
+				cmd = exec.Command("./shell-operator")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				err = cmd.Start()
+				if err != nil {
+					log.Error("start shell-operator: %w", err)
+				}
+				logger.Info("new shell-operator PID",
+					slog.Int("PID", cmd.Process.Pid),
+				)
 			}
 		}
 	}()
@@ -300,14 +333,6 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	// sudo go run ./cmd/shell-operator/ start --hooks-dir $(PWD)/hooks --tmp-dir $(PWD)/tmp --log-type color
-	// cmd := exec.Command("shell-operator")
-	// // cmd := exec.Command("ls", "-l")
-	// cmd.Stdout = os.Stdout
-	// cmd.Stderr = os.Stderr
-	// cmd.Run()
-	// syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
