@@ -279,7 +279,7 @@ function prepare_environment() {
 
 function get_opentofu() {
   CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
-  docker cp "${CONTAINER_ID}:/usr/bin/opentofu" $cwd/opentofu
+  docker cp "${CONTAINER_ID}:/bin/opentofu" $cwd/opentofu
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
 }
@@ -291,38 +291,35 @@ function bootstrap_static() {
 
   get_opentofu
 
-#  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-#  $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-  # TODO to delete, mac os debug
-  tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  tofu apply -auto-approve -no-color || return $?
+ $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+ $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 
-  if ! master_ip="$(tofu output -raw master_ip_address_for_ssh)"; then
+  if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get master_ip from opentofu output"
     return 1
   fi
 
-  if ! system_ip="$(tofu output -raw system_ip_address_for_ssh)"; then
+  if ! system_ip="$($cwd/opentofu output -raw system_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get system_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_redos_ip="$(tofu output -raw worker_redos_ip_address_for_ssh)"; then
+  if ! worker_redos_ip="$($cwd/opentofu output -raw worker_redos_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_opensuse_ip="$(tofu output -raw worker_opensuse_ip_address_for_ssh)"; then
+  if ! worker_opensuse_ip="$($cwd/opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
     return 1
   fi
 
-  if ! worker_rosa_ip="$(tofu output -raw worker_rosa_ip_address_for_ssh)"; then
+  if ! worker_rosa_ip="$($cwd/opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
     return 1
   fi
 
-  if ! bastion_ip="$(tofu output -raw bastion_ip_address_for_ssh)"; then
+  if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get bastion_ip from opentofu output"
     return 1
   fi
@@ -399,19 +396,20 @@ function bootstrap_static() {
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
-    if $ssh_command -i "$ssh_private_key_path" "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
        cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
 apt-get update
 apt-get install -y docker.io docker-compose wget curl
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
-DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
-if [ -z "\${DOWNLOAD_URL}" ]; then
-  echo "Failed to retrieve the URL for the download"
-  exit 1
-fi
+# DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
+# if [ -z "\${DOWNLOAD_URL}" ]; then
+#   echo "Failed to retrieve the URL for the download"
+#   exit 1
+# fi
 # download
+DOWNLOAD_URL=https://github.com/deckhouse/deckhouse-cli/releases/download/v0.15.0/d8-v0.15.0-linux-amd64.tar.gz
 wget -q "\${DOWNLOAD_URL}" -O /tmp/d8.tar.gz
 # install
 file /tmp/d8.tar.gz
@@ -423,7 +421,8 @@ d8 --version
 
 # pull
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}" \
+  --include-module commander-agent --include-module commander --include-module prompp
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 
@@ -485,7 +484,8 @@ ENDSSH
 
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Convert to air-gap environment by removing default route
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "echo Master ip"
        echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
@@ -508,7 +508,8 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+       echo "echo System ip"
        echo "#!/bin/sh" > /etc/rc.d/rc.local
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
@@ -531,7 +532,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -554,7 +555,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -577,7 +578,7 @@ ENDSSH
   fi
 
   for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
+    if $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
        echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
        echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
@@ -614,7 +615,7 @@ function system_node_register() {
 
   >&2 echo 'Fetch registration script ...'
   for ((i=0; i<10; i++)); do
-    bootstrap_system="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
+    bootstrap_system="$($ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash << "ENDSSH"
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -629,10 +630,9 @@ ENDSSH
     >&2 echo "Couldn't get secret manual-bootstrap-for-system in d8-cloud-instance-manager namespace."
     return 1
   fi
-
   # shellcheck disable=SC2087
   # Node reboots in bootstrap process, so ssh exits with error code 255. It's normal, so we use || true to avoid script fail.
-  $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
+  $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH || true
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -642,7 +642,7 @@ ENDSSH
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -661,7 +661,7 @@ ENDSSH
 
   if [[ -z $provisioning_failed && $CIS_ENABLED == "true" ]]; then
     for ((i=1; i<=5; i++)); do
-      if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+      if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -1016,17 +1016,17 @@ function run-test() {
 
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
-
+    echo http_code: $http_code
+    
     # Check for HTTP errors
-    if [[ ${http_code} -ge 400 ]]; then
+    if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+      break
+    else
       echo "Error: HTTP error ${http_code}" >&2
       echo "$response" >&2
       continue
-    else
-      break
     fi
   done
-
   cluster_id=$(jq -r '.id' <<< "$response")
   if [[ $cluster_id == "null" ]]; then
     echo "Error: jq failed to extract cluster ID" >&2
@@ -1223,11 +1223,11 @@ function cleanup() {
   if [[ ${PROVIDER} == "Static" ]]; then
     get_opentofu
     cd $cwd
-    #  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    #  $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+     $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
     # TODO tofu in  image has different architecture, to delete, mac os debug
-    tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    tofu destroy -auto-approve -no-color || return $?
+    # tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    # tofu destroy -auto-approve -no-color || return $?
   fi
 
   return 0
