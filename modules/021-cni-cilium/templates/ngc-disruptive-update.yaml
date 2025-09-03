@@ -24,19 +24,56 @@ spec:
 
     # cilium-agent image hash: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
 
+    desired_sau_ds_generation={{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
+
     # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
     kubeconfig="/etc/kubernetes/kubelet.conf"
     if [ ! -f "$kubeconfig" ]; then
       exit 0
     fi
 
+    # If it is the first bashible run, there is nothing to do
     if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
       exit 0
     fi
 
+    # If the migration has already succeeded, there is nothing to do
     if bb-kubectl --kubeconfig $kubeconfig get node $(bb-d8-node-name) -o json | \
-          jq -e '.metadata.annotations | has("network.deckhouse.io/cilium-1-17-migration-succeeded")' >/dev/null; then
+        jq -e '.metadata.annotations | has("network.deckhouse.io/cilium-1-17-migration-succeeded")' >/dev/null; then
       exit 0
+    fi
+
+    # If the safe-agent-updater pod does not exist, there is nothing to do
+    if sau_pod_count="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length')"; [[ "${sau_pod_count}" == "0" ]]; then
+      bb-log-info "There is no safe-agent-updater pod on the node."
+      exit 0
+    fi
+
+    attempt=0
+    until
+      sau_pod_count="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+      jq -er '.items | length')"; \
+      [[ "${sau_pod_count}" == "1" ]];
+    do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+          bb-log-error "ERROR: Failed to wait until only one safe-agent-updater pod stays on the node. Retry limit is over."
+          exit 1
+      fi
+      bb-log-info "Waiting until there is only one safe-agent-updater pods on the node."
+      sleep 10
+    done
+
+    sau_pod_name="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+      jq -er '.items[0].metadata.name')";
+
+    if ! current_sau_ds_generation="$(crictl pods --name ${sau_pod_name} -o json | \
+      jq -er '.items[0].annotations."safe-agent-updater-daemonset-generation"')" || \
+      [[ "${current_sau_ds_generation}" != "${desired_sau_ds_generation}" ]];
+    then
+      bb-kubectl --kubeconfig $kubeconfig delete pod -n d8-cni-cilium -l app=safe-agent-updater \
+        --field-selector spec.nodeName=$(bb-d8-node-name)
     fi
 
     attempt=0
