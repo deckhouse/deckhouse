@@ -1,4 +1,6 @@
 #!/bin/bash
+rm -rf hooks
+
 echo "--- generate ---"
 make generate
 

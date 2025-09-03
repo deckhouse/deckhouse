@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
@@ -27,11 +28,15 @@ func setupTestReconciler() *ValidationWebhookReconciler {
 		panic(err)
 	}
 
+	var isReloadShellNeed atomic.Bool
+	isReloadShellNeed.Store(false)
+
 	return &ValidationWebhookReconciler{
-		Client:   k8sClient,
-		Scheme:   sch,
-		Logger:   log.NewLogger(log.WithLevel(slog.LevelDebug)),
-		Template: string(tpl),
+		IsReloadShellNeed: &isReloadShellNeed,
+		Client:            k8sClient,
+		Scheme:            sch,
+		Logger:            log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		Template:          string(tpl),
 	}
 }
 
