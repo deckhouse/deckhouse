@@ -24,7 +24,7 @@ spec:
 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
 ```
 
-По умолчению модуль запустится в режиме `Automatic` с инлетом `Ingress`.
+По умолчанию модуль запустится в режиме `Automatic` с инлетом `Ingress`.
 В текущей версии другие режимы и инлеты отсутствуют.
 
 ## Как выключить модуль

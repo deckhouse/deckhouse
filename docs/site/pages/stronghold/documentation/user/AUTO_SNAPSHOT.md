@@ -36,9 +36,11 @@ Sudo privileges are required to interact with this API method.
 - **storage_type (immutable string: <required>)** - One of `local` or `aws-s3`. The remaining parameters described below are specific to the selected `storage_type` and prefixed accordingly.
 
 #### storage_type = "local"
+
 - **local_max_space (integer: 0)** - For `storage_type=local`, the maximum space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory. Snapshot attempts will fail if there is not enough space left in this allowance. A value of 0 (default) disables space checking.
 
 #### storage_type = "aws-s3"
+
 - **aws_s3_bucket (string: <required>)** - S3 bucket to write snapshots to.
 - **aws_s3_region (string)** - AWS region bucket is in.
 - **aws_access_key_id (string)** - AWS access key ID.
@@ -48,9 +50,11 @@ Sudo privileges are required to interact with this API method.
 - **aws_s3_ca_certificate (string)** - Certificate authority certificate for the `aws_s3_endpoint` in PEM format.
 
 ### Example
+
 #### Creation
 
 All required fields are specified
+
 ```sh
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
@@ -68,6 +72,7 @@ EOF
 ```
 
 Response:
+
 ```
 Key    Value
 ---    -----
@@ -77,6 +82,7 @@ msg    successfully created config
 #### Update
 
 You can specify not all fields; existing fields will not be changed
+
 ```sh
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
@@ -89,6 +95,7 @@ EOF
 ```
 
 Response:
+
 ```
 Key    Value
 ---    -----
@@ -107,6 +114,7 @@ Used to get a list of names of all existing automatic snapshots
 `d8 stronghold list sys/storage/raft/snapshot-auto/config`
 
 Response:
+
 ```
 Keys
 ----
@@ -125,6 +133,7 @@ localEvery3min
 `d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min`
 
 Response:
+
 ```
 Key                     Value
 ---                     -----
@@ -151,6 +160,7 @@ aws_s3_ca_certificate   n/a
 `d8 stronghold delete sys/storage/raft/snapshot-auto/config/s3every5min`
 
 Response:
+
 ```
 Key                    Value
 ---                    -----
@@ -175,6 +185,7 @@ snapshot_url           https://minio.domain.ru/my_bucket/backups/main_stronghold
 `d8 stronghold read sys/storage/raft/snapshot-auto/status/s3every5min`
 
 Response:
+
 ```
 Key    Value
 ---    -----

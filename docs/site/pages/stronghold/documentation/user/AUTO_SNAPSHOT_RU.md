@@ -36,9 +36,11 @@ Deckhouse Stronghold поддерживает создание расписан�
 - **storage_type (immutable string: <required>)** - Одно из значений `local` или `aws-s3`. Остальные параметры, описанные ниже, специфичны для выбранного `storage_type` и имеют соответствующий префикс. Неизменяемое значение.
 
 #### storage_type = "local"
+
 - **local_max_space (integer: 0)** - Для `storage_type=local` максимальное пространство в байтах, которое будет использоваться для всех снимков с заданным `file_prefix` в каталоге `path_prefix`. Попытки создания снэпшотов будут неудачными, если будет недостаточно места. Значение 0 (по умолчанию) отключает проверку занимаемого места.
 
 #### storage_type = "aws-s3"
+
 - **aws_s3_bucket (string: <required>)** - Название S3 бакета для записи снэпшотов.
 - **aws_s3_region (string)** - Регион S3 бакета.
 - **aws_access_key_id (string)** - Идентификатор ключа для доступа в S3 бакет.
@@ -48,9 +50,11 @@ Deckhouse Stronghold поддерживает создание расписан�
 - **aws_s3_ca_certificate (string)** - Сертификат центра сертификации для конечной точки в формате PEM.
 
 ### Пример
+
 #### Создание
 
 Указываются все обязательные поля
+
 ```sh
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
@@ -68,6 +72,7 @@ EOF
 ```
 
 Ответ:
+
 ```
 Key    Value
 ---    -----
@@ -77,6 +82,7 @@ msg    successfully created config
 #### Обновление
 
 Можно указывать не все поля, уже существующие поля не будут изменены
+
 ```sh
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
@@ -89,6 +95,7 @@ EOF
 ```
 
 Ответ:
+
 ```
 Key    Value
 ---    -----
@@ -107,6 +114,7 @@ msg    successfully updated config
 `d8 stronghold list sys/storage/raft/snapshot-auto/config`
 
 Ответ:
+
 ```
 Keys
 ----
@@ -125,6 +133,7 @@ localEvery3min
 `d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min`
 
 Ответ:
+
 ```
 Key                     Value
 ---                     -----
@@ -151,6 +160,7 @@ aws_s3_ca_certificate   n/a
 `d8 stronghold delete sys/storage/raft/snapshot-auto/config/s3every5min`
 
 Ответ:
+
 ```
 Key                    Value
 ---                    -----
@@ -175,6 +185,7 @@ snapshot_url           https://minio.domain.ru/my_bucket/backups/main_stronghold
 `d8 stronghold read sys/storage/raft/snapshot-auto/status/s3every5min`
 
 Ответ:
+
 ```
 Key    Value
 ---    -----
