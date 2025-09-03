@@ -30,7 +30,7 @@ Deckhouse is configured using global settings, module settings, and various cust
 The documentation for the Deckhouse version running in the cluster is available at `documentation.<cluster_domain>`, where `<cluster_domain>` is the DNS name that matches the template defined in the [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter.
 
 {% alert level="warning" %}
-Documentation is available when the [documentation](modules/documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/deckhouse/configuration.html#parameters-bundle).
+Documentation is available when the [`documentation`](modules/documentation/) module is enabled. It is enabled by default except the `Minimal` [bundle](modules/deckhouse/configuration.html#parameters-bundle).
 {% endalert %}
 
 ## Deckhouse update
@@ -429,7 +429,7 @@ The following requirements must be met if the [Nexus](https://github.com/sonatyp
 
 **Configuration**:
 
-1. Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the [Deckhouse registry](https://registry.deckhouse.io/):
+1. Create a docker **proxy** repository (*Administration* -> *Repository* -> *Repositories*) pointing to the Deckhouse registry `https://registry.deckhouse.io`:
   ![Create docker proxy repository](images/registry/nexus/nexus-repository.png)
 
 1. Fill in the fields on the Create page as follows:
@@ -732,7 +732,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
 ### How do I switch a running Deckhouse cluster to use a third-party registry?
 
 {% alert level="warning" %}
-When using the [registry](modules/registry/) module, change the address and parameters of the registry in the [registry](modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [registry](modules/registry/examples.html) module documentation.
+When using the [registry](modules/registry/) module, change the address and parameters of the registry in the [registry](modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [`registry`](modules/registry/examples.html) module documentation.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -977,10 +977,10 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
 - All commands are executed on the master node of the existing cluster with `root` user.
 {% endalert %}
 
-#### How to switch using the Registry module?
+#### How to switch using the registry module?
 
-1. Make sure the cluster has been migrated to be managed by the [registry module](modules/registry/faq.html#how-to-migrate-to-the-registry-module).  
-If the cluster is not managed by the registry module, proceed to the section below: "How to switch without using the Registry module?".
+1. Make sure the cluster has been migrated to be managed by the [`registry` module](modules/registry/faq.html#how-to-migrate-to-the-registry-module).  
+If the cluster is not managed by the `registry` module, proceed to the [instruction](#how-to-switch-without-using-the-registry-module).
 
 1. Prepare variables for the license token and new edition name:
 
@@ -1054,7 +1054,7 @@ If the cluster is not managed by the registry module, proceed to the section bel
    d8 k delete secret/$NEW_EDITION-image-pull-secret
    ```
 
-1. Perform the switch to the new edition. To do this, specify the following parameter in the `deckhouse` ModuleConfig. For detailed configuration, refer to the [deckhouse](modules/deckhouse/) module documentation.
+1. Perform the switch to the new edition. To do this, specify the following parameter in the `deckhouse` ModuleConfig. For detailed configuration, refer to the [`deckhouse`](modules/deckhouse/) module documentation.
 
    ```yaml
    ---
@@ -1070,17 +1070,17 @@ If the cluster is not managed by the registry module, proceed to the section bel
        registry:
          mode: Direct
          direct:
-           # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry
-           # This mode must be used to switch between editions
+           # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry.
+           # This mode must be used to switch between editions.
            checkMode: Relax
-           # Specify your value for <NEW_EDITION>
+           # Specify your value for <NEW_EDITION>.
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
-           # Specify your value for <LICENSE_TOKEN>
-           # If switching to the CE edition, remove this parameter
+           # Specify your value for <LICENSE_TOKEN>.
+           # If switching to the CE edition, remove this parameter.
            license: <LICENSE_TOKEN>
    ---
-   # Example for Unmanaged mode
+   # Example for Unmanaged mode.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -1092,14 +1092,14 @@ If the cluster is not managed by the registry module, proceed to the section bel
        registry:
          mode: Unmanaged
          unmanaged:
-           # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry
-           # This mode must be used to switch between editions
+           # Relax mode is used to check for the presence of the current Deckhouse version in the specified registry.
+           # This mode must be used to switch between editions.
            checkMode: Relax
-           # Specify your value for <NEW_EDITION>
+           # Specify your value for <NEW_EDITION>.
            imagesRepo: registry.deckhouse.ru/deckhouse/<NEW_EDITION>
            scheme: HTTPS
-           # Specify your value for <LICENSE_TOKEN>
-           # If switching to the CE edition, remove this parameter
+           # Specify your value for <LICENSE_TOKEN>.
+           # If switching to the CE edition, remove this parameter.
            license: <LICENSE_TOKEN>
    ```
 
@@ -1160,11 +1160,11 @@ Removing this parameter will trigger a check for the presence of critical compon
    This check does not take external modules into account:  
 
    ```shell
-   # Get the list of valid digest values from the images_digests.json file inside Deckhouse
+   # Get the list of valid digest values from the images_digests.json file inside Deckhouse.
    IMAGES_DIGESTS=$(d8 k -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- cat /deckhouse/modules/images_digests.json | jq -r '.[][]' | sort -u)
 
    # Check for Pods using Deckhouse images from `registry.d8-system.svc:5001/system/deckhouse`
-   # with a digest that is NOT present in the list of valid digest values (IMAGES_DIGESTS)
+   # with a digest that is NOT present in the list of valid digest values (IMAGES_DIGESTS).
    d8 k get pods -A -o json |
    jq -r --argjson digests "$(printf '%s\n' $IMAGES_DIGESTS | jq -R . | jq -s .)" '
      .items[]
@@ -1181,9 +1181,9 @@ Removing this parameter will trigger a check for the presence of critical compon
    ' | sort -u
    ```
 
-#### How to switch without using the Registry module?  
+#### How to switch without using the registry module?  
 
-1. Before you begin, disable the Registry module by following [instruction](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
+1. Before you begin, disable the `registry` module by following [instruction](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
 
 1. Prepare variables for the license token and new edition name:
 
@@ -1205,7 +1205,7 @@ Removing this parameter will trigger a check for the presence of critical compon
 
 1. Create a `NodeGroupConfiguration` resource for temporary authorization in `registry.deckhouse.io`:
 
-   > Before creating a resource, refer to the section ["How to add configuration for an additional registry"](modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
+   > Before creating a resource, refer to the section [How to add configuration for an additional registry](modules/node-manager/faq.html#how-to-add-configuration-for-an-additional-registry)
    >
    > Skip this step if switching to Deckhouse CE.
 
@@ -1362,9 +1362,9 @@ Removing this parameter will trigger a check for the presence of critical compon
 
 To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, follow these steps (all commands are executed on the cluster master node as a user with the `kubectl` context configured, or as the superuser):
 
-#### How to switch using the Registry module?
+#### How to switch using the registry module?
 
-1. Make sure that the cluster has been switched to use the [registry module](modules/registry/faq.html#how-to-migrate-to-the-registry-module). If the module is not used, go to the [instructions](#how-to-switch-without-using-registry-module).
+1. Make sure that the cluster has been switched to use the [`registry`](modules/registry/faq.html#how-to-migrate-to-the-registry-module) module. If the module is not used, go to the [instructions](#how-to-switch-without-using-registry-module).
 1. Configure the cluster to use the desired Kubernetes version (information on versioning is provided in the [How to switch Deckhouse EE to CSE](#how-to-switch-deckhouse-ee-to-cse) section). To do this:
    1. Run the command:
 
@@ -1406,7 +1406,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    ```
 
 1. Make sure that the modules used in the cluster are supported in Deckhouse CSE.
-   For example, Deckhouse CSE 1.58 and 1.64 do not have the cert-manager module. Therefore, before disabling the cert-manager module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
+   For example, Deckhouse CSE 1.58 and 1.64 do not have the `cert-manager` module. Therefore, before disabling the `cert-manager` module, it is necessary to switch the HTTPS mode of some components (for example, [`user-authn`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
 
    You can display a list of modules that are not supported in Deckhouse CSE and will be disabled using the following command:
 
@@ -1444,11 +1444,11 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    d8 k delete secret/cse-image-pull-secret
    ```
 
-1. Switch to the new edition. To do this, specify the following parameters in ModuleConfig `deckhouse` (for detailed settings, see the [deckhouse](modules/deckhouse/) module configuration):
+1. Switch to the new edition. To do this, specify the following parameters in ModuleConfig `deckhouse` (for detailed settings, see the [`deckhouse`](modules/deckhouse/) module configuration):
 
    ```yaml
    ---
-   # Example for Direct mode
+   # Example for Direct mode.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -1572,11 +1572,11 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    d8 k -n d8-system exec deploy/deckhouse -- deckhouse-controller module enable chrony
    ```
 
-#### How to switch without using the Registry module?
+#### How to switch without using the registry module?
 
-1. Before you begin, disable the Registry module using the [instructions](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
+1. Before you begin, disable the `registry` module using the [instructions](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
 
-1. Configure the cluster to use the required Kubernetes version (information on versioning is provided in the section [How to switch Deckhouse EE to CSE](#how-to-switch-deckhouse-ee-to-cse)). To do this:
+1. Configure the cluster to use the required Kubernetes version (information on versioning is provided in the [instruction](#how-to-switch-deckhouse-ee-to-cse)). To do this:
   1. Run the command:
 
      ```shell
@@ -1684,7 +1684,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    > ```
 
 1. Make sure that the modules used in the cluster are supported by Deckhouse CSE.
-   For example, Deckhouse CSE 1.58 and 1.64 do not have the cert-manager module. Therefore, before disabling the cert-manager module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
+   For example, Deckhouse CSE 1.58 and 1.64 do not have the `cert-manager` module. Therefore, before disabling the `cert-manager` module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
 
    You can display a list of modules that are not supported in Deckhouse CSE and will be disabled using the following command:
    

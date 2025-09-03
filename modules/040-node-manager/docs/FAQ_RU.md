@@ -928,7 +928,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль [registry](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -947,7 +947,7 @@ crictl pull private.registry.example/image/repo:tag
 
 ```toml
 [host]
-  # Mirror 1
+  # Mirror 1.
   [host."https://${REGISTRY_URL_1}"]
     capabilities = ["pull", "resolve"]
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
@@ -956,7 +956,7 @@ crictl pull private.registry.example/image/repo:tag
       username = "${USERNAME}"
       password = "${PASSWORD}"
 
-  # Mirror 2
+  # Mirror 2.
   [host."http://${REGISTRY_URL_2}"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
@@ -976,7 +976,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1020,7 +1020,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1073,7 +1073,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
   weight: 0
   bundles:
     - '*'
@@ -1108,13 +1108,13 @@ spec:
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
 
 ```bash
-# Через cri интерфейс
+# Через cri интерфейс.
 crictl pull private.registry.example/image/repo:tag
 
-# Через ctr с указанием директории с конфигурациями
+# Через ctr с указанием директории с конфигурациями.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
 
-# Через ctr для http репозитория
+# Через ctr для http репозитория.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
@@ -1322,7 +1322,7 @@ metadata:
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре
+     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1611,7 +1611,7 @@ Deckhouse Kubernetes Platform автоматически устанавлива�
 - **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`.
 
-Примеры см. в разделе [Примеры → GPU-узлы](../node-manager/examples.html#пример-gpu-nodegroup).
+Примеры приведены в разделе [Управление узлами: примеры](../node-manager/examples.html#пример-gpu-nodegroup).
 
 ## Как посмотреть доступные MIG-профили в кластере?
 

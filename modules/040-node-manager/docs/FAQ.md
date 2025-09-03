@@ -764,7 +764,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -814,7 +814,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -872,7 +872,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -918,7 +918,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the [registry module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [`registry` module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -938,7 +938,7 @@ Example contents of the `hosts.toml` file:
 
 ```toml
 [host]
-  # Mirror 1
+  # Mirror 1.
   [host."https://${REGISTRY_URL_1}"]
     capabilities = ["pull", "resolve"]
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
@@ -947,7 +947,7 @@ Example contents of the `hosts.toml` file:
       username = "${USERNAME}"
       password = "${PASSWORD}"
 
-  # Mirror 2
+  # Mirror 2.
   [host."http://${REGISTRY_URL_2}"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
@@ -967,7 +967,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required7
   weight: 0
   bundles:
     - '*'
@@ -1011,7 +1011,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
@@ -1064,7 +1064,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
@@ -1099,13 +1099,13 @@ spec:
 After applying the configuration file, check access to the registry from the nodes using the following commands:
 
 ```bash
-# Via the CRI interface
+# Via the CRI interface.
 crictl pull private.registry.example/image/repo:tag
 
-# Via ctr with the configuration directory specified
+# Via ctr with the configuration directory specified.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
 
-# Via ctr for an HTTP registry
+# Via ctr for an HTTP registry.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
@@ -1310,7 +1310,7 @@ To add a GPU node to the cluster, perform the following steps:
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure
+     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1597,7 +1597,7 @@ Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metri
 - **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
 
-See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
+See examples in [Managing nodes: examples](../node-manager/examples.html#example-gpu-nodegroup) section.
 
 ## How to view available MIG profiles in the cluster?
 

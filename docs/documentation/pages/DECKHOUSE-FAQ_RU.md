@@ -31,7 +31,7 @@ Deckhouse настраивается с помощью глобальных на
 Документация запущенной в кластере версии Deckhouse доступна по адресу `documentation.<cluster_domain>`, где `<cluster_domain>` — DNS-имя в соответствии с шаблоном из параметра [modules.publicDomainTemplate](deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) глобальной конфигурации.
 
 {% alert level="warning" %}
-Документация доступна, если в кластере включен модуль [documentation](modules/documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/deckhouse/configuration.html#parameters-bundle) `Minimal`.
+Документация доступна, если в кластере включен модуль [`documentation`](modules/documentation/). Он включен по умолчанию, кроме [варианта поставки](modules/deckhouse/configuration.html#parameters-bundle) `Minimal`.
 {% endalert %}
 
 ## Обновление Deckhouse
@@ -432,7 +432,7 @@ echo "$MYRESULTSTRING"
 
 **Настройка**:
 
-1. Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на [Deckhouse registry](https://registry.deckhouse.ru/):
+1. Создайте **проксирующий** репозиторий Docker (*Administration* -> *Repository* -> *Repositories*), указывающий на Deckhouse registry `https://registry.deckhouse.ru`:
    ![Создание проксирующего репозитория Docker](images/registry/nexus/nexus-repository.png)
 
 1. Заполните поля страницы создания репозитория следующим образом:
@@ -735,7 +735,7 @@ echo "$MYRESULTSTRING"
 ### Как переключить работающий кластер Deckhouse на использование стороннего registry?
 
 {% alert level="warning" %}
-При использовании модуля [registry](modules/registry/) смена адреса и параметров registry выполняется в секции [registry](modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [registry](modules/registry/examples.html).
+При использовании модуля [`registry`](modules/registry/) смена адреса и параметров registry выполняется в секции [registry](modules/deckhouse/configuration.html#parameters-registry) конфигурации модуля `deckhouse`. Пример настройки приведен в документации модуля [`registry`](modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -984,7 +984,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
 
 #### Как переключиться с помощью модуля registry?
 
-1. Убедитесь, что кластер был переключен на использование модуля [registry](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите [к инструкции](#как-переключиться-без-использования-модуля-registry).
+1. Убедитесь, что кластер был переключен на использование модуля [`registry`](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите [к инструкции](#как-переключиться-без-использования-модуля-registry).
 
 1. Подготовьте переменные с токеном лицензии и названием новой редакции:
 
@@ -1060,7 +1060,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
    d8 k delete secret/$NEW_EDITION-image-pull-secret
    ```
 
-1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [deckhouse](modules/deckhouse/)):
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](modules/deckhouse/)):
 
    ```yaml
    ---
@@ -1370,7 +1370,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
 
 #### Как переключиться с помощью модуля registry?
 
-1. Убедитесь, что кластер был переключен на использование модулем [registry](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите [к инструкции](#как-переключиться-без-использования-модуля-registry).
+1. Убедитесь, что кластер был переключен на использование модулем [`registry`](modules/registry/faq.html#как-мигрировать-на-модуль-registry). Если модуль не задействован, перейдите [к инструкции](#как-переключиться-без-использования-модуля-registry).
 1. Настройте кластер на использование необходимой версии Kubernetes (информация о версионности приведена в разделе [Как переключить Deckhouse EE на CSE](#как-переключить-deckhouse-ee-на-cse)). Для этого:
    1. Выполните команду:
 
@@ -1412,7 +1412,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.
 
    Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 
@@ -1450,11 +1450,11 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
    d8 k delete secret/cse-image-pull-secret
    ```
 
-1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [deckhouse](modules/deckhouse/)):
+1. Выполните переключение на новую редакцию. Для этого укажите следующие параметры в ModuleConfig `deckhouse` (для подробной настройки ознакомьтесь с конфигурацией модуля [`deckhouse`](modules/deckhouse/)):
 
    ```yaml
    ---
-   # Пример для Direct режима
+   # Пример для Direct режима.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -1466,15 +1466,15 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
        registry:
          mode: Direct
          direct:
-           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
-           # Для переключения между редакциями необходимо использовать данный режим проверки registry
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+           # Для переключения между редакциями необходимо использовать данный режим проверки registry.
            checkMode: Relax
            imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
-           # Укажите свой параметр <LICENSE_TOKEN>
+           # Укажите свой параметр <LICENSE_TOKEN>.
            license: <LICENSE_TOKEN>
    ---
-   # Пример для Unmanaged режима
+   # Пример для Unmanaged режима.
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -1486,12 +1486,12 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
        registry:
          mode: Unmanaged
          unmanaged:
-           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry
-           # Для переключения между редакциями необходимо использовать данный режим проверки
+           # Relax mode используется для проверки наличия текущей версии Deckhouse в указанном registry.
+           # Для переключения между редакциями необходимо использовать данный режим проверки.
            checkMode: Relax
            imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
-           # Укажите свой параметр <LICENSE_TOKEN>
+           # Укажите свой параметр <LICENSE_TOKEN>.
            license: <LICENSE_TOKEN>
    ```
 
@@ -1690,7 +1690,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
    > ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в Deckhouse CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль `cert-manager`. Поэтому, перед отключением модуля `cert-manager` необходимо перевести режим работы HTTPS некоторых компонентов (например [`user-authn`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.
 
    Отобразить список модулей, которые не поддерживаются в Deckhouse CSE и будут отключены, можно следующей командой:
 

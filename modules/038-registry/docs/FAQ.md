@@ -3,14 +3,14 @@ title: "Registry Module: FAQ"
 description: ""
 ---
 
-## How to Migrate to the Registry Module?
+## How to Migrate to the registry module?
 
 During the migration, Containerd v1 will switch to the new registry configuration format.
-Containerd v2 uses the new format by default. See the ["Adding a custom registry configuration"](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) section for details.
+Containerd v2 uses the new format by default. For more details, see the section [with a description of configuration methods](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry).
 
 ### For containerd v2
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [deckhouse](../deckhouse/) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -62,7 +62,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
 
 1. Make sure that nodes with containerd v1 do not have any [custom registry configurations](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) located in the `/etc/containerd/conf.d` directory.
 
-1. If configurations are present, you need to migrate to the new registry configuration format in containerd. To do this, add new configuration files to the `/etc/containerd/registry.d` directory. These configurations will take effect after switching to the `registry` module. To add configurations, prepare a `NodeGroupConfiguration`. See more details in the section ["adding custom registry configuration"](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry). Example:
+1. If configurations are present, you need to migrate to the new registry configuration format in containerd. To do this, add new configuration files to the `/etc/containerd/registry.d` directory. These configurations will take effect after switching to the `registry` module. To add configurations, prepare a `NodeGroupConfiguration`. For more details, see the section [with a description of configuration methods](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry). Example:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -116,7 +116,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [deckhouse](../deckhouse/) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -233,7 +233,7 @@ Containerd v2 uses the new format by default. See the ["Adding a custom registry
 - During the switch, [custom registry configurations](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) for containerd v1 will be temporarily unavailable.
 {% endalert %}
 
-1. Switch the registry to `Unmanaged` mode. If you are using a registry other than `registry.deckhouse.ru`, refer to the [deckhouse](../deckhouse/) module documentation for proper configuration.
+1. Switch the registry to `Unmanaged` mode. If you are using a registry other than `registry.deckhouse.ru`, refer to the [`deckhouse`](../deckhouse/) module documentation for proper configuration.
 
    Example configuration:
 
@@ -447,4 +447,4 @@ Description of conditions:
 | `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                               |
 | `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                               |
 | `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                   |
-| `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the module is ready to operate.                                    |
+| `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the `modul`e is ready to operate.                                    |
