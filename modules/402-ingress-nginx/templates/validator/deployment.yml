@@ -158,6 +158,10 @@ spec:
             - name: webhook-cert
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
+            - mountPath: /chroot/etc/resolv.conf
+              name: resolv-conf
+            - mountPath: /chroot/etc/ingress-controller/ssl
+              name: tmp-ssl
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -165,6 +169,12 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
+        - name: resolv-conf
+          hostPath:
+            path: /tmp/resolv.conf
+            type: FileOrCreate
+        - name: tmp-ssl
+          emptyDir: {}
 {{- end }}
 
 {{- $ctx := . }}

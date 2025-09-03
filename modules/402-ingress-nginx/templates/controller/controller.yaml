@@ -351,6 +351,12 @@ spec:
           mountPath: /chroot/var/log/valgrind
           readOnly: false
 {{- end }}
+{{- if ne $controllerVersion "1.9" }}
+        - mountPath: /chroot/etc/resolv.conf
+          name: resolv-conf
+        - mountPath: /chroot/etc/ingress-controller/ssl
+          name: tmp-ssl
+{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -419,6 +425,12 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
+      - name: resolv-conf
+        hostPath:
+          path: /tmp/resolv.conf
+          type: FileOrCreate
+      - name: tmp-ssl
+        emptyDir: {}
       - name: tmp-nginx
         emptyDir: {}
       - name: client-body-temp-path
