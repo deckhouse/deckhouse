@@ -22,6 +22,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the operator itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- conversionwebhook_admin_role.yaml
+- conversionwebhook_editor_role.yaml
+- conversionwebhook_viewer_role.yaml
 - validationwebhook_admin_role.yaml
 - validationwebhook_editor_role.yaml
 - validationwebhook_viewer_role.yaml
