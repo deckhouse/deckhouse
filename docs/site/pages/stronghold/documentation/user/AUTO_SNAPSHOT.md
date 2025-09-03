@@ -73,7 +73,7 @@ EOF
 
 Response:
 
-```
+```sh
 Key    Value
 ---    -----
 msg    successfully created config
@@ -96,7 +96,7 @@ EOF
 
 Response:
 
-```
+```sh
 Key    Value
 ---    -----
 msg    successfully updated config
@@ -115,7 +115,7 @@ Used to get a list of names of all existing automatic snapshots
 
 Response:
 
-```
+```sh
 Keys
 ----
 s3every5min
@@ -134,7 +134,7 @@ localEvery3min
 
 Response:
 
-```
+```sh
 Key                     Value
 ---                     -----
 interval                300
@@ -161,7 +161,7 @@ aws_s3_ca_certificate   n/a
 
 Response:
 
-```
+```sh
 Key                    Value
 ---                    -----
 consecutive_errors     0
@@ -186,7 +186,7 @@ snapshot_url           https://minio.domain.ru/my_bucket/backups/main_stronghold
 
 Response:
 
-```
+```sh
 Key    Value
 ---    -----
 msg    successfully deleted config
