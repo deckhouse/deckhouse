@@ -151,6 +151,7 @@ spec:
 ```
 
 {% offtopic title="Минимальный пример вебхука на Go..." %}
+
 ```go
 package main
 
@@ -225,6 +226,7 @@ func main() {
   }
 }
 ```
+
 {% endofftopic %}
 
 ## Сбор информации для отладки

@@ -149,6 +149,7 @@ spec:
 ```
 
 {% offtopic title="Minimal Go webhook example..." %}
+
 ```go
 package main
 
@@ -223,6 +224,7 @@ func main() {
   }
 }
 ```
+
 {% endofftopic %}
 
 ## Collect debug info
