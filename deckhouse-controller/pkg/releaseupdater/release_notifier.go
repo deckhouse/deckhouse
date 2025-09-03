@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -143,18 +144,20 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		if err != nil {
 			return nil, err
 		}
+
 		var req *http.Request
 		req, err = http.NewRequestWithContext(ctx, http.MethodPost, config.WebhookURL, buf)
 		if err != nil {
 			return nil, err
 		}
+
 		req.Header.Add("Content-Type", "application/json")
 		config.Auth.Fill(req)
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
-
 		defer resp.Body.Close()
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
@@ -163,27 +166,31 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		var responseError ResponseError
 
-		if resp.ContentLength > 0 && resp.ContentLength <= MaxContentLen {
-			decoder := json.NewDecoder(resp.Body)
-			if err := decoder.Decode(&responseError); err != nil {
-				return nil, fmt.Errorf("webhook response with status code %d", resp.StatusCode)
-			}
-
-			var errorParts []string
-			errorParts = append(errorParts, fmt.Sprintf("webhook response with status code %d", resp.StatusCode))
-
-			if responseError.Code != "" {
-				errorParts = append(errorParts, fmt.Sprintf("service code: %s", responseError.Code))
-			}
-
-			if responseError.Message != "" {
-				errorParts = append(errorParts, fmt.Sprintf("msg: %s", responseError.Message))
-			}
-
-			return nil, fmt.Errorf("%s", strings.Join(errorParts, ", "))
+		if resp.ContentLength == 0 {
+			return nil, fmt.Errorf("webhook response with status code %d, with empty body", resp.StatusCode)
 		}
 
-		return nil, fmt.Errorf("webhook response with status code %d", resp.StatusCode)
+		if resp.ContentLength > MaxContentLen {
+			return nil, fmt.Errorf("webhook response with status code %d: body is too large to read", resp.StatusCode)
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&responseError); err != nil {
+			return nil, fmt.Errorf("webhook response with status code %d: bad json", resp.StatusCode)
+		}
+
+		var errorParts []string
+		errorParts = append(errorParts, fmt.Sprintf("webhook response with status code %d", resp.StatusCode))
+
+		if responseError.Code != "" {
+			errorParts = append(errorParts, fmt.Sprintf("service code: %s", responseError.Code))
+		}
+
+		if responseError.Message != "" {
+			errorParts = append(errorParts, fmt.Sprintf("msg: %s", responseError.Message))
+		}
+
+		return nil, errors.New(strings.Join(errorParts, ", "))
+
 	})
 
 	return err

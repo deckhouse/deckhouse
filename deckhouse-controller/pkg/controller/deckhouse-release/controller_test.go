@@ -1139,41 +1139,6 @@ func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 func (suite *ControllerTestSuite) TestWebhookNotifications() {
 	ctx := context.Background()
 
-	suite.Run("Webhook returns 500 error - should block release", func() {
-		attemptCount := 0
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			attemptCount++
-			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("Internal Server Error")); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
-			}
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
-
-		suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-
-		// Should not fail, but release should be blocked
-		require.NoError(suite.T(), err)
-
-		// Should have made 5 attempts (initial + 4 retries)
-		require.Equal(suite.T(), 5, attemptCount)
-
-		// Check that release is still pending with notification error
-		dr = suite.getDeckhouseRelease("v1.26.0")
-		require.Equal(suite.T(), "Pending", dr.Status.Phase)
-		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
-	})
-
 	suite.Run("Notification: release with notification settings", func() {
 		var httpBody string
 		svr := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
@@ -1379,141 +1344,177 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		require.Equal(suite.T(), 5, attemptCount)
 	})
 
-	suite.Run("Webhook returns 404 with large body - should block release", func() {
-		largeBody := string(make([]byte, 5000))
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			if _, err := w.Write([]byte(largeBody)); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
+	suite.Run("Webhook returns success status codes", func() {
+		suite.Run("Webhook returns 200 - should succeed immediately", func() {
+			var httpBody string
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				data, _ := io.ReadAll(r.Body)
+				httpBody = string(data)
+				w.WriteHeader(http.StatusOK)
+				if _, err := w.Write([]byte("Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
 			}
-		}))
-		defer svr.Close()
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+			suite.setupControllerSettings("notifier-webhook-200-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
-		suite.setupControllerSettings("notifier-webhook-404-large-body.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available")
+		})
 
-		// Should not fail, but release should be blocked
-		require.NoError(suite.T(), err)
+		suite.Run("Webhook returns 201 - should succeed (2xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusCreated)
+				if _, err := w.Write([]byte("Created")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
 
-		// Check that release is still pending with notification error
-		dr = suite.getDeckhouseRelease("v1.26.0")
-		require.Equal(suite.T(), "Pending", dr.Status.Phase)
-		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-201-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			require.NoError(suite.T(), err)
+		})
+
+		suite.Run("Webhook returns 299 - should succeed (2xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(299) // Custom 2xx status
+				if _, err := w.Write([]byte("Custom Success")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-299-success.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			require.NoError(suite.T(), err)
+		})
 	})
 
-	suite.Run("Webhook returns 200 - should succeed immediately", func() {
-		var httpBody string
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			data, _ := io.ReadAll(r.Body)
-			httpBody = string(data)
-			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte("Success")); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
+	suite.Run("Webhook returns error status codes", func() {
+		suite.Run("Webhook returns 300 - should block release (3xx range)", func() {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusMultipleChoices)
+				if _, err := w.Write([]byte("Multiple Choices")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
 			}
-		}))
-		defer svr.Close()
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+			suite.setupControllerSettings("notifier-webhook-300-fail.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
-		suite.setupControllerSettings("notifier-webhook-200-success.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
 
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), httpBody, "New Deckhouse Release 1.26.0 is available")
-	})
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
 
-	suite.Run("Webhook returns 201 - should succeed (2xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusCreated)
-			if _, err := w.Write([]byte("Created")); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
+		suite.Run("Webhook returns 404 with large body - should block release", func() {
+			largeBody := make([]byte, 5000)
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				if _, err := w.Write(largeBody); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
 			}
-		}))
-		defer svr.Close()
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+			suite.setupControllerSettings("notifier-webhook-404-large-body.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
-		suite.setupControllerSettings("notifier-webhook-201-success.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
 
-		require.NoError(suite.T(), err)
-	})
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
 
-	suite.Run("Webhook returns 299 - should succeed (2xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(299) // Custom 2xx status
-			if _, err := w.Write([]byte("Custom Success")); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
+		suite.Run("Webhook returns 500 error - should block release", func() {
+			attemptCount := 0
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				attemptCount++
+				w.WriteHeader(http.StatusInternalServerError)
+				if _, err := w.Write([]byte("Internal Server Error")); err != nil {
+					suite.T().Fatalf("failed to write response: %v", err)
+				}
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
 			}
-		}))
-		defer svr.Close()
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+			suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
-		suite.setupControllerSettings("notifier-webhook-299-success.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
 
-		require.NoError(suite.T(), err)
-	})
+			// Should have made 5 attempts (initial + 4 retries)
+			require.Equal(suite.T(), 5, attemptCount)
 
-	suite.Run("Webhook returns 300 - should block release (3xx range)", func() {
-		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusMultipleChoices)
-			if _, err := w.Write([]byte("Multiple Choices")); err != nil {
-				suite.T().Fatalf("failed to write response: %v", err)
-			}
-		}))
-		defer svr.Close()
-
-		ds := &helpers.DeckhouseSettings{
-			ReleaseChannel: embeddedMUP.ReleaseChannel,
-		}
-		ds.Update.Mode = embeddedMUP.Update.Mode
-		ds.Update.Windows = embeddedMUP.Update.Windows
-		ds.Update.NotificationConfig.WebhookURL = svr.URL
-		ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
-
-		suite.setupControllerSettings("notifier-webhook-300-fail.yaml", initValues, ds)
-		dr := suite.getDeckhouseRelease("v1.26.0")
-		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
-
-		// Should not fail, but release should be blocked
-		require.NoError(suite.T(), err)
-
-		// Check that release is still pending with notification error
-		dr = suite.getDeckhouseRelease("v1.26.0")
-		require.Equal(suite.T(), "Pending", dr.Status.Phase)
-		require.Contains(suite.T(), dr.Status.Message, "Release is blocked, failed to send release notification")
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
 	})
 
 	suite.Run("Webhook network error - should retry and fail", func() {
