@@ -64,6 +64,11 @@ apiVersions:
               etcdDisk:
                 size: 10Gi
                 storageClass: linstor-thin-r1
+              additionalDisks:
+                - size: 10Gi
+                  storageClass: linstor-thin-r1
+                - size: 1Gi
+                  storageClass: linstor-thin-r1
           nodeGroups:
             - name: worker
               zones:
@@ -312,6 +317,28 @@ apiVersions:
                           description: |
                             The name of the image that will be used to create the root disk.
                             > The installation requires Linux OS images with cloud-init pre-installed.
+                additionalDisks:
+                  type: array
+                  description: |
+                    Specifies settings for additional data disks of the virtual machine.
+
+                    Each item in the array describes one additional disk.
+                    Both `size` and `storageClass` are required.
+                  items:
+                    type: object
+                    required: [size, storageClass]
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Size of the additional disk.
+                        example: 10Gi
+                      storageClass:
+                        type: string
+                        description: |
+                          Name of the existing StorageClass that will be used to create the additional disk.
+                        example: ceph-pool-r2-csi-rbd-immediate
                 etcdDisk:
                   type: object
                   description: |

@@ -65,6 +65,10 @@ locals {
           "kind" = "VirtualDisk"
           "name" = var.kubernetes_data_disk.name
         },
+        [for disk in var.additional_disks : {
+          "kind" = "VirtualDisk"
+          "name" = disk.name
+        }]
       ]
 
       "provisioning" = {
