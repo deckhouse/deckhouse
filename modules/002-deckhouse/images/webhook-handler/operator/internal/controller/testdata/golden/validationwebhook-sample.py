@@ -3,8 +3,6 @@ from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 config = """
 configVersion: v1
@@ -12,16 +10,15 @@ kubernetesValidating:
 - matchConditions:
   - expression: request.resource.group != "rbac.authorization.k8s.io"
     name: yyyy
-  namespaceSelector:
-    matchExpressions:
-    - key: runlevel
-      operator: NotIn
-      values:
-      - "0"
-      - "1"
-  objectSelector:
-    matchLabels:
-      foo: bar
+  name: validationwebhook.deployments.apps
+  namespace:
+    labelSelector:
+      matchExpressions:
+      - key: runlevel
+        operator: NotIn
+        values:
+        - "0"
+        - "1"
   rules:
   - apiGroups:
     - apps
@@ -47,9 +44,10 @@ kubernetes:
   nameSelector:
     matchNames:
     - global
-  namespaceSelector:
-    matchLabels:
-      bar: foo
+  namespace:
+    labelSelector:
+      matchLabels:
+        bar: foo
 """
 
 def main(ctx: hook.Context):
@@ -60,9 +58,9 @@ def main(ctx: hook.Context):
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-def validate(request: admission.Request, context: []Object || Context) -> tuple[Optional[str], bool]:
-  // logic here
-  return "message", True
+def validate(bindingcontext, output):
+  # logic here
+  return
 
 if __name__ == "__main__":
     hook.run(main, config=config)

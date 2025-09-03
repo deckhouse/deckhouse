@@ -82,7 +82,7 @@ type KubernetesContext struct {
 	NameSelector                 *NameSelector         `json:"nameSelector,omitempty"`
 	LabelSelector                *metav1.LabelSelector `json:"labelSelector,omitempty"`
 	FieldSelector                *FieldSelector        `json:"fieldSelector,omitempty"`
-	NamespaceSelector            *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
+	Namespace                    *NamespaceSelector    `json:"namespace,omitempty"`
 	JqFilter                     string                `json:"jqFilter,omitempty"`
 	AllowFailure                 bool                  `json:"allowFailure,omitempty"`
 	ResynchronizationPeriod      string                `json:"resynchronizationPeriod,omitempty"`
@@ -106,14 +106,13 @@ type Handler struct {
 
 // version 1 of kubernetes validation configuration
 type KubernetesAdmissionConfigV1 struct {
-	Name                 string                  `json:"name,omitempty"`
+	Name                 string                  `json:"name"`
 	IncludeSnapshotsFrom []string                `json:"includeSnapshotsFrom,omitempty"`
 	Group                string                  `json:"group,omitempty"`
 	Rules                []v1.RuleWithOperations `json:"rules,omitempty"`
 	FailurePolicy        *v1.FailurePolicyType   `json:"failurePolicy,omitempty"`
 	LabelSelector        *metav1.LabelSelector   `json:"labelSelector,omitempty"`
-	ObjectSelector       *metav1.LabelSelector   `json:"objectSelector,omitempty"`
-	NamespaceSelector    *metav1.LabelSelector   `json:"namespaceSelector,omitempty"`
+	Namespace            *NamespaceSelector      `json:"namespace,omitempty"`
 	SideEffects          *v1.SideEffectClass     `json:"sideEffects,omitempty"`
 	TimeoutSeconds       *int32                  `json:"timeoutSeconds,omitempty"`
 	MatchConditions      []v1.MatchCondition     `json:"matchConditions,omitempty"`
