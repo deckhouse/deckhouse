@@ -64,45 +64,45 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 1. If configurations are present, you need to migrate to the new registry configuration format in containerd. To do this, add new configuration files to the `/etc/containerd/registry.d` directory. These configurations will take effect after switching to the `registry` module. To add configurations, prepare a `NodeGroupConfiguration`. For more details, see the section [with a description of configuration methods](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry). Example:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: NodeGroupConfiguration
-  metadata:
-    name: containerd-additional-config-auth.sh
-  spec:
-    # The step can be arbitrary, as restarting the containerd service is not required
-    weight: 0
-    bundles:
-      - '*'
-    nodeGroups:
-      - "*"
-    content: |
-      # Copyright 2023 Flant JSC
-      #
-      # Licensed under the Apache License, Version 2.0 (the "License");
-      # you may not use this file except in compliance with the License.
-      # You may obtain a copy of the License at
-      #
-      #     http://www.apache.org/licenses/LICENSE-2.0
-      #
-      # Unless required by applicable law or agreed to in writing, software
-      # distributed under the License is distributed on an "AS IS" BASIS,
-      # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      # See the License for the specific language governing permissions and
-      # limitations under the License.
-      
-      REGISTRY_URL=private.registry.example
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-additional-config-auth.sh
+   spec:
+     # The step can be arbitrary, as restarting the containerd service is not required
+     weight: 0
+     bundles:
+       - '*'
+     nodeGroups:
+       - "*"
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+  
+       REGISTRY_URL=private.registry.example
 
-      mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
-      bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
-      [host]
-        [host."https://${REGISTRY_URL}"]
-          capabilities = ["pull", "resolve"]
-          [host."https://${REGISTRY_URL}".auth]
-            username = "username"
-            password = "password"
-      EOF
-  ```
+       mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+       bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+       [host]
+         [host."https://${REGISTRY_URL}"]
+           capabilities = ["pull", "resolve"]
+           [host."https://${REGISTRY_URL}".auth]
+             username = "username"
+             password = "password"
+       EOF
+   ```
 
 1. Apply the `NodeGroupConfiguration`. Wait until the configuration files appear in the `/etc/containerd/registry.d` directory on all nodes.
 
@@ -165,37 +165,37 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 1. Remove the old configuration files to allow switching to the `registry` module. To do this, create a `NodeGroupConfiguration`, for example:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: NodeGroupConfiguration
-  metadata:
-    name: containerd-additional-config-auth.sh
-  spec:
-    # To add a file before the '032_configure_containerd.sh' step
-    weight: 0
-    bundles:
-      - '*'
-    nodeGroups:
-      - "*"
-    content: |
-      # Copyright 2023 Flant JSC
-      #
-      # Licensed under the Apache License, Version 2.0 (the "License");
-      # you may not use this file except in compliance with the License.
-      # You may obtain a copy of the License at
-      #
-      #     http://www.apache.org/licenses/LICENSE-2.0
-      #
-      # Unless required by applicable law or agreed to in writing, software
-      # distributed under the License is distributed on an "AS IS" BASIS,
-      # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      # See the License for the specific language governing permissions and
-      # limitations under the License.
-      
-      file="/etc/containerd/conf.d/old-config.toml"
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-additional-config-auth.sh
+   spec:
+     # To add a file before the '032_configure_containerd.sh' step
+     weight: 0
+     bundles:
+       - '*'
+     nodeGroups:
+       - "*"
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+  
+       file="/etc/containerd/conf.d/old-config.toml"
 
-      [ -f "$file" ] && rm -f "$file"
-  ```
+       [ -f "$file" ] && rm -f "$file"
+   ```
 
 1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](faq.html#how-to-check-the-registry-mode-switch-status):
 
@@ -301,51 +301,51 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 1. If containerd v1 is used and [custom registry configurations](../node-manager/faq.html#how-to-add-configuration-for-an-additional-registry) are applied in the cluster, they must be replaced with the old format. To do this, prepare the registry configurations in the old format. These configurations do not need to be applied at this stage. Example configuration:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: NodeGroupConfiguration
-  metadata:
-    name: containerd-additional-config-auth.sh
-  spec:
-    # To add a file before the '032_configure_containerd.sh' step
-    weight: 31
-    bundles:
-      - '*'
-    nodeGroups:
-      - "*"
-    content: |
-      # Copyright 2023 Flant JSC
-      #
-      # Licensed under the Apache License, Version 2.0 (the "License");
-      # you may not use this file except in compliance with the License.
-      # You may obtain a copy of the License at
-      #
-      #     http://www.apache.org/licenses/LICENSE-2.0
-      #
-      # Unless required by applicable law or agreed to in writing, software
-      # distributed under the License is distributed on an "AS IS" BASIS,
-      # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      # See the License for the specific language governing permissions and
-      # limitations under the License.
-      
-      REGISTRY_URL=private.registry.example
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: containerd-additional-config-auth.sh
+   spec:
+     # To add a file before the '032_configure_containerd.sh' step
+     weight: 31
+     bundles:
+       - '*'
+     nodeGroups:
+       - "*"
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+  
+       REGISTRY_URL=private.registry.example
 
-      mkdir -p /etc/containerd/conf.d
-      bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
-      [plugins]
-        [plugins."io.containerd.grpc.v1.cri"]
-          [plugins."io.containerd.grpc.v1.cri".registry]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
-                endpoint = ["https://${REGISTRY_URL}"]
-            [plugins."io.containerd.grpc.v1.cri".registry.configs]
-              [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-                username = "username"
-                password = "password"
-                # OR
-                auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
-      EOF
-  ```
+       mkdir -p /etc/containerd/conf.d
+       bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+       [plugins]
+         [plugins."io.containerd.grpc.v1.cri"]
+           [plugins."io.containerd.grpc.v1.cri".registry]
+             [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+               [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+                 endpoint = ["https://${REGISTRY_URL}"]
+             [plugins."io.containerd.grpc.v1.cri".registry.configs]
+               [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+                 username = "username"
+                 password = "password"
+                 # OR
+                 auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
+       EOF
+   ```
 
 1. Delete the `registry-bashible-config` secret. This will trigger containerd v1 to switch back to the legacy registry format:
 
@@ -372,16 +372,16 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 1. Disable the `registry` module. Example:
 
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: registry
-  spec:
-    enabled: false
-    settings: {}
-    version: 1
-  ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: registry
+   spec:
+     enabled: false
+     settings: {}
+     version: 1
+   ```
 
 ## How to check the registry mode switch status?
 

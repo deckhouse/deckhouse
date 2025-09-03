@@ -1577,15 +1577,15 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
 1. Before you begin, disable the `registry` module using the [instructions](modules/registry/faq.html#how-to-migrate-back-from-the-registry-module).
 
 1. Configure the cluster to use the required Kubernetes version (information on versioning is provided in the [instruction](#how-to-switch-deckhouse-ee-to-cse)). To do this:
-  1. Run the command:
+   1. Run the command:
 
-     ```shell
-     d8 platform edit cluster-configuration
-     ```
+      ```shell
+      d8 platform edit cluster-configuration
+      ```
 
-  1. Change the `kubernetesVersion` parameter to the desired value, for example `"1.27"` (in quotes) for Kubernetes 1.27.
-  1. Save the changes. The cluster nodes will begin to be updated sequentially.
-  1. Wait for the update to complete. You can track the update progress using the `d8 k get no` command. The update is complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
+   1. Change the `kubernetesVersion` parameter to the desired value, for example `"1.27"` (in quotes) for Kubernetes 1.27.
+   1. Save the changes. The cluster nodes will begin to be updated sequentially.
+   1. Wait for the update to complete. You can track the update progress using the `d8 k get no` command. The update is complete when the updated version appears in the `VERSION` column of each cluster node in the command output.
 
 1. Prepare variables with the license token and create a NodeGroupConfiguration for transient authorization in `registry-cse.deckhouse.ru`:
 
@@ -1661,7 +1661,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
 1. Run the following commands to start a temporary Deckhouse CSE pod to get up-to-date digests and a list of modules:
 
    ```shell
-   DECKHOUSE_VERSION=v<ВЕРСИЯ_DECKHOUSE_CSE>
+   DECKHOUSE_VERSION=v<DECKHOUSE_VERSION_CSE>
    # For example, DECKHOUSE_VERSION=v1.58.2.
    d8 k run cse-image --image=registry-cse.deckhouse.ru/deckhouse/cse/install:$DECKHOUSE_VERSION --command sleep -- infinity
    ```
@@ -1687,7 +1687,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    For example, Deckhouse CSE 1.58 and 1.64 do not have the `cert-manager` module. Therefore, before disabling the `cert-manager` module, it is necessary to switch the HTTPS mode of some components (for example, [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](https://deckhouse.io/products/kubernetes-platform/documentation/v1.58/modules/prometheus/configuration.html#parameters-https-mode)) to alternative operating options, or change the [global parameter](deckhouse-configure-global.html#parameters-modules-https-mode) responsible for the HTTPS mode in the cluster.
 
    You can display a list of modules that are not supported in Deckhouse CSE and will be disabled using the following command:
-   
+
    ```shell
    echo $MODULES_WILL_DISABLE
    ```
