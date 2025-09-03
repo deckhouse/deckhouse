@@ -169,45 +169,105 @@ entries:
                     ru: Настройка NTP
                   url: /virtualization-platform/documentation/admin/platform-management/network/ntp.html
             - title:
-                en: Storage management
-                ru: Управление хранилищами
+                en: Storage
+                ru: Хранилища
               folders:
                 - title:
-                    en: Supported storages
-                    ru: Поддерживаемые хранилища
+                    en: Overview
+                    ru: Обзор
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/
+                - title:
+                    en: Storage configuration
+                    ru: Настройка хранилищ
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
+                - title:
+                    en: Configuring volume snapshot creation
+                    ru: Настройка создания снимков томов
+                  url: /virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
+                - title:
+                    en: Software-defined storage (SDS)
+                    ru: Программно-определяемые хранилища (SDS)
                   folders:
                     - title:
-                         en: Supported storages
-                         ru: Поддерживаемые хранилища
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
+                        en: Local path provisioner storage
+                        ru: Локальное хранилище Local Path Provisioner
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/local-path-provisioner.html
                     - title:
-                        en: SDS
-                        ru: Программно определяемые
+                        en: Node configuration for software-defined storage (SDS)
+                        ru: Настройка узлов для программно-определяемых хранилищ
                       folders:
                         - title:
-                            en: Local storage based on LVM
-                            ru: Локальные на основе LVM
+                            en: Overview
+                            ru: Обзор
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/about.html
+                        - title:
+                            en: Usage scenarios
+                            ru: Примеры использования
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/usage.html
+                        - title:
+                            en: Configuration scenarios
+                            ru: Сценарии конфигурации
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/layouts.html
+                        - title:
+                            en: FAQ
+                            ru: FAQ
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/faq.html
+                    - title:
+                        en: Local storage based on LVM
+                        ru: Локальное хранилище на основе LVM
+                      folders:
+                        - title:
+                            en: Setting up local storage based on LVM
+                            ru: Настройка локального хранилища на основе LVM
                           url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html
                         - title:
-                            en: Replicated storage based on LVM
-                            ru: Реплицируемые на основе LVM
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
+                            en: Managing local storage based on LVM
+                            ru: Управление локальным хранилищем на основе LVM
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local-faq.html
                     - title:
-                        en: External
-                        ru: Внешние
+                        en: Replicated storage based on DRBD
+                        ru: Реплицируемое хранилище на основе DRBD
                       folders:
                         - title:
-                            en: Yadro
-                            ru: Yadro
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
+                            en: Setting up replicated storage based on DRBD
+                            ru: Настройка реплицируемого хранилища на основе DRBD
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated.html
                         - title:
-                            en: NFS storage
-                            ru: NFS-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
-                        - title:
-                            en: CEPH storage
-                            ru: CEPH-хранилище
-                          url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
+                            en: Managing DRBD‑based replicated storage
+                            ru: Управление реплицируемым хранилищем на основе DRBD
+                          url: /virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-replicated-faq.html
+                - title:
+                    en: External
+                    ru: Внешние хранилища
+                  folders:
+                    - title:
+                        en: Distributed Ceph storage
+                        ru: Распределённое хранилище Ceph
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
+                    - title:
+                        en: HPE data storage
+                        ru: Хранилище данных HPE
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/hpe.html
+                    - title:
+                        en: Huawei data storage
+                        ru: Хранилище данных Huawei
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
+                    - title:
+                        en: NFS data storage
+                        ru: Хранилище данных NFS
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
+                    - title:
+                        en: S3 object storage
+                        ru: Объектное хранилище на основе S3
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/s3.html
+                    - title:
+                        en: SCSI-based data storage
+                        ru: Хранилище данных на основе протокола SCSI
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/scsi.html
+                    - title:
+                        en: TATLIN.UNIFIED (Yadro) unified storage
+                        ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
+                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
