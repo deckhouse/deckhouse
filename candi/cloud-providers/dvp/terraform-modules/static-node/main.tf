@@ -33,6 +33,17 @@ resource "kubernetes_secret" "cloudinit-secret" {
 }
 
 locals {
+  additional_block_refs = tolist([
+    for d in var.additional_disks : {
+      "kind" = "VirtualDisk"
+      "name" = d.name
+    }
+  ])
+
+  additional_disks_hashes = [
+    for d in var.additional_disks : d.hash
+  ]
+
   spec = merge(
     {
       "terminationGracePeriodSeconds" = 90
@@ -63,12 +74,7 @@ locals {
           "name" = var.root_disk.name
         }
         ],
-        tolist([
-          for disk in coalescelist(var.additional_disks, []) : {
-            "kind" = "VirtualDisk"
-            "name" = disk.name
-          }
-        ])
+        local.additional_block_refs
       )
 
       "provisioning" = {

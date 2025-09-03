@@ -169,6 +169,7 @@ locals {
     },
     {
       "rootDiskHash" = var.root_disk.hash,
+      "additionalDisksHash" = local.additional_disks_hashes
     },
   )
 
