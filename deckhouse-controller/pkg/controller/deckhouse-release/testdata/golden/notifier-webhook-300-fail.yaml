@@ -30,7 +30,7 @@ status:
   approved: false
   message: 'Release is blocked, failed to send release notification: send release
     notification: send webhook notification: after 5 attempts, last error: webhook
-    response with status code 300'
+    response with status code 300, with empty body'
   phase: Pending
   transitionTime: null
 ---

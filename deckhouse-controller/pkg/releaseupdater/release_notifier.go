@@ -170,7 +170,7 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 			return nil, fmt.Errorf("webhook response with status code %d, with empty body", resp.StatusCode)
 		}
 
-		if resp.ContentLength > MaxContentLen {
+		if resp.ContentLength > MaxContentLen || resp.ContentLength < 0 {
 			return nil, fmt.Errorf("webhook response with status code %d: body is too large to read", resp.StatusCode)
 		}
 

@@ -1426,9 +1426,6 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		suite.Run("Webhook returns 300 - should block release (3xx range)", func() {
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusMultipleChoices)
-				if _, err := w.Write([]byte("Multiple Choices")); err != nil {
-					suite.T().Fatalf("failed to write response: %v", err)
-				}
 			}))
 			defer svr.Close()
 
@@ -1453,10 +1450,10 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		})
 
 		suite.Run("Webhook returns 404 with large body - should block release", func() {
-			largeBody := make([]byte, 5000)
+			largeBody := string(make([]byte, 4000))
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
-				if _, err := w.Write(largeBody); err != nil {
+				if _, err := w.Write([]byte(largeBody)); err != nil {
 					suite.T().Fatalf("failed to write response: %v", err)
 				}
 			}))
@@ -1487,6 +1484,37 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				attemptCount++
 				w.WriteHeader(http.StatusInternalServerError)
+			}))
+			defer svr.Close()
+
+			ds := &helpers.DeckhouseSettings{
+				ReleaseChannel: embeddedMUP.ReleaseChannel,
+			}
+			ds.Update.Mode = embeddedMUP.Update.Mode
+			ds.Update.Windows = embeddedMUP.Update.Windows
+			ds.Update.NotificationConfig.WebhookURL = svr.URL
+			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
+
+			suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
+			dr := suite.getDeckhouseRelease("v1.26.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+
+			// Should not fail, but release should be blocked
+			require.NoError(suite.T(), err)
+
+			// Should have made 5 attempts (initial + 4 retries)
+			require.Equal(suite.T(), 5, attemptCount)
+
+			// Check that release is still pending with notification error
+			dr = suite.getDeckhouseRelease("v1.26.0")
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+		})
+
+		suite.Run("Webhook returns 500 error with not json response - should block release", func() {
+			attemptCount := 0
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				attemptCount++
+				w.WriteHeader(http.StatusInternalServerError)
 				if _, err := w.Write([]byte("Internal Server Error")); err != nil {
 					suite.T().Fatalf("failed to write response: %v", err)
 				}
@@ -1501,7 +1529,7 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 			ds.Update.NotificationConfig.WebhookURL = svr.URL
 			ds.Update.NotificationConfig.RetryMinTime = libapi.Duration{Duration: 10 * time.Millisecond}
 
-			suite.setupControllerSettings("notifier-webhook-500-error.yaml", initValues, ds)
+			suite.setupControllerSettings("notifier-webhook-500-not-json-error.yaml", initValues, ds)
 			dr := suite.getDeckhouseRelease("v1.26.0")
 			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 
