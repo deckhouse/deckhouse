@@ -26,17 +26,14 @@ meant to be valid for eternity, a lease is required to force the consumer
 to check in routinely.
 
 In addition to renewals, a lease can be _revoked_. When a lease is revoked, it
-invalidates that secret immediately and prevents any further renewals. For
-example, with the [Kubernetes secrets engine](/docs/secrets/kubernetes), the
-service accounts will be deleted from Kubernetes the moment a lease is revoked. This
-renders the access keys invalid from that point forward.
+invalidates that secret immediately and prevents any further renewals.
 
 Revocation can happen manually via the API, via the `d8 stronghold lease revoke` cli command,
 the user interface (UI) under the Access tab, or automatically by Stronghold. When a lease
 is expired, Stronghold will automatically revoke that lease. When a token is revoked,
 Stronghold will revoke all leases that were created using that token.
 
-**Note**: The [Key/Value Backend](/docs/secrets/kv) which stores
+**Note**: The [Key/Value Backend](../secrets-engines/kv/overview.html) which stores
 arbitrary secrets does not issue leases although it will sometimes return a
 lease duration; see the documentation for more information.
 
@@ -69,12 +66,6 @@ so often.
 As a result, the return value of renewals should be carefully inspected to
 determine what the new lease is.
 
-{% alert level="info" %}
-
-To implement token renewal logic in your application code, refer to the [code example in the Authentication doc](/docs/concepts/auth#code-example).
-
-{% endalert %}
-
 ## Prefix-based revocation
 
 In addition to revoking a single secret, operators with proper access control
@@ -83,9 +74,6 @@ can revoke multiple secrets based on their lease ID prefix.
 Lease IDs are structured in a way that their prefix is always the path where
 the secret was requested from. This lets you revoke trees of secrets. For
 example, to revoke all Userpass logins, you can do `d8 stronghold lease revoke -prefix auth/userpass/`.
-For more information about revoke command please check
-[cli's lease revoke](/docs/commands/lease/revoke#lease-revoke)
-command docs.
 
 This is very useful if there is an intrusion within a specific system: all
 secrets of a specific backend or a certain configured backend can be revoked

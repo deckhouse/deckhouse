@@ -324,22 +324,10 @@ i.e, user-based password guessing attacks as well as automated attacks.
 The user lockout feature is enabled by default. The default values for "lockout threshold" is 5 attempts,
 "lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
 
-The user lockout feature can be disabled as follows:
-
-- It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
-- It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
-  parameter within `user_lockout` stanza in configuration file.
-  Please see [user lockout configuration](/docs/configuration/user-lockout#user_lockout-stanza) for more details.
-- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/docs/commands/auth/tune)
-  or [auth tune api](/api-docs/system/auth#tune-auth-method) for more details.
+The user lockout feature can be disabled using "auth tune" by setting `disable_lockout` to `true`.
 
 {% endraw %}
+
 {% alert level="warning" %}
 This feature is only supported by the userpass, ldap, and approle auth methods.
 {% endalert %}
-
-## API
-
-The LDAP auth method has a full HTTP API. Please see the
-[LDAP auth method API](/api-docs/auth/ldap) for more
-details.

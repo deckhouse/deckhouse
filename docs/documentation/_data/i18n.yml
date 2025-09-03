@@ -89,6 +89,15 @@ common:
   pattern:
     en: pattern
     ru: шаблон
+  port:
+    en: port
+    ru: порт
+  protocol:
+    en: protocol
+    ru: протокол
+  purpose:
+    en: purpose
+    ru: назначение
   length:
     en: length
     ru: длина

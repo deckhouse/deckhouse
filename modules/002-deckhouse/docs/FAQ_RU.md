@@ -50,28 +50,104 @@ title: "Модуль deckhouse: FAQ"
 
 Данные, которые будут собраны:
 
-* состояние очереди Deckhouse;
-* Deckhouse values. За исключением значений `kubeRBACProxyCA` и `registry.dockercfg`;
-* список включенных модулей;
-* список модулей в режиме `maintenance`;
-* `events` из всех пространств имен;
-* манифесты controller'ов и подов из всех пространств имен Deckhouse;
-* все объекты `nodegroups`;
-* все объекты `nodes`;
-* все объекты `machines`;
-* все объекты `instances`;
-* все объекты `staticinstances`;
-* данные о текущей версии пода deckhouse;
-* все объекты `deckhousereleases`;
-* логи Deckhouse;
-* логи machine controller manager;
-* логи cloud controller manager;
-* логи cluster autoscaler;
-* логи Vertical Pod Autoscaler admission controller;
-* логи Vertical Pod Autoscaler recommender;
-* логи Vertical Pod Autoscaler updater;
-* логи Prometheus;
-* все горящие уведомления в Prometheus.
+<table>
+  <thead>
+    <tr>
+      <th>Категория</th>
+      <th>Собираемые данные</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Deckhouse</strong></td>
+      <td>
+        <ul>
+          <li>Состояние очереди Deckhouse</li>
+          <li>Deckhouse values (за исключением значений <code>kubeRBACProxyCA</code> и <code>registry.dockercfg</code>)</li>
+          <li>Данные о текущей версии пода <code>deckhouse</code></li>
+          <li>Все объекты DeckhouseRelease</li>
+          <li>Логи подов Deckhouse</li>
+          <li>Манифесты контроллеров и подов из всех пространств имен Deckhouse</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Объекты кластера</strong></td>
+      <td>
+        Все объекты следующих ресурсов:
+        <ul>
+          <li>NodeGroup</li>
+          <li>NodeGroupConfiguration</li>
+          <li>Node</li>
+          <li>Machine</li>
+          <li>Instance</li>
+          <li>StaticInstance</li>
+          <li>MachineDeployment</li>
+          <li>ClusterAuthorizationRule</li>
+          <li>AuthorizationRule</li>
+          <li>ModuleConfig</li>
+        </ul>
+        А также Events из всех пространств имен
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Модули и их состояния</strong></td>
+      <td>
+        <ul>
+          <li>Список включенных модулей</li>
+          <li>Список объектов ModuleSource в кластере</li>
+          <li>Список объектов ModulePullOverride в кластере</li>
+          <li>Список модулей в режиме <code>maintenance</code></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Логи и манифесты контроллеров</strong></td>
+      <td>
+        Логи следующих компонентов:
+        <ul>
+          <li><code>machine-controller-manager</code></li>
+          <li><code>cloud-controller-manager</code></li>
+          <li><code>csi-controller</code></li>
+          <li><code>cluster-autoscaler</code></li>
+          <li>Vertical Pod Autoscaler admission controller</li>
+          <li>Vertical Pod Autoscaler recommender</li>
+          <li>Vertical Pod Autoscaler updater</li>
+        </ul>
+        YAML-файлы следующих контроллеров:
+        <ul>
+          <li><code>capi-controller-manager</code></li>
+          <li><code>caps-controller-manager</code></li>
+          <li><code>machine-controller-manager</code></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Мониторинг и алерты</strong></td>
+      <td>
+        <ul>
+          <li>Логи Prometheus</li>
+          <li>Все горящие уведомления в Prometheus</li>
+          <li>Список всех подов, которые не находятся в состоянии <code>Running</code>, кроме подов в состояниях <code>Completed</code> и <code>Evicted</code></li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td><strong>Сеть</strong></td>
+      <td>
+        <ul>
+          <li>Все объекты из пространства имен <code>d8-istio</code></li>
+          <li>Все кастомные ресурсы <code>istio</code></li>
+          <li>Конфигурация Envoy для <code>istio</code></li>
+          <li>Логи <code>istio</code></li>
+          <li>Логи <code>istio</code> ingress gateway</li>
+          <li>Логи <code>istio</code> users</li>
+          <li>Состояние соединения Cilium (<code>cilium health status</code>)</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ## Как отлаживать проблемы в подах с помощью ephemeral containers?
 

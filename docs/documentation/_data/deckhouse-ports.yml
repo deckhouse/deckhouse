@@ -367,22 +367,58 @@ groups:
     description:
       en: "`monitoring-ping` metrics"
       ru: "Метрики `monitoring-ping`"
-  - ports: "4295-4299"
+  - ports: "4295&#8209;4297"
     protocol: UDP
     description:
-      en: VXLAN for pod-to-pod traffic encapsulation
-      ru: VXLAN для инкапсуляции трафика между подами
-  - ports: "7000-7999"
+      en: |
+        Used by the `cni-cilium` module for VXLAN encapsulation of inter-pod traffic in multiple nested virtualization — when DKP with the `virtualization` module enabled is deployed inside virtual machines that are also created in DKP with the `virtualization` module enabled
+      ru: |
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами при множественной вложенной виртуализации — когда DKP с включенным модулем `virtualization` развернут внутри виртуальных машин, также созданных в DKP с включенным модулем `virtualization`
+  - ports: "4298"
+    protocol: UDP
+    description:
+      en: |
+        Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods if the cluster was deployed on DKP version starting from **1.71** (for clusters deployed on DKP versions up to **1.71**, see the note for ports `4299/UDP`, `8469/UDP`, and `8472/UDP`)
+      ru: |
+        Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами, если кластер был развернут на DKP, начиная с версии **1.71** (для кластеров, развернутых на DKP до версии **1.71**, см. примечание для портов `4299/UDP`, `8469/UDP` и `8472/UDP`)
+  - ports: "4299"
+    protocol: UDP
+    description:
+      en: |
+        **For clusters deployed on DKP versions 1.64–1.70.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the port used unless the `virtualization` module is enabled.
+
+        **Note** that in such clusters, enabling the `virtualization` module on DKP up to version 1.70 changes the port to `4298/UDP`
+      ru: |
+        **Для кластеров, развернутых на DKP версий 1.64–1.70.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт на `4298/UDP`
+  - ports: "7000&#8209;7999"
     protocol: TCP
     description:
       en: "`sds-replicated-volume` DRBD replication"
       ru: "Репликация DRBD для `sds-replicated-volume`"
-  - ports: "8469, 8472"
+  - ports: "8469"
     protocol: UDP
     description:
-      en: VXLAN for pod-to-pod traffic encapsulation
-      ru: VXLAN для инкапсуляции трафика между подами
+      en: |
+        **For clusters deployed on DKP version 1.63 and below with the `virtualization` module enabled prior to DKP version 1.63.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port
+      ru: |
+        **Для кластеров, развернутых на DKP версии 1.63 и ниже с модулем `virtualization`, включенным до DKP версии 1.63.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт
+  - ports: "8472"
+    protocol: UDP
+    description:
+      en: |
+        **For clusters deployed on DKP version 1.63 and below.** Used by the `cni-cilium` module for VXLAN encapsulation of traffic between pods. Updating DKP to newer versions will not change the occupied port if the `virtualization` module is not enabled.
 
+        **Note** that in such clusters, enabling the `virtualization` module on DKP before version 1.70 changes the port:
+        - Enabling the `virtualization` module on DKP version 1.63 and below will change it to `8469/UDP` and will not change with subsequent DKP updates
+        - Enabling the `virtualization` module on DKP starting from version 1.64 will change it to `4298/UDP` and will not change with subsequent DKP updates
+      ru: |
+        **Для кластеров, развернутых на DKP версии 1.63 и ниже.** Используется модулем `cni-cilium` для VXLAN-инкапсуляции трафика между подами. Обновление DKP до более новых версий не изменит занимаемый порт, если не включается модуль `virtualization`.
+
+        **Обратите внимание,** что в таких кластерах включение модуля `virtualization` на DKP до версии 1.70 меняет порт:
+        - включение модуля `virtualization` на DKP версии 1.63 и ниже изменит его на `8469/UDP` и не изменит при последующих обновлениях DKP
+        - включение модуля `virtualization` на DKP, начиная с версии 1.64, изменит его на `4298/UDP` и не изменит при последующих обновлениях DKP
 - group: ExternalToMaster
   description:
     en: External traffic to master nodes
@@ -397,7 +433,7 @@ groups:
     protocol: TCP
     description:
       en: Direct access to the apiserver
-      ru: Прямой доступ к apiserver`у
+      ru: Прямой доступ к API-серверу
 
 - group: ExternalToFrontends
   description:

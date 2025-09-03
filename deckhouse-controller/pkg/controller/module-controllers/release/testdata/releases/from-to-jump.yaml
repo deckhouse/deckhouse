@@ -1,0 +1,98 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.67.5
+  labels:
+    module: demo
+    source: test-source
+    modules.deckhouse.io/update-policy: demo
+spec:
+  moduleName: demo
+  version: 1.67.5
+  weight: 900
+status:
+  approved: true
+  phase: Deployed
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.68.4
+  labels:
+    module: demo
+    source: test-source
+    modules.deckhouse.io/update-policy: demo
+spec:
+  moduleName: demo
+  version: 1.68.4
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: demo-1.69.10
+  labels:
+    module: demo
+    source: test-source
+    modules.deckhouse.io/update-policy: demo
+spec:
+  moduleName: demo
+  version: 1.69.10
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
+  name: demo-1.75.2
+  labels:
+    module: demo
+    source: test-source
+    modules.deckhouse.io/update-policy: demo
+spec:
+  moduleName: demo
+  version: 1.75.2
+  weight: 900
+  update:
+    versions:
+      - from: 1.67
+        to: 1.75
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: test-source
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io
+    scheme: HTTPS
+status:
+  modules:
+    - name: demo
+  modulesCount: 1
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: demo
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Manual
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: demo
+status:
+  phase: Ready

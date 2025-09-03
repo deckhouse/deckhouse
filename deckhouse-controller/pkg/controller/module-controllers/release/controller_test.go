@@ -120,10 +120,10 @@ func (suite *ReleaseControllerTestSuite) TearDownSubTest() {
 		err := os.WriteFile(goldenFile, gotB, 0o666)
 		require.NoError(suite.T(), err)
 	} else {
-		got := singleDocToManifests(gotB)
+		got := normalizeManifests(singleDocToManifests(gotB))
 		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
-		exp := singleDocToManifests(expB)
+		exp := normalizeManifests(singleDocToManifests(expB))
 		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
 		for i := range got {
 			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
@@ -253,12 +253,23 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
-	suite.Run("install new module in manual mode with deckhouse release approval annotation", func() {
-		suite.setupReleaseController(suite.fetchTestFileData("new-module-manual-mode.yaml"))
+	suite.Run("AutoPatch", func() {
+		suite.Run("install new module in manual mode with module release approval annotation", func() {
+			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-approved.yaml"))
 
-		repeatTest(func() {
-			_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
-			require.NoError(suite.T(), err)
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		suite.Run("install new module in manual mode with module release without approval annotation", func() {
+			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"))
+
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(ctx, suite.getModuleRelease(suite.testMRName))
+				require.NoError(suite.T(), err)
+			})
 		})
 	})
 
@@ -557,6 +568,176 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			})
 		})
 	})
+
+	// Module Release Skip Feature (from to)
+	suite.Run("Module Release Skip Feature (from to)", func() {
+		// 1) Sequential - should skip intermediate versions when constraint allows jump
+		suite.Run("Sequential", func() {
+			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0 (with constraint from 1.67 to 1.70)
+			testData := suite.fetchTestFileData("from-to-sequential.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 2) Jump through n versions
+		suite.Run("Jump through n versions", func() {
+			testData := suite.fetchTestFileData("from-to-jump.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.75.2
+				// constraints allow jump from 1.67.x -> 1.75.x, so earlier pendings must be skipped
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.10"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 2.1) Jump through n versions, but approved not latest
+		suite.Run("Jump through n versions", func() {
+			testData := suite.fetchTestFileData("from-to-jump-approved-not-latest.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 1.67.5, pendings: 1.75.1, 1.75.2 (approved), 1.75.3
+				// release will not deployed and stuck on 1.75.3
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.1"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.3"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 3) Jump when deployed is above 'from'
+		suite.Run("Jump when deployed is above 'from'", func() {
+			testData := suite.fetchTestFileData("from-to-deployed-above-from.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed 1.68.0, pendings: 1.69.0, 1.70.0, 1.71.0 (with constraint from 1.67 to 1.71)
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.71.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 4) No jump when deployed is below 'from'
+		suite.Run("No jump when deployed is below 'from'", func() {
+			testData := suite.fetchTestFileData("from-to-below-from.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 1.66.0 which is below 'from'; no jumping allowed
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.66.25"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.4"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 5) No backward jump if 'to' is less than deployed
+		suite.Run("No backward jump if 'to' is less than deployed", func() {
+			testData := suite.fetchTestFileData("from-to-to-less-than-deployed.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.76.0, constraints endpoint is lower than deployed, ensure we do not deploy any lower pending
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.66.23"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.5"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.3"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.75.2"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 6) Several update specs (approved version in second constraint)
+		suite.Run("Several update specs, must choose jump to constrainted release", func() {
+			testData := suite.fetchTestFileData("from-to-several-update-specs-must-choose-constrainted-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
+			// constraints allow jump from 1.67.x -> 1.70.x & 1.67.x -> 1.75.x, constrainted release must be chosen
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.3"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 7) Several update specs (different from maximum leap release is approved and matches constraint)
+		suite.Run("Different from constrainted release is approved and matches constraint", func() {
+			testData := suite.fetchTestFileData("from-to-several-update-specs-different-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
+			// constraints allow jump from 1.67.x -> 1.70.x no release can be processed
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 8) Update specis not for constrainted release
+		suite.Run("Different from constrainted release is approved and not matches to constrainted release", func() {
+			testData := suite.fetchTestFileData("from-to-update-spec-not-for-constrainted-release.yaml")
+			suite.setupReleaseController(testData)
+
+			// deployed is 1.67.5, pendings: 1.68.4, 1.69.10, 1.70.11
+			// constraints allow jump from 1.67.x -> 1.69.x no release can be processed
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.67.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.68.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.69.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {
@@ -666,7 +847,7 @@ type: Opaque
 
 	err := suite.Suite.SetupNoLock(initObjects)
 	require.NoError(suite.T(), err)
-	logger := log.NewNop()
+	logger := log.NewLogger(log.WithLevel(slog.LevelDebug))
 
 	rec := &reconciler{
 		client:               suite.Suite.Client(),
@@ -866,6 +1047,35 @@ func singleDocToManifests(doc []byte) []string {
 	}
 
 	return result
+}
+
+// normalizeManifests strips non-deterministic fields before comparison
+func normalizeManifests(docs []string) []string {
+	result := make([]string, 0, len(docs))
+	for _, d := range docs {
+		result = append(result, stripDeletionTimestamp(d))
+	}
+
+	return result
+}
+
+func stripDeletionTimestamp(y string) string {
+	// Best-effort: if unmarshal fails, return as-is
+	var obj map[string]any
+	if err := yaml.Unmarshal([]byte(y), &obj); err != nil {
+		return y
+	}
+
+	if meta, ok := obj["metadata"].(map[string]any); ok {
+		delete(meta, "deletionTimestamp")
+	}
+
+	b, err := yaml.Marshal(obj)
+	if err != nil {
+		return y
+	}
+
+	return string(b)
 }
 
 func TestValidateModule(t *testing.T) {

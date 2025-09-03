@@ -24,7 +24,7 @@
    - HTTPS access to the `registry.deckhouse.io` container image registry
    - access to the default package repositories for the operating system you are using
    - SSH key access from the **personal computer** (section 1)
-   - network access from the **personal computer** (section 1) via port `22322/TCP`
+   - network access from the **personal computer** (section 1) via port `22/TCP`
    - container runtime packages, such as containerd or docker, should not be installed on the node
    - `cloud-utils` and `cloud-init` packages should be installed on the node.
 

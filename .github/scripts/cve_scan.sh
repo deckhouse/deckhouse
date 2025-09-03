@@ -43,6 +43,47 @@ login_dev_registry() {
   docker login "${DEV_REGISTRY}"
 }
 
+trivy_scan() {
+  ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json ${1} --output ${2} --quiet ${3} --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+}
+
+send_report() {
+  echo ""
+  echo " Uploading trivy ${1} report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
+  echo ""
+  curl -s -S -o /dev/null --fail-with-body -X POST \
+    --retry 5 \
+    --retry-delay 10 \
+    --retry-all-errors \
+    https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
+    -H "accept: application/json" \
+    -H "Content-Type: multipart/form-data" \
+    -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
+    -F "auto_create_context=True" \
+    -F "minimum_severity=Info" \
+    -F "active=true" \
+    -F "verified=true" \
+    -F "scan_type=Trivy Scan" \
+    -F "close_old_findings=true" \
+    -F "do_not_reactivate=false" \
+    -F "push_to_jira=false" \
+    -F "file=@${2}" \
+    -F "product_type_name=DKP" \
+    -F "product_name=${3}" \
+    -F "scan_date=${date_iso}" \
+    -F "engagement_name=${1}" \
+    -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
+    -F "group_by=component_name+component_version" \
+    -F "deduplication_on_engagement=false" \
+    -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag}" \
+    -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
+    -F "version=${dd_image_version}" \
+    -F "build_id=${IMAGE_HASH}" \
+    -F "commit_hash=${GITHUB_SHA}" \
+    -F "branch_tag=${d8_tag}" \
+    -F "apply_tags_to_findings=true"
+}
+
 # Create docker config file to use during this CI Job
 echo "----------------------------------------------"
 echo ""
@@ -146,7 +187,7 @@ for d8_tag in "${d8_tags[@]}"; do
   digests=$(docker run --rm "${d8_image}:${d8_tag}" cat /deckhouse/modules/images_digests.json)
 
   # Additional images to scan
-  declare -a additional_images=("${d8_image}" 
+  declare -a additional_images=("${d8_image}"
                 "${d8_image}/install"
                 "${d8_image}/install-standalone"
                 )
@@ -213,45 +254,19 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       if [ "${additional_image_detected}" == true ]; then
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}:${d8_tag}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+        # CVE Scan
+        trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}:${d8_tag}"
+        # License scan
+        trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}:${d8_tag}"
       else
-        ${WORKDIR}/bin/trivy i --policy "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json --scanners vuln --output "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" --quiet "${d8_image}@${IMAGE_HASH}" --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+        # CVE Scan
+        trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
+        # License scan
+        trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       fi
 
-      echo ""
-      echo " Uploading trivy CVE report for image \"${IMAGE_NAME}\" of \"${MODULE_NAME}\" module"
-      echo ""
-      curl -s -S -o /dev/null --fail-with-body -X POST \
-        --retry 5 \
-        --retry-delay 10 \
-        --retry-all-errors \
-        https://${DEFECTDOJO_HOST}/api/v2/reimport-scan/ \
-        -H "accept: application/json" \
-        -H "Content-Type: multipart/form-data"  \
-        -H "Authorization: Token ${DEFECTDOJO_API_TOKEN}" \
-        -F "auto_create_context=True" \
-        -F "minimum_severity=Info" \
-        -F "active=true" \
-        -F "verified=true" \
-        -F "scan_type=Trivy Scan" \
-        -F "close_old_findings=true" \
-        -F "do_not_reactivate=true" \
-        -F "push_to_jira=false" \
-        -F "file=@${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" \
-        -F "product_type_name=Deckhouse images" \
-        -F "product_name=Deckhouse" \
-        -F "scan_date=${date_iso}" \
-        -F "engagement_name=CVE Test: Deckhouse Images" \
-        -F "service=${MODULE_NAME} / ${IMAGE_NAME}" \
-        -F "group_by=component_name+component_version" \
-        -F "deduplication_on_engagement=false" \
-        -F "tags=deckhouse_image,module:${MODULE_NAME},image:${IMAGE_NAME},branch:${dd_branch}${codeowner_tags},${dd_short_release_tag},${dd_full_release_tag},${dd_default_branch_tag}" \
-        -F "test_title=[${MODULE_NAME}]: ${IMAGE_NAME}:${dd_image_version}" \
-        -F "version=${dd_image_version}" \
-        -F "build_id=${IMAGE_HASH}" \
-        -F "commit_hash=${GITHUB_SHA}" \
-        -F "branch_tag=${d8_tag}" \
-        -F "apply_tags_to_findings=true"
+      send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}"
+      send_report "License" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${MODULE_NAME}"
     done
   done
 done

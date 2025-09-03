@@ -17,7 +17,7 @@ during authentication, and instead uses public key cryptography to verify the
 contents of JWTs. This means tokens that have been revoked by Kubernetes will
 still be considered valid by Stronghold until their expiry time. To mitigate this
 risk, use short TTLs for service account tokens or use
-[Kubernetes auth](/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
+[Kubernetes auth](../../kubernetes.html) which _does_ use the `TokenReview` API.
 
 {% endalert %}
 

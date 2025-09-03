@@ -22,7 +22,7 @@ metadata:
   labels:
     vm: my-vm
 spec:
-  virtualMachineClassName: host
+  virtualMachineClassName: generic
   cpu:
     cores: 1
   memory:
