@@ -1190,7 +1190,7 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: time.Hour}
 
-		suite.setupControllerSettings("release-with-notifier-webhook-settings.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-release-with-settings.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -1295,7 +1295,7 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		ds.Update.NotificationConfig.WebhookURL = svr.URL
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
 
-		suite.setupControllerSettings("update-minimal-notifier-webhook-time-without-configuring-notifier-webhook.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-update-minimal-time-without-configuring-notifier-webhook.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
@@ -1318,7 +1318,7 @@ func (suite *ControllerTestSuite) TestWebhookNotifications() {
 		ds.Update.NotificationConfig.MinimalNotificationTime = libapi.Duration{Duration: 2 * time.Hour}
 		ds.Update.NotificationConfig.ReleaseType = updater.ReleaseTypeAll
 
-		suite.setupControllerSettings("patch-release-notifier-webhook.yaml", initValues, ds)
+		suite.setupControllerSettings("notifier-webhook-patch-release.yaml", initValues, ds)
 		dr := suite.getDeckhouseRelease("v1.26.0")
 		_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
 		require.NoError(suite.T(), err)
