@@ -169,6 +169,8 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 
 		// TODO Make independent public and private fetch?
 		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
+
+		// Generate JWT for private metadata endpoint (short-lived)
 		claims := map[string]string{
 			"iss":   "d8-istio",
 			"aud":   publicMetadata.ClusterUUID,
@@ -181,6 +183,26 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
+
+		// Generate long-lived JWT for API access (stored in CRD status)
+		apiClaims := map[string]string{
+			"iss":   "d8-istio",
+			"aud":   publicMetadata.ClusterUUID,
+			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
+			"scope": "api",
+		}
+		apiJWT, err := jwt.GenerateJWT(privKey, apiClaims, time.Hour*24*366) // 1 year
+		if err != nil {
+			input.Logger.Warn("can't generate API JWT for IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
+			continue
+		}
+
+		// Add JWT to private metadata
+		privateMetadata.APIJWT = apiJWT
+		privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
+
+		input.Logger.Info("generated API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
+
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))

@@ -25,6 +25,50 @@ import (
 
 type payloadMap map[string]interface{}
 
+// JWTClaims represents the standard JWT claims
+type JWTClaims struct {
+	Iss   string `json:"iss"`
+	Aud   string `json:"aud"`
+	Sub   string `json:"sub"`
+	Scope string `json:"scope"`
+	Nbf   int64  `json:"nbf"`
+	Exp   int64  `json:"exp"`
+}
+
+// IsJWTValid checks if a JWT token is valid and not expired
+func IsJWTValid(tokenString string) (bool, *JWTClaims, error) {
+	if tokenString == "" {
+		return false, nil, nil
+	}
+
+	// Parse the JWT token
+	token, err := jose.ParseSigned(tokenString)
+	if err != nil {
+		return false, nil, err
+	}
+
+	// Extract the payload (we don't need to verify signature for expiration check)
+	payload := token.UnsafePayloadWithoutVerification()
+
+	var claims JWTClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return false, nil, err
+	}
+
+	// Check if token is expired
+	now := time.Now().UTC().Unix()
+	if claims.Exp <= now {
+		return false, &claims, nil
+	}
+
+	// Check if token is not yet valid (nbf)
+	if claims.Nbf > now {
+		return false, &claims, nil
+	}
+
+	return true, &claims, nil
+}
+
 func GenerateJWT(privKeyPEMBytes []byte, claims map[string]string, ttl time.Duration) (string, error) {
 	keyBlock, _ := pem.Decode(privKeyPEMBytes)
 	key, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
