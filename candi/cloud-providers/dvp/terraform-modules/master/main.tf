@@ -32,7 +32,36 @@ resource "kubernetes_secret" "cloudinit-secret" {
   }
 }
 
+module "additional_disk" {
+  source = "../additional-disk"
+
+  for_each = {
+    for i, d in var.additional_disks : tostring(i) => d
+  }
+
+  api_version  = var.api_version
+  prefix       = var.prefix
+  node_group   = var.node_group
+  node_index   = var.node_index
+  disk_index   = tonumber(each.key)
+  namespace    = var.namespace
+  storage_class= try(each.value.storage_class, null)
+  size         = each.value.size
+  timeouts     = var.timeouts
+}
+
 locals {
+  additional_block_refs = tolist([
+    for k in sort(keys(module.additional_disk)) : {
+      "kind" = "VirtualDisk"
+      "name" = module.additional_disk[k].name
+    }
+  ])
+
+  additional_disks_hashes = [
+    for k in sort(keys(module.additional_disk)) : module.additional_disk[k].hash
+  ]
+
   spec = merge(
     {
       "terminationGracePeriodSeconds" = 90
@@ -67,10 +96,7 @@ locals {
           "name" = var.kubernetes_data_disk.name
         },
         ],
-        [for disk in var.additional_disks : {
-          "kind" = "VirtualDisk"
-          "name" = disk.name
-        }]
+        local.additional_block_refs
       )
 
       "provisioning" = {

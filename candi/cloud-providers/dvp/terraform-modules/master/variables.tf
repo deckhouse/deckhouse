@@ -93,9 +93,8 @@ variable "kubernetes_data_disk" {
 
 variable "additional_disks" {
   type = list(object({
-    name   = string
-    hash   = string
-    md5_id = string
+    size          = string
+    storage_class = string
   }))
   default = []
 }
@@ -158,6 +157,8 @@ locals {
     var.node_selector
   )
 
+  additional_disks_hashes = []
+
   vm_destructive_params = merge(
     {
       "virtualMachine" = {
@@ -178,6 +179,7 @@ locals {
     {
       "rootDiskHash" = var.root_disk.hash,
       "etcDiskHash"  = var.kubernetes_data_disk.hash
+      "additionalDisksHash" = local.additional_disks_hashes
     },
   )
 

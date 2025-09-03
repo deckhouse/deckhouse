@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "kubernetes_manifest" "additional-disk" {
+resource "kubernetes_manifest" "additional_disk" {
   manifest = {
     "apiVersion" = var.api_version
     "kind"       = "VirtualDisk"
@@ -22,18 +22,21 @@ resource "kubernetes_manifest" "additional-disk" {
       "annotations" = local.disk_annotations
     }
     "spec" = {
-      "persistentVolumeClaim" = merge({
-        "size" = var.size
+      "persistentVolumeClaim" = merge(
+        {
+          "size" = var.size
         },
         var.storage_class != null ? { "storageClassName" = var.storage_class } : null
       )
     }
   }
+
   timeouts {
     create = var.timeouts.create
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
+
   lifecycle {
     ignore_changes = [
       object.spec.persistentVolumeClaim.storageClassName
@@ -41,7 +44,7 @@ resource "kubernetes_manifest" "additional-disk" {
   }
 }
 
-data "kubernetes_resource" "kubernetes-data-disk" {
+data "kubernetes_resource" "additional_disk" {
   api_version = var.api_version
   kind        = "VirtualDisk"
 
@@ -49,7 +52,8 @@ data "kubernetes_resource" "kubernetes-data-disk" {
     name      = local.disk_name
     namespace = var.namespace
   }
+
   depends_on = [
-    kubernetes_manifest.kubernetes-data-disk
+    kubernetes_manifest.additional_disk
   ]
 }
