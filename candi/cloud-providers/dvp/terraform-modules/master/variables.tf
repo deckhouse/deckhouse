@@ -157,8 +157,6 @@ locals {
     var.node_selector
   )
 
-  additional_disks_hashes = []
-
   vm_destructive_params = merge(
     {
       "virtualMachine" = {
