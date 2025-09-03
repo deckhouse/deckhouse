@@ -92,6 +92,39 @@ data:
             try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
         }
 
+        # Search index for embedded modules from the latest version
+        location ~* ^/modules/search-embedded-modules-index.json$  {
+            rewrite ^/modules/search-embedded-modules-index.json$ /modules-web-test2/latest/$lang/search-embedded-modules-index.json break;
+
+            limit_except GET {
+                deny all;
+            }
+
+            set $module "$1";
+            set $module_doc "$2";
+
+            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/v1.71/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-web-test2/v1.71/$lang/modules/$module/$module_doc break;
+
+            resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
+            proxy_cache             dcache;
+            proxy_cache_key         $uri;
+            proxy_intercept_errors  on;
+            proxy_buffering         on;
+            proxy_buffer_size       16k;
+            proxy_buffers           4 16k;
+            proxy_ignore_headers    Set-Cookie;
+            proxy_ignore_headers    Cache-Control;
+
+            proxy_set_header Host   {{ .Values.global.doc_s3_bucket_public_url }};
+
+            proxy_connect_timeout   30s;
+            proxy_read_timeout      30s;
+            proxy_send_timeout      30s;
+
+            proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
+        }
+
         # Modules from sources (they are served locally.)
         location ~* ^/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
             set $module "$1";
@@ -107,11 +140,8 @@ data:
                 deny all;
             }
 
-            set $module "$1";
-            set $module_doc "$2";
-
-            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/v1.71/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-web-test2/v1.71/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/latest/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-web-test2/latest/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;

@@ -9,7 +9,7 @@ url: modules/search.html
   <div class="container">
     <div class="input-wrapper">
       <input type="text" id="search-input" placeholder="Search through modules..." class="input">
-      <div id="search-results" class="results"></div>
+      <div id="search-results" class="results" style="display: none"></div>
     </div>
   </div>
 </div>
