@@ -224,14 +224,9 @@ func (in *KubernetesAdmissionConfigV1) DeepCopyInto(out *KubernetesAdmissionConf
 		*out = new(v1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ObjectSelector != nil {
-		in, out := &in.ObjectSelector, &out.ObjectSelector
-		*out = new(v1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.NamespaceSelector != nil {
-		in, out := &in.NamespaceSelector, &out.NamespaceSelector
-		*out = new(v1.LabelSelector)
+	if in.Namespace != nil {
+		in, out := &in.Namespace, &out.Namespace
+		*out = new(NamespaceSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.SideEffects != nil {
@@ -289,9 +284,9 @@ func (in *KubernetesContext) DeepCopyInto(out *KubernetesContext) {
 		*out = new(FieldSelector)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.NamespaceSelector != nil {
-		in, out := &in.NamespaceSelector, &out.NamespaceSelector
-		*out = new(v1.LabelSelector)
+	if in.Namespace != nil {
+		in, out := &in.Namespace, &out.Namespace
+		*out = new(NamespaceSelector)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.IncludeSnapshotsFrom != nil {
