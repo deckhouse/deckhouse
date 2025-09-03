@@ -124,19 +124,19 @@ layout: sidebar-guides
       <td>Узел мониторинга</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>Системный узел</td>
       <td style="text-align: center;">2</td>
       <td style="text-align: center;">4</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">60 / 160</a></td>
+      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
     </tr>
     <tr>
       <td rowspan="6" style="width: 45%;">
@@ -163,19 +163,19 @@ layout: sidebar-guides
       <td>Узел мониторинга</td>
       <td style="text-align: center;">6</td>
       <td style="text-align: center;">12</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>Системный узел</td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
-      <td style="text-align: center;"><a href="#storage">50 / 150</a></td>
+      <td style="text-align: center;"><a href="#storage">50 / 150*</a></td>
     </tr>
     <tr>
       <td>Системный узел <i>(если нет выделенных узлов мониторинга</i>)</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">16</td>
-      <td style="text-align: center;"><a href="#storage">60 / 160</a></td>
+      <td style="text-align: center;"><a href="#storage">60 / 160*</a></td>
     </tr>
     <tr>
       <td style="width: 45%;">
@@ -189,9 +189,13 @@ layout: sidebar-guides
   </tbody>
 </table>
 
-* <a name="storage">Дисковое пространство PVC для системных компонентов:</a> если для хранения системных PVC (модулей prometheus, upmeter и других) будет использоваться локальное дисковое пространство узла, то необходимо дополнительно выделить >= 100 Гб.
+{% alert %}
+<a name="storage">Примечания</a>:
+
+* Дисковое пространство PVC для системных компонентов: если для хранения системных PVC (модулей prometheus, upmeter и других) будет использоваться локальное дисковое пространство узла, то необходимо дополнительно выделить >= 100 Гб.
 * Характеристики worker-узлов во многом зависят от характера запускаемой на узле (узлах) нагрузки, в таблице указаны минимальные требования. Под системные сервисы (kubelet) и системные поды на worker-узлах требуется заложить как минимум 1 CPU и 2 ГБ памяти.
 * Для всех узлов следует выделять быстрые диски (400+ IOPS).
+{% endalert %}
 
 ### Кластер с одним-единственным master-узлом
 
