@@ -27,7 +27,7 @@ context:
     kubernetes:
       apiVersion: v1
       kind: Node
-      nameSelector: # oneOf с labelSelector
+      nameSelector: # As in labelSelector
         matchNames: ["global"]
       labelSelector:
         matchLabels:

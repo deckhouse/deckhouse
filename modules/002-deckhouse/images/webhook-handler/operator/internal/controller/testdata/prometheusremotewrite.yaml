@@ -30,7 +30,7 @@ context:
         }
 handler:
   cel: |
-    TODO: сейчас не делаем
+    TODO: not need now
   python: |
     def validate(ctx: DotMap, output: hook.ValidationsCollector):
         operation = ctx.review.request.operation
