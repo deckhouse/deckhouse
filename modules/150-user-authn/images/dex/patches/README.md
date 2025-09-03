@@ -49,3 +49,6 @@ for local user accounts. The following features are added:
 This adds functionality to configure password policy duration fields with `day` units, such as: `1d`, `30d12h`, etc.
 This patch also includes refactored password complexity checks - making them much simpler.
 
+### 009-oauth2-cve.patch
+
+Fixes CVE-2025-22868

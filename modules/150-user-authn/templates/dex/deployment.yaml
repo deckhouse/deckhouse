@@ -99,6 +99,7 @@ spec:
               fieldPath: metadata.namespace
         - name: DEX_EXPAND_ENV
           value: "false"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https
           containerPort: 5556

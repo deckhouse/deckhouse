@@ -14,4 +14,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-unshare -S 101 -R /chroot /usr/bin/curl "$@"
+unshare -S 64535 -R /chroot /usr/bin/curl "$@"

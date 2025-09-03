@@ -1,0 +1,79 @@
+candi:
+  fixes:
+    - summary: Changed ExecStartPre in d8-shutdown-inhibitor.service
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15134
+    - summary: >-
+        Added warnings to the VMware Cloud Director environment documentation about Edge
+        requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14994
+cni-cilium:
+  fixes:
+    - summary: >-
+        Add a compatibility check for the Cilium version and the kernel version, if WireGuard is
+        installed on the node
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15155
+      impact: >-
+        If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading
+        the linux kernel to 6.8 is required.
+    - summary: >-
+        Added a migration mechanism, which was implemented through the node group disruptive updates
+        with approval.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14977
+    - summary: fixed invalid annotation name for lb-algorithm in docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14947
+deckhouse-controller:
+  fixes:
+    - summary: fix module config ensure
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15203
+docs:
+  fixes:
+    - summary: Fix relative links in the multitenancy-manager module documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15187
+    - summary: Added steps that patch secret and prevented the image pull fail.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15166
+    - summary: Add containerv2 additional registry examples
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15100
+    - summary: Add new requirement and commands to meet containerdv2
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15095
+    - summary: Fixed command syntax for Docker container run in documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15066
+    - summary: Add new requirement and commands to meet containerdv2 requirements
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14959
+    - summary: Fix D8KubernetesStaleTokensDetected alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14913
+    - summary: There should be one disk in the template.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14906
+    - summary: Updates for Observability docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+log-shipper:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+loki:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-custom:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-kubernetes:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+monitoring-ping:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+prometheus:
+  fixes:
+    - summary: fix securityContext indentation in the Prometheus main and longterm resources
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15116
+      impact: main and longterm Prometheuses will be rollout-restarted
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+upmeter:
+  fixes:
+    - summary: Documentation updates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14785
+

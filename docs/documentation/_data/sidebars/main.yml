@@ -1626,7 +1626,7 @@ entries:
       - title:
           en: Storage configuration
           ru: Настройка хранилищ
-        url: /storage/admin/supported-storage.html
+        url: /storage/admin/supported-storage.html  
       - title:
           en: SDS
           ru: Программно-определяемые хранилища
@@ -1647,6 +1647,10 @@ entries:
               en: Distributed Ceph storage
               ru: Распределённое хранилище Ceph
             url: /storage/admin/external/ceph.html
+          - title:
+              en: vSphere data storage
+              ru: Хранилище данных vSphere
+            url: /storage/admin/external/vsphere.html  
           - title:
               en: HPE data storage
               ru: Хранилище данных HPE
@@ -1670,7 +1674,7 @@ entries:
           - title:
               en: TATLIN.UNIFIED (Yadro) unified storage
               ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
-            url: /storage/admin/external/yadro.html
+            url: /storage/admin/external/yadro.html     
       - title:
          en: Module settings
          ru: Настройки модулей
@@ -1683,6 +1687,10 @@ entries:
               en: csi-hpe
               ru: csi-hpe
             url: /reference/mc/csi-hpe/
+          - title:
+              en: csi-vsphere
+              ru: csi-vsphere
+            url: /reference/mc/csi-vsphere/  
           - title:
               en: csi-huawei
               ru: csi-huawei

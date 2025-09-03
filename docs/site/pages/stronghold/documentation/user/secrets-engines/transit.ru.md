@@ -172,7 +172,7 @@ ciphertext    vault:v1:8SDd3WHDOjf7mq69CyCqYjBXAiQQAVZRkFM13ok481zoCmHnSeDX9vyf7
 Обратите внимание: Stronghold не _хранит_ шифротекст. Ответственность за их сохранение лежит
 на вызывающей стороне. Чтобы расшифровать данные, необходимо снова передать шифротекст в Stronghold.
 
-{% alert level="warning" %}Stronghold HTTP API ограничивает размер запроса до 32MB во избежание атак типа DoS. Этот лимит можно изменить в блоке `listener` [конфигурации](../../configuration/) Stronghold.
+{% alert level="warning" %}Stronghold HTTP API ограничивает размер запроса до 32MB во избежание атак типа DoS. Этот лимит можно изменить в блоке `listener` [конфигурации](../../admin/standalone/configuration.html#listener) Stronghold.
 {% endalert %}
 
 Расшифровка данных с использованием `/decrypt`:

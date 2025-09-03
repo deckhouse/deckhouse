@@ -21,7 +21,7 @@ ctr_import_image() {
   local image_name="$1"
   local image_path="$2"
 
-  ctr -n k8s.io images import --index-name "$image_name" "$image_path"
+  ctr -n k8s.io images import "$image_path"
   ctr -n k8s.io images label "$image_name" io.cri-containerd.pinned=pinned
 }
 
