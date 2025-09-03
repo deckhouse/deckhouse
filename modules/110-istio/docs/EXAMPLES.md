@@ -634,6 +634,8 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 * Run the application init container from the user with uid `1337`. Requests from this user are not intercepted under Istio control.
 * Exclude an service IP address or port from Istio control using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` or `traffic.sidecar.istio.io/excludeOutboundPorts` annotations.
 
+{% alert level="warning" %}Each of the workarounds removes traffic from Istio's control, which in turn removes encryption of traffic between application services.{% endalert %}
+
 ## Upgrading Istio
 
 ### Upgrading Istio control-plane
