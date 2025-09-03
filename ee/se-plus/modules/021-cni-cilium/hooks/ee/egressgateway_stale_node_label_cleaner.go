@@ -7,9 +7,12 @@ package ee
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -21,7 +24,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Name:       "nodes",
 			ApiVersion: "v1",
 			Kind:       "Node",
-			FilterFunc: applyNodeFilter,
+			FilterFunc: filterNodeLabels,
 		},
 		{
 			Name:       "egressgateways",
@@ -31,6 +34,31 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, handleEgressNodeCleanup)
+
+func filterNodeLabels(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var node corev1.Node
+	err := sdk.FromUnstructured(obj, &node)
+	if err != nil {
+		return nil, err
+	}
+
+	info := NodeInfo{
+		Name:   node.Name,
+		Labels: node.Labels,
+	}
+
+	if _, ok := node.Labels[memberNodeLabelKey]; ok {
+		info.IsMemberLabeled = true
+	}
+
+	for k := range node.Labels {
+		if strings.HasPrefix(k, activeNodeLabelPrefix) {
+			info.ActiveForEGs = append(info.ActiveForEGs, strings.TrimPrefix(k, activeNodeLabelPrefix))
+		}
+	}
+
+	return info, nil
+}
 
 func handleEgressNodeCleanup(input *go_hook.HookInput) error {
 	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
