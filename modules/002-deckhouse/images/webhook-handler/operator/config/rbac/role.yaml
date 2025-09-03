@@ -7,6 +7,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - conversionwebhooks
   - validationwebhooks
   verbs:
   - create
@@ -19,12 +20,14 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - conversionwebhooks/finalizers
   - validationwebhooks/finalizers
   verbs:
   - update
 - apiGroups:
   - deckhouse.io
   resources:
+  - conversionwebhooks/status
   - validationwebhooks/status
   verbs:
   - get
