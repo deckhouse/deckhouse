@@ -2,6 +2,10 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+var (
+	ValidationWebhookFinalizer = "validationwebhooks.deckhouse.io/finalizer"
+)
+
 type WatchEventType string
 
 const (

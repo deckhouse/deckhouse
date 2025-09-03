@@ -256,7 +256,7 @@ func main() {
 
 	// go-routine that reloads shell-operator no more than once in 30s
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		ticker := time.NewTicker(30 * time.Second)
 
 		for range ticker.C {
 			if isReloadShellNeed.Load() {
