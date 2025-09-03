@@ -84,7 +84,7 @@ spec:
         - name: deckhouse-registry
       initContainers:
         - name: touch-files
-          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+          image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
           securityContext:
             readOnlyRootFilesystem: true
           imagePullPolicy: IfNotPresent
