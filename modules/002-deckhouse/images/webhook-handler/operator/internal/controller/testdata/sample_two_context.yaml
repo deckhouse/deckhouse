@@ -5,21 +5,20 @@ metadata:
     app.kubernetes.io/name: operator
     app.kubernetes.io/managed-by: kustomize
   name: validationwebhook-sample
-validationObject: # 1-в-1 из validationwebhookconfiguration
+validationObject: # as-is as validationwebhookconfiguration
+  name: validationwebhook.deployments.apps
   rules:
     - apiGroups: ["apps"]
       apiVersions: ["v1", "v1beta1"]
       operations: ["CREATE", "UPDATE"]
       resources: ["deployments", "replicasets"]
       scope: "Namespaced"
-  objectSelector:
-    matchLabels: # matchExpressions
-      foo: bar
-  namespaceSelector:
-    matchExpressions:
-      - key: runlevel
-        operator: NotIn
-        values: ["0","1"]
+  namespace:
+    labelSelector:
+      matchExpressions:
+        - key: runlevel
+          operator: NotIn
+          values: ["0","1"]
   matchConditions:
     - name: yyyy
       expression: 'request.resource.group != "rbac.authorization.k8s.io"'
@@ -33,9 +32,10 @@ context:
       labelSelector:
         matchLabels:
           foo: bar
-      namespaceSelector:
-        matchLabels: # matchExpressions, matchNames
-          bar: foo
+      namespace:
+        labelSelector:
+          matchLabels: # matchExpressions, matchNames
+            bar: foo
       jqFilter: |
         { "nodeName": .metadata.name }
   - name: some_node
@@ -47,15 +47,16 @@ context:
       labelSelector:
         matchLabels:
           foo: bar
-      namespaceSelector:
-        matchLabels: # matchExpressions, matchNames
-          bar: foo
+      namespace:
+        labelSelector:
+          matchLabels: # matchExpressions, matchNames
+            bar: foo
       jqFilter: |
         { "nodeName": .metadata.name }
 handler:
   cel: |
-    TODO: сейчас не делаем
+    TODO: not need now
   python: |
-    def validate(request: admission.Request, context: []Object || Context) -> tuple[Optional[str], bool]:
-      // logic here
-      return "message", True
+    def validate(bindingcontext, output):
+      # logic here
+      return
