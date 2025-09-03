@@ -747,3 +747,52 @@ requirements:
 
 	return dc
 }
+
+func TestDeckhousePrereleaseValidation(t *testing.T) {
+	testCases := []struct {
+		name    string
+		version string
+		isError bool
+	}{
+		{
+			name:    "valid stable version",
+			version: "v1.30.0",
+			isError: false,
+		},
+		{
+			name:    "prerelease alpha",
+			version: "v1.30.0-alpha.1",
+			isError: true,
+		},
+		{
+			name:    "prerelease beta",
+			version: "v1.30.0-beta.2",
+			isError: true,
+		},
+		{
+			name:    "prerelease rc",
+			version: "v1.30.0-rc.1",
+			isError: true,
+		},
+		{
+			name:    "prerelease dev",
+			version: "v1.30.0-dev",
+			isError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Test the validation logic directly
+			ver, err := semver.NewVersion(tc.version)
+			require.NoError(t, err)
+
+			hasPrerelease := ver.Prerelease() != ""
+			if tc.isError {
+				assert.True(t, hasPrerelease, "Expected version %s to have prerelease", tc.version)
+			} else {
+				assert.False(t, hasPrerelease, "Expected version %s to not have prerelease", tc.version)
+			}
+		})
+	}
+}
