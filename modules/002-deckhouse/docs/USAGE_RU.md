@@ -57,83 +57,6 @@ spec:
             - Sat
 ```
 
-{% offtopic title="Минимальный пример вебхука на Go..." %}
-```go
-package main
-
-import (
-  "encoding/json"
-  "fmt"
-  "log"
-  "net/http"
-)
-
-// Payload structure Deckhouse sends in POST body.
-type WebhookData struct {
-  Subject       string            `json:"subject"`
-  Version       string            `json:"version"`
-  Requirements  map[string]string `json:"requirements,omitempty"`
-  ChangelogLink string            `json:"changelogLink,omitempty"`
-  ApplyTime     string            `json:"applyTime,omitempty"`
-  Message       string            `json:"message"`
-}
-
-// Response structure that Deckhouse expects from webhook on error
-type ResponseError struct {
-  Code    string `json:"code,omitempty"`
-  Message string `json:"message"`
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-  if r.Method != http.MethodPost {
-    w.WriteHeader(http.StatusMethodNotAllowed)
-    return
-  }
-  defer r.Body.Close()
-
-  var data WebhookData
-  if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-    log.Printf("failed to decode payload: %v", err)
-    w.WriteHeader(http.StatusInternalServerError)
-    return
-  }
-
-  // Print payload fields
-  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v",
-    data.Subject, data.Version, data.ApplyTime, data.ChangelogLink, data.Requirements)
-  log.Printf("message=%s", data.Message)
-
-  // Example conditional logic: fail intentionally for testing
-  if data.Version == "v0.0.0-fail" {
-    // Return structured error response with error status code
-    errorResp := ResponseError{
-      Code:    "TEST_FAILURE",
-      Message: "intentional failure for testing",
-    }
-
-    w.WriteHeader(http.StatusBadRequest)
-    json.NewEncoder(w).Encode(errorResp)
-    return
-  }
-
-  // Return success response with 2xx status code
-  w.WriteHeader(http.StatusOK)
-  w.Write([]byte("Notification processed successfully"))
-}
-
-func main() {
-  mux := http.NewServeMux()
-  mux.HandleFunc("/webhook", handler)
-
-  addr := ":8080"
-  fmt.Printf("listening on %s, POST to http://localhost%s/webhook\n", addr, addr)
-  if err := http.ListenAndServe(addr, mux); err != nil {
-    log.Fatal(err)
-  }
-}
-```
-{% endofftopic %}
-
 <div id="ручное-подтверждение-потенциально-опасных-disruptive-обновлений"></div>
 
 ### Ручное подтверждение обновлений
@@ -226,6 +149,83 @@ spec:
         webhook: https://release-webhook.mydomain.com
         minimalNotificationTime: 8h
 ```
+
+{% offtopic title="Минимальный пример вебхука на Go..." %}
+```go
+package main
+
+import (
+  "encoding/json"
+  "fmt"
+  "log"
+  "net/http"
+)
+
+// Payload structure Deckhouse sends in POST body.
+type WebhookData struct {
+  Subject       string            `json:"subject"`
+  Version       string            `json:"version"`
+  Requirements  map[string]string `json:"requirements,omitempty"`
+  ChangelogLink string            `json:"changelogLink,omitempty"`
+  ApplyTime     string            `json:"applyTime,omitempty"`
+  Message       string            `json:"message"`
+}
+
+// Response structure that Deckhouse expects from webhook on error
+type ResponseError struct {
+  Code    string `json:"code,omitempty"`
+  Message string `json:"message"`
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+  if r.Method != http.MethodPost {
+    w.WriteHeader(http.StatusMethodNotAllowed)
+    return
+  }
+  defer r.Body.Close()
+
+  var data WebhookData
+  if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+    log.Printf("failed to decode payload: %v", err)
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+
+  // Print payload fields
+  log.Printf("subject=%s version=%s applyTime=%s changelog=%s requirements=%v",
+    data.Subject, data.Version, data.ApplyTime, data.ChangelogLink, data.Requirements)
+  log.Printf("message=%s", data.Message)
+
+  // Example conditional logic: fail intentionally for testing
+  if data.Version == "v0.0.0-fail" {
+    // Return structured error response with error status code
+    errorResp := ResponseError{
+      Code:    "TEST_FAILURE",
+      Message: "intentional failure for testing",
+    }
+
+    w.WriteHeader(http.StatusBadRequest)
+    json.NewEncoder(w).Encode(errorResp)
+    return
+  }
+
+  // Return success response with 2xx status code
+  w.WriteHeader(http.StatusOK)
+  w.Write([]byte("Notification processed successfully"))
+}
+
+func main() {
+  mux := http.NewServeMux()
+  mux.HandleFunc("/webhook", handler)
+
+  addr := ":8080"
+  fmt.Printf("listening on %s, POST to http://localhost%s/webhook\n", addr, addr)
+  if err := http.ListenAndServe(addr, mux); err != nil {
+    log.Fatal(err)
+  }
+}
+```
+{% endofftopic %}
 
 ## Сбор информации для отладки
 

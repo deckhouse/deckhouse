@@ -5,12 +5,14 @@ title: "The deckhouse module: usage"
 ## Setting up the update mode
 
 You can manage DKP updates in the following ways:
+
 - Using the [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse` parameter;
 - Using the [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup parameters section.
 
 ### Update windows configuration
 
 You can configure the time windows when Deckhouse will automatically install updates in the following ways:
+
 - in the [update.windows](configuration.html#parameters-update-windows) parameter of the `deckhouse` ModuleConfig for overall update management;
 - in the [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) and [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) parameters of NodeGroup, for managing disruptive updates.
 
@@ -58,6 +60,7 @@ spec:
 ### Manual update confirmation
 
 Manual confirmation of Deckhouse version updates is provided in the following cases:
+
 - The Deckhouse update confirmation mode is enabled.
 
   This means that the parameter [settings.update.mode](configuration.html#parameters-update-mode) in the ModuleConfig `deckhouse` is set to `Manual` (confirmation for both patch and minor versions of Deckhouse) or `AutoPatch` (confirmation for the minor version of Deckhouse).
@@ -116,13 +119,16 @@ After a new minor Deckhouse version appears on the selected update channel, but 
 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
-**Important**: When your webhook returns an error status code (4xx or 5xx), Deckhouse will retry the notification up to 5 times with exponential back-off. If all attempts fail, the release will be blocked until the webhook becomes available again.
+{% alert level="warning" %}
+If your webhook returns an error status code (4xx or 5xx), DKP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
+{% endalert %}
 
-For better error handling and debugging, your webhook should return a JSON response with the following structure when returning error status codes:
-- `code`: optional internal error code for programmatic handling
-- `message`: error message describing what went wrong
+For easier error handling and debugging, when returning error codes the webhook should return a JSON response with the following structure:
 
-If your webhook returns a successful HTTP status (2xx), Deckhouse will consider the notification successful regardless of the response body content.
+- `code` — optional internal error code for programmatic handling;
+- `message` — a human-readable description of what went wrong.
+
+If the webhook returns a successful HTTP status (2xx), DKP treats the notification as successful regardless of the response body.
 
 Example:
 
@@ -142,9 +148,7 @@ spec:
         minimalNotificationTime: 8h
 ```
 
-<details>
-<summary>Minimal webhook example (Go)</summary>
-
+{% offtopic title="Minimal Go webhook example..." %}
 ```go
 package main
 
@@ -219,8 +223,7 @@ func main() {
   }
 }
 ```
-
-</details>
+{% endofftopic %}
 
 ## Collect debug info
 
