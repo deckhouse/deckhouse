@@ -120,7 +120,7 @@ After a new minor Deckhouse version appears on the selected update channel, but 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
 {% alert level="warning" %}
-If your webhook returns any ыефегы code out of 2xx range, DKP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
+If your webhook returns any status code out of 2xx range, DKP retries sending the notification up to five times with exponential backoff. If all attempts fail, the release is blocked until the webhook becomes available again.
 {% endalert %}
 
 For easier error handling and debugging, when returning error codes the webhook should return a JSON response with the following structure:
