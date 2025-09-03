@@ -56,7 +56,8 @@ locals {
         "size" = var.memory_size
       }
 
-      "blockDeviceRefs" = [
+      "blockDeviceRefs" = concat(
+        [
         {
           "kind" = "VirtualDisk"
           "name" = var.root_disk.name
@@ -65,11 +66,12 @@ locals {
           "kind" = "VirtualDisk"
           "name" = var.kubernetes_data_disk.name
         },
+        ],
         [for disk in var.additional_disks : {
           "kind" = "VirtualDisk"
           "name" = disk.name
         }]
-      ]
+      )
 
       "provisioning" = {
         "type" = "UserDataRef"

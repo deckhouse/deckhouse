@@ -56,16 +56,20 @@ locals {
         "size" = var.memory_size
       }
 
-      "blockDeviceRefs" = [
+      "blockDeviceRefs" = concat(
+        [
         {
           "kind" = "VirtualDisk"
           "name" = var.root_disk.name
-        },
-        [for disk in var.additional_disks : {
-          "kind" = "VirtualDisk"
-          "name" = disk.name
-        }]
-      ]
+        }
+        ],
+        tolist([
+          for disk in coalescelist(var.additional_disks, []) : {
+            "kind" = "VirtualDisk"
+            "name" = disk.name
+          }
+        ])
+      )
 
       "provisioning" = {
         "type" = "UserDataRef"
