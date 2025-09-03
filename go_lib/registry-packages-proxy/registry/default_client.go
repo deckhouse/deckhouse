@@ -37,7 +37,6 @@ import (
 type DefaultClient struct{}
 
 func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *ClientConfig, digest string, path string) (int64, string, io.ReadCloser, error) {
-
 	repo := config.Repository
 	if path != "" {
 		repo = fmt.Sprintf("%s/%s", repo, path)
@@ -64,9 +63,10 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 	}
 
 	// Verify image signature
-	if err := ddk.VerifyImageManifestSignature(ctx, string(rootca.RootCA), manifest); err != nil {
-		log.Error("verify image signature failed: %w", err)
-		//return 0, "", nil, err
+	if config.SignCheck {
+		if err := ddk.VerifyImageManifestSignature(ctx, string(rootca.RootCA), manifest); err != nil {
+			log.Error("verify image signature failed: %w", err)
+		}
 	}
 
 	if err != nil {
