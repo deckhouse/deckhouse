@@ -6,6 +6,9 @@ linters-settings:
           name: terraform-auto-converger
           container: converger
         - kind: Deployment
+          name: terraform-auto-converger
+          container: to-tofu-migrator
+        - kind: Deployment
           name: terraform-state-exporter
           container: exporter
         - kind: Deployment
