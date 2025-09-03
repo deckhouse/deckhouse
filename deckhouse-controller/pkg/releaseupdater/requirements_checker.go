@@ -465,7 +465,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 			c.logger.Warn("migrated module not found in any ModuleSource registry", slog.String("module", moduleName))
 			c.setMigratedModuleNotFoundAlert(moduleName)
 
-			return fmt.Errorf("migrated module %q not found in any ModuleSource registry", moduleName)
+			return fmt.Errorf(`migrated module '%s' not found in any ModuleSource registry`, moduleName)
 		}
 	}
 
