@@ -88,17 +88,17 @@ spec:
         - name: write-files
           emptyDir: {}
       initContainers:
-        - name: touch-files
-          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
-          {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
-            readOnlyRootFilesystem: true
-          imagePullPolicy: IfNotPresent
-          command:
-            - /bin/touch
-            - /tmp/nginx.conf
-          volumeMounts:
-            - name: write-files
-              mountPath: /tmp/
+      - name: touch-files
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/touch
+          - /tmp/nginx.conf
+        volumeMounts:
+          - name: write-files
+            mountPath: /tmp
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: controller
