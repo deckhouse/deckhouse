@@ -61,6 +61,10 @@ locals {
           "kind" = "VirtualDisk"
           "name" = var.root_disk.name
         },
+        [for disk in var.additional_disks : {
+          "kind" = "VirtualDisk"
+          "name" = disk.name
+        }]
       ]
 
       "provisioning" = {
