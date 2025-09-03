@@ -168,6 +168,19 @@ spec:
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+        - name: touch-files
+          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/touch
+            - /tmp/resolv.conf
+            - /tmp/opentelemetry.toml
+          volumeMounts:
+            - name: write-files
+              mountPath: /tmp
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
@@ -353,7 +366,11 @@ spec:
 {{- end }}
 {{- if ne $controllerVersion "1.9" }}
         - mountPath: /chroot/etc/resolv.conf
-          name: resolv-conf
+          name: write-files
+          subPath: resolv.conf
+        - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+          name: write-files
+          subPath: opentelemetry.toml      
         - mountPath: /chroot/etc/ingress-controller/ssl
           name: tmp-ssl
 {{- end }}
@@ -425,10 +442,8 @@ spec:
             cpu: 10m
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       volumes:
-      - name: resolv-conf
-        hostPath:
-          path: /tmp/resolv.conf
-          type: FileOrCreate
+      - name: write-files
+        emptyDir: {}
       - name: tmp-ssl
         emptyDir: {}
       - name: tmp-nginx

@@ -82,6 +82,18 @@ spec:
       terminationGracePeriodSeconds: 420
       imagePullSecrets:
         - name: deckhouse-registry
+      initContainers:
+        - name: touch-files
+          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/touch
+            - /tmp/resolv.conf
+          volumeMounts:
+            - name: write-files
+              mountPath: /tmp/
       containers:
         - name: validator
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
@@ -159,9 +171,12 @@ spec:
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
             - mountPath: /chroot/etc/resolv.conf
-              name: resolv-conf
+              name: write-files
+              subPath: resolv.conf
             - mountPath: /chroot/etc/ingress-controller/ssl
               name: tmp-ssl
+            - mountPath: /chroot/tmp/nginx
+              name: tmp-nginx
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -169,11 +184,11 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
-        - name: resolv-conf
-          hostPath:
-            path: /tmp/resolv.conf
-            type: FileOrCreate
+        - name: write-files
+          emptyDir: {}
         - name: tmp-ssl
+          emptyDir: {}
+        - name: tmp-nginx
           emptyDir: {}
 {{- end }}
 
