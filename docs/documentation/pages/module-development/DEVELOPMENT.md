@@ -3,9 +3,14 @@ title: "Module development and debugging"
 permalink: en/module-development/development/
 ---
 
-{% raw %}
-
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
+
+{% alert level="warning" %}
+The ModulePullOverride resource is intended **for development and debugging environments only**.
+Using it in production clusters is **not recommended**, and support for this resource may be discontinued in future Deckhouse versions.
+{% endalert %}
+
+{% raw %}
 
 An example of ModulePullOverride:
 
