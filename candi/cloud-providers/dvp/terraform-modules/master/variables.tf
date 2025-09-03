@@ -93,8 +93,9 @@ variable "kubernetes_data_disk" {
 
 variable "additional_disks" {
   type = list(object({
-    size          = string
-    storage_class = string
+    name          = string
+    hash          = string
+    md5_id        = string
   }))
   default = []
 }

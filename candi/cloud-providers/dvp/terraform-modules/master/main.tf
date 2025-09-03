@@ -32,24 +32,6 @@ resource "kubernetes_secret" "cloudinit-secret" {
   }
 }
 
-module "additional_disk" {
-  source = "../additional-disk"
-
-  for_each = {
-    for i, d in var.additional_disks : tostring(i) => d
-  }
-
-  api_version  = var.api_version
-  prefix       = var.prefix
-  node_group   = var.node_group
-  node_index   = var.node_index
-  disk_index   = tonumber(each.key)
-  namespace    = var.namespace
-  storage_class= try(each.value.storage_class, null)
-  size         = each.value.size
-  timeouts     = var.timeouts
-}
-
 locals {
   additional_block_refs = tolist([
     for k in sort(keys(module.additional_disk)) : {
