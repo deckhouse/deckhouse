@@ -195,7 +195,6 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 		}
 
 		return nil, errors.New(strings.Join(errorParts, ", "))
-
 	})
 
 	return err
