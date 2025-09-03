@@ -80,5 +80,5 @@ module "static-node" {
   region                     = local.region
   zone                       = local.zone
   cloud_config               = local.user_data
-  additional_disks = local.master_additional_disks
+  additional_disks           = local.static_additional_disks
 }
