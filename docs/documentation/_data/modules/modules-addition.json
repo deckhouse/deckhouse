@@ -108,6 +108,21 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
   },
+  "csi-netapp": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
+  },
+  "csi-vsphere": {
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/documentation/v1/storage/admin/external/vsphere.html"
+  },
   "csi-hpe": {
     "editions": [
       "ee"
@@ -182,13 +197,6 @@
       }
     }
   },
-  "managed-postgres": {
-    "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
-  },
   "metallb": {
     "editionMinimumAvailable": "se",
     "editionsWithRestrictions": [
@@ -242,6 +250,17 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
+  },
+  "pod-reloader": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
   },
   "sds-local-volume": {
     "editions": [
@@ -317,6 +336,23 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
+  },
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/static-routing-manager/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/storage-volume-data-manager/stable/"
   },
   "stronghold (CE)": {
     "editions": [

@@ -179,6 +179,11 @@ func (in *DeckhouseRelease) GetModuleName() string {
 	return ""
 }
 
+// GetUpdateSpec returns the optional update spec of the related release
+func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
+	return nil
+}
+
 type DeckhouseReleaseSpec struct {
 	Version       string            `json:"version,omitempty"`
 	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`

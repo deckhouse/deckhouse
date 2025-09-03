@@ -38,7 +38,6 @@
 450-network-gateway/            @apolovov
 460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
 462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
-465-pod-reloader/               @name212 @sprait
 470-chrony/                     @name212 @sprait
 491-containerized-data-importer @fl64
 500-basic-auth/                 @nabokihms

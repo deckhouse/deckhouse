@@ -271,10 +271,16 @@ function prepare_environment() {
 
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
-    # Then switch deploment to DECKHOUSE_IMAGE_TAG.
-    DEV_BRANCH="${INITIAL_IMAGE_TAG}"
-    SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
-    echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
+    # Then update cluster to DECKHOUSE_IMAGE_TAG.
+    # NOTE: currently only release branches are supported for updating.
+    if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
+      DEV_BRANCH="${INITIAL_IMAGE_TAG}"
+      SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
+      update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+      echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
+    else
+      echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
+    fi
   fi
   case "$PROVIDER" in
   "Yandex.Cloud")
@@ -437,153 +443,12 @@ function run-test() {
   wait_cluster_ready || return $?
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
-    test_requirements || return $?
-    change_deckhouse_image "${IMAGES_REPO:-"dev-registry.deckhouse.io/sys/deckhouse-oss"}:${SWITCH_TO_IMAGE_TAG}" || return $?
+    echo "Starting Deckhouse update..."
+    trigger_deckhouse_update || return $?
+    wait_update_ready "${SWITCH_TO_IMAGE_TAG}"|| return $?
     wait_deckhouse_ready || return $?
     wait_cluster_ready || return $?
   fi
-}
-
-# Parse DEV_BRANCH and convert to semver format
-parse_version_from_branch() {
-    local branch="$1"
-    local version=""
-
-    # Extract version pattern like "1.69" from various formats
-    if [[ "$branch" =~ release-([0-9]+\.[0-9]+) ]]; then
-        version="v${BASH_REMATCH[1]}.0"
-    elif [[ "$branch" =~ v?([0-9]+\.[0-9]+)(\.[0-9]+)? ]]; then
-        # Handle cases like "v1.69" or "1.69.1"
-        if [[ -n "${BASH_REMATCH[2]}" ]]; then
-            version="v${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
-        else
-            version="v${BASH_REMATCH[1]}.0"
-        fi
-    else
-        # Fallback: try to extract any version-like pattern
-        if [[ "$branch" =~ ([0-9]+\.[0-9]+) ]]; then
-            version="v${BASH_REMATCH[1]}.0"
-        else
-            # If no version pattern found, return original or default
-            version="v0.0.0"
-        fi
-    fi
-
-    echo "$version"
-}
-
-function test_requirements() {
-  >&2 echo "Start check requirements ..."
-  if [ ! -f /deckhouse/release.yaml ]; then
-      >&2 echo "File /deckhouse/release.yaml not found"
-      return 1
-  fi
-
-  release=$(< /deckhouse/release.yaml)
-  if [ -z "${release:-}" ]; then return 1; fi
-  release=${release//\"/\\\"}
-
-
-  >&2 echo "Run script ... "
-
-  SEMVER_VERSION=$(parse_version_from_branch "${DEV_BRANCH}")
-  if [ -z "${SEMVER_VERSION:-}" ]; then
-    >&2 echo "Failed to parse version from branch '${DEV_BRANCH}'"
-    return 1
-  fi
-
-  testScript=$(cat <<ENDSC
-export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-export LANG=C
-set -Eeuo pipefail
-
->&2 echo "Check python ..."
-function check_python() {
-  for pybin in python3 python2 python; do
-    if command -v "\$pybin" >/dev/null 2>&1; then
-      python_binary="\$pybin"
-      return 0
-    fi
-  done
-  echo "Python not found, exiting..."
-  return 1
-}
-check_python
-
->&2 echo "Create release file ..."
-
-echo "$release" > /tmp/releaseFile.yaml
-
->&2 echo "Release file ..."
-
-cat /tmp/releaseFile.yaml
-
->&2 echo "Apply module config ..."
-
-echo 'apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: deckhouse
-spec:
-  settings:
-    releaseChannel: Stable
-    update:
-      mode: Auto' | kubectl apply -f -
-
->&2 echo "Apply deckhousereleases ..."
-
-echo "apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    dryrun: \"true\"
-  name: ${SEMVER_VERSION}
-spec:
-  version: ${SEMVER_VERSION}
-  requirements: {}
-" | \$python_binary -c "
-import yaml, sys
-
-data = yaml.safe_load(sys.stdin)
-with open('/tmp/releaseFile.yaml') as f:
-  d1 = yaml.safe_load(f)
-r = d1.get('requirements', {})
-r.pop('k8s', None)  # remove the 'k8s' key
-r.pop('autoK8sVersion', None)  # remove the 'autoK8sVersion' key
-data['spec']['requirements'] = r
-print(yaml.dump(data))
-" | kubectl apply -f -
-
->&2 echo "Remove release file ..."
-
-rm /tmp/releaseFile.yaml
-
->&2 echo "Sleep 5 seconds before check..."
-
-sleep 5
-
->&2 echo "Release status: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')"
-if [ ! -z "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')" ]; then
-  >&2 echo "Error message: \$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.message}')"
-fi
-
-[[ "\$(kubectl get deckhousereleases.deckhouse.io -o 'jsonpath={..status.phase}')" == "Deployed" ]]
-ENDSC
-)
-
-  testRequirementsAttempts=10
-  for ((i=1; i<=$testRequirementsAttempts; i++)); do
-    if $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su - -c /bin/bash <<<$testScript; then
-        return 0
-    else
-      >&2 echo "Test requirements $i/$testRequirementsAttempts failed. Sleeping 5 seconds..."
-      sleep 5
-    fi
-  done
-
-  write_deckhouse_logs
-  return 1
 }
 
 function pre_bootstrap_static_setup() {
@@ -742,8 +607,9 @@ ENDSSH
     WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
     envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
-  D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  D8_MIRROR_USER="$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+  D8_MIRROR_PASSWORD="$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
@@ -765,10 +631,16 @@ mkdir d8cli
 tar -xf /tmp/d8.tar.gz -C d8cli
 mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
+#download crane
+wget -q "https://github.com/google/go-containerregistry/releases/download/v0.20.6/go-containerregistry_Linux_x86_64.tar.gz" -O "/tmp/crane.tar.gz"
+mkdir crane
+tar -xf /tmp/crane.tar.gz -C crane
+mv crane/crane /usr/bin/crane
+
 d8 --version
 # pull
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+  --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login mirror --registry-password $LOCAL_REGISTRY_MIRROR_PASSWORD
 
@@ -795,12 +667,19 @@ echo "Deckhouse Minor Version: \$dh_minor"
 
 # Check that the major versions match and the minor differs by +1
 if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor + 1))" ]; then
-    >&2 echo "Pull both versions of fe-upgrade"
+    >&2 echo "Mirroring the updated version..."
     # pull
     d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-    --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
+    --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
     # push
     d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login mirror --registry-password ${LOCAL_REGISTRY_MIRROR_PASSWORD}
+    >&2 echo "Copying the release-channel images..."
+    crane auth login "${D8_MIRROR_HOST}" -u "${D8_MIRROR_USER}" -p "${D8_MIRROR_PASSWORD}"
+    crane auth login "${BASTION_INTERNAL_IP}:5000" -u "mirror" -p "${LOCAL_REGISTRY_MIRROR_PASSWORD}"
+    crane copy "${D8_MIRROR_HOST}/sys/deckhouse-oss/release-channel:beta" "${IMAGES_REPO}/release-channel:beta"
+    crane copy "${IMAGES_REPO}:${DECKHOUSE_IMAGE_TAG}" "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}"
+    crane auth logout "${D8_MIRROR_HOST}"
+    crane auth logout "${BASTION_INTERNAL_IP}:5000"
 fi
 
 set +x
@@ -1173,6 +1052,55 @@ ENDSSH
     >&2 echo "Cannot change deckhouse image to ${new_image}."
     return 1
   fi
+}
+
+# update_release_channel changes the release-channel image to given tag
+function update_release_channel() {
+  crane copy "$1/release-channel:$2" "$1/release-channel:beta"
+}
+
+# trigger_deckhouse_update sets the release channel for the cluster, prompting it to upgrade to the next version.
+function trigger_deckhouse_update() {
+  >&2 echo "Setting Deckhouse release channel to Beta."
+  if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl patch mc/deckhouse -p '{"spec": {"settings": {"releaseChannel": "Beta"}}}' --type=merge
+ENDSSH
+    >&2 echo "Cannot change Deckhouse release channel."
+    return 1
+  fi
+}
+
+# wait_update_ready checks if the cluster is ready for updating.
+function wait_update_ready() {
+  expectedVersion="$1"
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get deckhouserelease -o 'jsonpath={.items[?(@.status.phase=="Deployed")].spec.version}'
+END_SCRIPT
+)
+
+  testRunAttempts=20
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check DeckhouseRelease..."
+    deployedVersion="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}")"
+    if [[ "${expectedVersion}" == "${deployedVersion}" ]]; then
+      return 0
+    elif [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  write_deckhouse_logs
+
+  return 1
 }
 
 # wait_deckhouse_ready check if deckhouse Pod become ready.

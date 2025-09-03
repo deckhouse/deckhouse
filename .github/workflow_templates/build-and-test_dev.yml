@@ -117,7 +117,7 @@ jobs:
     steps:
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
           ci_commit_hash: ${{ github.event.pull_request.head.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"

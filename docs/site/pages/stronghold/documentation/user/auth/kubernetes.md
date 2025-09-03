@@ -169,10 +169,9 @@ table summarizes the options, each of which is explained in more detail below.
 {% alert level="info" %}
 
 **Note:** By default, Kubernetes currently extends the lifetime of admission
-injected service account tokens to a year to help smooth the transition to short-lived tokens. If you would like to disable this, set [--service-account-extend-token-expiration=false][k8s-extended-tokens] for `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See [here](/docs/auth/jwt/oidc-providers/kubernetes#specifying-ttl-and-audience) for an example.
+injected service account tokens to a year to help smooth the transition to short-lived tokens. If you would like to disable this, set [--service-account-extend-token-expiration=false](https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options) for `kube-apiserver` or specify your own `serviceAccountToken` volume mount. See [this section](jwt/oidc-providers/kubernetes.html#specifying-ttl-and-audience) for an example.
 
 {% endalert %}
-[k8s-extended-tokens]: <https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/#options>
 
 #### Use local service account token as the reviewer JWT
 
@@ -238,7 +237,7 @@ JWT tokens Kubernetes generates can also be verified using Kubernetes as an OIDC
 provider. The JWT auth method documentation has [instructions][k8s-jwt-auth] for
 setting up JWT auth with Kubernetes as the OIDC provider.
 
-[k8s-jwt-auth]: /docs/auth/jwt/oidc-providers/kubernetes
+[k8s-jwt-auth]: jwt/oidc-providers/kubernetes.html
 
 This solution allows you to use short-lived tokens for all clients and removes
 the need for a reviewer JWT. However, the client tokens cannot be revoked before
@@ -289,7 +288,7 @@ d8 stronghold write auth/kubernetes/config \
 
 ## Configuring kubernetes
 
-This auth method accesses the [Kubernetes TokenReview API][k8s-tokenreview] to
+This auth method accesses the Kubernetes TokenReview API to
 validate the provided JWT is still valid. Kubernetes should be running with
 `--service-account-lookup`. This is defaulted to true from Kubernetes 1.7.
 Otherwise deleted tokens in Kubernetes will not be properly revoked and
@@ -315,10 +314,3 @@ subjects:
     name: myapp-auth
     namespace: default
 ```
-
-## API
-
-The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api-docs/auth/kubernetes) for more details.
-
-[k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io

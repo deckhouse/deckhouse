@@ -7,18 +7,9 @@ description: >-
   tokens, service accounts, role bindings, and roles dynamically.
 ---
 
-{% alert level="warning" %}
-
-**Note**: This engine can use external X.509 certificates as part of TLS or signature validation.
-   Verifying signatures against X.509 certificates that use SHA-1 is deprecated and is no longer
-   usable without a workaround. See the
-   [deprecation FAQ](/docs/deprecation/faq#q-what-is-the-impact-of-removing-support-for-x-509-certificates-with-signatures-that-use-sha-1)
-   for more information.
-
-{% endalert %}
-The Kubernetes Secrets Engine for Stronghold generates Kubernetes service account tokens, and
+The Kubernetes Secrets Engine for Stronghold generates Kubernetes service account tokens (not to be confused with [Stronghold tokens](../concepts/tokens.html)), and
 optionally service accounts, role bindings, and roles. The created service account tokens have
-a configurable TTL and any objects created are automatically deleted when the Stronghold lease expires.
+a configurable [TTL](#ttl) and any objects created are automatically deleted when the Stronghold [lease](../concepts/lease.html) expires.
 
 For each lease, Stronghold will create a service account token attached to the
 defined service account. The service account token is returned to the caller.
@@ -31,7 +22,7 @@ documentation.
 {% alert level="warning" %}
 
 **Note:** We do not recommend using tokens created by the Kubernetes Secrets Engine to
-   authenticate with the [Stronghold Kubernetes Auth Method](/docs/auth/kubernetes). This will
+   authenticate with the [Stronghold Kubernetes Auth Method](../auth/kubernetes.html). This will
    generate many unique identities in Stronghold that will be hard to manage.
 
 {% endalert %}
@@ -215,9 +206,6 @@ management tool.
    ```shell-session
    d8 stronghold write -f kubernetes/config
    ```
-
-   Configuration options are available as specified in the
-   [API docs](/api-docs/secret/kubernetes).
 
 1. You can now configure Kubernetes Secrets Engine to create an Stronghold role (**not** the same as a
    Kubernetes role) that can generate service account tokens for the given service account:
@@ -427,8 +415,3 @@ service_account_name         v-token-auto-man-1653002096-4imxf3ytjh5hbyro9s1oqdo
 service_account_namespace    test
 service_account_token        eyJHbGci0iJSUzI1Ni...
 ```
-
-## API
-
-The Kubernetes Secrets Engine has a full HTTP API. Please see the
-[Kubernetes Secrets Engine API docs](/api-docs/secret/kubernetes) for more details.

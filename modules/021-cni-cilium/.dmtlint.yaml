@@ -26,6 +26,12 @@ linters-settings:
         - kind: DaemonSet
           name: agent
           container: mount-cgroup
+        - kind: DaemonSet
+          name: agent
+          container: check-linux-kernel
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: check-linux-kernel
       liveness-probe:
         - kind: DaemonSet
           name: safe-agent-updater

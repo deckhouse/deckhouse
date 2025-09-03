@@ -5,7 +5,7 @@ description: ""
 
 ## Описание
 
-Модуль отвечает за управление конфигурацией registry компонентов Deckhouse компонентов и предоставляет внутреннее хранилище образов контейнеров (container registry, registry).
+Модуль отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров (container registry, registry).
 
 Внутренний registry оптимизирует загрузку и хранение образов, а также повышает высокую доступность и отказоустойчивость Deckhouse Kubernetes Platform.
 
@@ -17,9 +17,29 @@ description: ""
   - Конфигурируемый - режим, управляемый с помощью модуля `registry`. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (ознакомьтесь с [примерами использования](examples.html)).
   - Неконфигурируемый (deprecated) - режим используемый по умолчанию. Параметры конфигурации задаются [при установке кластера](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развёрнутом кластере](../../deckhouse-faq.html#как-переключить-работающий-кластер-deckhouse-на-использование-стороннего-registry) с помощью утилиты `helper change registry` (deprecated).
 
-{% alert level="info" %}
-Для работы в режиме `Direct` и `Unmanaged` (конфигурируемый) необходимо использовать CRI `Containerd` или `Containerd V2` на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html#clusterconfiguration)
-{% endalert %}
+## Ограничения и особенности использования модуля
+
+Модуль `registry` имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
+
+### Ограничения при установке кластера
+
+Bootstrap кластера DKP поддерживается только в неконфигурируемом `Unmanaged` режиме. Настройки registry во время bootstrap задаются через [initConfiguration](../../installing/configuration.html#initconfiguration-deckhouse-imagesrepo).
+
+Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
+
+### Ограничения по условиям работы
+
+Модуль работает при соблюдении следующих условий:
+
+- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](../../installing/configuration.html##clusterconfiguration-defaultcri).
+- Кластер полностью управляется DKP. В Managed Kubernetes кластерах он работать не будет.
+
+### Ограничения по переключению режимов
+
+Ограничения по переключению режимов следующие:
+
+- Для первого переключения на модуль registry необходимо выполнить миграцию пользовательских конфигураций реестра. Подробнее — в разделе [«Модуль registry: FAQ»](./faq.html).
+- Переключение в неконфигурируемый `Unmanaged` режим доступно только из `Unmanaged` режима. Подробнее — в разделе [«Модуль registry: FAQ»](./faq.html).
 
 ## Архитектура режима Direct
 
