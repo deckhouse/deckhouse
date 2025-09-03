@@ -122,17 +122,22 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 	return nil
 }
 
+const (
+	defaultRetryBackoff          = 2 * time.Second
+	defaultNotifierClientTimeout = 10 * time.Second
+)
+
 func sendWebhookNotification(ctx context.Context, config NotificationConfig, data *WebhookData) error {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: config.SkipTLSVerify},
 		},
-		Timeout: 10 * time.Second,
+		Timeout: defaultNotifierClientTimeout,
 	}
 
 	buf := bytes.NewBuffer(nil)
 
-	retryBackoff := 2 * time.Second
+	retryBackoff := defaultRetryBackoff
 	if config.RetryMinTime.Duration > 0 {
 		retryBackoff = config.RetryMinTime.Duration
 	}
