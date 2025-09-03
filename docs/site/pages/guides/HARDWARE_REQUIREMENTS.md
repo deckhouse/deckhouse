@@ -190,9 +190,7 @@ Features of the configurations listed in the table above:
 </table>
 
 {% alert %}
-<a name="storage">Notes:</a>
-
-* PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB.
+* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB.
 * The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), the table lists the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
 * Note that all nodes require high performance disks (400+ IOPS).
 {% endalert %}
