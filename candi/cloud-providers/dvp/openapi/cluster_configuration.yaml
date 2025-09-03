@@ -320,10 +320,10 @@ apiVersions:
                 additionalDisks:
                   type: array
                   description: |
-                    Specifies settings for additional data disks of the virtual machine.
+                    Parameters for additional virtual machine disks.
 
                     Each item in the array describes one additional disk.
-                    Both `size` and `storageClass` are required.
+                    Both `size` and `storageClass` parameters must be specified for each disk.
                   items:
                     type: object
                     required: [size, storageClass]
@@ -466,10 +466,10 @@ apiVersions:
                   additionalDisks:
                     type: array
                     description: |
-                      Specifies settings for additional data disks of the virtual machine.
+                      Parameters for additional virtual machine disks.
 
                       Each item in the array describes one additional disk.
-                      Both `size` and `storageClass` are required.
+                      Both `size` and `storageClass` parameters must be specified for each disk.
                     items:
                       type: object
                       required: [size, storageClass]

@@ -116,7 +116,7 @@ spec:
                       - storageClass
                     properties:
                       size:
-                        description: Disk size (resource.Quantity), e.g. 10Gi
+                        description: Disk size (`resource.Quantity`). For example, `10Gi`.
                         anyOf:
                           - type: integer
                           - type: string

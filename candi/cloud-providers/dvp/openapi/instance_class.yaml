@@ -125,7 +125,7 @@ spec:
                 additionalDisks:
                   type: array
                   description: |
-                    Additional disks for the virtual machine.
+                    Parameters for additional virtual machine disks.
                   items:
                     type: object
                     required: ["size", "storageClass"]
@@ -139,7 +139,7 @@ spec:
                       storageClass:
                         type: string
                         description: |
-                          The name of the existing StorageClass will be used to create the additional disk.
+                          Name of the existing StorageClass that will be used to create the additional disk.
   scope: Cluster
   names:
     plural: dvpinstanceclasses
