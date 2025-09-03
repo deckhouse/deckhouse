@@ -42,7 +42,7 @@ spec:
                         type: string
                       type: array
                     executeHookOnSynchronization:
-                      type: string
+                      type: boolean
                     fieldSelector:
                       properties:
                         matchExpressions:
@@ -71,7 +71,7 @@ spec:
                     jqFilter:
                       type: string
                     keepFullObjectsInMemory:
-                      type: string
+                      type: boolean
                     kind:
                       type: string
                     labelSelector:

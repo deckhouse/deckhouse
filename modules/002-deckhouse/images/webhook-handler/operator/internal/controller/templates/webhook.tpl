@@ -3,8 +3,6 @@ from typing import Optional
 
 from deckhouse import hook
 from dotmap import DotMap
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 config = """
 configVersion: v1

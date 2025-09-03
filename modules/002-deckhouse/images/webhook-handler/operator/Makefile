@@ -110,6 +110,20 @@ build: manifests generate fmt vet ## Build manager binary.
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
+	export LOG_LEVEL="debug"
+	export VALIDATING_WEBHOOK_CONFIGURATION_NAME="test"
+	export VALIDATING_WEBHOOK_SERVICE_NAME="test"
+	export VALIDATING_WEBHOOK_SERVER_CERT="certs/ca.crt"
+	export VALIDATING_WEBHOOK_SERVER_KEY="certs/ca.key"
+	export VALIDATING_WEBHOOK_CA="certs/ca.crt"
+	export VALIDATING_WEBHOOK_CLIENT_CA="certs/ca.crt"
+	export VALIDATING_WEBHOOK_FAILURE_POLICY=""
+	export VALIDATING_WEBHOOK_LISTEN_PORT=""
+	export VALIDATING_WEBHOOK_LISTEN_ADDRESS=""
+	export CONVERSION_WEBHOOK_SERVER_CERT="certs/ca.crt"
+	export CONVERSION_WEBHOOK_SERVER_KEY="certs/ca.key"
+	export SHELL_OPERATOR_NAMESPACE="default"
+	export PYTHONPATH="/opt/homebrew/lib/python3.13/site-packages"
 	go run ./cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.

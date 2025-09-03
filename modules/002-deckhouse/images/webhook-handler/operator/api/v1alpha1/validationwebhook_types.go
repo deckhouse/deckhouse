@@ -73,9 +73,9 @@ type KubernetesContext struct {
 	Name                         string                `json:"name,omitempty"`
 	WatchEventTypes              []WatchEventType      `json:"watchEvent,omitempty"`
 	ExecuteHookOnEvents          []WatchEventType      `json:"executeHookOnEvent,omitempty"`
-	ExecuteHookOnSynchronization string                `json:"executeHookOnSynchronization,omitempty"`
+	ExecuteHookOnSynchronization bool                  `json:"executeHookOnSynchronization,omitempty"`
 	WaitForSynchronization       string                `json:"waitForSynchronization,omitempty"`
-	KeepFullObjectsInMemory      string                `json:"keepFullObjectsInMemory,omitempty"`
+	KeepFullObjectsInMemory      bool                  `json:"keepFullObjectsInMemory,omitempty"`
 	Mode                         KubeEventMode         `json:"mode,omitempty"`
 	ApiVersion                   string                `json:"apiVersion,omitempty"`
 	Kind                         string                `json:"kind,omitempty"`
