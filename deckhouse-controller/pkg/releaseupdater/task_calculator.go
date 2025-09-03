@@ -36,6 +36,7 @@ import (
 const (
 	taskCalculatorServiceName = "task-calculator"
 	maxMinorVersionDiffForLTS = 10
+	deckhouseModuleName       = "" // Empty string indicates Deckhouse release (not a module)
 )
 
 type TaskCalculator struct {
@@ -455,9 +456,11 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
 				// here we have only Deployed phase releases in prevRelease
 				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
+				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 
 				// it must await if deployed release has minor version more than one
-				if !ltsRelease &&
+				// For modules, skip this check (allow any minor version jump)
+				if !ltsRelease && isDeckhouseRelease &&
 					release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 					msg := fmt.Sprintf(
 						"minor version is greater than deployed %s by one",
@@ -475,7 +478,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				}
 
 				// it must await if deployed release has minor version more than acceptable LTS channel limitation
-				if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+				// For modules, skip this check (allow any minor version jump)
+				if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
 					msg := fmt.Sprintf(
 						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
 						prevRelease.GetVersion().Original(),

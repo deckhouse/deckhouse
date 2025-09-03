@@ -1093,6 +1093,77 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 			require.NoError(suite.T(), err)
 			require.Empty(suite.T(), dr.Status.Message)
 		})
+		suite.Run("block 20 minor version jump", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-block-20-minor-jump.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.20.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			// Should be blocked due to 20 minor version jump (1.0.0 -> 1.20.0)
+			require.Equal(suite.T(), "Pending", dr.Status.Phase)
+			require.Contains(suite.T(), dr.Status.Message, "minor version is greater than deployed")
+		})
+		suite.Run("allow 10 minor version jump", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-allow-10-minor-jump.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.10.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+			// Should be allowed as it's within 10 minor version limit (1.0.0 -> 1.10.0)
+			// The release should be processed and deployed
+			require.Equal(suite.T(), "Deployed", dr.Status.Phase)
+		})
+		suite.Run("single release jump with 20 version gap", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-single-jump-20-gap.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.20.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("sequential 2 releases jump", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-sequential-2-jump.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.2.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("reverse order 2 releases jump", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode: "Auto",
+				},
+				ReleaseChannel: "LTS",
+			}
+
+			suite.setupController("lts-reverse-2-jump.yaml", initValues, mup)
+			dr := suite.getDeckhouseRelease("v1.2.0")
+			_, err := suite.ctr.createOrUpdateReconcile(ctx, dr)
+			require.NoError(suite.T(), err)
+		})
 	})
 
 	suite.Run("Migrated Modules", func() {
