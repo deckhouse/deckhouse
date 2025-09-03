@@ -616,6 +616,36 @@ disable:
 		err := suite.ctr.checkDeckhouseRelease(context.TODO())
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("Prerelease versions are blocked", func() {
+		// Test different prerelease versions
+		prereleaseVersions := []string{"v1.16.0-alpha.1", "v1.16.0-beta.2", "v1.16.0-rc.1", "v1.16.0-dev"}
+
+		for _, prereleaseVersion := range prereleaseVersions {
+			suite.Run("Block "+prereleaseVersion, func() {
+				dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
+				dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+					ManifestStub: ManifestStub,
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{&fakeLayer{}, &fakeLayer{
+							FilesContent: map[string]string{
+								"version.json": fmt.Sprintf(`{"version": "%s"}`, prereleaseVersion),
+							}}}, nil
+					},
+					DigestStub: func() (v1.Hash, error) {
+						return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+					},
+				}, nil)
+
+				// Use our own test data file for prerelease validation
+				suite.setupController("prerelease-version-blocked.yaml", initValues, embeddedMUP)
+				err := suite.ctr.checkDeckhouseRelease(ctx)
+				require.Error(suite.T(), err)
+				assert.Contains(suite.T(), err.Error(), "pre-release versions are not supported")
+				assert.Contains(suite.T(), err.Error(), prereleaseVersion)
+			})
+		}
+	})
 }
 
 type fakeLayer struct {
