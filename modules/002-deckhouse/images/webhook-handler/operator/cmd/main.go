@@ -21,12 +21,17 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"sync/atomic"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	soapp "github.com/flant/shell-operator/pkg/app"
+	shell_operator "github.com/flant/shell-operator/pkg/shell-operator"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -87,6 +92,13 @@ func main() {
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
+
+	soapp.ValidatingWebhookSettings.ConfigurationName = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ConfigurationName, os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
+	soapp.ValidatingWebhookSettings.ServiceName = ReturnNotEmpty("test", "test") //os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME"))
+	soapp.ValidatingWebhookSettings.ServerCertPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ServerCertPath, os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
+	soapp.ValidatingWebhookSettings.ServerKeyPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ServerKeyPath, os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
+	soapp.ValidatingWebhookSettings.CAPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.CAPath, os.Getenv("VALIDATING_WEBHOOK_CA"))
+	soapp.Namespace = ReturnNotEmpty("default", os.Getenv("SHELL_OPERATOR_NAMESPACE"))
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
@@ -209,14 +221,55 @@ func main() {
 		os.Exit(1)
 	}
 
+	// hooks/
+	err = os.MkdirAll("hooks", 0777)
+	if err != nil {
+		log.Error("create dir: %w", err)
+		panic(err)
+	}
+
+	logger := log.NewLogger(
+		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
+		log.WithHandlerType(log.TextHandlerType))
+	// cctx, cancel := context.WithCancel(context.Background())
+
+	setupLog.Info("starting shell-operator")
+	so, err := shell_operator.Init(logger)
+	if err != nil {
+		logger.Fatal("init shell", log.Err(err))
+	}
+	// non-blocking sync variable to know that we need to reload shell-operator
+	var isReloadShellNeed atomic.Bool
+	isReloadShellNeed.Store(false)
+
+	// go-routine that reloads shell-operator no more than once in 30s
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		go so.Start()
+		for range ticker.C {
+			if isReloadShellNeed.Load() {
+				isReloadShellNeed.Store(false)
+
+				so.Shutdown()
+				so.Stop()
+
+				// reinit
+				time.Sleep(10 * time.Second)
+				// so, err = shell_operator.Init(logger)
+				// if err != nil {
+				// 	logger.Fatal("init shell", log.Err(err))
+				// }
+				go so.Start()
+			}
+		}
+	}()
+
 	if err := (&controller.ValidationWebhookReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		Logger: log.NewLogger(
-			log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
-			log.WithHandlerType(log.TextHandlerType),
-		),
-		Template: string(tpl),
+		IsReloadShellNeed: &isReloadShellNeed,
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Logger:            logger,
+		Template:          string(tpl),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ValidationWebhook")
 		os.Exit(1)
@@ -248,9 +301,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	// sudo go run ./cmd/shell-operator/ start --hooks-dir $(PWD)/hooks --tmp-dir $(PWD)/tmp --log-type color
+	// cmd := exec.Command("shell-operator")
+	// // cmd := exec.Command("ls", "-l")
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+	// cmd.Run()
+	// syscall.Kill(cmd.Process.Pid, syscall.SIGTERM)
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func ReturnNotEmpty(defaultValue, newValue string) string {
+	if newValue == "" {
+		return defaultValue
+	}
+
+	return newValue
 }

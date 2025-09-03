@@ -20,6 +20,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"sync/atomic"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,8 +35,9 @@ import (
 
 // ValidationWebhookReconciler reconciles a ValidationWebhook object
 type ValidationWebhookReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
+	IsReloadShellNeed *atomic.Bool
+	Client            client.Client
+	Scheme            *runtime.Scheme
 	// init logger as in docs builder (watcher)
 	Logger *log.Logger
 	// Go template with python webhook
@@ -138,6 +140,8 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 	if !controllerutil.ContainsFinalizer(vh, "some finalizer") {
 		controllerutil.AddFinalizer(vh, "some finalizer")
 	}
+
+	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }

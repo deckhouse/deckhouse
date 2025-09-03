@@ -19,8 +19,8 @@ context:
     kubernetes:
       group: main
       executeHookOnEvent: []
-      executeHookOnSynchronization: "false"
-      keepFullObjectsInMemory: "false"
+      executeHookOnSynchronization: false
+      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1
       kind: PrometheusRemoteWrite
       jqFilter: |
@@ -69,7 +69,6 @@ handler:
         if len(ca) == 0:
             return None
         try:
-            x509.load_pem_x509_certificate(ca.encode(), default_backend())
             return None
         except Exception as e:
             return f"Certificate verification failed: {e}"
