@@ -3,6 +3,9 @@ async function initializeChannelMenu() {
         const yamlText = await loadYAMLFile('/includes/release-channels/channels.yaml');
         const appData = jsyaml.load(yamlText);
 
+        // Store channels data globally for use in updateCurrentVersion
+        window.channelsData = appData.groups[0].channels;
+
         renderMenu(appData.groups[0]);
         updateCurrentVersion();
     } catch (error) {
@@ -30,12 +33,13 @@ function updateCurrentVersion() {
 
     // Extract channel from URL pattern /modules/CHANNEL/...
     const urlPath = window.location.pathname;
-    const channelMatch = urlPath.match(/\/modules\/([^\/]+)\//);
+    const channelMatch = urlPath.match(/\/modules\/([^\/]+)\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//);
 
     let currentChannel = 'stable'; // default fallback
+    let extractedChannel = null;
 
     if (channelMatch) {
-        const extractedChannel = channelMatch[1];
+        extractedChannel = channelMatch[2];
         // Check if extracted channel is one of the valid channels
         const validChannels = ['alpha', 'beta', 'early-access', 'stable', 'rock-solid', 'latest'];
         if (validChannels.includes(extractedChannel)) {
@@ -43,8 +47,33 @@ function updateCurrentVersion() {
         }
     }
 
+    // Try to find the actual channel name from the channels data
+    // This will be called after the channels data is loaded
+    if (window.channelsData && extractedChannel) {
+        const matchingChannels = window.channelsData.filter(channel => {
+            // Check if the channel name or version matches the extracted channel
+            return channel.name === extractedChannel || channel.version === extractedChannel;
+        });
+
+        if (matchingChannels.length > 0) {
+            // If multiple channels have the same version, find the most stable one
+            if (matchingChannels.length > 1) {
+                const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'ea': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
+                const mostStableChannel = matchingChannels.reduce((prev, current) => {
+                    const prevStability = stabilityOrder[prev.name] || 0;
+                    const currentStability = stabilityOrder[current.name] || 0;
+                    return currentStability > prevStability ? current : prev;
+                });
+                currentChannel = mostStableChannel.name;
+            } else {
+                currentChannel = matchingChannels[0].name;
+            }
+        }
+    }
+
     // Format the channel name for display
     const formattedChannel = currentChannel
+        .replace(/ea/g, 'early access')
         .replace(/early-access/g, 'Early Access')
         .replace(/-/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase());
@@ -79,7 +108,7 @@ function renderMenu(settings) {
 
     // Sort channels by stability in descending order (rock-solid first)
     const sortedChannels = [...settings.channels].sort((a, b) => {
-        const stabilityOrder = { 'rock-solid': 4, 'stable': 3, 'ea': 2, 'alpha': 1, 'beta': 0 };
+        const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'ea': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
         const aStability = stabilityOrder[a.name] || 0;
         const bStability = stabilityOrder[b.name] || 0;
         return bStability - aStability;
@@ -127,11 +156,8 @@ function renderMenu(settings) {
                 if (currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
                     // Current URL has version, replace it with channel version
                     channelUrl = currentUrl.replace(/\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `/${urlVersion}/`);
-                    console.log('Current URL has version, replace it with channel version');
-                    console.log('Replaced URL:', channelUrl);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add version
-                     console.log('Current URL is /modules/MODULE/, add version');
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
                 }
             }
