@@ -130,7 +130,7 @@ After the node group is created, a script for adding servers to the group will b
 
 ## Modifying a static cluster configuration
 
-The static cluster settings are stored in the [StaticClusterConfiguration](/reference/api/cr.html#staticclusterconfiguration) structure.
+The static cluster settings are stored in the [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) structure.
 
 To modify the static cluster parameters, run the following command:
 

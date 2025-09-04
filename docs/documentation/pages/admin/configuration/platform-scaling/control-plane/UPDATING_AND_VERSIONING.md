@@ -14,7 +14,7 @@ The control plane update process in DKP is fully automated.
 
 ### Changing the Kubernetes version
 
-1. Open the [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration) editor:
+1. Open the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) editor:
 
    ```shell
    d8 platform edit cluster-configuration

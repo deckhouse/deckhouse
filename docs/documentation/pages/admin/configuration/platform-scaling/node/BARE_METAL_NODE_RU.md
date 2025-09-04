@@ -131,7 +131,7 @@ lang: ru
 
 ## Изменение конфигурации статического кластера
 
-Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](/reference/api/cr.html#staticclusterconfiguration).
+Настройки статического кластера хранятся в структуре [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration).
 
 Чтобы изменить параметры статического кластера, выполните команду:
 

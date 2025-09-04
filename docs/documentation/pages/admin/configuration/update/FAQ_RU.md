@@ -6,7 +6,7 @@ lang: ru
 
 ## Как применить обновление, минуя окна обновлений, canary-release и ручной режим обновлений?
 
-Чтобы применить обновление DKP немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление DKP немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 {% alert level="warning" %}
 В этом случае будут проигнорированы окна обновления, [настройки canary-release](../../../user/network/canary-deployment.html) и [режим ручного обновления кластера](configuration.html#ручное-подтверждение-обновлений). Обновление применится сразу после установки аннотации.
@@ -91,7 +91,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 Как только на установленном в кластере канале обновления появляется новая версия DKP:
 
 - Загорается алерт `DeckhouseReleaseIsWaitingManualApproval`, если кластер использует [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
-- Появляется новый кастомный ресурс [DeckhouseRelease](/reference/api/cr.html#deckhouserelease). Используйте команду `d8 k get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
+- Появляется новый кастомный ресурс [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease). Используйте команду `d8 k get deckhousereleases`, чтобы посмотреть список релизов. Если `DeckhouseRelease` новой версии находится в состоянии `Pending`, указанная версия еще не установлена. Возможные причины, при которых `DeckhouseRelease` может находиться в `Pending`:
   - Установлен [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений).
   - Установлен автоматический режим обновлений и настроены [окна обновлений](configuration.html#окна-обновлений), интервал которых еще не наступил.
   - Установлен автоматический режим обновлений, окна обновлений не настроены, но применение версии отложено на случайный период времени из-за механизма снижения нагрузки на репозиторий образов контейнеров. В поле `status.message` ресурса DeckhouseRelease будет соответствующее сообщение.
@@ -101,8 +101,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 Получать заранее информацию об обновлении минорных версий DKP на канале обновлений можно следующими способами:
 
-- Настроить [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval`, и в кластере появится новый [кастомный ресурс DeckhouseRelease](/reference/api/cr.html#deckhouserelease).
-- Настроить [автоматический режим обновлений](configuration.html#автоматическое-обновление) и указать минимальное время в [параметре `minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый [кастомный ресурс DeckhouseRelease](/reference/api/cr.html#deckhouserelease). Если указать URL в параметре [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook), через указанный вебхук будет отправлено уведомление об предстоящем обновлении.
+- Настроить [ручной режим обновлений](configuration.html#ручное-подтверждение-обновлений). В этом случае при появлении новой версии на канале обновлений загорится алерт `DeckhouseReleaseIsWaitingManualApproval`, и в кластере появится новый [кастомный ресурс DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease).
+- Настроить [автоматический режим обновлений](configuration.html#автоматическое-обновление) и указать минимальное время в [параметре `minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime), на которое будет отложено обновление. В этом случае при появлении новой версии на канале обновлений в кластере появится новый [кастомный ресурс DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease). Если указать URL в параметре [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook), через указанный вебхук будет отправлено уведомление об предстоящем обновлении.
 
 ## Как узнать версию DKP на каждом из каналов обновлений?
 

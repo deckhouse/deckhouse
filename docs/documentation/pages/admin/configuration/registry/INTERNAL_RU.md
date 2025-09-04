@@ -13,10 +13,10 @@ lang: ru
 Модуль `registry`, реализующий внутреннее хранилище, работает в следующих режимах:
 
 - `Direct` — работа с использованием внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/registry-direct-mode.html).
-- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется по адресу, который можно [задать при установке кластера](/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или [изменить в развернутом кластере](../registry/third-party.html).
+- `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется по адресу, который можно [задать при установке кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или [изменить в развернутом кластере](../registry/third-party.html).
 
 {% alert level="info" %}
-Для работы в режиме `Direct` необходимо использовать CRI containerd или containerd v2 на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/reference/api/cr.html#clusterconfiguration)
+Для работы в режиме `Direct` необходимо использовать CRI containerd или containerd v2 на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration)
 {% endalert %}
 
 ## Ограничения по работе с внутренним registry
@@ -31,7 +31,7 @@ Bootstrap кластера Deckhouse Kubernetes Platform с включенным
 
 Модуль `registry`, реализующий возможность использования внутреннего container registry, работает при соблюдении следующих условий:
 
-- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/reference/api/cr.html#clusterconfiguration-defaultcri).
+- Если на узлах кластера используется CRI containerd или containerd v2. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - Кластер полностью управляется DKP. В Managed Kubernetes кластерах он работать не будет.
 
 ### Ограничения по переключению режимов

@@ -10,10 +10,10 @@ lang: ru
 
 Миграция на containerd v2 возможна при выполнении следующих условий:
 
-- Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/reference/api/cr.html#clusterconfiguration-defaultcri).
+- Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 - На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 
-При несоответствии одному из требований, описанных [в общих параметрах кластера](/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Kubernetes Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config`.
+При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Kubernetes Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config`.
 
 При наличии одного из этих лейблов cмена параметра [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
 
@@ -36,7 +36,7 @@ ls -l /etc/containerd/conf.d
 
 Включение containerd v2 возможно двумя способами:
 
-1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 
    Пример:
 
