@@ -91,22 +91,22 @@ spec:
           valueFrom:
             secretKeyRef:
               key: insecure
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_HREF
           valueFrom:
             secretKeyRef:
               key: host
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_VDC
           valueFrom:
             secretKeyRef:
               key: vdc
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_ORG
           valueFrom:
             secretKeyRef:
               key: org
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_USER
           valueFrom:
             secretKeyRef:
