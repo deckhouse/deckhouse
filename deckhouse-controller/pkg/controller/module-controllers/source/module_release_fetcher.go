@@ -290,6 +290,11 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	// For LTS channels, skip intermediate versions and create release directly
 	isLTSChannel := strings.EqualFold(f.releaseChannel, ltsReleaseChannel)
 
+	logger.Debug("Checking release channel",
+		slog.String("channel", f.releaseChannel),
+		slog.String("ltsChannel", ltsReleaseChannel),
+		slog.Bool("isLTS", isLTSChannel))
+
 	if isLTSChannel {
 		logger.Debug("LTS channel detected, creating release without intermediate versions")
 
