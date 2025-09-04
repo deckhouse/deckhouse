@@ -942,7 +942,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 {% alert level="warning" %}
 При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -973,7 +973,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Проверьте, чтобы очередь DKP была пустой и без ошибок.
 
-1. Создайте ресурс [NodeGroupConfiguration](modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
+1. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
 
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 

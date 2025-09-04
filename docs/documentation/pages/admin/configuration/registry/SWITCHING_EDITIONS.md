@@ -949,7 +949,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 
 {% alert level="warning" %}
 When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
-To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -978,7 +978,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 
 1. Ensure the Deckhouse queue is empty and error-free.
 
-1. Create a [NodeGroupConfiguration](modules/node-manager/cr.html#nodegroupconfiguration) resource for temporary authorization in `registry.deckhouse.io`:
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for temporary authorization in `registry.deckhouse.io`:
 
    > Skip this step if switching to Deckhouse CE.
 
