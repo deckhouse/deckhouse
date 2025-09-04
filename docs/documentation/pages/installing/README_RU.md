@@ -726,7 +726,7 @@ echo "$MYRESULTSTRING"
 
    При запуске установщика используйте не официальное публичное хранилище образов DKP, а хранилище в которое ранее были загружены образы. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable`, вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   В ресурсе [InitConfiguration](/reference/api/cr.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
+   В ресурсе [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) при установке также используйте адрес вашего хранилища и данные авторизации (параметры [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg) или [шаг 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) руководства по быстрому старту).
 
 ### Создание кластера и запуск DKP без использования каналов обновлений
 
@@ -737,8 +737,8 @@ echo "$MYRESULTSTRING"
 Если необходимо установить DKP с отключенным автоматическим обновлением:
 
 1. Используйте тег образа установщика соответствующей версии. Например, если вы хотите установить релиз `v1.44.3`, используйте образ `your.private.registry.com/deckhouse/install:v1.44.3`.
-1. Укажите соответствующий номер версии в параметре [deckhouse.devBranch](/reference/api/cr.html#initconfiguration-deckhouse-devbranch) в ресурсе [InitConfiguration](/reference/api/cr.html#initconfiguration).
-    > **Не указывайте** параметр [deckhouse.releaseChannel](/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в ресурсе [InitConfiguration](/reference/api/cr.html#initconfiguration).
+1. Укажите соответствующий номер версии в параметре [deckhouse.devBranch](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) в ресурсе [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+    > **Не указывайте** параметр [deckhouse.releaseChannel](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module-v1alpha1-properties-releasechannel) в ресурсе [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
 
 Если вы хотите отключить автоматические обновления у уже установленного Deckhouse (включая обновления patch-релизов), удалите параметр [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) из конфигурации модуля `deckhouse`.
 
@@ -787,7 +787,7 @@ echo "$MYRESULTSTRING"
 
 {% endofftopic %}
 
-Для настройки DKP на использование proxy используйте параметр [proxy](/reference/api/cr.html#clusterconfiguration-proxy) ресурса ClusterConfiguration.
+Для настройки DKP на использование proxy используйте параметр [proxy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) ресурса ClusterConfiguration.
 
 Пример:
 

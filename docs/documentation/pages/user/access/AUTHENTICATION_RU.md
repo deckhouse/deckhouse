@@ -99,7 +99,7 @@ DKP позволяет настраивать аутентификацию ка�
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
       - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
    Пример (для DexAuthenticator с именем `app-name`, в пространстве имен `app-ns`):
 
