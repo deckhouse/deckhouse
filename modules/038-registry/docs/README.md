@@ -38,7 +38,7 @@ The module works under the following conditions:
 
 Mode switching restrictions are as follows:
 
-- For the first switch to the registry module, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](./faq.html) section.
+- For the first switch, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](./faq.html) section.
 - Switching to the non-configurable `Unmanaged` mode is only available from the `Unmanaged` mode. For more details, see the [Registry Module: FAQ](./faq.html) section.
 
 ## Direct Mode Architecture
