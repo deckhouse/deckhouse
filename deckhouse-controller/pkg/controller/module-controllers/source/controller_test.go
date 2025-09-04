@@ -658,7 +658,7 @@ func (suite *ControllerTestSuite) TestLTSChannelReleases() {
 
 		// Modify the test data to use LTS channel
 		testDataStr := string(testData)
-		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: Lts", 1)
 
 		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
@@ -680,7 +680,7 @@ func (suite *ControllerTestSuite) TestLTSChannelReleases() {
 
 		// Modify the test data to use LTS channel and big jump
 		testDataStr := string(testData)
-		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: Lts", 1)
 		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
 		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
 		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
@@ -709,7 +709,7 @@ func (suite *ControllerTestSuite) TestLTSChannelReleases() {
 
 		// Modify the test data to use LTS channel and sequential jump
 		testDataStr := string(testData)
-		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: Lts", 1)
 		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
 		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
 		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
@@ -738,7 +738,7 @@ func (suite *ControllerTestSuite) TestLTSChannelReleases() {
 
 		// Modify the test data to use LTS channel and reverse order
 		testDataStr := string(testData)
-		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: Lts", 1)
 		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
 		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
 		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates

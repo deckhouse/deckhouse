@@ -747,7 +747,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 					Mode:    "Auto",
 					Windows: make(update.Windows, 0),
 				},
-				ReleaseChannel: "lts",
+				ReleaseChannel: "Lts",
 			}
 
 			testData := suite.fetchTestFileData("lts-module-allow-20-minor-jump.yaml")
@@ -780,7 +780,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 					Mode:    "Auto",
 					Windows: make(update.Windows, 0),
 				},
-				ReleaseChannel: "lts",
+				ReleaseChannel: "Lts",
 			}
 
 			testData := suite.fetchTestFileData("lts-module-allow-10-minor-jump.yaml")
@@ -810,7 +810,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 					Mode:    "Auto",
 					Windows: make(update.Windows, 0),
 				},
-				ReleaseChannel: "lts",
+				ReleaseChannel: "Lts",
 			}
 
 			testData := suite.fetchTestFileData("lts-module-allow-any-minor-jump.yaml")
