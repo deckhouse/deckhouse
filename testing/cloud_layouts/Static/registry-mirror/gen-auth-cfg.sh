@@ -15,13 +15,15 @@
 # limitations under the License.
 
 generate_hash() {
-    local password=$1
-    docker run --rm -e PASSWORD="$password" python:3-alpine \
-    sh -c "pip install bcrypt > /dev/null && python -c 'import bcrypt, os; print(bcrypt.hashpw(os.environ[\"PASSWORD\"].encode(), bcrypt.gensalt(rounds=10)).decode())'"
+    local user=$1
+    local password=$2
+    hash=$(docker run --rm httpd:2.4-alpine htpasswd -nbB $1 $2)
+    pass=$(echo $hash | cut -d':' -f 2)
+    echo $pass
 }
 
-MIRROR_HASH=$(generate_hash "$1")
-CLUSTER_HASH=$(generate_hash "$2")
+MIRROR_HASH=$(generate_hash mirror "$1")
+CLUSTER_HASH=$(generate_hash cluster "$2")
 
 cat <<EOF
 server:
