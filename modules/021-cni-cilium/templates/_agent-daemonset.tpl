@@ -253,7 +253,6 @@ spec:
           readOnlyRootFilesystem: true
         imagePullPolicy: IfNotPresent
         command:
-        command:
           - sh
           - -c
           - --
