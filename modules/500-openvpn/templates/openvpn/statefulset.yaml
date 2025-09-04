@@ -136,7 +136,7 @@ spec:
 {{- if .Values.openvpn.tcpEnabled }}
 # openvpn-tcp
       - name: openvpn-tcp
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
         command: [ '/entrypoint' ]
         ports:
@@ -172,7 +172,7 @@ spec:
 {{- if .Values.openvpn.udpEnabled }}
 # openvpn-udp
       - name: openvpn-udp
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW" "MKNOD" "SETGID" "SETUID")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "openvpn") }}
         command: [ '/entrypoint' ]
         ports:
@@ -208,7 +208,7 @@ spec:
 {{- if and .Values.openvpn.tcpEnabled .Values.openvpn.pmacctEnabled }}
 # pmacct-tcp
       - name: pmacct-tcp
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "pmacct") }}
         command: [ "/usr/sbin/pmacctd" ]
         args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,proto", "-i", "tun-tcp", "-w", "-r", "60", "-S", "user"]
@@ -222,7 +222,7 @@ spec:
 {{- if and .Values.openvpn.udpEnabled .Values.openvpn.pmacctEnabled }}
 # pmacct-udp
       - name: pmacct-udp
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_RAW")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "pmacct") }}
         command: [ "/usr/sbin/pmacctd" ]
         args: ["-P", "print", "-O", "json",  "-c", "src_host,dst_host,src_port,dst_port,proto", "-i", "tun-udp", "-w", "-r", "60", "-S", "user"]
