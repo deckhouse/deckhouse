@@ -44,17 +44,16 @@ spec:
     fi
 
     # If the safe-agent-updater pod does not exist, there is nothing to do
-    if sau_pod_count="$(/opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
-        jq -er '.items | length == 0')"; then
+    if /opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length == 0' > /dev/null; then
       bb-log-info "There is no safe-agent-updater pod on the node."
       exit 0
     fi
 
     attempt=0
     until
-      sau_pod_count="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
-      jq -er '.items | length')"; \
-      [[ "${sau_pod_count}" == "1" ]];
+      /opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length == 1' > /dev/null;
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -65,10 +64,10 @@ spec:
       sleep 10
     done
 
-    sau_pod_name="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+    sau_pod_name="$(/opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
       jq -er '.items[0].metadata.name')";
 
-    if ! current_sau_ds_generation="$(crictl pods --name ${sau_pod_name} -o json | \
+    if ! current_sau_ds_generation="$(/opt/deckhouse/bin/crictl pods --name ${sau_pod_name} -o json | \
       jq -er '.items[0].annotations."safe-agent-updater-daemonset-generation"')" || \
       [[ "${current_sau_ds_generation}" != "${desired_sau_ds_generation}" ]];
     then
