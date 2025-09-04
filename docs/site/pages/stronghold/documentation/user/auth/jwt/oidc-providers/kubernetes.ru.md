@@ -29,7 +29,7 @@ Kubernetes может выступать в качестве провайдер�
 Убедитесь, что URL адреса обнаружения OIDC не требует аутентификации, как описано [тут][k8s-sa-issuer-discovery]:
 
 ```bash
-kubectl create clusterrolebinding oidc-reviewer  \
+d8 k create clusterrolebinding oidc-reviewer  \
    --clusterrole=system:service-account-issuer-discovery \
    --group=system:unauthenticated
 ```
@@ -37,7 +37,7 @@ kubectl create clusterrolebinding oidc-reviewer  \
 Определите адрес issuer URL для вашего кластера.
 
 ```bash
-ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
+ISSUER="$(d8 k get --raw /.well-known/openid-configuration | jq -r '.issuer')"
 ```
 
 Включите и настройте аутентификацию JWT в Stronghold.
@@ -69,7 +69,7 @@ d8 stronghold write auth/jwt/config oidc_discovery_url="${ISSUER}"
 
 ```bash
 # jwks_uri доступен в /.well-known/openid-configuration
-kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
+d8 k get --raw "$(d8 k get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
 ```
 
 Преобразуйте ключи из формата JWK в формат PEM. Вы можете сделать это с помощью консолькой утилиты, или любого онлайн-сервиса, например [этого][jwk-to-pem].
@@ -98,14 +98,14 @@ MIIBIjANBgkqhkiG9...
 Чтобы найти целевую группу по умолчанию, вы можете создать новый токен (требуется `kubectl` v1.24.0+):
 
 ```shell-session
-$ kubectl create token default | cut -f2 -d. | base64 --decode
+$ d8 k create token default | cut -f2 -d. | base64 --decode
 {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
 ```
 
 Или прочитать токен из запущенного пода:
 
 ```shell-session
-$ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
+$ d8 k exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
 {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
 ```
 

@@ -28,14 +28,14 @@ master-2   Ready    control-plane,master   247d   v1.28.15
    Список всех алертов можно посмотреть с помощью команды:
 
    ```shell
-   kubectl get clusteralerts
+   d8 k get clusteralerts
    ```
 
 1. Убедитесь, что очередь Deckhouse пуста.
    Для просмотра состояния всех очередей заданий Deckhouse, выполните следующую команду:
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 p queue list
    ```
 
 1. Снимите с узла метки `node.deckhouse.io/group: master` и `node-role.kubernetes.io/control-plane: ""`.

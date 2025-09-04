@@ -21,7 +21,7 @@ spec:
 или выполните команду:
 
 ```shell
-kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+d8 p module enable stronghold
 ```
 
 По умолчению модуль запустится в режиме `Automatic` с инлетом `Ingress`.
@@ -33,7 +33,7 @@ kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-control
 Либо выполнив команду:
 
 ```bash
-kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module disable stronghold
+d8 k -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module disable stronghold
 ```
 
 {% alert level="danger" %}
@@ -124,7 +124,7 @@ spec:
 1. Получаем адрес платформы аутентификации командой:
 
     ```shell
-    kubectl -n d8-user-authn get ing dex
+    d8 k -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
@@ -159,7 +159,7 @@ spec:
 
 > Для этого способа подойдут как наличие публичного доменного имени, так и доступ только из внутренней сети.
 
-Редактируем настройки **global** модуля. Сделать это можно, например, командой `kubectl edit mc global`.
+Редактируем настройки **global** модуля. Сделать это можно, например, командой `d8 k edit mc global`.
 Добавляем параметр `settings.modules.https.certManager.clusterIssuerName: selfsigned`. В результате конфигурация модуля должна выглядеть так:
 
 ```yaml
@@ -177,7 +177,7 @@ spec:
   version: 1
 ```
 
-Далее редактируем настройки **user-authn** модуля. Выполняем команду `kubectl edit mc user-authn` и изменяем параметр `settings.controlPlaneConfigurator.dexCAMode` на `FromIngressSecret`:
+Далее редактируем настройки **user-authn** модуля. Выполняем команду `d8 k edit mc user-authn` и изменяем параметр `settings.controlPlaneConfigurator.dexCAMode` на `FromIngressSecret`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -196,7 +196,7 @@ spec:
 1. Получаем адрес платформы аутентификации командой:
 
     ```shell
-    kubectl -n d8-user-authn get ing dex
+    d8 k -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
@@ -277,11 +277,11 @@ cat "${certName}.crt" "${caName}.crt" > "${certName}_fullchain.crt"
 Используя полученные файлы `kubernetes.key` и `kubernetes_fullchain.crt` нужно создать секрет в неймспейсе d8-system
 
 ```shell
-d8 kubectl -n d8-system create secret tls mycompany-wildcard-tls --cert=kubernetes_fullchain.crt --key=kubernetes.key
+d8 k -n d8-system create secret tls mycompany-wildcard-tls --cert=kubernetes_fullchain.crt --key=kubernetes.key
 ```
 
 Для использования полученного сертификата в кластере нужно привести конфигурацию модуля `global` к такому виду.
-Сделать это можно например командой `d8 kubectl edit mc global`
+Сделать это можно например командой `d8 k edit mc global`
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -320,7 +320,7 @@ spec:
 1. Получаем адрес платформы аутентификации командой:
 
     ```shell
-    kubectl -n d8-user-authn get ing dex
+    d8 k -n d8-user-authn get ing dex
     # Ожидаемый ответ
     # NAME   CLASS   HOSTS               ADDRESS         PORTS     AGE
     # dex    nginx   dex.mycompany.tld   34.85.243.109   80, 443   4d20h
@@ -363,7 +363,7 @@ spec:
 Пример получения IP для ингресса `nginx-load-balancer` с типом `LoadBlancer`
 
 ```shell
-d8 kubectl -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
+d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o jsonpath='{ .spec.clusterIP }'
 ```
 
 Допустим наш адрес `34.85.243.109`, тогда модуль-конфиг kube-dns будет выглядеть так
@@ -387,12 +387,12 @@ spec:
 После этого можно включить модуль `stronghold`, инициализация и настройка интеграции с `dex` произойдет автоматически.
 
 ```shell
-d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+d8 p module enable stronghold
 ```
 
 После запуска модуля проследить:
 1. убедиться в наличии сертификата для домена stronghold.*
-    `d8 kubectl -n d8-stronghold get ingress-tls` (либо через Консоль)
+    `d8 k -n d8-stronghold get ingress-tls` (либо через Консоль)
   В разделе [Трудности](#трудности) есть описания решений возможных проблем с отсутствием сертификата.
 2. Убедиться в доступности адреса <https://stronghold.mycompany.tld/v1/sys/health>
 3. Проверить соответствие Издателя сертификата с CA сертификатом (Опционально)
@@ -402,7 +402,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 #### Поды в состоянии ContainerCreating, объекта Secret с названием ingress-tls нет
 
 Проверьте статус пода Stronghold:
-`d8 kubectl -n d8-stronghold describe pod stronghold-0`
+`d8 k -n d8-stronghold describe pod stronghold-0`
 Ищем строку:
 
 ```log
@@ -414,7 +414,7 @@ MountVolume.SetUp failed for volume "certificates" : secret "ingress-tls" not fo
 Получаем список *CertificateRequest*
 
 ```bash
-d8 kubectl -n d8-stronghold get certificaterequest
+d8 k -n d8-stronghold get certificaterequest
 ```
 
 Ищем среди них объект начинающийся с **stronghold-**, для примера это будет **stronghold-b5wc6**
@@ -422,7 +422,7 @@ d8 kubectl -n d8-stronghold get certificaterequest
 Смотрим его статус
 
 ```bash
-d8 kubectl -n d8-stronghold describe certificaterequest stronghold-b5wc6
+d8 k -n d8-stronghold describe certificaterequest stronghold-b5wc6
 ```
 
 Одной из причин может быть ошибка `too many certificates already issued for mycompany.tld`, в особенности, если используется бесплатный dynDNS сервис наподобие `sslip.io` или `getmoss.site`. В таком случае нужно либо подождать, пока не пройдёт таймаут ограничения, либо сменить способ создания сертификата для домена `stronghold.mycompany.tld` (*ClusterIssuer* **selfsigned**, ручная подпись сертификата).

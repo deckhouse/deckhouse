@@ -76,7 +76,7 @@ management tool.
      verbs: ["bind", "escalate", "create", "update", "delete"]
    ```
 
-   Create this role in Kubernetes (e.g., with `kubectl apply -f`).
+   Create this role in Kubernetes (e.g., with `d8 k apply -f`).
 
    Moreover, if you want to use label selection to configure the namespaces on which a role can act,
    you will need to grant Stronghold permissions to read namespaces.
@@ -150,7 +150,7 @@ management tool.
    already exist.
 
    ```shell-session
-   $ kubectl create namespace test
+   $ d8 k create namespace test
    namespace/test created
    ```
 
@@ -189,7 +189,7 @@ management tool.
      namespace: test
    ```
 
-   You can create these objects with `kubectl apply -f`.
+   You can create these objects with `d8 k apply -f`.
 
 1. Enable the Kubernetes Secrets Engine:
 
@@ -240,7 +240,7 @@ You can use the service account token above (`eyJHbG...`) with any Kubernetes AP
 its service account is authorized for (through role bindings).
 
 ```shell-session
-$ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
+$ curl -sk $(d8 k config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
 {
   "kind": "PodList",
@@ -255,7 +255,7 @@ $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.serv
 When the lease expires, you can verify that the token has been revoked.
 
 ```shell-session
-$ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
+$ curl -sk $(d8 k config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
 {
   "kind": "Status",
@@ -370,7 +370,7 @@ $ d8 stronghold write kubernetes/roles/auto-managed-sa-role \
 {% alert level="warning" %}
 
 **Note**: Stronghold's service account will also need access to the resources it is granting
-access to. This can be done for the examples above with `kubectl -n test create rolebinding --role test-role-list-pods --serviceaccount=d8-stronghold:stronghold stronghold-test-role-abilities`.
+access to. This can be done for the examples above with `d8 k -n test create rolebinding --role test-role-list-pods --serviceaccount=d8-stronghold:stronghold stronghold-test-role-abilities`.
 This is how Kubernetes prevents privilege escalation.
 You can read more in the
 [Kubernetes RBAC documentation](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping).

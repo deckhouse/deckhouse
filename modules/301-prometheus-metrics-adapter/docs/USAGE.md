@@ -443,28 +443,28 @@ spec:
 ### How do I get a list of custom metrics?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
 
 ### How do I get the value of a metric associated with an object?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/rps_1m
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/mymetric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/rps_1m
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/mymetric
 ```
 
 ### How do I get the value of a metric created via `NamespaceMetric`?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
 
 ### How do I get external metrics?
 
 ```shell
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
 ```
 
 {% endraw %}

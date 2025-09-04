@@ -13,7 +13,7 @@ By default, the NTP server `pool.ntp.org` is used. The NTP server can be changed
 To view the NTP servers used, you can use the command:
 
 ```bash
-kubectl exec -it -n d8-chrony chrony-master-r7v6c -- chronyc -N sources
+d8 k exec -it -n d8-chrony chrony-master-r7v6c -- chronyc -N sources
 Defaulted container "chrony" out of: chrony, chrony-exporter, kube-rbac-proxy
 MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ===============================================================================
@@ -25,7 +25,7 @@ MS Name/IP address         Stratum Poll Reach LastRx Last sample
 
 `^+` - combined NTP server (`chrony` combines information from `combined` servers to reduce inaccuracies);  
 `^*` - current NTP server;  
-`^-` - non-combinable NTP server. 
+`^-` - non-combinable NTP server.
 
 `chrony` agents on master nodes and on other nodes have one main difference - on all nodes that are not masters, the list of NTP servers contains not only NTP servers from `module config`, but also the addresses of all master nodes of the cluster.  
 
