@@ -4,6 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
   name: vcdaffinityrules.deckhouse.io
 spec:
   group: deckhouse.io
