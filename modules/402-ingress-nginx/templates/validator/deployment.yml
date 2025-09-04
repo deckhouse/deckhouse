@@ -93,7 +93,7 @@ spec:
             - sh
             - -c
             - --
-            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/nginx.pid /tmp/error.log && chomod 0666 /tmp/*"
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/nginx.pid /tmp/error.log && chmod 0666 /tmp/*"
           volumeMounts:
             - name: write-files
               mountPath: /tmp/

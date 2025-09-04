@@ -257,7 +257,7 @@ spec:
           - sh
           - -c
           - --
-          - "/bin/touch /tmp/features.h /tmp/features_skb.h /tmp/features_xdp.h && chomod 0666 /tmp/*"
+          - "/bin/touch /tmp/features.h /tmp/features_skb.h /tmp/features_xdp.h && chmod 0666 /tmp/*"
         volumeMounts:
           - name: write-files
             mountPath: /tmp/
