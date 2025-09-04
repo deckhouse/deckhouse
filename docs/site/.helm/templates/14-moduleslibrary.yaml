@@ -23,6 +23,26 @@ spec:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       serviceAccountName: docs-builder
+      initContainers:
+        - name: init
+          image: {{ index .Values.werf.image "web-frontend" }}
+          command: ["sh"]
+          args: ["/scripts/channels-convert.sh"]
+          env:
+            - name: CHANNELS_CONF_PATH
+              value: "/app/channels-data/channels.conf"
+            - name: CHANNELS_YAML_PATH
+              value: "/app/channels.yaml"
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 65534
+            runAsUser: 65534
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/channels.yaml
+              subPath: channels.yaml
+            - name: channels-data
+              mountPath: /app/channels-data
       containers:
         - name: web
           command: ["nginx", "-g", "daemon off;"]
@@ -65,6 +85,8 @@ spec:
               subPath: nginx.conf
             - mountPath: /tmp
               name: web-tmp
+            - name: channels-data
+              mountPath: /app/channels-data
         - name: builder
           command:
             - "/app/server"
@@ -121,6 +143,11 @@ spec:
         - name: nginx-config
           configMap:
             name: doc-moduleslibrary-nginx-config
+        - name: channels-yaml
+          configMap:
+            name: release-channels-data
+        - name: channels-data
+          emptyDir: {}
         - name: web-tmp
           emptyDir: {}
         - name: modules-docs-en
