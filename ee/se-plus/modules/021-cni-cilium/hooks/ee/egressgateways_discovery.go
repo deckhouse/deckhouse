@@ -510,8 +510,7 @@ func removeLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 
 func processAddingLabels(input *go_hook.HookInput, nodeToLabel map[string][]string) {
 	for keyName, labels := range nodeToLabel {
-		doLabels := appendLabels(labels)
-		input.PatchCollector.PatchWithMutatingFunc(doLabels, "v1", "Node", "", keyName)
+		input.PatchCollector.PatchWithMutatingFunc(appendLabels(labels), "v1", "Node", "", keyName)
 	}
 }
 
