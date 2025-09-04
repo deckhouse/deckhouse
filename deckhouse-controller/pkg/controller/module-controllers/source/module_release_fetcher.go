@@ -301,6 +301,17 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		return nil
 	}
 
+	// For all non-LTS channels, check that minor version jumps are not allowed
+	// Major version jumps (1.0.0 -> 2.0.0) are allowed, but minor jumps (1.0.0 -> 1.2.0) are not
+	if !isUpdatingSequence(actual.GetVersion(), newSemver) {
+		logger.Warn("Non-LTS channel does not allow minor version jumps",
+			slog.String("current", "v"+actual.GetVersion().String()),
+			slog.String("target", "v"+newSemver.String()),
+			slog.String("channel", f.releaseChannel))
+		return fmt.Errorf("Non-LTS channel does not allow minor version jumps: current 'v%s' target 'v%s'",
+			actual.GetVersion().String(), newSemver.String())
+	}
+
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		return fmt.Errorf("get new versions: %w", err)

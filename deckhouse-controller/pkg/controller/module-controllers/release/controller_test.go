@@ -834,6 +834,106 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
 		})
 	})
+
+	// Stable Release channel tests for modules
+	suite.Run("Stable Release channel", func() {
+		suite.Run("prevent minor version jump for modules", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode:    "Auto",
+					Windows: make(update.Windows, 0),
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			testData := suite.fetchTestFileData("stable-module-prevent-minor-jump.yaml")
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+			// Test module release with 2 minor version jump (1.0.0 -> 1.2.0)
+			// For modules in Stable channel, minor version jumps should be prevented
+			mr := suite.getModuleRelease("test-module-v1.2.0")
+
+			// Try multiple calls to handleRelease
+			for i := 0; i < 3; i++ {
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
+
+				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseSuperseded {
+					break
+				}
+			}
+
+			// Should be superseded as Stable channel prevents minor version jumps
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, mr.Status.Phase)
+			require.Contains(suite.T(), mr.Status.Message, "not sequential version")
+		})
+
+		suite.Run("allow single minor version jump for modules", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode:    "Auto",
+					Windows: make(update.Windows, 0),
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			testData := suite.fetchTestFileData("stable-module-allow-single-minor-jump.yaml")
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+			// Test module release with 1 minor version jump (1.0.0 -> 1.1.0)
+			// For modules in Stable channel, single minor version jump should be allowed
+			mr := suite.getModuleRelease("test-module-v1.1.0")
+
+			// Try multiple calls to handleRelease
+			for i := 0; i < 3; i++ {
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
+
+				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+					break
+				}
+			}
+
+			// Should be deployed as single minor version jump is allowed in Stable channel
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
+		})
+
+		suite.Run("allow major version jump for modules", func() {
+			mup := &v1alpha2.ModuleUpdatePolicySpec{
+				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
+					Mode:    "Auto",
+					Windows: make(update.Windows, 0),
+				},
+				ReleaseChannel: "Stable",
+			}
+
+			testData := suite.fetchTestFileData("stable-module-allow-major-jump.yaml")
+			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
+
+			// Test module release with major version jump (1.0.0 -> 2.0.0)
+			// For modules in Stable channel, major version jump should be allowed
+			mr := suite.getModuleRelease("test-module-v2.0.0")
+
+			// Try multiple calls to handleRelease
+			for i := 0; i < 3; i++ {
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+
+				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
+
+				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
+					break
+				}
+			}
+
+			// Should be deployed as major version jump is allowed in Stable channel
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
+		})
+	})
 }
 
 func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedContainer, releaseName string) {

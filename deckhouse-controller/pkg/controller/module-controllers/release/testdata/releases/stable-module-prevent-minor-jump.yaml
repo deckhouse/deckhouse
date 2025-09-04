@@ -1,0 +1,64 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  namespace: default
+spec:
+  version: "1.0.0"
+  source: test-source
+  releaseChannel: "Stable"
+status:
+  phase: Ready
+  conditions:
+  - type: IsReady
+    status: "True"
+  - type: EnabledByModuleManager
+    status: "True"
+  - type: EnabledByModuleConfig
+    status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: test-source
+  namespace: default
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/ce/modules
+    scheme: HTTPS
+status:
+  phase: Active
+  modules:
+  - name: test-module
+    version: "1.2.0"
+    checksum: sha256:test-checksum
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: test-module-v1.0.0
+  namespace: default
+  labels:
+    module: test-module
+spec:
+  moduleName: test-module
+  version: "1.0.0"
+  weight: 900
+status:
+  phase: Deployed
+  message: ""
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: test-module-v1.2.0
+  namespace: default
+  labels:
+    module: test-module
+spec:
+  moduleName: test-module
+  version: "1.2.0"
+  weight: 900
+status:
+  phase: Pending
+  message: ""
