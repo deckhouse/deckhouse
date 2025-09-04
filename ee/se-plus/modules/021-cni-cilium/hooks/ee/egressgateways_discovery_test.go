@@ -16,6 +16,7 @@ var _ = Describe("cni-cilium :: hooks :: egress_discovery ::", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal": {"egressGatewaysMap": {}}}}`, "")
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGateway", false)
 	f.RegisterCRD("internal.network.deckhouse.io", "v1alpha1", "SDNInternalEgressGatewayInstance", false)
+	f.RegisterCRD("cilium.io", "v2", "CiliumNode", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
