@@ -528,7 +528,7 @@ shell:
   #
   # copy base images binaries
   - |
-    echo "{{ $baseImagesBinaries }}" | tr ' ' '\n' | sort -u | while read -r file; do
+    for file in {{ $baseImagesBinaries }}; do
       if [ -f "$file" ] || [ -L "$file" ]; then
         dir="/relocate/$(dirname "$file")"
         mkdir -p "$dir"
