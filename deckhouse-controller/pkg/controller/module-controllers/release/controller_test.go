@@ -40,6 +40,7 @@ import (
 	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
@@ -849,14 +850,13 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("stable-module-prevent-minor-jump.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			// Test module release with 2 minor version jump (1.0.0 -> 1.2.0)
+			// Test that ModuleRelease with 2 minor version jump (1.0.0 -> 1.2.0) is not created
 			// For modules in Stable channel, minor version jumps should be prevented
-			mr := suite.getModuleRelease("test-module-v1.2.0")
-
-			// Try to handle release - should return error due to minor version jump
-			_, err := suite.ctr.handleRelease(ctx, mr)
+			// The ModuleRelease should not exist because our logic prevents its creation
+			mr := new(v1alpha1.ModuleRelease)
+			err := suite.client.Get(ctx, client.ObjectKey{Name: "test-module-v1.2.0"}, mr)
 			require.Error(suite.T(), err)
-			require.Contains(suite.T(), err.Error(), "Non-LTS channel does not allow minor version jumps")
+			require.True(suite.T(), apierrors.IsNotFound(err), "ModuleRelease should not be created due to minor version jump prevention")
 		})
 
 		suite.Run("allow single minor version jump for modules", func() {
@@ -871,7 +871,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("stable-module-allow-single-minor-jump.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			// Test module release with 1 minor version jump (1.0.0 -> 1.1.0)
+			// Test that ModuleRelease with 1 minor version jump (1.0.0 -> 1.1.0) is created
 			// For modules in Stable channel, single minor version jump should be allowed
 			mr := suite.getModuleRelease("test-module-v1.1.0")
 
@@ -893,7 +893,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("stable-module-allow-major-jump.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			// Test module release with major version jump (1.0.0 -> 2.0.0)
+			// Test that ModuleRelease with major version jump (1.0.0 -> 2.0.0) is created
 			// For modules in Stable channel, major version jump should be allowed
 			mr := suite.getModuleRelease("test-module-v2.0.0")
 
