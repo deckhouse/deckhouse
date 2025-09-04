@@ -67,9 +67,8 @@ spec:
     sau_pod_name="$(/opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
       jq -er '.items[0].metadata.name')";
 
-    if ! current_sau_ds_generation="$(/opt/deckhouse/bin/crictl pods --name ${sau_pod_name} -o json | \
-      jq -er '.items[0].annotations."safe-agent-updater-daemonset-generation"')" || \
-      [[ "${current_sau_ds_generation}" != "${desired_sau_ds_generation}" ]];
+    if /opt/deckhouse/bin/crictl pods --name ${sau_pod_name} -o json | \
+      jq --arg desired_sau_ds_generation "$desired_sau_ds_generation" -e '.items[0].annotations."safe-agent-updater-daemonset-generation" != $desired_sau_ds_generation' > /dev/null;
     then
       bb-kubectl --kubeconfig $kubeconfig delete pod -n d8-cni-cilium -l app=safe-agent-updater \
         --field-selector spec.nodeName=$(bb-d8-node-name)
