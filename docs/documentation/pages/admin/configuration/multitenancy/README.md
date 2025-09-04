@@ -29,7 +29,7 @@ Using projects helps address these limitations and offers the following benefits
   allowing developers to deploy and test their applications without affecting others.
 
 {% alert level="warning" %}
-[Secret copying](TODO?) across all namespaces is incompatible with projects in multitenancy mode.
+[Secret copying](modules/secret-copier) across all namespaces is incompatible with projects in multitenancy mode.
 
 This mode creates isolated environments for users within their projects,
 while `secret-copier` automatically distributes secrets to all namespaces.

@@ -10,10 +10,10 @@ lang: en
 
 The following custom resources are used to create a project:
 
-* [ProjectTemplate](TODO): Describes the project template.
+* [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate): Describes the project template.
   It defines the list of resources to be created in the project
   and the parameter schema that can be passed during project creation.
-* [Project](TODO): Describes a specific project.
+* [Project](/modules/multitenancy-manager/cr.html#project): Describes a specific project.
 
 When a Project is created from a specified ProjectTemplate, the following occurs:
 

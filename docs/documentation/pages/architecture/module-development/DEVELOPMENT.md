@@ -158,7 +158,7 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
    - The previously deployed version (ModuleRelease v1.0.0) is used.
    - New releases are checked.
    - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
-   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](/modules/deckhouse/configuration.html#parameters-update)
 
    If the module is re-enabled after 72 hours:
    - The old version is deleted (`delete ModuleRelease v1.0.0`).

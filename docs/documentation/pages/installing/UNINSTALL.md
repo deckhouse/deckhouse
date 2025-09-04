@@ -24,7 +24,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
    where:
    - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e. g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
+   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
      - `alpha` — for the *Alpha* release channel;
      - `beta` — for the *Beta* release channel;
      - `early-access` — for the *Early Access* release channel;
@@ -76,7 +76,7 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
    where:
    - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e. g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
+   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
      - `alpha` — for the *Alpha* release channel;
      - `beta` — for the *Beta* release channel;
      - `early-access` — for the *Early Access* release channel;
@@ -128,7 +128,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
    where:
    - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e.g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
-   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
+   - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
      - `alpha` — for the *Alpha* release channel;
      - `beta` — for the *Beta* release channel;
      - `early-access` — for the *Early Access* release channel;

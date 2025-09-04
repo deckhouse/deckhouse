@@ -145,7 +145,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ee:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
+1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
    If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -352,7 +352,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
+1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
 If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -388,7 +388,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
 
 ## Switching DKP from EE to SE
 
-To perform the switch, you will need a valid license token. If needed, you can [request a temporary license](https://deckhouse.io/products/kubernetes-platform) by clicking the *Request Consultation* button.
+To perform the switch, you will need a valid license token.
 
 {% alert level="info" %}
 This instruction uses the public container registry address: `registry.deckhouse.ru`.

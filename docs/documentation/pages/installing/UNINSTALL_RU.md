@@ -24,7 +24,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
@@ -76,7 +76,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа:
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;
@@ -128,7 +128,7 @@ lang: ru
    где:
    - `<MOUNT_OPTIONS>` — параметры монтирования файлов в контейнер инсталлятора, таких как SSH-ключи доступа;
    - `<DECKHOUSE_REVISION>` — [редакция](../revision-comparison.html) Deckhouse (например, `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
-   - `<RELEASE_CHANNEL>` — [канал обновлений](../modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
+   - `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) Deckhouse в kebab-case:
      - `alpha` — для канала обновлений *Alpha*;
      - `beta` — для канала обновлений *Beta*;
      - `early-access` — для канала обновлений *Early Access*;

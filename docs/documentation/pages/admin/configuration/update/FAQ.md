@@ -122,7 +122,7 @@ For information about the current DKP versions across all release channels, visi
 
 ## What should I do if DKP is not receiving updates from the configured channel?
 
-- Ensure the [correct release channel](/products/kubernetes-platform/documentation/v1/architecture/updating.html#release-channels) is configured.
+- Ensure the [correct release channel](./architecture/updating.html#release-channels) is configured.
 - Check that DNS resolution for the Deckhouse image registry is working correctly.
   
   Get and compare the IP addresses of `registry.deckhouse.io` from both a node and the `deckhouse` Pod.

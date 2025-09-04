@@ -346,7 +346,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
+      [automatically](../../installing/#advanced-scheduling).</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file:
@@ -544,8 +544,8 @@ Parameters that can be used in `module.yaml`:
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
-- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
+- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](/reference/api/global.html#parameters-modules) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
   For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
 - `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.

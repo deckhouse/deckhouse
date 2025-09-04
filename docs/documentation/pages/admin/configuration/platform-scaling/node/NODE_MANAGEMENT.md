@@ -51,7 +51,7 @@ Node management is implemented via the [`node-manager`](/modules/node-manager/) 
    # Or disable.
    ```
 
-1. Using the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/):
+1. Using the [Deckhouse web interface](./user/web/console.html):
 
    - Go to the "Deckhouse → Modules" section.
    - Find the `node-manager` module and click on it.

@@ -51,9 +51,9 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
    d8 platform module disable control-plane-manager
    ```
 
-1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](./user/web/console.html):
 
-   - перейдите в раздел «Deckhouse - «Модули»;
+   - перейдите в раздел «Deckhouse — «Модули»;
    - найдите модуль `control-plane-manager` и нажмите на него;
    - включите тумблер «Модуль включен».
 

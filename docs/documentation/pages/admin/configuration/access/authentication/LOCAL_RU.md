@@ -15,7 +15,7 @@ lang: ru
 
 Для создания статического пользователя создайте ресурс User.
 
-Пример создания ресурса (обратите внимание, что в приведенном примере указан [ttl](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user-v1-spec-ttl)):
+Пример создания ресурса (обратите внимание, что в приведенном примере указан [ttl](/modules/user-authn/cr.html#user-v1-spec-ttl)):
 
 ```yaml
 apiVersion: deckhouse.io/v1

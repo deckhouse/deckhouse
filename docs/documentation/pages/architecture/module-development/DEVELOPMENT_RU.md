@@ -158,7 +158,7 @@ accessibility:
    - Используется та же версия, которая была задеплоена ранее (ModuleRelease v1.0.0).
    - Проверяются новые релизы.
    - При их наличии они загружаются (например, v1.1.0, v1.1.1).
-   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../deckhouse-release-channels.html) (Update). [Подробнее](../../modules/deckhouse/configuration.html#parameters-update).
+   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../deckhouse-release-channels.html) (Update). [Подробнее](/modules/deckhouse/configuration.html#parameters-update).
 
    Если модуль включён позже 72 часов:
    - Старая версия удаляется (`delete ModuleRelease v1.0.0`).

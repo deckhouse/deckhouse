@@ -346,7 +346,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
+      [automatically](../../installing/#advanced-scheduling).</code>
 ```
 
 Пример файла `/openapi/doc-ru-config-values.yaml` для русскоязычного перевода схемы:
@@ -544,8 +544,8 @@ dependencies:
   - `kubernetes` — *Строка.* Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes).
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
 - `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
-- `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](../../cr.html#module) по шаблону `module.deckhouse.io/<TAG>=""`.
+Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
+- `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](/reference/api/global.html#parameters-modules) по шаблону `module.deckhouse.io/<TAG>=""`.
 
   Например, если указать `tags: ["test", "myTag"]`, то объект Module получит лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
 - `weight` — *Число.* Вес модуля. Влияет на порядок запуска модулей: модули с меньшим значением `weight` запускаются раньше. По умолчанию — `900`.

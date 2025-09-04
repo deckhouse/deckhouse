@@ -14,7 +14,7 @@ Local authentication involves creating User and Group resources in the cluster f
 
 To create a static user, create a User resource.
 
-Example resource definition (note that the example includes a [ttl](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#user-v1-spec-ttl)):
+Example resource definition (note that the example includes a [ttl](/modules/user-authn/cr.html#user-v1-spec-ttl)):
 
 ```yaml
 apiVersion: deckhouse.io/v1

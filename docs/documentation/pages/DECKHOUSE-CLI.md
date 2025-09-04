@@ -22,7 +22,7 @@ The `d8 dk` and `d8 mirror` command groups are not available for Community Editi
 
   Usage scenario:
 
-  - [Manually uploading images to an air-gapped registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry).
+  - [Manually uploading images to an air-gapped registry](./installing/#manual-loading-of-deckhouse-kubernetes-platform-images-vulnerability-scanner-db-and-dkp-modules-into-a-private-registry).
 
 * `d8 v` — the set of commands for managing virtual machines created by [Deckhouse Virtualization Platform](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     For example, the `d8 virtualization console` command execs you into the VM console.

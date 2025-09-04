@@ -52,7 +52,7 @@ DKP может работать как с bare-metal, так и с облачн�
    # Или disable.
    ```
 
-1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](./user/web/console.html):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `node-manager` и нажмите на него;
