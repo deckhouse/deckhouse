@@ -127,7 +127,7 @@ To properly recover a multi-master cluster, follow these steps:
 1. Wait for the tasks from the Deckhouse queue to complete:
 
     ```shell
-    d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 p queue main
     ```
 
 1. Switch the cluster back to multi-master mode in accordance with [instruction](#how-to-add-master-nodes-to-a-cloud-cluster) for cloud clusters or [instruction](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) for static or hybrid clusters.

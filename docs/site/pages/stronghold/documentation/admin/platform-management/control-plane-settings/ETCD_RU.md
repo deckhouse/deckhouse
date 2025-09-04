@@ -128,7 +128,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 p queue main
    ```
 
 1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](masters.html#добавление-master-узла).
