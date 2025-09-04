@@ -79,6 +79,7 @@
  - **[cloud-provider-aws]** Bumped `terraform-provider-aws` to `5.83.1`. [#11546](https://github.com/deckhouse/deckhouse/pull/11546)
  - **[cloud-provider-azure]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-azure]** bump Azure Terraform provider (azurerm) to v3.117.1 [#12937](https://github.com/deckhouse/deckhouse/pull/12937)
+ - **[cloud-provider-dvp]** fix virtualMachineClassName in terraform [#14251](https://github.com/deckhouse/deckhouse/pull/14251)
  - **[cloud-provider-dvp]** Fix cherry-pick conflicts pr https://github.com/deckhouse/deckhouse/pull/13779 [#13876](https://github.com/deckhouse/deckhouse/pull/13876)
  - **[cloud-provider-dvp]** fix cluster-autoscaler rbac issues [#13642](https://github.com/deckhouse/deckhouse/pull/13642)
  - **[cloud-provider-dvp]** fix cloud-data-discoverer rbac [#13625](https://github.com/deckhouse/deckhouse/pull/13625)
@@ -86,7 +87,6 @@
  - **[cloud-provider-dynamix]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-dynamix]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-gcp]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
- - **[cloud-provider-huaweicloud]** fix virtualMachineClassName in terraform [#14251](https://github.com/deckhouse/deckhouse/pull/14251)
  - **[cloud-provider-huaweicloud]** Added probes for `kube-rbac-proxy` in cloud provider components. [#13520](https://github.com/deckhouse/deckhouse/pull/13520)
  - **[cloud-provider-huaweicloud]** Fixed bild cloud-data-discoverer. [#13141](https://github.com/deckhouse/deckhouse/pull/13141)
  - **[cloud-provider-huaweicloud]** Added the `--cluster-name` CLI flag to the `cloud-controller-manager`. [#12950](https://github.com/deckhouse/deckhouse/pull/12950)
@@ -143,6 +143,7 @@
  - **[ingress-nginx]** Resolve conflicts to successfully merge [ingress-nginx] Restore validation [#13993](https://github.com/deckhouse/deckhouse/pull/13993)
  - **[ingress-nginx]** Implemented iptables cleanup when `HostWithFailover` Inlet was reconfigured to another nodes or deleted. [#13106](https://github.com/deckhouse/deckhouse/pull/13106)
  - **[ingress-nginx]** Forbidden to enable `enableIstioSidecar` when `HostWithFailover` is enabled. [#12789](https://github.com/deckhouse/deckhouse/pull/12789)
+ - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15146](https://github.com/deckhouse/deckhouse/pull/15146)
  - **[istio]** fixed an error in processing custom input gateway addresses using the configuration option of the alliance.ingressGateway.advertise module. [#14850](https://github.com/deckhouse/deckhouse/pull/14850)
  - **[istio]** Added condition if the `cloud-provider-huaweicloud` module is enabled, define `RBAC` permissions granting the `cloud-controller-manager` access to list pods in the `d8-istio` namespace. [#13270](https://github.com/deckhouse/deckhouse/pull/13270)
  - **[istio]** Added `RBAC` rules to grant the HuaweiCloud `cloud-controller-manager` permission to view pods in the `d8-istio` namespace. [#12951](https://github.com/deckhouse/deckhouse/pull/12951)
@@ -194,6 +195,7 @@
  - **[candi]** Bump patch versions of Kubernetes images. [#13572](https://github.com/deckhouse/deckhouse/pull/13572)
     Kubernetes control-plane components will restart, kubelet will restart.
  - **[candi]** Update Deckhouse CLI to 0.12.1 [#13651](https://github.com/deckhouse/deckhouse/pull/13651)
+ - **[cert-manager]** Fixes for CVE-2025-22870 CVE-2025-22872 CVE-2025-22869 CVE-2025-22868 CVE-2025-27144 CVE-2025-30204 [#15123](https://github.com/deckhouse/deckhouse/pull/15123)
  - **[cloud-provider-vcd]** Added еhe `VCD provider` outputs logs in JSON format. [#13183](https://github.com/deckhouse/deckhouse/pull/13183)
  - **[cni-cilium]** Improve kernel versions check and the requirements for further cilium update added. [#13425](https://github.com/deckhouse/deckhouse/pull/13425)
  - **[cni-cilium]** Revert adding the encryption mode. [#13557](https://github.com/deckhouse/deckhouse/pull/13557)
@@ -212,6 +214,8 @@
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14033](https://github.com/deckhouse/deckhouse/pull/14033)
  - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
  - **[operator-trivy]** Set proxy env for updater and operator. [#13337](https://github.com/deckhouse/deckhouse/pull/13337)
+ - **[runtime-audit-engine]** Fixed CVE's: CVE-2025-30204, CVE-2025-29923, CVE-2025-22869, CVE-2025-22870, CVE-2025-22872, CVE-2025-22868, CVE-2025-8556, CVE-2025-54410, GHSA-fv92-fjc5-jj9h [#15113](https://github.com/deckhouse/deckhouse/pull/15113)
+ - **[runtime-audit-engine]** Limit memory consumption by falco containers [#14818](https://github.com/deckhouse/deckhouse/pull/14818)
  - **[runtime-audit-engine]** Removed deprecated `falco_events` metric. [#13228](https://github.com/deckhouse/deckhouse/pull/13228)
     Dashboards and alerts based on the `falco_events` metric might be broken.
 
