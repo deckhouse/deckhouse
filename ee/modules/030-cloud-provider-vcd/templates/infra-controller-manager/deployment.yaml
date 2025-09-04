@@ -76,13 +76,14 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       automountServiceAccountToken: true
+      hostNetwork: true
       serviceAccountName: infra-controller-manager
       containers:
       - name: infra-controller-manager
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . $icmImageName) }}
         args:
-        - --health-probe-bind-address=127.0.0.1:8080
+        - --health-probe-bind-address=:8080
         - --leader-elect
         - --leader-election-namespace=d8-cloud-provider-vcd
         env:
@@ -133,12 +134,12 @@ spec:
           httpGet:
             path: /healthz
             port: 8080
-            scheme: HTTPS
+            scheme: HTTP
         readinessProbe:
           httpGet:
             path: /readyz
             port: 8080
-            scheme: HTTPS
+            scheme: HTTP
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
