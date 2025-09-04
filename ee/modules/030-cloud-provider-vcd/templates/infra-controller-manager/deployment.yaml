@@ -69,7 +69,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: infra-controller-manager
         kubectl.kubernetes.io/default-logs-container: infra-controller-manager
-        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/infra-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/connection-info.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
