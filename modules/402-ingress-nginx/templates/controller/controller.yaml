@@ -175,9 +175,10 @@ spec:
             readOnlyRootFilesystem: true
           imagePullPolicy: IfNotPresent
           command:
-            - /bin/touch
-            - /tmp/resolv.conf
-            - /tmp/opentelemetry.toml
+            - sh
+            - -c
+            - --
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log && chomod 0666 /tmp/*"
           volumeMounts:
             - name: write-files
               mountPath: /tmp
@@ -364,16 +365,17 @@ spec:
           mountPath: /chroot/var/log/valgrind
           readOnly: false
 {{- end }}
-{{- if ne $controllerVersion "1.9" }}
         - mountPath: /chroot/etc/resolv.conf
           name: write-files
           subPath: resolv.conf
         - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
           name: write-files
-          subPath: opentelemetry.toml      
+          subPath: opentelemetry.toml
+        - mountPath: /chroot/var/log/nginx/error.log
+          name: write-files
+          subPath: error.log
         - mountPath: /chroot/etc/ingress-controller/ssl
           name: tmp-ssl
-{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}

@@ -87,6 +87,8 @@ spec:
             type: FileOrCreate
         - name: write-files
           emptyDir: {}
+        - name: tmp-nginx
+          emptyDir: {}
       initContainers:
       - name: touch-files
         image: {{ include "helm_lib_module_common_image" (list $context "init") }}
@@ -96,6 +98,7 @@ spec:
         command:
           - /bin/touch
           - /tmp/nginx.conf
+          - /tmp/error.log
         volumeMounts:
           - name: write-files
             mountPath: /tmp
@@ -136,6 +139,11 @@ spec:
           - mountPath: /opt/nginx-static/conf/nginx.conf
             name: write-files
             subPath: nginx.conf
+          - mountPath: /opt/nginx-static/logs/error.log
+            name: write-files
+            subPath: error.log
+          - mountPath: /opt/nginx-static/client_body_temp
+            name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:

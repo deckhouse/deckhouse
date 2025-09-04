@@ -1,2 +1,3 @@
 dirs:
  - /opt/nginx-static/additional-conf
+ - /opt/nginx-static/client_body_temp

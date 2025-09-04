@@ -89,8 +89,11 @@ spec:
             readOnlyRootFilesystem: true
           imagePullPolicy: IfNotPresent
           command:
-            - /bin/touch
-            - /tmp/resolv.conf
+          command:
+            - sh
+            - -c
+            - --
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/nginx.pid /tmp/error.log && chomod 0666 /tmp/*"
           volumeMounts:
             - name: write-files
               mountPath: /tmp/
@@ -173,10 +176,17 @@ spec:
             - mountPath: /chroot/etc/resolv.conf
               name: write-files
               subPath: resolv.conf
+            - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+              name: write-files
+              subPath: opentelemetry.toml
             - mountPath: /chroot/etc/ingress-controller/ssl
               name: tmp-ssl
-            - mountPath: /chroot/tmp/nginx
-              name: tmp-nginx
+            - mountPath: /chroot/tmp/nginx/nginx.pid
+              name: write-files
+              subPath: nginx.pid
+            - mountPath: /chroot/var/log/nginx/error.log
+              name: write-files
+              subPath: error.log
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -187,8 +197,6 @@ spec:
         - name: write-files
           emptyDir: {}
         - name: tmp-ssl
-          emptyDir: {}
-        - name: tmp-nginx
           emptyDir: {}
 {{- end }}
 
