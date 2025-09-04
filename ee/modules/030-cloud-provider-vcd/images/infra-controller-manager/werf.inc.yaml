@@ -58,6 +58,6 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /infra-controller-manager
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /infra-controller-manager ./...
   - chown 64535:64535 /infra-controller-manager
   - chmod 0755 /infra-controller-manager
