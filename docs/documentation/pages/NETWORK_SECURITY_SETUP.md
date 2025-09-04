@@ -8,7 +8,7 @@ lang: en
 
 If the infrastructure where Deckhouse Kubernetes Platform (DKP) is running has requirements to limit host-to-host network communications, the following conditions must be met:
 
-* Tunneling mode for traffic between pods is enabled ([configuration](modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [configuration](modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel).
+* Tunneling mode for traffic between pods is enabled ([configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode) for CNI Cilium, [configuration](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) for CNI Flannel).
 * Traffic between [podSubnetCIDR](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) encapsulated within a VXLAN is allowed (if inspection and filtering of traffic within a VXLAN tunnel is performed).
 * If there is integration with external systems (e.g. LDAP, SMTP or other external APIs), it is required to allow network communication with them.
 * Local network communication is fully allowed within each individual cluster node.

@@ -46,20 +46,20 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-1. [InitConfiguration](configuration.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse), необходимые для корректного запуска Deckhouse после установки.
+1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse), необходимые для корректного запуска Deckhouse после установки.
 
    Основные настройки, задаваемые в этом ресурсе:
 
-   * [Параметры размещения компонентов](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys);
-   * Используемый [StorageClass](../deckhouse-configure-global.html#parameters-storageclass) (параметры хранилища);
-   * Параметры доступа к [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg);
-   * Шаблон [DNS-имен](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate);
+   * [Параметры размещения компонентов](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys);
+   * Используемый [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass);
+   * Параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg);
+   * Шаблон [DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate);
    * Другие важные параметры, без которых Deckhouse не сможет корректно функционировать.
 
-1. [ClusterConfiguration](configuration.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые настройки, параметры CRI и т. д.
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые настройки, параметры CRI и т. д.
     > Этот ресурс требуется использовать только в случае, если Deckhouse устанавливается с предварительным развертыванием кластера Kubernetes. Если Deckhouse устанавливается в уже существующий кластер, этот ресурс не нужен.
 
-1. [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — параметры для кластеров Kubernetes, развертываемых на серверах bare-metal или виртуальных машинах в неподдерживаемых облаках.
+1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры для кластеров Kubernetes, развертываемых на серверах bare-metal или виртуальных машинах в неподдерживаемых облаках.
    > Этот ресурс требуется использовать только в случае, если Deckhouse устанавливается с предварительным развертыванием кластера Kubernetes. Если Deckhouse устанавливается в уже существующий кластер, этот ресурс не нужен.
 
 1. `<CLOUD_PROVIDER>ClusterConfiguration` — набор ресурсов, содержащих параметры конфигурации поддерживаемых облачных провайдеров. Включает такие параметры, как:
@@ -71,14 +71,14 @@ YAML-файл конфигурации установки содержит па�
 
    Список ресурсов конфигурации поддерживаемых облачных провайдеров:
 
-   * [AWSClusterConfiguration](../modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-   * [AzureClusterConfiguration](../modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [GCPClusterConfiguration](../modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-   * [OpenStackClusterConfiguration](../modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-   * [VsphereClusterConfiguration](../modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-   * [VCDClusterConfiguration](../modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](../modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
+   * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
+   * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
+   * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
+   * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
+   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
+   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — набор ресурсов, содержащих параметры конфигурации [встроенных модулей Deckhouse](../).
 
@@ -372,7 +372,7 @@ dhctl bootstrap \
 Список проверок, выполняемых инсталлятором перед началом установки Deckhouse:
 
 1. Общие проверки:
-   - Значения параметров [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) не совпадают.
+   - Значения параметров [PublicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;
