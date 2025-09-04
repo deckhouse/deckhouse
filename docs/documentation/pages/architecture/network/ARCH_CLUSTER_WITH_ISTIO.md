@@ -61,7 +61,7 @@ Therefore, the more applications and their instances, the more services, and the
 the more computational resources are required and the greater the load on the network.
 Two approaches are supported to reduce the load on controller instances:
 
-* Horizontal scaling (the [`controlPlane.replicasManagement`](../../modules/istio/configuration.html#parameters-controlplane-replicasmanagement) parameter
+* Horizontal scaling (the [`controlPlane.replicasManagement`](/modules/istio/configuration.html#parameters-controlplane-replicasmanagement) parameter
   of the module) — the more controller instances, the fewer instances of istio sidecars to serve for each controller
   and the less CPU and network load.
 * Data-plane segmentation using the [Sidecar](../../modules/istio/istio-cr.html#sidecar) resource (recommended approach)

@@ -78,7 +78,7 @@ d8 k edit moduleconfig/upmeter
 Для применения изменений конфигурации узлов необходимо выполнить команду `dhctl converge`, запустив инсталлятор DKP. Эта команда синхронизирует состояние узлов с указанным в конфигурации.
 {% endalert %}
 
-Общие параметры кластера хранятся в структуре [ClusterConfiguration](installing/configuration.html#clusterconfiguration).
+Общие параметры кластера хранятся в структуре [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration).
 
 Чтобы изменить общие параметры кластера, выполните команду:
 

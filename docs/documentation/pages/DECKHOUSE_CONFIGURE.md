@@ -78,7 +78,7 @@ To apply changes related to node configuration, you must run the `dhctl converge
 This command synchronizes the actual node state with the specified configuration.
 {% endalert %}
 
-General cluster parameters are defined in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
+General cluster parameters are defined in the [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration) structure.
 
 To modify these parameters, run the following command:
 

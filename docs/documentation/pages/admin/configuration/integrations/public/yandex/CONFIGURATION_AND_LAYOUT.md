@@ -489,7 +489,7 @@ Read through the [security group specifics in Yandex Cloud](https://yandex.cloud
 
 1. Identify the cloud network used by the DKP cluster.
 
-   The network name matches the `prefix` field in the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource.
+   The network name matches the `prefix` field in the [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration) resource.
    You can retrieve it using the following command:
 
    ```bash

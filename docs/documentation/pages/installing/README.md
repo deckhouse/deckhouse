@@ -80,7 +80,7 @@ The installation configuration YAML file contains parameters for several resourc
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
-   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/prometheus/configuration.html#parameters-nodeselector) parameter.
+   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter.
 
 1. `IngressNginxController` — deploying the Ingress controller.
 
@@ -320,7 +320,7 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
+1. `<RELEASE_CHANNEL>` — the [update channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
    - `alpha` — for the Alpha update channel;
    - `beta` — for the Beta update channel;
    - `early-access` — for the Early Access update channel;
@@ -725,7 +725,7 @@ You can check the current status of versions in the release channels at [release
 
    When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   In the [InitConfiguration](installing/configuration.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
+   In the [InitConfiguration](reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
 
 ### Creating a cluster and running DKP without using update channels
 
@@ -736,10 +736,10 @@ This method should only be used if your isolated private registry does not conta
 If you need to install DKP with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
-1. Specify the appropriate version number in the [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](installing/configuration.html#initconfiguration) resource.  
-   > **Do not specify** the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter in the [InitConfiguration](installing/configuration.html#initconfiguration) resource.
+1. Specify the appropriate version number in the [deckhouse.devBranch](/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](reference/api/cr.html#initconfiguration) resource.  
+   > **Do not specify** the [deckhouse.releaseChannel](/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in the [InitConfiguration](/reference/api/cr.html#initconfiguration) resource.
 
-If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
 
@@ -785,7 +785,7 @@ Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (
 
 {% endofftopic %}
 
-To configure DKP to use a proxy, use the [proxy](installing/configuration.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
+To configure DKP to use a proxy, use the [proxy](/reference/api/cr.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
 
 Example:
 

@@ -221,7 +221,7 @@ If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can
 
 ## Running DKP on an arbitrary node
 
-To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
+To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
 
 {% alert level="warning" %}
 Only use nodes of type **CloudStatic** or **Static** to run DKP. Avoid using a `NodeGroup` that contains only a single node for running DKP.

@@ -222,7 +222,7 @@ metadata:
 
 ## Запуск DKP на произвольном узле
 
-Для запуска DKP на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`. Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
+Для запуска DKP на произвольном узле установите у модуля `deckhouse` соответствующий [параметр](/modules/deckhouse/configuration.html) `nodeSelector` и не задавайте `tolerations`. Необходимые значения `tolerations` в этом случае будут проставлены автоматически.
 
 {% alert level="warning" %}
 Используйте для запуска DKP только узлы с типом **CloudStatic** или **Static**. Также избегайте использования для запуска DKP группы узлов (`NodeGroup`), содержащей только один узел.

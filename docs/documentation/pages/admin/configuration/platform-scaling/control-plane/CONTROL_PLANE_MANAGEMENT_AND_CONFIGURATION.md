@@ -19,7 +19,7 @@ The control plane management functionality includes:
 
 - Configuring kubeconfig. DKP generates an up-to-date configuration file (with `cluster-admin` privileges), handles automatic renewal and updates, and creates a `symlink` for the `root` user.
 
-> Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/installing/configuration.html#clusterconfiguration) resource.
+> Some parameters affecting control plane behavior are taken from the [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration) resource.
 
 ## Enabling, disabling, and configuring the module
 

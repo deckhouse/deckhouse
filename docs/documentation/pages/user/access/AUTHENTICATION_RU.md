@@ -90,7 +90,7 @@ DKP позволяет настраивать аутентификацию ка�
    * В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
    * Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
 
-     О настройке авторизации читайте в разделе [Авторизация](./admin/configuration/access/authorization/) документации. Все параметры `DexAuthenticator` описаны в разделе [Справка](modules/user-authn/configuration.html).
+     О настройке авторизации читайте в разделе [Авторизация](./admin/configuration/access/authorization/) документации. Все параметры `DexAuthenticator` описаны в разделе [Справка](/modules/user-authn/configuration.html).
 
 1. Добавьте в Ingress-ресурс приложения следующие аннотации:
 
@@ -99,7 +99,7 @@ DKP позволяет настраивать аутентификацию ка�
    - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
       - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
    Пример (для DexAuthenticator с именем `app-name`, в пространстве имен `app-ns`):
 

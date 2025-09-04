@@ -100,7 +100,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
 
      - `NAME` is the value of `metadata.name` from the `DexAuthenticator` resource;
      - `NS` is the value of `metadata.namespace` from the `DexAuthenticator` resource;
-     - `C_DOMAIN` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration-clusterdomain) resource).
+     - `C_DOMAIN` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration-clusterdomain) resource).
 
         Example (for a `DexAuthenticator` named `app-name` in namespace `app-ns`):
 

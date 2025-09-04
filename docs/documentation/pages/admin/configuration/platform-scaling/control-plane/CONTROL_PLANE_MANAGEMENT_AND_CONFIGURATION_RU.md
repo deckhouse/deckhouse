@@ -20,7 +20,7 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 
 - Настройка kubeconfig — DKP формирует актуальный конфигурационный файл (с правами `cluster-admin`), автоматическое продление и обновление, а также создание `symlink` для пользователя `root`.
 
-> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/installing/configuration.html#clusterconfiguration).
+> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/reference/api/cr.html#clusterconfiguration).
 
 ## Включение, отключение и настройка модуля
 
