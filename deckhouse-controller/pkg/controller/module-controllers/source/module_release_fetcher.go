@@ -173,6 +173,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
+	}
+
 	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
 	if err != nil {
 		return fmt.Errorf("download module definition: %w", err)

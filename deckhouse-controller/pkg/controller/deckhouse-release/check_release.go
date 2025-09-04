@@ -253,6 +253,11 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return fmt.Errorf("parse semver: %w", err)
 	}
 
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
+	}
+
 	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
 
 	// sort releases before
