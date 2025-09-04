@@ -14,12 +14,12 @@ lang: ru
 
 ### Требования к кластерам
 
-* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе ClusterConfiguration. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
+* Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе ClusterConfiguration. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
   > Значение `cluster.local` использовать нельзя — зарезервированный псевдоним для домена локального кластера.
-  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
+  > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Подсети сервисов и подов, заданные в параметрах [`serviceSubnetCIDR`](/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны различаться между кластерами.
+* Подсети сервисов и подов, заданные в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны различаться между кластерами.
 
   > При анализе трафика Istio использует:
   > - для HTTP/HTTPS-запросов — заголовки;

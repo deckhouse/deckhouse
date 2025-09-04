@@ -11,11 +11,11 @@ Available only in DKP Enterprise Edition (EE).
 
 ### Requirements for clusters
 
-* Cluster domains in the [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter
+* Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter
   of the ClusterConfiguration resource must be the same for all multicluster members. The default value is `cluster.local`.
 
-* Pod and Service subnets in the [`podSubnetCIDR`](/reference/api/cr.html#clusterconfiguration-podsubnetcidr)
-  and [`serviceSubnetCIDR`](/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters
+* Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)
+  and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters
   of the ClusterConfiguration resource must be unique for each multicluster member.
 
   > - When analyzing HTTP and HTTPS traffic _(in Istio terminology)_,
