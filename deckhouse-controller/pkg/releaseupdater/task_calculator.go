@@ -248,7 +248,7 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	return delta
 }
 
-const ltsReleaseChannel = "lts"
+const ltsReleaseChannel = "Lts"
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
