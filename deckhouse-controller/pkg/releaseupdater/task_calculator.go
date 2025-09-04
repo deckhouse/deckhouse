@@ -468,8 +468,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 
 				// it must await if deployed release has minor version more than one
-				// For modules, skip this check (allow any minor version jump)
-				if !ltsRelease && isDeckhouseRelease &&
+				// For modules in Stable channel, also apply this check (only LTS modules can jump versions)
+				if !ltsRelease &&
 					release.GetVersion().Minor()-1 > prevRelease.GetVersion().Minor() {
 					msg := fmt.Sprintf(
 						"minor version is greater than deployed %s by one",
