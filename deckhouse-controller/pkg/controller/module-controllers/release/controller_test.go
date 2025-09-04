@@ -853,21 +853,10 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			// For modules in Stable channel, minor version jumps should be prevented
 			mr := suite.getModuleRelease("test-module-v1.2.0")
 
-			// Try multiple calls to handleRelease
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseSuperseded {
-					break
-				}
-			}
-
-			// Should be superseded as Stable channel prevents minor version jumps
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseSuperseded, mr.Status.Phase)
-			require.Contains(suite.T(), mr.Status.Message, "not sequential version")
+			// Try to handle release - should return error due to minor version jump
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.Error(suite.T(), err)
+			require.Contains(suite.T(), err.Error(), "Non-LTS channel does not allow minor version jumps")
 		})
 
 		suite.Run("allow single minor version jump for modules", func() {
@@ -886,19 +875,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			// For modules in Stable channel, single minor version jump should be allowed
 			mr := suite.getModuleRelease("test-module-v1.1.0")
 
-			// Try multiple calls to handleRelease
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-					break
-				}
-			}
-
-			// Should be deployed as single minor version jump is allowed in Stable channel
+			// Try to handle release - should succeed for single minor version jump
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
 		})
 
@@ -918,19 +897,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			// For modules in Stable channel, major version jump should be allowed
 			mr := suite.getModuleRelease("test-module-v2.0.0")
 
-			// Try multiple calls to handleRelease
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-					break
-				}
-			}
-
-			// Should be deployed as major version jump is allowed in Stable channel
+			// Try to handle release - should succeed for major version jump
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
 		})
 	})
