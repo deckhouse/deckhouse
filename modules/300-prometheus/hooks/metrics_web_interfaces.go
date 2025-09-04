@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -26,6 +27,8 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // This hook get all ingresses with labels `heritage: deckhouse` and 'module'
@@ -145,16 +148,13 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func domainMetricHandler(input *go_hook.HookInput) error {
-	snap := input.Snapshots["ingresses"]
 	input.MetricsCollector.Expire("deckhouse_exported_domains")
 	globalHTTPSMode := input.ConfigValues.Get("global.modules.https.mode").String()
 
-	for _, sn := range snap {
-		if sn == nil {
-			continue
+	for domain, err := range sdkobjectpatch.SnapshotIter[exportedWebInterface](input.NewSnapshots.Get("ingresses")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ingresses' snapshots: %w", err)
 		}
-
-		domain := sn.(exportedWebInterface)
 
 		if globalHTTPSMode == "OnlyInURI" {
 			domain.URL = strings.ReplaceAll(domain.URL, "http://", "https://")

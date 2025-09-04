@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -70,16 +72,28 @@ func filterTokenSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func handleTokens(input *go_hook.HookInput) error {
-	grafanaTokenSnapshots := input.Snapshots["grafana_token"]
+	grafanaTokenSnapshots := input.NewSnapshots.Get("grafana_token")
 
 	if len(grafanaTokenSnapshots) > 0 {
-		input.Values.Set("loki.internal.grafanaToken", grafanaTokenSnapshots[0].(string))
+		var grafanaToken string
+		err := grafanaTokenSnapshots[0].UnmarshalTo(&grafanaToken)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal grafana token: %w", err)
+		}
+
+		input.Values.Set("loki.internal.grafanaToken", grafanaToken)
 	}
 
-	logShipperTokenSnapshots := input.Snapshots["log_shipper_token"]
+	logShipperTokenSnapshots := input.NewSnapshots.Get("log_shipper_token")
 
 	if len(logShipperTokenSnapshots) > 0 {
-		input.Values.Set("loki.internal.logShipperToken", logShipperTokenSnapshots[0].(string))
+		var logShipperToken string
+		err := logShipperTokenSnapshots[0].UnmarshalTo(&logShipperToken)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal log shipper token: %w", err)
+		}
+
+		input.Values.Set("loki.internal.logShipperToken", logShipperToken)
 	}
 
 	return nil

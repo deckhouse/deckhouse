@@ -61,7 +61,7 @@ func applySecertMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func istioMTLSswitchHook(input *go_hook.HookInput) error {
-	if len(input.Snapshots["prometheus_secret_mtls"]) == 1 {
+	if len(input.NewSnapshots.Get("prometheus_secret_mtls")) == 1 {
 		input.Values.Set(mTLSSwitchPath, true)
 	} else {
 		input.Values.Set(mTLSSwitchPath, false)
