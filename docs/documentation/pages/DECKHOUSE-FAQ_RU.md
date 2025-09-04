@@ -957,7 +957,7 @@ d8 platform edit cluster-configuration
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 p edit provider-cluster-configuration
 ```
 
 ### Как изменить конфигурацию статического кластера?
@@ -967,7 +967,7 @@ d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-contro
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 p edit static-cluster-configuration
 ```
 
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?

@@ -56,7 +56,7 @@ spec:
 или выполните команду:
 
 ```shell
-d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-controller module enable stronghold
+d8 p module enable stronghold
 ```
 
 По умолчанию, модуль запускается в режиме `Automatic` с инлетом `Ingress`. В текущей версии, другие режимы и инлеты не предусмотрены.
@@ -80,7 +80,7 @@ d8 kubectl -n d8-system exec deploy/deckhouse -c deckhouse -it -- deckhouse-cont
 - Root-токен из секрета `stronghold-keys` пространства имен `kubernetes d8-stronghold`. Пример команды получения root-токена:
 
   ```shell
-  d8 kubectl -n d8-stronghold get secret stronghold-keys -o json | jq -r .data.rootToken | base64 -d
+  d8 k -n d8-stronghold get secret stronghold-keys -o json | jq -r .data.rootToken | base64 -d
   ```
 
 - Токен доступа с полными правами через UI Deckhouse Admin.

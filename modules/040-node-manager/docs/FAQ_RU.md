@@ -290,7 +290,7 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
    Пример:
 
    ```shell
-   $ d8 k get instances | grep Pending
+   d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
@@ -303,7 +303,7 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
    Пример:
 
    ```shell
-   $ d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -438,7 +438,7 @@ spec:
 
 При изменении конфигурации Deckhouse (как в модуле `node-manager`, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Пересоздание происходит только после изменения ресурсов `InstanceClass` или `NodeGroup`.
 
-Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `d8 k annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
 ## Как выделить узлы под специфические нагрузки?
 
@@ -606,7 +606,7 @@ spec:
 
 Для изменения CRI для всего кластера, необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфигурационном файле `cluster-configuration`.
 
-Также возможно выполнить эту операцию с помощью `kubectl patch`.
+Также возможно выполнить эту операцию с помощью `d8 k patch`.
 
 * Для `Containerd`:
 

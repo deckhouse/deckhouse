@@ -252,7 +252,7 @@ Evict resources from the node and remove the node from LINSTOR/DRBD using the [i
 
 ## How do I know if something went wrong?
 
-If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
+If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `d8 k get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
 To view the logs of the `bashible` service on a specific node, run the following command:
 
@@ -281,7 +281,7 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    An example:
 
    ```shell
-   $ d8 k get instances | grep Pending
+   d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
@@ -294,7 +294,7 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    An example:
 
    ```shell
-   $ d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -429,7 +429,7 @@ During the disruption update, an evict of the pods from the node is performed. I
 
 If the Deckhouse configuration is changed (both in the node-manager module and in any of the cloud providers), the VMs will not be redeployed. The redeployment is performed only in response to changing `InstanceClass` or `NodeGroup` objects.
 
-To force the redeployment of all Machines, you need to add/modify the `manual-rollout-id` annotation to the `NodeGroup`: `kubectl annotate NodeGroup name_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+To force the redeployment of all Machines, you need to add/modify the `manual-rollout-id` annotation to the `NodeGroup`: `d8 k annotate NodeGroup name_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
 ## How do I allocate nodes to specific loads?
 

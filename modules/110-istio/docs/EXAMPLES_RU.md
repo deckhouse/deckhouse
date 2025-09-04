@@ -637,6 +637,8 @@ annotations:
 * Запустить прикладной init-контейнер от пользователя с uid `1337`. Запросы данного пользователя не перехватываются под управление Istio.
 * Исключить IP-адрес или порт сервиса из-под контроля Istio с помощью аннотаций `traffic.sidecar.istio.io/excludeOutboundIPRanges` или `traffic.sidecar.istio.io/excludeOutboundPorts`.
 
+{% alert level="warning" %}Каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
+
 ## Обновление Istio
 
 ## Обновление control plane Istio
@@ -659,7 +661,7 @@ annotations:
 Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 19), выполните команду:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

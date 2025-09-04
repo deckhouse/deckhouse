@@ -954,7 +954,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+d8 p edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -964,7 +964,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+d8 p edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
