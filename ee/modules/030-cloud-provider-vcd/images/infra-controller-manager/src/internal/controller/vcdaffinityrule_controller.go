@@ -49,10 +49,10 @@ var (
 // SetupWithManager sets up the controller with the Manager.
 func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	nodePredicate := predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
+		CreateFunc: func(_ event.CreateEvent) bool {
 			return true
 		},
-		DeleteFunc: func(e event.DeleteEvent) bool {
+		DeleteFunc: func(_ event.DeleteEvent) bool {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -184,8 +184,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if !vcdAffinityRule.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(vcdAffinityRule, finalizer) {
-
-		err := r.deleteVmAffinityRule(vcdAffinityRule, vdcClient)
+		err := r.deleteVMAffinityRule(vcdAffinityRule, vdcClient)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 		}
@@ -204,7 +203,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if vcdAffinityRule.Status.RuleID != "" {
 			r.Logger.Info("deleting affinity rule from VCD API due to insufficient VM count")
 
-			err = r.deleteVmAffinityRule(vcdAffinityRule, vdcClient)
+			err = r.deleteVMAffinityRule(vcdAffinityRule, vdcClient)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 			}
@@ -219,7 +218,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	vmAffinityRuleDefinition, err := r.buildVmAffinityRule(vcdAffinityRule, vappClient)
+	vmAffinityRuleDefinition, err := r.buildVMAffinityRule(vcdAffinityRule, vappClient)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to build vm affinity rule: %w", err)
 	}
@@ -262,7 +261,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *VCDAffinityRuleReconciler) buildVmAffinityRule(resource *v1alpha1.VCDAffinityRule, vapp *govcd.VApp) (*types.VmAffinityRule, error) {
+func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAffinityRule, vapp *govcd.VApp) (*types.VmAffinityRule, error) {
 	nodeStatus := resource.Status.Nodes
 
 	vmReference := make([]*types.Reference, len(nodeStatus))
@@ -303,7 +302,7 @@ func (r *VCDAffinityRuleReconciler) buildVmAffinityRule(resource *v1alpha1.VCDAf
 	}, nil
 }
 
-func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDAffinityRule, vdc *govcd.Vdc) error {
+func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(resource *v1alpha1.VCDAffinityRule, vdc *govcd.Vdc) error {
 	if resource.Status.RuleID != "" {
 		r.Logger.Info("deleting affinity rule from VCD API by id", slog.String("ruleID", resource.Status.RuleID))
 		vmAffinityRule, err := vdc.GetVmAffinityRuleById(resource.Status.RuleID)
@@ -318,7 +317,6 @@ func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDA
 		}
 
 		return nil
-
 	}
 	r.Logger.Warn("no ruleID in status, trying to find rule by name and polarity")
 
@@ -330,18 +328,15 @@ func (r *VCDAffinityRuleReconciler) deleteVmAffinityRule(resource *v1alpha1.VCDA
 	if len(vmAffinityRules) == 0 {
 		r.Logger.Warn("no affinity rule found, nothing to delete")
 		return nil
-
 	} else if len(vmAffinityRules) > 1 {
 		r.Logger.Warn("multiple affinity rules found with same name and polarity, unable to determine which to delete")
 		return fmt.Errorf("multiple affinity rules found with same name and polarity, unable to determine which to delete")
-
-	} else {
-
-		err := vmAffinityRules[0].Delete()
-		if err != nil {
-			return fmt.Errorf("failed to delete vm affinity rule: %w", err)
-		}
-
-		return nil
 	}
+
+	err = vmAffinityRules[0].Delete()
+	if err != nil {
+		return fmt.Errorf("failed to delete vm affinity rule: %w", err)
+	}
+
+	return nil
 }
