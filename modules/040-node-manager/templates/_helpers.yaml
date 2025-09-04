@@ -35,7 +35,7 @@
 {{- define "nvidia_node_selector" }}
   {{- $context := index . 0 }} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $strategy := index . 1 }} {{- /* strategy, one of "gfd" "mig-manager" "device-plugin" "any" */ -}}
-  {{- $ng := index 2 }} {{- /* NodeGroup name  */ -}}
+  {{- $ng := index . 2 }} {{- /* NodeGroup name  */ -}}
 
   {{- if eq $strategy "gfd" }}
 affinity:
@@ -62,6 +62,8 @@ affinity:
               operator: In
               values:
                 - "true"
+nodeSelector:
+  node.deckhouse.io/group: {{ $ng | quote }}
   {{- else if eq $strategy "device-plugin" }}
       affinity:
         nodeAffinity:
@@ -86,10 +88,7 @@ nodeSelector:
   node.deckhouse.io/group: {{ $ng | quote }}
   {{- else if eq $strategy "mig-manager" }}
 nodeSelector:
-  node.deckhouse.io/group: {{ $ng | quote }}
-nodeSelector:
   nvidia.com/mig.capable: "true"
-  node.deckhouse.io/group: {{ $ng | quote }}
   {{- else if eq $strategy "any" }}
 nodeSelector:
   node.deckhouse.io/gpu: ""
