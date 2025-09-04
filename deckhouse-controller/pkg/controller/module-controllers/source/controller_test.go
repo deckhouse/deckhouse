@@ -519,14 +519,6 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 	return source
 }
 
-func getMockKeys(dc *dependency.MockedContainer) []string {
-	keys := make([]string, 0, len(dc.CRClientMap))
-	for k := range dc.CRClientMap {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modules, tags []string) *dependency.MockedContainer {
 	dc := dependency.NewMockedContainer()
 
