@@ -71,7 +71,6 @@ func (r *VCDAffinityRuleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		var vcdAffinityRulesList v1alpha1.VCDAffinityRuleList
 		var requests []reconcile.Request
 
-		// Получение всех MyResource
 		if err := r.Client.List(ctx, &vcdAffinityRulesList); err != nil {
 			return nil
 		}
