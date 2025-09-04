@@ -60,6 +60,12 @@ data:
           default       "en";
       }
 
+      # Map channel names to versions
+      map $channel_name $channel_version {
+          default "latest";
+          include /app/channels-data/channels.conf;
+      }
+
       server {
         listen   8080;
         server_name _;
@@ -201,6 +207,11 @@ data:
             try_files $uri $uri/ =404;
         }
 
+        # TODO TMP Redirect channel names to their corresponding versions
+        location ~ ^/modules/test/(alpha|beta|ea|stable|rock-solid)$ {
+            set $channel_name $1;
+            return 301 /$channel_version;
+        }
 
         #        # Redirects for modules folders
         #        location ~* ^/(ru|en)/modules/([^/.]+)$ {

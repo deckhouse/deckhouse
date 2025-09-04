@@ -136,6 +136,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
+# TODO use the common image fro nginx
 fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
@@ -145,7 +146,19 @@ shell:
       cat <<"EOD" > /etc/nginx/nginx.conf
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
+      mkdir -p /scripts
+      cat <<"EOD" > /scripts/channels-convert.sh
+      {{- .Files.Get ".werf/channels-convert.sh" | nindent 6 }}
+      EOD
 import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 - image: web-frontend-artifact
   add: /app/_site
   to: /app

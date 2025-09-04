@@ -25,11 +25,14 @@ services:
     working_dir: "/app"
   frontend:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
-    command: ["nginx", "-g", "daemon off;"]
+    command: ["/entrypoint.sh"]
     volumes:
       - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
+      - ".werf/entrypoint-local.sh:/entrypoint.sh:ro"
+      - ".helm/channels.yaml:/app/channels.yaml:ro"
       - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"
       - "./backends/docs-builder-template/public/ru/modules:/app/modules-from-source/ru/modules:ro"
+      - "channels-conf:/app/channels-data"
     ports:
       - "80:80"
     networks:
@@ -39,3 +42,6 @@ networks:
   deckhouse:
     name: deckhouse
     external: true
+
+volumes:
+  channels-conf:
