@@ -60,6 +60,8 @@ type VCDAffinityRuleStatusNode struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="NodeCount",type=integer,JSONPath=`.status.nodeCount`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="module=cloud-provider-vcd"
 
 // VCDAffinityRule is the Schema for the vcdaffinityrules API.
 type VCDAffinityRule struct {
