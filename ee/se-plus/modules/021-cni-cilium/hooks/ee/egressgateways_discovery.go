@@ -459,8 +459,34 @@ func makeEGStatusPatchForState(egState egressGatewayState, egInstances []EgressG
 
 func processRemovingLabels(input *go_hook.HookInput, nodeToLabel map[string][]string) {
 	for keyName, labels := range nodeToLabel {
+		// if node is hard reseted, cilium agent from this node stopped sync labels
+		// between k8s nodes and ciliumnodes CR, so we drop labels in ciliumnodes CR from here
+		// cilium agent on live nodes will choose new egress gateway only when ciliumnodes CR
+		// will be updated
+		removeCiliumLabels(input, keyName, labels)
 		input.PatchCollector.PatchWithMutatingFunc(removeLabels(labels), "v1", "Node", "", keyName)
 	}
+}
+
+func removeCiliumLabels(input *go_hook.HookInput, nodeName string, labels []string) {
+	labelPatch := map[string]interface{}{}
+	for _, lbl := range labels {
+		labelPatch[lbl] = nil
+	}
+
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": labelPatch,
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(
+		patch,
+		"cilium.io/v2",
+		"CiliumNode",
+		"",
+		nodeName,
+	)
 }
 
 func removeLabels(labels []string) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
@@ -484,7 +510,8 @@ func removeLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 
 func processAddingLabels(input *go_hook.HookInput, nodeToLabel map[string][]string) {
 	for keyName, labels := range nodeToLabel {
-		input.PatchCollector.PatchWithMutatingFunc(appendLabels(labels), "v1", "Node", "", keyName)
+		doLabels := appendLabels(labels)
+		input.PatchCollector.PatchWithMutatingFunc(doLabels, "v1", "Node", "", keyName)
 	}
 }
 
