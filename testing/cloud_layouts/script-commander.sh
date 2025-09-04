@@ -127,7 +127,8 @@ function prepare_environment() {
         update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
         echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
       else
-        echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
+        echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch."
+        return 1
       fi
     else
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
