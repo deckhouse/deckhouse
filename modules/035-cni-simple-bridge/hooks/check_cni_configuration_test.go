@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"strings"
+	"time"
 
 	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
@@ -56,7 +57,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   creationTimestamp: null
-  name: desiredCNIModuleConfig
+  name: desired-cni-moduleconfig
   namespace: d8-system
 data:
   cni-flannel-mc.yaml: |
@@ -449,6 +450,70 @@ data:
 			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
 			Expect(secret.Exists()).To(BeTrue())
 			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Cluster is bootstrapped, has cni secret created after MC, so MC takes priority", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+
+			// Create MC first (earlier timestamp)
+			mc := &v1alpha1.ModuleConfig{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "deckhouse.io/v1alpha1",
+					Kind:       "ModuleConfig",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              cniName,
+					CreationTimestamp: metav1.NewTime(time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)),
+				},
+				Spec: v1alpha1.ModuleConfigSpec{
+					Version:  1,
+					Settings: v1alpha1.SettingsValues{},
+					Enabled:  ptr.To(true),
+				},
+			}
+			mcYAML, _ := yaml.Marshal(mc)
+
+			// Create secret later (later timestamp)
+			secretData := make(map[string][]byte)
+			secretData["cni"] = []byte(cni)
+			secretData[cni] = []byte(``)
+			secret := &v1core.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "d8-cni-configuration",
+					Namespace:         "kube-system",
+					CreationTimestamp: metav1.NewTime(time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC)), // 1 day later
+				},
+				Data: secretData,
+			}
+			secretYAML, _ := yaml.Marshal(secret)
+
+			resources := []string{
+				string(secretYAML),
+				string(mcYAML),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret created after MC)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desired-cni-moduleconfig")
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
 		})
 	})
 })
