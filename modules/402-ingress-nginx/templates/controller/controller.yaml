@@ -358,7 +358,8 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp/nginx/
+        # - mountPath: /chroot/tmp/nginx/
+        - mountPath: /chroot/tmp
           name: tmp-nginx
 {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: valgrind

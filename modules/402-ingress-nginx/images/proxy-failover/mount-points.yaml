@@ -3,3 +3,4 @@ files:
 dirs:
  - /opt/nginx-static/additional-conf
  - /opt/nginx-static/client_body_temp
+ - /opt/nginx-static/proxy_temp

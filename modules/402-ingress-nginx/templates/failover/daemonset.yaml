@@ -144,6 +144,8 @@ spec:
             subPath: error.log
           - mountPath: /opt/nginx-static/client_body_temp
             name: tmp-nginx
+          - mountPath: /opt/nginx-static/proxy_temp
+            name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:

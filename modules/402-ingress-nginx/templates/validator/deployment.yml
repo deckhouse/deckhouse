@@ -181,9 +181,11 @@ spec:
               subPath: opentelemetry.toml
             - mountPath: /chroot/etc/ingress-controller/ssl
               name: tmp-ssl
-            - mountPath: /chroot/tmp/nginx/nginx.pid
-              name: write-files
-              subPath: nginx.pid
+            - mountPath: /chroot/tmp
+              name: tmp-nginx
+            # - mountPath: /chroot/tmp/nginx/nginx.pid
+            #   name: write-files
+            #   subPath: nginx.pid
             - mountPath: /chroot/var/log/nginx/error.log
               name: write-files
               subPath: error.log
@@ -197,6 +199,8 @@ spec:
         - name: write-files
           emptyDir: {}
         - name: tmp-ssl
+          emptyDir: {}
+        - name: tmp-nginx
           emptyDir: {}
 {{- end }}
 
