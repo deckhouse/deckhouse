@@ -1,0 +1,15 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+[Контроль целостности] --> [Контроль целостности\n при запуске контейнеров]
+[Контроль целостности] --> [Контроль целостности\n работающих контейнеров]
+[Контроль целостности\n работающих контейнеров] <-- [Использование механизма контроля DM-Verity]
+[Контроль целостности\n при запуске контейнеров] <-- [Использование механизма контроля DM-Verity]
+[Контроль целостности\n при запуске контейнеров] <-- [Проверка подписи\n при загрузке образа]
+[Контроль целостности\n при запуске контейнеров] <-- [Использование\n EROFS-snapshotter,\n отказ от RW upperdir]
+@enduml
