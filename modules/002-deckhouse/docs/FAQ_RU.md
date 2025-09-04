@@ -41,9 +41,7 @@ title: "Модуль deckhouse: FAQ"
 1. Выполните следующую команду, чтобы собрать необходимые данные:
 
    ```sh
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse \
-     -- deckhouse-controller collect-debug-info \
-     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 2. Отправьте получившийся архив [команде Deckhouse](https://github.com/deckhouse/deckhouse/issues/new/choose) для дальнейшего расследования.

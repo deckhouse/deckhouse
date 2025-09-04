@@ -11,7 +11,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > Once you modify the node configuration, run [`dhctl converge`](../../deckhouse-faq.html#changing-the-configuration) for changes to take effect.
