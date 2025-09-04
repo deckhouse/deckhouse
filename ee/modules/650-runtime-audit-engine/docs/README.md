@@ -110,7 +110,7 @@ There is also an additional set of built-in rules:
 To list all `falco` audit rules, run:
 
 ```shell
-kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+d8 k -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
 {% alert level="info" %}

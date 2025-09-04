@@ -69,7 +69,7 @@ spec:
   Для подтверждения обновления выполните следующую команду (укажите необходимую версию Deckhouse):
 
   ```shell
-  kubectl patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - Если для какой-либо группы узлов отключено автоматическое применение обновлений, которые могут привести к кратковременному простою в работе системных компонентов.
@@ -80,7 +80,7 @@ spec:
   Пример:
 
   ```shell
-  kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
 ### Оповещение об обновлении Deckhouse
