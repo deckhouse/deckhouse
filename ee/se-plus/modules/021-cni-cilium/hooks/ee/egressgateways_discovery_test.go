@@ -634,6 +634,31 @@ spec:
   podCIDRs:
   - 10.111.3.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -761,6 +786,31 @@ spec:
   podCIDR: 10.111.3.0/24
   podCIDRs:
   - 10.111.3.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
 ---
 apiVersion: v1
 kind: Pod
@@ -927,6 +977,31 @@ spec:
   podCIDRs:
   - 10.111.3.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1080,6 +1155,23 @@ spec:
   podCIDR: 10.111.2.0/24
   podCIDRs:
   - 10.111.2.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
 ---
 apiVersion: v1
 kind: Pod
