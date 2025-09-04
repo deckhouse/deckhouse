@@ -40,7 +40,6 @@ import (
 	"golang.org/x/text/language"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
@@ -838,28 +837,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	// Stable Release channel tests for modules
 	suite.Run("Stable Release channel", func() {
-		suite.Run("prevent minor version jump for modules", func() {
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Stable",
-			}
-
-			testData := suite.fetchTestFileData("stable-module-prevent-minor-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test that ModuleRelease with 2 minor version jump (1.0.0 -> 1.2.0) is not created
-			// For modules in Stable channel, minor version jumps should be prevented
-			// The ModuleRelease should not exist because our logic prevents its creation
-			mr := new(v1alpha1.ModuleRelease)
-			err := suite.client.Get(ctx, client.ObjectKey{Name: "test-module-v1.2.0"}, mr)
-			require.Error(suite.T(), err)
-			require.True(suite.T(), apierrors.IsNotFound(err), "ModuleRelease should not be created due to minor version jump prevention")
-		})
-
-		suite.Run("allow single minor version jump for modules", func() {
+		suite.Run("allow minor version jump for modules", func() {
 			mup := &v1alpha2.ModuleUpdatePolicySpec{
 				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "Auto",
@@ -871,7 +849,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("stable-module-allow-single-minor-jump.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			// Test that ModuleRelease with 1 minor version jump (1.0.0 -> 1.1.0) is created
+			// Test that ModuleRelease with 1 minor version jump (1.0.0 -> 1.1.0) is allowed
 			// For modules in Stable channel, single minor version jump should be allowed
 			mr := suite.getModuleRelease("test-module-v1.1.0")
 
@@ -881,7 +859,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
 		})
 
-		suite.Run("allow major version jump for modules", func() {
+		suite.Run("prevent major version jump for modules", func() {
 			mup := &v1alpha2.ModuleUpdatePolicySpec{
 				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "Auto",
@@ -893,15 +871,16 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 			testData := suite.fetchTestFileData("stable-module-allow-major-jump.yaml")
 			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
 
-			// Test that ModuleRelease with major version jump (1.0.0 -> 2.0.0) is created
-			// For modules in Stable channel, major version jump should be allowed
+			// Test that ModuleRelease with major version jump (1.0.0 -> 2.0.0) is prevented
+			// For modules in Stable channel, major version jump should be prevented
 			mr := suite.getModuleRelease("test-module-v2.0.0")
 
-			// Try to handle release - should succeed for major version jump
+			// Try to handle release - should be blocked for major version jump
 			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
+			require.NoError(suite.T(), err) // No error, but release should remain in Pending status
+			require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase)
 		})
+
 	})
 }
 
@@ -1129,7 +1108,7 @@ func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) stri
 
 func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1.ModuleRelease {
 	release := new(v1alpha1.ModuleRelease)
-	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
+	err := suite.Suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, release)
 	require.NoError(suite.T(), err)
 
 	return release
