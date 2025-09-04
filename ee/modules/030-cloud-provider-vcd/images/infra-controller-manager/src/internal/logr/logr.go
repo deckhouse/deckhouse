@@ -22,7 +22,7 @@ func NewLogrAdapter(logger *log.Logger) logr.Logger {
 	})
 }
 
-func (l *LogrAdapter) Enabled(level int) bool {
+func (l *LogrAdapter) Enabled(_ int) bool {
 	return true
 }
 
@@ -35,7 +35,7 @@ func (l *LogrAdapter) Info(level int, msg string, args ...any) {
 	}
 }
 
-func (l *LogrAdapter) Error(err error, msg string, args ...any) {
+func (l *LogrAdapter) Error(err error, msg string, _ ...any) {
 	l.logger.Error(msg, slog.String("error", err.Error()))
 }
 
@@ -51,4 +51,4 @@ func (l *LogrAdapter) WithName(name string) logr.LogSink {
 	}
 }
 
-func (l *LogrAdapter) Init(info logr.RuntimeInfo) {}
+func (l *LogrAdapter) Init(_ logr.RuntimeInfo) {}

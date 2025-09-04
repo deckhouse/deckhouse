@@ -70,7 +70,7 @@ func NewConfigFromEnv() (*Config, error) {
 	}
 
 	if !strings.HasSuffix(href, "api") {
-		href = href + "/api"
+		href = fmt.Sprintf("%s/api", href)
 	}
 
 	c.Href = href
@@ -105,7 +105,7 @@ func (c *Config) NewOrgClient() (*govcd.Org, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	orgClient, err := govcd.GetOrgByName(vcdClient, c.Org)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (c *Config) NewVDCClient() (*govcd.Vdc, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	vdcClient, err := orgClient.GetVDCByName(c.VDC, false)
 	if err != nil {
 		return nil, err
