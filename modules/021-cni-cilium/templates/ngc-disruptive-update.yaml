@@ -44,8 +44,8 @@ spec:
     fi
 
     # If the safe-agent-updater pod does not exist, there is nothing to do
-    if sau_pod_count="$(crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
-        jq -er '.items | length')"; [[ "${sau_pod_count}" == "0" ]]; then
+    if sau_pod_count="$(/opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length == 0')"; then
       bb-log-info "There is no safe-agent-updater pod on the node."
       exit 0
     fi
