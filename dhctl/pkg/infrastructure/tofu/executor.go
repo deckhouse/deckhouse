@@ -17,6 +17,7 @@ package tofu
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,7 +59,29 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
 	)
 
-	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
+	log.DebugF("Tofu Command envs:\n %s\n", "TEST")
+	s := strings.Join(cmd.Env, " ")
+
+	f, err := os.CreateTemp("", "")
+	if err != nil {
+		log.DebugF("Failed to create temporary file: %v", err)
+	}
+	defer f.Close()
+
+	log.DebugF("Created temporary file: %s", f.Name())
+	_, err = f.Write([]byte(s))
+	if err != nil {
+		log.DebugF("Failed to write temporary file: %v", err)
+	}
+
+	//slog.Info("[SLOG!!!] Tofu Command output", strings.Join(cmd.Env, " "))
+	slog.Info(fmt.Sprintf("[SLOG!!!] Tofu Command output %s", strings.Join(cmd.Env, " ")))
+
+	log.DebugF("======")
+	log.DebugF("ENVS: %v\n", len(s))
+	log.DebugF("ENVS: %v\n", cmd.Env)
+	log.DebugF("ENVS: %v\n", s)
+	log.DebugF("======")
 
 	return cmd
 }
@@ -85,6 +108,12 @@ func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
 	}
 
 	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+
+	log.DebugF("INIT BEFORE EXEC\n")
+	defer func() {
+		log.DebugF("INIT AFTER EXEC\n")
+	}()
+
 	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
 
 	return err
@@ -139,6 +168,11 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	}
 
 	e.cmd = tofuCmd(ctx, e.workingDir, args...)
+
+	log.DebugF("PLAN BEFORE EXEC\n")
+	defer func() {
+		log.DebugF("PLAN AFTER EXEC\n")
+	}()
 
 	return infrastructure.Exec(ctx, e.cmd, e.logger)
 }
