@@ -5,7 +5,7 @@ permalink: en/architecture/module-development/development/
 
 {% raw %}
 
-When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
+When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
 
 An example of ModulePullOverride:
 
@@ -215,11 +215,11 @@ status:
   phase: Ready
 ```
 
-The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
+The module will keep running after ModulePullOverride is removed. But if there is a [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy) for the module, new releases of the module (ModuleRelease) will be pulled to replace the current "developer version".
 
 ### An example
 
-1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](../../cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
+1. Suppose there are two modules, `echo` and `hello-world`, defined in [ModuleSource](/reference/api/cr.html#modulesource). The update policy is set for them, and they are pulled in and installed in DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -241,7 +241,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
      modulesCount: 2
    ```
 
-1. Enable the module and create [ModulePullOverride](../../cr.html#modulepulloverride) for the `echo` module:
+1. Enable the module and create [ModulePullOverride](/reference/api/cr.html#modulepulloverride) for the `echo` module:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -300,7 +300,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
 
 ## Module artifacts in the container registry
 
-After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](../../cr.html#modulesource) resource.
+After a module has been built, its artifacts must be pushed to the container registry at a path that is the *source* path for pulling and running modules in DKP. The path where module artifacts are pushed to the registry is specified in the [ModuleSource](/reference/api/cr.html#modulesource) resource.
 
 Below is an example of the container image hierarchy after pushing the `module-1` and `modules-2` module artifacts into the registry:
 

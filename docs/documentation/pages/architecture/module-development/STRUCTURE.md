@@ -327,7 +327,7 @@ An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-promet
 
 ### config-values.yaml
 
-This file is required to validate the module parameters that the user can configure via [ModuleConfig](../../cr.html#moduleconfig).
+This file is required to validate the module parameters that the user can configure via [ModuleConfig](/reference/api/cr.html#moduleconfig).
 
 To render the schema in the documentation on the site or in the documentation module in the cluster, create:
 - the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
@@ -519,7 +519,7 @@ dependencies:
 
 The `module.yaml` file in the root of the module folder contains the module's metadata.
 
-The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
+The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](./reference/api/cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](/reference/api/cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
 

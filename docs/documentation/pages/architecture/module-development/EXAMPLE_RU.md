@@ -97,7 +97,7 @@ lang: ru
 
 1. Настройте CI/CD.
 
-   В шаблоне проекта в директории `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](../../cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
+   В шаблоне проекта в директории `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](/reference/api/cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
 
    Выполните следующие настройки в свойствах вашего проекта на GitHub, чтобы workflow модуля работал корректно:
    - Откройте страницу *Settings -> Actions -> General*.
@@ -154,7 +154,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурс [ModuleSource](../../cr.html#modulesource) (укажите адрес container registry и строку аутентификации).
+1. Создайте в кластере ресурс [ModuleSource](/reference/api/cr.html#modulesource) (укажите адрес container registry и строку аутентификации).
 
    ```shell
    d8 k apply -f - <<EOF
@@ -183,7 +183,7 @@ lang: ru
    ...
    ```
 
-1. Создайте ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
+1. Создайте ресурс [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy), определяющий политику обновления модуля.
 
    Выполните следующую команду, чтобы создать политику обновления с каналом обновления *Alpha* и режимом обновления *Auto*:
 
@@ -220,7 +220,7 @@ lang: ru
    d8 k get ms ghcr -o yaml
    ```
 
-1. Убедитесь, что были созданы новые объекты [ModuleRelease](../../cr.html#modulerelease) для модуля:
+1. Убедитесь, что были созданы новые объекты [ModuleRelease](/reference/api/cr.html#modulerelease) для модуля:
 
    ```shell
    d8 k get mr

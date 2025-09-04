@@ -11,15 +11,15 @@ Available only in DKP Enterprise Edition (EE).
 
 ### Requirements for clusters
 
-* Each cluster must have a unique domain in the [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the ClusterConfiguration resource.
+* Each cluster must have a unique domain in the [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the ClusterConfiguration resource.
   Note that none of the clusters should use the domain `cluster.local`, which is the default setting.
 
   > `cluster.local` can't be used as it's an unmodified alias for the local cluster domain.
   > When specifying `cluster.local` as a principals in the AuthorizationPolicy,
-  > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](../../../../reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`
+  > it will always refer to the local cluster, even if there is another cluster in the mesh with [`clusterDomain`](/reference/api/cr.html#clusterconfiguration-clusterdomain) explicitly defined as `cluster.local`
   > (for details, refer to the [Istio documentation](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Pod and Service subnets in the [`podSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the ClusterConfiguration resource must be unique for each federation member.
+* Pod and Service subnets in the [`podSubnetCIDR`](../../../../reference/api/cr.html#clusterconfiguration-podsubnetcidr) and [`serviceSubnetCIDR`](/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters of the ClusterConfiguration resource must be unique for each federation member.
 
   > When analyzing traffic, Istio uses:
   > - For HTTP and HTTPS requests — headers.

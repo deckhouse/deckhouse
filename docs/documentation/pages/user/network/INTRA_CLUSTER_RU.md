@@ -128,7 +128,7 @@ spec:
 
 ### Настройка балансировщика
 
-Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](../../modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
+Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](/modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
 
 * Его спецификация идентична стандартному ресурсу Service с добавлением раздела `healthcheck`, который содержит набор проверок.
 * На данный момент поддерживается три вида проб:

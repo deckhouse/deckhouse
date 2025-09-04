@@ -98,7 +98,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html -->
 
-Для настройки балансировки используйте кастомный ресурс [IngressNginxController](../../../../../modules/ingress-nginx/cr.html#ingressnginxcontroller).
+Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
 ### Пример для AWS (Network Load Balancer)
 

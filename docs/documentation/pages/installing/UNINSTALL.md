@@ -58,7 +58,7 @@ The installer will then connect to the cluster, retrieve the necessary data, and
 
 Follow these steps to delete a hybrid cluster consisting of the nodes that were automatically deployed in the cloud as well as the static nodes that were manually plugged in:
 
-1. First, [delete](../modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](../modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) (CloudStatic and Static) that were manually plugged in.
+1. First, [delete](/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) (CloudStatic and Static) that were manually plugged in.
 
 2. Find out the update channel set in the cluster. To do this, run the command:
 

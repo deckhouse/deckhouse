@@ -88,7 +88,7 @@ When this condition is met:
 
 1. DKP checks the release channel every minute for new releases.
 1. When a new release appears,
-   DKP downloads it into the cluster and creates a [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) custom resource.
+   DKP downloads it into the cluster and creates a [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) custom resource.
 1. Once the DeckhouseRelease resource appears in the cluster,
    DKP applies the corresponding update according to the configured update settings.
    By default, the update is performed automatically, at any time.

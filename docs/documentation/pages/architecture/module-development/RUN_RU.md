@@ -10,13 +10,13 @@ lang: ru
 
 Чтобы запустить модуль в кластере, необходимо выполнить следующие шаги:
 
-- [Определить источник модулей](#источник-модулей) (ресурс [ModuleSource](../../cr.html#modulesource)).
-- _(не обязательно)_ Определить [политику обновления модуля](#политика-обновления-модуля) (ресурс [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy)).
-- [Включить модуль в кластере](#включение-модуля-в-кластере) (ресурс [ModuleConfig](../../cr.html#moduleconfig)).
+- [Определить источник модулей](#источник-модулей) (ресурс [ModuleSource](/reference/api/cr.html#modulesource)).
+- _(не обязательно)_ Определить [политику обновления модуля](#политика-обновления-модуля) (ресурс [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy)).
+- [Включить модуль в кластере](#включение-модуля-в-кластере) (ресурс [ModuleConfig](/reference/api/cr.html#moduleconfig)).
 
 ### Источник модулей
 
-Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](../../cr.html#modulesource). В этом ресурсе указывается адрес container registry, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
+Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](/reference/api/cr.html#modulesource). В этом ресурсе указывается адрес container registry, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
 
 Пример ресурса ModuleSource:
 
@@ -82,7 +82,7 @@ module-1 module-2
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](../../cr.html#module) (DKP создает их автоматически, создавать их не нужно).
+После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](/reference/api/cr.html#module) (DKP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
@@ -311,7 +311,7 @@ d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 
 ### Политика обновления модуля
 
-Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), в котором можно настроить:
+Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
 - режим обновления модуля (автоматический, ручной, обновления отключены);
 - канал стабильности, используемый при обновлении;
 - окна автоматического обновления, в пределах которых разрешено обновление модуля.
@@ -373,7 +373,7 @@ module-two                   Available   False     False
 
 - Создать ресурс `ModuleConfig` с параметром `enabled: true` и настройками модуля.
 
-  Пример [ModuleConfig](../../cr.html#moduleconfig), для включения и настройки модуля `module-one` в кластере:
+  Пример [ModuleConfig](/reference/api/cr.html#moduleconfig), для включения и настройки модуля `module-one` в кластере:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -422,7 +422,7 @@ module-two                   Available   False     False
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-По аналогии [с DeckhouseRelease](../../cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](../../cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в container registry.
+По аналогии [с DeckhouseRelease](/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в container registry.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell
@@ -437,7 +437,7 @@ NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAG
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
-В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](../../cr.html#moduleupdatepolicy-v1alpha1-spec-update-mode) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
+В примере вывода показан ModuleRelease, когда режим обновления (параметр [update.mode](/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) ModuleUpdatePolicy установлен в `Manual`. В этом случае необходимо вручную подтвердить установку новой версии модуля, установив на ModuleRelease аннотацию `modules.deckhouse.io/approved="true"`:
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
