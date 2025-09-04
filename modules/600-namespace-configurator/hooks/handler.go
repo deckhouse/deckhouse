@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -71,8 +72,8 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
-func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
+func handleNamespaceConfiguration(ctx context.Context, input *go_hook.HookInput) error {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.Snapshots, "namespaces")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}
@@ -90,7 +91,7 @@ func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
-		err = configItem.Apply(input)
+		err = configItem.Apply(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -150,8 +151,8 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 	return nil
 }
 
-func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
+func (configItem *namespaceConfigurationItem) Apply(_ context.Context, input *go_hook.HookInput) error {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.Snapshots, "namespaces")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}

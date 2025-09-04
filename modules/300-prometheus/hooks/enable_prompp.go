@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -75,9 +76,9 @@ func applyModuleConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return mc.Name, nil
 }
 
-func enablePrompp(input *go_hook.HookInput) error {
-	hasModule := len(input.NewSnapshots.Get("prompp_module")) > 0
-	hasModuleConfig := len(input.NewSnapshots.Get("prompp_moduleconfig")) > 0
+func enablePrompp(_ context.Context, input *go_hook.HookInput) error {
+	hasModule := len(input.Snapshots.Get("prompp_module")) > 0
+	hasModuleConfig := len(input.Snapshots.Get("prompp_moduleconfig")) > 0
 
 	if !hasModule {
 		input.Logger.Info("no prompp module found, won't create ModuleConfig")

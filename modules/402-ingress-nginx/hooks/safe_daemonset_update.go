@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -90,14 +91,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, safeControllerUpdate)
 
-func safeControllerUpdate(input *go_hook.HookInput) error {
-	controllerPods := input.NewSnapshots.Get("for_delete")
+func safeControllerUpdate(_ context.Context, input *go_hook.HookInput) error {
+	controllerPods := input.Snapshots.Get("for_delete")
 	if len(controllerPods) == 0 {
 		return nil
 	}
 
-	proxys := input.NewSnapshots.Get("proxy_ads")
-	failovers := input.NewSnapshots.Get("failover_ads")
+	proxys := input.Snapshots.Get("proxy_ads")
+	failovers := input.Snapshots.Get("failover_ads")
 
 	controllers := set.New()
 

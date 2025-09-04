@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -112,7 +113,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(multiclusterDiscovery))
 
-func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(multiclusterMetricsGroup)
 
 	if !input.Values.Get("istio.multicluster.enabled").Bool() {
@@ -123,7 +124,7 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 		return nil
 	}
 
-	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.Snapshots.Get("multiclusters")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over multiclusters: %v", err)
 		}

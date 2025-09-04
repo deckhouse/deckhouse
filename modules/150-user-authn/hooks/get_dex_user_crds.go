@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -118,11 +119,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexUsers)
 
-func getDexUsers(input *go_hook.HookInput) error {
-	users := make([]DexUserInternalValues, 0, len(input.NewSnapshots.Get("users")))
+func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
+	users := make([]DexUserInternalValues, 0, len(input.Snapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
 
-	groupsSnap := input.NewSnapshots.Get("groups")
+	groupsSnap := input.Snapshots.Get("groups")
 	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groupsSnap) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
@@ -134,7 +135,7 @@ func getDexUsers(input *go_hook.HookInput) error {
 		}
 	}
 
-	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.NewSnapshots.Get("users")) {
+	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.Snapshots.Get("users")) {
 		if err != nil {
 			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}

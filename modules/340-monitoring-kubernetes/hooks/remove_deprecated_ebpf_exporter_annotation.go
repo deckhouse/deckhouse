@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,8 +62,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, unlabelNodes)
 
-func unlabelNodes(input *go_hook.HookInput) error {
-	snapshot := input.NewSnapshots.Get("nodes")
+func unlabelNodes(_ context.Context, input *go_hook.HookInput) error {
+	snapshot := input.Snapshots.Get("nodes")
 	for labeledNodeRaw, err := range sdkobjectpatch.SnapshotIter[NodeWithLabel](snapshot) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)

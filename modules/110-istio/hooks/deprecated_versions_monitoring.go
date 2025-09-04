@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -33,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // The hook relies on operatorVersionsToInstall value discovered in discovery_operator_versions_to_install.go before.
 }, versionMonitoringHook)
 
-func versionMonitoringHook(input *go_hook.HookInput) error {
+func versionMonitoringHook(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("istio.internal.operatorVersionsToInstall").Exists() {
 		return nil
 	}

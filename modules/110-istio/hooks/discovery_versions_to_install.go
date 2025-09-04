@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(revisionsDiscovery))
 
-func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
 	var unsupportedVersions = make([]string, 0)

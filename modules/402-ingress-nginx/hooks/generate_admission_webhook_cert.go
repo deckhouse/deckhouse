@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -66,8 +67,8 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func generateValidateWebhookCert(input *go_hook.HookInput) error {
-	snap := input.NewSnapshots.Get("cert-secret")
+func generateValidateWebhookCert(_ context.Context, input *go_hook.HookInput) error {
+	snap := input.Snapshots.Get("cert-secret")
 
 	if len(snap) > 0 {
 		var adm certificate.Certificate
