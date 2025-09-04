@@ -107,6 +107,15 @@ spec:
   podCIDR: 10.111.4.0/24
   podCIDRs:
     - 10.111.4.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-4
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-prod: ""
 `
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: egress_label_cleaner", func() {
