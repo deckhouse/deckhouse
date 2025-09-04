@@ -260,6 +260,9 @@ spec:
         volumeMounts:
           - name: write-files
             mountPath: /tmp/
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
