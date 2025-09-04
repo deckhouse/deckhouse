@@ -868,7 +868,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("prevent major version jump for modules", func() {
-
 			mup := &v1alpha2.ModuleUpdatePolicySpec{
 				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 					Mode:    "Auto",
@@ -894,7 +893,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 			require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase)
 		})
-
 	})
 }
 
