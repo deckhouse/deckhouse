@@ -725,7 +725,7 @@ You can check the current status of versions in the release channels at [release
 
    When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   In the [InitConfiguration](reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
+   In the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
 
 ### Creating a cluster and running DKP without using update channels
 
@@ -736,8 +736,8 @@ This method should only be used if your isolated private registry does not conta
 If you need to install DKP with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
-1. Specify the appropriate version number in the [deckhouse.devBranch](/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](reference/api/cr.html#initconfiguration) resource.  
-   > **Do not specify** the [deckhouse.releaseChannel](/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in the [InitConfiguration](/reference/api/cr.html#initconfiguration) resource.
+1. Specify the appropriate version number in the [deckhouse.devBranch](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource.  
+   > **Do not specify** the [deckhouse.releaseChannel](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource.
 
 If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
@@ -785,7 +785,7 @@ Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (
 
 {% endofftopic %}
 
-To configure DKP to use a proxy, use the [proxy](/reference/api/cr.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
+To configure DKP to use a proxy, use the [proxy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
 
 Example:
 

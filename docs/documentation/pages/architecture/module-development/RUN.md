@@ -7,13 +7,13 @@ This section describes the process of running a module in a Deckhouse Kubernetes
 
 Follow these steps to run the module in a cluster:
 
-- [Define ModuleSource](#module-source) (the [ModuleSource](/reference/api/cr.html#modulesource) resource).
-- _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy) resource).
-- [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](/reference/api/cr.html#moduleconfig) resource).
+- [Define ModuleSource](#module-source) (the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource).
+- _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource).
+- [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource).
   
 ## Module source
 
-Create a [ModuleSource](/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
+Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
 An example of a ModuleSource resource:
 
@@ -79,7 +79,7 @@ The complete list of modules available from all module sources created in the cl
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/reference/api/cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
+After creating the ModuleSource resource and successful synchronization, _modules_ — [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) resources should start appearing in the cluster (DKP creates them automatically, you do not need to create them). You can view the list of modules using the following command:
 
 ```shell
 d8 k get module
@@ -306,7 +306,7 @@ Follow these steps to deploy a module from a different module source:
 
 ## Module update policy
 
-The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
+The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
 - module update mode (automatic, manual, updates are disabled);
 - the release channel to use for updates;
 - time windows for automatic updates during which the module update is permitted.
@@ -368,7 +368,7 @@ You can enable the module similarly to built-in DKP modules using any of the fol
 
 - Create a `ModuleConfig` resource containing the `enabled: true` parameter and module settings..
 
-  Below is an example of a [ModuleConfig](/reference/api/cr.html#moduleconfig) that enables and configures the `module-one` module in the cluster:
+  Below is an example of a [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) that enables and configures the `module-one` module in the cluster:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -417,7 +417,7 @@ If there were errors while enabling a module in the cluster, you can learn about
   example     2       16s    Some errors occurred. Inspect status for details
   ```
 
-Similar to [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
+Similar to [DeckhouseRelease](/reference/api/cr.html#deckhouserelease) (a DKP release resource), modules have a [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) resource. DKP creates ModuleRelease resources based on what is stored in the container registry. When troubleshooting module issues, check the ModuleRelease available in the cluster as well:
 
 ```shell
 d8 k get mr
@@ -431,7 +431,7 @@ NAME                 PHASE        UPDATE POLICY          TRANSITIONTIME   MESSAG
 module-1-v1.23.2     Pending      example-update-policy  3m               Waiting for the 'release.deckhouse.io/approved: "true"' annotation
 ```
 
-The example output above illustrates ModuleRelease message when the update mode ([update.mode](/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
+The example output above illustrates ModuleRelease message when the update mode ([update.mode](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec) of the ModuleUpdatePolicy is set to `Manual`. In this case, you must manually confirm the installation of the new module version by adding the `modules.deckhouse.io/approved="true"` annotation to the ModuleRelease:
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"

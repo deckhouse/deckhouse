@@ -56,11 +56,11 @@ Deckhouse Kubernetes Platform использует **пять каналов о�
 
 ### Автоматическое обновление минорных версий
 
-Для автоматического обновления минорной версии control plane (например, с `1.28.*` на `1.30.*`) укажите [`kubernetesVersion: Automatic`](/reference/api/cr.html#clusterconfiguration-kubernetesversion) в ресурсе ClusterConfiguration. Будет выбрана минорная версия Kubernetes, используемая в DKP по умолчанию на момент обновления.
+Для автоматического обновления минорной версии control plane (например, с `1.28.*` на `1.30.*`) укажите [`kubernetesVersion: Automatic`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) в ресурсе ClusterConfiguration. Будет выбрана минорная версия Kubernetes, используемая в DKP по умолчанию на момент обновления.
 
 ### Ручное обновление минорных версий
 
-Для ручного обновления минорной версии control plane (например, с `1.28.*` до `1.30.*`), укажите нужную версию в параметре [`kubernetesVersion`](/reference/api/cr.html#clusterconfiguration-kubernetesversion) ресурса ClusterConfiguration. Например: `kubernetesVersion: 1.30`.
+Для ручного обновления минорной версии control plane (например, с `1.28.*` до `1.30.*`), укажите нужную версию в параметре [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) ресурса ClusterConfiguration. Например: `kubernetesVersion: 1.30`.
 
 ```shell
 d8 platform edit cluster-configuration
