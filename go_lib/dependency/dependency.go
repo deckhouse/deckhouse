@@ -252,7 +252,7 @@ func (dc *dependencyContainer) GetClock() clockwork.Clock {
 }
 
 // WithExternalDependencies decorate function with external dependencies
-func WithExternalDependencies(f func(ctx context.Context, input *go_hook.HookInput, dc Container) error) func(_ context.Context, input *go_hook.HookInput) error {
+func WithExternalDependencies(f func(ctx context.Context, input *go_hook.HookInput, dc Container) error) func(ctx context.Context, input *go_hook.HookInput) error {
 	return func(ctx context.Context, input *go_hook.HookInput) error {
 		return f(ctx, input, defaultDC)
 	}
