@@ -248,7 +248,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: touch-files
-        image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
         securityContext:
           readOnlyRootFilesystem: true
         imagePullPolicy: IfNotPresent
