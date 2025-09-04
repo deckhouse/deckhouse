@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -59,6 +60,7 @@ type ciliumConfigStruct struct {
 }
 
 type cniSecretStruct struct {
+	CreationTimestamp                 time.Time
 	CniConfigSourcePriorityFlagExists bool
 	CNI                               string
 	Flannel                           flannelConfigStruct
@@ -105,6 +107,10 @@ func applyCNIConfigurationFromSecretFilter(obj *unstructured.Unstructured) (go_h
 		return nil, fmt.Errorf("cannot convert incoming object to Secret: %v", err)
 	}
 	cniSecret := cniSecretStruct{}
+
+	// get creation timestamp from secret
+	cniSecret.CreationTimestamp = secret.CreationTimestamp.Time
+
 	// Check if the secret has the annotation "network.deckhouse.io/cni-configuration-source-priority"
 	_, exists := secret.Annotations[cniConfigSourcePriorityAnnotation]
 	cniSecret.CniConfigSourcePriorityFlagExists = exists
@@ -258,7 +264,15 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// If the cluster is already bootstrapped, then we should
+	// Let's check what was created earlier: MC or Secret.
+	if cniSecret.CreationTimestamp.After(cniModuleConfigs[0].CreationTimestamp.Time) {
+		annotateSecret(input)
+		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
+		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
+		return nil
+	}
+
+	// If the cluster is already bootstrapped and the secret was created earlier than MC, then we should
 	// - generate desired MC based on secret
 	// - create cm based on desired MC
 	// - fire alert
