@@ -45,6 +45,25 @@ rules:
   - get
 ---
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: infra-controller-manager-leader-election
+  {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
+rules:
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: d8:cloud-provider-vcd:infra-controller-manager
@@ -57,3 +76,18 @@ subjects:
 - kind: ServiceAccount
   name: infra-controller-manager
   namespace: d8-cloud-provider-vcd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: infra-controller-manager-leader-election
+  namespace:  d8-cloud-provider-vcd
+  {{- include "helm_lib_module_labels" (list . (dict "app" "infra-controller-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: infra-controller-manager-leader-election
+subjects:
+- kind: ServiceAccount
+  name: infra-controller-manager
+  namespace:  d8-cloud-provider-vcd
