@@ -212,7 +212,15 @@ data:
 
   {{- if $crd.spec.config }}
     {{- range $key, $additionalConfig := $crd.spec.config }}
+      {{- if and (eq $key "hide-headers") ($context.Values.global.enabledModules | has "istio") }}
+        {{- if not (contains "x-envoy-decorator-operation" $additionalConfig) }}
+      {{- $additionalConfig = (printf "%s, x-envoy-decorator-operation" $additionalConfig) }}
+        {{- end }}
+      {{- end }}
   {{ $key }}: {{ $additionalConfig | quote }}
+    {{- end }}
+    {{- if and (not (hasKey $crd.spec.config "hide-headers")) ($context.Values.global.enabledModules | has "istio") }}
+  hide-headers: "x-envoy-decorator-operation"
     {{- end }}
   {{- end }}
 {{- end }}
