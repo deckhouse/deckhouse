@@ -119,12 +119,16 @@ function prepare_environment() {
 
     if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
       # Use initial image tag as devBranch setting in InitConfiguration.
-      # Then switch deployment to DECKHOUSE_IMAGE_TAG.
-      DEV_BRANCH="${INITIAL_IMAGE_TAG}"
-      SWITCH_TO_IMAGE_TAG="${DECKHOUSE_IMAGE_TAG}"
-      echo "Will install '${DEV_BRANCH}' first and then switch to '${SWITCH_TO_IMAGE_TAG}'"
-    else
-      DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
+      # Then update cluster to DECKHOUSE_IMAGE_TAG.
+      # NOTE: currently only release branches are supported for updating.
+      if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
+        DEV_BRANCH="${INITIAL_IMAGE_TAG}"
+        SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
+        update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+        echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
+      else
+        echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
+      fi
     fi
 
   case "$PROVIDER" in
@@ -419,6 +423,56 @@ ENDSSH
   fi
 }
 
+
+# update_release_channel changes the release-channel image to given tag
+function update_release_channel() {
+  crane copy "$1/release-channel:$2" "$1/release-channel:beta"
+}
+
+# trigger_deckhouse_update sets the release channel for the cluster, prompting it to upgrade to the next version.
+function trigger_deckhouse_update() {
+  >&2 echo "Setting Deckhouse release channel to Beta."
+  if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl patch mc/deckhouse -p '{"spec": {"settings": {"releaseChannel": "Beta"}}}' --type=merge
+ENDSSH
+    >&2 echo "Cannot change Deckhouse release channel."
+    return 1
+  fi
+}
+
+# wait_update_ready checks if the cluster is ready for updating.
+function wait_update_ready() {
+  expectedVersion="$1"
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get deckhouserelease -o 'jsonpath={.items[?(@.status.phase=="Deployed")].spec.version}'
+END_SCRIPT
+)
+
+  testRunAttempts=20
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    >&2 echo "Check DeckhouseRelease..."
+    deployedVersion="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}")"
+    if [[ "${expectedVersion}" == "${deployedVersion}" ]]; then
+      return 0
+    elif [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Expected DeckhouseRelease not deployed. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  write_deckhouse_logs
+
+  return 1
+}
+
 # wait_deckhouse_ready check if deckhouse Pod become ready.
 function wait_deckhouse_ready() {
   testScript=$(cat <<"END_SCRIPT"
@@ -654,8 +708,9 @@ function run-test() {
   fi
 
   if [[ -n ${SWITCH_TO_IMAGE_TAG} ]]; then
-    echo "Starting switch deckhouse image"
-    change_deckhouse_image "${SWITCH_TO_IMAGE_TAG}" || return $?
+    echo "Starting Deckhouse update..."
+    trigger_deckhouse_update || return $?
+    wait_update_ready "${SWITCH_TO_IMAGE_TAG}"|| return $?
     wait_deckhouse_ready || return $?
     wait_upmeter_green || return $?
     wait_alerts_resolve || return $?
