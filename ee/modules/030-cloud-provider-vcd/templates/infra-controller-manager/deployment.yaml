@@ -57,8 +57,6 @@ metadata:
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
-  strategy:
-    type: Recreate
   selector:
     matchLabels:
       app: infra-controller-manager
