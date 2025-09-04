@@ -60,40 +60,79 @@ func cwd() string {
 	return dir
 }
 
+const deckhouseModuleName = "github.com/deckhouse/deckhouse/"
+
 func searchHooks(hookModules *[]string, dir, workDir string) error {
 	files := make(map[string]interface{})
+	isGlobalHooks := strings.HasSuffix(dir, "global-hooks")
+
+	// Single filepath.Walk with unified logic
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
-		if f != nil && f.IsDir() {
-			if f.Name() == "internal" {
+		if err != nil {
+			return err
+		}
+
+		// Handle directories
+		if f.IsDir() {
+			// For global-hooks, skip all subdirectories to avoid duplicate imports
+			if isGlobalHooks && path != dir {
 				return filepath.SkipDir
 			}
-			return nil
-		}
-		if filepath.Ext(path) != ".go" {
-			return nil
-		}
-		if strings.HasSuffix(path, "_test.go") {
+
+			// For regular modules, skip specific directories
+			if !isGlobalHooks && shouldSkipDirectory(f.Name()) {
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 
+		// Handle files - only process valid Go hook files
+		if !isValidGoHookFile(path) {
+			return nil
+		}
+
+		// Generate module name and add to collection
 		moduleName := filepath.Join(
 			deckhouseModuleName,
-			filepath.Dir(
-				strings.TrimPrefix(path, workDir),
-			),
+			filepath.Dir(strings.TrimPrefix(path, workDir)),
 		)
 		files[moduleName] = struct{}{}
 		return nil
 	})
 
+	if err != nil {
+		return err
+	}
+
+	// Convert map to slice
 	for hook := range files {
 		*hookModules = append(*hookModules, hook)
 	}
 
-	return err
+	return nil
 }
 
-const deckhouseModuleName = "github.com/deckhouse/deckhouse/"
+// isValidGoHookFile checks if the file is a valid Go hook file
+func isValidGoHookFile(path string) bool {
+	if filepath.Ext(path) != ".go" {
+		return false
+	}
+	if strings.HasSuffix(path, "_test.go") {
+		return false
+	}
+	return true
+}
+
+// shouldSkipDirectory determines if a directory should be skipped during scanning
+func shouldSkipDirectory(dirName string) bool {
+	switch dirName {
+	case "internal":
+		return true
+	default:
+		return false
+	}
+}
 
 func main() {
 	workDir := cwd()
