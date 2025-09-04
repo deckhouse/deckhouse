@@ -90,6 +90,7 @@ spec:
 var _ = Describe("Modules :: cni-cilium :: hooks :: egress_label_cleaner", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGateway", false)
+	f.RegisterCRD("cilium.io", "v2", "CiliumNode", false)
 
 	Context("Node with correct NodeSelector and labels", func() {
 		BeforeEach(func() {
