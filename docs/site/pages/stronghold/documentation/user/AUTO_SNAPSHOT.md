@@ -23,17 +23,17 @@ Sudo privileges are required to interact with this API method.
 
 ### Parameters
 
-- **name (string: <required>)** – Name of the configuration to modify.
+- **name (string: &lt;required&gt;)** – Name of the configuration to modify.
 
-- **interval (integer or string: <required>)** - Time between snapshots. This can be either an integer number of seconds, or a Go duration format string (e.g. 24h)
+- **interval (integer or string: &lt;required&gt;)** - Time between snapshots. This can be either an integer number of seconds, or a Go duration format string (e.g. 24h)
 
 - **retain (integer: 3)** - How many snapshots are to be kept; when writing a snapshot, if there are more snapshots already stored than this number, the oldest ones will be deleted.
 
-- **path_prefix (immutable string: <required>)** - For `storage_type=local`, the directory to write the snapshots in. For s3 storage type, the bucket prefix to use. The trailing `/` is optional.
+- **path_prefix (immutable string: &lt;required&gt;)** - For `storage_type=local`, the directory to write the snapshots in. For s3 storage type, the bucket prefix to use. The trailing `/` is optional.
 
 - **file_prefix (immutable string: "stronghold-snapshot")** - Within the directory or bucket prefix given by `path_prefix`, the file or object name of snapshot files will start with this string.
 
-- **storage_type (immutable string: <required>)** - One of `local` or `aws-s3`. The remaining parameters described below are specific to the selected `storage_type` and prefixed accordingly.
+- **storage_type (immutable string: &lt;required&gt;)** - One of `local` or `aws-s3`. The remaining parameters described below are specific to the selected `storage_type` and prefixed accordingly.
 
 #### storage_type = "local"
 
@@ -41,7 +41,7 @@ Sudo privileges are required to interact with this API method.
 
 #### storage_type = "aws-s3"
 
-- **aws_s3_bucket (string: <required>)** - S3 bucket to write snapshots to.
+- **aws_s3_bucket (string: &lt;required&gt;)** - S3 bucket to write snapshots to.
 - **aws_s3_region (string)** - AWS region bucket is in.
 - **aws_access_key_id (string)** - AWS access key ID.
 - **aws_secret_access_key (string)** - AWS secret access key.
