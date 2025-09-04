@@ -677,60 +677,89 @@ func (suite *ControllerTestSuite) TestLTSChannelReleases() {
 		suite.T().Logf("LTS test results: %s", string(releases))
 	})
 	suite.Run("LTS channel - single release jump with 20 version gap", func() {
-		// Setup: deployed v1.0.0, target v1.20.0 (20 minor versions gap)
-		// For modules in LTS channel, any minor version jump should be allowed
+		// Use existing working test data but modify for LTS channel and big jump
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.20.0",
-			[]string{"test-module"},
+			[]string{"parca"},
 			[]string{"v1.0.0", "v1.1.0", "v1.2.0", "v1.3.0", "v1.4.0", "v1.5.0", "v1.6.0", "v1.7.0", "v1.8.0", "v1.9.0", "v1.10.0", "v1.11.0", "v1.12.0", "v1.13.0", "v1.14.0", "v1.15.0", "v1.16.0", "v1.17.0", "v1.18.0", "v1.19.0", "v1.20.0"})
 
-		suite.setupTestController(string(suite.parseTestdata("lts-single-jump-20-gap.yaml")), withDependencyContainer(dc))
+		// Parse existing test data
+		testData := suite.parseTestdata("existing-module-releases-with-listing-registry.yaml")
 
-		// Debug: check what's in the test environment before running
-		suite.T().Logf("Before handleModuleSource - checking mocks:")
-		suite.T().Logf("CRClientMap keys: %v", getMockKeys(dc))
+		// Modify the test data to use LTS channel and big jump
+		testDataStr := string(testData)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
+		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
+		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
 
+		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
-		// Debug: print the results to understand what's happening
+		// Check results - should create new releases for big jump
 		releases := suite.fetchResults()
-		suite.T().Logf("Test results: %s", string(releases))
+		suite.T().Logf("LTS big jump test results: %s", string(releases))
 
-		// Check that a new release was created for v1.20.0
-		// This should work because modules in LTS channel allow any minor version jump
-		assert.Contains(suite.T(), string(releases), "test-module-v1.20.0")
+		// Should create new releases for the big jump
+		assert.Contains(suite.T(), string(releases), "parca-v1.20.0")
 	})
 
 	suite.Run("LTS channel - sequential 2 releases jump", func() {
-		// Setup: deployed v1.0.0, target v1.2.0 (sequential jump)
+		// Use existing working test data but modify for LTS channel and sequential jump
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.2.0",
-			[]string{"test-module"},
+			[]string{"parca"},
 			[]string{"v1.0.0", "v1.1.0", "v1.2.0"})
 
-		suite.setupTestController(string(suite.parseTestdata("lts-sequential-2-jump.yaml")), withDependencyContainer(dc))
+		// Parse existing test data
+		testData := suite.parseTestdata("existing-module-releases-with-listing-registry.yaml")
+
+		// Modify the test data to use LTS channel and sequential jump
+		testDataStr := string(testData)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
+		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
+		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
+
+		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
-		// Check that a new release was created for v1.2.0
+		// Check results - should create new releases for sequential jump
 		releases := suite.fetchResults()
-		assert.Contains(suite.T(), string(releases), "test-module-v1.2.0")
+		suite.T().Logf("LTS sequential jump test results: %s", string(releases))
+
+		// Should create new releases for the sequential jump
+		assert.Contains(suite.T(), string(releases), "parca-v1.2.0")
 	})
 
 	suite.Run("LTS channel - reverse order 2 releases jump", func() {
-		// Setup: deployed v1.0.0, target v1.2.0 (reverse order in registry)
+		// Use existing working test data but modify for LTS channel and reverse order
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.2.0",
-			[]string{"test-module"},
+			[]string{"parca"},
 			[]string{"v1.2.0", "v1.1.0", "v1.0.0"}) // Reverse order
 
-		suite.setupTestController(string(suite.parseTestdata("lts-reverse-2-jump.yaml")), withDependencyContainer(dc))
+		// Parse existing test data
+		testData := suite.parseTestdata("existing-module-releases-with-listing-registry.yaml")
+
+		// Modify the test data to use LTS channel and reverse order
+		testDataStr := string(testData)
+		testDataStr = strings.Replace(testDataStr, "releaseChannel: Alpha", "releaseChannel: lts", 1)
+		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
+		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
+		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
+
+		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 
-		// Check that a new release was created for v1.2.0
+		// Check results - should create new releases for reverse order
 		releases := suite.fetchResults()
-		assert.Contains(suite.T(), string(releases), "test-module-v1.2.0")
+		suite.T().Logf("LTS reverse order test results: %s", string(releases))
+
+		// Should create new releases for the reverse order
+		assert.Contains(suite.T(), string(releases), "parca-v1.2.0")
 	})
 }
