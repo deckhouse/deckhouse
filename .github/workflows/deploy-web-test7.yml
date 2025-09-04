@@ -269,7 +269,7 @@ jobs:
           WERF_SET_URL: "global.url=deckhouse.7.test.flant.com"
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.7.test.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-test7"
-          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLjQudGVzdC5mbGFudC5jb20iLCAicnUiIDogImRlY2tob3VzZS5ydS40LnRlc3QuZmxhbnQuY29tIn0="
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLjcudGVzdC5mbGFudC5jb20iLCAicnUiIDogImRlY2tob3VzZS5ydS43LnRlc3QuZmxhbnQuY29tIn0="
           WERF_SET_DCNAME: "web.dc_name=dev"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
