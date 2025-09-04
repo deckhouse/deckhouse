@@ -129,6 +129,8 @@ function prepare_environment() {
       else
         echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
       fi
+    else
+      DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
   case "$PROVIDER" in
