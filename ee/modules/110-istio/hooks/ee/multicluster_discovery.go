@@ -94,6 +94,17 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		// If JWT is invalid or expired, existingAPIJWT will remain empty and will be generated later
 	}
 
+	// Also check if we recently generated a JWT (within the last 5 minutes) to avoid frequent regeneration
+	if existingAPIJWT == "" && multicluster.Status.MetadataCache.PrivateLastFetchTimestamp != "" {
+		if lastFetch, err := time.Parse(time.RFC3339, multicluster.Status.MetadataCache.PrivateLastFetchTimestamp); err == nil {
+			if time.Since(lastFetch) < 5*time.Minute {
+				// Skip JWT generation if we fetched private metadata recently
+				// This prevents frequent JWT regeneration due to hook running every minute
+				existingAPIJWT = "skip_generation"
+			}
+		}
+	}
+
 	me := multicluster.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
@@ -200,10 +211,14 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 
 		// Check if we already have a valid JWT from the filter function
 		var apiJWT string
-		if multiclusterInfo.ExistingAPIJWT != "" {
+		if multiclusterInfo.ExistingAPIJWT != "" && multiclusterInfo.ExistingAPIJWT != "skip_generation" {
 			// Use existing valid JWT
 			apiJWT = multiclusterInfo.ExistingAPIJWT
 			input.Logger.Info("reusing existing valid API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
+		} else if multiclusterInfo.ExistingAPIJWT == "skip_generation" {
+			// Skip JWT generation - we recently generated one
+			input.Logger.Info("skipping JWT generation for multicluster (recently generated)", slog.String("name", multiclusterInfo.Name))
+			continue
 		} else {
 			// Generate long-lived JWT for API access (stored in CRD status)
 			apiClaims := map[string]string{
@@ -254,9 +269,14 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			continue
 		}
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
-		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
-		if err != nil {
-			return err
+
+		// Only patch private metadata if we generated a new JWT
+		shouldPatchPrivate := multiclusterInfo.ExistingAPIJWT == ""
+		if shouldPatchPrivate {
+			err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
