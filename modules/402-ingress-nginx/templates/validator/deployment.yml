@@ -99,7 +99,7 @@ spec:
               mountPath: /tmp/
           resources:
             requests:
-              {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
       containers:
         - name: validator
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
