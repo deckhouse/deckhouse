@@ -185,7 +185,7 @@ spec:
           - mountPath: /sbin
             name: sbin
             readOnly: true
-          - name: openvpn-tmp
+          - name: openvpn-tcp-tmp
             mountPath: /tmp
         resources:
           requests:
@@ -226,7 +226,7 @@ spec:
           - mountPath: /sbin
             name: sbin
             readOnly: true
-          - name: openvpn-tmp
+          - name: openvpn-udp-tmp
             mountPath: /tmp
         resources:
           requests:
@@ -425,10 +425,14 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
-      - name: openvpn-tmp
+      - name: openvpn-tcp-tmp
         emptyDir:
           medium: Memory
-          sizeLimit: 128Mi
+          sizeLimit: 4Mi
+      - name: openvpn-udp-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
       - name: sbin
         emptyDir:
           medium: Memory
