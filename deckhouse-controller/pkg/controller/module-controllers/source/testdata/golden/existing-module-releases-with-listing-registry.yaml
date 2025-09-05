@@ -16,10 +16,9 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: Some errors occurred. Inspect status for details
+  message: ""
   modules:
-  - error: 'ensure releases: Non-LTS channel does not allow minor version jumps: current
-      ''v1.5.2'' target ''v1.7.1'''
+  - checksum: 'sha256:'
     name: parca
     version: v1.7.1
   modulesCount: 1
@@ -77,3 +76,67 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (step-by-step)
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: parca-v1.6.2
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: parca
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.6.2
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (step-by-step)
+  creationTimestamp: null
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: ""
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: parca-v1.7.1
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: parca
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.7.1
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null
