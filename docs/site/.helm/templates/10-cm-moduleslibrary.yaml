@@ -147,15 +147,20 @@ data:
 
         # Requests for modules without channel and version in URL - /module/NAME/...
         # This is the default URL for modules documentation and it is indexed by search engines.
-        location ~* ^/modules/([^\./]+)/(?!(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest).*)$  {
+        location ~* ^/modules/([^./]+)/((?!(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)).*)$ {
             set $module "$1";
             # $channel_name is mapped to $channel_version (see map above)
             set $channel_name "stable";
             set $module_doc "$2";
 
+            # Modules from sources (they are served locally.)
+            if (-d $document_root/$lang/modules/$module/$channel_name) {
+               rewrite ^/modules/[^/]+/[^/]+/.*$ /$lang/modules/$module/$channel_name/$module_doc last;
+            }
+
             # Serve doc for the stable channel. Don't redirect as it shoud be SEO friendly.
-            rewrite ^/.+/$ /modules-web-test2/$channel_version/$lang/modules/$module/index.html break;
-            rewrite ^/.+[^/]$ /modules-web-test2/$channel_version/$lang/modules/$module/$module_doc break;
+            rewrite /$    /modules-web-test2/$channel_version/$lang/modules/$module/${module_doc}index.html break;
+            rewrite [^/]$ /modules-web-test2/$channel_version/$lang/modules/$module/$module_doc break;
 
             limit_except GET {
                 deny all;
@@ -219,6 +224,10 @@ data:
         # Internal redirect to serve module docs from sources
         location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
             internal;
+            set $module "$2";
+            set $channel "$3";
+            set $module_doc "$4";
+
             try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
         }
 
