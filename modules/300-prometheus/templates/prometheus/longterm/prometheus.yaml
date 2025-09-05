@@ -8,6 +8,13 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "prompp-context" -}}
+{{- $values := deepCopy .Values | merge dict }}
+{{- $_ := set $values.global.modulesImages.registry "base" (printf "%s/modules/prompp" .Values.global.modulesImages.registry.base) }}
+{{- $ctx := dict "Chart" (dict "Name" "prompp") "Values" $values }}
+{{- $ctx | toYaml }}
+{{- end }}
+
 {{- if .Values.prometheus.longtermRetentionDays }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -52,7 +59,7 @@ spec:
   retention: {{ .Values.prometheus.longtermRetentionDays }}d
   retentionSize: {{ .Values.prometheus.internal.prometheusLongterm.retentionGigabytes }}GB
 {{- if (.Values.global.enabledModules | has "prompp") }}
-  image: {{ include "helm_lib_module_image" (list (include "prompp_context" . | fromYaml) "prompp") }}
+  image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompp") }}
   version: v2.53.2
 {{- else }}
   image: {{ include "helm_lib_module_image" (list . "prometheus") }}
@@ -66,7 +73,33 @@ spec:
   additionalArgs:
     - name: scrape.timestamp-tolerance
       value: 10ms
-  {{- include "prometheus_init_containers" (list . "prometheus-longterm-db") | nindent 2 }}
+{{- if hasKey .Values.global.modulesImages.digests "prompp" }}
+  initContainers:
+  - name: prompptool
+    image: {{ include "helm_lib_module_image" (list (include "prompp-context" . | fromYaml) "prompptool") }}
+    command:
+    - /bin/prompptool
+    - "--working-dir=/prometheus"
+    - "--verbose"
+    {{- if (.Values.global.enabledModules | has "prompp") }}
+    - "walvanilla"
+    {{- else }}
+    - "walpp"
+    {{- end }}
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      readOnlyRootFilesystem: true
+    volumeMounts:
+    - name: prometheus-longterm-db
+      mountPath: /prometheus
+      subPath: prometheus-db
+    resources:
+      requests:
+        {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- end }}
   containers:
   - name: prometheus
     startupProbe:

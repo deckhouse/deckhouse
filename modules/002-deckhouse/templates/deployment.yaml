@@ -53,6 +53,8 @@ metadata:
   namespace: d8-system
   annotations:
     helm.sh/resource-policy: keep
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
     core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
@@ -191,12 +193,20 @@ spec:
                   fieldPath: spec.nodeName
             - name: HELM_HOST
               value: "127.0.0.1:44434"
+            - name: HELM_TIMEOUT
+              value: "10m"
+            - name: USE_NELM
+              value: "true"
+            - name: NELM_FEAT_PERIODIC_STACK_TRACES
+              value: "true"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
               value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
               value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
