@@ -67,7 +67,7 @@
 
           To list all deprecated panel intervals, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, interval) (d8_grafana_dashboards_deprecated_interval) > 0
           ```
 
@@ -92,7 +92,7 @@
 
           To list all deprecated alert rules, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, alert_rule) (d8_grafana_dashboards_deprecated_alert_rule) > 0
           ```
 
@@ -117,7 +117,7 @@
 
           To list all potentially outdated plugins, use the following expression:
 
-          ```promql
+          ```prometheus
           sum by (dashboard, panel, plugin) (d8_grafana_dashboards_deprecated_plugin) > 0
           ```
 

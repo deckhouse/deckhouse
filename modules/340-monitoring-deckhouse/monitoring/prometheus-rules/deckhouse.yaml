@@ -142,7 +142,7 @@
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseHasNoAccessToRegistry
@@ -186,7 +186,7 @@
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseGlobalHookFailsTooOften
@@ -215,7 +215,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseModuleHookFailsTooOften
@@ -244,7 +244,7 @@
         To investigate the issue, check the logs by running the following command:
 
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseCouldNotDiscoverModules
@@ -266,7 +266,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseCouldNotRunModule
@@ -288,7 +288,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseCouldNotDeleteModule
@@ -310,7 +310,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseCouldNotRunGlobalHook
@@ -332,7 +332,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseCouldNotRunModuleHook
@@ -354,7 +354,7 @@
         To investigate the issue, check the logs by running the following command:
         
         ```bash
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
 
   - alert: D8DeckhouseConfigInvalid
@@ -380,19 +380,19 @@
         1. Check Deckhouse logs by running the following command:
         
            ```bash
-           kubectl -n d8-system logs -f -l app=deckhouse
+           d8 k -n d8-system logs -f -l app=deckhouse
            ```
 
         1. Edit the Deckhouse global configuration:
 
            ```bash
-           kubectl edit mc global
+           d8 k edit mc global
            ```
            
            Or edit configuration of a specific module:
 
            ```bash
-           kubectl edit mc <MODULE_NAME>
+           d8 k edit mc <MODULE_NAME>
            ```
 
   - alert: DeckhouseUpdating
@@ -496,7 +496,7 @@
         1. Check Deckhouse logs for more information by running:
 
            ```bash
-           kubectl -n d8-system logs deploy/deckhouse | grep error | grep -i watch
+           d8 k -n d8-system logs deploy/deckhouse | grep error | grep -i watch
            ```
 
         1. This alert attempts to detect a correlation between the faulty snapshot invalidation and API server connection errors, specifically for the `handle-node-template` hook in the `node-manager` module.
@@ -504,7 +504,7 @@
            To compare the snapshot with the actual node objects for this hook, run the following command:
 
            ```bash
-           diff -u <(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)
+           diff -u <(d8 k get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'|sort) <(d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module snapshots node-manager -o json | jq '."040-node-manager/hooks/handle_node_templates.go"' | jq '.nodes.snapshot[] | .filterResult.Name' -r | sort)
            ```
 
   - alert: D8DeckhouseDeprecatedConfigmapManagedByArgoCD
@@ -541,7 +541,7 @@
         To resolve this issue, remove the label from the module release using the following command:
         
         ```bash
-        kubectl label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
+        d8 k label mr {{ $labels.module_release }} modules.deckhouse.io/update-policy-
         ```
 
         A new suitable policy will be detected automatically.
@@ -561,9 +561,9 @@
         Initial config for module {{ $labels.module }} is not valid. 
         
         You can get more details via
-         
+        
         ```bash
-        kubectl get mr -l module={{ $labels.module }}
+        d8 k get mr -l module={{ $labels.module }}
         ```
 
         Provided error: {{ $labels.error }}
@@ -590,7 +590,7 @@
         - There is a network issue preventing access to the registry.
         
         Please check:
-        1. ModuleSource configurations: `kubectl get modulesources`.
+        1. ModuleSource configurations: `d8 k get modulesources`.
         2. Registry accessibility and credentials.
         3. Module availability in the configured registries.
         
@@ -598,14 +598,14 @@
         
         ```bash
         # Check ModuleSource status
-        kubectl get modulesources
+        d8 k get modulesources
         
         # Check available modules in all sources
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
-        kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
+        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get sources
+        d8 k -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller registry get modules <source_name>
         
         # Check Deckhouse logs for more details
-        kubectl -n d8-system logs -f -l app=deckhouse
+        d8 k -n d8-system logs -f -l app=deckhouse
         ```
   - alert: DeckhouseEditionNotFound
     expr: |

@@ -28,7 +28,7 @@
         For details, refer to the logs of the agent:
 
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
   - alert: CiliumAgentMetricNotFound
     expr: (count by (namespace,pod) (cilium_unreachable_health_endpoints) OR count by (namespace,pod) (cilium_endpoint_state)) != 1
@@ -50,13 +50,13 @@
         1. Check the logs of the agent:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+           d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
            ```
         
         1. Verify the agent's health status:
 
            ```bash
-           kubectl -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
+           d8 k -n {{ $labels.namespace }} exec -ti {{ $labels.pod }} cilium-health status
            ```
 
         1. Compare the metrics with those of a neighboring agent.
@@ -80,7 +80,7 @@
         For details, refer to the logs of the agent:
         
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```
   - alert: CiliumAgentMapPressureCritical
     expr: sum by (namespace, pod, map_name) (cilium_bpf_map_pressure > 0.9)
@@ -119,5 +119,5 @@
         For details, refer to the logs of the agent:
         
         ```bash
-        kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }}
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }}
         ```

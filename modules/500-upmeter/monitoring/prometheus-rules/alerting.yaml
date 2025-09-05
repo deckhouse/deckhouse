@@ -73,13 +73,13 @@
           - Check the StatefulSet status:
 
             ```shell
-            kubectl -n d8-upmeter get statefulset upmeter -o json | jq .status
+            d8 k -n d8-upmeter get statefulset upmeter -o json | jq .status
             ```
 
           - Check the Pod status:
 
             ```shell
-            kubectl -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
+            d8 k -n d8-upmeter get pods upmeter-0 -o json | jq '.items[] | {(.metadata.name):.status}'
             ```
 
     - alert: D8UpmeterAgentReplicasUnavailable
@@ -115,13 +115,13 @@
           - Check the DaemonSet status:
 
             ```shell
-            kubectl -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
+            d8 k -n d8-upmeter get daemonset upmeter-agent -o json | jq .status
             ```
 
           - Check the Pod status:
 
             ```shell
-            kubectl -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
+            d8 k -n d8-upmeter get pods -l app=upmeter-agent -o json | jq '.items[] | {(.metadata.name):.status}'
             ```
 
 - name: d8.upmeter.malfunctioning
@@ -157,7 +157,7 @@
           To investigate the cause, check the logs:
 
           ```shell
-          kubectl -n d8-upmeter logs -f upmeter-0 upmeter
+          d8 k -n d8-upmeter logs -f upmeter-0 upmeter
           ```
 
 - name: d8.upmeter.smoke-mini
@@ -191,7 +191,7 @@
           To investigate the cause, check the PersistentVolumeClaim phase:
 
           ```shell
-          kubectl -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
+          d8 k -n d8-upmeter get pvc {{ $labels.persistentvolumeclaim }}
           ```
 
           If your cluster doesn't have a disk provisioning system,
@@ -236,7 +236,7 @@
           1. Check the `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "basic-functionality") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Ensure the control plane is operating normally.
@@ -244,7 +244,7 @@
           3. Delete stale ConfigMaps manually:
 
              ```shell
-             kubectl -n d8-upmeter delete cm -l heritage=upmeter
+             d8 k -n d8-upmeter delete cm -l heritage=upmeter
              ```
 
     - alert: D8UpmeterProbeGarbageDeployment
@@ -284,7 +284,7 @@
           1. Check the `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
@@ -292,7 +292,7 @@
           3. Delete stale Deployments manually:
 
              ```shell
-             kubectl -n d8-upmeter delete deployment -l heritage=upmeter
+             d8 k -n d8-upmeter delete deployment -l heritage=upmeter
              ```
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
@@ -333,7 +333,7 @@
           1. Check the `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
@@ -341,7 +341,7 @@
           3. Delete stale Pods manually:
 
              ```shell
-             kubectl -n d8-upmeter delete pods -l upmeter-probe=controller-manager
+             d8 k -n d8-upmeter delete pods -l upmeter-probe=controller-manager
              ```
 
     - alert: D8UpmeterProbeGarbagePods
@@ -381,7 +381,7 @@
           1. Check `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "scheduler") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Ensure the control plane is operating normally.
@@ -389,7 +389,7 @@
           3. Delete stale Pods manually:
 
              ```shell
-             kubectl -n d8-upmeter delete pods -l upmeter-probe=scheduler
+             d8 k -n d8-upmeter delete pods -l upmeter-probe=scheduler
              ```
 
     - alert: D8UpmeterProbeGarbageNamespaces
@@ -428,7 +428,7 @@
           1. Check `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "namespace") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Ensure the control plane is operating normally.
@@ -436,7 +436,7 @@
           3. Delete stale namespaces manually:
           
              ```shell
-             kubectl -n d8-upmeter delete ns -l heritage=upmeter
+             d8 k -n d8-upmeter delete ns -l heritage=upmeter
              ```
 
     - alert: D8UpmeterTooManyHookProbeObjects
@@ -469,7 +469,7 @@
           To view all `UpmeterHookProbe` objects, run the following command:
 
           ```shell
-          kubectl get upmeterhookprobes.deckhouse.io
+          d8 k get upmeterhookprobes.deckhouse.io
           ```
 
     - alert: D8UpmeterSmokeMiniMoreThanOnePVxPVC
@@ -509,7 +509,7 @@
           To list all the PVs, run the following command:
 
           ```shell
-          kubectl get pv | grep disk-smoke-mini
+          d8 k get pv | grep disk-smoke-mini
           ```
 
     - alert: D8UpmeterProbeGarbageSecretsByCertManager
@@ -548,7 +548,7 @@
           1. Check `upmeter-agent` logs:
 
              ```shell
-             kubectl -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
+             d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "cert-manager") | [.time, .level, .msg] | @tsv'
              ```
 
           2. Check that the control plane and `cert-manager` are operating normally.
@@ -556,8 +556,8 @@
           3. Delete stale certificates and Secrets manually:
 
              ```shell
-             kubectl -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
-             kubectl -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- kubectl -n d8-upmeter delete secret
+             d8 k -n d8-upmeter delete certificate -l upmeter-probe=cert-manager
+             d8 k -n d8-upmeter get secret -ojson | jq -r '.items[] | .metadata.name' | grep upmeter-cm-probe | xargs -n 1 -- d8 k -n d8-upmeter delete secret
              ```
 
     - alert: D8UpmeterDiskUsage
@@ -585,11 +585,11 @@
           1. Delete the PVC and restart the `upmeter` Pod:
 
              ```shell
-             kubectl -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
+             d8 k -n d8-upmeter delete persistentvolumeclaim/data-upmeter-0 pod/upmeter-0
              ```
 
           1. Check the status of the created PVC:
 
              ```shell
-             kubectl -n d8-upmeter get pvc
+             d8 k -n d8-upmeter get pvc
              ```

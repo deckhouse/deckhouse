@@ -19,7 +19,7 @@
         To list all ServiceMonitors in the Deckhouse namespace, run the following command:
         
         ```bash
-        kubectl get servicemonitors --all-namespaces -l heritage!=deckhouse
+        d8 k get servicemonitors --all-namespaces -l heritage!=deckhouse
         ```
 
         For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
@@ -43,7 +43,7 @@
         To list all PodMonitors in the Deckhouse namespace, run the following command:
         
         ```bash
-        kubectl get podmonitors --all-namespaces -l heritage!=deckhouse
+        d8 k get podmonitors --all-namespaces -l heritage!=deckhouse
         ```
 
         For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
@@ -67,7 +67,7 @@
         To list all PrometheusRules in the Deckhouse namespace, run the following command:
         
         ```bash
-        kubectl get prometheusrules --all-namespaces -l heritage!=deckhouse
+        d8 k get prometheusrules --all-namespaces -l heritage!=deckhouse
         ```
 
         For details on adding alerts and recording rules, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
@@ -91,7 +91,7 @@
         To list all services labeled with `prometheus-custom-target`, run the following command:
         
         ```bash
-        kubectl get service --all-namespaces --show-labels | grep prometheus-custom-target
+        d8 k get service --all-namespaces --show-labels | grep prometheus-custom-target
         ```
 
         For more information on metric collection, refer to the [Prometheus module FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html).
