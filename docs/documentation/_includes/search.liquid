@@ -4,7 +4,7 @@
 {%- for page in searchedpages %}
 {%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' %}{% continue %}{% endif %}
 {"title": "{{ page.title | escape }}",
-"url": "/products/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 "keywords": {{ page.search | jsonify }},
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
 }

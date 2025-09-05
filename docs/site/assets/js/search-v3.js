@@ -15,13 +15,14 @@ class ModuleSearch {
       other: 5
     };
     this.isDataLoaded = false;
-    
+
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
+      baseurl: null,
       ...options
     };
-    
+
     // Initialize i18n
     this.initI18n();
 
@@ -487,7 +488,7 @@ class ModuleSearch {
       }
 
       html += `
-        <a href="${doc.url || '#'}" class="result-item">
+        <a href="${this.buildTargetUrl(doc.url)}" class="result-item">
           <div class="result-title">${title}</div>
           ${module}
           <div class="result-description">${description}</div>
@@ -602,6 +603,73 @@ class ModuleSearch {
     return text.replace(regex, '<mark>$1</mark>');
   }
 
+  buildTargetUrl(originalUrl) {
+    // If originalUrl is already a full URL or starts with http/https, return as is
+    if (originalUrl && (originalUrl.startsWith('http://') || originalUrl.startsWith('https://'))) {
+      return originalUrl;
+    }
+
+    // If originalUrl is empty or just '#', return current page
+    if (!originalUrl || originalUrl === '#') {
+      return window.location.pathname;
+    }
+
+    // If baseurl is explicitly set, use it
+    if (this.options.baseurl) {
+      const baseUrl = this.options.baseurl.endsWith('/') ? this.options.baseurl.slice(0, -1) : this.options.baseurl;
+      const urlPath = originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl;
+      return baseUrl + urlPath;
+    }
+
+    // Check for meta tag with relative current page URL
+    const relativeMeta = document.querySelector('meta[name="page:url:relative"]');
+    if (relativeMeta && relativeMeta.content) {
+      const currentPageRelative = relativeMeta.content;
+
+      // Extract relative path from originalUrl
+      let targetRelativePath = originalUrl;
+
+      // If originalUrl is an absolute path, extract the relative part after the version
+      if (originalUrl.startsWith('/')) {
+        const urlSegments = originalUrl.split('/').filter(segment => segment);
+
+        // Find the version segment and extract everything after it
+        for (let i = 0; i < urlSegments.length; i++) {
+          if (urlSegments[i].match(/^v\d+(\.\d+)*$/)) {
+            // Found version segment, take everything after it
+            targetRelativePath = urlSegments.slice(i + 1).join('/');
+            break;
+          }
+        }
+      }
+
+      // Count how many levels deep the current page is
+      // Remove ./ prefix and count path segments
+      const cleanPath = currentPageRelative.startsWith('./') ?
+        currentPageRelative.substring(2) : currentPageRelative;
+      const currentPageSegments = cleanPath.split('/').filter(segment => segment && segment !== '.');
+      // Don't count the filename, only the directory levels
+      const currentPageDepth = currentPageSegments.length - 1;
+
+
+      // Generate relative path (go up to version base, then down to target)
+      let relativePath = '';
+      for (let i = 0; i < currentPageDepth; i++) {
+        relativePath += '../';
+      }
+
+      // Add the target path
+      if (targetRelativePath) {
+        relativePath += targetRelativePath;
+      }
+
+      return relativePath || './';
+    }
+
+    // Fallback: return original URL as is
+    return originalUrl;
+  }
+
   showLoading() {
     this.searchResults.style.display = 'flex';
     this.searchResults.innerHTML = `<div class="loading">${this.t('loading')}</div>`;
@@ -636,8 +704,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if there's a data attribute on the search input for custom search index path
   const searchInput = document.getElementById('search-input');
   const searchIndexPath = searchInput?.dataset.searchIndexPath;
-  
-  // Create search instance with custom search index path if specified
-  const options = searchIndexPath ? { searchIndexPath } : {};
+  const baseurl = searchInput?.dataset.baseurl;
+
+  // Create search instance with custom options if specified
+  const options = {};
+  if (searchIndexPath) {
+    options.searchIndexPath = searchIndexPath;
+  }
+  if (baseurl) {
+    options.baseurl = baseurl;
+  }
+
   window.moduleSearch = new ModuleSearch(options);
 });
