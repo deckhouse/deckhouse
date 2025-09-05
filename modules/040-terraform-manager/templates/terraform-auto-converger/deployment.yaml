@@ -84,21 +84,6 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" 10 | nindent 12 }}
             {{- include "converger_resources" . | nindent 12 }}
       {{- end }}
-      - name: prepare-converger
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-        image: {{ include "terraform_manager_image" . }}
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
-        command:
-        - "/bin/cp"
-        args:
-        - "-a"
-        - "/deckhouse/candi/cloud-providers/"
-        - "/cloud-providers"
-        volumeMounts:
-        - name: cloud-providers
-          mountPath: /cloud-providers
       containers:
       - name: converger
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -133,11 +118,6 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
-          - name: terraform-workdir
-            mountPath: /home/terraform
-          - name: cloud-providers
-            mountPath: /deckhouse/candi/cloud-providers
-            subPath: cloud-providers
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
