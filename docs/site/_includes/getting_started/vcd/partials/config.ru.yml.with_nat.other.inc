@@ -193,9 +193,21 @@ metadata:
   name: nginx
 spec:
   ingressClass: nginx
-  # [<en>] The way traffic goes to cluster from the outer network.
-  # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: NodePort
+  # Способ поступления трафика из внешнего мира.
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  # Описывает, на каких узлах будет находиться Ingress-контроллер.
+  # Возможно, захотите изменить.
+  # Больше примеров здесь
+  # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
