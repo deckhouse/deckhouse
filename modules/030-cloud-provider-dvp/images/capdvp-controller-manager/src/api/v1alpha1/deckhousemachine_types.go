@@ -68,6 +68,12 @@ type VMAddress struct {
 	Address string `json:"address"`
 }
 
+type AdditionalDisks struct {
+	// Size of the disk.
+	Size         resource.Quantity `json:"size"`
+	StorageClass string            `json:"storageClass"`
+}
+
 // DeckhouseMachineSpec defines the desired state of DeckhouseMachine.
 type DeckhouseMachineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -93,6 +99,9 @@ type DeckhouseMachineSpec struct {
 
 	// RootDiskStorageClass holds the name of the StorageClass to use for bootable disk.
 	RootDiskStorageClass string `json:"rootDiskStorageClass"`
+
+	// AdditionalDisks holds the list of additional disks to attach to the VM.
+	AdditionalDisks []AdditionalDisks `json:"additionalDisks,omitempty"`
 
 	// BootDiskImageRef holds the image to boot this VM from.
 	BootDiskImageRef DiskImageRef `json:"bootDiskImageRef"`
