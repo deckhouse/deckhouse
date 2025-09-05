@@ -72,3 +72,4 @@ git:
 imageSpec:
   config:
     entrypoint: ["/failover"]
+    env: { "PATH": "/sbin:/usr/sbin:/bin:/usr/bin" }
