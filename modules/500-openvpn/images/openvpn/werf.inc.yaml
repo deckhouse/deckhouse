@@ -8,17 +8,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/openvpn/src/openvpn/openvpn
   to: /usr/sbin/openvpn
