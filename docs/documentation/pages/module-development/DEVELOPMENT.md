@@ -7,7 +7,7 @@ When developing modules, you may want to pull and deploy a module bypassing the 
 
 {% alert level="warning" %}
 The ModulePullOverride resource is intended **for development and debugging environments only**.
-Using it in production clusters is **not recommended**, and support for this resource may be discontinued in future Deckhouse versions.
+Using it in production clusters is **not recommended*. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
 {% endalert %}
 
 {% raw %}
