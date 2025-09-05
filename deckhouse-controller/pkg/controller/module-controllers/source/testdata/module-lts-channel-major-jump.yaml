@@ -1,0 +1,65 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  name: test-source-1
+spec:
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+    - name: testmodule
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-lts
+spec:
+  releaseChannel: LTS
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: testmodule
+properties:
+  version: 0.8.0
+  source: test-source-1
+  availableSources:
+    - test-source-1
+  updatePolicy: test-lts
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: test-source-1
+  name: testmodule-v0.8.0
+spec:
+  changelog:
+    features:
+      - Initial version
+  moduleName: testmodule
+  version: 0.8.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"
