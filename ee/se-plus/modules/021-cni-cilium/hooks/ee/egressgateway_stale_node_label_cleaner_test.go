@@ -174,6 +174,10 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: egress_label_cleaner", func(
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-dev"))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-prod"))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/member"))
+
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-dev"))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-prod"))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/member"))
 		})
 	})
 })
