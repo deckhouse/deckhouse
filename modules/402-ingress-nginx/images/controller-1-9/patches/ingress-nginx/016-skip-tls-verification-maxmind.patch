@@ -1,0 +1,56 @@
+diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
+index 032a3e19f..ea66d0568 100644
+--- a/internal/nginx/maxmind.go
++++ b/internal/nginx/maxmind.go
+@@ -30,6 +30,7 @@ import (
+ 	"syscall"
+ 	"time"
+ 
++	"crypto/tls"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	klog "k8s.io/klog/v2"
+ )
+@@ -55,6 +56,9 @@ var MaxmindRetriesTimeout = time.Second * 0
+ // minimumRetriesCount minimum value of the MaxmindRetriesCount parameter. If MaxmindRetriesCount less than minimumRetriesCount, it will be set to minimumRetriesCount
+ const minimumRetriesCount = 1
+ 
++// MaxmindSkipVerifyTLS disabled certificate verification when downloading a database from a mirror.
++var MaxmindSkipVerifyTLS = false
++
+ const (
+ 	geoIPPath   = "/etc/ingress-controller/geoip"
+ 	dbExtension = ".mmdb"
+@@ -158,12 +162,20 @@ func createURL(mirror, licenseKey, dbName string) string {
+ 
+ func downloadDatabase(dbName string) error {
+ 	newURL := createURL(MaxmindMirror, MaxmindLicenseKey, dbName)
++	tr := &http.Transport{
++		TLSClientConfig: &tls.Config{InsecureSkipVerify: MaxmindSkipVerifyTLS},
++	}
++	client := &http.Client{
++		Transport: tr,
++		Timeout:   3 * time.Second,
++	}
++
+ 	req, err := http.NewRequest(http.MethodGet, newURL, http.NoBody)
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+-	resp, err := http.DefaultClient.Do(req)
++	resp, err := client.Do(req)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
+index d3bc4ee86..0e77af75f 100644
+--- a/pkg/flags/flags.go
++++ b/pkg/flags/flags.go
+@@ -230,6 +230,7 @@ https://blog.maxmind.com/2019/12/18/significant-changes-to-accessing-and-using-g
+ 	flags.StringVar(&nginx.MaxmindEditionIDs, "maxmind-edition-ids", "GeoLite2-City,GeoLite2-ASN", `Maxmind edition ids to download GeoLite2 Databases.`)
+ 	flags.IntVar(&nginx.MaxmindRetriesCount, "maxmind-retries-count", 1, "Number of attempts to download the GeoIP DB.")
+ 	flags.DurationVar(&nginx.MaxmindRetriesTimeout, "maxmind-retries-timeout", time.Second*0, "Maxmind downloading delay between 1st and 2nd attempt, 0s - do not retry to download if something went wrong.")
++	flags.BoolVar(&nginx.MaxmindSkipVerifyTLS, "maxmind-skip-tls-verification", false, "TLS verification is being forcibly skipped.")
+ 
+ 	flags.AddGoFlagSet(flag.CommandLine)
+ 	if err := flags.Parse(os.Args); err != nil {
