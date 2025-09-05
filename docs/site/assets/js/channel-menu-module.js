@@ -145,9 +145,11 @@ function renderMenu(settings) {
                 const channelName = channel.name;
                 if (currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)) {
                     // Current URL has channel, replace it
+                    console.log("Current URL has channel, replace it: ", currentUrl);
                     channelUrl = currentUrl.replace(/\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `/${channelName}/`);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add channel name
+                    console.log("Current URL format - /modules/MODULE/:", currentUrl);
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${channelName}/`);
                 }
             } else {

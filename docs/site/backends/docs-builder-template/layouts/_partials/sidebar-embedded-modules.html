@@ -108,7 +108,7 @@
 
  {{- with $ctx.GetPage ( printf "modules/%s/%s/README.md" $sidebarItem.module $sidebarItem.channel  ) }}
   <li class="sidebar__submenu-item {{ if or ($ctx.Page.IsAncestor .) (eq $ctx.Page .) }}active{{ end }}">
-     <a href="{{ replaceRE "/readme.html$" "/" .RelPermalink }}">
+     <a href="./{{ replaceRE "readme.html$" "" (path.Base .RelPermalink) }}">
      {{- if in .Site.Data.helpers.knownPageNames .File.TranslationBaseName }}
        {{- T (printf "moduleLinkTitle%s" .File.TranslationBaseName) }}
      {{- else if .LinkTitle }}
@@ -135,7 +135,7 @@
   {{- end }}
   {{- if not $pageTitle }}{{ continue }}{{ end }}
        <li class="sidebar__submenu-item {{ if or (.IsAncestor page) (eq . page) }}active{{ end }}">
-          <a href="{{ if .IsPage }}{{ replaceRE "/readme.html$" "/" .RelPermalink }}{{ else }}#{{ end }}">
+          <a href="{{ if .IsPage }}./{{ replaceRE "readme.html$" "" (path.Base .RelPermalink) }}{{ else }}#{{ end }}">
           {{- $pageTitle -}}
           </a>
       </li>
