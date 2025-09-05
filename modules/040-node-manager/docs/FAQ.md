@@ -82,13 +82,13 @@ You can automate the bootstrap process with any automation platform you prefer. 
 1. Pick up one of Kubernetes API Server endpoints. Note that this IP must be accessible from nodes that are being added to the cluster:
 
    ```shell
-   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
    Check the K8s version. If the version >= 1.25, create `node-group` token:
 
    ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
    Save the token you got and add it to the `token:` field of the Ansible playbook in the next steps.
@@ -96,7 +96,7 @@ You can automate the bootstrap process with any automation platform you prefer. 
 1. If the Kubernetes version is smaller than 1.25, get a Kubernetes API token for a special ServiceAccount that Deckhouse manages:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+   d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
@@ -221,8 +221,8 @@ Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you
 To switch an existing [manually created](./#working-with-static-nodes) static node to another `NodeGroup`, you need to change its group label:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Applying the changes will take some time.
@@ -238,8 +238,8 @@ Evict resources from the node and remove the node from LINSTOR/DRBD using the [i
 1. Delete the node from the Kubernetes cluster:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Run cleanup script on the node:
@@ -252,7 +252,7 @@ Evict resources from the node and remove the node from LINSTOR/DRBD using the [i
 
 ## How do I know if something went wrong?
 
-If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `kubectl get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
+If a node in a nodeGroup is not updated (the value of `UPTODATE` when executing the `d8 k get nodegroup` command is less than the value of `NODES`) or you assume some other problems that may be related to the `node-manager` module, then you need to look at the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
 To view the logs of the `bashible` service on a specific node, run the following command:
 
@@ -275,26 +275,26 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
 1. Find the node that is currently bootstrapping:
 
    ```shell
-   kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    ```
 
    An example:
 
    ```shell
-   $ kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
 1. Get information about connection parameters for viewing logs:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    ```
 
    An example:
 
    ```shell
-   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -429,7 +429,7 @@ During the disruption update, an evict of the pods from the node is performed. I
 
 If the Deckhouse configuration is changed (both in the node-manager module and in any of the cloud providers), the VMs will not be redeployed. The redeployment is performed only in response to changing `InstanceClass` or `NodeGroup` objects.
 
-To force the redeployment of all Machines, you need to add/modify the `manual-rollout-id` annotation to the `NodeGroup`: `kubectl annotate NodeGroup name_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+To force the redeployment of all Machines, you need to add/modify the `manual-rollout-id` annotation to the `NodeGroup`: `d8 k annotate NodeGroup name_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
 ## How do I allocate nodes to specific loads?
 
@@ -528,7 +528,7 @@ Below is an instruction on how you can restore the master node.
 Execute the following command to restore the master node in any cluster running under Deckhouse:
 
 ```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
+d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
@@ -571,13 +571,13 @@ Also, this operation can be done with patch:
 * For `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * For `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <NodeGroup name> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -601,15 +601,15 @@ Also, this operation can be done with the following patch:
 * For `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 * For `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 If it is necessary to leave some NodeGroup on another CRI, then before changing the `defaultCRI` it is necessary to set CRI for this NodeGroup,
@@ -626,13 +626,13 @@ When changing the CRI in the cluster, additional steps are required for the mast
 1. Deckhouse updates nodes in master NodeGroup one by one, so you need to discover which node is updating right now:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Confirm the disruption of the master node that was discovered in the previous step:
 
    ```shell
-   kubectl annotate node <master node name> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <master node name> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Wait for the updated master node to switch to `Ready` state. Repeat steps for the next master node.
@@ -1463,7 +1463,7 @@ To add a GPU node to the cluster, perform the following steps:
    NVIDIA Pods in `d8-nvidia-gpu`:
 
    ```bash
-   kubectl -n d8-nvidia-gpu get pod
+   d8 k -n d8-nvidia-gpu get pod
    ```
 
    **Expected healthy output (example):**
@@ -1479,7 +1479,7 @@ To add a GPU node to the cluster, perform the following steps:
    NFD Pods in `d8-cloud-instance-manager`:
 
    ```bash
-   kubectl -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
    ```
 
    **Expected healthy output (example):**
@@ -1494,7 +1494,7 @@ To add a GPU node to the cluster, perform the following steps:
    Resource exposure on the node:
 
    ```bash
-   kubectl describe node <node-name>
+   d8 k describe node <node-name>
    ```
 
    **Output snippet (example):**
@@ -1540,7 +1540,7 @@ To add a GPU node to the cluster, perform the following steps:
    Check the logs using the command:
 
    ```bash
-   kubectl logs job/nvidia-cuda-test
+   d8 k logs job/nvidia-cuda-test
    ```
 
    Output example:
@@ -1594,7 +1594,7 @@ To add a GPU node to the cluster, perform the following steps:
    Check the logs using the command::
 
    ```bash
-   kubectl logs job/gpu-operator-test
+   d8 k logs job/gpu-operator-test
    ```
 
    Output example:
@@ -1627,7 +1627,7 @@ See examples in [Examples → GPU nodes](../node-manager/examples.html#example-g
 Pre-defined profiles are stored in the **`mig-parted-config`** ConfigMap inside the **`d8-nvidia-gpu`** namespace and can be viewed with the command:
 
 ```bash
-kubectl -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
 ```
 
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
@@ -1658,7 +1658,7 @@ Select the profile that matches your accelerator and set its name in `spec.gpu.m
 1. If `nvidia.com/mig-*` resources are still missing, check:
 
    ```bash
-   kubectl -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
+   d8 k -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
    nvidia-smi -L
    ```
 

@@ -81,13 +81,13 @@ title: "Cloud provider — AWS: FAQ"
    * Узнать `cluster_uuid` можно с помощью команды:
 
      ```shell
-     kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+     d8 k -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
      ```
 
    * Узнать `prefix` можно с помощью команды:
 
      ```shell
-     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+     d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
        | base64 -d | grep prefix
      ```
 
@@ -97,7 +97,7 @@ title: "Cloud provider — AWS: FAQ"
 
 Операция проходит полностью автоматически и занимает до одной минуты. Никаких дополнительных действий не требуется.
 
-За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
+За ходом процесса можно наблюдать в events через команду `d8 k describe pvc`.
 
 > После изменения volume нужно подождать не менее шести часов и убедиться, что volume находится в состоянии `in-use` или `available`, прежде чем станет возможно изменить его еще раз. Подробности можно найти [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
 

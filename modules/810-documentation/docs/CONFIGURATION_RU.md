@@ -14,13 +14,13 @@ title: "Модуль documentation: настройки"
 Чтобы посмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values documentation -o json | jq '.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values documentation -o json | jq '.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, удалите ресурс Secret:
 
 ```shell
-kubectl -n d8-system delete secret/documentation-basic-auth
+d8 k -n d8-system delete secret/documentation-basic-auth
 ```
 
 {% alert level="info" %}

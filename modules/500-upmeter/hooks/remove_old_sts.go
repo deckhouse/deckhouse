@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,6 +24,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -81,12 +84,13 @@ func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func removeStsUpmeter(input *go_hook.HookInput) error {
-	if stsSnapshot := input.Snapshots["sts"]; len(stsSnapshot) > 0 {
-		for _, snap := range stsSnapshot {
-			sts, ok := snap.(*StatefulSetStorage)
-			if !ok {
-				continue
+	stsSnapshot := input.NewSnapshots.Get("sts")
+	if len(stsSnapshot) > 0 {
+		for sts, err := range sdkobjectpatch.SnapshotIter[StatefulSetStorage](stsSnapshot) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over snapshots: %w", err)
 			}
+
 			if sts.StorageRequest != "2Gi" {
 				log.Debug("Deleting StatefulSet", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
 				input.PatchCollector.DeleteNonCascading(sts.APIVersion, sts.Kind, sts.Namespace, sts.Name)

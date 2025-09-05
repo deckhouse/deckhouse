@@ -1,0 +1,37 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+:Исходное состояние:\nтекущая установленная версия модуля\n(Deployed);
+
+if (В кластере есть релиз\nс update.versions?) then (Да)
+  if (Одно из значений to\nсовпадает с версией этого релиза?) then (Да)
+    :Если правил/релизов несколько —\nDKP выбирает вариант с наибольшим to;
+    if (Текущая версия (Deployed)\nниже соответствующего from?) then (Да)
+      :Обычное обновление по порядку\n(без пропуска);
+      stop
+    else (Нет)
+      :DKP выбирает цель — последнюю доступную версию\nв пределах to;
+      if (Требуется подтверждение?) then (Да)
+        :Ожидается подтверждение — аннотация\nmodules.deckhouse.io/approved="true";
+      else (Нет)
+      endif
+      :Развернут релиз назначения (Deployed);
+      stop
+    endif
+  else (Нет)
+    :Обычное обновление по порядку\n(без пропуска);
+    stop
+  endif
+else (Нет)
+  :Обычное обновление по порядку\n(без пропуска);
+  stop
+endif
+
+@enduml

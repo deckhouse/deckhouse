@@ -133,6 +133,7 @@ properties:
         x-examples:
         - webhook: https://release-webhook.mydomain.com
           minimalNotificationTime: 8h
+          retryMinTime: 2s
         properties:
           webhook:
             type: string
@@ -185,6 +186,19 @@ properties:
               The update mechanism ensures that Deckhouse will not be updated until a specified period of time has passed.
 
               When using update windows, the Deckhouse update will happen at the nearest possible update window but not before the time specified in `minimalNotificationTime` expires.
+          retryMinTime:
+            type: string
+            pattern: '^([0-9]+h([0-9]+m)?|[0-9]+m|[0-9]+s)$'
+            x-doc-example: '2s'
+            description: |
+              The minimum time between webhook retry attempts when the webhook request fails.
+
+              It is specified as a string containing the time unit in hours, minutes, or seconds: 30s, 1m, 2m30s, 1h, 2h30m.
+
+              The retry mechanism uses exponential backoff: each subsequent retry attempt waits twice as long as the previous one.
+              For example, if `retryMinTime` is set to `2s`, the retry delays will be: 2s, 4s, 8s, 16s, 32s.
+
+              Default value is 2 seconds if not specified.
           auth:
             type: object
             oneOf:

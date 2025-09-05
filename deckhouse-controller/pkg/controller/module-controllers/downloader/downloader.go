@@ -181,6 +181,12 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 
 	res.ModuleDefinition = def
 
+	md.logger.Info("module definition extracted from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+		slog.Any("def", def),
+	)
+
 	return res, nil
 }
 
