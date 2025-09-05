@@ -276,7 +276,7 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
  );
 
 -adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
-+adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
++adduser -r -U -u 64535 -d /usr/local/nginx -s /sbin/nologin -c deckhouse deckhouse
 
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};

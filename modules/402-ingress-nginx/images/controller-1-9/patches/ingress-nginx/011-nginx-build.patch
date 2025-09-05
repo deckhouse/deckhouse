@@ -5,7 +5,7 @@ index 8bf372f21..fad97e00e 100755
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
- 
+
 +SOURCE_REPO="${SOURCE_REPO}"
 +CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
 +
@@ -14,16 +14,16 @@ index 8bf372f21..fad97e00e 100755
  set -o pipefail
 @@ -126,6 +129,7 @@ export LUA_RESTY_GLOBAL_THROTTLE_VERSION=0.2.0
  export MIMALOC_VERSION=1.7.6
- 
+
  export BUILD_PATH=/tmp/build
 +export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
- 
+
  ARCH=$(uname -m)
- 
+
 @@ -150,170 +154,12 @@ get_src()
    rm -rf "$f"
  }
- 
+
 -# install required packages to build
 -apk add \
 -  bash \
@@ -64,10 +64,10 @@ index 8bf372f21..fad97e00e 100755
 -  coreutils
 -
  mkdir -p /etc/nginx
- 
+
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
- 
+
 -# download, verify and extract the source files
 -get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
 -        "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
@@ -189,11 +189,11 @@ index 8bf372f21..fad97e00e 100755
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/refs/tags/v${MIMALOC_VERSION}.tar.gz"
 +git clone -b "$CONTROLLER_BRANCH" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
- 
+
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
 @@ -465,15 +311,16 @@ make install
- 
+
  # Get Brotli source and deps
  cd "$BUILD_PATH"
 -git clone --depth=100 https://github.com/google/ngx_brotli.git
@@ -204,15 +204,15 @@ index 8bf372f21..fad97e00e 100755
  git submodule init
 +git submodule set-url deps/brotli "${SOURCE_REPO}/google/brotli.git"
  git submodule update
- 
+
  cd "$BUILD_PATH"
 -git clone --depth=1 https://github.com/ssdeep-project/ssdeep
 +git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
  cd ssdeep/
- 
+
  ./bootstrap
 @@ -484,10 +331,13 @@ make install
- 
+
  # build modsecurity library
  cd "$BUILD_PATH"
 -git clone -n https://github.com/SpiderLabs/ModSecurity
@@ -224,17 +224,17 @@ index 8bf372f21..fad97e00e 100755
 +git submodule set-url others/libinjection "${SOURCE_REPO}/libinjection/libinjection.git"
 +git submodule set-url bindings/python "${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git"
  git submodule update
- 
+
  sh build.sh
 @@ -517,7 +367,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
- 
+
 -git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
 +git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
- 
+
 @@ -582,6 +432,7 @@ WITH_FLAGS="--with-debug \
    --with-http_realip_module \
    --with-http_auth_request_module \
@@ -246,9 +246,9 @@ index 8bf372f21..fad97e00e 100755
 @@ -729,7 +580,7 @@ writeDirs=( \
    /var/log/nginx \
  );
- 
+
 -adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
-+adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
- 
++adduser -r -U -u 64535 -d /usr/local/nginx -s /sbin/nologin -c deckhouse deckhouse
+
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};
