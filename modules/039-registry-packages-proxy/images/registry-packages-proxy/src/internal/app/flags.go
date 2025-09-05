@@ -21,10 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+var RppSignCheck = "false"
+
 type Config struct {
-	KubeConfig         string
-	ListenAddress      string
-	DisableCache       bool
+    KubeConfig         string
+    ListenAddress      string
+    DisableCache       bool
+    SignCheck          bool
 	CacheDirectory     string
 	CacheRetentionSize resource.Quantity
 	LogLevel           log.Level
@@ -49,9 +52,13 @@ func InitFlags() (*Config, error) {
 		return nil, err
 	}
 	config.LogLevel, err = log.ParseLevel(*v)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
-	return config, nil
+    if RppSignCheck == "true" {
+        config.SignCheck = true
+    }
+
+    return config, nil
 }

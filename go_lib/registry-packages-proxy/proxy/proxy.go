@@ -30,12 +30,13 @@ import (
 )
 
 type Proxy struct {
-	server         *http.Server
-	listener       net.Listener
-	getter         registry.ClientConfigGetter
-	registryClient registry.Client
-	cache          cache.Cache
-	logger         log.Logger
+    server         *http.Server
+    listener       net.Listener
+    getter         registry.ClientConfigGetter
+    registryClient registry.Client
+    cache          cache.Cache
+    logger         log.Logger
+    config         Config
 }
 
 func NewProxy(server *http.Server,
@@ -63,12 +64,22 @@ func NewProxy(server *http.Server,
 	return p
 }
 
-func (p *Proxy) Serve() {
-	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" && r.Method != "GET" {
-			p.logger.Error("method not allowed")
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
+type Config struct {
+    SignCheck bool
+}
+
+func (p *Proxy) Serve(cfg *Config) {
+    // Initialize runtime config (use zero values if nil)
+    if cfg != nil {
+        p.config = *cfg
+    } else {
+        p.config = Config{}
+    }
+    http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != "HEAD" && r.Method != "GET" {
+            p.logger.Error("method not allowed")
+            http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+            return
 		}
 
 		requestIP := getRequestIP(r)
@@ -210,15 +221,16 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 }
 
 func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
-	registryConfig, err := p.getter.Get(repository)
-	if err != nil {
-		return 0, "", nil, err
-	}
-
-	size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
-	if err != nil {
-		return 0, "", nil, err
-	}
+    registryConfig, err := p.getter.Get(repository)
+    if err != nil {
+        return 0, "", nil, err
+    }
+    registryConfig.SignCheck = p.config.SignCheck
+    
+    size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
+    if err != nil {
+        return 0, "", nil, err
+    }
 	return size, layerDigest, registryReader, nil
 }
 
