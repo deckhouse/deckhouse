@@ -57,7 +57,7 @@ import (
 const (
 	metricUpdatingFailedGroup   = "d8_updating_is_failed"
 	serviceName                 = "check-release"
-	ltsChannelName              = "LTS"
+	ltsChannelName              = "lts"
 	checkDeckhouseReleasePeriod = 3 * time.Minute
 )
 

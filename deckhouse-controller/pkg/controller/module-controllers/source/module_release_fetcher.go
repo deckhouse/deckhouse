@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	ltsReleaseChannel = "LTS"
+	ltsReleaseChannel = "lts"
 )
 
 type ModuleReleaseFetcherConfig struct {
