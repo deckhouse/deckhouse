@@ -351,9 +351,9 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("LTS channel module minor version jump +20", func() {
 		dc := newMockedContainerWithData(suite.T(),
-			"v1.20.0",
+			"v0.25.0",
 			[]string{"testmodule"},
-			[]string{"v1.0.0", "v1.20.0"})
+			[]string{"v0.5.0", "v0.25.0"})
 		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-minor-jump.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
@@ -363,16 +363,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		releasesStr := string(releases)
 
 		// Should contain the target version
-		assert.Contains(suite.T(), releasesStr, "testmodule-v1.20.0")
+		assert.Contains(suite.T(), releasesStr, "testmodule-v0.25.0")
 		// Should contain the deployed version
-		assert.Contains(suite.T(), releasesStr, "testmodule-v1.0.0")
+		assert.Contains(suite.T(), releasesStr, "testmodule-v0.5.0")
 	})
 
 	suite.Run("LTS channel module major version jump +1", func() {
 		dc := newMockedContainerWithData(suite.T(),
-			"v2.0.0",
+			"v1.0.0",
 			[]string{"testmodule"},
-			[]string{"v1.0.0", "v2.0.0"})
+			[]string{"v0.8.0", "v1.0.0"})
 		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-major-jump.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
@@ -382,16 +382,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		releasesStr := string(releases)
 
 		// Should contain the target version
-		assert.Contains(suite.T(), releasesStr, "testmodule-v2.0.0")
-		// Should contain the deployed version
 		assert.Contains(suite.T(), releasesStr, "testmodule-v1.0.0")
+		// Should contain the deployed version
+		assert.Contains(suite.T(), releasesStr, "testmodule-v0.8.0")
 	})
 
 	suite.Run("LTS channel module multiple versions - should create only latest", func() {
 		dc := newMockedContainerWithData(suite.T(),
-			"v1.4.0",
+			"v0.7.0",
 			[]string{"testmodule"},
-			[]string{"v1.0.0", "v1.2.0", "v1.4.0"})
+			[]string{"v0.3.0", "v0.5.0", "v0.7.0"})
 		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-multiple-versions.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
@@ -401,11 +401,11 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		releasesStr := string(releases)
 
 		// Should contain the latest version
-		assert.Contains(suite.T(), releasesStr, "testmodule-v1.4.0")
+		assert.Contains(suite.T(), releasesStr, "testmodule-v0.7.0")
 		// Should contain the deployed version
-		assert.Contains(suite.T(), releasesStr, "testmodule-v1.0.0")
+		assert.Contains(suite.T(), releasesStr, "testmodule-v0.3.0")
 		// Should NOT contain intermediate version
-		assert.NotContains(suite.T(), releasesStr, "testmodule-v1.2.0")
+		assert.NotContains(suite.T(), releasesStr, "testmodule-v0.5.0")
 	})
 }
 
