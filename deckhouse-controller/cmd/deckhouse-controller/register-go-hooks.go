@@ -81,7 +81,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/300-prometheus/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/301-prometheus-metrics-adapter/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/302-vertical-pod-autoscaler/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/340-extended-monitoring/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-custom/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/340-monitoring-kubernetes/requirements"
