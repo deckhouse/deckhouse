@@ -54,7 +54,7 @@ spec:
 
                     For the list of operating systems and specific versions supported by Deckhouse, refer to [Supported Kubernetes and OS versions](https://deckhouse.io/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
 
-                    **By default**, either the `HuaweiCloudCloudDiscoveryData` value or `instances.imageName` is used.
+                    **By default**, either the `HuaweiCloudDiscoveryData` value or `instances.imageName` is used.
                   x-doc-required: false
                   x-doc-examples: ['ubuntu-18-04-cloud-amd64']
                   type: string
@@ -72,15 +72,23 @@ spec:
 
                     The parameter is used to specify the type of a volume that will be used for the root disk.
 
-                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    **By default**, the value from `HuaweiCloudDiscoveryData` is used.
                   x-doc-examples: ['GPSSD']
                   type: string
                   x-doc-required: false
+                mainNetwork:
+                  description: |
+                    Primary network for the for the VMs main NIC.
+
+                    **By default**, the value from 'HuaweiCloudDiscoverData' is used.
+                additionalNetworks:
+                  description: |
+                  List of networks (subnets) for secondary NICs.
                 subnets:
                   description: |
-                    Paths to networks that the secondary VirtualMachines NICs will connect to.
+                    DEPRICATED. Use 'additionalNetworks' instead.
 
-                    **By default**, the value from `HuaweiCloudCloudDiscoveryData` is used.
+                    If set together with 'additionalNetworks', values are merged.
                   x-doc-examples:
                   - ['BGP-network-VLAN-3894', 'External-VLAN-3699']
                   type: array
