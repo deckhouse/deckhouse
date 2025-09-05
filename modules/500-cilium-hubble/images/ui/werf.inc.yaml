@@ -59,7 +59,7 @@ shell:
 ############################################################################
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-frontend
-fromImage: common/nginx-static
+fromImage: base/nginx
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/server/public
@@ -69,7 +69,7 @@ git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-backend
 fromImage: common/distroless

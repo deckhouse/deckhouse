@@ -91,6 +91,10 @@ spec:
             name: tmp
         args:
           - "--leader-elect"
+          # Todo remove after rewrite caps
+          - "--leader-elect-lease-duration=3m"
+          - "--leader-elect-renew-deadline=2m50s"
+          - "--leader-elect-retry-period=5s"
           - "--sync-period=1m"
         livenessProbe:
           httpGet:
