@@ -528,6 +528,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modu
 
 	for _, module := range modules {
 		moduleVersionsMock := cr.NewClientMock(t)
+
 		if len(tags) > 0 {
 			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
