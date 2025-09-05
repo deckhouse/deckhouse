@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -111,8 +112,8 @@ func createBootstrapClusterCm(patchCollector go_hook.PatchCollector) {
 	patchCollector.CreateIfNotExists(cm)
 }
 
-func clusterIsBootstrapped(input *go_hook.HookInput) error {
-	isBootstrappedCmSnap := input.NewSnapshots.Get(isBootstrappedCmSnapName)
+func clusterIsBootstrapped(_ context.Context, input *go_hook.HookInput) error {
+	isBootstrappedCmSnap := input.Snapshots.Get(isBootstrappedCmSnapName)
 
 	if len(isBootstrappedCmSnap) > 0 {
 		// if we have cm here then set value and return
@@ -128,7 +129,7 @@ func clusterIsBootstrapped(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, readyNotMasterNodesSnapName)
+	readyNodes, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, readyNotMasterNodesSnapName)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal %s snapshot: %w", readyNotMasterNodesSnapName, err)
 	}

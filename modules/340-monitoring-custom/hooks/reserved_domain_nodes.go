@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -85,7 +86,7 @@ func checkLabelsAndTaints(labelsAndTaints []string, modules set.Set) bool {
 	return false
 }
 
-func exposeDomainNodes(input *go_hook.HookInput) error {
+func exposeDomainNodes(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
@@ -93,7 +94,7 @@ func exposeDomainNodes(input *go_hook.HookInput) error {
 	// Adding reserved names
 	enabledModules.Add("monitoring", "system", "frontend")
 
-	nodes := input.NewSnapshots.Get("nodes")
+	nodes := input.Snapshots.Get("nodes")
 
 	for node, err := range sdkobjectpatch.SnapshotIter[ReservedNode](nodes) {
 		if err != nil {

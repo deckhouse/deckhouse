@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -79,9 +80,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, setCiliumMode)
 
-func setCiliumMode(input *go_hook.HookInput) error {
+func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 	// if secret exists, use it
-	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.NewSnapshots, "cni_configuration_secret")
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[CiliumConfigStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}

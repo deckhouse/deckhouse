@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -81,12 +82,12 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return storageClass, nil
 }
 
-func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	ddSnaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	ddSnaps := input.Snapshots.Get("cloud_provider_discovery_data")
 	if len(ddSnaps) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		scSnaps := input.NewSnapshots.Get("storage_classes")
+		scSnaps := input.Snapshots.Get("storage_classes")
 		if len(scSnaps) == 0 {
 			input.Logger.Warn("failed to find storage classes for vSphere provisioner")
 			return nil
@@ -168,7 +169,7 @@ func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, zonedDataStores []
 	}
 
 	storageClassSnapshots := make(map[string]storage.StorageClass)
-	sclasses, err := objectpatch.UnmarshalToStruct[storage.StorageClass](input.NewSnapshots, "storage_classes")
+	sclasses, err := objectpatch.UnmarshalToStruct[storage.StorageClass](input.Snapshots, "storage_classes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal storage_classes snapshot: %w", err)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -56,8 +57,8 @@ func filterIngressClass(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return ic.Name, nil
 }
 
-func handleExternalIngressClasses(input *go_hook.HookInput) error {
-	snap := input.NewSnapshots.Get("external-ingress-class")
+func handleExternalIngressClasses(_ context.Context, input *go_hook.HookInput) error {
+	snap := input.Snapshots.Get("external-ingress-class")
 
 	externalIngressClasses := make([]string, 0, len(snap))
 

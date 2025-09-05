@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
@@ -98,9 +100,9 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func setGPULabel(input *go_hook.HookInput) error {
-	ngs := input.NewSnapshots.Get("nodegroups")
-	nodes := input.NewSnapshots.Get("nodes")
+func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
+	ngs := input.Snapshots.Get("nodegroups")
+	nodes := input.Snapshots.Get("nodes")
 
 	for _, ngSnapshot := range ngs {
 		var ng nodeGroupInfo

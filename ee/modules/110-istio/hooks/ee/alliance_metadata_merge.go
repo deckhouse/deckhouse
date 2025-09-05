@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -149,7 +150,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, metadataMerge)
 
-func metadataMerge(input *go_hook.HookInput) error {
+func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 	var properFederations = make([]IstioFederationMergeCrdInfo, 0)
 	var properMulticlusters = make([]IstioMulticlusterMergeCrdInfo, 0)
 	var multiclustersNeedIngressGateway = false
@@ -159,7 +160,7 @@ func metadataMerge(input *go_hook.HookInput) error {
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
 federationsLoop:
-	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.NewSnapshots.Get("federations")) {
+	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.Snapshots.Get("federations")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over federations: %w", err)
 		}
@@ -190,7 +191,7 @@ federationsLoop:
 	}
 
 multiclustersLoop:
-	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.NewSnapshots.Get("multiclusters")) {
+	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.Snapshots.Get("multiclusters")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over multiclusters: %w", err)
 		}

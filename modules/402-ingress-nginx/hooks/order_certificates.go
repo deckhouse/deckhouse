@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -80,7 +81,7 @@ func applyIngressSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func orderCertificate(input *go_hook.HookInput) error {
+func orderCertificate(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Exists("ingressNginx.internal.ingressControllers") {
 		return nil
 	}
@@ -94,7 +95,7 @@ func orderCertificate(input *go_hook.HookInput) error {
 	controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
 
 	certificatesSecretMap := make(map[string]*certificate.Certificate)
-	for certificateData, err := range sdkobjectpatch.SnapshotIter[certificateData](input.NewSnapshots.Get("certificates_data")) {
+	for certificateData, err := range sdkobjectpatch.SnapshotIter[certificateData](input.Snapshots.Get("certificates_data")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'certificates_data' snapshots: %w", err)
 		}

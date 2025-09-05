@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -38,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // The hook relies on operatorVersionsToInstall value discovered in discovery_operator_versions_to_install.go before.
 }, versionCompatibilityMonitoringHook)
 
-func versionCompatibilityMonitoringHook(input *go_hook.HookInput) error {
+func versionCompatibilityMonitoringHook(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("istio.internal.operatorVersionsToInstall").Exists() {
 		return nil
 	}

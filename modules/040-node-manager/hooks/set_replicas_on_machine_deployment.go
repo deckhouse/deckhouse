@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -193,10 +194,10 @@ func calculateReplicasAndPatchMachineDeployment(
 	return nil
 }
 
-func handleSetReplicas(input *go_hook.HookInput) error {
+func handleSetReplicas(_ context.Context, input *go_hook.HookInput) error {
 	nodeGroups := make(map[string]setReplicasNodeGroup)
 
-	snaps := input.NewSnapshots.Get("ngs")
+	snaps := input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[setReplicasNodeGroup](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
@@ -205,12 +206,12 @@ func handleSetReplicas(input *go_hook.HookInput) error {
 		nodeGroups[ng.Name] = ng
 	}
 
-	err := calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("mds"), nodeGroups, "machine.sapcloud.io/v1alpha1")
+	err := calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("mds"), nodeGroups, "machine.sapcloud.io/v1alpha1")
 	if err != nil {
 		return err
 	}
 
-	err = calculateReplicasAndPatchMachineDeployment(input, input.NewSnapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
+	err = calculateReplicasAndPatchMachineDeployment(input, input.Snapshots.Get("capi_mds"), nodeGroups, "cluster.x-k8s.io/v1beta1")
 	if err != nil {
 		return err
 	}

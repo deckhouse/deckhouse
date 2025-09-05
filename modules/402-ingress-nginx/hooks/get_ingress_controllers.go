@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -162,8 +163,8 @@ func setDefaultEmptyObjectOnCondition(key string, obj map[string]interface{}, co
 	}
 }
 
-func setInternalValues(input *go_hook.HookInput) error {
-	controllersFilterResult := input.NewSnapshots.Get("controller")
+func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
+	controllersFilterResult := input.Snapshots.Get("controller")
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	input.MetricsCollector.Expire("")
 

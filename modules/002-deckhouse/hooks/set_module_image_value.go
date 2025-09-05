@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,13 +62,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, parseDeckhouseImage)
 
-func parseDeckhouseImage(input *go_hook.HookInput) error {
+func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
 		deckhouseBasePath  = "global.modulesImages.registry.base"
 	)
 
-	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "deckhouse")
+	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "deckhouse")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
 	}

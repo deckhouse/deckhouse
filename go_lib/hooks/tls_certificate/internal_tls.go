@@ -17,6 +17,7 @@ limitations under the License.
 package tls_certificate
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ const (
 //	ClusterDomainSAN(value) to generate sans with respect of cluster domain (e.g.: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
 //	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
-	return func(input *go_hook.HookInput) []string {
+	return func(_ context.Context, input *go_hook.HookInput) []string {
 		res := make([]string, 0, len(sans))
 
 		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
@@ -110,7 +111,7 @@ type GenSelfSignedTLSHookConf struct {
 	// BeforeHookCheck runs check function before hook execution. Function should return boolean 'continue' value
 	// if return value is false - hook will stop its execution
 	// if return value is true - hook will continue
-	BeforeHookCheck func(input *go_hook.HookInput) bool
+	BeforeHookCheck func(_ context.Context, input *go_hook.HookInput) bool
 }
 
 func (gss GenSelfSignedTLSHookConf) path() string {
@@ -180,7 +181,7 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}, nil
 }
 
-func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
+func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, input *go_hook.HookInput) error {
 	var usages []string
 	if conf.Usages == nil {
 		usages = []string{
@@ -194,9 +195,9 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		}
 	}
 
-	return func(input *go_hook.HookInput) error {
+	return func(ctx context.Context, input *go_hook.HookInput) error {
 		if conf.BeforeHookCheck != nil {
-			passed := conf.BeforeHookCheck(input)
+			passed := conf.BeforeHookCheck(ctx, input)
 			if !passed {
 				return nil
 			}
@@ -205,9 +206,9 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		var cert certificate.Certificate
 		var err error
 
-		cn, sans := conf.CN, conf.SANs(input)
+		cn, sans := conf.CN, conf.SANs(ctx, input)
 
-		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, SnapshotKey)
+		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal secret snapshot: %w", err)
 		}
@@ -326,4 +327,4 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 }
 
 // SANsGenerator function for generating sans
-type SANsGenerator func(input *go_hook.HookInput) []string
+type SANsGenerator func(_ context.Context, input *go_hook.HookInput) []string

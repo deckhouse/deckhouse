@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,7 +62,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateSelfSignedCA)
 
-func generateSelfSignedCA(input *go_hook.HookInput) error {
+func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		certPath = "userAuthn.internal.selfSignedCA.cert"
 		keyPath  = "userAuthn.internal.selfSignedCA.key"
@@ -78,7 +79,7 @@ func generateSelfSignedCA(input *go_hook.HookInput) error {
 
 	var sefSignedCA certificate.Authority
 
-	certs := input.NewSnapshots.Get("cert")
+	certs := input.Snapshots.Get("cert")
 	if len(certs) == 1 {
 		err := certs[0].UnmarshalTo(&sefSignedCA)
 		if err != nil {

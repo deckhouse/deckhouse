@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -95,28 +96,28 @@ func applyNameNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func handleLegacyAnnotatedResource(input *go_hook.HookInput) error {
+func handleLegacyAnnotatedResource(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_legacy_annotation")
 
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("nodes")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("nodes")); err != nil {
 		return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("namespaces")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("namespaces")); err != nil {
 		return fmt.Errorf("failed to iterate over 'namespaces' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("deployments")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("deployments")); err != nil {
 		return fmt.Errorf("failed to iterate over 'deployments' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("statefulsets")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("statefulsets")); err != nil {
 		return fmt.Errorf("failed to iterate over 'statefulsets' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("daemonsets")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("daemonsets")); err != nil {
 		return fmt.Errorf("failed to iterate over 'daemonsets' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("cronjobs")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("cronjobs")); err != nil {
 		return fmt.Errorf("failed to iterate over 'cronjobs' snapshots: %w", err)
 	}
-	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.NewSnapshots.Get("ingresses")); err != nil {
+	if err := iterateOverSnapshotsAndSetMetric(input.MetricsCollector, input.Snapshots.Get("ingresses")); err != nil {
 		return fmt.Errorf("failed to iterate over 'ingresses' snapshots: %w", err)
 	}
 

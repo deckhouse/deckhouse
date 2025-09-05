@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -106,9 +107,9 @@ func applyClusterRoleBindingFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	return obj.GetName(), nil
 }
 
-func deleteLegacyRBACs(input *go_hook.HookInput) error {
+func deleteLegacyRBACs(_ context.Context, input *go_hook.HookInput) error {
 	// remove legacy Roles
-	for role, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.NewSnapshots.Get("role_for_delete")) {
+	for role, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("role_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'role_for_delete' snapshot: %w", err)
 		}
@@ -118,7 +119,7 @@ func deleteLegacyRBACs(input *go_hook.HookInput) error {
 	}
 
 	// remove legacy RoleBindings
-	for roleBinding, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.NewSnapshots.Get("rolebinding_for_delete")) {
+	for roleBinding, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("rolebinding_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'rolebinding_for_delete' snapshot: %w", err)
 		}
@@ -128,7 +129,7 @@ func deleteLegacyRBACs(input *go_hook.HookInput) error {
 	}
 
 	// remove legacy ClusterRoles
-	for clusterRoleName, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("clusterrole_for_delete")) {
+	for clusterRoleName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("clusterrole_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'clusterrole_for_delete' snapshot: %w", err)
 		}
@@ -138,7 +139,7 @@ func deleteLegacyRBACs(input *go_hook.HookInput) error {
 	}
 
 	// remove legacy ClusterRoleBindings
-	for clusterRoleBindingName, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("clusterrolebinding_for_delete")) {
+	for clusterRoleBindingName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("clusterrolebinding_for_delete")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'clusterrolebinding_for_delete' snapshot: %w", err)
 		}

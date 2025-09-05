@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -56,11 +57,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleExcludes)
 
-func handleExcludes(input *go_hook.HookInput) error {
+func handleExcludes(_ context.Context, input *go_hook.HookInput) error {
 	nss := make([]string, 0)
 	ings := make([]string, 0)
 
-	snaps := input.NewSnapshots.Get("labeled_ingress")
+	snaps := input.Snapshots.Get("labeled_ingress")
 	for res, err := range sdkobjectpatch.SnapshotIter[discardedIngress](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'labeled_ingress' snapshots: %w", err)
@@ -69,7 +70,7 @@ func handleExcludes(input *go_hook.HookInput) error {
 		ings = append(ings, res.String())
 	}
 
-	snaps = input.NewSnapshots.Get("labeled_ns")
+	snaps = input.Snapshots.Get("labeled_ns")
 	for res, err := range sdkobjectpatch.SnapshotIter[discardedIngress](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'labeled_ns' snapshots: %w", err)

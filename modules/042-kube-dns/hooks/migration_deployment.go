@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -79,8 +81,8 @@ func applyDeploymentCorednsPortsFilter(obj *unstructured.Unstructured) (go_hook.
 	return ports, nil
 }
 
-func ensureCorednsPorts(input *go_hook.HookInput) error {
-	portsSnap := input.NewSnapshots.Get(snap)
+func ensureCorednsPorts(_ context.Context, input *go_hook.HookInput) error {
+	portsSnap := input.Snapshots.Get(snap)
 	if len(portsSnap) == 0 {
 		return nil
 	}

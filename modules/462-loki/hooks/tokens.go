@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -71,8 +72,8 @@ func filterTokenSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return string(secret.Data["token"]), nil
 }
 
-func handleTokens(input *go_hook.HookInput) error {
-	grafanaTokenSnapshots := input.NewSnapshots.Get("grafana_token")
+func handleTokens(_ context.Context, input *go_hook.HookInput) error {
+	grafanaTokenSnapshots := input.Snapshots.Get("grafana_token")
 
 	if len(grafanaTokenSnapshots) > 0 {
 		var grafanaToken string
@@ -84,7 +85,7 @@ func handleTokens(input *go_hook.HookInput) error {
 		input.Values.Set("loki.internal.grafanaToken", grafanaToken)
 	}
 
-	logShipperTokenSnapshots := input.NewSnapshots.Get("log_shipper_token")
+	logShipperTokenSnapshots := input.Snapshots.Get("log_shipper_token")
 
 	if len(logShipperTokenSnapshots) > 0 {
 		var logShipperToken string

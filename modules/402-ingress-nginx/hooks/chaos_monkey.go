@@ -113,9 +113,9 @@ func applyIngressDaemonSetFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func chaosMonkey(input *go_hook.HookInput, dc dependency.Container) error {
-	controllers := input.NewSnapshots.Get("controllers")
-	daemonsets := input.NewSnapshots.Get("daemonsets")
+func chaosMonkey(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	controllers := input.Snapshots.Get("controllers")
+	daemonsets := input.Snapshots.Get("daemonsets")
 
 	chaosMonkeyEnabled := make(map[string]bool)
 	for controller, err := range sdkobjectpatch.SnapshotIter[ingressControllerChaosConfig](controllers) {

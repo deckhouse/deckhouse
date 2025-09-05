@@ -17,6 +17,7 @@ limitations under the License.
 package copy_custom_certificate
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -76,9 +77,9 @@ func RegisterHook(moduleName string) bool {
 	}, copyCustomCertificatesHandler(moduleName))
 }
 
-func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		snapshots := input.NewSnapshots.Get("custom_certificates")
+func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
+		snapshots := input.Snapshots.Get("custom_certificates")
 		if len(snapshots) == 0 {
 			input.Logger.Info("No custom certificates received, skipping setting values")
 			return nil

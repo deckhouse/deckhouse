@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -45,8 +46,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleSP)
 
-func handleSP(input *go_hook.HookInput) error {
-	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.NewSnapshots, "security-policies")
+func handleSP(_ context.Context, input *go_hook.HookInput) error {
+	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.Snapshots, "security-policies")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal security-policies snapshot: %w", err)
 	}

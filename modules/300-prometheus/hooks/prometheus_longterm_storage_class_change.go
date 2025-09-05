@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/storage_class_change"
@@ -31,7 +33,7 @@ var _ = storage_class_change.RegisterHook(storage_class_change.Args{
 	ObjectName:                    "longterm",
 	InternalValuesSubPath:         "prometheusLongterm",
 	D8ConfigStorageClassParamName: "longtermStorageClass",
-	BeforeHookCheck: func(input *go_hook.HookInput) bool {
+	BeforeHookCheck: func(_ context.Context, input *go_hook.HookInput) bool {
 		return input.Values.Get("prometheus.longtermRetentionDays").Float() > 0
 	},
 })

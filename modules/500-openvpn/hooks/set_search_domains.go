@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -31,7 +33,7 @@ const (
 	clusterDomainsInternalValuesPath = "openvpn.internal.pushToClientSearchDomains"
 )
 
-func setSearchDomain(input *go_hook.HookInput) error {
+func setSearchDomain(_ context.Context, input *go_hook.HookInput) error {
 	userDefinedDomains, ok := input.ConfigValues.GetOk(clusterDomainsValuesPath)
 	if ok {
 		domains := make([]string, 0)

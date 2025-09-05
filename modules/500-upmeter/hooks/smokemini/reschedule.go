@@ -17,6 +17,7 @@ limitations under the License.
 package smokemini
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -119,7 +120,7 @@ var _ = sdk.RegisterFunc(
 	reschedule,
 )
 
-func reschedule(input *go_hook.HookInput) error {
+func reschedule(_ context.Context, input *go_hook.HookInput) error {
 	if !smokeMiniEnabled(input.Values) {
 		return nil
 	}
@@ -128,7 +129,7 @@ func reschedule(input *go_hook.HookInput) error {
 	const statePath = "upmeter.internal.smokeMini.sts"
 
 	// Parse the state from values
-	statefulSets, err := snapshot.ParseStatefulSetSlice(input.NewSnapshots.Get("statefulsets"))
+	statefulSets, err := snapshot.ParseStatefulSetSlice(input.Snapshots.Get("statefulsets"))
 	if err != nil {
 		return err
 	}
@@ -144,29 +145,29 @@ func reschedule(input *go_hook.HookInput) error {
 	}
 
 	// Parse inputs
-	storageClass, err := getSmokeMiniStorageClass(input.Values, input.NewSnapshots.Get("default_sc"))
+	storageClass, err := getSmokeMiniStorageClass(input.Values, input.Snapshots.Get("default_sc"))
 	if err != nil {
 		return err
 	}
 
 	image := getSmokeMiniImage(input.Values)
 
-	nodes, err := snapshot.ParseNodeSlice(input.NewSnapshots.Get("nodes"))
+	nodes, err := snapshot.ParseNodeSlice(input.Snapshots.Get("nodes"))
 	if err != nil {
 		return err
 	}
 
-	pods, err := snapshot.ParsePodSlice(input.NewSnapshots.Get("pods"))
+	pods, err := snapshot.ParsePodSlice(input.Snapshots.Get("pods"))
 	if err != nil {
 		return err
 	}
 
-	pvcs, err := snapshot.ParsePvcTerminationSlice(input.NewSnapshots.Get("pvc"))
+	pvcs, err := snapshot.ParsePvcTerminationSlice(input.Snapshots.Get("pvc"))
 	if err != nil {
 		return err
 	}
 
-	disruptionAllowed, err := parseAllowedDisruption(input.NewSnapshots.Get("pdb"))
+	disruptionAllowed, err := parseAllowedDisruption(input.Snapshots.Get("pdb"))
 	if err != nil {
 		return err
 	}

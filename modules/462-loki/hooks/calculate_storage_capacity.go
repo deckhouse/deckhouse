@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -140,13 +141,13 @@ func persistentVolumeClaimFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func lokiDisk(input *go_hook.HookInput) error {
+func lokiDisk(_ context.Context, input *go_hook.HookInput) error {
 	var stsStorageSize, pvcSize, cleanupThreshold uint64
 
 	defaultDiskSize := uint64(input.Values.Get("loki.diskSizeGigabytes").Int() << 30)
 	ingestionRate := input.Values.Get("loki.lokiConfig.ingestionRateMB").Float()
 
-	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.NewSnapshots.Get("pvcs")) {
+	for pvc, err := range sdkobjectpatch.SnapshotIter[PersistentVolumeClaim](input.Snapshots.Get("pvcs")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'pvcs' snapshots: %w", err)
 		}
@@ -159,7 +160,7 @@ func lokiDisk(input *go_hook.HookInput) error {
 		break
 	}
 
-	for sts, err := range sdkobjectpatch.SnapshotIter[StatefulSet](input.NewSnapshots.Get("sts")) {
+	for sts, err := range sdkobjectpatch.SnapshotIter[StatefulSet](input.Snapshots.Get("sts")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'sts' snapshots: %w", err)
 		}

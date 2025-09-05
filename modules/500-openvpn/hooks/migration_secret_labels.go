@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -73,8 +74,8 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, err
 }
 
-func addMissingLabels(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("openvpn_pki_server")
+func addMissingLabels(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("openvpn_pki_server")
 	if len(snaps) == 0 {
 		input.Logger.Warn("Secret openvpn-pki-server not found, skipping")
 		return nil

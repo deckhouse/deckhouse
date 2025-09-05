@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 
@@ -62,9 +63,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleClusterLogDestinationD8Loki)
 
-func handleClusterLogDestinationD8Loki(input *go_hook.HookInput) error {
-	destinationSnapshots := input.NewSnapshots.Get("cluster_log_destination")
-	lokiEndpointSnap := input.NewSnapshots.Get("loki_endpoint")
+func handleClusterLogDestinationD8Loki(_ context.Context, input *go_hook.HookInput) error {
+	destinationSnapshots := input.Snapshots.Get("cluster_log_destination")
+	lokiEndpointSnap := input.Snapshots.Get("loki_endpoint")
 
 	var lokiEndpoint endpoint
 

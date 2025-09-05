@@ -24,6 +24,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -124,10 +125,10 @@ func applyIstioOperatorPodFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return result, nil
 }
 
-func hackIopReconcilingHook(input *go_hook.HookInput) error {
+func hackIopReconcilingHook(_ context.Context, input *go_hook.HookInput) error {
 	operatorPodMap := make(map[string]string)
 
-	for operatorPod, err := range sdkobjectpatch.SnapshotIter[IstioOperatorPodSnapshot](input.NewSnapshots.Get("istio_operator_pods")) {
+	for operatorPod, err := range sdkobjectpatch.SnapshotIter[IstioOperatorPodSnapshot](input.Snapshots.Get("istio_operator_pods")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'istio_operator_pods' snapshot: %w", err)
 		}
@@ -137,7 +138,7 @@ func hackIopReconcilingHook(input *go_hook.HookInput) error {
 		}
 	}
 
-	for iop, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdSnapshot](input.NewSnapshots.Get("istio_operators")) {
+	for iop, err := range sdkobjectpatch.SnapshotIter[IstioOperatorCrdSnapshot](input.Snapshots.Get("istio_operators")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'istio_operators' snapshot: %w", err)
 		}

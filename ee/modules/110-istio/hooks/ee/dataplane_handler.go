@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -410,7 +411,7 @@ func applyReplicaSetFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	return result, nil
 }
 
-func dataplaneHandler(input *go_hook.HookInput) error {
+func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("istio.internal.globalVersion").Exists() {
 		return nil
 	}
@@ -423,7 +424,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 
 	// create istio namespace map to find out needed revisions and versions
 	istioNamespaceMap := make(map[string]IstioDrivenNamespaceFilterResult)
-	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioDrivenNamespaceFilterResult](append(input.NewSnapshots.Get("namespaces_definite_revision"), input.NewSnapshots.Get("namespaces_global_revision")...)) {
+	for nsInfo, err := range sdkobjectpatch.SnapshotIter[IstioDrivenNamespaceFilterResult](append(input.Snapshots.Get("namespaces_definite_revision"), input.Snapshots.Get("namespaces_global_revision")...)) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over namespaces: %w", err)
 		}
@@ -444,9 +445,9 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	upgradeCandidatesMap := make(map[string]map[string]map[string]*upgradeCandidate)
 
 	k8sControllers := make([]sdkpkg.Snapshot, 0)
-	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("deployment")...)
-	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("statefulset")...)
-	k8sControllers = append(k8sControllers, input.NewSnapshots.Get("daemonset")...)
+	k8sControllers = append(k8sControllers, input.Snapshots.Get("deployment")...)
+	k8sControllers = append(k8sControllers, input.Snapshots.Get("statefulset")...)
+	k8sControllers = append(k8sControllers, input.Snapshots.Get("daemonset")...)
 
 	// fill in upgradeCandidates and upgradeCandidatesMap
 	for k8sController, err := range sdkobjectpatch.SnapshotIter[K8SControllerFilterResult](k8sControllers) {
@@ -485,7 +486,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	replicaSets := make(map[string]map[string]upgradeCandidateRS)
 
 	// create a map of the replica sets depending on the deployments from upgradeCandidatesMap map
-	for rsInfo, err := range sdkobjectpatch.SnapshotIter[K8SControllerFilterResult](input.NewSnapshots.Get("replicaset")) {
+	for rsInfo, err := range sdkobjectpatch.SnapshotIter[K8SControllerFilterResult](input.Snapshots.Get("replicaset")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over replica sets: %w", err)
 		}
@@ -511,7 +512,7 @@ func dataplaneHandler(input *go_hook.HookInput) error {
 	// map of namespace, which will be ignored when selecting controllers to update
 	ignoredNamespace := make(map[string]struct{})
 
-	for istioPod, err := range sdkobjectpatch.SnapshotIter[IstioDrivenPodFilterResult](input.NewSnapshots.Get("istio_pod")) {
+	for istioPod, err := range sdkobjectpatch.SnapshotIter[IstioDrivenPodFilterResult](input.Snapshots.Get("istio_pod")) {
 		if err != nil {
 			return fmt.Errorf("cannot iterate over istio pods: %w", err)
 		}

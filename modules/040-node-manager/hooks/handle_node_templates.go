@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -141,8 +142,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // nodeTemplatesHandler applies annotations, labels and taints to Hybrid and Static nodes from NodeGroup's nodeTemplate.
 // Also, "node.deckhouse.io/uninitialized" taint is deleted.
-func nodeTemplatesHandler(input *go_hook.HookInput) error {
-	nodes := input.NewSnapshots.Get("nodes")
+func nodeTemplatesHandler(_ context.Context, input *go_hook.HookInput) error {
+	nodes := input.Snapshots.Get("nodes")
 	// Expire d8_unmanaged_nodes_on_cluster metric and register unmanaged nodes.
 	// This is a separate loop because template applying may return an error.
 	input.MetricsCollector.Expire("")
@@ -160,7 +161,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	nodeGroups := input.NewSnapshots.Get("ngs")
+	nodeGroups := input.Snapshots.Get("ngs")
 	if len(nodeGroups) == 0 {
 		return nil
 	}

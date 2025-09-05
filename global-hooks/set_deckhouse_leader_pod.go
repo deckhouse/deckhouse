@@ -36,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(setLeaderLabelToPod))
 
 // setLeaderLabelToPod just add `deckhouse-leader` label to leader pod
-func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) error {
+func setLeaderLabelToPod(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	podName := os.Getenv("DECKHOUSE_POD")
 
 	client, err := dc.GetK8sClient()

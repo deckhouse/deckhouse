@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -73,8 +74,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, setPodNetworkMode)
 
-func setPodNetworkMode(input *go_hook.HookInput) error {
-	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.NewSnapshots, "cni_configuration_secret")
+func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
+	cniConfigurationSecrets, err := sdkobjectpatch.UnmarshalToStruct[FlannelConfig](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal cni_configuration_secret to FlannelConfig: %w", err)
 	}

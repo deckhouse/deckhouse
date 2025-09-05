@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -67,8 +68,8 @@ func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func getHubbleCACert(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("ca-secret")
+func getHubbleCACert(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("ca-secret")
 
 	if len(snaps) == 0 {
 		return errors.New("secret with hubble CA not found")

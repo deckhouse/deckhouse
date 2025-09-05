@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -35,7 +36,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, discoveryModulesImagesDigests)
 
-func discoveryModulesImagesDigests(input *go_hook.HookInput) error {
+func discoveryModulesImagesDigests(_ context.Context, input *go_hook.HookInput) error {
 	var downloadedModulesDir string
 
 	digestsFile := "/deckhouse/modules/images_digests.json"

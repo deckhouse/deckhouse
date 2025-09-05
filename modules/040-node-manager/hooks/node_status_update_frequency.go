@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -48,8 +49,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleUpdateFreq)
 
-func handleUpdateFreq(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("secret")
+func handleUpdateFreq(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("secret")
 
 	if len(snaps) == 0 {
 		input.Values.Remove("nodeManager.internal.nodeStatusUpdateFrequency")

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -70,8 +71,8 @@ type recicleMastersNode struct {
 	Name string
 }
 
-func handleRecicleMastersNode(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("master_nodes")
+func handleRecicleMastersNode(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("master_nodes")
 
 	if len(snaps) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")

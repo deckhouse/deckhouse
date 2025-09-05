@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -104,13 +105,13 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	return &CM{Name: cm.Name}, nil
 }
 
-func systemReserve(input *go_hook.HookInput) error {
-	if cmSnapshotNew := input.NewSnapshots.Get("cmNew"); len(cmSnapshotNew) > 0 {
+func systemReserve(_ context.Context, input *go_hook.HookInput) error {
+	if cmSnapshotNew := input.Snapshots.Get("cmNew"); len(cmSnapshotNew) > 0 {
 		log.Debug("System reserved Nodes are already migrated, skipping...")
 		return nil
 	}
 
-	ngsSnapshot := input.NewSnapshots.Get("ngs")
+	ngsSnapshot := input.Snapshots.Get("ngs")
 	for ng, err := range sdkobjectpatch.SnapshotIter[NodeGroup](ngsSnapshot) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshot: %w", err)
@@ -143,7 +144,7 @@ func systemReserve(input *go_hook.HookInput) error {
 		},
 	})
 
-	if cmSnapshot := input.NewSnapshots.Get("cm"); len(cmSnapshot) > 0 {
+	if cmSnapshot := input.Snapshots.Get("cm"); len(cmSnapshot) > 0 {
 		log.Debug("Delete old migration configmap", slog.String("configmap", "(d8-system/"+systemReserveMigrationCM+")"))
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", systemReserveMigrationCM)
 	}

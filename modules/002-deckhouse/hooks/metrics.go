@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,7 +31,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, collectMetrics)
 
-func collectMetrics(input *go_hook.HookInput) error {
+func collectMetrics(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Set("deckhouse_release_channel", 1, map[string]string{
 		"release_channel": input.Values.Get("deckhouse.releaseChannel").String(),
 	})

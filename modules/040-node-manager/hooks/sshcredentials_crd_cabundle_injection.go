@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -147,25 +148,25 @@ func applyCAPSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func injectCAtoCRD(input *go_hook.HookInput) error {
-	if len(input.NewSnapshots.Get("sshcredentials")) == 0 {
+func injectCAtoCRD(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("sshcredentials")) == 0 {
 		return nil
 	}
 
-	if len(input.NewSnapshots.Get("webhook-service")) == 0 {
+	if len(input.Snapshots.Get("webhook-service")) == 0 {
 		return nil
 	}
 
-	if len(input.NewSnapshots.Get("cabundle")) > 0 {
+	if len(input.Snapshots.Get("cabundle")) > 0 {
 		var crd CRD
 		var bundle certificate.Certificate
 
-		err := input.NewSnapshots.Get("cabundle")[0].UnmarshalTo(&bundle)
+		err := input.Snapshots.Get("cabundle")[0].UnmarshalTo(&bundle)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal first 'cabundle' snapshot: %w", err)
 		}
 
-		err = input.NewSnapshots.Get("sshcredentials")[0].UnmarshalTo(&crd)
+		err = input.Snapshots.Get("sshcredentials")[0].UnmarshalTo(&crd)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal first 'sshcredentials' snapshot: %w", err)
 		}

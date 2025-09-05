@@ -37,8 +37,8 @@ type Composer struct {
 }
 
 func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) (*Composer, error) {
-	sourceSnap := input.NewSnapshots.Get("cluster_log_source")
-	namespacedSourceSnap := input.NewSnapshots.Get("namespaced_log_source")
+	sourceSnap := input.Snapshots.Get("cluster_log_source")
+	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
 
 	res := &Composer{
 		Source: make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),

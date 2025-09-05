@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -70,8 +71,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleGatekeeperBootstrap)
 
-func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
-	templates, err := sdkobjectpatch.UnmarshalToStruct[cTemplate](input.NewSnapshots, "gatekeeper_templates")
+func handleGatekeeperBootstrap(_ context.Context, input *go_hook.HookInput) error {
+	templates, err := sdkobjectpatch.UnmarshalToStruct[cTemplate](input.Snapshots, "gatekeeper_templates")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal gatekeeper_templates: %w", err)
 	}
