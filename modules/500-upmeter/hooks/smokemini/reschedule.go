@@ -190,6 +190,10 @@ func reschedule(input *go_hook.HookInput) error {
 	// Update values
 	state[x] = newSts
 	input.Values.Set(statePath, state)
+
+	maxUnavailable := maxStsPerNode(state)
+	input.Values.Set("upmeter.internal.smokeMini.pdb.maxUnavailable", maxUnavailable)
+
 	return nil
 }
 
@@ -266,4 +270,26 @@ func firstNonEmpty(xs ...string) string {
 func smokeMiniEnabled(v sdkpkg.PatchableValuesCollector) bool {
 	disabled := v.Get("upmeter.smokeMiniDisabled").Bool()
 	return !disabled
+}
+
+func maxStsPerNode(state scheduler.State) int {
+	counts := make(map[string]int)
+	minValue := 1
+
+	for _, sts := range state {
+		if sts.Node != "" {
+			counts[sts.Node]++
+		}
+	}
+
+	maxValue := 0
+	for _, c := range counts {
+		if c > maxValue {
+			maxValue = c
+		}
+	}
+	if maxValue == 0 {
+		return minValue
+	}
+	return maxValue
 }
