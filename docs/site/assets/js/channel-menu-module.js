@@ -33,6 +33,16 @@ async function loadYAMLFile(url) {
     return await response.text();
 }
 
+// Format channel name for display (e.g., "early-access" -> "Early Access")
+function formatChannelName(channelName) {
+    if (!channelName) {
+        return 'Unknown Channel';
+    }
+    return channelName
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, l => l.toUpperCase());
+}
+
 // Get current channel from URL and update the doc-current-version element
 function updateCurrentVersion() {
     const currentVersionElement = document.getElementById('doc-current-version');
@@ -82,10 +92,7 @@ function updateCurrentVersion() {
     }
 
     // Format the channel name for display
-    const formattedChannel = currentChannel
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, l => l.toUpperCase());
-
+    const formattedChannel = formatChannelName(currentChannel);
     currentVersionElement.textContent = formattedChannel;
 }
 
@@ -185,9 +192,7 @@ function renderMenu(settings) {
         // Create channel name span
         const channelSpan = document.createElement('span');
         channelSpan.className = 'submenu-item-channel';
-        const formattedName = (channel.name || 'Unknown Channel')
-            .replace(/-/g, ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
+        const formattedName = formatChannelName(channel.name);
         channelSpan.textContent = formattedName;
 
         // Create dot separator - use special class if same release version as previous item
