@@ -3,6 +3,16 @@ async function initializeChannelMenu() {
         const yamlText = await loadYAMLFile('/includes/release-channels/channels.yaml');
         const appData = jsyaml.load(yamlText);
 
+        // Replace 'ea' with 'early-access' when loading data
+        if (appData.groups[0].channels) {
+            appData.groups[0].channels = appData.groups[0].channels.map(channel => {
+                if (channel.name === 'ea') {
+                    return { ...channel, name: 'early-access' };
+                }
+                return channel;
+            });
+        }
+
         // Store channels data globally for use in updateCurrentVersion
         window.channelsData = appData.groups[0].channels;
 
@@ -58,7 +68,7 @@ function updateCurrentVersion() {
         if (matchingChannels.length > 0) {
             // If multiple channels have the same version, find the most stable one
             if (matchingChannels.length > 1) {
-                const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'ea': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
+                const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'early-access': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
                 const mostStableChannel = matchingChannels.reduce((prev, current) => {
                     const prevStability = stabilityOrder[prev.name] || 0;
                     const currentStability = stabilityOrder[current.name] || 0;
@@ -73,15 +83,12 @@ function updateCurrentVersion() {
 
     // Format the channel name for display
     const formattedChannel = currentChannel
-        .replace(/ea/g, 'early access')
-        .replace(/early-access/g, 'Early Access')
         .replace(/-/g, ' ')
         .replace(/\b\w/g, l => l.toUpperCase());
 
     currentVersionElement.textContent = formattedChannel;
 }
 
-// Use the JSON structure in your logic
 function renderMenu(settings) {
     const menuContainer = document.getElementById('doc-versions-menu');
     // Check page type from meta tag
@@ -94,7 +101,6 @@ function renderMenu(settings) {
         return;
     }
 
-    // Check if settings has channels data
     if (!settings || !settings.channels) {
         console.warn('No channels data found in settings');
         return;
@@ -108,7 +114,7 @@ function renderMenu(settings) {
 
     // Sort channels by stability in descending order (rock-solid first)
     const sortedChannels = [...settings.channels].sort((a, b) => {
-        const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'ea': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
+        const stabilityOrder = { 'rock-solid': 5, 'stable': 4, 'early-access': 3, 'beta': 2, 'alpha': 1, 'latest': 0 };
         const aStability = stabilityOrder[a.name] || 0;
         const bStability = stabilityOrder[b.name] || 0;
         return bStability - aStability;
@@ -176,11 +182,10 @@ function renderMenu(settings) {
         submenuItemLink.className = 'submenu-item-link';
         submenuItemLink.setAttribute('data-proofer-ignore', '');
 
-        // Create channel name span - replace dashes with spaces and capitalize
+        // Create channel name span
         const channelSpan = document.createElement('span');
         channelSpan.className = 'submenu-item-channel';
         const formattedName = (channel.name || 'Unknown Channel')
-            .replace(/ea/g, 'early access')
             .replace(/-/g, ' ')
             .replace(/\b\w/g, l => l.toUpperCase());
         channelSpan.textContent = formattedName;
