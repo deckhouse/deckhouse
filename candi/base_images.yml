@@ -86,6 +86,8 @@ tools/cosign: "sha256:764beea2f92fc6a1ad53d4c82c5b57a67a4bb0941cf3cc57f0667b51f0
 tools/cosign-v2.4.3: "sha256:764beea2f92fc6a1ad53d4c82c5b57a67a4bb0941cf3cc57f0667b51f098454a" # fromImage: builder/scratch
 tools/cryptsetup: "sha256:4e63a30db6f0e9d5a65d31d7ef53f824818bebf8b564d1f5805c714420649dba" # fromImage: builder/scratch
 tools/cryptsetup-v2.7.5: "sha256:4e63a30db6f0e9d5a65d31d7ef53f824818bebf8b564d1f5805c714420649dba" # fromImage: builder/scratch
+tools/diffutils: "sha256:81d8111af1895614d50b7ff4c4c8efd4db9ab888d47da790b118f6fe01bb93e4" # fromImage: builder/scratch
+tools/diffutils-v3.12: "sha256:81d8111af1895614d50b7ff4c4c8efd4db9ab888d47da790b118f6fe01bb93e4" # fromImage: builder/scratch
 tools/e2fsprogs: "sha256:f5a5fcd1bb0a84f39044c2f746ebe006f49632b1deb03cc73ac535b383af304b" # fromImage: builder/scratch
 tools/e2fsprogs-v1.47.2: "sha256:f5a5fcd1bb0a84f39044c2f746ebe006f49632b1deb03cc73ac535b383af304b" # fromImage: builder/scratch
 tools/erofs-utils: "sha256:3740a2cc02fa64b7f6bbb1645d89fff0aca6e0b3974d3c939f8e85096d82939f" # fromImage: builder/scratch
@@ -110,6 +112,8 @@ tools/nfs-utils: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa
 tools/nfs-utils-nfs-utils-2-8-2: "sha256:f86c11311bd1852a03bde7132eaa54596edb9cfa276cc2098eb40fa9d1dcb147" # fromImage: builder/scratch
 tools/openssl: "sha256:964434af72ac38f5db56c73a878bbb78db3edad3993313c45c40848a289d3629" # fromImage: builder/scratch
 tools/openssl-openssl-3.5.0: "sha256:964434af72ac38f5db56c73a878bbb78db3edad3993313c45c40848a289d3629" # fromImage: builder/scratch
+tools/procps: "sha256:e0bfd59f1af98e6c7672d0b08874276b5369c7b9f8feeff1d91dc49c4abc80c5" # fromImage: builder/scratch
+tools/procps-v4.0.5: "sha256:e0bfd59f1af98e6c7672d0b08874276b5369c7b9f8feeff1d91dc49c4abc80c5" # fromImage: builder/scratch
 tools/pwru: "sha256:34254656bdf070f3599ac9d5c27238bd90a6927a433671349e4f9d537f77aed6" # fromImage: builder/scratch
 tools/pwru-v1.0.9: "sha256:34254656bdf070f3599ac9d5c27238bd90a6927a433671349e4f9d537f77aed6" # fromImage: builder/scratch
 tools/sed: "sha256:634e5ba9fb711a2ee89e8502a8260f6a76515525bcccd102ee7b145aa7e03a9a" # fromImage: builder/scratch
