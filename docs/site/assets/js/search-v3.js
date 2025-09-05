@@ -643,13 +643,17 @@ class ModuleSearch {
         }
       }
 
-      // Count how many levels deep the current page is
-      // Remove ./ prefix and count path segments
-      const cleanPath = currentPageRelative.startsWith('./') ?
-        currentPageRelative.substring(2) : currentPageRelative;
-      const currentPageSegments = cleanPath.split('/').filter(segment => segment && segment !== '.');
-      // Don't count the filename, only the directory levels
-      const currentPageDepth = currentPageSegments.length - 1;
+              // Count how many levels deep the current page is
+        // Remove ./ prefix and count path segments
+        const cleanPath = currentPageRelative.startsWith('./') ?
+          currentPageRelative.substring(2) : currentPageRelative;
+        const currentPageSegments = cleanPath.split('/').filter(segment => segment && segment !== '.');
+        
+        // If path ends with /, treat it as index file (same level as last directory)
+        // Otherwise, don't count the filename, only the directory levels
+        const currentPageDepth = cleanPath.endsWith('/') ? 
+          currentPageSegments.length : 
+          currentPageSegments.length - 1;
 
 
       // Generate relative path (go up to version base, then down to target)
