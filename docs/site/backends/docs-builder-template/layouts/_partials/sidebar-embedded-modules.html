@@ -44,7 +44,7 @@
 
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
       {{- if $.IsPage }}
-      <!--#include virtual="/includes/channel-menu-module.html" -->
+        {{- "<!--#include virtual=\"/includes/channel-menu-module.html\" -->"  | safeHTML }}
       {{- end }}
     </div>
 
