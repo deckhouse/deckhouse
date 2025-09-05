@@ -34,13 +34,13 @@
         1. Find the `node-exporter` Pod running on the affected node:
         
            ```bash
-           kubectl -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
+           d8 k -n d8-monitoring get pod -l app=node-exporter -o json | jq -r ".items[] | select(.spec.nodeName==\"{{$labels.node}}\") | .metadata.name"
            ```
 
         2. Describe the `node-exporter` Pod:
         
            ```bash
-           kubectl -n d8-monitoring describe pod <POD_NAME>
+           d8 k -n d8-monitoring describe pod <POD_NAME>
            ```
 
         3. Verify that the kubelet is running on node `{{ $labels.node }}`.
@@ -101,13 +101,13 @@
         - To cordon the node:
         
           ```bash
-          kubectl cordon {{ $labels.node }}
+          d8 k cordon {{ $labels.node }}
           ```
 
         - To drain the node (if draining has been running for more than 20 minutes):
         
           ```bash
-          kubectl drain {{ $labels.node }}
+          d8 k drain {{ $labels.node }}
           ```
 
         The was likely caused by the scheduled maintenance of that node.
