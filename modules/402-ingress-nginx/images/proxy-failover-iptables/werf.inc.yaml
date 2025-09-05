@@ -62,7 +62,7 @@ import:
   before: setup
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
   add: /
-  to: /usr/sbin
+  to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi

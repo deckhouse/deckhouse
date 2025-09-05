@@ -89,6 +89,8 @@ spec:
           emptyDir: {}
         - name: tmp-nginx
           emptyDir: {}
+        - name: sbin-iptables
+          emptyDir: {}
       initContainers:
       - name: touch-files
         image: {{ include "helm_lib_module_common_image" (list $context "init") }}
@@ -98,9 +100,32 @@ spec:
         command:
           - /bin/touch
           - /tmp/nginx.conf
-          - /tmp/error.log
         volumeMounts:
           - name: write-files
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+      - name: sbin-iptables
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore \
+            iptables-legacy iptables-legacy-save iptables-legacy-restore \
+            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
+            iptables-nft iptables-nft-save iptables-nft-restore \
+            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+          done
+        volumeMounts:
+          - name: sbin-iptables
             mountPath: /tmp
         resources:
           requests:
@@ -142,9 +167,8 @@ spec:
           - mountPath: /opt/nginx-static/conf/nginx.conf
             name: write-files
             subPath: nginx.conf
-          - mountPath: /opt/nginx-static/logs/error.log
-            name: write-files
-            subPath: error.log
+          - mountPath: /opt/nginx-static/logs
+            name: tmp-nginx
           - mountPath: /opt/nginx-static/client_body_temp
             name: tmp-nginx
           - mountPath: /opt/nginx-static/proxy_temp
@@ -152,6 +176,8 @@ spec:
           - mountPath: /opt/nginx-static/fastcgi_temp
             name: tmp-nginx
           - mountPath: /opt/nginx-static/uwsgi_temp
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/scgi_temp
             name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
@@ -180,6 +206,8 @@ spec:
           - mountPath: /run/xtables.lock
             name: xtables-lock
             readOnly: false
+          - mountPath: /usr/sbin
+            name: sbin-iptables
       - name: nginx-exporter
         image: {{ include "helm_lib_module_image" (list $context "nginxExporter") }}
         args:
