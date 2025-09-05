@@ -16,13 +16,13 @@
 
 set -euo pipefail
 
-available_modules="$(find /available_hooks/ -name webhooks | sed 's#/webhooks##g')"
-for module in $ENABLED_MODULES; do
- module_dir=$(grep -E "/[0-9]+-$module$" <<< "$available_modules" || true)
- if [[ -n "$module_dir" ]]; then
-   cp -r "$module_dir" /hooks
- fi
-done
+# available_modules="$(find /available_hooks/ -name webhooks | sed 's#/webhooks##g')"
+# for module in $ENABLED_MODULES; do
+#  module_dir=$(grep -E "/[0-9]+-$module$" <<< "$available_modules" || true)
+#  if [[ -n "$module_dir" ]]; then
+#    cp -r "$module_dir" /hooks
+#  fi
+# done
 
 # exec /usr/bin/tini -- /shell-operator "$@"
 exec /webhook-operator

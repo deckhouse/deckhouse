@@ -145,9 +145,9 @@ shell:
     - cd /operator
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - go build -o /webhook-operator ./cmd/main.go
-    - chown -R 64535:64535 /webhook-operator
-    - chmod 0700 /webhook-operator
+    - go build -o webhook-operator ./cmd/main.go
+    - chown -R 64535:64535 /operator/webhook-operator
+    - chmod 0700 /operator/webhook-operator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
 fromImage: common/src-artifact
