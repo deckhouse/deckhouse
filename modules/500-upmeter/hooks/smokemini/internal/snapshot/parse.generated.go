@@ -31,7 +31,7 @@ import (
 
 // ParseNodeSlice parses Node slice from snapshots
 func ParseNodeSlice(rs []sdkpkg.Snapshot) ([]Node, error) {
-	ret := make([]Node, len(rs))
+	ret := make([]Node, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[Node](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Node: %w", err)	
@@ -44,7 +44,7 @@ func ParseNodeSlice(rs []sdkpkg.Snapshot) ([]Node, error) {
 
 // ParseStatefulSetSlice parses StatefulSet slice from snapshots
 func ParseStatefulSetSlice(rs []sdkpkg.Snapshot) ([]StatefulSet, error) {
-	ret := make([]StatefulSet, len(rs))
+	ret := make([]StatefulSet, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[StatefulSet](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StatefulSet: %w", err)	
@@ -57,7 +57,7 @@ func ParseStatefulSetSlice(rs []sdkpkg.Snapshot) ([]StatefulSet, error) {
 
 // ParsePodSlice parses Pod slice from snapshots
 func ParsePodSlice(rs []sdkpkg.Snapshot) ([]Pod, error) {
-	ret := make([]Pod, len(rs))
+	ret := make([]Pod, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[Pod](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse Pod: %w", err)	
@@ -70,7 +70,7 @@ func ParsePodSlice(rs []sdkpkg.Snapshot) ([]Pod, error) {
 
 // ParseStorageClassSlice parses StorageClass slice from snapshots
 func ParseStorageClassSlice(rs []sdkpkg.Snapshot) ([]StorageClass, error) {
-	ret := make([]StorageClass, len(rs))
+	ret := make([]StorageClass, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[StorageClass](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse StorageClass: %w", err)	
@@ -83,7 +83,7 @@ func ParseStorageClassSlice(rs []sdkpkg.Snapshot) ([]StorageClass, error) {
 
 // ParsePodPhaseSlice parses PodPhase slice from snapshots
 func ParsePodPhaseSlice(rs []sdkpkg.Snapshot) ([]PodPhase, error) {
-	ret := make([]PodPhase, len(rs))
+	ret := make([]PodPhase, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[PodPhase](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PodPhase: %w", err)	
@@ -96,7 +96,7 @@ func ParsePodPhaseSlice(rs []sdkpkg.Snapshot) ([]PodPhase, error) {
 
 // ParsePvcTerminationSlice parses PvcTermination slice from snapshots
 func ParsePvcTerminationSlice(rs []sdkpkg.Snapshot) ([]PvcTermination, error) {
-	ret := make([]PvcTermination, len(rs))
+	ret := make([]PvcTermination, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[PvcTermination](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse PvcTermination: %w", err)	
