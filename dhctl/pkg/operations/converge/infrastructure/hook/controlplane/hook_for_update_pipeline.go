@@ -106,6 +106,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, nil
 	}
 
+	if !runner.GetMasterDestruction() {
+		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
+		return false, nil
+	}
+
 	if len(h.nodeToHostForChecks) == 0 {
 		return false, ErrSingleMasterClusterInfrastructurePlanHasDestructiveChanges
 	}
@@ -132,6 +137,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if runner.GetChangesInPlan() != infrastructure.PlanHasDestructiveChanges {
+		return nil
+	}
+
+	if !runner.GetMasterDestruction() {
+		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return nil
 	}
 
