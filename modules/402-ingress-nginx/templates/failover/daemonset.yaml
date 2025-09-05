@@ -124,6 +124,8 @@ spec:
             ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
               ln -f -s /iptables-wrapper "/tmp/${cmd}"
           done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
         volumeMounts:
           - name: sbin-iptables
             mountPath: /tmp
