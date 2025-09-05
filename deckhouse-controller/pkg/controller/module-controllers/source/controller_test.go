@@ -522,24 +522,17 @@ func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSour
 func newMockedContainerWithData(t minimock.Tester, versionInChannel string, modules, tags []string) *dependency.MockedContainer {
 	dc := dependency.NewMockedContainer()
 
-	// Mock for listing modules
-	modulesMock := cr.NewClientMock(t)
-	modulesMock.ListTagsMock.Optional().Return(modules, nil)
 	dc.CRClientMap = map[string]cr.Client{
-		"dev-registry.deckhouse.io/deckhouse/modules": modulesMock,
+		"dev-registry.deckhouse.io/deckhouse/modules": cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
 	}
 
 	for _, module := range modules {
-		// Mock for listing module versions
 		moduleVersionsMock := cr.NewClientMock(t)
 		if len(tags) > 0 {
-			moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
+			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
 		}
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock
 
-		// Mock for getting module image
-		moduleImageMock := cr.NewClientMock(t)
-		moduleImageMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
+		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
 			_, err := semver.NewVersion(imageTag)
 			if err != nil {
 				imageTag = versionInChannel
@@ -583,7 +576,6 @@ accessibility:
 				},
 			}, nil
 		})
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleImageMock
 	}
 
 	dc.CRClient.ListTagsMock.Return(modules, nil)
