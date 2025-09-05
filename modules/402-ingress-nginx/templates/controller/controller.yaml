@@ -196,8 +196,8 @@ spec:
             - --
             - "/bin/mkdir /tmp/nginx && chmod 0777 /tmp/*"
           volumeMounts:
-        - mountPath: tmp
-          name: tmp-nginx
+            - mountPath: tmp
+              name: tmp-nginx
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
