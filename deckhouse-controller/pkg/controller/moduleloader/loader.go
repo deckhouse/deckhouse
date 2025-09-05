@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
@@ -253,7 +254,7 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 }
 
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
-	modules := []string{}
+	modules := make([]string, 0, len(l.modules))
 	for _, module := range l.modules {
 		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
@@ -264,6 +265,14 @@ func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
 
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		l.logger.Info("LoadModulesFromFS completed",
+			slog.Int64("took_ms", time.Since(start).Milliseconds()),
+			slog.Int("modules", len(l.modules)),
+		)
+	}()
+	l.logger.Info("LoadModulesFromFS started")
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
@@ -302,44 +311,94 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		}
 	}
 
+	// OPTIMIZATION: Make cleanup async to not block module loading startup!
+	// Cleanup is non-critical housekeeping that can happen in background
+	go func() {
+		cleanupStart := time.Now()
+		if err := l.cleanupDeletedModules(ctx); err != nil {
+			l.logger.Warn("async cleanup failed", slog.String("error", err.Error()))
+		} else {
+			cleanupTook := time.Since(cleanupStart)
+			l.logger.Debug("async module cleanup completed", slog.Int64("cleanup_ms", cleanupTook.Milliseconds()))
+		}
+	}()
+
+	return nil
+}
+
+// cleanupDeletedModules removes modules that no longer exist and updates status for modules without configs
+func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
+	l.logger.Debug("cleanup: starting module cleanup process")
+
 	// clear deleted embedded modules
+	listStart := time.Now()
 	modulesList := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
 		return fmt.Errorf("list all modules: %w", err)
 	}
+	l.logger.Debug("cleanup: listed modules",
+		slog.Int("count", len(modulesList.Items)),
+		slog.Int64("took_ms", time.Since(listStart).Milliseconds()))
 
+	configListStart := time.Now()
 	moduleConfigs := new(v1alpha1.ModuleConfigList)
 	if err := l.client.List(ctx, moduleConfigs); err != nil {
 		return fmt.Errorf("list module configs: %w", err)
 	}
+	l.logger.Debug("cleanup: listed module configs",
+		slog.Int("count", len(moduleConfigs.Items)),
+		slog.Int64("took_ms", time.Since(configListStart).Milliseconds()))
+
+	processStart := time.Now()
+	deletedCount := 0
+	statusUpdatedCount := 0
 
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
-			l.logger.Debug("delete embedded module", slog.String("name", module.Name))
+			deleteStart := time.Now()
+			l.logger.Debug("cleanup: deleting embedded module", slog.String("name", module.Name))
 			if err := l.client.Delete(ctx, &module); err != nil {
-				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
+				return fmt.Errorf("delete the '%s' embedded module: %w", module.Name, err)
 			}
+			deletedCount++
+			l.logger.Debug("cleanup: deleted embedded module",
+				slog.String("name", module.Name),
+				slog.Int64("took_ms", time.Since(deleteStart).Milliseconds()))
 		}
 
 		var found bool
+		configSearchStart := time.Now()
 		for _, config := range moduleConfigs.Items {
 			if config.GetName() == module.Name {
 				found = true
 				break
 			}
 		}
+		configSearchTime := time.Since(configSearchStart)
 
 		if !found {
+			statusUpdateStart := time.Now()
+			l.logger.Debug("cleanup: updating status for module without config", slog.String("name", module.Name))
 			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
 				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-
 				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
+			statusUpdatedCount++
+			l.logger.Debug("cleanup: updated status for module",
+				slog.String("name", module.Name),
+				slog.Int64("config_search_ms", configSearchTime.Milliseconds()),
+				slog.Int64("status_update_ms", time.Since(statusUpdateStart).Milliseconds()))
 		}
 	}
+
+	l.logger.Debug("cleanup: processing modules completed",
+		slog.Int("total_modules", len(modulesList.Items)),
+		slog.Int("deleted_modules", deletedCount),
+		slog.Int("status_updated_modules", statusUpdatedCount),
+		slog.Int64("total_process_ms", time.Since(processStart).Milliseconds()))
 
 	return nil
 }
@@ -551,15 +610,11 @@ func (l *Loader) moduleDefinitionByDir(moduleName, moduleDir string) (*moduletyp
 // moduleDefinitionByFile returns Definition instance parsed from the module.yaml file
 func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition, error) {
 	path := filepath.Join(absPath, moduletypes.DefinitionFile)
-	if _, err := os.Stat(path); err != nil {
+	f, err := os.Open(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, err
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
