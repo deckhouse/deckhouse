@@ -5,12 +5,17 @@ skinparam ArrowFontStyle italic
 skinparam DefaultTextAlignment center
 skinparam backgroundColor transparent
 skinparam Shadowing false
+skinparam componentStyle rectangle
+
+component "<color:navy>Using the DM-Verity\n <color:navy>control mechanism" as DMV #LightBlue
+component "<color:navy>Signature verification\n <color:navy>when loading the image" as CS #LightBlue
+component "<color:navy>Using EROFS-snapshotter,\n <color:navy>RW upperdir rejection" as EROFS #LightBlue
 
 [Integrity control] --> [Integrity control\n when starting containers]
 [Integrity control] --> [Integrity control\n of running containers]
-[Integrity control\n of running containers] <-- [Using the DM-Verity\n control mechanism]
-[Integrity control\n when starting containers] <-- [Using the DM-Verity\n control mechanism]
+[Integrity control\n of running containers] <.. DMV
+[Integrity control\n when starting containers] <.. DMV
 
-[Integrity control\n when starting containers] <-- [Signature verification\n when loading the image]
-[Integrity control\n when starting containers] <-- [Using EROFS-snapshotter,\n RW upperdir rejection]
+[Integrity control\n when starting containers] <.. CS
+[Integrity control\n when starting containers] <.. EROFS
 @enduml
