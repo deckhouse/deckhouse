@@ -193,15 +193,20 @@ metadata:
   name: nginx
 spec:
   ingressClass: nginx
-  # Способ поступления трафика из внешнего мира.
+  # [<en>] The way traffic goes to cluster from the outer network.
+  # [<ru>] Способ поступления трафика из внешнего мира.
   inlet: HostPort
   hostPort:
     httpPort: 80
     httpsPort: 443
-  # Описывает, на каких узлах будет находиться Ingress-контроллер.
-  # Возможно, захотите изменить.
-  # Больше примеров здесь
-  # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  # [<en>] Describes on which nodes the Ingress Controller will be located.
+  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
+  # [<en>] You might consider changing this.
+  # [<en>] More examples here.
+  # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  # [<ru>] Возможно, захотите изменить.
+  # [<ru>] Больше примеров здесь
+  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:
