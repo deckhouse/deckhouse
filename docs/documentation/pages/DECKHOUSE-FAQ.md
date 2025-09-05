@@ -143,8 +143,8 @@ A detailed list of changes can be found in the Changelog, which is referenced in
 
 During the update:
 
-- The `DeckhouseUpdating` alert is displayed.
-- The `deckhouse` Pod is not the `Ready` status. If the Pod does not go to the `Ready` status for a long time, then this may indicate that there are problems in the work of Deckhouse. Diagnosis is necessary.
+* The `DeckhouseUpdating` alert is displayed.
+* The `deckhouse` Pod is not the `Ready` status. If the Pod does not go to the `Ready` status for a long time, then this may indicate that there are problems in the work of Deckhouse. Diagnosis is necessary.
 
 ### How do I know that the update was successful?
 
@@ -202,19 +202,19 @@ Possible options for action if something went wrong:
 
 As soon as a new version of Deckhouse appears on the release channel installed in the cluster:
 
-- The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-- There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
-  - Manual update mode is set (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
-  - The automatic update mode is set, and the [update windows](modules/deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
-  - The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
-  - The [update.notification.minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
+* The alert `DeckhouseReleaseIsWaitingManualApproval` fires, if the cluster uses manual update mode (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+* There is a new custom resource [DeckhouseRelease](cr.html#deckhouserelease). Use the `kubectl get deckhousereleases` command, to view the list of releases. If the `DeckhouseRelease` is in the `Pending` state, the specified version has not yet been installed. Possible reasons why `DeckhouseRelease` may be in `Pending`:
+  * Manual update mode is set (the [update.mode](modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`).
+  * The automatic update mode is set, and the [update windows](modules/deckhouse/usage.html#update-windows-configuration) are configured, the interval of which has not yet come.
+  * The automatic update mode is set, update windows are not configured, but the installation of the version has been postponed for a random time due to the mechanism of reducing the load on the repository of container images. There will be a corresponding message in the `status.message` field of the `DeckhouseRelease` resource.
+  * The [update.notification.minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter is set, and the specified time has not passed yet.
 
 ### How do I get information about the upcoming update in advance?
 
 You can get information in advance about updating minor versions of Deckhouse on the release channel in the following ways:
 
-- Configure manual [update mode](modules/deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will be displayed and a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will be applied in the cluster.
-- Configure automatic [update mode](modules/deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
+* Configure manual [update mode](modules/deckhouse/configuration.html#parameters-update-mode). In this case, when a new version appears on the release channel, the alert `DeckhouseReleaseIsWaitingManualApproval` will be displayed and a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will be applied in the cluster.
+* Configure automatic [update mode](modules/deckhouse/configuration.html#parameters-update-mode) and specify the minimum time in the [minimalNotificationTime](modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter for which the update will be postponed. In this case, when a new version appears on the release channel, a new custom resource [DeckhouseRelease](cr.html#deckhouserelease) will appear in the cluster. And if you specify a URL in the [update.notification.webhook](modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter, then the webhook will be called additionally.
 
 ### How do I find out which version of Deckhouse is on which release channel?
 
@@ -291,7 +291,7 @@ Starting from DKP 1.70 patch releases (e.g., an update from version `1.70.1` to 
 
 In the example, DNS settings produce different results when resolving names on the host and in the Kubernetes pod:
 
-- The `/etc/resolv.conf` file on the node:
+* The `/etc/resolv.conf` file on the node:
 
   ```text
   nameserver 10.0.0.10
@@ -300,7 +300,7 @@ In the example, DNS settings produce different results when resolving names on t
 
   > Note that the `ndot` parameter defaults to 1 (`options ndots:1`) on the node. But in Kubernetes pods, the `ndot` parameter is set to **5**. Therefore, the logic for resolving DNS names with 5 dots or less in the name is different on the host and in the pod.
 
-- The `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. That is, any DNS name in the `company.my` zone for which there is no specific DNS entry is resolved to `10.0.0.100`.
+* The `company.my` DNS zone is configured to resolve wildcard records `*.company.my` to `10.0.0.100`. That is, any DNS name in the `company.my` zone for which there is no specific DNS entry is resolved to `10.0.0.100`.
 
 In this case, subject to the `search` parameter specified in the `/etc/resolv.conf` file, when accessing the `registry.deckhouse.io` address **on the node**, the system will try to obtain the IP address for the `registry.deckhouse.io` name (it treats it as a fully qualified name given the default setting of `options ndots:1`).
 
@@ -493,22 +493,22 @@ It is important to follow these guidelines:
    Some services no longer consider the `CN` (Common Name) field as the source for domain names.
 
 2. Correctly fill out the `keyUsage`, `basicConstraints`, `extendedKeyUsage` fields, specifically:
-   - `basicConstraints = CA:FALSE`  
+   * `basicConstraints = CA:FALSE`  
 
      This field determines whether the certificate is an end-entity certificate or a certification authority (CA) certificate. CA certificates cannot be used as service certificates.
 
-   - `keyUsage = digitalSignature, keyEncipherment`  
+   * `keyUsage = digitalSignature, keyEncipherment`  
 
      The `keyUsage` field limits the permissible usage scenarios of this key:
 
-     - `digitalSignature`: Allows the key to be used for signing digital messages and ensuring data integrity.
-     - `keyEncipherment`: Allows the key to be used for encrypting other keys, which is necessary for secure data exchange using TLS (Transport Layer Security).
+     * `digitalSignature`: Allows the key to be used for signing digital messages and ensuring data integrity.
+     * `keyEncipherment`: Allows the key to be used for encrypting other keys, which is necessary for secure data exchange using TLS (Transport Layer Security).
 
-   - `extendedKeyUsage = serverAuth`  
+   * `extendedKeyUsage = serverAuth`  
 
      The `extendedKeyUsage` field specifies additional key usage scenarios required by specific protocols or applications:
 
-     - `serverAuth`: Indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
+     * `serverAuth`: Indicates that the certificate is intended for server use, authenticating the server to the client during the establishment of a secure connection.
 
 It is also recommended to:
 
@@ -620,35 +620,35 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    ```
 
    where:
-   - `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `se-plus`).
-   - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
-   - `/home/user/d8-bundle` — the directory to store the resulting bundle into. It will be created if not present.
+   * `<EDITION>` — the edition code of the Deckhouse Kubernetes Platform (for example, `ee`, `se`, `se-plus`).
+   * `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
+   * `/home/user/d8-bundle` — the directory to store the resulting bundle into. It will be created if not present.
 
    > If the loading of images is interrupted, rerunning the command will resume the loading if no more than a day has passed since it stopped.
 
    You can also use the following command options:
-   - `--no-pull-resume` — to forcefully start the download from the beginning;
-   - `--no-platform` — to skip downloading the Deckhouse Kubernetes Platform package (platform.tar);
-   - `--no-modules` — to skip downloading modules packages (module-*.tar);
-   - `--no-security-db` — to skip downloading security scanner databases (security.tar);
-   - `--since-version=X.Y` — to download all versions of Deckhouse starting from the specified minor version. This parameter will be ignored if a version higher than the version on the Rock Solid updates channel is specified. This parameter cannot be used simultaneously with the `--deckhouse-tag` parameter;
-   - `--deckhouse-tag` — to download only a specific build of Deckhouse (without considering update channels). This parameter cannot be used simultaneously with the `--since-version` parameter;
-   - `--include-module` / `-i` = `name[@Major.Minor]` — to download only a specific whitelist of modules (and optionally their minimal versions). Specify multiple times to whitelist more modules. This flags are ignored if used with `--no-modules`.
-   - `--exclude-module` / `-e` = `name` — to skip downloading of a specific blacklisted set of modules. Specify multiple times to blacklist more modules. Ignored if `--no-modules` or `--include-module` are used.
-   - `--modules-path-suffix` — to change the suffix of the module repository path in the main Deckhouse repository. By default, the suffix is `/modules`. (for example, the full path to the repository with modules will look like `registry.deckhouse.io/deckhouse/EDITION/modules` with this default).
-   - `--gost-digest` — for calculating the checksums of the bundle in the format of GOST R 34.11-2012 (Streebog). The checksum for each package will be displayed and written to a file with the extension `.tar.gostsum` in the folder with the package;
-   - `--source` — to specify the address of the Deckhouse source registry;
-      - To authenticate in the official Deckhouse image registry, you need to use a license key and the `--license` parameter;
-      - To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
-   - `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`);
-   - `--tmp-dir` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading. By default, `.tmp` subdirectory under the bundle directory is used.
+   * `--no-pull-resume` — to forcefully start the download from the beginning;
+   * `--no-platform` — to skip downloading the Deckhouse Kubernetes Platform package (platform.tar);
+   * `--no-modules` — to skip downloading modules packages (module-*.tar);
+   * `--no-security-db` — to skip downloading security scanner databases (security.tar);
+   * `--since-version=X.Y` — to download all versions of Deckhouse starting from the specified minor version. This parameter will be ignored if a version higher than the version on the Rock Solid updates channel is specified. This parameter cannot be used simultaneously with the `--deckhouse-tag` parameter;
+   * `--deckhouse-tag` — to download only a specific build of Deckhouse (without considering update channels). This parameter cannot be used simultaneously with the `--since-version` parameter;
+   * `--include-module` / `-i` = `name[@Major.Minor]` — to download only a specific whitelist of modules (and optionally their minimal versions). Specify multiple times to whitelist more modules. This flags are ignored if used with `--no-modules`.
+   * `--exclude-module` / `-e` = `name` — to skip downloading of a specific blacklisted set of modules. Specify multiple times to blacklist more modules. Ignored if `--no-modules` or `--include-module` are used.
+   * `--modules-path-suffix` — to change the suffix of the module repository path in the main Deckhouse repository. By default, the suffix is `/modules`. (for example, the full path to the repository with modules will look like `registry.deckhouse.io/deckhouse/EDITION/modules` with this default).
+   * `--gost-digest` — for calculating the checksums of the bundle in the format of GOST R 34.11-2012 (Streebog). The checksum for each package will be displayed and written to a file with the extension `.tar.gostsum` in the folder with the package;
+   * `--source` — to specify the address of the Deckhouse source registry;
+      * To authenticate in the official Deckhouse image registry, you need to use a license key and the `--license` parameter;
+      * To authenticate in a third-party registry, you need to use the `--source-login` and `--source-password` parameters;
+   * `--images-bundle-chunk-size=N` — to specify the maximum file size (in GB) to split the image archive into. As a result of the operation, instead of a single file archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set of files, specify the file name without the `.NNNN.chunk` suffix in the `d8 mirror push` command (e.g., `d8.tar` for files like `d8.tar.NNNN.chunk`);
+   * `--tmp-dir` — path to a temporary directory to use for image pulling and pushing. All processing is done in this directory, so make sure there is enough free disk space to accommodate the entire bundle you are downloading. By default, `.tmp` subdirectory under the bundle directory is used.
 
    Additional configuration options for the `d8 mirror` family of commands are available as environment variables:
-    - `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
-    - `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`). The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
-    - `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
-    - `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
-    - `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
+    * `HTTP_PROXY`/`HTTPS_PROXY` — URL of the proxy server for HTTP(S) requests to hosts that are not listed in the variable `$NO_PROXY`;
+    * `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Supported value formats include IP addresses (`1.2.3.4`), CIDR notations (`1.2.3.4/8`), domains, and the asterisk character (`*`). The IP addresses and domain names can also include a literal port number (`1.2.3.4:80`). The domain name matches that name and all the subdomains. The domain name with a leading `.` matches subdomains only. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but does not match `y.com`. A single asterisk `*` indicates that no proxying should be done;
+    * `SSL_CERT_FILE` — path to the SSL certificate. If the variable is set, system certificates are not used;
+    * `SSL_CERT_DIR` — list of directories to search for SSL certificate files, separated by a colon. If set, system certificates are not used. [See more...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html);
+    * `MIRROR_BYPASS_ACCESS_CHECKS` — set to `1` to skip validation of registry credentials;
 
    Example of a command to download all versions of Deckhouse EE starting from version 1.59 (provide the license key):
 
@@ -781,7 +781,7 @@ To switch the Deckhouse cluster to using a third-party registry, follow these st
       --user=USER          User with pull access to registry.
       --password=PASSWORD  Password/token for registry user.
       --ca-file=CA-FILE    Path to registry CA.
-      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --scheme=SCHEME      Used scheme while connecting to registry, "http" or "https".
       --dry-run            Don't change deckhouse resources, only print them.
       --new-deckhouse-tag=NEW-DECKHOUSE-TAG
                           New tag that will be used for deckhouse deployment image (by default
@@ -975,22 +975,22 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 {% endalert %}
 
 {% alert level="warning" %}
-- The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
-- For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](https://deckhouse.ru/products/enterprise_edition.html).
-- The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](#how-do-i-configure-deckhouse-to-use-a-third-party-registry).
-- The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules. A detailed comparison is available in the [documentation](revision-comparison.html).
-- All commands are executed on the master node of the existing cluster with `root` user.
+* The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
+* For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](https://deckhouse.ru/products/enterprise_edition.html).
+* The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](#how-do-i-configure-deckhouse-to-use-a-third-party-registry).
+* The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules. A detailed comparison is available in the [documentation](revision-comparison.html).
+* All commands are executed on the master node of the existing cluster with `root` user.
 {% endalert %}
 
 1. Prepare variables for the license token and new edition name:
 
     > It is not necessary to fill the `NEW_EDITION` and `AUTH_STRING` variables when switching to Deckhouse CE edition.
     The `NEW_EDITION` variable should match your desired Deckhouse edition. For example, to switch to:
-    - CE, the variable should be `ce`;
-    - BE, the variable should be `be`;
-    - SE, the variable should be `se`;
-    - SE+, the variable should be `se-plus`;
-    - EE, the variable should be `ee`.
+    * CE, the variable should be `ce`;
+    * BE, the variable should be `be`;
+    * SE, the variable should be `se`;
+    * SE+, the variable should be `se-plus`;
+    * EE, the variable should be `ee`.
 
     ```shell
     NEW_EDITION=<PUT_YOUR_EDITION_HERE>
