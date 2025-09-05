@@ -73,7 +73,7 @@ spec:
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
-# [<ru>] Настройки модуля user-authн.
+# [<ru>] Настройки модуля user-authn.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
