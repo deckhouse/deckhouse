@@ -145,7 +145,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ee:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
+1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
    If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -352,7 +352,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](https://deckhouse.io/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse) to complete.  
+1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
 If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -388,7 +388,7 @@ If you encounter the `ImagePullBackOff` error during this process, wait for the 
 
 ## Switching DKP from EE to SE
 
-To perform the switch, you will need a valid license token. If needed, you can [request a temporary license](https://deckhouse.io/products/kubernetes-platform) by clicking the *Request Consultation* button.
+To perform the switch, you will need a valid license token.
 
 {% alert level="info" %}
 This instruction uses the public container registry address: `registry.deckhouse.ru`.
@@ -772,7 +772,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
    ```
 
 1. Make sure that the modules currently used in the cluster are supported in DKP CSE.  
-   For example, in Deckhouse CSE 1.58 and 1.64, the `cert-manager` module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](deckhouse-configure-global.html#parameters-modules-https-mode) accordingly.
+   For example, in Deckhouse CSE 1.58 and 1.64, the `cert-manager` module is not available. Therefore, before disabling the `cert-manager` module, you must switch the HTTPS mode of certain components (such as [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) or [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) to alternative modes, or change the [global HTTPS mode parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) accordingly.
 
    To display the list of modules that are not supported in DKP CSE and will be disabled, run:
 
@@ -789,7 +789,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
      tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
    ```
 
-   The `earlyOOM` component is not supported in DKP CSE. Disable it using the [earlyOomEnabled](modules/node-manager/configuration.html#parameters-earlyoomenabled)) setting.
+   The `earlyOOM` component is not supported in DKP CSE. Disable it using the [earlyOomEnabled](/modules/node-manager/configuration.html#parameters-earlyoomenabled)) setting.
 
    Wait for the DKP pod to reach the `Ready` status and for all tasks in the queue to complete:
 
@@ -949,7 +949,7 @@ To switch your Deckhouse Enterprise Edition cluster to Certified Security Editio
 
 {% alert level="warning" %}
 When using the `registry` module, switching between editions is only possible in `Unmanaged` mode.  
-To switch to `Unmanaged` mode, follow the [instruction](modules/registry/examples.html).
+To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -978,7 +978,7 @@ To switch to `Unmanaged` mode, follow the [instruction](modules/registry/example
 
 1. Ensure the Deckhouse queue is empty and error-free.
 
-1. Create a [NodeGroupConfiguration](modules/node-manager/cr.html#nodegroupconfiguration) resource for temporary authorization in `registry.deckhouse.io`:
+1. Create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource for temporary authorization in `registry.deckhouse.io`:
 
    > Skip this step if switching to Deckhouse CE.
 

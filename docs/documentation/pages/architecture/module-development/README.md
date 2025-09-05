@@ -4,7 +4,7 @@ permalink: en/architecture/module-development/
 lang: en
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a [module source](../cr.html#modulesource). This section details what the DKP module is and how it works.
+Deckhouse Kubernetes Platform (DKP) supports both built-in modules and modules that can be fetched from a [module source](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). This section details what the DKP module is and how it works.
 
 Creating a module consists of the following stages:
 

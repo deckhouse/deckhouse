@@ -218,7 +218,7 @@ You need to configure two separate load balancers for these services — a web l
 
 ### Creating the virtual machine
 
-Create a `my-vm` virtual machine based on the examples in the [DVP documentation](https://deckhouse.io/products/kubernetes-platform/modules/virtualization/stable/user_guide.html).
+Create a `my-vm` virtual machine based on the examples in the [DVP documentation](https://deckhouse.io/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
 
 In the following manifest example, the label `vm: my-vm` is added for further identification in the load balancers.
 

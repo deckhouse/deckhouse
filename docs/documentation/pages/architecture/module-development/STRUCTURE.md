@@ -327,7 +327,7 @@ An [example](https://github.com/deckhouse/deckhouse/blob/main/modules/300-promet
 
 ### config-values.yaml
 
-This file is required to validate the module parameters that the user can configure via [ModuleConfig](../../cr.html#moduleconfig).
+This file is required to validate the module parameters that the user can configure via [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
 
 To render the schema in the documentation on the site or in the documentation module in the cluster, create:
 - the `doc-ru-config-values.yaml` file with a structure similar to that of the `config-values.yaml` file. Keep only the translated description parameters in the `doc-ru-config-values.yaml` file;
@@ -346,7 +346,7 @@ properties:
       The same as the Pods' `spec.nodeSelector` parameter in Kubernetes.
 
       If the parameter is omitted or `false`, `nodeSelector` will be determined
-      [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).</code>
+      [automatically](../../installing/#advanced-scheduling).</code>
 ```
 
 An example of the `/openapi/doc-ru-config-values.yaml` file:
@@ -519,7 +519,7 @@ dependencies:
 
 The `module.yaml` file in the root of the module folder contains the module's metadata.
 
-The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](../../cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](../../cr.html#modulesource)) is configured and synchronization is successful.
+The file might not be present, but it is recommended to fill it in. Most of the metadata will be available in the [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) object in the cluster. The Module object will be created automatically after the module source (resource [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)) is configured and synchronization is successful.
 
 Parameters that can be used in `module.yaml`:
 
@@ -544,8 +544,8 @@ Parameters that can be used in `module.yaml`:
   - `kubernetes` — *String.* Dependency on the [Kubernetes version](../dependencies/#kubernetes-version-dependency) that the module is compatible with.
   - `modules` — *Object.* Dependency on the [version of other modules](../dependencies/#dependency-on-the-version-of-other-modules).
 - `stage` — *String.* [Module lifecycle stage](../versioning/#how-do-i-figure-out-how-stable-a-module-is). Possible values: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
-If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
-- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](../../cr.html#module) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
+If `stage` is set to `Experimental`, the module cannot be enabled by default. To allow the use of such modules, set the [`allowExperimentalModules`](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter to `true`.
+- `tags` — *Array of strings.* List of additional module tags. Tags are converted to [Module](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules) object labels using the template `module.deckhouse.io/<TAG>=""` (where `<TAG>` is the tag name).
 
   For example, if you specify `tags: ["test", "myTag"]`, then the corresponding Module object in the cluster will have the labels `module.deckhouse.io/test=""` and `module.deckhouse.io/myTag=""`.
 - `weight` — *Number.* The weight of the module. Used to determine the startup order among modules — the lower the weight, the earlier the module will start. Default: 900.

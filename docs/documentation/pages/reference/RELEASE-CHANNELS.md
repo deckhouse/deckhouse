@@ -17,7 +17,7 @@ Clusters, as infrastructure elements, usually have to meet various requirements.
 
 A production cluster, unlike a development one, has higher requirements for reliability. In a production cluster, frequent component updates and changes are undesirable. All the cluster components must be thoroughly tested for stable and reliable operation.
 
-Deckhouse uses **five release channels** which you can *soft-switch* between using the [deckhouse](modules/deckhouse/) module: just specify the desired release channel in the module [configuration](modules/deckhouse/configuration.html#parameters-releasechannel).
+Deckhouse uses **five release channels** which you can *soft-switch* between using the [deckhouse](/modules/deckhouse/) module: just specify the desired release channel in the module [configuration](/modules/deckhouse/configuration.html#parameters-releasechannel).
 
 <div id="releases__stale__block" class="releases__info releases__stale__warning" >
   <strong>Note!</strong> The cluster does not use any release channel.

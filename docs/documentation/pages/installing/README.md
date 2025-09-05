@@ -45,19 +45,19 @@ Make sure that the configuration files meet the requirements of your infrastruct
 
 The installation configuration YAML file contains parameters for several resources (manifests):
 
-1. [InitConfiguration](configuration.html#initconfiguration) — initial parameters for [Deckhouse configuration](../#deckhouse-configuration), necessary for the proper startup of Deckhouse after installation.
+1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — initial parameters for [Deckhouse configuration](../#deckhouse-configuration), necessary for the proper startup of Deckhouse after installation.
 
    Key settings specified in this resource:
-   * [Component placement parameters](../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys);
-   * The [StorageClass](../deckhouse-configure-global.html#parameters-storageclass) (storage parameters);
-   * Access parameters for the [container registry](configuration.html#initconfiguration-deckhouse-registrydockercfg);
-   * Template for [DNS names](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate);
+   * [Component placement parameters](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys);
+   * The [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) (storage parameters);
+   * Access parameters for the [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg);
+   * Template for [DNS names](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate);
    * Other essential parameters required for Deckhouse to function correctly.
 
-1. [ClusterConfiguration](configuration.html#clusterconfiguration) — general cluster parameters, such as control plane version, network settings, CRI parameters, etc.
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster parameters, such as control plane version, network settings, CRI parameters, etc.
     > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
-1. [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters for Kubernetes clusters deployed on bare-metal servers or virtual machines in unsupported clouds.
+1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — parameters for Kubernetes clusters deployed on bare-metal servers or virtual machines in unsupported clouds.
    > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
 1. `<CLOUD_PROVIDER>ClusterConfiguration` — a set of resources containing configuration parameters for supported cloud providers. These include:
@@ -67,20 +67,20 @@ The installation configuration YAML file contains parameters for several resourc
    * Node group creation settings.
 
    List of cloud provider configuration resources:
-   * [AWSClusterConfiguration](../modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
-   * [AzureClusterConfiguration](../modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
-   * [GCPClusterConfiguration](../modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
-   * [OpenStackClusterConfiguration](../modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
-   * [VsphereClusterConfiguration](../modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
-   * [VCDClusterConfiguration](../modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
-   * [YandexClusterConfiguration](../modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
-   * [ZvirtClusterConfiguration](../modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
+   * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) — Amazon Web Services;
+   * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration) — Microsoft Azure;
+   * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) — Google Cloud Platform;
+   * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) — OpenStack;
+   * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) — VMware vSphere;
+   * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration) — VMware Cloud Director;
+   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
+   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
 1. `ModuleConfig` — a set of resources containing configuration parameters for [Deckhouse built-in modules](../).
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
-   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](../modules/prometheus/configuration.html#parameters-nodeselector) parameter.
+   For example, for the `prometheus` module, the configuration is specified in the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter.
 
 1. `IngressNginxController` — deploying the Ingress controller.
 
@@ -320,7 +320,7 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
+1. `<RELEASE_CHANNEL>` — the [update channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
    - `alpha` — for the Alpha update channel;
    - `beta` — for the Beta update channel;
    - `early-access` — for the Early Access update channel;
@@ -368,7 +368,7 @@ Where:
 List of checks performed by the installer before starting Deckhouse installation:
 
 1. General checks:
-   - The values of the parameters [PublicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](configuration.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [PublicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
    - The authentication data for the container image registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters;
@@ -725,7 +725,7 @@ You can check the current status of versions in the release channels at [release
 
    When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-   In the [InitConfiguration](installing/configuration.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](installing/configuration.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](installing/configuration.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
+   In the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource during installation, also use your registry address and authorization data (parameters [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg), or [Step 3]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm-private/step3.html) of the Quick Start Guide).
 
 ### Creating a cluster and running DKP without using update channels
 
@@ -736,10 +736,10 @@ This method should only be used if your isolated private registry does not conta
 If you need to install DKP with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
-1. Specify the appropriate version number in the [deckhouse.devBranch](installing/configuration.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](installing/configuration.html#initconfiguration) resource.  
-   > **Do not specify** the [deckhouse.releaseChannel](installing/configuration.html#initconfiguration-deckhouse-releasechannel) parameter in the [InitConfiguration](installing/configuration.html#initconfiguration) resource.
+1. Specify the appropriate version number in the [deckhouse.devBranch](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource.  
+   > **Do not specify** the [deckhouse.releaseChannel](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) resource.
 
-If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](modules/002-deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
 
@@ -785,7 +785,7 @@ Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (
 
 {% endofftopic %}
 
-To configure DKP to use a proxy, use the [proxy](installing/configuration.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
+To configure DKP to use a proxy, use the [proxy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter in the ClusterConfiguration resource.
 
 Example:
 

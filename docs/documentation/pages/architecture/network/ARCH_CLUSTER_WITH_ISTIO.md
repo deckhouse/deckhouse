@@ -42,7 +42,7 @@ Control plane components:
 With Istio enabled, the Ingress controller behavior is changed as follows:
 
 * A sidecar proxy is added to the controller Pods.
-  It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](../../modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the IngressNginxController resource).
+  It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the IngressNginxController resource).
 * Services not managed by Istio continue to function as before, requests to them are not intercepted by the controller sidecar.
 * Requests to services running under Istio are intercepted by the sidecar
   and processed according to Istio rules (read more about [activating Istio to work with an application](../../user/network/app_istio_activation.html)).
@@ -61,10 +61,10 @@ Therefore, the more applications and their instances, the more services, and the
 the more computational resources are required and the greater the load on the network.
 Two approaches are supported to reduce the load on controller instances:
 
-* Horizontal scaling (the [`controlPlane.replicasManagement`](../../modules/istio/configuration.html#parameters-controlplane-replicasmanagement) parameter
+* Horizontal scaling (the [`controlPlane.replicasManagement`](/modules/istio/configuration.html#parameters-controlplane-replicasmanagement) parameter
   of the module) — the more controller instances, the fewer instances of istio sidecars to serve for each controller
   and the less CPU and network load.
-* Data-plane segmentation using the [Sidecar](../../modules/istio/istio-cr.html#sidecar) resource (recommended approach)
+* Data-plane segmentation using the [Sidecar](/modules/istio/istio-cr.html#sidecar) resource (recommended approach)
   — the smaller the scope of an individual istio sidecar, the less data in the data plane needs to be updated and the less CPU and network load.
 
 A rough estimate of overhead for a control plane instance

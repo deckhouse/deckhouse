@@ -51,7 +51,7 @@ Node management is implemented via the [`node-manager`](/modules/node-manager/) 
    # Or disable.
    ```
 
-1. Using the [Deckhouse web interface](https://deckhouse.io/products/kubernetes-platform/modules/console/stable/):
+1. Using the [Deckhouse web interface](/modules/console):
 
    - Go to the "Deckhouse → Modules" section.
    - Find the `node-manager` module and click on it.
@@ -221,7 +221,7 @@ If the Cluster API Provider Static (CAPS) is enabled, the NodeGroup resource can
 
 ## Running DKP on an arbitrary node
 
-To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
+To run DKP on an arbitrary node, configure the `deckhouse` module with the appropriate [`nodeSelector`](/modules/deckhouse/configuration.html) parameter and **do not** specify `tolerations`. The required `tolerations` will be set automatically in this case.
 
 {% alert level="warning" %}
 Only use nodes of type **CloudStatic** or **Static** to run DKP. Avoid using a `NodeGroup` that contains only a single node for running DKP.

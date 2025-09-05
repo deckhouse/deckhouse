@@ -6,7 +6,7 @@ lang: ru
 
 {% raw %}
 
-При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
+При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride).
 
 Пример ModulePullOverride:
 
@@ -158,7 +158,7 @@ accessibility:
    - Используется та же версия, которая была задеплоена ранее (ModuleRelease v1.0.0).
    - Проверяются новые релизы.
    - При их наличии они загружаются (например, v1.1.0, v1.1.1).
-   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../deckhouse-release-channels.html) (Update). [Подробнее](../../modules/deckhouse/configuration.html#parameters-update).
+   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../deckhouse-release-channels.html) (Update). [Подробнее](/modules/deckhouse/configuration.html#parameters-update).
 
    Если модуль включён позже 72 часов:
    - Старая версия удаляется (`delete ModuleRelease v1.0.0`).
@@ -215,11 +215,11 @@ status:
   phase: Ready
 ```
 
-После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
+После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
 
-1. В [ModuleSource](../../cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
+1. В [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -241,7 +241,7 @@ status:
      modulesCount: 2
    ```
 
-1. Включите модуль и создайте [ModulePullOverride](../../cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -300,7 +300,7 @@ status:
 
 ## Артефакты модуля в container registry
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../../cr.html#modulesource).
+После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
 
 Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
 

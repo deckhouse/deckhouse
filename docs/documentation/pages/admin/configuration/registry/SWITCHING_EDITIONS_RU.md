@@ -145,7 +145,7 @@ lang: ru
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ee:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](./platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Проверка статуса пода DKP:
 
@@ -347,7 +347,7 @@ lang: ru
    kubectl --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/deckhouse-faq.html#%D0%BA%D0%B0%D0%BA-%D0%BF%D1%80%D0%BE%D0%B2%D0%B5%D1%80%D0%B8%D1%82%D1%8C-%D0%BE%D1%87%D0%B5%D1%80%D0%B5%D0%B4%D1%8C-%D0%B7%D0%B0%D0%B4%D0%B0%D0%BD%D0%B8%D0%B9-%D0%B2-deckhouse). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](./platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Проверка статуса пода DKP:
 
@@ -382,7 +382,7 @@ lang: ru
 
 ## Переключение DKP с EE на SE
 
-Для переключения вам потребуется действующий лицензионный ключ. При необходимости вы можете [запросить временный ключ](https://deckhouse.ru/products/kubernetes-platform), нажав на кнопку *Получить консультацию*.
+Для переключения вам потребуется действующий лицензионный ключ.
 
 {% alert level="info" %}
 В инструкции используется публичный адрес container registry: `registry.deckhouse.ru`.
@@ -765,7 +765,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
    ```
 
 1. Убедитесь, что используемые в кластере модули поддерживаются в DKP CSE.
-   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](deckhouse-configure-global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
+   Например, в Deckhouse CSE 1.58 и 1.64 отсутствует модуль cert-manager. Поэтому, перед отключением модуля cert-manager необходимо перевести режим работы HTTPS некоторых компонентов (например [user-authn](/modules/user-authn/configuration.html#parameters-https-mode) или [prometheus](/modules/prometheus/configuration.html#parameters-https-mode)) на альтернативные варианты работы, либо изменить [глобальный параметр](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-mode) отвечающий за режим работы HTTPS в кластере.  
 
    Отобразить список модулей, которые не поддерживаются в DKP CSE и будут отключены, можно следующей командой:
 
@@ -942,7 +942,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 {% alert level="warning" %}
 При использовании модуля `registry` переключение между редакциями выполняется только в режиме `Unmanaged`.  
-Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](modules/registry/examples.html).
+Чтобы перейти в режим `Unmanaged`, [воспользуйтесь инструкцией](/modules/registry/examples.html).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -973,7 +973,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 
 1. Проверьте, чтобы очередь DKP была пустой и без ошибок.
 
-1. Создайте ресурс [NodeGroupConfiguration](modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
+1. Создайте ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) для переходной авторизации в `registry.deckhouse.ru`:
 
    > При переходе на редакцию Deckhouse CE пропустите этот шаг.
 

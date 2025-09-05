@@ -22,7 +22,7 @@ Deckhouse Kubernetes Platform (DKP) использует container registry дл
 - Сборка артефактов модуля из тегов с использованием продуктивного container registry.
 - Публикация модуля в container registry GitHub Packages в выбранный [канал обновлений](../versioning/#каналы-обновлений) из тега.  
 
-Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](../../cr.html#modulesource).
+Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
 
 Выполните следующие настройки в свойствах вашего проекта на GitHub, чтобы workflow модуля работал корректно:
 - Откройте страницу _Settings -> Actions -> General_.

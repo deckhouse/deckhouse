@@ -6,7 +6,7 @@ permalink: en/admin/configuration/update/faq.html
 ## How can I apply an update immediately, bypassing update windows, canary releases, and manual update mode?
 
 To apply a Deckhouse Kubernetes Platform (DKP) update immediately,
-add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource.
+add the annotation `release.deckhouse.io/apply-now: "true"` to the corresponding [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource.
 
 {% alert level="warning" %}
 This will bypass update windows, [canary release settings](../../../user/network/canary-deployment.html), and the [manual cluster update mode](configuration.html#manual-update-approval).
@@ -95,7 +95,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 As soon as a new version appears on the configured release channel:
 
 - The `DeckhouseReleaseIsWaitingManualApproval` alert will appear if the cluster is in [manual update mode](configuration.html#manual-update-approval).
-- A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) custom resource will be created.
+- A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource will be created.
   To see the list of releases, run `d8 k get deckhousereleases`.
   If the new version is in `Pending` state, it means it hasn’t been installed yet. Possible reasons:
   - [Manual update mode](configuration.html#manual-update-approval) is enabled.
@@ -110,9 +110,9 @@ As soon as a new version appears on the configured release channel:
 You can get information about upcoming minor DKP version updates on the release channel in one of the following ways:
 
 - Enable [manual update mode](configuration.html#manual-update-approval).
-  A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource and the DeckhouseReleaseIsWaitingManualApproval alert will appear when a new version is available.
+  A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource and the DeckhouseReleaseIsWaitingManualApproval alert will appear when a new version is available.
 - Enable [automatic update mode](configuration.html#automatic-update-mode) and set a delay using the [`minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter.
-  A new [DeckhouseRelease](../../../reference/cr.html#deckhouserelease) resource will appear when a new version is available.
+  A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource will appear when a new version is available.
   If you also set a webhook URL in the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter,
   a notification will be sent about the upcoming update.
 
@@ -122,7 +122,7 @@ For information about the current DKP versions across all release channels, visi
 
 ## What should I do if DKP is not receiving updates from the configured channel?
 
-- Ensure the [correct release channel](/products/kubernetes-platform/documentation/v1/architecture/updating.html#release-channels) is configured.
+- Ensure the [correct release channel](../../../architecture/updating.html#release-channels) is configured.
 - Check that DNS resolution for the Deckhouse image registry is working correctly.
   
   Get and compare the IP addresses of `registry.deckhouse.io` from both a node and the `deckhouse` Pod.

@@ -78,7 +78,7 @@ To apply changes related to node configuration, you must run the `dhctl converge
 This command synchronizes the actual node state with the specified configuration.
 {% endalert %}
 
-General cluster parameters are defined in the [ClusterConfiguration](installing/configuration.html#clusterconfiguration) structure.
+General cluster parameters are defined in the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) structure.
 
 To modify these parameters, run the following command:
 
@@ -176,7 +176,7 @@ user-authn   false     1         12h
 
 ## Module bundles
 
-Depending on the [bundle used](./modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
+Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
 <table>
 <thead>
@@ -222,8 +222,8 @@ The documentation for the running version of Deckhouse is available at `document
 where `<cluster_domain>` is the DNS name generated according to the template specified in the `modules.publicDomainTemplate` parameter of the global configuration.
 
 {% alert level="warning" %}
-Documentation is available only if the [documentation](modules/documentation/) module is enabled in the cluster.  
-It is enabled by default, except when using the [`Minimal` delivery bundle](modules/deckhouse/configuration.html#parameters-bundle).
+Documentation is available only if the [documentation](/modules/documentation/) module is enabled in the cluster.  
+It is enabled by default, except when using the [`Minimal` delivery bundle](/modules/deckhouse/configuration.html#parameters-bundle).
 {% endalert %}
 
 ## Managing placement of Deckhouse components
@@ -244,7 +244,7 @@ You cannot set `nodeSelector` and `tolerations` for modules:
 
 {% raw %}
 * The *monitoring*-related modules (`operator-prometheus`, `prometheus` and `vertical-pod-autoscaler`):
-  * Deckhouse examines nodes to determine a [nodeSelector](https://deckhouse.io/products/kubernetes-platform/documentation/modules/prometheus/configuration.html#parameters-nodeselector) in the following order:
+  * Deckhouse examines nodes to determine a [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) in the following order:
     1. It checks if a node with the `node-role.deckhouse.io/MODULE_NAME` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/monitoring` label is present in the cluster.
     1. It checks if a node with the `node-role.deckhouse.io/system` label is present in the cluster.

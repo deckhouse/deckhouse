@@ -96,7 +96,7 @@ This section provides an example of creating a `helloworld` module based on [mod
 
 1. Set up CI/CD.
 
-   The project template in the `.github` directory contains pre-built GitHub Actions workflow files that implement a simple scheme for building and publishing a module using the [GitHub Packages](https://github.com/features/packages) registry (ghcr.io). Module artifacts will be pushed to `ghcr.io/<OWNER>/modules/`, which will be the [module source](../../cr.html#modulesource). Make changes to the workflow files if the suggested option does not work for you.
+   The project template in the `.github` directory contains pre-built GitHub Actions workflow files that implement a simple scheme for building and publishing a module using the [GitHub Packages](https://github.com/features/packages) registry (ghcr.io). Module artifacts will be pushed to `ghcr.io/<OWNER>/modules/`, which will be the [module source](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). Make changes to the workflow files if the suggested option does not work for you.
 
    Do the following in the properties of your project on GitHub to make the module workflow run smoothly:
    - Open the *Settings -> Actions -> General* page.
@@ -153,7 +153,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    EOF
    ```
 
-1. Create a [ModuleSource](../../cr.html#modulesource) resource in the cluster (specify the container registry address and authentication string).
+1. Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource in the cluster (specify the container registry address and authentication string).
 
    ```shell
    d8 k apply -f - <<EOF
@@ -182,7 +182,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    ...
    ```
 
-1. Create a [ModuleUpdatePolicy](../../cr.html#moduleupdatepolicy) resource that defines the module update policy.
+1. Create a [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource that defines the module update policy.
 
    Run the following command to create an update policy with the *Alpha* release channel and *Auto* update mode:
 
@@ -219,7 +219,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
    d8 k get ms ghcr -o yaml
    ```
 
-1. Confirm that the new [ModuleRelease](../../cr.html#modulerelease) objects have been created for the module:
+1. Confirm that the new [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease) objects have been created for the module:
 
    ```shell
    d8 k get mr

@@ -88,7 +88,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
    - The `applicationDomain` parameter in the `DexAuthenticator` defines the main domain of the application. Additional domains can be specified via the `additionalApplications.domain` parameter.
    - The `whitelistSourceRanges` and `additionalApplications.whitelistSourceRanges` parameters allow you to restrict authentication access to a specific list of IP addresses.
 
-     Refer to the [Authorization](TODO) section for information about configuring authorization. A full description of all `DexAuthenticator` parameters can be found in the [Reference](TODO) section.
+     Refer to the [Authorization](./admin/configuration/access/authorization/) section for information about configuring authorization. A full description of all `DexAuthenticator` parameters can be found in the [Reference](/modules/user-authn/configuration.html) section.
 
 1. Add the following annotations to the application's Ingress resource:
 
@@ -100,7 +100,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
 
      - `NAME` is the value of `metadata.name` from the `DexAuthenticator` resource;
      - `NS` is the value of `metadata.namespace` from the `DexAuthenticator` resource;
-     - `C_DOMAIN` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration-clusterdomain) resource).
+     - `C_DOMAIN` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) resource).
 
         Example (for a `DexAuthenticator` named `app-name` in namespace `app-ns`):
 

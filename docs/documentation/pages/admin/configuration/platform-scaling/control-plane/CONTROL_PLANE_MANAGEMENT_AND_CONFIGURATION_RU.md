@@ -20,7 +20,7 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 
 - Настройка kubeconfig — DKP формирует актуальный конфигурационный файл (с правами `cluster-admin`), автоматическое продление и обновление, а также создание `symlink` для пользователя `root`.
 
-> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/installing/configuration.html#clusterconfiguration).
+> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
 
 ## Включение, отключение и настройка модуля
 
@@ -51,9 +51,9 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
    d8 platform module disable control-plane-manager
    ```
 
-1. Через [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/modules/console/stable/):
+1. Через [веб-интерфейс Deckhouse](/modules/console):
 
-   - перейдите в раздел «Deckhouse - «Модули»;
+   - перейдите в раздел «Deckhouse — «Модули»;
    - найдите модуль `control-plane-manager` и нажмите на него;
    - включите тумблер «Модуль включен».
 

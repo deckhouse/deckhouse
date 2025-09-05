@@ -59,7 +59,7 @@ spec:
 
 Для использования объектов CiliumClusterwideNetworkPolicy выполните следующие шаги:
 
-1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](../../../../modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
+1. Примените первичный набор объектов CiliumClusterwideNetworkPolicy. Для этого в настройки модуля `cni-cilium` добавьте конфигурационную опцию [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) со значением `true`.
 
    Опция `policyAuditMode` может быть удалена после применения всех объектов CniliumClusterwideNetworkPolicy и проверки корректности их работы в Hubble UI.
 

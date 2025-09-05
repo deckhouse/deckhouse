@@ -128,7 +128,7 @@ spec:
 
 ### Настройка балансировщика
 
-Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](../../modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
+Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](/modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
 
 * Его спецификация идентична стандартному ресурсу Service с добавлением раздела `healthcheck`, который содержит набор проверок.
 * На данный момент поддерживается три вида проб:
@@ -200,7 +200,7 @@ spec:
 
 ### Создание виртуальной машины
 
-Создайте виртуальную машину `my-vm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/kubernetes-platform/modules/virtualization/stable/user_guide.html).
+Создайте виртуальную машину `my-vm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
 
 В примере манифеста ниже добавлен лейбл `vm: my-vm` для дальнейшей идентификации в балансировщиках.
 

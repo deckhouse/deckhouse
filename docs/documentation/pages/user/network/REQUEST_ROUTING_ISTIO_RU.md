@@ -29,5 +29,5 @@ lang: ru
   * таймаут и настройки retry (повторных попыток).
 
 {% alert level="warning" %}
-Для корректной работы `destination`в Istio необходимо его указать. Если вы используете внешний API, укажите его с помощью [ServiceEntry](../../modules/istio/istio-cr.html#serviceentry).
+Для корректной работы `destination`в Istio необходимо его указать. Если вы используете внешний API, укажите его с помощью [ServiceEntry](/modules/istio/istio-cr.html#serviceentry).
 {% endalert %}

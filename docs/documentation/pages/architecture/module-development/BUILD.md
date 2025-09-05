@@ -22,7 +22,7 @@ We suggest using the pre-compiled [GitHub Actions](https://github.com/deckhouse/
 - Build module artifacts from tags using the production container registry.
 - Publish module to GitHub Packages container registry to the selected [release channel](../versioning/#release-channels) from a tag.
 
-Module artifacts will be uploaded to `ghcr.io/<OWNER>/modules/`, which will serve as [module source](../../cr.html#modulesource).
+Module artifacts will be uploaded to `ghcr.io/<OWNER>/modules/`, which will serve as [module source](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
 
 For the module workflow to run smoothly, adjust the properties of your project on GitHub as follows:
 - Open the _Settings -> Actions -> General_ page.
