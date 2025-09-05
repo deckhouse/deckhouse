@@ -73,7 +73,7 @@ spec:
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
-# [<ru>] Настройки модуля user-authn.
+# [<ru>] Настройки модуля user-authн.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -111,7 +111,7 @@ spec:
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VCDClusterConfiguration
 layout: WithNAT
 provider:
@@ -140,7 +140,7 @@ edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
   type: "NSX-T"
   externalIP: *!CHANGE_EDGE_EXTERNAL_IP*
-  externalPort: 10022
+  externalPort: 22
 createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
@@ -194,9 +194,21 @@ metadata:
   name: nginx
 spec:
   ingressClass: nginx
-  # [<en>] The way traffic goes to cluster from the outer network.
-  # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: NodePort
+  # Способ поступления трафика из внешнего мира.
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  # Описывает, на каких узлах будет находиться Ingress-контроллер.
+  # Возможно, захотите изменить.
+  # Больше примеров здесь
+  # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
