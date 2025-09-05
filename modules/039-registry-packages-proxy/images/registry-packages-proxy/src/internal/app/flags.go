@@ -21,11 +21,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+var RppSignCheck = "false"
+
 type Config struct {
-	KubeConfig         string
-	ListenAddress      string
-	DisableCache       bool
-	SignCheck          bool
+    KubeConfig         string
+    ListenAddress      string
+    DisableCache       bool
+    SignCheck          bool
 	CacheDirectory     string
 	CacheRetentionSize resource.Quantity
 	LogLevel           log.Level
@@ -37,7 +39,6 @@ func InitFlags() (*Config, error) {
 	flag.StringVar(&config.ListenAddress, "listen-address", ":5080", "Listen address for HTTP")
 	flag.StringVar(&config.KubeConfig, "kubeconfig", "", "Path to kubeconfig")
 	flag.BoolVar(&config.DisableCache, "disable-cache", false, "Disable cache")
-	flag.BoolVar(&config.SignCheck, "sign-check", false, "Signature check")
 	flag.StringVar(&config.CacheDirectory, "cache-directory", "/cache", "Path to cache directory")
 
 	crs := flag.String("cache-retention-size", "1Gi", "Cache retention size")
@@ -51,9 +52,13 @@ func InitFlags() (*Config, error) {
 		return nil, err
 	}
 	config.LogLevel, err = log.ParseLevel(*v)
-	if err != nil {
-		return nil, err
-	}
+    if err != nil {
+        return nil, err
+    }
 
-	return config, nil
+    if RppSignCheck == "true" {
+        config.SignCheck = true
+    }
+
+    return config, nil
 }
