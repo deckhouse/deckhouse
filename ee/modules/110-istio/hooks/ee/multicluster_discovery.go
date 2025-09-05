@@ -43,6 +43,7 @@ type IstioMulticlusterDiscoveryCrdInfo struct {
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
+	ExistingAPIJWT           string
 }
 
 func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
@@ -81,6 +82,18 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		clusterUUID = multicluster.Status.MetadataCache.Public.ClusterUUID
 	}
 
+	// Check if we have an existing valid JWT
+	var existingAPIJWT string
+	if multicluster.Status.MetadataCache.Private != nil && multicluster.Status.MetadataCache.Private.APIJWT != "" {
+		// Validate the existing JWT
+		isValid, _, err := jwt.IsJWTValid(multicluster.Status.MetadataCache.Private.APIJWT)
+		if err == nil && isValid {
+			// Use existing JWT if it's still valid
+			existingAPIJWT = multicluster.Status.MetadataCache.Private.APIJWT
+		}
+		// If JWT is invalid or expired, existingAPIJWT will remain empty and will be generated later
+	}
+
 	me := multicluster.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
@@ -92,6 +105,7 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		ClusterUUID:              clusterUUID,
 		PublicMetadataEndpoint:   me + "/public/public.json",
 		PrivateMetadataEndpoint:  me + "/private/multicluster.json",
+		ExistingAPIJWT:           existingAPIJWT,
 	}, nil
 }
 
@@ -184,17 +198,26 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 			continue
 		}
 
-		// Generate long-lived JWT for API access (stored in CRD status)
-		apiClaims := map[string]string{
-			"iss":   "d8-istio",
-			"aud":   publicMetadata.ClusterUUID,
-			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
-			"scope": "api",
-		}
-		apiJWT, err := jwt.GenerateJWT(privKey, apiClaims, time.Hour*24*366) // 1 year
-		if err != nil {
-			input.Logger.Warn("can't generate API JWT for IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
-			continue
+		// Check if we already have a valid JWT from the filter function
+		var apiJWT string
+		if multiclusterInfo.ExistingAPIJWT != "" {
+			// Use existing valid JWT
+			apiJWT = multiclusterInfo.ExistingAPIJWT
+			input.Logger.Info("reusing existing valid API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
+		} else {
+			// Generate long-lived JWT for API access (stored in CRD status)
+			apiClaims := map[string]string{
+				"iss":   "d8-istio",
+				"aud":   publicMetadata.ClusterUUID,
+				"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
+				"scope": "api",
+			}
+			apiJWT, err = jwt.GenerateJWT(privKey, apiClaims, time.Hour*24*366) // 1 year
+			if err != nil {
+				input.Logger.Warn("can't generate API JWT for IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
+				continue
+			}
+			input.Logger.Info("generated new API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
 		}
 
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
@@ -217,9 +240,14 @@ func multiclusterDiscovery(input *go_hook.HookInput, dc dependency.Container) er
 
 		// Add JWT to private metadata AFTER unmarshaling remote data
 		privateMetadata.APIJWT = apiJWT
-		privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
 
-		input.Logger.Info("generated API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
+		// Only update expiry time if we generated a new JWT
+		if multiclusterInfo.ExistingAPIJWT == "" {
+			privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
+			input.Logger.Info("stored new API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
+		} else {
+			input.Logger.Info("stored existing API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
+		}
 		if privateMetadata.NetworkName == "" || privateMetadata.APIHost == "" || privateMetadata.IngressGateways == nil {
 			input.Logger.Warn("bad private metadata format in endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)

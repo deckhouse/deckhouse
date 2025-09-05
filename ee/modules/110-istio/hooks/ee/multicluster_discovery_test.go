@@ -209,7 +209,7 @@ status:
 
 			// Check that we have JWT generation logs
 			logOutput := string(f.LoggerOutput.Contents())
-			Expect(logOutput).To(ContainSubstring("generated API JWT for multicluster"))
+			Expect(logOutput).To(ContainSubstring("generated new API JWT for multicluster"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-0"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-1"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-2"))
