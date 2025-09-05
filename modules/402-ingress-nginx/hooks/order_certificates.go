@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
@@ -92,8 +94,11 @@ func orderCertificate(input *go_hook.HookInput) error {
 	controllersValues := input.Values.Get("ingressNginx.internal.ingressControllers").Array()
 
 	certificatesSecretMap := make(map[string]*certificate.Certificate)
-	for _, v := range input.Snapshots["certificates_data"] {
-		certificateData := v.(certificateData)
+	for certificateData, err := range sdkobjectpatch.SnapshotIter[certificateData](input.NewSnapshots.Get("certificates_data")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'certificates_data' snapshots: %w", err)
+		}
+
 		certificatesSecretMap[certificateData.SecretName] = certificateData.CertificateData
 	}
 

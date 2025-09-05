@@ -11,13 +11,13 @@ title: "The openvpn module: configuration"
 To view the generated password, run the command:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 To generate a new password, delete the Secret:
 
 ```shell
-kubectl -n d8-openvpn delete secret/basic-auth
+d8 k -n d8-openvpn delete secret/basic-auth
 ```
 
 {% alert level="info" %}

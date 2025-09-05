@@ -354,7 +354,7 @@ journalctl -u bashible.service
 Проверить контрольную сумму можно следующей командой:  
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```  
 
 Сравнение контрольных суммы сервис совершает каждую минуту.  

@@ -81,7 +81,7 @@ Alerts configured in the dashboard do not work with datasource templates - such 
 {% endalert %}
 
 {% alert level="info" %}
-If the dashboard does not appear in Grafana after being applied, there might be an error in the dashboard's JSON file. To identify the source of the problem, use the command `kubectl logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` to view the logs of the component responsible for applying dashboards.
+If the dashboard does not appear in Grafana after being applied, there might be an error in the dashboard's JSON file. To identify the source of the problem, use the command `d8 k logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` to view the logs of the component responsible for applying dashboards.
 {% endalert %}
 
 {% raw %}
@@ -614,13 +614,13 @@ You can get information about active alerts not only in the Grafana/Prometheus w
 Run the following command to get cluster alerts:
 
 ```shell
-kubectl get clusteralerts
+d8 k get clusteralerts
 ```
 
 Example:
 
 ```shell
-# kubectl get clusteralerts
+# d8 k get clusteralerts
 NAME               ALERT                                      SEVERITY   AGE     LAST RECEIVED   STATUS
 086551aeee5b5b24   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
 226d35c886464d6e   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
@@ -632,13 +632,13 @@ ab17837fffa5e440   DeadMansSwitch                             4          5d4h   
 Run the following command to view a specific alert:
 
 ```shell
-kubectl get clusteralerts <ALERT_NAME> -o yaml
+d8 k get clusteralerts <ALERT_NAME> -o yaml
 ```
 
 Example:
 
 ```shell
-# kubectl get clusteralerts 235d4efba7df6af4 -o yaml
+# d8 k get clusteralerts 235d4efba7df6af4 -o yaml
 alert:
   description: |
     The recommended course of action:

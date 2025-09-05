@@ -101,7 +101,7 @@ title: "Модуль user-authn: FAQ"
 - Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
 
   ```shell
-  kubectl edit mc user-authn
+  d8 k edit mc user-authn
   ```
 
 - Добавьте следующую секцию в блок `settings` и сохраните изменения:

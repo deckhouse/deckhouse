@@ -29,14 +29,14 @@ master-2 Ready control-plane,master 247d v1.28.15
    A list of all alerts can be viewed using the command:
 
    ```shell
-   kubectl get clusteralerts
+   d8 k get clusteralerts
    ```
 
 1. Make sure the Deckhouse queue is empty.
    To view the status of all Deckhouse job queues, run the following command:
 
    ```shell
-   kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 p queue list
    ```
 
 1. Unlabel the node `node.deckhouse.io/group: master` and `node-role.kubernetes.io/control-plane: ""`.

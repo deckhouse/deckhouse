@@ -262,7 +262,7 @@ linux-vm-root   Ready   10Gi       10m
 Примените изменения:
 
 ```bash
-kubectl patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
+d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
 ```
 
 Проверьте размер после изменения:

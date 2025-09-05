@@ -62,6 +62,6 @@ spec:
 Чтобы получить список текущих подсетей, используемых для конкретной установки, выполните следующую команду:
 
 ```bash
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cloud-provider-aws -o json \
 | jq -r '.cloudProviderAws.internal.zoneToSubnetIdMap'
 ```

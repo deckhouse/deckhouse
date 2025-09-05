@@ -102,7 +102,7 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
 - Open the `user-authn` module settings (create the moduleConfig `user-authn` resource if there is none):
 
   ```shell
-  kubectl edit mc user-authn
+  d8 k edit mc user-authn
   ```
 
 - Add the following section to the `settings` block and save the changes:

@@ -325,7 +325,12 @@ func generateConfig(input *go_hook.HookInput) error {
 		destinations = append(destinations, *d)
 	}
 
-	configContent, err := composer.FromInput(input, destinations).Do()
+	composerFromInput, err := composer.FromInput(input, destinations)
+	if err != nil {
+		return err
+	}
+
+	configContent, err := composerFromInput.Do()
 	if err != nil {
 		return err
 	}

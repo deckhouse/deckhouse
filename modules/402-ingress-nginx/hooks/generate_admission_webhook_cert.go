@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -66,10 +67,14 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 }
 
 func generateValidateWebhookCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["cert-secret"]
+	snap := input.NewSnapshots.Get("cert-secret")
 
 	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+		var adm certificate.Certificate
+		if err := snap[0].UnmarshalTo(&adm); err != nil {
+			return fmt.Errorf("failed to unmarshal 'cert-secret' snapshots: %w", err)
+		}
+
 		input.Values.Set("ingressNginx.internal.admissionCertificate.cert", adm.Cert)
 		input.Values.Set("ingressNginx.internal.admissionCertificate.key", adm.Key)
 		input.Values.Set("ingressNginx.internal.admissionCertificate.ca", adm.CA)

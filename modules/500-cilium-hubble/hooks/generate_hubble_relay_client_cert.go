@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -77,10 +78,14 @@ func genCAAuthority(input *go_hook.HookInput) certificate.Authority {
 }
 
 func generateHubbleRelayClientCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-relay-client-certs"]
+	snaps := input.NewSnapshots.Get("hubble-relay-client-certs")
 
-	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+	if len(snaps) > 0 {
+		var adm certificate.Certificate
+		err := snaps[0].UnmarshalTo(&adm)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal hubble-relay-client-certs: %w", err)
+		}
 		input.Values.Set("ciliumHubble.internal.relay.clientCerts.cert", adm.Cert)
 		input.Values.Set("ciliumHubble.internal.relay.clientCerts.key", adm.Key)
 		input.Values.Set("ciliumHubble.internal.relay.clientCerts.ca", adm.CA)

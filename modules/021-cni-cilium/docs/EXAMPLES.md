@@ -27,13 +27,13 @@ To perform maintenance on a node that is currently the active egress gateway, fo
 1. Remove the node label to exclude it from the egress gateway candidate pool. Egress-label is the label specified in `spec.nodeSelector` of your EgressGateway.
 
     ```bash
-    kubectl label node <node-name> <egress-label>-
+    d8 k label node <node-name> <egress-label>-
     ```
 
 1. Cordon the node to prevent new pods from starting:
 
     ```bash
-    kubectl cordon <node-name>
+    d8 k cordon <node-name>
     ```
 
     After this, Cilium will automatically select a new active node from the remaining candidates.
@@ -42,8 +42,8 @@ To perform maintenance on a node that is currently the active egress gateway, fo
 1. After maintenance is complete, return the node to service:
 
    ```bash
-    kubectl uncordon <node-name>
-    kubectl label node <node-name> <egress-label>=<value>
+    d8 k uncordon <node-name>
+    d8 k label node <node-name> <egress-label>=<value>
    ```
 
 > Note: Reapplying the label may cause the node to become active again (if it is first in alphabetical order among candidates).

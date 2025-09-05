@@ -31,7 +31,7 @@ title: "Модуль multitenancy-manager: примеры использован
 Чтобы перечислить все доступные параметры для шаблона проекта, выполните команду:
 
 ```shell
-kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ## Создание проекта
@@ -69,10 +69,10 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 3. Для проверки статуса проекта выполните команду:
 
    ```shell
-   kubectl get projects my-project
+   d8 k get projects my-project
    ```
 
-   Успешно созданный проект должен отображаться в статусе `Deployed` (синхронизирован). Если отображается статус `Error` (ошибка), добавьте аргумент `-o yaml` к команде (например, `kubectl get projects my-project -o yaml`) для получения более подробной информации о причине ошибки.
+   Успешно созданный проект должен отображаться в статусе `Deployed` (синхронизирован). Если отображается статус `Error` (ошибка), добавьте аргумент `-o yaml` к команде (например, `d8 k get projects my-project -o yaml`) для получения более подробной информации о причине ошибки.
 
 ### Автоматическое создание проекта для пространства имён
 
@@ -81,19 +81,19 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 1. Создайте новое пространство имён:
 
    ```shell
-   kubectl create ns test
+   d8 k create ns test
    ```
 
 1. Пометьте его аннотацией:
 
    ```shell
-   kubectl annotate ns test projects.deckhouse.io/adopt=""
+   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Убедитесь, что проект создался:
 
    ```shell
-   kubectl get projects
+   d8 k get projects
    ```
 
    В списке проектов появится новый проект, соответствующий пространству имён:
@@ -124,7 +124,7 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 2. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
 
    ```shell
-   kubectl get projecttemplates default -o yaml > my-project-template.yaml
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
 3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
@@ -136,13 +136,13 @@ kubectl get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath=
 5. Примените полученный шаблон командой:
 
    ```shell
-   kubectl apply -f my-project-template.yaml
+   d8 k apply -f my-project-template.yaml
    ```
 
 6. Проверьте доступность нового шаблона с помощью команды:
 
    ```shell
-   kubectl get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
+   d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
    ```
 
 {% endraw %}

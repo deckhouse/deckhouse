@@ -1,4 +1,4 @@
-2440
+2461
 1GB
 2GB
 5XX
@@ -55,8 +55,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 aren
 argocd
@@ -264,8 +264,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -370,6 +370,7 @@ DeckhouseRelease
 DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
+defaultCRI
 Defragment
 descheduled
 descheduler
@@ -406,8 +407,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -422,6 +423,7 @@ DRBD
 DRBDv
 dropdown
 DRS
+dryrun
 Dryrun
 DSA
 DSL
@@ -432,6 +434,7 @@ dvp
 DVP
 Dynamix
 DynamiX
+dynDNS
 EarlyAccess
 earlyOOM
 eBPF
@@ -465,6 +468,8 @@ erlier
 ESXi
 ESXis
 etcd
+etcdctl
+etcdutl
 eth
 EuropeClouds
 eventsExporter
@@ -519,6 +524,7 @@ FSID
 fstype
 fulfil
 FullAccess
+fullchain
 GARP
 GateKeeper
 gatewayEE
@@ -720,6 +726,7 @@ JSC
 json
 jsonData
 jsonPath
+JWK
 JWKS
 JWT
 k3d
@@ -900,6 +907,7 @@ MTU
 multicluster
 Multicluster
 multiclustering
+MULTIFACTOR
 multiline
 Multiline
 multimaster
@@ -944,7 +952,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -953,6 +960,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1012,6 +1020,7 @@ OpenLDAP
 openrc
 OpenShift
 openssh
+OpenSSL
 openstack
 OpenStack
 OpenStackClusterConfiguration
@@ -1158,6 +1167,7 @@ rbac
 RBAC
 RBD
 RBDs
+RDP
 RDS
 readinessProbe
 README
@@ -1170,6 +1180,7 @@ Reddit
 redis
 Redis
 Redoc
+redos
 regex
 Regex
 regexes
@@ -1227,6 +1238,7 @@ SaaSUninstall
 SAML
 SANs
 SASL
+SBOM
 SchedulingDisabled
 schemas
 SCM
@@ -1461,6 +1473,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDI
 ve
 vectoradd
 Venafi
@@ -1751,7 +1764,9 @@ ZvirtInstanceClass
 дашборд
 дашборда
 дашбордами
+дашбордах
 дашбордов
+дашбордом
 дашборды
 двухфакторная
 Двухфакторная
@@ -1974,6 +1989,7 @@ ZvirtInstanceClass
 мультимастерный
 мультиплатформенной
 мультитенантности
+МУЛЬТИФАКТОР
 мусорку
 мэтчем
 наблюдаемости
@@ -2109,7 +2125,7 @@ ZvirtInstanceClass
 пиринговой
 пиринговую
 ПК
-Поддомен
+поддомен
 поддоменам
 поддоменами
 поддомены
@@ -2226,6 +2242,8 @@ ZvirtInstanceClass
 ресурcы
 ретраев
 ротирован
+ротировать
+ротируется
 роутер
 роутера
 роутерами
@@ -2340,8 +2358,10 @@ ZvirtInstanceClass
 токена
 токенам
 токенами
+токене
 токенов
 токеном
+токену
 токены
 Токены
 траффик
@@ -2434,6 +2454,7 @@ ZvirtInstanceClass
 эндпоинтами
 эндпоинтах
 эндпоинтов
+эндпоинту
 эндпоинты
 эскалаций
 юзера

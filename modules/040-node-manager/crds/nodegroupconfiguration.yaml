@@ -46,7 +46,7 @@ spec:
                     The list of parameters available for use in templates can be retrieved from the `bashible-apiserver-context` Secret as follows:
 
                     ```shell
-                    kubectl -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
+                    d8 k -n d8-cloud-instance-manager get secrets bashible-apiserver-context -o jsonpath='{.data.input\.yaml}'| base64 -d
                     ```
 
                     For example:

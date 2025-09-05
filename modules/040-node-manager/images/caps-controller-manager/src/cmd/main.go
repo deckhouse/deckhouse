@@ -68,6 +68,9 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var syncPeriod time.Duration
+	var leaderElectionLeaseDuration time.Duration
+	var leaderElectionRenewDeadline time.Duration
+	var leaderElectionRetryPeriod time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -75,6 +78,15 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 15m).")
+	flag.DurationVar(&leaderElectionLeaseDuration, "leader-elect-lease-duration", 15*time.Second,
+		"Interval at which non-leader candidates will wait to force acquire leadership (duration string)")
+
+	flag.DurationVar(&leaderElectionRenewDeadline, "leader-elect-renew-deadline", 10*time.Second,
+		"Duration that the leading controller manager will retry refreshing leadership before giving up (duration string)")
+
+	flag.DurationVar(&leaderElectionRetryPeriod, "leader-elect-retry-period", 2*time.Second,
+		"Duration the LeaderElector clients should wait between tries of actions (duration string)")
+
 	flag.Parse()
 
 	if err := v1.ValidateAndApply(logOptions, nil); err != nil {
@@ -90,6 +102,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-election-caps",
+		LeaseDuration:          &leaderElectionLeaseDuration,
+		RenewDeadline:          &leaderElectionRenewDeadline,
+		RetryPeriod:            &leaderElectionRetryPeriod,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
