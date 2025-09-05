@@ -7,28 +7,25 @@ document.addEventListener('DOMContentLoaded', function () {
     const closeBtn = document.querySelectorAll('.modal-window__close-btn');
     const detailedInput = document.querySelector('.more-detailed');
     const currentUrl = window.location.href;
-    let cookieUserIp = '';
+    const cookieName = 'userFeedback';
 
     let accessModalTimeout;
 
-    async function getUserId() {
+    async function getUserIp() {
         try {
             const res = await fetch('https://api.ipify.org?format=json');
             const data = await res.json();
-            cookieUserIp = data.ip;
-            return cookieUserIp;
+            return data.ip;
         } catch(error) {
             return null;
         }
-    }
+    };
 
-    getUserId();
-
-    function setCookie(ip, value, days) {
+    function setCookie(name, value, days) {
         const date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
         const expires = 'expires=' + date.toUTCString();
-        document.cookie = ip + '=' + encodeURIComponent(JSON.stringify(value)) + ';' + expires + ';path=/';
+        document.cookie = name + '=' + encodeURIComponent(JSON.stringify(value)) + ';' + expires + ';path=/';
     }
 
     function getCookie(name) {
@@ -60,10 +57,27 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    let cookieUserData = getCookie(cookieUserIp);
-    if(!cookieUserData) {
-        cookieUserData = { cookieUserId: generateUUID(), pages: {} }
-    }
+    let cookieUserData;
+
+    (async function initUserData() {
+        cookieUserData = getCookie(cookieName);
+
+        if(!cookieUserData) {
+            cookieUserData = { cookieUserId: generateUUID(), cookieUserIp: null,  pages: {}};
+        }
+
+        if(!cookieUserData.cookieUserId) {
+            cookieUserData.cookieUserId = generateUUID();
+        }
+
+        if(!cookieUserData.cookieUserIp) {
+            const ip = await getUserIp();
+            cookieUserData.cookieUserIp = ip;
+            setCookie(cookieName, cookieUserData, 365);
+        }
+
+        buttonState();
+    })();
 
     function showAccessModal() {
         accessModal.style.display = 'flex';
@@ -86,25 +100,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buttonState() {
-        if(!cookieUserData.pages) {
-            cookieUserData.pages = {};
-        }
-
         const feedbackPage = cookieUserData.pages[currentUrl];
-        // dislikeIcon.classList.remove('active');
-        // likeIcon.classList.remove('active');
+        dislikeIcon.classList.remove('active');
+        likeIcon.classList.remove('active');
 
         if(feedbackPage) {
             if(feedbackPage.result === true) {
                 likeIcon.classList.add('active');
-                dislikeIcon.classList.remove('active');
             } else if(feedbackPage.result === false) {
                 dislikeIcon.classList.add('active');
-                likeIcon.classList.remove('active');
             }
         }
 
-        setCookie(cookieUserIp, cookieUserData, 365);
+        setCookie(cookieName, cookieUserData, 365);
     }
 
     async function sendFeedback(result, reasons = []) {
@@ -130,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
             let url = 'https://deckhouse.ru/wp-json/articles-feedback/v1/feedback';
             // // let url = '/wp-json/articles-feedback/v1/feedback';
-            url = url + '?user_ip=' + cookieUserIp +'&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons;
+            url = url + '?user_ip=' + cookieUserData.cookieUserIp + '&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons;
             
             const response = await fetch(url, {
                 method: 'POST',
@@ -149,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 presentTime: Date.now()
             };
 
-            setCookie(cookieUserIp, cookieUserData, 365);
+            setCookie(cookieName, cookieUserData, 365);
 
             buttonState();
             showAccessModal();
@@ -159,7 +167,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     likeIcon.addEventListener('click', async function() {
-        showAccessModal();
         await sendFeedback(true, []);
     })
 
@@ -193,8 +200,6 @@ document.addEventListener('DOMContentLoaded', function () {
         hideFormModal();
         await sendFeedback(false, reasons)
     })
-
-    buttonState();
 
     window.addEventListener('beforeunload', function() {
         this.clearTimeout(accessModalTimeout);
