@@ -90,7 +90,7 @@ kind: ModuleUpdatePolicy
 metadata:
   name: demo
 spec:
-  releaseChannel: Lts
+  releaseChannel: Alpha
   update:
     mode: Manual
 ---

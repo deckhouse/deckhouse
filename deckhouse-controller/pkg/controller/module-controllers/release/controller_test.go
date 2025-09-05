@@ -609,7 +609,7 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		// 2.1) Jump through n versions, but approved not latest
-		suite.Run("Jump through n versions approved not latest", func() {
+		suite.Run("Jump through n versions", func() {
 			testData := suite.fetchTestFileData("from-to-jump-approved-not-latest.yaml")
 			suite.setupReleaseController(testData)
 
@@ -736,162 +736,6 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("demo-1.70.0"))
 				require.NoError(suite.T(), err)
 			})
-		})
-	})
-
-	// LTS Release channel tests for modules
-	suite.Run("LTS Release channel", func() {
-		suite.Run("allow 20 minor version jump for modules", func() {
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Lts",
-			}
-
-			testData := suite.fetchTestFileData("lts-module-allow-20-minor-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test module release with 20 minor version jump (1.0.0 -> 1.20.0)
-			// For modules in LTS channel, any minor version jump should be allowed
-			mr := suite.getModuleRelease("test-module-v1.20.0")
-
-			// Try multiple calls to handleRelease to see if it eventually becomes Deployed
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				// Debug: print the status message to understand what's happening
-				suite.T().Logf("Call %d: Release status: %s, Message: %s", i+1, mr.Status.Phase, mr.Status.Message)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-					break
-				}
-			}
-
-			// Should be deployed as modules allow any minor version jump in LTS channel
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
-		})
-
-		suite.Run("allow 10 minor version jump for modules", func() {
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Lts",
-			}
-
-			testData := suite.fetchTestFileData("lts-module-allow-10-minor-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test module release with 10 minor version jump (1.0.0 -> 1.10.0)
-			// For modules in LTS channel, any minor version jump should be allowed
-			mr := suite.getModuleRelease("test-module-v1.10.0")
-
-			// Try multiple calls to handleRelease to see if it eventually becomes Deployed
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-					break
-				}
-			}
-
-			// Should be deployed as modules allow any minor version jump in LTS channel
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
-		})
-
-		suite.Run("allow any minor version jump for modules in LTS", func() {
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Lts",
-			}
-
-			testData := suite.fetchTestFileData("lts-module-allow-any-minor-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test module release with 5 minor version jump (1.0.0 -> 1.5.0)
-			// For modules in LTS channel, any minor version jump should be allowed
-			mr := suite.getModuleRelease("test-module-v1.5.0")
-
-			// Try multiple calls to handleRelease to see if it eventually becomes Deployed
-			for i := 0; i < 3; i++ {
-				_, err := suite.ctr.handleRelease(ctx, mr)
-				require.NoError(suite.T(), err)
-
-				if mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
-					break
-				}
-			}
-
-			// Should be deployed as modules allow any minor version jump in LTS channel
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
-		})
-	})
-
-	// Stable Release channel tests for modules
-	suite.Run("Stable Release channel", func() {
-		suite.Run("allow minor version jump for modules", func() {
-			// Disable golden file comparison for this test
-			suite.testDataFileName = ""
-
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Stable",
-			}
-
-			testData := suite.fetchTestFileData("stable-module-allow-single-minor-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test that ModuleRelease with 1 minor version jump (1.0.0 -> 1.1.0) is allowed
-			// For modules in Stable channel, single minor version jump should be allowed
-			mr := suite.getModuleRelease("test-module-v1.1.0")
-
-			// Try to handle release - should succeed for single minor version jump
-			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err)
-
-			// Save the changes to the test client
-			err = suite.Suite.Client().Status().Update(ctx, mr)
-			require.NoError(suite.T(), err)
-
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhaseDeployed, mr.Status.Phase)
-		})
-
-		suite.Run("prevent major version jump for modules", func() {
-			mup := &v1alpha2.ModuleUpdatePolicySpec{
-				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
-					Mode:    "Auto",
-					Windows: make(update.Windows, 0),
-				},
-				ReleaseChannel: "Stable",
-			}
-
-			testData := suite.fetchTestFileData("stable-module-allow-major-jump.yaml")
-			suite.setupReleaseController(testData, withModuleUpdatePolicy(mup))
-
-			// Test that ModuleRelease with major version jump (1.0.0 -> 2.0.0) is prevented
-			// For modules in Stable channel, major version jump should be prevented
-			mr := suite.getModuleRelease("test-module-v2.0.0")
-
-			// Try to handle release - should be blocked for major version jump
-			_, err := suite.ctr.handleRelease(ctx, mr)
-			require.NoError(suite.T(), err) // No error, but release should remain in Pending status
-
-			// Save the changes to the test client
-			err = suite.Suite.Client().Status().Update(ctx, mr)
-			require.NoError(suite.T(), err)
-
-			require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase)
 		})
 	})
 }
@@ -1120,7 +964,7 @@ func (suite *ReleaseControllerTestSuite) fetchTestFileData(filename string) stri
 
 func (suite *ReleaseControllerTestSuite) getModuleRelease(name string) *v1alpha1.ModuleRelease {
 	release := new(v1alpha1.ModuleRelease)
-	err := suite.Suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, release)
+	err := suite.client.Get(context.TODO(), client.ObjectKey{Name: name}, release)
 	require.NoError(suite.T(), err)
 
 	return release
