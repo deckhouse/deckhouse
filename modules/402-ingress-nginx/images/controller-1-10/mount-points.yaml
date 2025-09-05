@@ -1,6 +1,5 @@
 files:
  - /chroot/var/log/nginx/error.log
- - /chroot/tmp/nginx/nginx.pid
 dirs:
  - /chroot/etc/nginx/ssl
  - /chroot/tmp/nginx

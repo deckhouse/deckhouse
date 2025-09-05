@@ -185,6 +185,22 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
+        - name: mkdir-nginx
+          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - --
+            - "/bin/mkdir /tmp/nginx && chmod 0777 /tmp/*"
+          volumeMounts:
+        - mountPath: tmp
+          name: tmp-nginx
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
