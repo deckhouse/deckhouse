@@ -93,7 +93,7 @@ spec:
             - sh
             - -c
             - --
-            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/nginx.pid /tmp/error.log && chmod 0666 /tmp/*"
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf && chmod 0666 /tmp/*"
           volumeMounts:
             - name: write-files
               mountPath: /tmp/
@@ -195,11 +195,16 @@ spec:
             - mountPath: /chroot/etc/resolv.conf
               name: write-files
               subPath: resolv.conf
+            - mountPath: /chroot/etc/nginx/nginx.conf
+              name: write-files
+              subPath: nginx.conf
             - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
               name: write-files
               subPath: opentelemetry.toml
             - mountPath: /chroot/etc/ingress-controller/ssl
               name: tmp-ssl
+            - mountPath: /tmp
+              name: tmp-nginx
             - mountPath: /chroot/tmp
               name: tmp-nginx
             - mountPath: /chroot/var/log/nginx/error.log

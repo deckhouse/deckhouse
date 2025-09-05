@@ -178,7 +178,7 @@ spec:
             - sh
             - -c
             - --
-            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log && chmod 0666 /tmp/*"
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf && chmod 0666 /tmp/*"
           volumeMounts:
             - name: write-files
               mountPath: /tmp
@@ -377,7 +377,8 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        # - mountPath: /chroot/tmp/nginx/
+        - mountPath: /tmp
+          name: tmp-nginx
         - mountPath: /chroot/tmp
           name: tmp-nginx
 {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
@@ -388,6 +389,9 @@ spec:
         - mountPath: /chroot/etc/resolv.conf
           name: write-files
           subPath: resolv.conf
+        - mountPath: /chroot/etc/nginx/nginx.conf
+          name: write-files
+          subPath: nginx.conf
         - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
           name: write-files
           subPath: opentelemetry.toml
