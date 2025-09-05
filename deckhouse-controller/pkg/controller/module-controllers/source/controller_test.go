@@ -386,6 +386,27 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		// Should contain the deployed version
 		assert.Contains(suite.T(), releasesStr, "testmodule-v1.0.0")
 	})
+
+	suite.Run("LTS channel module multiple versions - should create only latest", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v1.4.0",
+			[]string{"testmodule"},
+			[]string{"v1.0.0", "v1.2.0", "v1.4.0"})
+		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-multiple-versions.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+
+		// Check that LTS channel creates only the latest version, skipping intermediate
+		releases := suite.fetchResults()
+		releasesStr := string(releases)
+
+		// Should contain the latest version
+		assert.Contains(suite.T(), releasesStr, "testmodule-v1.4.0")
+		// Should contain the deployed version
+		assert.Contains(suite.T(), releasesStr, "testmodule-v1.0.0")
+		// Should NOT contain intermediate version
+		assert.NotContains(suite.T(), releasesStr, "testmodule-v1.2.0")
+	})
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
