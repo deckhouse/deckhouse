@@ -151,6 +151,8 @@ spec:
             name: tmp-nginx
           - mountPath: /opt/nginx-static/fastcgi_temp
             name: tmp-nginx
+          - mountPath: /opt/nginx-static/uwsgi_temp
+            name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:
