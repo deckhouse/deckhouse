@@ -1,0 +1,5 @@
+deckhouse==0.4.11
+dictdiffer==0.9.0
+dotmap==1.3.30
+PyYAML==6.0.2
+cryptography==44.0.1
