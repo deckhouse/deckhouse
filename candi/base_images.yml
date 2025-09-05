@@ -25,6 +25,7 @@ builder/alt-go-svace: "sha256:15f8067534281275f4e4a0bb07a0ae59e17c6a107d64ca8244
 builder/alt-go-svace-2025-08-12: "sha256:15f8067534281275f4e4a0bb07a0ae59e17c6a107d64ca8244878f5728461b0b" # fromImage: builder/alt
 builder/debian: "sha256:6a9d02298c6d4727c4e985983226d3363dd0e877e4cdd4564101716a040ab292" # from: debian:trixie-slim
 builder/debian-12.11-slim: "sha256:ceb764d8e68cb03b3dc703dc2a567c59538112062e08a2a34bac8c004fab0a1b" # from: debian:12.11-slim
+builder/debian-13-slim: "sha256:6a9d02298c6d4727c4e985983226d3363dd0e877e4cdd4564101716a040ab292" # from: debian:13-slim
 builder/debian-svace: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian
 builder/debian-svace-12.11-slim: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian
 builder/debian-svace-trixie-slim: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian

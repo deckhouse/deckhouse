@@ -98,7 +98,7 @@ lang: ru
 | ALT Linux                   | p10, 10.0, 10.1, 10.2, 11       |
 | Astra Linux Special Edition | 1.7.2, 1.7.3, 1.7.4, 1.7.5, 1.8 |
 | CentOS                      | 7, 8, 9                         |
-| Debian                      | 10, 11, 12                      |
+| Debian                      | 10, 11, 12, 13                  |
 | Ubuntu                      | 18.04, 20.04, 22.04, 24.04      |
 
 {% alert level="warning" %}

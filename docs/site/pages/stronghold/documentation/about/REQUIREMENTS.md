@@ -13,5 +13,5 @@ permalink: en/stronghold/documentation/about/requirements.html
 | Linux distribution          | Supported versions              |
 | --------------------------- | ------------------------------- |
 | CentOS                      | 7, 8, 9                         |
-| Debian                      | 10, 11, 12                      |
+| Debian                      | 10, 11, 12, 13                  |
 | Ubuntu                      | 20.04, 22.04, 24.04      |

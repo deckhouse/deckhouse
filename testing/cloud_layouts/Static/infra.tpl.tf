@@ -41,6 +41,7 @@ locals {
     "redos" = data.openstack_images_image_v2.redos_image.id
     "opensuse" = data.openstack_images_image_v2.opensuse_image.id
     "rosa" = data.openstack_images_image_v2.rosa_image.id
+    "debian" = data.openstack_images_image_v2.debian_image.id
   }
 }
 
@@ -145,6 +146,12 @@ data "openstack_images_image_v2" "rosa_image" {
   most_recent = true
   visibility  = "shared"
   name        = "rosa-server-cobalt-20240613"
+}
+
+data "openstack_images_image_v2" "debian_image" {
+  most_recent = true
+  visibility  = "shared"
+  name        = "debian-13"
 }
 
 resource "openstack_blockstorage_volume_v3" "master" {
@@ -298,6 +305,10 @@ output "worker_opensuse_ip_address_for_ssh" {
 
 output "worker_rosa_ip_address_for_ssh" {
   value = lookup(openstack_compute_instance_v2.worker["rosa"].network[0], "fixed_ip_v4")
+}
+
+output "worker_debian_ip_address_for_ssh" {
+  value = lookup(openstack_compute_instance_v2.worker["debian"].network[0], "fixed_ip_v4")
 }
 
 output "bastion_ip_address_for_ssh" {

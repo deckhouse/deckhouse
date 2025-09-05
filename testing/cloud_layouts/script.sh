@@ -386,6 +386,7 @@ function prepare_environment() {
     ssh_redos_user_worker="redos"
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
+    ssh_debian_user_worker="root"
     ;;
   esac
 
@@ -503,6 +504,11 @@ function bootstrap_static() {
     return 1
   fi
 
+  if ! worker_debian_ip="$(opentofu output -state="${terraform_state_file}" -raw worker_debian_ip_address_for_ssh)"; then
+    >&2 echo "ERROR: can't get worker_debian_ip from opentofu output"
+    return 1
+  fi
+
   if ! bastion_ip="$(opentofu output -state="${terraform_state_file}" -raw bastion_ip_address_for_ssh)"; then
     >&2 echo "ERROR: can't get bastion_ip from opentofu output"
     return 1
@@ -605,6 +611,7 @@ ENDSSH
     WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
     WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
     WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
+    WORKER_DEBIAN_USER="$ssh_debian_user_worker" WORKER_DEBIAN_IP="$worker_debian_ip" \
     envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   D8_MIRROR_USER="$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
@@ -830,6 +837,7 @@ ENDSSH
       WORKER_REDOS_USER="$ssh_redos_user_worker" WORKER_REDOS_IP="$worker_redos_ip" \
       WORKER_OPENSUSE_USER="$ssh_opensuse_user_worker" WORKER_OPENSUSE_IP="$worker_opensuse_ip" \
       WORKER_ROSA_USER="$ssh_rosa_user_worker" WORKER_ROSA_IP="$worker_rosa_ip" \
+      WORKER_DEBIAN_USER="$ssh_debian_user_worker" WORKER_DEBIAN_IP="$worker_debian_ip" \
       envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
 
   # Bootstrap
