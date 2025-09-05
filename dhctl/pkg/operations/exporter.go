@@ -17,6 +17,7 @@ package operations
 import (
 	"context"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
