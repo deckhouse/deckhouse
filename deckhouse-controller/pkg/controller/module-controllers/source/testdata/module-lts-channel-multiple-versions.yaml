@@ -20,7 +20,7 @@ kind: ModuleUpdatePolicy
 metadata:
   name: test-lts
 spec:
-  releaseChannel: lts
+  releaseChannel: LTS
   update:
     mode: Auto
 ---
