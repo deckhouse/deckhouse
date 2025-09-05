@@ -48,9 +48,7 @@
 
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
       {{- if $.IsPage }}
-      {{- if and $currentModuleName $currentModuleChannel }}
-        {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
-      {{- end }}
+      <!--#include virtual="/includes/channel-menu-module.html" -->
       {{- end }}
     </div>
   </div>
