@@ -1,0 +1,7 @@
+cni-cilium:
+  fixes:
+    - summary: >-
+        Fixed the infinite loop in the "cilium migration" bashible step and improved synchronization
+        between bashible and safe-agent-updater.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15262
+
