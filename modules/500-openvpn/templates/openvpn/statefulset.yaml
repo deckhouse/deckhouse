@@ -185,6 +185,8 @@ spec:
           - mountPath: /sbin
             name: sbin
             readOnly: true
+          - name: openvpn-tmp
+            mountPath: /tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -224,6 +226,8 @@ spec:
           - mountPath: /sbin
             name: sbin
             readOnly: true
+          - name: openvpn-tmp
+            mountPath: /tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -337,7 +341,7 @@ spec:
             readOnly: false
           - name: ccd
             mountPath: /mnt/ccd
-          - name: tmp
+          - name: ovpn-admin-tmp
             mountPath: /tmp
         resources:
           requests:
@@ -417,7 +421,11 @@ spec:
         configMap:
           name: openvpn
           defaultMode: 0644
-      - name: tmp
+      - name: ovpn-admin-tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 128Mi
+      - name: openvpn-tmp
         emptyDir:
           medium: Memory
           sizeLimit: 128Mi
