@@ -345,7 +345,7 @@ EOF
 После создания ресурса ModuleConfig `virtualization` дождитесь выполнения заданий из очереди:
 
 ```shell
-d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 p queue main
 
 # Queue 'main': length 0, status: 'waiting for task 1m1s'
 ```

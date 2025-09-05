@@ -163,7 +163,7 @@ spec:
 Сначала выполните вход в контейнер openldap:
 
 ```shell
-d8 kubectl exec svc/openldap -it -- bash
+d8 k exec svc/openldap -it -- bash
 ```
 
 Создайте пользователя с помощью следующих команд:

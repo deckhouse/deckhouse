@@ -159,15 +159,15 @@ func generateMTLSCertHook(input *go_hook.HookInput) error {
 	var mTLSCert certificate.Certificate
 
 	// Get istio CA keypair.
-	istioCASnap := input.Snapshots["istio_secret_ca"]
+	istioCASnap := input.NewSnapshots.Get("istio_secret_ca")
 	if len(istioCASnap) == 0 {
 		input.Values.Remove(mTLSCrtPath)
 		input.Values.Remove(mTLSKeyPath)
 		return nil
 	}
 
-	istioCA, ok = istioCASnap[0].(certificate.Authority)
-	if !ok {
+	err = istioCASnap[0].UnmarshalTo(&istioCA)
+	if err != nil {
 		return fmt.Errorf("can't convert certificate to certificate struct")
 	}
 
@@ -175,10 +175,10 @@ func generateMTLSCertHook(input *go_hook.HookInput) error {
 	mTLSCertSAN := fmt.Sprintf("spiffe://%s/ns/d8-monitoring/sa/prometheus", clusterDomain)
 
 	// Get prometheus scraper mTLS keypair.
-	mTLSCertSnap := input.Snapshots["secret_istio_mtls"]
+	mTLSCertSnap := input.NewSnapshots.Get("secret_istio_mtls")
 	if len(mTLSCertSnap) == 1 {
-		mTLSCert, ok = mTLSCertSnap[0].(certificate.Certificate)
-		if !ok {
+		err = mTLSCertSnap[0].UnmarshalTo(&mTLSCert)
+		if err != nil {
 			return fmt.Errorf("can't convert certificate to certificate struct")
 		}
 	}

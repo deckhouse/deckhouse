@@ -23,6 +23,9 @@ linters-settings:
         - kind: DaemonSet
           name: nvidia-mig-manager
           container: nvidia-mig-manager
+        - kind: Deployment
+          name: standby-holder-name
+          container: reserve-resources
       resources:
         - kind: Deployment
           name: standby-holder-name

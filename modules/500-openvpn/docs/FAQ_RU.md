@@ -51,13 +51,13 @@ title: "Модуль openvpn: FAQ"
 1. Удалите текущий секрет, содержащий сертификат и ключ сервера:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-server
    ```
 
-1. Перезапустите подs OpenVPN, чтобы инициировать генерацию нового сертификата:
+1. Перезапустите поды OpenVPN, чтобы инициировать генерацию нового сертификата:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 ## Как ротировать корневой сертификат (CA)
@@ -72,13 +72,13 @@ title: "Модуль openvpn: FAQ"
 1. Удалите секреты `openvpn-pki-ca` и `openvpn-pki-server`  в пространстве имён `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
    ```
 
 1. Перезапустите поды OpenVPN:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 1. Выполните [ротацию сертификатов](#как-отозвать-ротировать-или-удалить-сертификат-клиента) для отозванных клиентов или создайте новых клиентов с новыми сертификатами.
@@ -86,5 +86,5 @@ title: "Модуль openvpn: FAQ"
 1. Удалите все отозванные сертификаты:
 
    ```shell
-   kubectl  -n d8-openvpn delete secrets -l revokedForever=true
+   d8 k  -n d8-openvpn delete secrets -l revokedForever=true
    ```
