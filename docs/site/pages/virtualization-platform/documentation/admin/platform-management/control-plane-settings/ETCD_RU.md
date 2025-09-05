@@ -128,7 +128,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 p queue main
    ```
 
 1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере) для облачных кластеров или [инструкцией](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) для статических или гибридных кластеров.
@@ -182,14 +182,14 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    - Установите актуальное имя образа etcd:
 
       ```shell
-      IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
+      IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec.    containers[*].image}"`
       sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
       ```
 
    - Создайте под:
 
      ```shell
-     kubectl create -f etcd.pod.yaml
+     d8 k create -f etcd.pod.yaml
      ```
 
    - Скопируйте `etcdhelper` и снимок etcd в контейнер пода. `etcdhelper` можно собрать из [исходного кода](https://github.com/openshift/origin/tree/master/tools/etcdhelper) или скопировать из готового образа (например, из образа `etcdhelper` на [Docker Hub](https://hub.docker.com/r/webner/etcdhelper/tags)).
@@ -197,8 +197,8 @@ rm -r ./kubernetes ./etcd-backup.snapshot
      Пример:
 
      ```shell
-     kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-     kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+     d8 k cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+     d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
      ```
 
    - В контейнере установите права на запуск `etcdhelper`, восстановите данные из резервной копии и запустите etcd.
@@ -206,7 +206,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
      Пример:
 
      ```console
-     ~ # kubectl -n default exec -it etcdrestore -- sh
+     ~ # d8 k -n default exec -it etcdrestore -- sh
      / # chmod +x /usr/bin/etcdhelper
      / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
      / # etcd &
@@ -217,7 +217,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
      Пример:
 
      ```console
-     ~ # kubectl -n default exec -it etcdrestore -- sh
+     ~ # d8 k -n default exec -it etcdrestore -- sh
      / # mkdir /tmp/restored_yaml
      / # cd /tmp/restored_yaml
      /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
@@ -297,13 +297,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    Чтобы получить список алертов в кластере, выполните команду:
 
     ```shell
-    kubectl get clusteralerts
+    d8 k get clusteralerts
     ```
 
    Чтобы просмотреть конкретный алерт, выполните команду:
 
     ```shell
-    kubectl get clusteralerts <ALERT_NAME> -o yaml
+    d8 k get clusteralerts <ALERT_NAME> -o yaml
     ```
 
 1. Убедитесь, что очередь Deckhouse пуста.
@@ -311,7 +311,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    Чтобы просмотреть состояние всех очередей заданий Deckhouse, выполните команду:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+    d8 p queue list
     ```
 
    Пример вывода (очереди пусты):
@@ -326,7 +326,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
    Чтобы просмотреть состояние очереди заданий `main` Deckhouse, выполните команду:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
 
    Пример вывода (очередь `main` пуста):
@@ -338,8 +338,8 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -379,7 +379,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Дождитесь появления необходимого количества master-узлов в статусе `Ready` и готовности всех экземпляров `control-plane-manager`:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
 ### Как уменьшить число master-узлов в облачном кластере?
@@ -395,13 +395,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
     Чтобы получить список алертов в кластере, выполните команду:
 
     ```shell
-    kubectl get clusteralerts
+    d8 k get clusteralerts
     ```
 
     Чтобы просмотреть конкретный алерт, выполните команду:
 
     ```shell
-    kubectl get clusteralerts <ALERT_NAME> -o yaml
+    d8 k get clusteralerts <ALERT_NAME> -o yaml
     ```
 
 1. Убедитесь, что очередь Deckhouse пуста.
@@ -409,7 +409,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
     Чтобы просмотреть состояние всех очередей заданий Deckhouse, выполните команду:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+    d8 p queue list
     ```
   
     Пример вывода (очереди пусты):
@@ -424,7 +424,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
     Чтобы просмотреть состояние очереди заданий `main` Deckhouse, выполните команду:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
 
     Пример вывода (очередь `main` пуста):
@@ -436,8 +436,8 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -466,13 +466,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
       Команда для снятия лейблов:
   
       ```bash
-      kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+      d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
       ```
 
 1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -481,7 +481,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Выполните `drain` для удаляемых узлов:
 
    ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
    ```
 
 1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
@@ -489,13 +489,13 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Удалите в кластере поды, оставшиеся на удаленных узлах:
 
    ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
 1. Удалите в кластере объекты `Node` удаленных узлов:
 
    ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
+   d8 k delete node <MASTER-NODE-N-NAME>
    ```
 
 1. **В контейнере с инсталлятором** выполните команду для запуска масштабирования:

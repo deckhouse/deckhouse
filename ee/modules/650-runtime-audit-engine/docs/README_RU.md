@@ -111,7 +111,7 @@ Deckhouse запускает агенты Falco (объединены в DaemonS
 Чтобы вывести список всех правил аудита `falco`, выполните:
 
 ```shell
-kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+d8 k -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
 {% alert level="info" %}

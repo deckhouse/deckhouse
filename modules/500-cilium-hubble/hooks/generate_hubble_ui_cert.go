@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -53,10 +54,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateHubbleUICert)
 
 func generateHubbleUICert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-ui-client-certs"]
+	snaps := input.NewSnapshots.Get("hubble-ui-client-certs")
 
-	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+	if len(snaps) > 0 {
+		var adm certificate.Certificate
+		err := snaps[0].UnmarshalTo(&adm)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal hubble-ui-client-certs: %w", err)
+		}
 		input.Values.Set("ciliumHubble.internal.ui.cert", adm.Cert)
 		input.Values.Set("ciliumHubble.internal.ui.key", adm.Key)
 		input.Values.Set("ciliumHubble.internal.ui.ca", adm.CA)

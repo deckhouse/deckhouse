@@ -268,13 +268,13 @@ spec:
 Пример отключения сбора статистики (метрик) для всех Ingress-ресурсов в пространстве имен `review-1`:
 
 ```shell
-kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+d8 k label ns review-1 ingress.deckhouse.io/discard-metrics=true
 ```
 
 Пример отключения сбора статистики (метрик) для всех Ingress-ресурсов `test-site` в пространстве имен `development`:
 
 ```shell
-kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+d8 k label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
 
 ## Как корректно вывести из эксплуатации (drain) узел с запущенным IngressNginxController?
@@ -286,16 +286,16 @@ kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metr
     Аннотация будет автоматически удалена после завершения операции.
 
     ```shell
-    kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+    d8 k annotate node <node_name> update.node.deckhouse.io/draining=user
     ```
 
-1. С помощью kubectl drain.
+1. С помощью d8 k drain.
 
-    При использовании стандартной команды kubectl drain необходимо указать флаг `--force` даже при наличии `--ignore-daemonsets`,
+    При использовании стандартной команды d8 k drain необходимо указать флаг `--force` даже при наличии `--ignore-daemonsets`,
     поскольку IngressNginxController развёрнут с использованием Advanced DaemonSet:
 
     ```shell
-    kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+    d8 k drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
     ```
 
 ## Как включить Web Application Firewall (WAF)?

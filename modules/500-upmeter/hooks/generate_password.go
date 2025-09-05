@@ -27,6 +27,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -112,7 +115,7 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 		}
 
 		// Try to restore generated password from the Secret, or generate a new one.
-		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots[authSecretBinding], secretName)
+		pass, err := restoreGeneratedPasswordFromSnapshot(input.NewSnapshots.Get(authSecretBinding), secretName)
 		if err != nil {
 			input.Logger.Info("No password in config values, generate new one", slog.String("name", appName), log.Err(err))
 			pass = GeneratePassword()
@@ -130,12 +133,15 @@ func GeneratePassword() string {
 
 // restoreGeneratedPasswordFromSnapshot extracts password from the plain basic auth string:
 // admin:{PLAIN}password
-func restoreGeneratedPasswordFromSnapshot(snapshot []go_hook.FilterResult, secretName string) (string, error) {
+func restoreGeneratedPasswordFromSnapshot(snapshot []pkg.Snapshot, secretName string) (string, error) {
 	var secretData map[string][]byte
 	var hasSecret = false
 	// Find snapshot for appName.
-	for _, snap := range snapshot {
-		storedPassword := snap.(storedPassword)
+	for storedPassword, err := range sdkobjectpatch.SnapshotIter[storedPassword](snapshot) {
+		if err != nil {
+			return "", fmt.Errorf("failed to iterate over snapshots: %w", err)
+		}
+
 		if storedPassword.SecretName == secretName {
 			secretData = storedPassword.Data
 			hasSecret = true

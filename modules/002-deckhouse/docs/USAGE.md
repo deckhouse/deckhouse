@@ -67,7 +67,7 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
   Run the following command to confirm the update (use the corresponding Deckhouse version):
 
   ```shell
-  kubectl patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
+  d8 k patch DeckhouseRelease <VERSION> --type=merge -p='{"approved": true}'
   ```
 
 - If automatic application of disruptive updates is disabled for a node group.
@@ -78,7 +78,7 @@ Manual confirmation of Deckhouse version updates is provided in the following ca
   Example:
 
   ```shell
-  kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+  d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
   ```
 
 ### Deckhouse update notifications
