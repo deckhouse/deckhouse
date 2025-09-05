@@ -237,13 +237,16 @@ func netLinkCreateTuntap(name string, mtu int) error {
 		LinkAttrs: linkAttrs,
 		Mode:      unix.IFF_TUN,
 	}
-	err := netlink.LinkAdd(l)
-	if err != nil {
-		return err
+	if err := netlink.LinkAdd(l); err != nil {
+		return fmt.Errorf("failed to add the link: %w", err)
 	}
 
 	link, _ := netlink.LinkByName(linkAttrs.Name)
-	return netlink.LinkSetUp(link)
+	if err := netlink.LinkSetUp(link); err != nil {
+		return fmt.Errorf("failed to set the link up: %w", err)
+	}
+
+	return nil
 }
 
 func routeAdd(dstNet string, linkName string, table int) {
