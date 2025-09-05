@@ -568,6 +568,11 @@ status:
 "egress-gateway.network.deckhouse.io/member": "",
 "node-role": "egress"}
 `))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-1").Field("metadata.labels").String()).To(MatchJSON(`
+{
+"egress-gateway.network.deckhouse.io/member": "",
+"node-role": "egress"}
+`))
 
 			Expect(f.KubernetesGlobalResource("Node", "frontend-3").Field("metadata.labels").String()).To(MatchJSON(`
 {
