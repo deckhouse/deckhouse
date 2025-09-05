@@ -28,10 +28,14 @@ spec:
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.subnets }}
-      subnets: {{ prepend .nodeGroup.instanceClass.subnets $subnetID }}
-      {{- else }}
-      subnets: [{{ $subnetID }}]
+      {{- $ic := .nodeGroup.instanceClass -}}
+      {{- $primary := (default $subnetID $ic.mainNetwork) -}}
+      {{- $nets := list $primary -}}
+      {{- if $ic.additionalNetworks }}{{- $nets = concat $nets $ic.additionalNetworks }}{{- end }}
+      {{- if $ic.subnets }}            {{- $nets = concat $nets $ic.subnets }}            {{- end }} {{/* DEPRECATED compat */}}
+      subnets:
+      {{- range $n := $nets }}
+        - {{ $n | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
