@@ -218,7 +218,7 @@ service_account_token      eyJHbGci0iJSUzI1NiIsImtpZCI6ImlrUEE...
 ```
 
 Вы можете использовать указанный выше токен учетной записи сервиса (`eyJHbG...`) для любого
-авторизированного запроса к Kubernetes API. Авторизацией управляют привязки ролей к учетной записи сервиса.
+авторизованного запроса к Kubernetes API. Авторизацией управляют привязки ролей к учетной записи сервиса.
 
 ```shell-session
 $ curl -sk $(d8 k config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
@@ -296,7 +296,7 @@ $ echo 'eyJhbGc...' | cut -d'.' -f2 | base64 -d  | jq -r '.iat,.exp|todate'
 
 Токены в Kubernetes имеют формат JWT, а значит, используют механизм "утверждений" (claims).
 Одним из таких является утверждение `aud` (аудитория) - это строка или массив строк, которые
-идентифицируют получателей, для которых предназначен JWT. Для более подробной информаци ознакомьтесь со спецификацией [JWT audience claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3)
+идентифицируют получателей, для которых предназначен JWT. Для более подробной информации ознакомьтесь со спецификацией [JWT audience claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3)
 
 Вы можете задать аудитории по умолчанию (`token_default_audiences`) при создании или настройке роли Stronghold.
 Если явно не задано, по умолчанию кластер Kubernetes будет использовать свои значения аудитории для токенов учетной записи сервиса.

@@ -16,7 +16,7 @@ To configure, follow these steps:
    * Fill in `Local` and `Another VPC` fields.
 1. Switch to the region where vpc-b is running.
 1. Click `VPC` -> `VPC Peering Connections`.
-1. Select the newly created perring connection and click `Action "Accept Request"`.
+1. Select the newly created peering connection and click `Action "Accept Request"`.
 1. Add routes to vpc-b's CIDR over a peering connection to the vpc-a's routing tables.
 1. Add routes to vpc-a's CIDR over a peering connection to the vpc-b's routing tables.
 

@@ -54,7 +54,7 @@ title: "Модуль openvpn: FAQ"
    d8 k -n d8-openvpn delete secrets openvpn-pki-server
    ```
 
-1. Перезапустите подs OpenVPN, чтобы инициировать генерацию нового сертификата:
+1. Перезапустите поды OpenVPN, чтобы инициировать генерацию нового сертификата:
 
    ```shell
    d8 k -n d8-openvpn rollout restart sts openvpn
