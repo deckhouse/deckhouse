@@ -239,7 +239,7 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	return delta
 }
 
-const ltsReleaseChannel = "Lts"
+const ltsReleaseChannel = "LTS"
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
@@ -456,7 +456,6 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			if release.GetVersion().Major() == prevRelease.GetVersion().Major() {
 				// here we have only Deployed phase releases in prevRelease
 				ltsRelease := strings.EqualFold(p.releaseChannel, ltsReleaseChannel)
-				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 
 				// it must await if deployed release has minor version more than one
 				if !ltsRelease &&
@@ -476,6 +475,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					}, nil
 				}
 
+				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 				// it must await if deployed release has minor version more than acceptable LTS channel limitation
 				// For modules, skip this check (allow any minor version jump)
 				if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {

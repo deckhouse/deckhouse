@@ -348,6 +348,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("LTS channel module direct update to latest version", func() {
+		dc := newMockedContainerWithData(suite.T(),
+			"v2.0.0",
+			[]string{"testmodule"},
+			[]string{"v1.0.0", "v1.1.0", "v1.2.0", "v2.0.0"})
+		suite.setupTestController(string(suite.parseTestdata("module-lts-channel-direct-update.yaml")), withDependencyContainer(dc))
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) parseTestdata(filename string) []byte {
