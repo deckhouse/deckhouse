@@ -26,14 +26,34 @@ spec:
 
     desired_sau_ds_generation={{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
 
-    # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
-    kubeconfig="/etc/kubernetes/kubelet.conf"
-    if [ ! -f "$kubeconfig" ]; then
+    # If there is no cilium-cni binary on node than node is not bootstrapped and there is nothing to do
+    if [ ! -f "/opt/cni/bin/cilium-cni" ]; then
       exit 0
+    fi
+
+    # If the cilium-cni binary is the version 1.17.4 or higher, there is nothing to do
+    if ! out=$(/opt/cni/bin/cilium-cni VERSION 2>&1); then
+      bb-log-info "Failed to execute cilium-cni binary: $out"
+      exit 1
+    fi
+    version=$(echo "$out" | grep -oP 'Cilium\s+CNI\s+plugin\s+\K\d+\.\d+\.\d+')
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+    patch=$(echo "$version" | cut -d. -f3)
+
+    if [[ $major -gt 1 || ( $major -eq 1 && $minor -ge 17 ) ]]; then
+        echo "Cilium CNI plugin version is not less than 1.17: $version"
+        exit 0
     fi
 
     # If it is the first bashible run, there is nothing to do
     if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
+      exit 0
+    fi
+
+    # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
+    kubeconfig="/etc/kubernetes/kubelet.conf"
+    if [ ! -f "$kubeconfig" ]; then
       exit 0
     fi
 
@@ -94,10 +114,16 @@ spec:
 
     bb-deckhouse-get-disruptive-update-approval
 
+    attempt=0
     until
       bb-kubectl --kubeconfig $kubeconfig get node $(bb-d8-node-name) -o json | \
       jq -e '.metadata.annotations | has("network.deckhouse.io/cilium-1-17-migration-succeeded")' >/dev/null;
     do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+          bb-log-error "ERROR: Failed to wait until the safe-agent-updater completes the disruptive-update on our Node (can't get annotation 'network.deckhouse.io/cilium-1-17-migration-succeeded') . Retry limit is over."
+          exit 1
+      fi
       bb-log-info "Waiting until the safe-agent-updater completes the disruptive-update on node."
       sleep 10
     done
