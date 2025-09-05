@@ -91,7 +91,6 @@ function updateCurrentVersion() {
         }
     }
 
-    // Format the channel name for display
     const formattedChannel = formatChannelName(currentChannel);
     currentVersionElement.textContent = formattedChannel;
 }
@@ -136,40 +135,33 @@ function renderMenu(settings) {
     const submenuContainer = document.createElement('div');
     submenuContainer.className = 'submenu-container';
 
-    // Create submenu list
     const submenu = document.createElement('ul');
     submenu.className = 'submenu';
 
-    // Iterate through sorted channels and create menu items
+    // Create menu items
     sortedChannels.forEach((channel, index) => {
         const submenuItem = document.createElement('li');
         submenuItem.className = 'submenu-item';
 
         const submenuItemLink = document.createElement('a');
 
-        // Generate channel URL according to the rules
         let channelUrl = '#';
-        console.debug("Processing channel:", channel);
 
         if (channel.version) {
             const currentUrl = window.location.pathname;
 
             if (isFromSource) {
                 // For modules from source use channel name instead of channel version in the link
-                console.log("For modules from source use channel name instead of channel version in the link");
                 const channelName = channel.name;
                 if (currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)) {
                     // Current URL has channel, replace it
-                    console.log("Current URL has channel, replace it: ", currentUrl);
                     channelUrl = currentUrl.replace(/\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `/${channelName}/`);
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add channel name
-                    console.log("Current URL format - /modules/MODULE/:", currentUrl);
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${channelName}/`);
                 }
             } else {
                 // For embedded modules, use channel version in the link
-                console.debug("For embedded modules, use channel version in the link");
                 const urlVersion = `${channel.version}`;
                 if (currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
                     // Current URL has version, replace it with channel version
@@ -182,7 +174,7 @@ function renderMenu(settings) {
         } else {
             // No version available, use current URL
             channelUrl = window.location.pathname;
-            console.warn("Channel version not specified, using current URL:", channelUrl);
+            console.warn("Channel version not specified");
         }
 
         submenuItemLink.href = channelUrl;
@@ -206,7 +198,6 @@ function renderMenu(settings) {
         releaseSpan.className = 'submenu-item-release';
         releaseSpan.textContent = channel.version || 'latest';
 
-        // Assemble the link
         submenuItemLink.appendChild(channelSpan);
         submenuItemLink.appendChild(dotSpan);
         submenuItemLink.appendChild(releaseSpan);
