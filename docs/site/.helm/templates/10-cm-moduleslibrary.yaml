@@ -74,6 +74,9 @@ data:
         index  index.html readme.html;
         error_page 403 404 /$lang/404.html;
 
+        # Intercept proxy errors for processing with the error_page directive. Necessary for S3 handling.
+        proxy_intercept_errors on;
+
         charset utf-8;
         access_log     /dev/stdout json_combined;
 
@@ -90,12 +93,6 @@ data:
         # Modules library root folder
         location ~* ^/modules/$  {
             try_files /$lang/modules/index.html =404;
-        }
-
-        # Internal redirect to serve module docs from sources
-        location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
-            internal;
-            try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
         }
 
         # Search index for embedded modules from the latest version
@@ -131,23 +128,33 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-        # Modules from sources (they are served locally.)
+        # Requests for modules channels - /module/NAME/CHANNEL/...
         location ~* ^/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
             set $module "$1";
             set $channel "$2";
+            # $channel_name is mapped to $channel_version (see map above)
+            set $channel_name "$2";
             set $module_doc "$3";
 
+            # Modules from sources (they are served locally.)
             if (-d $document_root/$lang/modules/$module/$channel) {
                rewrite ^/modules/[^/]+/[^/]+/.*$ /$lang/modules/$module/$channel/$module_doc last;
             }
 
-            # Handle stable channel requests and serve v1.71 modules version TODO
+            # Redirect for channel names to their corresponding versions for modules served from S3.
+            rewrite ^/modules/[^/]+/(rock-solid|stable|early-access|beta|alpha)/$ /modules/$module/$channel_version/$module_doc redirect;
+        }
+
+        # Requests for modules without channel and version in URL - /module/NAME/...
+        # This is the default URL for modules documentation and it is indexed by search engines.
+        location ^/modules/([^\./]+)/((?!(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)).*)$ {
+            # Serve doc for the stable channel. Don't redirect as it shoud be SEO friendly.
+            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/$channel_version/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/$channel_version/$lang/modules/$module/$module_doc break;
+
             limit_except GET {
                 deny all;
             }
-
-            rewrite ^/modules/[^/]+/stable/$ /modules-web-test2/latest/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-web-test2/latest/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
@@ -168,7 +175,7 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-        # Embeddede modules (they are served from s3)
+        # Embedded modules (they are served from s3)
         location ~* ^/modules/([^/]+)/(latest|v1\.[0-9]+)/(.*)$ {
             limit_except GET {
                 deny all;
@@ -203,15 +210,22 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
+
+        # Internal redirect to serve module docs from sources
+        location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
+            internal;
+            try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
+        }
+
         location / {
             try_files $uri $uri/ =404;
         }
 
-        # TODO TMP Redirect channel names to their corresponding versions
-        location ~ ^/modules/test/(alpha|beta|ea|stable|rock-solid)$ {
-            set $channel_name $1;
-            return 301 /$channel_version;
-        }
+        ## TODO TMP Redirect channel names to their corresponding versions
+        #location ~ ^/modules/test/(alpha|beta|ea|stable|rock-solid)$ {
+        #    set $channel_name $1;
+        #    return 301 /$channel_version;
+        #}
 
         #        # Redirects for modules folders
         #        location ~* ^/(ru|en)/modules/([^/.]+)$ {
