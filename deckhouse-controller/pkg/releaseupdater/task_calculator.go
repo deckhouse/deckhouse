@@ -57,8 +57,7 @@ func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logg
 		releaseChannel: releaseChannel,
 	}
 }
-
-func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger, releaseChannel string) *TaskCalculator {
+func NewModuleReleaseTaskCalculator(k8sclient client.Client, releaseChannel string, logger *log.Logger) *TaskCalculator {
 	return &TaskCalculator{
 		k8sclient:      k8sclient,
 		listFunc:       listModuleReleases,
