@@ -111,7 +111,7 @@ spec:
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1
 kind: VCDClusterConfiguration
 layout: WithNAT
 provider:
