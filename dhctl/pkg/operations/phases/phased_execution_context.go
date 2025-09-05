@@ -87,7 +87,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) setLastState(stateCache 
 }
 
 func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, completedPhaseData OperationPhaseDataT, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
-	err := pec.progressTracker.Progress(completedPhase, "")
+	err := pec.progressTracker.Progress(pec.progressTracker.LastCompletedPhase(completedPhase, nextPhase), "")
 	if err != nil {
 		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
 	}

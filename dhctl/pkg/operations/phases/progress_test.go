@@ -35,6 +35,31 @@ func TestProgressTracker_NilCallback(t *testing.T) {
 	require.NoError(t, progressTracker.Progress(phases.BootstrapPhases[len(phases.BootstrapPhases)-1].Phase, ""))
 }
 
+func TestProgressTracker_LastCompletedPhase(t *testing.T) {
+	t.Parallel()
+
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		return nil
+	})
+
+	assert.EqualValues(t,
+		phases.BootstrapPhases[0].Phase,
+		progressTracker.LastCompletedPhase(phases.BootstrapPhases[0].Phase, ""),
+	)
+	assert.EqualValues(t,
+		"",
+		progressTracker.LastCompletedPhase("", phases.BootstrapPhases[0].Phase),
+	)
+	assert.EqualValues(t,
+		phases.BootstrapPhases[0].Phase,
+		progressTracker.LastCompletedPhase("", phases.BootstrapPhases[1].Phase),
+	)
+	assert.EqualValues(t,
+		phases.BootstrapPhases[len(phases.BootstrapPhases)-2].Phase,
+		progressTracker.LastCompletedPhase("", phases.BootstrapPhases[len(phases.BootstrapPhases)-1].Phase),
+	)
+}
+
 func TestProgressTracker(t *testing.T) {
 	t.Parallel()
 
