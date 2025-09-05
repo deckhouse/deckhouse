@@ -248,6 +248,25 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		return nil
 	}
 
+	// For LTS channels, skip intermediate versions and create release directly
+	isLTSChannel := strings.EqualFold(f.releaseChannel, ltsReleaseChannel)
+
+	logger.Debug("Checking release channel",
+		slog.String("channel", f.releaseChannel),
+		slog.String("ltsChannel", ltsReleaseChannel),
+		slog.Bool("isLTS", isLTSChannel))
+
+	if isLTSChannel {
+		logger.Debug("LTS channel detected, creating release directly without intermediate versions")
+
+		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "LTS channel - direct release")
+		if err != nil {
+			return fmt.Errorf("create LTS release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
+		}
+
+		return nil
+	}
+
 	// create release if deployed release and new release are in updating sequence
 	actual := releaseForUpdate
 	metricLabels["actual_version"] = "v" + actual.GetVersion().String()
@@ -286,14 +305,6 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			return nil
 		}
 	}
-
-	// For LTS channels, skip intermediate versions and create release directly
-	isLTSChannel := strings.EqualFold(f.releaseChannel, ltsReleaseChannel)
-
-	logger.Debug("Checking release channel",
-		slog.String("channel", f.releaseChannel),
-		slog.String("ltsChannel", ltsReleaseChannel),
-		slog.Bool("isLTS", isLTSChannel))
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {

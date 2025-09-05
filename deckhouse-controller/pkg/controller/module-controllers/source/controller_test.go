@@ -744,6 +744,21 @@ spec:
 		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
 		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
 
+		// Add foxtrot-alpha policy with LTS channel
+		testDataStr += `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: foxtrot-alpha
+spec:
+  releaseChannel: Lts
+  update:
+    mode: Manual`
+
+		// Update Module to reference foxtrot-alpha policy
+		testDataStr = strings.Replace(testDataStr, "  availableSources:", "  updatePolicy: foxtrot-alpha\n  availableSources:", 1)
+
 		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)
@@ -772,6 +787,21 @@ spec:
 		testDataStr = strings.Replace(testDataStr, "version: 1.4.1", "version: 1.0.0", 1) // Start from v1.0.0
 		testDataStr = strings.Replace(testDataStr, "parca-v1.4.1", "parca-v1.0.0", 1)
 		testDataStr = strings.Replace(testDataStr, "parca-v1.5.2", "parca-v1.0.0-pending", 1) // Different name to avoid duplicates
+
+		// Add foxtrot-alpha policy with LTS channel
+		testDataStr += `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: foxtrot-alpha
+spec:
+  releaseChannel: Lts
+  update:
+    mode: Manual`
+
+		// Update Module to reference foxtrot-alpha policy
+		testDataStr = strings.Replace(testDataStr, "  availableSources:", "  updatePolicy: foxtrot-alpha\n  availableSources:", 1)
 
 		suite.setupTestController(testDataStr, withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
