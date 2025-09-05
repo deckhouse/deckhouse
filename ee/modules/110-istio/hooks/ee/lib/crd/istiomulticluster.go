@@ -42,6 +42,8 @@ type MulticlusterPrivateMetadata struct {
 	IngressGateways *[]MulticlusterIngressGateways `json:"ingressGateways"`
 	APIHost         string                         `json:"apiHost,omitempty"`
 	NetworkName     string                         `json:"networkName,omitempty"`
+	APIJWT          string                         `json:"apiJWT,omitempty"`
+	JWTExpiryTime   string                         `json:"jwtExpiryTime,omitempty"`
 }
 
 type MulticlusterIngressGateways struct {
