@@ -19,7 +19,6 @@ class ModuleSearch {
     // Configuration options
     this.options = {
       searchIndexPath: '/modules/search-embedded-modules-index.json',
-      baseurl: null,
       ...options
     };
 
@@ -604,72 +603,96 @@ class ModuleSearch {
   }
 
   buildTargetUrl(originalUrl) {
+    console.debug('buildTargetUrl called with:', originalUrl);
+    
     // If originalUrl is already a full URL or starts with http/https, return as is
     if (originalUrl && (originalUrl.startsWith('http://') || originalUrl.startsWith('https://'))) {
+      console.debug('Full URL detected, returning as is:', originalUrl);
       return originalUrl;
     }
 
     // If originalUrl is empty or just '#', return current page
     if (!originalUrl || originalUrl === '#') {
+      console.debug('Empty URL, returning current page:', window.location.pathname);
       return window.location.pathname;
     }
 
-    // If baseurl is explicitly set, use it
-    if (this.options.baseurl) {
-      const baseUrl = this.options.baseurl.endsWith('/') ? this.options.baseurl.slice(0, -1) : this.options.baseurl;
-      const urlPath = originalUrl.startsWith('/') ? originalUrl : '/' + originalUrl;
-      return baseUrl + urlPath;
-    }
 
     // Check for meta tag with relative current page URL
     const relativeMeta = document.querySelector('meta[name="page:url:relative"]');
+    console.debug('Meta tag found:', relativeMeta ? relativeMeta.content : 'none');
+    
     if (relativeMeta && relativeMeta.content) {
       const currentPageRelative = relativeMeta.content;
+      console.debug('Current page relative:', currentPageRelative);
 
       // Extract relative path from originalUrl
       let targetRelativePath = originalUrl;
+      console.debug('Initial target relative path:', targetRelativePath);
 
       // If originalUrl is an absolute path, extract the relative part after the version
       if (originalUrl.startsWith('/')) {
         const urlSegments = originalUrl.split('/').filter(segment => segment);
+        console.debug('URL segments:', urlSegments);
 
         // Find the version segment and extract everything after it
         for (let i = 0; i < urlSegments.length; i++) {
           if (urlSegments[i].match(/^v\d+(\.\d+)*$/)) {
             // Found version segment, take everything after it
             targetRelativePath = urlSegments.slice(i + 1).join('/');
+            console.debug('Found version segment at index', i, 'extracted relative path:', targetRelativePath);
             break;
           }
         }
+      } else {
+        // originalUrl is already relative, use it as is
+        console.debug('URL is already relative, using as is:', targetRelativePath);
       }
 
-              // Calculate base URL by subtracting page:url:relative from current page URL
-        const currentPageUrl = window.location.pathname;
-        const cleanRelativePath = currentPageRelative.startsWith('./') ?
-          currentPageRelative.substring(2) : currentPageRelative;
+      // Calculate base URL by subtracting page:url:relative from current page URL
+      const currentPageUrl = window.location.pathname;
+      const cleanRelativePath = currentPageRelative.startsWith('./') ?
+        currentPageRelative.substring(2) : currentPageRelative;
+      
+      console.debug('Current page URL:', currentPageUrl);
+      console.debug('Clean relative path:', cleanRelativePath);
+      
+      // Find the base URL by removing the relative path from the current URL
+      let baseUrl = currentPageUrl;
+      if (currentPageUrl.endsWith(cleanRelativePath)) {
+        baseUrl = currentPageUrl.substring(0, currentPageUrl.length - cleanRelativePath.length);
+        console.debug('Base URL calculated:', baseUrl);
+      } else {
+        console.debug('Current URL does not end with relative path, using full URL as base');
+      }
+      
+      // Construct absolute URL using the base URL
+      if (targetRelativePath) {
+        // Remove leading slash from target path to avoid // in the result
+        const cleanTargetPath = targetRelativePath.startsWith('/') ? 
+          targetRelativePath.substring(1) : targetRelativePath;
         
-        // Find the base URL by removing the relative path from the current URL
-        let baseUrl = currentPageUrl;
-        if (currentPageUrl.endsWith(cleanRelativePath)) {
-          baseUrl = currentPageUrl.substring(0, currentPageUrl.length - cleanRelativePath.length);
-        }
+        // Ensure base URL ends with / for proper concatenation
+        const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         
-        // Construct absolute URL using the base URL
-        if (targetRelativePath) {
-          // Remove leading slash from target path to avoid // in the result
-          const cleanTargetPath = targetRelativePath.startsWith('/') ? 
-            targetRelativePath.substring(1) : targetRelativePath;
-          
-          // Ensure base URL ends with / for proper concatenation
-          const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-          
-          return normalizedBaseUrl + cleanTargetPath;
-        }
+        const result = normalizedBaseUrl + cleanTargetPath;
+        console.debug('Final URL construction:', {
+          baseUrl,
+          normalizedBaseUrl,
+          targetRelativePath,
+          cleanTargetPath,
+          result
+        });
+        
+        return result;
+      }
 
-        return baseUrl;
+      console.debug('No target relative path, returning base URL:', baseUrl);
+      return baseUrl;
     }
 
     // Fallback: return original URL as is
+    console.debug('No meta tag found, returning original URL:', originalUrl);
     return originalUrl;
   }
 
@@ -707,16 +730,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if there's a data attribute on the search input for custom search index path
   const searchInput = document.getElementById('search-input');
   const searchIndexPath = searchInput?.dataset.searchIndexPath;
-  const baseurl = searchInput?.dataset.baseurl;
-
+  
   // Create search instance with custom options if specified
   const options = {};
   if (searchIndexPath) {
     options.searchIndexPath = searchIndexPath;
   }
-  if (baseurl) {
-    options.baseurl = baseurl;
-  }
-
+  
   window.moduleSearch = new ModuleSearch(options);
 });
