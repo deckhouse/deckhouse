@@ -23,7 +23,7 @@ spec:
 Prepare the application to publish:
 
 ```shell
-kubectl create deploy nginx --image=nginx
+d8 k create deploy nginx --image=nginx
 ```
 
 Deploy the MetalLoadBalancerClass resource:
@@ -65,7 +65,7 @@ spec:
 As a result, the created Service with the type `LoadBalancer` will be assigned the specified number of addresses:
 
 ```shell
-$ kubectl get svc
+d8 k get svc
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```

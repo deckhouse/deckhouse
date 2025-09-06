@@ -10,7 +10,7 @@ apiVersions:
         Выполните следующую команду, чтобы изменить конфигурацию в запущенном кластере:
 
         ```shell
-        d8 platform edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -163,7 +163,7 @@ apiVersions:
                 mainNetworkIPAddress:
                   description: |
                     IP-адрес бастион-хоста в `mainNetwork`.
-                  
+
                     По умолчанию DHCP-клиент включен.
         sshPublicKey:
           description: |
@@ -187,7 +187,7 @@ apiVersions:
             type:
               description: |
                 Тип платформы сетевой виртуализации, обеспечивающей работу VMware Cloud Director Edge Gateway (один из "NSX-V" или "NSX-T").
-                Тип платформы можно узнать у администратора. 
+                Тип платформы можно узнать у администратора.
             externalIP:
               description: |
                 IP-адрес, доступный из внешних сетей, через который

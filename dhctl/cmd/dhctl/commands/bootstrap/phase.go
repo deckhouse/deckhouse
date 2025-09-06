@@ -44,7 +44,11 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
-				sshClient = gossh.NewClientFromFlags()
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -98,7 +102,11 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
-				sshClient = gossh.NewClientFromFlags()
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -124,7 +132,11 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if app.SSHLegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
-			sshClient = gossh.NewClientFromFlags()
+			var err error
+			sshClient, err = gossh.NewClientFromFlags()
+			if err != nil {
+				return err
+			}
 		}
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),

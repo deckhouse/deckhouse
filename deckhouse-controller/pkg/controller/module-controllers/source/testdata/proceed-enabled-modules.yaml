@@ -63,6 +63,9 @@ properties:
     - test-source-1
 status:
   phase: Available
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "Unknown"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: Module

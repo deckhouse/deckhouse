@@ -403,8 +403,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -416,8 +419,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -427,8 +433,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -444,6 +456,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -747,8 +767,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -760,8 +783,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -771,8 +797,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -788,6 +820,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1091,8 +1131,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1104,8 +1147,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1115,8 +1161,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1132,6 +1184,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1435,8 +1495,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1448,8 +1511,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1459,8 +1525,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1476,6 +1548,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1779,8 +1859,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1792,8 +1875,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1803,8 +1889,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1820,6 +1912,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -2123,8 +2223,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -2136,8 +2239,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -2147,8 +2253,14 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2164,6 +2276,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi

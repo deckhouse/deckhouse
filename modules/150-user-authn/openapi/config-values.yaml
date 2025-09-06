@@ -39,7 +39,7 @@ properties:
 
               In the `SelfSigned` mode, a CA-signed certificate will be issued for the Ingress resource.
 
-              Use the following command to get the certificate: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+              Use the following command to get the certificate: `d8 k -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               In the `Global` mode, the policies specified in the `global.modules.https.mode` global parameter will be applied. Thus, if the global parameter has the `CertManager` mode set (with `letsencrypt` as the ClusterIssuer), then the Let's Encrypt certificate will be issued for the Ingress resource.
           global:
@@ -76,7 +76,7 @@ properties:
           type: string
           description: |
             If you plan to use a TCP proxy, then you must configure a certificate on the API server's side for the TCP proxy address. Suppose your API servers use three different addresses (`192.168.0.10`, `192.168.0.11`, and `192.168.0.12`) while the client uses a TCP load balancer (say, `192.168.0.15`). In this case, you have to re-generate the API server certificates:
-            * edit `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
+            * edit `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
             * save the resulting config: `kubeadm config view > kubeadmconf.yaml`;
             * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
@@ -130,9 +130,9 @@ properties:
           interval:
             type: string
             minLength: 2
-            pattern: "^(?:(?:[1-9]|[1-9][0-9])h)?(?:(?:[1-9]|[1-9][0-9])m)?(?:(?:[1-9]|[1-9][0-9])s)?$"
+            pattern: "^(?:(?:[1-9]|[1-9][0-9]+)d)?(?:(?:[1-9]|[1-9][0-9]+)h)?(?:(?:[1-9]|[1-9][0-9]+)m)?(?:(?:[1-9]|[1-9][0-9]+)s)?$"
             description: |
-              Time interval after which the password must be changed. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
+              Time interval after which the password must be changed. Can be set in seconds, minutes, hours or days: `10s`, `5m`, `1h`, `3d`.
       lockout:
         type: object
         required: ["maxAttempts", "lockDuration"]
@@ -146,9 +146,9 @@ properties:
           lockDuration:
             type: string
             minLength: 2
-            pattern: "^(?:(?:[1-9]|[1-9][0-9])h)?(?:(?:[1-9]|[1-9][0-9])m)?(?:(?:[1-9]|[1-9][0-9])s)?$"
+            pattern: "^(?:(?:[1-9]|[1-9][0-9]+)d)?(?:(?:[1-9]|[1-9][0-9]+)h)?(?:(?:[1-9]|[1-9][0-9]+)m)?(?:(?:[1-9]|[1-9][0-9]+)s)?$"
             description: |
-              Temporary lockout duration. Can be set in seconds, minutes, or hours: `10s`, `5m`, `1h`.
+              Temporary lockout duration. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `3d`.
   staticUsers2FA:
     type: object
     default: {}

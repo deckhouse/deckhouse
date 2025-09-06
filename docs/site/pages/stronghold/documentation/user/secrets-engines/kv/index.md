@@ -20,9 +20,6 @@ is stored. Additionally, requests going to a backend configured this way will be
 more performant because for any given request there will be fewer storage calls
 and no locking.
 
-More information about running in this mode can be found in the [K/V Version 1
-Docs](/docs/secrets/kv/kv-v1)
-
 ## KV version 2
 
 When running v2 of the `kv` backend a key can retain a configurable number of
@@ -36,6 +33,3 @@ version's data the destroy command or API endpoint can be used. Additionally all
 versions and metadata for a key can be deleted by deleting on the metadata
 command or API endpoint. Each of these operations can be ACL'ed differently,
 restricting who has permissions to soft delete, undelete, or fully remove data.
-
-More information about running in this mode can be found in the [K/V Version 2
-Docs](/docs/secrets/kv/kv-v2)

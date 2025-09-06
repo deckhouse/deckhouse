@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -45,7 +45,7 @@ git:
     - '**/*.tpl'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
 - image: {{ .ModuleName }}/build-proxy-failover-artifact
   add: /src/proxy-failover-controller

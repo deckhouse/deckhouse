@@ -43,3 +43,16 @@ for local user accounts. The following features are added:
 2. Password expiration and forced rotation
 3. Password reuse prevention
 4. Account lockout after failed attempts
+
+### 008-password-policy-chore.patch
+
+This adds functionality to configure password policy duration fields with `day` units, such as: `1d`, `30d12h`, etc.
+This patch also includes refactored password complexity checks - making them much simpler.
+
+### 009-oauth2-cve.patch
+
+Fixes CVE-2025-22868
+
+### 010-fix-password-connector.patch
+
+This patch fixes a critical bug in the password connector. Previously, the login logic assumed that all password connectors must have a locally stored password in the database, which is incorrect. This functionality should only be executed for password connectors with a passwordDB implementation.

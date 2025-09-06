@@ -25,6 +25,7 @@ import (
 	"slices"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -55,7 +56,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules without sources, it seems impossible, but just in case
 			if len(module.Properties.AvailableSources) == 0 {
 				// don`t delete enabled module
-				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				return nil
@@ -64,7 +65,7 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 			// delete modules with this source as the last source
 			if len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName {
 				// don`t delete enabled module
-				if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleManager) {
+				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
 					return r.client.Delete(ctx, module)
 				}
 				module.Properties.AvailableSources = []string{}
@@ -187,8 +188,8 @@ func (r *reconciler) needToEnsureRelease(
 		return false
 	}
 
-	// check the module enabled
-	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+	//  not found or unknown
+	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) || module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
 		enabledByBundle := false
 		if meta.ModuleDefinition != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
@@ -201,6 +202,9 @@ func (r *reconciler) needToEnsureRelease(
 		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
 			return false
 		}
+	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+		// disabled by module config
+		return false
 	}
 
 	return sourceModule.Checksum != meta.Checksum || !releaseExists

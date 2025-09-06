@@ -12,7 +12,7 @@ apiVersions:
         Run the following command to change the configuration in a running cluster:
 
         ```shell
-        d8 platform edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
@@ -361,7 +361,7 @@ apiVersions:
             externalPort:
               type: integer
               description: |
-                The external port mapped by the DNAT rule to forward incoming SSH 
+                The external port mapped by the DNAT rule to forward incoming SSH
                 connections to the master node.
               minimum: 1
               maximum: 65535

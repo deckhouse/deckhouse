@@ -224,7 +224,7 @@ spec:
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Выполните предварительную настройку нового узла в соответствии с особенностями вашего окружения. Например:
@@ -299,7 +299,7 @@ spec:
    Выполните следующую команду, для создания в кластере ресурса `SSHCredentials` (здесь и далее также используйте `kubectl`, настроенный на управление кластером):
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: SSHCredentials
    metadata:
@@ -313,7 +313,7 @@ spec:
 1. Создайте в кластере ресурс [StaticInstance](cr.html#staticinstance), указав IP-адрес сервера статического узла:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -334,7 +334,7 @@ spec:
    > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить `labelSelector`, нужно создать новую `NodeGroup` и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -362,7 +362,7 @@ spec:
    > Поле `labelSelector` в ресурсе `NodeGroup` является неизменным. Чтобы обновить labelSelector, нужно создать новую NodeGroup и перенести в неё статические узлы, изменив их лейблы (labels).
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -392,7 +392,7 @@ spec:
 1. Создайте в кластере ресурсы [StaticInstance](cr.html#staticinstance), указав актуальные IP-адреса серверов:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -482,7 +482,7 @@ spec:
 Создайте новый ресурс NodeGroup, например, с именем `front`, который будет управлять статическим узлом с лейблом `role: front`.
 
 ```shell
-kubectl create -f - <<EOF
+d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -502,7 +502,7 @@ EOF
 Измените лейбл `role` у существующего StaticInstance с `worker` на `front`. Это позволит новой NodeGroup `front` начать управлять этим узлом.
 
 ```shell
-kubectl label staticinstance static-worker-1 role=front --overwrite
+d8 k label staticinstance static-worker-1 role=front --overwrite
 ```
 
 ##### 3. Уменьшение количества статических узлов в исходной `NodeGroup`
@@ -510,7 +510,7 @@ kubectl label staticinstance static-worker-1 role=front --overwrite
 Обновите ресурс NodeGroup `worker`, уменьшив значение параметра `count` с `1` до `0`.
 
 ```shell
-kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+d8 k patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
 ```
 
 ## Пример описания `NodeUser`

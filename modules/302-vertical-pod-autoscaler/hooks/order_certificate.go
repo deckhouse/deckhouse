@@ -26,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
 
@@ -98,12 +100,15 @@ func vpaCertHandler(input *go_hook.HookInput) error {
 		err     error
 	)
 
-	snapshots := input.Snapshots["VPACertSecret"]
+	snapshots := input.NewSnapshots.Get("VPACertSecret")
 
 	shouldGenerateNewCert := true
 
-	if len(snapshots) > 0 {
-		vpaCert = *snapshots[0].(*vpaCertSecretData)
+	for vpaCert, err = range sdkobjectpatch.SnapshotIter[vpaCertSecretData](snapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'VPACertSecret' snapshots: %w", err)
+		}
+
 		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon([]byte(vpaCert.ServerCert), time.Hour*7*24)
 		if err != nil {
 			return err

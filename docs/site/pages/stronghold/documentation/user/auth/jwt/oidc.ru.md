@@ -14,7 +14,7 @@ lang: ru
 
 #### Аутентификация в OIDC
 
-В данном разделе рассматривается настройка и использование ролей OIDC. Предполагается базовое знакомство с концепциями OIDC. Поток Authorization Code использует расширение Proof Key for Code Exchange (PKCE).
+В данном разделе рассматривается настройка и использование ролей OIDC. Предполагается базовое знакомство с [концепциями OIDC](https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1). Поток Authorization Code использует расширение Proof Key for Code Exchange (PKCE).
 
 Deckhouse Stronghold включает два встроенных потока авторизации OIDC: пользовательский интерфейс Deckhouse Stronghold UI и CLI с использованием логина vault.
 

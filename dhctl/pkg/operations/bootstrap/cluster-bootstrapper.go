@@ -210,7 +210,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
-				sshClient = gossh.NewClientFromFlags()
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
 			}
 
 			if metaConfig.IsStatic() {

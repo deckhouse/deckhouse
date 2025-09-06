@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      d8 platform edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -218,7 +218,7 @@ apiVersions:
           Публичный ключ для доступа на узлы.
       disableDefaultSecurityGroup:
         description: |
-          Если установлено значение `true`, то security group по умолчанию создаваться не будут. 
+          Если установлено значение `true`, то security group по умолчанию создаваться не будут.
 
           **Важно.** При использовании `disableDefaultSecurityGroup: true` вы обязаны самостоятельно создать все необходимые security group для доступа к узлам кластера. Кроме того, необходимо явно указать их в следующих параметрах:
 

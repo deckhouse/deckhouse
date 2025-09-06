@@ -120,9 +120,8 @@ block-until-image-is-not-ready:
           if (context.eventName === 'pull_request') {
             branchName = context.payload.pull_request.head.ref;
             prNum = context.payload.pull_request.number;
-          } else if (context.eventName === 'workflow_dispatch') {
-            branchName = context.payload.inputs.ci_commit_ref_name;
-            prNum = context.payload.inputs.issue_number;
+          } else {
+            return true;
           }
 
           if (!branchName) {
