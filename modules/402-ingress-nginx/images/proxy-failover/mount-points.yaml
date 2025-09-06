@@ -4,3 +4,7 @@ dirs:
  - /opt/nginx-static/additional-conf
  - /opt/nginx-static/client_body_temp
  - /opt/nginx-static/proxy_temp
+ - /opt/nginx-static/logs
+ - /opt/nginx-static/fastcgi_temp
+ - /opt/nginx-static/uwsgi_temp
+ - /opt/nginx-static/scgi_temp
