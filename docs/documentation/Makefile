@@ -20,7 +20,7 @@ registry-down:
 		docker rm -f registry; docker volume prune -fa
 
 up: network
-		werf compose up --follow --docker-compose-command-options='-d' --env module --repo localhost:4999/docs
+		werf compose up --follow --docker-compose-command-options='-d' --env local --repo localhost:4999/docs
 
 clean:
 		werf cleanup --env module --repo localhost:4999/docs --without-kube

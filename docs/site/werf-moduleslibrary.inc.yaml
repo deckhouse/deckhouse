@@ -1,0 +1,27 @@
+# Nginx for serving modules library
+#image: {{ .ModuleName }}/modules-library-web
+#imageSpec:
+#  config:
+#    workingDir: "/app"
+#fromImage: builder/alpine-3.20
+#shell:
+#  beforeSetup:
+#  - apk add --no-cache nginx
+#  setup:
+#  - |
+#      cat <<"EOD" > /etc/nginx/nginx.conf
+#      /comment -/ .Files.Get ".werf/nginx.conf" | nindent 6  /comment
+#      EOD
+#import:
+#- image: {{ .ModuleName }}/{{ .ImageName }}/static
+#  add: /app/_site/en/modules
+#  to: /app/en/embedded-modules
+#  before: setup
+#  owner: nginx
+#  group: nginx
+#- image: {{ .ModuleName }}/{{ .ImageName }}/static
+#  add: /app/_site/ru/modules
+#  to: /app/ru/embedded-modules
+#  before: setup
+#  owner: nginx
+#  group: nginx

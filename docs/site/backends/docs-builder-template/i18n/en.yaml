@@ -1,5 +1,6 @@
 allowed_values: allowed values
-search-placeholder: Search...
+search_placeholder_text: Search...
+search_placeholder_text_modules: Search by modules documentation...
 modules: modules
 modules2: modules
 module: module
@@ -7,6 +8,7 @@ module_versions: Module versions
 module_version: Module version
 deckhouse: deckhouse
 documentation: documentation
+Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
 category: category
@@ -57,6 +59,7 @@ reset_filter: reset filter
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.
 show_more: Show more
+show_more_pattern: "Show %s more"
 element_of_array: element of the array
 x-kubernetes-int-or-string: integer or string
 of_x-kubernetes-int-or-string: of integers or strings
@@ -73,8 +76,9 @@ of_string: of strings
 boolean: boolean
 of_boolean: of booleans
 version: version
-version_of_module: "### module version"
+version_of_module: "Module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
 parameters: parameters
+api: API
 no_custom_configuration: The module has no configuration parameters.
