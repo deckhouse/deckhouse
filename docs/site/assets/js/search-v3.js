@@ -665,10 +665,13 @@ class ModuleSearch {
           relativePath += '../';
         }
 
-      // Add the target path
-      if (targetRelativePath) {
-        relativePath += targetRelativePath;
-      }
+        // Add the target path
+        if (targetRelativePath) {
+          // Remove leading slash from target path to avoid // in the result
+          const cleanTargetPath = targetRelativePath.startsWith('/') ? 
+            targetRelativePath.substring(1) : targetRelativePath;
+          relativePath += cleanTargetPath;
+        }
 
       return relativePath || './';
     }
