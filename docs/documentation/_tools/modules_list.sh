@@ -19,54 +19,34 @@
 # ...
 # modules:
 #   network-gateway:
-#     folder_name: modules/450-network-gateway/
 #     path: modules/network-gateway/
-#     edition: ee
+#     editionMinimumAvailable: ee
 #   network-policy-engine:
-#     folder_name: modules/050-network-policy-engine/
 #     path: modules/network-policy-engine/
-#     edition: ce
+#     ededitionMinimumAvailableition: ce
 #
-
-check_module_docs_exist() {
-    moduleToCheck=$1
-
-    if [[ -n ${moduleToCheck} ]]
-    then
-       # Loop through the list of modules with docs
-       for item in ${modules_with_docs}; do
-         if [[ "${item}" == "${moduleToCheck}" ]]; then
-           return 0
-         fi
-       done
-    fi
-
-    return 1
-}
 
 
 if [[ -z ${MODULES_DIR} ]]; then
   MODULES_DIR=/src
 fi
 
-modules_with_docs=$(find ${MODULES_DIR} -regex '.*/docs/README.md' -print | sed -E 's#^.+/modules/([^/]+)(/.+?)?$#\1#; s#^[0-9]+-##' | sort -u)
+DATA='{'
 
-for module_edition_path in $(find ${MODULES_DIR} -type d -print | grep -E '.+/modules/[^/]+' |sed -E 's#^(.+/modules/[^/]+)(/.+?)?$#\1#' | sort -u | sed -E "s#^${MODULES_DIR}/modules/#${MODULES_DIR}/ce/modules/#" | sed -E "s#^${MODULES_DIR}/(ce/|be/|se/|se-plus/|ee/|fe/)?modules/([^/]+)\$#\1\2#" | sort -t/ -k 2.4 ); do
-  module_name=$(echo $module_edition_path | sed -E 's#ce/|be/|se/|se-plus/|ee/|fe/##; s#^[0-9]+-##')
-  module_doc_path=""
-
-  # Skip modules, which are listed in modules_menu_skip file
-  if grep -Fxq "$module_name" _tools/modules_menu_skip; then
-      continue
-  fi
-
-  if check_module_docs_exist "${module_name}"; then
-      module_doc_path="modules/${module_name}/"
-  fi
-
-  cat << YAML
-$module_name:
-  path: "${module_doc_path}"
-  editionMinimumAvailable: "$(echo $module_edition_path | cut -d/ -f1)"
-YAML
+# Iterates over all module documentation files found in the specified modules directory,
+# extracts the module name and its edition, and constructs a JSON object entry for each module with
+# its path and minimum available edition.
+for module_edition_path in $(find ${MODULES_DIR} -regex '.*/docs/README.md' -print |
+       grep -E '.+/modules/[^/]+' |
+       sed -E "s#^${MODULES_DIR}(.*/modules/[^/]+)/.+\$#\1#; s#^/modules/#/ce/modules/#; s#^/ee/(be/|se/|se-plus/|fe/)#/\1#;
+               s#/([^/]+)/modules/([0-9]+-)?(.+)#\1/\3#" | sort -t/ -k 2 ); do
+  module_name=$(echo $module_edition_path | cut -d/ -f2)
+  module_edition=$(echo $module_edition_path | cut -d/ -f1)
+DATA+="\"${module_name}\": {\"path\": \"modules/${module_name}/\",\"editionMinimumAvailable\": \"${module_edition}\"},"
 done
+
+# Remove the last comma to ensure valid JSON format
+DATA="${DATA%,}}"
+
+# Filter out the excluded modules from the JSON data.
+echo ${DATA} | jq --slurpfile exclude _tools/modules_excluded.json 'with_entries(select(.key | . as $k | $exclude[0] | index($k) | not))'

@@ -22,5 +22,6 @@ configVersion: 1
 {{- $_ := set $context "ModuleName" "docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "ModulePath" "../../" }}
+{{- $_ := set $context "BuildModules" false }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
 ---
