@@ -113,6 +113,29 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 	}
 }
 
+func (p *ProgressTracker) LastCompletedPhase(
+	completedPhase, nextPhase OperationPhase,
+) OperationPhase {
+	if completedPhase != "" {
+		return completedPhase
+	}
+
+	if nextPhase == "" {
+		return completedPhase
+	}
+
+	phases, ok := operationPhases[p.progress.Operation]
+	if !ok {
+		return completedPhase
+	}
+
+	nextPhaseIndex := slices.IndexFunc(phases, func(phases PhaseWithSubPhases) bool {
+		return phases.Phase == nextPhase
+	})
+
+	return nOrEmpty(phases, nextPhaseIndex-1).Phase
+}
+
 func (p *ProgressTracker) Progress(completedPhase OperationPhase, completedSubPhase OperationSubPhase) error {
 	if p.onProgressFunc == nil {
 		return nil

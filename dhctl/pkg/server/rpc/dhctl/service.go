@@ -240,6 +240,12 @@ type progressTracker[T proto.Message] struct {
 
 func (p *progressTracker[T]) sendProgress() phases.OnProgressFunc {
 	return func(progress phases.Progress) error {
+		// todo(1)
+		r, err := json.Marshal(progress)
+		log.WarnF("Progress data\n")
+		log.WarnF("%v\n", string(r))
+		log.WarnF("%v\n", err)
+
 		p.sendCh <- p.dataFunc(progress)
 
 		return nil
