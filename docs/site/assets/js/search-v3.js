@@ -654,26 +654,19 @@ class ModuleSearch {
           baseUrl = currentPageUrl.substring(0, currentPageUrl.length - cleanRelativePath.length);
         }
         
-        // Count how many levels up we need to go to reach the base URL
-        const baseUrlSegments = baseUrl.split('/').filter(segment => segment);
-        const currentUrlSegments = currentPageUrl.split('/').filter(segment => segment);
-        const upLevels = currentUrlSegments.length - baseUrlSegments.length;
-
-        // Generate relative path (go up to base URL, then down to target)
-        let relativePath = '';
-        for (let i = 0; i < upLevels; i++) {
-          relativePath += '../';
-        }
-
-        // Add the target path
+        // Construct absolute URL using the base URL
         if (targetRelativePath) {
           // Remove leading slash from target path to avoid // in the result
           const cleanTargetPath = targetRelativePath.startsWith('/') ? 
             targetRelativePath.substring(1) : targetRelativePath;
-          relativePath += cleanTargetPath;
+          
+          // Ensure base URL ends with / for proper concatenation
+          const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+          
+          return normalizedBaseUrl + cleanTargetPath;
         }
 
-      return relativePath || './';
+        return baseUrl;
     }
 
     // Fallback: return original URL as is
