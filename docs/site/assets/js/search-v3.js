@@ -643,24 +643,27 @@ class ModuleSearch {
         }
       }
 
-              // Count how many levels deep the current page is
-        // Remove ./ prefix and count path segments
-        const cleanPath = currentPageRelative.startsWith('./') ?
+              // Calculate base URL by subtracting page:url:relative from current page URL
+        const currentPageUrl = window.location.pathname;
+        const cleanRelativePath = currentPageRelative.startsWith('./') ?
           currentPageRelative.substring(2) : currentPageRelative;
-        const currentPageSegments = cleanPath.split('/').filter(segment => segment && segment !== '.');
         
-        // If path ends with /, treat it as index file (same level as last directory)
-        // Otherwise, don't count the filename, only the directory levels
-        const currentPageDepth = cleanPath.endsWith('/') ? 
-          currentPageSegments.length : 
-          currentPageSegments.length - 1;
+        // Find the base URL by removing the relative path from the current URL
+        let baseUrl = currentPageUrl;
+        if (currentPageUrl.endsWith(cleanRelativePath)) {
+          baseUrl = currentPageUrl.substring(0, currentPageUrl.length - cleanRelativePath.length);
+        }
+        
+        // Count how many levels up we need to go to reach the base URL
+        const baseUrlSegments = baseUrl.split('/').filter(segment => segment);
+        const currentUrlSegments = currentPageUrl.split('/').filter(segment => segment);
+        const upLevels = currentUrlSegments.length - baseUrlSegments.length;
 
-
-      // Generate relative path (go up to version base, then down to target)
-      let relativePath = '';
-      for (let i = 0; i < currentPageDepth; i++) {
-        relativePath += '../';
-      }
+        // Generate relative path (go up to base URL, then down to target)
+        let relativePath = '';
+        for (let i = 0; i < upLevels; i++) {
+          relativePath += '../';
+        }
 
       // Add the target path
       if (targetRelativePath) {
