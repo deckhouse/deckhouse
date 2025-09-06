@@ -309,7 +309,7 @@ status:
 
 ## Логика автообновления модулей
 
-![Логика автообновления модулей](../../images/module-development/module_update_flow_ru.svg)
+![Логика автообновления модулей](../../images/architecture/module-development/module_update_flow_ru.svg)
 
 > Версии ModuleRelease `v1.0.0` и `v1.1.1` приведены в качестве примера.
 
@@ -360,7 +360,7 @@ update:
 
 Если в кластер попадает релиз с [update.versions](../../cr.html#modulerelease-v1alpha1-spec-update), DKP не требует обновляться по порядку — такой релиз появляется в списке «как есть», DKP автоматически выбирает подходящий вариант и, при необходимости, ждёт подтверждения. Вы можете сразу подтвердить установку последней доступной версии в пределах `to`. После подтверждения промежуточные релизы между `from` и `to` получат статус `Skipped` после реконсиляции (не сразу); какое-то время между `Superseded` и `Deployed` возможны релизы в статусе `Pending`.
 
-![Логика механизма `from-to`](../../images/module-development/from_to_ru.png)
+![Логика механизма `from-to`](../../images/architecture/module-development/from_to_ru.png)
 
 Проверить доступные релизы (ModuleRelease) можно с помощью команды:
 
