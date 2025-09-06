@@ -1,0 +1,5 @@
+docs:
+  fixes:
+    - summary: Fix TargetSampleLimitExceeded alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15347
+
