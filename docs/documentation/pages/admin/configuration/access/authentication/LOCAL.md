@@ -5,6 +5,9 @@ permalink: en/admin/configuration/access/authentication/local.html
 
 In addition to external authentication providers, DKP also supports local authentication.
 
+Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.
+The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+
 Local authentication involves creating User and Group resources in the cluster for static users and groups:
 
 - A User object stores user information, including email and a hashed password (the password is not stored in plain text).
@@ -66,6 +69,70 @@ spec:
       name: admin
 ```
 
-Members: List of users included in the group (specified as `kind`: User and username).
+Where `members` is a list of users belonging to the group.
 
 Once the group is created and includes all necessary users, proceed by configuring [authorization](../../access/authorization/).
+
+## Configuring password policy
+
+Password policy allows controlling password complexity, rotation, and user lockout.
+
+To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Fair
+      passwordHistoryLimit: 10
+      lockout:
+        lockDuration: 15m
+        maxAttempts: 3
+      rotation:
+        interval: "30d"
+```
+
+Field description:
+
+* `complexityLevel`: Password complexity level.
+* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
+* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
+  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
+  * `lockout.lockDuration`: User lockout duration.
+* `rotation`: Password rotation settings:
+  * `rotation.interval`: Period for mandatory password change.
+
+## Configuring two-factor authentication (2FA)
+
+2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
+
+To set up 2FA, use the [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa) field in the configuration of the `user-authn` module:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    staticUsers2FA:
+      enabled: true
+      issuerName: "awesome-app"
+```
+
+Field description:
+
+* `enabled`: Enables or disables 2FA for all static users.
+* `issuerName`: Name displayed in the authenticator application when adding an account.
+
+{% alert level="info" %}
+After enabling 2FA, each user must register in the authenticator application during their first login.
+{% endalert %}
