@@ -348,41 +348,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -415,16 +380,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -487,15 +442,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -515,7 +465,6 @@ jobs:
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -526,11 +475,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -544,54 +494,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -645,7 +565,6 @@ jobs:
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -655,10 +574,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -671,48 +591,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_1_29
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -735,17 +632,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -859,41 +745,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -926,16 +777,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -998,15 +839,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1026,7 +862,6 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1037,11 +872,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1055,54 +891,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1156,7 +962,6 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1166,10 +971,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1182,48 +988,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_1_30
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1246,17 +1029,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1370,41 +1142,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -1437,16 +1174,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -1509,15 +1236,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -1537,7 +1259,6 @@ jobs:
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1548,11 +1269,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1566,54 +1288,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1667,7 +1359,6 @@ jobs:
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -1677,10 +1368,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -1693,48 +1385,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_1_31
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -1757,17 +1426,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -1881,41 +1539,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -1948,16 +1571,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -2020,15 +1633,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2048,7 +1656,6 @@ jobs:
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2059,11 +1666,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2077,54 +1685,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2178,7 +1756,6 @@ jobs:
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2188,10 +1765,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2204,48 +1782,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_1_32
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2268,17 +1823,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2392,41 +1936,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -2459,16 +1968,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -2531,15 +2030,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2559,7 +2053,6 @@ jobs:
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2570,11 +2063,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2588,54 +2082,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2689,7 +2153,6 @@ jobs:
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -2699,10 +2162,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2715,48 +2179,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_1_33
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2779,17 +2220,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -2903,41 +2333,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -2970,16 +2365,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -3042,15 +2427,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3070,7 +2450,6 @@ jobs:
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3081,11 +2460,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3099,54 +2479,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -3200,7 +2550,6 @@ jobs:
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3210,10 +2559,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3226,48 +2576,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerd_Automatic
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3290,17 +2617,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -3414,41 +2730,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -3481,16 +2762,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -3553,15 +2824,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -3581,7 +2847,6 @@ jobs:
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3592,11 +2857,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3610,54 +2876,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -3711,7 +2947,6 @@ jobs:
           KUBERNETES_VERSION: "1.29"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -3721,10 +2956,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3737,48 +2973,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_1_29
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3801,17 +3014,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -3925,41 +3127,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -3992,16 +3159,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -4064,15 +3221,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4092,7 +3244,6 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4103,11 +3254,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -4121,54 +3273,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -4222,7 +3344,6 @@ jobs:
           KUBERNETES_VERSION: "1.30"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4232,10 +3353,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -4248,48 +3370,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_1_30
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -4312,17 +3411,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -4436,41 +3524,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -4503,16 +3556,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -4575,15 +3618,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -4603,7 +3641,6 @@ jobs:
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4614,11 +3651,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -4632,54 +3670,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -4733,7 +3741,6 @@ jobs:
           KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -4743,10 +3750,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -4759,48 +3767,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_1_31
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -4823,17 +3808,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -4947,41 +3921,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -5014,16 +3953,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -5086,15 +4015,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5114,7 +4038,6 @@ jobs:
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5125,11 +4048,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -5143,54 +4067,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -5244,7 +4138,6 @@ jobs:
           KUBERNETES_VERSION: "1.32"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5254,10 +4147,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -5270,48 +4164,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_1_32
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -5334,17 +4205,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -5458,41 +4318,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -5525,16 +4350,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -5597,15 +4412,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -5625,7 +4435,6 @@ jobs:
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5636,11 +4445,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -5654,54 +4464,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -5755,7 +4535,6 @@ jobs:
           KUBERNETES_VERSION: "1.33"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -5765,10 +4544,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -5781,48 +4561,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_1_33
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -5845,17 +4602,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
@@ -5969,41 +4715,6 @@ jobs:
       # </template: login_dev_registry_step>
 
 
-      # <template: login_rw_registry_step>
-      - name: Check rw registry credentials
-        id: check_rw_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to rw registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-          logout: false
-      - name: Login to Github Container Registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_rw_registry_step>
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
       - name: Setup
         id: setup
         env:
@@ -6036,16 +4747,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -6108,15 +4809,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -6136,7 +4832,6 @@ jobs:
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -6147,11 +4842,12 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
           CIS_ENABLED: ${{ needs.check_e2e_labels.outputs.cis }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -6165,54 +4861,24 @@ jobs:
             CIS_ENABLED=${CIS_ENABLED}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export CIS_ENABLED=${CIS_ENABLED}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          echo "Start waiting ssh connection string script"
-          comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
-          echo "Full comment url for updating ${comment_url}"
-
-          ssh_connect_str_file="${DHCTL_LOG_FILE}-ssh-connect_str-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
           echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
 
-          bastion_ip_file=""
-          if [[ "${PROVIDER}" == "Static" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-ssh-bastion-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          elif [[ "${PROVIDER}" == "VCD" ]] ; then
-            bastion_ip_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          fi
-
-          echo "ssh_bastion_str_file=${bastion_ip_file}" >> $GITHUB_OUTPUT
-
-          $(pwd)/testing/cloud_layouts/wait-master-ssh-and-update-comment.sh "$dhctl_log_file" "$comment_url" "$ssh_connect_str_file" "$bastion_ip_file" > "${dhctl_log_file}-wait-log" 2>&1 &
-
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e CIS_ENABLED=${CIS_ENABLED} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -6266,7 +4932,6 @@ jobs:
           KUBERNETES_VERSION: "Automatic"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
@@ -6276,10 +4941,11 @@ jobs:
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
+          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -6292,48 +4958,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
+          export DECKHOUSE_E2E_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG:-not_provided}
+          export AWS_ACCESS_KEY=${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
+          export AWS_SECRET_ACCESS_KEY=${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_static_containerdv2_Automatic
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -6356,17 +4999,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
       # <template: update_comment_on_finish>
       - name: Update comment on finish
