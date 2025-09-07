@@ -18,6 +18,7 @@
 {%- endif %}
 "keywords": {{ keywords | jsonify }},
 "module": {{ page['module-kebab-name'] | jsonify }},
+"moduletype": "embedded",
 "summary": "{% if page.summary %}{{ page.summary | strip }}{% else %}{{ page.description | strip }}{% endif %}",
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
 }
@@ -38,6 +39,7 @@
 {
 "name": "{{ item.name }}",
 "module": "{{ item.module }}",
+"moduletype": "embedded",
 "url": "{{ page_canonical_url }}",
 "resName": "{{ item.resourceName | escape }}",
 {%- if item.isResource %}

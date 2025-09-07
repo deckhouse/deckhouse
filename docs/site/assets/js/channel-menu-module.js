@@ -97,10 +97,9 @@ function updateCurrentVersion() {
 
 function renderMenu(settings) {
     const menuContainer = document.getElementById('doc-versions-menu');
-    // Check page type from meta tag
-    const pageTypeMeta = document.querySelector('meta[name="page:module:type"]');
-    // isFromSource is false for embedded modules, true for modules from source
-    const isFromSource = pageTypeMeta && pageTypeMeta.getAttribute('content') === 'from-source';
+    const pageModuleType = document.querySelector('meta[name="page:module:type"]');
+    // isEmbeddedModule is true for embedded modules, false for modules from source
+    const isEmbeddedModule = pageModuleType && pageModuleType.getAttribute('content') === 'embedded';
 
     if (!menuContainer) {
         console.error('Channel menu container not found');
@@ -126,7 +125,7 @@ function renderMenu(settings) {
         return bStability - aStability;
     });
 
-    if (!isFromSource) {
+    if (isEmbeddedModule) {
         // For embedded modules, add latest channel to the end of the channel list
         sortedChannels.push({ name: 'latest', version: 'latest' });
     }
@@ -150,17 +149,7 @@ function renderMenu(settings) {
         if (channel.version) {
             const currentUrl = window.location.pathname;
 
-            if (isFromSource) {
-                // For modules from source use channel name instead of channel version in the link
-                const channelName = channel.name;
-                if (currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)) {
-                    // Current URL has channel, replace it
-                    channelUrl = currentUrl.replace(/\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `/${channelName}/`);
-                } else if (currentUrl.includes('/modules/')) {
-                    // Current URL is /modules/MODULE/, add channel name
-                    channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${channelName}/`);
-                }
-            } else {
+            if (isEmbeddedModule) {
                 // For embedded modules, use channel version in the link
                 const urlVersion = `${channel.version}`;
                 if (currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest|)\//)) {
@@ -169,6 +158,16 @@ function renderMenu(settings) {
                 } else if (currentUrl.includes('/modules/')) {
                     // Current URL is /modules/MODULE/, add version
                     channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${urlVersion}/`);
+                }
+            } else {
+                // For modules from source use channel name instead of channel version in the link
+                const channelName = channel.name;
+                if (currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)) {
+                    // Current URL has channel, replace it
+                    channelUrl = currentUrl.replace(/\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `/${channelName}/`);
+                } else if (currentUrl.includes('/modules/')) {
+                    // Current URL is /modules/MODULE/, add channel name
+                    channelUrl = currentUrl.replace(/\/modules\/([^/]+)\//, `/modules/$1/${channelName}/`);
                 }
             }
         } else {
