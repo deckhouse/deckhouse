@@ -84,8 +84,8 @@ spec:
         args:
         - --leader-elect
         # Todo remove after rewrite caps
-        - --leader-elect-lease-duration=3m
-        - --leader-elect-renew-deadline=2m50s
+        - --leader-elect-lease-duration=1m
+        - --leader-elect-renew-deadline=50s
         - --leader-elect-retry-period=5s
         - --diagnostics-address=127.0.0.1:4211
         - --insecure-diagnostics
