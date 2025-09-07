@@ -38,6 +38,12 @@ properties:
           A list of CIDRs that are allowed to connect to the Load Balancer.
 
           The cloud provider may not support this option or ignore it.
+      loadBalancerClass:
+        type: string
+        description: |
+          The class of the Load Balancer used for external OpenVPN service.
+
+          **Caution.** If this field is changed the current service used for balancing external VPN connections will be recreated and a new external IP address will be allocated, which will result in interruption of the VPN service.
   hostPort:
     type: integer
     description: |
