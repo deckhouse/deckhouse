@@ -26,8 +26,8 @@
               "keywords": {{ $keywords | jsonify }},
               {{- end -}}
               "module": {{ $moduleName | jsonify }},
-              "moduletype": "external",
-              "summary": {{ if .Summary }}{{ .Summary | jsonify }}{{ else if .Description }}{{ .Description | jsonify }}{{ else }}""{{ end }},
+              "moduletype": "source",
+              "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
               "content": {{ .Content | plainify | jsonify }}
             }
           {{- end -}}
@@ -50,7 +50,7 @@
               {
                 "name": {{ $fileData.name | default $file | jsonify }},
                 "module": {{ $moduleName | jsonify }},
-                "moduletype": "external",
+                "moduletype": "source",
                 "url": {{ printf "/modules/%s/%s/%s/" $moduleName $channel $file | jsonify }},
                 {{- if $fileData.resourceName -}}
                 "resName": {{ $fileData.resourceName | jsonify }},
