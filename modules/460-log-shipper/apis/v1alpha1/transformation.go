@@ -16,12 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-// Modules labeles transformation that users can use
+// Modules labels transformation that users can use
 type TransformationSpec struct {
 	Action       TransformationAction `json:"action"`
-	ReplaceKeys  ReplaceKeysSpec      `josn:"replaceKeys,omitempty"`
+	ReplaceKeys  ReplaceKeysSpec      `json:"replaceKeys,omitempty"`
 	ParseMessage ParseMessageSpec     `json:"parseMessage,omitempty"`
 	DropLabels   DropLabelsSpec       `json:"dropLabels,omitempty"`
+	ReplaceValue ReplaceValueSpec     `json:"replaceValue,omitempty"`
 }
 
 type TransformationAction string
@@ -30,6 +31,7 @@ const (
 	ReplaceKeys  TransformationAction = "ReplaceKeys"
 	ParseMessage TransformationAction = "ParseMessage"
 	DropLabels   TransformationAction = "DropLabels"
+	ReplaceValue TransformationAction = "ReplaceValue"
 )
 
 type ReplaceKeysSpec struct {
@@ -37,14 +39,26 @@ type ReplaceKeysSpec struct {
 	Target string   `json:"target"`
 	Labels []string `json:"labels"`
 }
+
 type DropLabelsSpec struct {
 	Labels []string `json:"labels"`
+}
+
+type ReplaceValueSpec struct {
+	Label    string             `json:"label"`
+	Patterns []ReplaceValueRule `json:"patterns"`
+}
+
+type ReplaceValueRule struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
 }
 type ParseMessageSpec struct {
 	SourceFormat SourceFormat           `json:"sourceFormat"`
 	String       SourceFormatStringSpec `json:"string,omitempty"`
 	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
 }
+
 type SourceFormat string
 
 const (
@@ -59,6 +73,7 @@ const (
 type SourceFormatStringSpec struct {
 	TargetField string `json:"targetField"`
 }
+
 type SourceFormatJSONSpec struct {
 	Depth int `json:"depth,omitempty"`
 }
