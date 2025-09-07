@@ -2,3 +2,10 @@ version: 3
 conversions:
   - del(.accessLevel)
   - del(.auth.allowScale) | if .auth == {} then del(.auth) end
+description:
+  ru: |
+    Удалите `.accessLevel`.
+    Удалите `.auth.allowScale` и целиком `.auth`, если его значение пустое.
+  en: |
+    Remove `.accessLevel`.
+    Remove `.auth.allowScale`, then `.auth` if empty.
