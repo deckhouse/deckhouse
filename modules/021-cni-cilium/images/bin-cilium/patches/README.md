@@ -64,3 +64,7 @@ For HostPort pseudo-serivces always use random LB algo. When bpf-lb-algorithm-an
 ## 012-add-least-conn-lb-algorithm.patch
 
 Added an implementation of the Least Connections load balancing algorithm.
+
+## 013-upstream-fix-lb-algo-selection.patch
+
+Test patch.
