@@ -38,8 +38,6 @@
   "parameters": [
     {{- $first := true -}}
     {{- range $moduleName, $moduleData := $modulesData -}}
-      {{- $isExternal := eq $moduleData.external "true" -}}
-      {{- if $isExternal -}}
         {{- $modulePath := printf "data/modules/%s" $moduleName -}}
         {{- $moduleFiles := .Site.Data.modules -}}
         {{- range $channel, $channelData := index $moduleFiles $moduleName -}}
@@ -77,7 +75,17 @@
             {{- end -}}
           {{- end -}}
         {{- end -}}
-      {{- end -}}
     {{- end -}}
   ]
 }
+---
+{{ $modulesStablestList := partial "get-stablest-modules-list.html" . }}
+  {{- range $modulesStablestList }}
+    {{- $moduleChannel := index . "channel" }}
+    {{- $moduleName := index . "name" }}
+    {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
+    {{- if not $moduleData }}
+      {{- continue -}}
+    {{- end }}
+    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang) }}
+  {{- end }}

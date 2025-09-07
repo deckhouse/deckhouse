@@ -1,0 +1,20 @@
+{{- $moduleName := .name }}
+{{- $moduleChannel := .channel }}
+{{- $moduleData := .data }}
+{{- $lang := .lang }}
+{{ $lang }}
+
+{{- if index $moduleData "crds" }}
+crds
+  {{- range $crdName, $crdData := $moduleData.crds }}
+    {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
+    {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
+    {{- partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
+  {{- end }}
+{{- end }}
+{{- if index $moduleData "openapi" }}
+    {{- $cfgData := index $moduleData.openapi "config-values" }}
+    {{- $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
+{{ $cfgData }}
+{{- end }}
+
