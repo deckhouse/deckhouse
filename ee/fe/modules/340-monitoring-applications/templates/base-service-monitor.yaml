@@ -13,7 +13,7 @@
 - regex: endpoint
   action: labeldrop
 
-- sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready, __meta_kubernetes_service_annotation_prometheus_deckhouse_io_allows_unready_pods]
+- sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready, __meta_kubernetes_service_annotation_prometheus_deckhouse_io_allow_unready_pods]
   regex: ^(.*)true(.*)$
   action: keep
 
