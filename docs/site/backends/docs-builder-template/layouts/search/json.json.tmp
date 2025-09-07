@@ -36,8 +36,50 @@
     {{- end -}}
   ],
   "parameters": [
-  {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
-  {{- $firstModule := true }}
+    {{- $first := true -}}
+    {{- range $moduleName, $moduleData := $modulesData -}}
+        {{- $modulePath := printf "data/modules/%s" $moduleName -}}
+        {{- $moduleFiles := .Site.Data.modules -}}
+        {{- range $channel, $channelData := index $moduleFiles $moduleName -}}
+          {{- range $file, $fileData := $channelData -}}
+            {{- if and (ne $file "channels") (ne $file "editions") -}}
+              {{- if not $first -}},{{- end -}}
+              {{- $first = false -}}
+              {
+                "name": {{ $fileData.name | default $file | jsonify }},
+                "module": {{ $moduleName | jsonify }},
+                "moduletype": "source",
+                "url": {{ printf "/modules/%s/%s/%s/" $moduleName $channel $file | jsonify }},
+                {{- if $fileData.resourceName -}}
+                "resName": {{ $fileData.resourceName | jsonify }},
+                {{- end -}}
+                {{- if $fileData.isResource -}}
+                "isResource": "true",
+                {{- end -}}
+                {{- if $fileData.deprecated -}}
+                "deprecated": "true",
+                {{- end -}}
+                {{- $keywords := slice -}}
+                {{- if $moduleData.tags -}}
+                  {{- $keywords = $keywords | append $moduleData.tags -}}
+                {{- end -}}
+                {{- if $fileData.search -}}
+                  {{- $keywords = $keywords | append (split $fileData.search ",") -}}
+                {{- end -}}
+                {{- if gt (len $keywords) 0 -}}
+                "keywords": {{ $keywords | jsonify }},
+                {{- end -}}
+                "path": {{ printf "%s.%s.%s" $moduleName $channel $file | jsonify }},
+                "content": {{ $fileData.content | default "" | jsonify }}
+              }
+            {{- end -}}
+          {{- end -}}
+        {{- end -}}
+    {{- end -}}
+  ]
+}
+---
+{{ $modulesStablestList := partial "get-stablest-modules-list.html" . }}
   {{- range $modulesStablestList }}
     {{- $moduleChannel := index . "channel" }}
     {{- $moduleName := index . "name" }}
@@ -48,8 +90,5 @@
     {{- if ne $moduleName "virtualization" }}
       {{- continue -}}
     {{- end }}
-    {{- if not $firstModule }},{{- end }}
     {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang) }}
-    {{- $firstModule = false }}
-  {{- end -}}
-]}
+  {{- end }}
