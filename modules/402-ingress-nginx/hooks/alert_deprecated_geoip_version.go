@@ -92,7 +92,7 @@ func inletHostWithFailoverFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return controller, nil
 }
 
-func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container) error {
+func searchForDeprecatedGeoip(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient := dc.MustGetK8sClient()
 	input.MetricsCollector.Expire(metricsGroup)
 	defaultVersion, err := semver.NewVersion(input.Values.Get("ingressNginx.defaultControllerVersion").String())
@@ -100,7 +100,7 @@ func searchForDeprecatedGeoip(input *go_hook.HookInput, dc dependency.Container)
 		return fmt.Errorf("couldn't parse defaultControllerVersion as semver: %w", err)
 	}
 
-	controllers := input.NewSnapshots.Get("controller")
+	controllers := input.Snapshots.Get("controller")
 
 	// check ingressnginxcontrollers' configs
 	for controller, err := range sdkobjectpatch.SnapshotIter[controllerVersion](controllers) {

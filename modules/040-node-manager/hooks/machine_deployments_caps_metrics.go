@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -117,8 +118,8 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 	}, nil
 }
 
-func handleMachineDeploymentStatus(input *go_hook.HookInput) error {
-	mdStatusSnapshots := input.NewSnapshots.Get("machinedeployment_status")
+func handleMachineDeploymentStatus(_ context.Context, input *go_hook.HookInput) error {
+	mdStatusSnapshots := input.Snapshots.Get("machinedeployment_status")
 
 	input.MetricsCollector.Expire(capsMachineDeploymentMetricsGroup)
 

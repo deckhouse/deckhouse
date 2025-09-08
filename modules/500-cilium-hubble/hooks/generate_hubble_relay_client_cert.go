@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -70,15 +71,15 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func genCAAuthority(input *go_hook.HookInput) certificate.Authority {
+func genCAAuthority(_ context.Context, input *go_hook.HookInput) certificate.Authority {
 	return certificate.Authority{
 		Key:  input.Values.Get("ciliumHubble.internal.caCert.key").String(),
 		Cert: input.Values.Get("ciliumHubble.internal.caCert.cert").String(),
 	}
 }
 
-func generateHubbleRelayClientCert(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("hubble-relay-client-certs")
+func generateHubbleRelayClientCert(ctx context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("hubble-relay-client-certs")
 
 	if len(snaps) > 0 {
 		var adm certificate.Certificate
@@ -93,7 +94,7 @@ func generateHubbleRelayClientCert(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ca := genCAAuthority(input)
+	ca := genCAAuthority(ctx, input)
 
 	const cn = "*.hubble-relay.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.Logger,

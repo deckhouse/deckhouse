@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -96,8 +97,8 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput) error {
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.NewSnapshots, "provider_cluster_configuration")
+func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.Snapshots, "provider_cluster_configuration")
 	if err != nil {
 		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
 	}

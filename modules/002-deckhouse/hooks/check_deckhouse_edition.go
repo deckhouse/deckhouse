@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"os"
 	"regexp"
 	"slices"
@@ -58,18 +59,18 @@ func validateEdition(edition string) bool {
 	return slices.Contains(allExpectedEditions, edition)
 }
 
-func handleModuleConfigWrap() func(*go_hook.HookInput) error {
+func handleModuleConfigWrap() func(_ context.Context, _ *go_hook.HookInput) error {
 	// skip check for dev
 	versionContent, readErr := os.ReadFile("/deckhouse/version")
 
 	if readErr == nil {
 		version := strings.TrimSuffix(string(versionContent), "\n")
 		if version == "dev" {
-			return func(_ *go_hook.HookInput) error { return nil }
+			return func(_ context.Context, _ *go_hook.HookInput) error { return nil }
 		}
 	}
 
-	return func(input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
 		if readErr != nil {
 			input.Logger.Warn("can't read deckhouse version file", log.Err(readErr))
 		}
@@ -113,7 +114,7 @@ func handleModuleConfigWrap() func(*go_hook.HookInput) error {
 		}
 
 		// check moduleConfig spec.settings.licence.edition
-		moduleEditions := input.NewSnapshots.Get("moduleconfigs") // snapshot is a string with edition
+		moduleEditions := input.Snapshots.Get("moduleconfigs") // snapshot is a string with edition
 		for _, moduleEditionSnap := range moduleEditions {
 			moduleEdition := moduleEditionSnap.String()
 			if validateEdition(moduleEdition) {

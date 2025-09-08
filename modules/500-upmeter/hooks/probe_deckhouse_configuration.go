@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -64,14 +65,14 @@ func filterProbeObject(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func mirrorProbeValue(input *go_hook.HookInput) error {
+func mirrorProbeValue(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		apiVersion = "deckhouse.io/v1"
 		kind       = "UpmeterHookProbe"
 		namespace  = ""
 	)
 
-	probeObjects, err := sdkobjectpatch.UnmarshalToStruct[probeObject](input.NewSnapshots, "probe_objects")
+	probeObjects, err := sdkobjectpatch.UnmarshalToStruct[probeObject](input.Snapshots, "probe_objects")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal probe_objects snapshot: %w", err)
 	}

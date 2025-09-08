@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -83,8 +84,8 @@ func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func removeStsUpmeter(input *go_hook.HookInput) error {
-	stsSnapshot := input.NewSnapshots.Get("sts")
+func removeStsUpmeter(_ context.Context, input *go_hook.HookInput) error {
+	stsSnapshot := input.Snapshots.Get("sts")
 	if len(stsSnapshot) > 0 {
 		for sts, err := range sdkobjectpatch.SnapshotIter[StatefulSetStorage](stsSnapshot) {
 			if err != nil {

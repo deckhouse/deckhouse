@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -75,8 +76,8 @@ func filterIngressServiceAddress(obj *unstructured.Unstructured) (go_hook.Filter
 	return nil, nil
 }
 
-func updateIngressAddress(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("ingress-loadbalancer-service")
+func updateIngressAddress(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("ingress-loadbalancer-service")
 	for svc, err := range sdkobjectpatch.SnapshotIter[loadBalancerService](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ingress-loadbalancer-service' snapshots: %w", err)
