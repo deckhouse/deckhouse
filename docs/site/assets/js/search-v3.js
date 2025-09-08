@@ -694,25 +694,6 @@ class ModuleSearch {
       let targetModifiedPath = originalTargetUrl;
       console.debug('Initial target modified path:', targetModifiedPath);
 
-      // // If originalTargetUrl is an absolute path, extract the relative part after the version
-      // if (originalTargetUrl.startsWith('/')) {
-      //   const urlSegments = originalTargetUrl.split('/').filter(segment => segment);
-      //   console.debug('URL segments:', urlSegments);
-      //
-      //   // Find the version segment and extract everything after it
-      //   for (let i = 0; i < urlSegments.length; i++) {
-      //     if (urlSegments[i].match(/^v\d+(\.\d+)*$/)) {
-      //       // Found version segment, take everything after it
-      //       targetRelativePath = urlSegments.slice(i + 1).join('/');
-      //       console.debug('Found version segment at index', i, 'extracted relative path:', targetRelativePath);
-      //       break;
-      //     }
-      //   }
-      // } else {
-      //   // originalTargetUrl is already relative, use it as is
-      //   console.debug('URL is already relative, using as is:', targetRelativePath);
-      // }
-
       // Calculate base URL by subtracting page:url:relative from current page URL
       const currentPageUrl = window.location.pathname;
       const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-accces|stable|rock-solid|latest)\//);
@@ -740,35 +721,6 @@ class ModuleSearch {
         console.debug('Current URL does not end with relative path, using full URL as base');
       }
 
-      // For embedded module search results, use relative URLs
-      // if (isEmbeddedModuleResult) {
-      //   console.debug('Embedded module search result detected, using relative URL');
-      //
-      //   // Calculate relative path from current page to target
-      //   const currentPageSegments = relativeCurrentPageURL.split('/').filter(segment => segment && segment !== '.');
-      //   const currentPageDepth = relativeCurrentPageURL.endsWith('/') ?
-      //     currentPageSegments.length :
-      //     currentPageSegments.length - 1;
-      //
-      //   // Generate relative path (go up to base, then down to target)
-      //   let relativePath = '';
-      //   for (let i = 0; i < currentPageDepth; i++) {
-      //     relativePath += '../';
-      //   }
-      //
-      //   // Add the target path
-      //   if (targetRelativePath) {
-      //     const cleanTargetPath = targetRelativePath.startsWith('/') ?
-      //       targetRelativePath.substring(1) : targetRelativePath;
-      //     relativePath += cleanTargetPath;
-      //   }
-      //
-      //   console.debug('Embedded module search result relative URL:', relativePath);
-      //   return relativePath || './';
-      // }
-
-      // For non-embedded module search results, construct absolute URL using the base URL
-      //
       // Construct absolute URL using the base URL
       if (relativeCurrentPageURL) {
         // Remove leading slash from target path to avoid // in the result
