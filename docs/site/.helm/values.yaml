@@ -24,6 +24,8 @@ moduleWatcher:
       - registry.flant.com/team/foxtrot/docs-example
     web-production:
       - registry.deckhouse.io/deckhouse/fe/modules
+    web-test:
+      - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
     _default: 15s
     web-production: 5m
