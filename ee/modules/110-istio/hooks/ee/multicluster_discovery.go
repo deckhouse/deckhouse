@@ -88,7 +88,11 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	if multicluster.Status.MetadataCache.Private != nil && multicluster.Status.MetadataCache.Private.APIJWT != "" {
 		// Validate the existing JWT
 		isValid, _, err := jwt.IsJWTValid(multicluster.Status.MetadataCache.Private.APIJWT)
-		if err == nil && isValid {
+		if err != nil {
+			// JWT validation error - will generate new one
+		} else if !isValid {
+			// JWT expired or invalid - will generate new one
+		} else {
 			// Use existing JWT if it's still valid
 			existingAPIJWT = multicluster.Status.MetadataCache.Private.APIJWT
 		}
@@ -96,8 +100,9 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	if existingAPIJWT == "" && multicluster.Status.MetadataCache.PrivateLastFetchTimestamp != "" {
 		if lastFetch, err := time.Parse(time.RFC3339, multicluster.Status.MetadataCache.PrivateLastFetchTimestamp); err == nil {
-			if time.Since(lastFetch) < 5*time.Minute {
-				// Skip JWT generation if we fetched private metadata recently
+			if time.Since(lastFetch) < 2*time.Minute {
+				// Skip JWT generation if we fetched private metadata very recently
+				// This prevents race conditions when CRD is updated
 				existingAPIJWT = "skip_generation"
 			}
 		}
