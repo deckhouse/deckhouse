@@ -5,6 +5,7 @@ git:
   to: /deckhouse/candi/cloud-providers/yandex
   owner: 64535
   group: 64535
+{{- include "image mount points" . }}
 import:
 - image: terraform-provider-yandex
   add: /terraform-provider-yandex

@@ -1,0 +1,4 @@
+files:
+  - /.terraform.lock.hcl
+dirs:
+  - /tmp
