@@ -22,7 +22,7 @@
         {%- if page.sidebar == 'embedded-modules' %}
         data-search-index-path="/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
         {%- else %}
-        data-search-index-path="{{ '/search.json' | true_relative_url }}"
+        data-search-index-path="{{ '/search.json' | true_relative_url }},/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
         {%- endif -%}
         >
         <div id="search-results" class="results" style="display: none"></div>
