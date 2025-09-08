@@ -1,0 +1,28 @@
+{{ define "main" }}
+<div class="layout-sidebar__content">
+  <div class="layout-sidebar__sidebar_left">
+    <div class="sidebar">
+      <h1>{{ .Title }}</h1>
+      {{ .Content }}
+      
+      {{ if eq .Section "modules" }}
+        <div class="modules-list">
+          {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
+          {{- range $modulesStablestList }}
+            {{- $moduleChannel := index . "channel" }}
+            {{- $moduleName := index . "name" }}
+            {{- $moduleVersion := index . "version" }}
+            {{- $modulePage := $.GetPage (printf "modules/%s/%s/readme.html" $moduleName $moduleChannel) }}
+            {{- if $modulePage }}
+              <div class="module-item">
+                <h3><a href="{{ $modulePage.RelPermalink }}">{{ $moduleName }}</a></h3>
+                <p>Channel: {{ $moduleChannel }} ({{ $moduleVersion }})</p>
+              </div>
+            {{- end }}
+          {{- end }}
+        </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}
