@@ -1,0 +1,10 @@
+{{- if .Content -}}
+{{ .Content | jsonify }}
+{{- else -}}
+{
+  "title": {{ .Title | jsonify }},
+  "url": {{ .RelPermalink | jsonify }},
+  "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
+  "content": {{ .Content | plainify | jsonify }}
+}
+{{- end -}}

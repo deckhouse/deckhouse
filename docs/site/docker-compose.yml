@@ -32,6 +32,8 @@ services:
       - ".helm/channels.yaml:/app/channels.yaml:ro"
       - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"
       - "./backends/docs-builder-template/public/ru/modules:/app/modules-from-source/ru/modules:ro"
+      - "./backends/docs-builder-template/public/en/search/search.json:/app/modules-from-source/en/search-external-modules-index.json:ro"
+      - "./backends/docs-builder-template/public/ru/search/search.json:/app/modules-from-source/ru/search-external-modules-index.json:ro"
       - "channels-conf:/app/channels-data"
     ports:
       - "80:80"
