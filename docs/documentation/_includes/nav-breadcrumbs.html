@@ -20,7 +20,7 @@
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
         {%- if page.sidebar == 'embedded-modules' %}
-        data-search-index-path="/modules/search-embedded-modules-index.json"
+        data-search-index-path="/modules/search-embedded-modules-index.json,/modules/search-external-modules-index.json"
         {%- else %}
         data-search-index-path="{{ '/search.json' | true_relative_url }}"
         {%- endif -%}
