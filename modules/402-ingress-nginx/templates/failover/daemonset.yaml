@@ -72,6 +72,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: ingress-nginx
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -84,6 +85,53 @@ spec:
           hostPath:
             path: /run/xtables.lock
             type: FileOrCreate
+        - name: write-files
+          emptyDir: {}
+        - name: tmp-nginx
+          emptyDir: {}
+        - name: sbin-iptables
+          emptyDir: {}
+      initContainers:
+      - name: touch-files
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+          - /bin/touch
+          - /tmp/nginx.conf
+        volumeMounts:
+          - name: write-files
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+      - name: sbin-iptables
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore \
+            iptables-legacy iptables-legacy-save iptables-legacy-restore \
+            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
+            iptables-nft iptables-nft-save iptables-nft-restore \
+            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+          done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+        volumeMounts:
+          - name: sbin-iptables
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: controller
@@ -108,6 +156,7 @@ spec:
             memory: 500Mi
             cpu: 350m
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
           capabilities:
             add:
             - NET_RAW
@@ -117,6 +166,21 @@ spec:
           - name: additional-config
             mountPath: "/opt/nginx-static/additional-conf"
             readOnly: true
+          - mountPath: /opt/nginx-static/conf/nginx.conf
+            name: write-files
+            subPath: nginx.conf
+          - mountPath: /opt/nginx-static/logs
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/client_body_temp
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/proxy_temp
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/fastcgi_temp
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/uwsgi_temp
+            name: tmp-nginx
+          - mountPath: /opt/nginx-static/scgi_temp
+            name: tmp-nginx
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:
@@ -135,6 +199,7 @@ spec:
             cpu: 10m
         # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+          readOnlyRootFilesystem: true
           capabilities:
             add:
             - NET_RAW
@@ -143,6 +208,8 @@ spec:
           - mountPath: /run/xtables.lock
             name: xtables-lock
             readOnly: false
+          - mountPath: /usr/sbin
+            name: sbin-iptables
       - name: nginx-exporter
         image: {{ include "helm_lib_module_image" (list $context "nginxExporter") }}
         args:
@@ -162,7 +229,9 @@ spec:
             memory: 20Mi
             cpu: 10m
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
       - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208"

@@ -38,6 +38,7 @@ import:
   to: /protobuf_exporter
   before: setup
 git:
+{{- include "image mount points" . }}
 - add: /{{ $.ModulePath }}modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs/
   to: /
   stageDependencies:
