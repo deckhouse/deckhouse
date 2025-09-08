@@ -123,10 +123,8 @@ apiServer:
         https://127.0.0.1:2379{{ if .apiserver.etcdServers }},{{ .apiserver.etcdServers | join "," }}{{ end }}
     - name: feature-gates
       value: {{ $featureGates | quote }}
-    {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
     - name: runtime-config
       value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
-    {{- end }}
     {{ if .apiserver.webhookURL }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
