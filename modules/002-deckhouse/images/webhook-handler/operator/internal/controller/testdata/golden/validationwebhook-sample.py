@@ -7,47 +7,25 @@ from dotmap import DotMap
 config = """
 configVersion: v1
 kubernetesValidating:
-- matchConditions:
-  - expression: request.resource.group != "rbac.authorization.k8s.io"
-    name: yyyy
-  name: validationwebhook.deployments.apps
-  namespace:
-    labelSelector:
-      matchExpressions:
-      - key: runlevel
-        operator: NotIn
-        values:
-        - "0"
-        - "1"
+- group: main
+  name: service.apps.kubernetes.io
   rules:
   - apiGroups:
-    - apps
+    - '*'
     apiVersions:
-    - v1
-    - v1beta1
+    - '*'
     operations:
     - CREATE
     - UPDATE
+    - DELETE
     resources:
-    - deployments
-    - replicasets
-    scope: Namespaced
+    - services
+    scope: '*'
 kubernetes:
-- name: some_node
+- name: services
   apiVersion: v1
-  jqFilter: |
-    { "nodeName": .metadata.name }
-  kind: Node
-  labelSelector:
-    matchLabels:
-      foo: bar
-  nameSelector:
-    matchNames:
-    - global
-  namespace:
-    labelSelector:
-      matchLabels:
-        bar: foo
+  group: main
+  kind: Service
 """
 
 def main(ctx: hook.Context):
@@ -58,9 +36,13 @@ def main(ctx: hook.Context):
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-def validate(bindingcontext, output):
-  # logic here
-  return
+def validate(ctx: DotMap, output: hook.ValidationsCollector):
+    resource = ctx.review.request.name
+    if "test" in resource:
+        output.deny("TEST: service with \"test\" in .metadata.name")
+        return
+    output.allow()
+
 
 if __name__ == "__main__":
     hook.run(main, config=config)
