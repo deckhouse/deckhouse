@@ -9,4 +9,3 @@ dirs:
  - /run/secrets/istiod/ca
  - /run/secrets/istiod/tls
  - /run/secrets/remote
- - /run/secrets/tokens
