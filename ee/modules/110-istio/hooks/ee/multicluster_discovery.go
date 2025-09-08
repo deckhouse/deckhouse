@@ -102,12 +102,15 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	if multicluster.Status.MetadataCache.Private != nil {
 		// We have private metadata, check if JWT exists
 		if multicluster.Status.MetadataCache.Private.APIJWT != "" {
-			// JWT exists in CRD, but validation failed
+			// JWT exists in CRD, but validation failed - log it for debugging
+			fmt.Printf("DEBUG: Found JWT in CRD but validation failed: %s\n", multicluster.Status.MetadataCache.Private.APIJWT[:50]+"...")
 		} else {
 			// No JWT in CRD status
+			fmt.Printf("DEBUG: No JWT in CRD status for %s\n", multicluster.GetName())
 		}
 	} else {
 		// No private metadata in CRD status
+		fmt.Printf("DEBUG: No private metadata in CRD status for %s\n", multicluster.GetName())
 	}
 
 	me := multicluster.Spec.MetadataEndpoint
@@ -253,10 +256,9 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			continue
 		}
 
-		// Add JWT to private metadata AFTER unmarshaling remote data
+		// Preserve JWT fields after unmarshaling remote data
+		// The remote response doesn't include our JWT, so we need to add it back
 		privateMetadata.APIJWT = apiJWT
-
-		// Always update expiry time to ensure it's current
 		privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
 		if multiclusterInfo.ExistingAPIJWT == "" {
 			input.Logger.Info("stored new API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
