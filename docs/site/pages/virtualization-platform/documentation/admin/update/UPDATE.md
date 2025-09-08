@@ -124,7 +124,7 @@ To disable the platform update mechanism, remove the `.spec.settings.releaseChan
 
 To apply an update immediately, set the annotation `release.deckhouse.io/apply-now: "true"` on the corresponding [DeckhouseRelease](../../../reference/cr/deckhouserelease.html) resource.
 
-> In this case, update windows, [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](../../reference/cr.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after setting the annotation.
+> In this case, update windows, [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) settings, and the [manual cluster update mode](../../../reference/mc.html#parameters-update-disruptionapprovalmode) will be ignored. The update will be applied immediately after setting the annotation.
 
 Example command to set the annotation for bypassing update windows for version `v1.56.2`:
 
