@@ -53,3 +53,7 @@ The current version of operator does not support kubernetes v1.31+ because of ne
 
 Forced security context on scanning job pods that is similar to `helm_lib_module_container_security_context_pss_restricted_flexible`.
 Passed the trivy-operator's HTTP(S)_PROXY and NO_PROXY environment variables to the scanning pods.
+
+### 013-fix-cve.patch
+
+Updated some operator dependencies.
