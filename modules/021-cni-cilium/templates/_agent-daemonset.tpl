@@ -191,24 +191,6 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
-        - mountPath: /usr/sbin/iptables
-          name: sbin-iptables
-          subPath: iptables
-        - mountPath: /usr/sbin/iptables-save
-          name: sbin-iptables
-          subPath: iptables-save
-        - mountPath: /usr/sbin/iptables-restore
-          name: sbin-iptables
-          subPath: iptables-restore
-        - mountPath: /usr/sbin/ip6tables
-          name: sbin-iptables
-          subPath: ip6tables
-        - mountPath: /usr/sbin/ip6tables-save
-          name: sbin-iptables
-          subPath: ip6tables-save
-        - mountPath: /usr/sbin/ip6tables-restore
-          name: sbin-iptables
-          subPath: ip6tables-restore
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
@@ -358,24 +340,6 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
-        - mountPath: /usr/sbin/iptables
-          name: sbin-iptables
-          subPath: iptables
-        - mountPath: /usr/sbin/iptables-save
-          name: sbin-iptables
-          subPath: iptables-save
-        - mountPath: /usr/sbin/iptables-restore
-          name: sbin-iptables
-          subPath: iptables-restore
-        - mountPath: /usr/sbin/ip6tables
-          name: sbin-iptables
-          subPath: ip6tables
-        - mountPath: /usr/sbin/ip6tables-save
-          name: sbin-iptables
-          subPath: ip6tables-save
-        - mountPath: /usr/sbin/ip6tables-restore
-          name: sbin-iptables
-          subPath: ip6tables-restore
       {{- if eq $context.Values.cniCilium.internal.mode "VXLAN" }}
       - name: handle-vxlan-offload
         image: {{ include "helm_lib_module_common_image" (list $context "vxlanOffloadingFixer") }}
