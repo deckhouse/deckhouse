@@ -191,7 +191,6 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
-        - mountPath: /usr/sbin/iptables
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
