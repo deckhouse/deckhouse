@@ -569,6 +569,52 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 	})
 
+	// LTS Channel Module Release Tests
+	suite.Run("LTS Channel Module Release Tests", func() {
+		// 1) LTS channel minor version jump (+20)
+		suite.Run("LTS channel minor version jump +20", func() {
+			testData := suite.fetchTestFileData("lts-channel-minor-jump.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 0.5.0, pending is 0.25.0 - should allow large minor jump in LTS channel
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.5.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.25.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 2) LTS channel major version jump (+1)
+		suite.Run("LTS channel major version jump +1", func() {
+			testData := suite.fetchTestFileData("lts-channel-major-jump.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				// deployed is 0.8.0, pending is 1.0.0 - should allow major jump in LTS channel
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.8.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-1.0.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+
+		// 3) LTS channel multiple intermediate versions - should process only latest
+		suite.Run("LTS channel multiple intermediate versions - should process only latest", func() {
+			testData := suite.fetchTestFileData("lts-channel-multiple-versions.yaml")
+			suite.setupReleaseController(testData)
+
+			repeatTest(func() {
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.3.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.5.0"))
+				require.NoError(suite.T(), err)
+				_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease("testmodule-0.7.0"))
+				require.NoError(suite.T(), err)
+			})
+		})
+	})
+
 	// Module Release Skip Feature (from to)
 	suite.Run("Module Release Skip Feature (from to)", func() {
 		// 1) Sequential - should skip intermediate versions when constraint allows jump
