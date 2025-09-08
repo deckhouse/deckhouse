@@ -926,6 +926,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "pip"
+  directory: "/modules/002-deckhouse/images/webhook-handler/operator/shell-test"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "pip"
   directory: "/modules/002-deckhouse/images/webhook-handler/src"
   labels:
   - "type/dependencies"
