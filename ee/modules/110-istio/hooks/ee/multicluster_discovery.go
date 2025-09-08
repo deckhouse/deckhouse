@@ -98,14 +98,11 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		}
 	}
 
-	if existingAPIJWT == "" && multicluster.Status.MetadataCache.PrivateLastFetchTimestamp != "" {
-		if lastFetch, err := time.Parse(time.RFC3339, multicluster.Status.MetadataCache.PrivateLastFetchTimestamp); err == nil {
-			if time.Since(lastFetch) < 2*time.Minute {
-				// Skip JWT generation if we fetched private metadata very recently
-				// This prevents race conditions when CRD is updated
-				existingAPIJWT = "skip_generation"
-			}
-		}
+	// Debug Log
+	if existingAPIJWT == "" {
+		// No valid JWT found - will generate new one
+	} else {
+		// Found valid JWT - will reuse it
 	}
 
 	me := multicluster.Spec.MetadataEndpoint
@@ -212,16 +209,12 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		}
 
 		var apiJWT string
-		switch {
-		case multiclusterInfo.ExistingAPIJWT != "" && multiclusterInfo.ExistingAPIJWT != "skip_generation":
+		if multiclusterInfo.ExistingAPIJWT != "" {
 			// Use existing valid JWT
 			apiJWT = multiclusterInfo.ExistingAPIJWT
 			input.Logger.Info("reusing existing valid API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
-		case multiclusterInfo.ExistingAPIJWT == "skip_generation":
-			// Skip JWT generation - we recently generated one
-			input.Logger.Info("skipping JWT generation for multicluster (recently generated)", slog.String("name", multiclusterInfo.Name))
-			continue
-		default:
+		} else {
+			// Generate new JWT
 			apiClaims := map[string]string{
 				"iss":   "d8-istio",
 				"aud":   publicMetadata.ClusterUUID,
@@ -257,12 +250,12 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		// Add JWT to private metadata AFTER unmarshaling remote data
 		privateMetadata.APIJWT = apiJWT
 
-		// Only update expiry time if we generated a new JWT
+		// Always update expiry time to ensure it's current
+		privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
 		if multiclusterInfo.ExistingAPIJWT == "" {
-			privateMetadata.JWTExpiryTime = time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
 			input.Logger.Info("stored new API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
 		} else {
-			input.Logger.Info("stored existing API JWT for multicluster", slog.String("name", multiclusterInfo.Name))
+			input.Logger.Info("stored existing API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
 		}
 		if privateMetadata.NetworkName == "" || privateMetadata.APIHost == "" || privateMetadata.IngressGateways == nil {
 			input.Logger.Warn("bad private metadata format in endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name))
