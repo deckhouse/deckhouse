@@ -1,40 +1,30 @@
 ## Patches
 
-### 001-go-mod.patch
-
-Changing Golang version from 1.24 to version 1.23
-
-### 002-client-filters.patch
+### 001-client-filters.patch
 
 With this patch, Dex can authorize requests for specific `OAuth2Client`s based on username and user's groups.
 We use it in Dex authenticators to make `allowedUsers` and `allowedGroups` option to work.
 
 This problem is not solved in upstream, and our patch will not be accepted.
 
-### 003-gitlab-refresh-context.patch
+### 002-gitlab-refresh-context.patch
 
 Refresh can be called only one. By propagating a context of the user request, refresh can accidentally canceled.
 
 To avoid this, this patch makes refresh requests to declare and utilize their own contexts.
 
-### 004-static-user-groups.patch
+### 003-static-user-groups.patch
 
 Adding group entity to kubernetes authentication.
 
-### 005-2fa.patch
+### 004-2fa.patch
 
 This patch adds support for two-factor authentication (2FA) in Dex.
 It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
 
 Upstream PR: https://github.com/dexidp/dex/pull/3712
 
-### 006-oidc-httpclient-to-context.patch
-
-This patch fixes the issue with the `insecureSkipVerify` and `rootCAs` options which do not work in OIDC connector.
-
-Upstream PR: https://github.com/dexidp/dex/pull/4223
-
-### 007-password-policy.patch
+### 005-password-policy.patch
 
 This patch implements password strength requirements and rotation rules
 for local user accounts. The following features are added:
@@ -43,16 +33,3 @@ for local user accounts. The following features are added:
 2. Password expiration and forced rotation
 3. Password reuse prevention
 4. Account lockout after failed attempts
-
-### 008-password-policy-chore.patch
-
-This adds functionality to configure password policy duration fields with `day` units, such as: `1d`, `30d12h`, etc.
-This patch also includes refactored password complexity checks - making them much simpler.
-
-### 009-oauth2-cve.patch
-
-Fixes CVE-2025-22868
-
-### 010-fix-password-connector.patch
-
-This patch fixes a critical bug in the password connector. Previously, the login logic assumed that all password connectors must have a locally stored password in the database, which is incorrect. This functionality should only be executed for password connectors with a passwordDB implementation.
