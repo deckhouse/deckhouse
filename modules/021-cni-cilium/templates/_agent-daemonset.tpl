@@ -293,10 +293,8 @@ spec:
           for cmd in \
             iptables iptables-save iptables-restore \
             ip6tables ip6tables-save ip6tables-restore; do
-              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+              ln -f -s /usr/sbin/iptables-wrapper "/tmp/${cmd}"
           done
-          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
-          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
         volumeMounts:
           - name: sbin-iptables
             mountPath: /tmp
