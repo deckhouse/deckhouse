@@ -281,6 +281,9 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		if err != nil {
 			return err
 		}
+
+		// Debug: Log about patched the CRD
+		input.Logger.Info("patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
 	}
 	return nil
 }
