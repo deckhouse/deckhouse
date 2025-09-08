@@ -8,6 +8,14 @@ sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: snapshot-controller
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: sds-node-configurator
 spec:
   version: 1
@@ -110,16 +118,15 @@ sds-pool     Completed   LVM    87d
 
 ```bash
 sudo -i d8 k apply -f - <<EOF
- ---
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStorageClass
- metadata:
-   name: sds-r1
- spec:
-   replication: None
-   storagePool: sds-pool
-   reclaimPolicy: Delete
-   topology: Ignored
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStorageClass
+metadata:
+  name: sds-r1
+spec:
+  replication: None
+  storagePool: sds-pool
+  reclaimPolicy: Delete
+  topology: Ignored
 EOF
 ```
 
