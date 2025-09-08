@@ -3,18 +3,14 @@
 {{- $moduleData := .data }}
 {{- $lang := .lang }}
 {{- $firstModule := .firstModule | default true }}
-{{- $first := true }}
+{{- $allSearchParams := slice }}
 {{- if index $moduleData "crds" }}
   {{- range $crdName, $crdData := $moduleData.crds }}
     {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
     {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
     {{- $crdSearchParams := partial "openapi/extract-crd-search-params.json" (dict "crdData" $crdData "langData" $langData "moduleName" $moduleName "moduleChannel" $moduleChannel "crdName" $crdName) }}
     {{- if gt (len $crdSearchParams) 0 }}
-      {{- range $crdSearchParams }}
-        {{- if not $first }},{{- end }}
-        {{- $first = false }}
-        {{ . | jsonify }}
-      {{- end }}
+      {{- $allSearchParams = $allSearchParams | append $crdSearchParams }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -24,11 +20,8 @@
     {{- if $cfgData }}
       {{- $searchParams := partial "openapi/extract-configuration-search-params.json" (dict "data" $cfgData "langData" $langData "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" slice) }}
       {{- if gt (len $searchParams) 0 }}
-        {{- range $searchParams }}
-          {{- if not $first }},{{- end }}
-          {{- $first = false }}
-          {{ . | jsonify }}
-        {{- end }}
+        {{- $allSearchParams = $allSearchParams | append $searchParams }}
       {{- end }}
     {{- end }}
 {{- end }}
+{{- $allSearchParams | jsonify }}
