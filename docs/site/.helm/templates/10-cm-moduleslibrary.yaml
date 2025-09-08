@@ -90,6 +90,11 @@ data:
             try_files /$lang/modules/index.html =404;
         }
 
+        # Search index for modules from sources
+        location ~* ^/modules/search-external-modules-index.json$  {
+            try_files /$lang/search-external-modules-index.json =404;
+        }
+
         # Search index for embedded modules from the latest version
         location ~* ^/modules/search-embedded-modules-index.json$  {
             rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/latest/$lang/search-embedded-modules-index.json break;
