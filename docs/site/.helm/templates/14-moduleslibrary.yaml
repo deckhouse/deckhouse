@@ -76,11 +76,9 @@ spec:
               name: modules-docs-en
             - mountPath: /app/ru/modules
               name: modules-docs-ru
-            - mountPath: /app/en/search-external-modules-index.json
-              subPath: search.json
+            - mountPath: /app/en/search-external-modules-index
               name: modules-searchindex-en
-            - mountPath: /app/ru/search-external-modules-index.json
-              subPath: search.json
+            - mountPath: /app/ru/search-external-modules-index
               name: modules-searchindex-ru
             - mountPath: /cache
               name: download-cache

@@ -92,7 +92,7 @@ data:
 
         # Search index for modules from sources
         location ~* ^/modules/search-external-modules-index.json$  {
-            try_files /$lang/search-external-modules-index.json =404;
+            try_files /$lang/search-external-modules-index/search.json =404;
         }
 
         # Search index for embedded modules from the latest version
