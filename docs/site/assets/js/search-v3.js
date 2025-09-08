@@ -96,15 +96,15 @@ class ModuleSearch {
   }
 
     setupEventListeners() {
-    // Load search index on focus
+    // Load search index on focus (only if not already loaded)
     this.searchInput.addEventListener('focus', () => {
       // Show loading state when user first focuses on search
       if (!this.isDataLoaded) {
         this.showLoading();
         this.searchInput.disabled = true;
         this.searchInput.placeholder = this.t('loading');
+        this.loadSearchIndex();
       }
-      this.loadSearchIndex();
       // Show search results container when focused (even if empty)
       this.searchResults.style.display = 'flex';
     });
@@ -147,11 +147,9 @@ class ModuleSearch {
         this.searchResults.style.display = 'flex';
         this.handleSearch(query);
       } else {
-        // Hide search results when search is cleared, but not if there are loading/error messages
-        const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
-        if (!hasLoadingOrError) {
-          this.searchResults.style.display = 'none';
-        }
+        // Show "What are we looking for?" message when search is cleared
+        this.searchResults.style.display = 'flex';
+        this.showMessage(this.t('ready'));
       }
     });
 
