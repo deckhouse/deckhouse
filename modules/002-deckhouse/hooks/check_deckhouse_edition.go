@@ -43,12 +43,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyModuleConfigFilter,
 		},
 	},
-	Schedule: []go_hook.ScheduleConfig{
-		{
-			Name:    "moduleconfigs",
-			Crontab: "*/1 * * * *", // every minute
-		},
-	},
 }, handleModuleConfigWrap())
 
 var reEditionFromPath = regexp.MustCompile(`^/deckhouse/(.+)$`)
