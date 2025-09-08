@@ -191,6 +191,24 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
+        - mountPath: /usr/sbin/iptables
+          name: sbin-iptables
+          subPath: iptables
+        - mountPath: /usr/sbin/iptables-save
+          name: sbin-iptables
+          subPath: iptables-save
+        - mountPath: /usr/sbin/iptables-restore
+          name: sbin-iptables
+          subPath: iptables-restore
+        - mountPath: /usr/sbin/ip6tables
+          name: sbin-iptables
+          subPath: ip6tables
+        - mountPath: /usr/sbin/ip6tables-save
+          name: sbin-iptables
+          subPath: ip6tables-save
+        - mountPath: /usr/sbin/ip6tables-restore
+          name: sbin-iptables
+          subPath: ip6tables-restore
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
@@ -263,6 +281,28 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+      - name: sbin-iptables
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        securityContext:
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore; do
+              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+          done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+        volumeMounts:
+          - name: sbin-iptables
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
@@ -320,6 +360,24 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
+        - mountPath: /usr/sbin/iptables
+          name: sbin-iptables
+          subPath: iptables
+        - mountPath: /usr/sbin/iptables-save
+          name: sbin-iptables
+          subPath: iptables-save
+        - mountPath: /usr/sbin/iptables-restore
+          name: sbin-iptables
+          subPath: iptables-restore
+        - mountPath: /usr/sbin/ip6tables
+          name: sbin-iptables
+          subPath: ip6tables
+        - mountPath: /usr/sbin/ip6tables-save
+          name: sbin-iptables
+          subPath: ip6tables-save
+        - mountPath: /usr/sbin/ip6tables-restore
+          name: sbin-iptables
+          subPath: ip6tables-restore
       {{- if eq $context.Values.cniCilium.internal.mode "VXLAN" }}
       - name: handle-vxlan-offload
         image: {{ include "helm_lib_module_common_image" (list $context "vxlanOffloadingFixer") }}
@@ -559,6 +617,8 @@ spec:
       terminationGracePeriodSeconds: 1
       volumes:
       - name: write-files
+        emptyDir: {}
+      - name: sbin-iptables
         emptyDir: {}
       - name: tmp
         emptyDir: {}
