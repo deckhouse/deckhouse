@@ -257,10 +257,6 @@ entries:
                         ru: Хранилище данных NFS
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                     - title:
-                        en: S3 object storage
-                        ru: Объектное хранилище на основе S3
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/external/s3.html
-                    - title:
                         en: SCSI-based data storage
                         ru: Хранилище данных на основе протокола SCSI
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/scsi.html

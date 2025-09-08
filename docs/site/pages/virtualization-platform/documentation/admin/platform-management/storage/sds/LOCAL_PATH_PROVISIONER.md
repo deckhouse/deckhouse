@@ -3,13 +3,13 @@ title: "Local path provisioner storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/sds/local-path-provisioner.html
 ---
 
-Deckhouse Kubernetes Platform provides the ability to configure local storage using Local Path Provisioner. This is a simple solution without support for snapshots or volume size limits, best suited for development, testing, and small clusters. It uses local disk space on Kubernetes nodes to create PersistentVolumes without relying on external storage systems.
+Deckhouse Virtualization Platform (DVP) provides the ability to configure local storage using Local Path Provisioner. This is a simple solution without support for snapshots or volume size limits, best suited for development, testing, and small clusters. It uses local disk space on Kubernetes nodes to create PersistentVolumes without relying on external storage systems.
 
 ## How it works
 
-For each [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling pods.
+For each [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling VMs.
 
-When a pod requests a disk, the following occurs:
+When a VM requests a disk, the following occurs:
 - A PersistentVolume of type `HostPath` is created;
 - A directory is created on the appropriate node, with the `path` generated from the path parameter, the PV name, and the PVC name.
 
@@ -76,4 +76,4 @@ spec:
    storageClass: localpath-system
    ```
 
-1. Wait for Prometheus pods to restart.
+1. Wait for Prometheus VMs to restart.

@@ -78,7 +78,7 @@ lvchange -an <VG_or_LV_NAME>
       <td>
         <ul>
           <li>Диски делятся на 2 раздела</li>
-          <li>Из первых разделов каждого диска создаётся зеркало, на нём создается VG под ОС</li>
+          <li>Из первых разделов каждого диска создаётся зеркало, на нём создается VG ВМ ОС</li>
           <li>Из вторых разделов создаётся VG для данных без зеркалирования</li>
         </ul>
       </td>
@@ -121,13 +121,13 @@ lvchange -an <VG_or_LV_NAME>
    vgchange main --addtag storage.deckhouse.io/enabled=true
    ```
 
-1. Добавьте подготовленный узел в кластер Deckhouse.
+1. Добавьте подготовленный узел в кластер DVP.
 
    Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Полное зеркало»)
 
-В этом сценарии три узла кластера Deckhouse сконфигурированы в режиме «Полное зеркало».  
+В этом сценарии три узла кластера DVP сконфигурированы в режиме «Полное зеркало».  
 После запуска автоматического обнаружения в кластере появятся три CRD-ресурса типа [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) с автоматически сгенерированными именами.
 
 Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
@@ -232,7 +232,7 @@ EOF
 
 - Не используйте разделы с одинаковыми `PARTUUID`.
 - Изменение `PARTUUID` раздела, на котором уже создан VG, не поддерживается.
-- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.  
+- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в DVP.  
 
 {% endalert %}
 
@@ -264,17 +264,17 @@ EOF
    vgchange main-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
 
-1. Добавьте подготовленный узел в кластер Deckhouse.
+1. Добавьте подготовленный узел в кластер DVP.
 
    Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`,
    то на этом узле запустится агент модуля `sds-node-configurator`,
-   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) в кластер Deckhouse.
+   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) в кластер DVP.
    Дальше ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
 В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
@@ -453,7 +453,7 @@ EOF
 #### Пример настройки модулей SDS (комбинированное хранилище, «Полное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Полное зеркало».
-В кластере Deckhouse при этом появятся три ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В кластере DVP при этом появятся три ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
 В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
@@ -580,7 +580,7 @@ EOF
 
 - Не используйте разделы с одинаковыми `PARTUUID`.
 - Изменение `PARTUUID` раздела, на котором уже создан VG, не поддерживается.
-- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в Deckhouse.
+- Для таблицы разделов рекомендуется использовать GPT — в MBR `PARTUUID` псевдослучайный и содержит номер раздела, а также отсутствует поддержка `PARTLABEL`, который может пригодиться для идентификации разделов в DVP.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -618,7 +618,7 @@ EOF
 #### Пример настройки модулей SDS (комбинированное хранилище, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере Deckhouse при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
 В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 

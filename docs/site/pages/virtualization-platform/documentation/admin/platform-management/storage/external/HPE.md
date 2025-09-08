@@ -3,14 +3,14 @@ title: "HPE data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/hpe.html
 ---
 
-Deckhouse includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass) resource.
+Deckhouse Virtualization Platform (DVP) includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass) resource.
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
-Only HPE 3PAR storage systems are supported. For other HPE storage systems, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+Only HPE 3PAR storage systems are supported. For other HPE storage systems, contact the [technical support](https://deckhouse.io/tech-support/).
 {% endalert %}
 
-This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
+This page provides instructions on connecting HPE 3PAR to DVP, configuring the connection, creating StorageClass, and verifying storage functionality.
 
 ## System requirements
 
@@ -26,7 +26,7 @@ Note that all commands must be run on a machine that has administrator access to
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
 
 - Registration of the CSI driver.
-- Launch of service Pods for the `csi-hpe` components.
+- Launch of service VMs for the `csi-hpe` components.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -100,8 +100,8 @@ To create a StorageClass, you need to use the [HPEStorageClass](/modules/csi-hpe
 
 ### Module health verification
 
-To verify module health, ensure that all Pods in the `d8-csi-hpe` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify module health, ensure that all VMs in the `d8-csi-hpe` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-hpe get pod -owide -w
+d8 k -n d8-csi-hpe get vm -owide -w
 ```

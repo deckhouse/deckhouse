@@ -3,9 +3,9 @@ title: "NFS data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
 ---
 
-Deckhouse supports Network File System (NFS), enabling the connection and management of network file storage in Kubernetes. This helps organize centralized data storage and shared file usage between containers.
+Deckhouse Virtualization Platform (DVP) supports Network File System (NFS), enabling the connection and management of network file storage in Kubernetes. This helps organize centralized data storage and shared file usage between containers.
 
-This page provides instructions for connecting NFS storage in Deckhouse, configuring the connection, creating a StorageClass, and verifying system operability.
+This page provides instructions for connecting NFS storage in DVP, configuring the connection, creating a StorageClass, and verifying system operability.
 
 ## Enabling the module
 
@@ -90,13 +90,13 @@ If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` mo
 
 ## Module health check
 
-To verify the health of the module, ensure that all pods in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify the health of the module, ensure that all VMs in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-nfs get pod -owide -w
+d8 k -n d8-csi-nfs get vm -owide -w
 ```
 
-As a result, the list of all pods in the `d8-csi-nfs` namespace will be displayed:
+As a result, the list of all VMs in the `d8-csi-nfs` namespace will be displayed:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
@@ -113,7 +113,7 @@ It is not possible to change NFS server connection parameters for already create
 
 ## Creating volume snapshots
 
-In Deckhouse, snapshots are created by archiving the volume’s folder. The archive is saved in the root directory of the NFS server specified in the `spec.connection.share` parameter. To create snapshots:
+In DVP, snapshots are created by archiving the volume’s folder. The archive is saved in the root directory of the NFS server specified in the `spec.connection.share` parameter. To create snapshots:
 
 1. Enable the `snapshot-controller` module:
 

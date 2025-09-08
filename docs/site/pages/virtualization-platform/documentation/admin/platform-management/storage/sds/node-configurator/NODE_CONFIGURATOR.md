@@ -3,7 +3,7 @@ title: "Overview"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/about.html
 ---
 
-Deckhouse Kubernetes Platform provides automatic management of logical volumes (Logical Volume Manager, LVM) on cluster nodes using custom Kubernetes resources. This functionality is provided by the `sds-node-configurator` module and includes:
+Deckhouse Virtualization Platform (DVP) provides automatic management of logical volumes (Logical Volume Manager, LVM) on cluster nodes using custom Kubernetes resources. This functionality is provided by the `sds-node-configurator` module and includes:
 
 - Detection of block devices on each node and creation of corresponding [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) resources.
 

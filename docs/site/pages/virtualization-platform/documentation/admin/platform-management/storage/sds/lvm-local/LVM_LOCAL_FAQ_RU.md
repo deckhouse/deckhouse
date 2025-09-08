@@ -51,21 +51,21 @@ nodeSelector:
 В `nodeSelector` можно указать несколько лейблов. Однако для корректной работы модуля все эти лейблы должны присутствовать на каждом узле, на котором предполагается запуск `sds-local-volume-csi-node`.
 {% endalert %}
 
-После настройки лейблов убедитесь, что на целевых узлах запущены поды `sds-local-volume-csi-node`. Проверить их наличие можно командой:
+После настройки лейблов убедитесь, что на целевых узлах запущены ВМ `sds-local-volume-csi-node`. Проверить их наличие можно командой:
 
 ```shell
-d8 k -n d8-sds-local-volume get pod -owide
+d8 k -n d8-sds-local-volume get vm -owide
 ```
 
 ## Проверка создания PVC на выбранном узле
 
-Убедитесь, что на выбранном узле работает pod `sds-local-volume-csi-node`. Для этого выполните команду:
+Убедитесь, что на выбранном узле работает VM `sds-local-volume-csi-node`. Для этого выполните команду:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-При отсутствии пода проверьте, что на узле установлены все лейблы, указанные в настройках модуля в поле `nodeSelector`. Подробнее о способах решения проблемы с отсутствием подов на нужном узле можно прочитать [в этом разделе](#отсутствие-служебных-подов-на-нужном-узле).
+При отсутствии ВМ проверьте, что на узле установлены все лейблы, указанные в настройках модуля в поле `nodeSelector`. Подробнее о способах решения проблемы с отсутствием ВМ на нужном узле можно прочитать [в этом разделе](#отсутствие-служебных-вм-на-нужном-узле).
 
 ## Вывод узла из-под управления модуля
 
@@ -94,13 +94,13 @@ d8 k label node %node-name% %label-from-selector%-
 После ключа лейбла необходимо указать знак минуса для её удаления.
 {% endalert %}
 
-После этого под `sds-local-volume-csi-node` должен быть удален с узла. Проверьте его состояние командой:
+После этого ВМ `sds-local-volume-csi-node` должен быть удален с узла. Проверьте его состояние командой:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-Если под остаётся после удаления метки, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
+Если ВМ остаётся после удаления метки, убедитесь, что метки из конфигурации `d8-sds-local-volume-controller-config` действительно удалены. Это можно проверить с помощью следующей команды:
 
 ```shell
 d8 k get node %node-name% --show-labels
@@ -177,11 +177,11 @@ d8 k get node %node-name% --show-labels
 
 1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 
-## Оставшийся под sds-local-volume-csi-node после удаления лейблов
+## Оставшаяся ВМ sds-local-volume-csi-node после удаления лейблов
 
-Если после удаления лейблов с узла под `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), которые используются в одном из ресурсов [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если после удаления лейблов с узла ВМ `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), которые используются в одном из ресурсов [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass). Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
-## Отсутствие служебных подов на нужном узле
+## Отсутствие служебных ВМ на нужном узле
 
 Проблема может быть связана с некорректно установленными лейблами. Узлы, используемые модулем, определяются лейблами, заданными в поле `nodeSelector` в настройках модуля. Для просмотра текущих лейблов выполните:
 
@@ -292,9 +292,9 @@ kubectl_completed_check=0
 
 echo "Waiting for data migration to be completed"
 while [[ $kubectl_completed_check -eq 0 ]]; do
-   d8 k -n $ns get pods | grep migrate-pv-$src
+   d8 k -n $ns get vms | grep migrate-pv-$src
    sleep 5
-   kubectl_completed_check=`d8 k -n $ns get pods | grep migrate-pv-$src | grep "Completed" | wc -l`
+   kubectl_completed_check=`d8 k -n $ns get vms | grep migrate-pv-$src | grep "Completed" | wc -l`
 done
 echo "Data migration completed"
 ```

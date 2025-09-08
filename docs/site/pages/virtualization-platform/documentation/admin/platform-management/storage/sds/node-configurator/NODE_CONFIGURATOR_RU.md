@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform предоставляет возможность автоматического управления логическими томами (Logical Volume Manager, LVM) на узлах кластера с помощью пользовательских ресурсов Kubernetes. Эта функциональность обеспечивается модулем `sds-node-configurator` и включает в себя:
+Deckhouse Virtualization Platform (DVP) предоставляет возможность автоматического управления логическими томами (Logical Volume Manager, LVM) на узлах кластера с помощью пользовательских ресурсов Kubernetes. Эта функциональность обеспечивается модулем `sds-node-configurator` и включает в себя:
 
 - Обнаружение блочных устройств на каждом узле и создание соответствующих ресурсов [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice).
   

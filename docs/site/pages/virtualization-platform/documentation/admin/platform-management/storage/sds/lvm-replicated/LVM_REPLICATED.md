@@ -54,7 +54,7 @@ spec:
 EOF
 ```
 
-This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the `sds-replicated-volume` component Pods.
+This will install the DRBD kernel module on all cluster nodes, register the CSI driver, and launch the `sds-replicated-volume` component VMs.
 
 Wait until the `sds-replicated-volume` module reaches the `Ready` status. To check the module status, run the following command:
 
@@ -69,11 +69,11 @@ NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-replicated-volume              Embedded  Available   True       True
 ```
 
-To check that all Pods in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and have been started on all nodes where DRBD resources are planned to be used, use the following commands:
+To check that all VMs in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and have been started on all nodes where DRBD resources are planned to be used, use the following commands:
 
 ```shell
-d8 k -n d8-sds-replicated-volume get pod -w
-d8 k -n d8-sds-node-configurator get pod -w
+d8 k -n d8-sds-replicated-volume get vm -w
+d8 k -n d8-sds-node-configurator get vm -w
 ```
 
 {% alert level="info" %}

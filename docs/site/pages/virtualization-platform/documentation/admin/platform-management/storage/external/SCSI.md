@@ -3,9 +3,9 @@ title: "SCSI-based data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/scsi.html
 ---
 
-Deckhouse supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
+Deckhouse Virtualization Platform (DVP) supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
 
-This page provides instructions for connecting SCSI devices in Deckhouse, creating SCSITarget, StorageClass, and verifying system functionality.
+This page provides instructions for connecting SCSI devices in DVP, creating SCSITarget, StorageClass, and verifying system functionality.
 
 ## Supported features
 
@@ -13,7 +13,7 @@ This page provides instructions for connecting SCSI devices in Deckhouse, creati
 - Creating PersistentVolume from pre-provisioned LUN.
 - Deleting PersistentVolume and wiping data on LUN.
 - Attaching LUN to nodes via iSCSI/FC.
-- Creating `multipath` devices and mounting them in Pods.
+- Creating `multipath` devices and mounting them in VMs.
 - Detaching LUN from nodes.
 
 ## Limitations
@@ -36,7 +36,7 @@ All commands should be executed on a machine with access to the Kubernetes API a
 Enable the `csi-scsi-generic` module. This will ensure that the following happens on all cluster nodes:
 
 - The CSI driver is registered.
-- Auxiliary Pods for the `csi-scsi-generic` components are launched.
+- Auxiliary VMs for the `csi-scsi-generic` components are launched.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -136,8 +136,8 @@ d8 k get scsistorageclasses.storage.deckhouse.io <name-of-scsistorageclass>
 
 ### Module health check
 
-Check the status of Pods in the `d8-csi-scsi-generic` namespace using the following command. All Pods should be in the `Running` or `Completed` state and deployed on all nodes.
+Check the status of VMs in the `d8-csi-scsi-generic` namespace using the following command. All VMs should be in the `Running` or `Completed` state and deployed on all nodes.
 
 ```shell
-d8 k -n d8-csi-scsi-generic get pod -owide -w
+d8 k -n d8-csi-scsi-generic get vm -owide -w
 ```

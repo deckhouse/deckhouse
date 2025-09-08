@@ -16,7 +16,7 @@ Applicable to both single‑zone clusters and clusters that use multiple availab
 - Use stock kernels shipped with the supported distributions.
 - For network connectivity, use infrastructure with bandwidth of 10 Gbps or higher.
 - To achieve maximum performance, network latency between nodes should be within 0.5–1 ms.
-- Do not use another SDS (Software‑defined storage) to provide disks for Deckhouse SDS.
+- Do not use another SDS (Software‑defined storage) to provide disks for DVP SDS.
 
 ## Recommendations
 
@@ -198,10 +198,10 @@ Before eviction:
    d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
 
-1. Ensure all Pods in the `d8-sds-replicated-volume` namespace are in the `Running` state:
+1. Ensure all VMs in the `d8-sds-replicated-volume` namespace are in the `Running` state:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume get pods | grep -v Running
+   d8 k -n d8-sds-replicated-volume get vms | grep -v Running
    ```
 
 ### Example of removing a node from LINSTOR and Kubernetes
@@ -270,13 +270,13 @@ Issues can arise at various component layers. The cheat sheet below helps diagno
 
 ### Start error of linstor-node while loading the DRBD module
 
-1. Check the `linstor-node` Pods:
+1. Check the `linstor-node` VMs:
 
    ```shell
-   d8 k get pod -n d8-sds-replicated-volume -l app=linstor-node
+   d8 k get VM -n d8-sds-replicated-volume -l app=linstor-node
    ```
 
-1. If some Pods are stuck in `Init`, check the DRBD version and bashible logs on the node:
+1. If some VMs are stuck in `Init`, check the DRBD version and bashible logs on the node:
 
    ```shell
    cat /proc/drbd
@@ -295,11 +295,11 @@ Most likely causes:
 
 - Secure Boot is enabled. Because DRBD is built dynamically (similar to dkms) without a digital signature, the module is not supported when Secure Boot is enabled.
 
-### FailedMount error when starting a Pod
+### FailedMount error when starting a VM
 
-#### Pod stuck in ContainerCreating
+#### VM stuck in ContainerCreating
 
-If the Pod is stuck in `ContainerCreating` and `d8 k describe pod` shows errors like the one below, the device is mounted on another node:
+If the VM is stuck in `ContainerCreating` and `d8 k describe VM` shows errors like the one below, the device is mounted on another node:
 
 ```console
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
@@ -317,7 +317,7 @@ The `InUse` flag shows on which node the device is used; unmount the disk manual
 
 #### Input/output error
 
-Such errors usually occur during filesystem creation (mkfs). Check `dmesg` on the node where the Pod is starting:
+Such errors usually occur during filesystem creation (mkfs). Check `dmesg` on the node where the VM is starting:
 
 ```shell
 dmesg | grep 'Remote failed to finish a request within'
@@ -475,7 +475,7 @@ The backup is stored in encoded segments in Secrets named `linstor-%date_time%-b
    d8 k apply -f ./backup/
    ```
 
-## Missing sds-replicated-volume service Pods on a selected node
+## Missing sds-replicated-volume service VMs on a selected node
 
 The issue is most likely related to node labels.
 
@@ -592,7 +592,7 @@ User data is not affected because the migration moves to a new namespace and add
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
 
-1. Wait until all Pods in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are `Ready` or `Completed`:
+1. Wait until all VMs in the `d8-sds-replicated-volume` and `d8-sds-node-configurator` namespaces are `Ready` or `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-node-configurator
@@ -622,13 +622,13 @@ Note that in old StorageClasses you look at the option in the `parameters` secti
 | linstor.csi.linbit.com/placementCount: "2"           | replication: "Availability" |     | Two data replicas will be created                                                           |
 | linstor.csi.linbit.com/placementCount: "3"           | replication: "ConsistencyAndAvailability" | Yes | Three data replicas will be created                                                         |
 | linstor.csi.linbit.com/storagePool: "name"           | storagePool: "name"    |         | Name of the storage pool used for storage                                                   |
-| linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" |         | Remote Pod access to data volumes is forbidden (local disk access within the node only)     |
+| linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" |         | Remote VM access to data volumes is forbidden (local disk access within the node only)     |
 
 Additional parameters:
 
 - `reclaimPolicy` (Delete, Retain): Corresponds to `reclaimPolicy` of the old StorageClass.
-- `zones`: List of zones to place resources in (direct cloud zone names). Note that remote Pod access to the data volume is possible only within one zone.
-- `volumeAccess` values: `Local` (access strictly within the node), `EventuallyLocal` (a data replica will synchronize to the node after the Pod starts), `PreferablyLocal` (remote Pod access allowed, `volumeBindingMode: WaitForFirstConsumer`), `Any` (remote Pod access allowed, `volumeBindingMode: Immediate`).
+- `zones`: List of zones to place resources in (direct cloud zone names). Note that remote VM access to the data volume is possible only within one zone.
+- `volumeAccess` values: `Local` (access strictly within the node), `EventuallyLocal` (a data replica will synchronize to the node after the VM starts), `PreferablyLocal` (remote VM access allowed, `volumeBindingMode: WaitForFirstConsumer`), `Any` (remote VM access allowed, `volumeBindingMode: Immediate`).
 - If you need `volumeBindingMode: Immediate`, set `volumeAccess` in ReplicatedStorageClass to `Any`.
 
 ### Migrating to ReplicatedStoragePool
@@ -637,7 +637,7 @@ The [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedsto
 
 ## Migration from the sds-drbd module to sds-replicated-volume
 
-During migration the module control plane and its CSI are unavailable. This prevents creation, expansion, or deletion of PVs and the creation or deletion of Pods that use DRBD PVs for the duration of the migration.
+During migration the module control plane and its CSI are unavailable. This prevents creation, expansion, or deletion of PVs and the creation or deletion of VMs that use DRBD PVs for the duration of the migration.
 
 {% alert level="warning" %}
 The migration will not affect user data, as it is performed in a new namespace and volume management will be handled by new components that will replace the functionality of the previous module.
@@ -694,7 +694,7 @@ The migration will not affect user data, as it is performed in a new namespace a
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
 
-1. Wait until all Pods in the `d8-sds-replicated-volume` namespace are `Ready` or `Completed`:
+1. Wait until all VMs in the `d8-sds-replicated-volume` namespace are `Ready` or `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-replicated-volume
@@ -711,7 +711,7 @@ If no faulty resources are found, migration was successful.
 
 > **Warning.** DRBDStoragePool and DRBDStorageClass resources will be automatically migrated to ReplicatedStoragePool and ReplicatedStorageClass. No user action is required.
 
-The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain. If they do, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain. If they do, contact the [technical support](https://deckhouse.io/tech-support/).
 
 ## Reasons to avoid RAID with sds-replicated-volume
 

@@ -55,7 +55,7 @@ spec:
 EOF
 ```
 
-Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные поды компонентов `sds-replicated-volume`.
+Это установит модуль ядра DRBD на всех узлах кластера, зарегистрирует CSI-драйвер и запустит служебные ВМ компонентов `sds-replicated-volume`.
 
 Дождитесь, когда модуль `sds-replicated-volume` перейдет в состояние `Ready`. Проверить состояние можно, выполнив следующую команду:
 
@@ -70,11 +70,11 @@ NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
 sds-replicated-volume              Embedded  Available   True       True
 ```
 
-Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все поды в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
+Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все ВМ в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
 
 ```shell
-d8 k -n d8-sds-replicated-volume get pod -w
-d8 k -n d8-sds-node-configurator get pod -w
+d8 k -n d8-sds-replicated-volume get vm -w
+d8 k -n d8-sds-node-configurator get vm -w
 ```
 
 {% alert level="info" %}

@@ -50,21 +50,21 @@ The module selects only those nodes that have all the labels specified in the `n
 You can specify multiple labels in the `nodeSelector`. However, for the module to work correctly, all these labels must be present on each node where you intend to run `sds-local-volume-csi-node`.
 {% endalert %}
 
-After configuring the labels, ensure that the `sds-local-volume-csi-node` Pods are running on the target nodes. You can check their presence with the command:
+After configuring the labels, ensure that the `sds-local-volume-csi-node` VMs are running on the target nodes. You can check their presence with the command:
 
 ```shell
-d8 k -n d8-sds-local-volume get pod -owide
+d8 k -n d8-sds-local-volume get vm -owide
 ```
 
 ## Verifying PVC creation on the selected node
 
-Make sure that the `sds-local-volume-csi-node` Pod is running on the selected node. To do this, run the command:
+Make sure that the `sds-local-volume-csi-node` VM is running on the selected node. To do this, run the command:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-If the Pod is absent, verify that all the labels specified in the module settings in the nodeSelector field are present on the node. For available solutions when Pods are missing from the target node, refer to [this section](#absence-of-component-service-pods-on-the-desired-node).
+If the VM is absent, verify that all the labels specified in the module settings in the nodeSelector field are present on the node. For available solutions when VMs are missing from the target node, refer to [this section](#absence-of-component-service-vms-on-the-desired-node).
 
 ## Removing a node from the module management
 
@@ -93,13 +93,13 @@ d8 k label node %node-name% %label-from-selector%-
 After the label key, you must specify a minus sign to remove it.
 {% endalert %}
 
-After this, the `sds-local-volume-csi-node` Pod should be removed from the node. Check its status with the command:
+After this, the `sds-local-volume-csi-node` VM should be removed from the node. Check its status with the command:
 
 ```shell
 d8 k -n d8-sds-local-volume get po -owide
 ```
 
-If the Pod remains after removing the label, ensure that the labels from the `d8-sds-local-volume-controller-config` config are actually removed. You can verify this using:
+If the VM remains after removing the label, ensure that the labels from the `d8-sds-local-volume-controller-config` config are actually removed. You can verify this using:
 
 ```shell
 d8 k get node %node-name% --show-labels
@@ -176,11 +176,11 @@ To check the dependent resources, follow these steps:
 
 1. Ensure that the node you intend to remove from the module's control does not have any [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources used in [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resources. To avoid unintentionally losing control over volumes already created using the module, the user needs to manually delete dependent resources by performing necessary operations on the volume.
 
-## Remaining sds-local-volume-csi-node Pod after removing labels
+## Remaining sds-local-volume-csi-node VM after removing labels
 
-If after removing the labels from the node the `sds-local-volume-csi-node` Pod continues to run, this is most likely due to the presence on the node of [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources that are used by one of the [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resources. The verification process is described [above](#verifying-dependent-LVMVolumeGroup-resources-on-the-node).
+If after removing the labels from the node the `sds-local-volume-csi-node` VM continues to run, this is most likely due to the presence on the node of [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources that are used by one of the [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass) resources. The verification process is described [above](#verifying-dependent-LVMVolumeGroup-resources-on-the-node).
 
-## Absence of component service Pods on the desired node
+## Absence of component service VMs on the desired node
 
 The issue may be related to incorrectly set labels. The nodes used by the module are determined by the labels specified in the module settings in the `nodeSelector` field. To view the current labels, run:
 
@@ -291,9 +291,9 @@ kubectl_completed_check=0
 
 echo "Waiting for data migration to be completed"
 while [[ $kubectl_completed_check -eq 0 ]]; do
-   d8 k -n $ns get pods | grep migrate-pv-$src
+   d8 k -n $ns get vms | grep migrate-pv-$src
    sleep 5
-   kubectl_completed_check=`d8 k -n $ns get pods | grep migrate-pv-$src | grep "Completed" | wc -l`
+   kubectl_completed_check=`d8 k -n $ns get vms | grep migrate-pv-$src | grep "Completed" | wc -l`
 done
 echo "Data migration completed"
 ```

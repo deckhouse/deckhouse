@@ -3,26 +3,26 @@ title: "Distributed Ceph storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/ceph.html
 ---
 
-Ceph is a scalable distributed storage system that provides high availability and fault tolerance for data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClasses based on RADOS Block Device (RBD) or CephFS.
+Ceph is a scalable distributed storage system that provides high availability and fault tolerance for data. Deckhouse Virtualization Platform (DVP) supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClasses based on RADOS Block Device (RBD) or CephFS.
 
-This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
+This page provides instructions on connecting Ceph to DVP, configuring authentication, creating StorageClass objects, and verifying storage functionality.
 
 {% alert level="warning" %}
 When switching to this module from the`ceph-csi` module, an automatic migration is performed, but it requires preparation:
 
-1. Scale all operators (redis, clickhouse, kafka, etc.) to zero replicas; during migration, operators in the cluster must not be running. The only exception is the `prometheus` operator in Deckhouse, which will be automatically disabled during migration.
+1. Scale all operators (redis, clickhouse, kafka, etc.) to zero replicas; during migration, operators in the cluster must not be running. The only exception is the `prometheus` operator in DVP, which will be automatically disabled during migration.
 1. Disable the `ceph-csi` module and enable the `csi-ceph` module.
-1. Wait for the migration process to complete in the Deckhouse logs (indicated by "Finished migration from Ceph CSI module").
-1. Create test pod/PVC to verify CSI functionality.
+1. Wait for the migration process to complete in the DVP logs (indicated by "Finished migration from Ceph CSI module").
+1. Create test VM/PVC to verify CSI functionality.
 1. Restore operators to a working state.
    If the CephCSIDriver resource has a `spec.cephfs.storageClasses.pool` field set to a value other than `cephfs_data`, the migration will fail with an error.
    If a Ceph StorageClass was created manually and not via the CephCSIDriver resource, manual migration is required.
-   In these cases, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+   In these cases, contact the [technical support](https://deckhouse.io/tech-support/).
    {% endalert %}
 
 ## Enabling the module
 
-To connect a Ceph cluster in Deckhouse, you need to enable the `csi-ceph` module. To do this, apply the ModuleConfig resource:
+To connect a Ceph cluster in DVP, you need to enable the `csi-ceph` module. To do this, apply the ModuleConfig resource:
 
 ```shell
 d8 k apply -f - <<EOF

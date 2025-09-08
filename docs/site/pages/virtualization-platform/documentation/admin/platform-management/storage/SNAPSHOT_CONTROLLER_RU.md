@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform поддерживает создание снимков томов для CSI-драйверов в кластере Kubernetes.
+Deckhouse Virtualization Platform (DVP) поддерживает создание снимков томов для CSI-драйверов в кластере Kubernetes.
 
 Снимки фиксируют состояние тома на определенный момент времени и могут быть использованы для восстановления данных или клонирования томов. Способность создавать снимки зависит от возможностей используемого CSI-драйвера.
 

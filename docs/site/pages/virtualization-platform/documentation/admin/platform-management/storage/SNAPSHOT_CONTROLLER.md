@@ -3,7 +3,7 @@ title: "Configuring volume snapshot creation"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
 ---
 
-Deckhouse Kubernetes Platform supports volume snapshot creation for CSI drivers in a Kubernetes cluster.
+Deckhouse Virtualization Platform (DVP) supports volume snapshot creation for CSI drivers in a Kubernetes cluster.
 
 Snapshots capture the state of a volume at a specific point in time and can be used for data recovery or volume cloning. The ability to create snapshots depends on the capabilities of the CSI driver in use.
 

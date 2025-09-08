@@ -120,13 +120,13 @@ To configure a node according to this scenario, follow these steps:
    vgchange main --addtag storage.deckhouse.io/enabled=true
    ```
 
-1. Add the prepared node to the Deckhouse cluster.
+1. Add the prepared node to the DVP cluster.
 
    If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will detect the VG `main` and create a [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource. This can be used in the `sds-local-volume` and `sds-replicated-volume` modules.
 
 #### Example of configuring SDS modules (identical disks, "Full mirror")
 
-In this scenario, three nodes of the Deckhouse cluster are configured in "Full mirror" mode.  
+In this scenario, three nodes of the DVP cluster are configured in "Full mirror" mode.  
 After automatic discovery, three CRD resources of type [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) with automatically generated names will appear in the cluster.
 
 To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
@@ -230,7 +230,7 @@ To configure the `sds-replicated-volume` module according to the "Full mirror" s
 
 - Do not use partitions with the same `PARTUUID`.
 - Changing the `PARTUUID` of a partition on which a VG is already created is not supported.
-- It is recommended to use GPT for the partition table — in MBR, `PARTUUID` is pseudo-random and contains the partition number, and there is no support for `PARTLABEL`, which may be useful for identifying partitions in Deckhouse.
+- It is recommended to use GPT for the partition table — in MBR, `PARTUUID` is pseudo-random and contains the partition number, and there is no support for `PARTLABEL`, which may be useful for identifying partitions in DVP.
 {% endalert %}
 
 In this scenario, two partitions are used on each disk:
@@ -261,13 +261,13 @@ To configure a node according to the "Partial mirror" scenario, follow these ste
    vgchange main-unsafe --addtag storage.deckhouse.io/enabled=true
    ```
 
-1. Add the prepared node to the Deckhouse cluster.
+1. Add the prepared node to the DVP cluster.
 
-   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will run on this node, detect the VGs `main-safe` and `main-unsafe`, and add the corresponding [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to the Deckhouse cluster. These [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources can then be used to create volumes in the `sds-replicated-volume` or `sds-local-volume` modules.
+   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will run on this node, detect the VGs `main-safe` and `main-unsafe`, and add the corresponding [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to the DVP cluster. These [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources can then be used to create volumes in the `sds-replicated-volume` or `sds-local-volume` modules.
 
 #### Example of configuring SDS modules (identical disks, "Partial mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Partial mirror" scenario. In the Deckhouse cluster, six [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Partial mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
 To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
 
@@ -436,7 +436,7 @@ Examples of VG names for additional disks of different types:
 
 #### Example of configuring SDS modules (combined storage, "Full mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Full Mirror" scenario. In the Deckhouse cluster, three [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Full Mirror" scenario. In the DVP cluster, three [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
 To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
 
@@ -559,7 +559,7 @@ To configure the `sds-replicated-volume` module according to the "Full Mirror" s
 
 - Do not use partitions with the same `PARTUUID`.
 - Changing the `PARTUUID` of a partition on which a VG is already created is not supported.
-- It is recommended to use GPT for the partition table — in MBR, `PARTUUID` is pseudo-random and contains the partition number, and there is no support for `PARTLABEL`, which may be useful for identifying partitions in Deckhouse.
+- It is recommended to use GPT for the partition table — in MBR, `PARTUUID` is pseudo-random and contains the partition number, and there is no support for `PARTLABEL`, which may be useful for identifying partitions in DVP.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -591,7 +591,7 @@ To configure a node with additional disks according to the "Partial mirror" scen
 
 #### Example of configuring SDS modules (Combined storage, "Partial mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Partial Mirror" scenario. In the Deckhouse cluster, six [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Partial Mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
 To list the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
 
