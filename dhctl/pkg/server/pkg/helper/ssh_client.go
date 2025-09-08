@@ -20,7 +20,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
@@ -89,14 +88,18 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 
 	var sshClient node.SSHClient
 	if app.SSHLegacyMode {
-		log.InfoF("[DEBUG] app.SSHLegacyMode TRUE\n")
 		sshClient = clissh.NewClient(sess, keys)
 	} else {
-		log.InfoF("[DEBUG] app.SSHLegacyMode FALSE\n")
 		sshClient = gossh.NewClient(sess, keys)
 	}
 
+	err = sshClient.Start()
+	if err != nil {
+		return nil, cleanuper.AsFunc(), fmt.Errorf("starting ssh client: %w", err)
+	}
+
 	cleanuper.Add(func() error {
+		sshClient.Stop()
 		return nil
 	})
 

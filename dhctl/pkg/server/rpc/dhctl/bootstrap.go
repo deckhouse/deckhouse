@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -29,7 +28,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -39,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -246,34 +243,12 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.schemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-
-		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() && len(connectionConfig.SSHHosts) > 0 {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
-		}
-
-		return nil
+	_, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
+		CommanderMode:       p.request.Options.CommanderMode,
+		SchemaStore:         s.schemaStore,
+		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
+	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
