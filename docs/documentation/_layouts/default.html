@@ -4,6 +4,8 @@
 <head>
   {% if page.sidebar == 'embedded-modules' %}
   <meta name="page:module:type" content="embedded">
+  {% else %}
+  <meta name="page:versioned" content="true">
   {% endif %}
   <meta name="page:url:relative" content="./{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}">
   {%- if page.anchors_disabled == true %}

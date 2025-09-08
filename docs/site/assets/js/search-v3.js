@@ -661,12 +661,16 @@ class ModuleSearch {
     }
 
     // Get relative current page URL from the meta tag
+    const isPageVersionedMeta = document.querySelector('meta[name="page:versioned"]');
+    const isPageVersioned = isPageVersionedMeta && isPageVersionedMeta.content === 'true';
+    const isModulePage = document.querySelector('meta[name="page:module:type"]') !== null ? true : false;
     let relativeCurrentPageURL = document.querySelector('meta[name="page:url:relative"]');
     const isEmbeddedModuleResult = moduleType === 'embedded';
 
     console.debug('Meta tag found:', relativeCurrentPageURL ? relativeCurrentPageURL.content : 'none');
     console.debug('Module type:', moduleType);
-    console.debug('Is embedded module result:', isEmbeddedModuleResult);
+    console.debug('Is embedded module:', isEmbeddedModuleResult);
+    console.debug('Is page versioned:', isPageVersioned);
 
     if (relativeCurrentPageURL && relativeCurrentPageURL.content) {
       relativeCurrentPageURL = relativeCurrentPageURL.content;
@@ -697,7 +701,7 @@ class ModuleSearch {
 
       // Calculate base URL by subtracting page:url:relative from current page URL
       const currentPageUrl = window.location.pathname;
-      const match = currentPageUrl.match(/\/(v\d+\.\d+|alpha|beta|early-accces|stable|rock-solid|latest)\//);
+      const match = currentPageUrl.match(/\/(v\d+\.\d+|v\d+|alpha|beta|early-accces|stable|rock-solid|latest)\//);
       const currentPageVersion = match ? match[1] : null;
       const currentPageUrlWithoutVersion = currentPageUrl.replace('/' + currentPageVersion + '/', '/');
 
@@ -709,9 +713,12 @@ class ModuleSearch {
 
       // Find the base URL
       let baseUrl = currentPageUrlWithoutVersion;
-      if (currentPageUrlWithoutVersion.endsWith(relativeCurrentPageURL)) {
+      if (isModulePage && currentPageUrlWithoutVersion.endsWith(relativeCurrentPageURL)) {
         baseUrl = currentPageUrlWithoutVersion.substring(0, currentPageUrlWithoutVersion.length - relativeCurrentPageURL.length);
         console.debug('Base URL calculated:', baseUrl);
+      } else if (isPageVersioned) {
+        baseUrl = currentPageUrl.substring(0, currentPageUrl.length - relativeCurrentPageURL.length);
+        console.debug('Base URL calculated (versioned page):', baseUrl);
       } else {
         console.debug('Current URL does not end with relative path, using full URL as base');
       }
@@ -752,7 +759,7 @@ class ModuleSearch {
           targetModifiedPath.substring(1) : targetModifiedPath;
 
         let result = baseUrl + targetModifiedPath;
-        if (currentPageVersion) {
+        if (currentPageVersion && isModulePage) {
           // Insert the current version into the URL for modules pages
           result = result.replace(/\/modules\/([^/]+)\//, `/modules/$1/${currentPageVersion}/`);
         }
