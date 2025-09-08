@@ -410,3 +410,11 @@
         ```bash
         kubectl get mr {{ $labels.name }} -o yaml
         ```
+
+        To apply a major release, you must meet the minimum version requirements. To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.
