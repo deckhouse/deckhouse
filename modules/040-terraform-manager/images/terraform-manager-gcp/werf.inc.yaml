@@ -4,8 +4,6 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/gcp
   to: /deckhouse/candi/cloud-providers/gcp
-  owner: 64535
-  group: 64535
 import:
 - image: terraform-provider-gcp
   add: /terraform-provider-gcp

@@ -52,30 +52,16 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "terraform-state-exporter")) | nindent 6 }}
-      {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
       automountServiceAccountToken: true
       serviceAccountName: terraform-state-exporter
-      initContainers:
-      - name: prepare-exporter
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-        image: {{ include "terraform_manager_image" . }}
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false) | nindent 8 }}
-        command:
-        - "/bin/cp"
-        args:
-        - "-a"
-        - "/deckhouse/candi/cloud-providers/"
-        - "/cloud-providers"
-        volumeMounts:
-        - name: cloud-providers
-          mountPath: /cloud-providers
       containers:
       - name: exporter
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
         args:
         - "--do-not-write-debug-log-file"
         - "terraform"
@@ -96,20 +82,14 @@ spec:
             port: 9100
           timeoutSeconds: 5
         volumeMounts:
-        - mountPath: /tmp
-          name: tmp
-        - name: terraform-workdir
-          mountPath: /home/terraform
-        - name: cloud-providers
-          mountPath: /deckhouse/candi/cloud-providers
-          subPath: cloud-providers
+          - mountPath: /tmp
+            name: tmp
         env:
         - name: DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER
           value: "true"
         - name: DHCTL_CLI_ALLOWED_COMMANDS
           value: "terraform converge-exporter check"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
-
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -166,8 +146,4 @@ spec:
 {{- end }}
       volumes:
         - name: tmp
-          emptyDir: {}
-        - name: terraform-workdir
-          emptyDir: {}
-        - name: cloud-providers
           emptyDir: {}
