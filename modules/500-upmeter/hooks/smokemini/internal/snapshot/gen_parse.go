@@ -96,7 +96,7 @@ import (
 
 // {{ $m.Name }} parses {{ $m.Type }} slice from snapshots
 func {{ $m.Name }}(rs []sdkpkg.Snapshot) ([]{{ $m.Type }}, error) {
-	ret := make([]{{ $m.Type }}, len(rs))
+	ret := make([]{{ $m.Type }}, 0, len(rs))
 	for snap, err := range sdkobjectpatch.SnapshotIter[{{ $m.Type }}](rs) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse {{ $m.Type }}: %w", err)	
