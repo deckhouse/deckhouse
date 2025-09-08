@@ -29,13 +29,12 @@ DVP offers a wide range of solutions, which can be divided into two main groups.
 - [HPE data storage](../storage/external/hpe.html)
 - [Huawei data storage](../storage/external/huawei.html)
 - [NFS data storage](../storage/external/nfs.html)
-- [S3-based object storage](../storage/external/s3.html)
 - [SCSI-based data storage](../storage/external/scsi.html)
 - [TATLIN.UNIFIED (Yadro) unified storage](../storage/external/yadro.html)
 
 ## Key features
 
 - All storage configurations are performed through DVP and its modules, simplifying integration with all cluster components.
-- Ready-to-use solutions for Ceph, NFS, S3, corporate storage systems, and other options, which make connecting storage to the cluster straightforward.
-- Thanks to SDS support (including DRBD) and distributed solutions (Ceph, S3), you can scale up as your workload grows.
+- Ready-to-use solutions for Ceph, NFS, corporate storage systems, and other options, which make connecting storage to the cluster straightforward.
+- Thanks to SDS support (including DRBD) and distributed solutions (Ceph), you can scale up as your workload grows.
 - Data replication and integration with robust storage systems help protect critical services and applications from data loss.
