@@ -169,8 +169,8 @@ entries:
                     ru: Настройка NTP
                   url: /virtualization-platform/documentation/admin/platform-management/network/ntp.html
             - title:
-                en: Storage
-                ru: Хранилища
+                en: Storage management
+                ru: Настройка хранилищ
               folders:
                 - title:
                     en: Overview
