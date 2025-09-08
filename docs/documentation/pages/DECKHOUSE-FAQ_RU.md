@@ -784,7 +784,7 @@ echo "$MYRESULTSTRING"
       --user=USER          User with pull access to registry.
       --password=PASSWORD  Password/token for registry user.
       --ca-file=CA-FILE    Path to registry CA.
-      --scheme=SCHEME      Used scheme while connecting to registry, http or https.
+      --scheme=SCHEME      Used scheme while connecting to registry, "http" or "https".
       --dry-run            Don't change deckhouse resources, only print them.
       --new-deckhouse-tag=NEW-DECKHOUSE-TAG
                           New tag that will be used for deckhouse deployment image (by default
