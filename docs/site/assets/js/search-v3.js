@@ -412,7 +412,7 @@ class ModuleSearch {
 
     // Convert to array and sort alphabetically
     this.searchDictionary = Array.from(dictionary)
-      .filter(word => word.length >= 3) // Filter out very short words
+      .filter(word => word.length >= 2) // Filter out very short words (reduced from 3 to 2)
       .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
 
     console.log(`Built search dictionary with ${this.searchDictionary.length} unique terms`);
@@ -422,13 +422,19 @@ class ModuleSearch {
     if (!text) return [];
 
     // Extract words from text, handling various separators and special characters
-    return text
+    // Use a better regex that properly handles Cyrillic characters
+    const words = text
       .toLowerCase()
-      .replace(/[^\w\s-]/g, ' ') // Replace special chars with spaces
+      .replace(/[^\p{L}\p{N}\s-]/gu, ' ') // Unicode-aware: keep letters, numbers, spaces, hyphens
       .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
       .split(/\s+/)
       .filter(word => word.length >= 2) // Filter out very short words
-      .filter(word => !/^\d+$/.test(word)); // Filter out pure numbers
+      .filter(word => !/^\d+$/.test(word)) // Filter out pure numbers
+      .filter(word => /[\p{L}]/u.test(word)); // Only keep words that contain letters
+
+    // Russian words extraction working properly with Unicode regex
+
+    return words;
   }
 
   buildFuseIndex() {
@@ -437,15 +443,18 @@ class ModuleSearch {
       return;
     }
 
-    // console.log('Building Fuse.js index with dictionary size:', this.searchDictionary.length);
-    // console.log('Sample dictionary terms:', this.searchDictionary.slice(0, 10));
+    // Building Fuse.js index for fuzzy search
 
     // Create Fuse.js index for fuzzy search
     this.fuseIndex = new Fuse(this.searchDictionary, {
       threshold: 0.8, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
       distance: 100,  // Maximum distance for fuzzy matching
       includeScore: true,
-      minMatchCharLength: 2
+      minMatchCharLength: 2,
+      // Better support for Cyrillic characters
+      ignoreLocation: true,
+      findAllMatches: true,
+      useExtendedSearch: false
     });
 
     console.log('Built Fuse.js index for fuzzy search');
@@ -457,10 +466,93 @@ class ModuleSearch {
     }
 
     // Get fuzzy matches from the dictionary
-    const fuzzyResults = this.fuseIndex.search(query);
+    let fuzzyResults = this.fuseIndex.search(query);
+
+    // Check if query contains Russian characters and use fallback if needed
+    const hasRussian = /[а-яё]/i.test(query);
+    if (hasRussian && fuzzyResults.length === 0) {
+      // Fallback for Russian: use simple character-based similarity
+      fuzzyResults = this.getRussianFuzzySuggestions(query);
+    }
 
     // Return top 5 suggestions with scores
     return fuzzyResults.slice(0, 5);
+  }
+
+  getRussianFuzzySuggestions(query) {
+    // Fallback method for Russian text when Fuse.js doesn't work well
+    const queryLower = query.toLowerCase();
+    const results = [];
+
+    // Get Russian terms from dictionary
+    const russianTerms = this.searchDictionary.filter(term => /[а-яё]/i.test(term));
+
+    for (const term of russianTerms) {
+      const termLower = term.toLowerCase();
+
+      // Calculate simple similarity score
+      let score = 0;
+
+      // Check for exact match first
+      if (termLower === queryLower) {
+        score = 1.0;
+      }
+      // Check for substring matches
+      else if (termLower.includes(queryLower)) {
+        score = 0.8;
+      } else if (queryLower.includes(termLower)) {
+        score = 0.7;
+      } else {
+        // Calculate character-based similarity
+        const similarity = this.calculateRussianSimilarity(queryLower, termLower);
+        if (similarity > 0.2) { // Lowered threshold
+          score = similarity;
+        }
+      }
+
+      if (score > 0.2) { // Lowered threshold
+        results.push({
+          item: term,
+          score: score
+        });
+      }
+    }
+
+    // Sort by score and return
+    return results.sort((a, b) => b.score - a.score);
+  }
+
+  calculateRussianSimilarity(str1, str2) {
+    // Simple Levenshtein distance for Russian text
+    const matrix = [];
+    const len1 = str1.length;
+    const len2 = str2.length;
+
+    for (let i = 0; i <= len2; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= len1; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= len2; i++) {
+      for (let j = 1; j <= len1; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+
+    const distance = matrix[len2][len1];
+    const maxLength = Math.max(len1, len2);
+    return 1 - (distance / maxLength);
   }
 
   clearFuzzySearchMessages() {
@@ -504,7 +596,7 @@ class ModuleSearch {
           if (fuzzySuggestions.length > 0) {
             // Try searching with the best fuzzy suggestion
             const bestSuggestion = fuzzySuggestions[0].item;
-            console.log(`No exact results for "${query}", trying fuzzy suggestion: "${bestSuggestion}"`);
+            // Using fuzzy suggestion for better results
             results = this.lunrIndex.search(bestSuggestion);
           }
       }
