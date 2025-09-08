@@ -34,10 +34,12 @@ type ConversionWebhook struct {
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
 	// +optional
+	Foo *string `json:"foo,omitempty"`
+
+	// +optional
 	Context []Context `json:"context,omitempty"`
 
-	// spec defines the desired state of ConversionWebhook
-	// +required
+	// +optional
 	Conversions []ConversionRule `json:"conversions,omitempty"`
 
 	// status defines the observed state of ConversionWebhook
@@ -46,26 +48,14 @@ type ConversionWebhook struct {
 }
 
 type ConversionRule struct {
-	FromVersion string                   `json:"fromVersion"`
-	ToVersion   string                   `json:"toVersion"`
-	Handler     ConversionWebhookHandler `json:"handler"`
+	FromVersion string                    `json:"from"`
+	ToVersion   string                    `json:"to"`
+	Handler     *ConversionWebhookHandler `json:"handler"`
 }
 
 type ConversionWebhookHandler struct {
 	// this is a python script handler for object
 	Python string `json:"python,omitempty"`
-}
-
-// ConversionWebhookSpec defines the desired state of ConversionWebhook
-type ConversionWebhookSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
-
-	// foo is an example field of ConversionWebhook. Edit conversionwebhook_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
 }
 
 // ConversionWebhookStatus defines the observed state of ConversionWebhook.
