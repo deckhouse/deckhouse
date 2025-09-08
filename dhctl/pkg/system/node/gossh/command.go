@@ -102,6 +102,8 @@ func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
 	var err error
 
 	err = retry.NewSilentLoop("Establish new session", 10, 5*time.Second).Run(func() error {
+		log.InfoF("[DEBUG] Establish new session client %#v\n", client)
+		log.InfoF("[DEBUG] Establish new session client.sshClient %#v\n", client.sshClient)
 		session, err = client.sshClient.NewSession()
 		return err
 	})

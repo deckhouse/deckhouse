@@ -217,11 +217,17 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
+		log.InfoF("[DEBUG] starting ssh client %v#v\n", sshClient)
+		log.InfoF("[DEBUG]  %v\n", reflect.ValueOf(sshClient).IsNil())
+		log.InfoF("[DEBUG]  %v\n", len(connectionConfig.SSHHosts))
+
 		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() && len(connectionConfig.SSHHosts) > 0 {
+			log.InfoF("[DEBUG] STARTING\n")
 			err = sshClient.Start()
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
 			}
+			log.InfoF("[DEBUG] STARTED %#v\n", sshClient)
 		}
 		return nil
 	})
