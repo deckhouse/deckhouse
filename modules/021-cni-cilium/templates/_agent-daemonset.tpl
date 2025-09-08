@@ -263,26 +263,6 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-      - name: sbin-iptables
-        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
-        securityContext:
-          readOnlyRootFilesystem: true
-        imagePullPolicy: IfNotPresent
-        command:
-        - sh
-        - -ec
-        - |
-          for cmd in \
-            iptables iptables-save iptables-restore \
-            ip6tables ip6tables-save ip6tables-restore; do
-              ln -f -s /usr/sbin/iptables-wrapper "/tmp/${cmd}"
-          done
-        volumeMounts:
-          - name: sbin-iptables
-            mountPath: /tmp
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
@@ -579,8 +559,6 @@ spec:
       terminationGracePeriodSeconds: 1
       volumes:
       - name: write-files
-        emptyDir: {}
-      - name: sbin-iptables
         emptyDir: {}
       - name: tmp
         emptyDir: {}
