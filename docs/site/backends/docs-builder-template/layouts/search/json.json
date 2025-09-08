@@ -49,7 +49,7 @@
       {{- continue -}}
     {{- end }}
     {{- if not $firstModule }},{{- end }}
-    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang) }}
+    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" $firstModule) }}
     {{- $firstModule = false }}
   {{- end -}}
 ]}
