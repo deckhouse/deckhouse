@@ -16,7 +16,7 @@
             {{- $first = false -}}
             {
               "title": {{ .Title | jsonify }},
-              "url": {{ .RelPermalink | jsonify }},
+              "url": {{ .RelPermalink | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
               {{- $keywords := slice -}}
               {{- if $moduleData.tags -}}
                 {{- $keywords = $keywords | append $moduleData.tags -}}
@@ -46,9 +46,6 @@
     {{- $moduleName := index . "name" }}
     {{- $moduleData := index (index $.Site.Data.modules $moduleName) $moduleChannel }}
     {{- if not $moduleData }}
-      {{- continue -}}
-    {{- end }}
-    {{- if ne $moduleName "virtualization" }}
       {{- continue -}}
     {{- end }}
     {{- if not $firstModule }},{{- end }}

@@ -194,12 +194,53 @@ class ModuleSearch {
     try {
       this.showLoading();
 
-      const response = await fetch(this.options.searchIndexPath);
-      if (!response.ok) {
-        throw new Error(`Failed to load search index: ${response.status}`);
-      }
+      // Check if searchIndexPath contains multiple comma-separated paths
+      const indexPaths = this.options.searchIndexPath.split(',').map(path => path.trim());
 
-            this.searchData = await response.json();
+      if (indexPaths.length === 1) {
+        // Single index file
+        const response = await fetch(indexPaths[0]);
+        if (!response.ok) {
+          throw new Error(`Failed to load search index: ${response.status}`);
+        }
+        this.searchData = await response.json();
+      } else {
+        // Multiple index files - load and merge them
+        console.log(`Loading ${indexPaths.length} search index files:`, indexPaths);
+
+        const responses = await Promise.all(
+          indexPaths.map(async (path) => {
+            try {
+              const response = await fetch(path);
+              if (!response.ok) {
+                console.warn(`Failed to load search index: ${path} (${response.status})`);
+                return { documents: [], parameters: [] };
+              }
+              return await response.json();
+            } catch (error) {
+              console.warn(`Error loading search index: ${path}`, error);
+              return { documents: [], parameters: [] };
+            }
+          })
+        );
+
+        // Merge all search indexes
+        this.searchData = {
+          documents: [],
+          parameters: []
+        };
+
+        responses.forEach((indexData, index) => {
+          if (indexData && indexData.documents) {
+            this.searchData.documents = this.searchData.documents.concat(indexData.documents);
+          }
+          if (indexData && indexData.parameters) {
+            this.searchData.parameters = this.searchData.parameters.concat(indexData.parameters);
+          }
+        });
+
+        console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
+      }
 
       // Refresh language detection before building index
       this.refreshLanguageDetection();
