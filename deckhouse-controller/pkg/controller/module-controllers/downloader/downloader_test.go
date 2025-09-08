@@ -35,6 +35,9 @@ import (
 func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
 
+	// Mock Digest method first
+	dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "stable").Then("sha256:1234567890abcdef", nil)
+
 	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
 		ManifestStub: func() (*crv1.Manifest, error) {
 			return &crv1.Manifest{
@@ -44,6 +47,9 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 		},
 		LayersStub: func() ([]crv1.Layer, error) {
 			return []crv1.Layer{&utils.FakeLayer{}}, nil
+		},
+		DigestStub: func() (crv1.Hash, error) {
+			return crv1.Hash{Algorithm: "sha256", Hex: "1234567890abcdef"}, nil
 		},
 	}, nil)
 
@@ -55,6 +61,9 @@ func TestDownloadMetadataFromReleaseChannelError(t *testing.T) {
 
 func TestDownloadMetadataByVersion(t *testing.T) {
 	ms := &v1alpha1.ModuleSource{}
+
+	// Mock Digest method first
+	dependency.TestDC.CRClient.DigestMock.When(minimock.AnyContext, "v1.2.3").Then("sha256:1234567890abcdef", nil)
 
 	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.2.3").Then(&fake.FakeImage{
 		ManifestStub: func() (*crv1.Manifest, error) {
@@ -73,7 +82,7 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 					}}}, nil
 		},
 		DigestStub: func() (crv1.Hash, error) {
-			return crv1.Hash{Algorithm: "sha256"}, nil
+			return crv1.Hash{Algorithm: "sha256", Hex: "1234567890abcdef"}, nil
 		},
 	}, nil)
 
@@ -82,4 +91,60 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "v1.2.3", meta.ModuleVersion)
 	require.Equal(t, map[string]any{"feat": []any{"Added new feature"}}, meta.Changelog)
+}
+
+func TestReleaseImageInfoCache(t *testing.T) {
+	// Test cache creation
+	cache := NewReleaseImageInfoCache()
+
+	// Test setting and getting
+	info1 := &LightweightReleaseInfo{}
+	cache.Set("digest1", info1)
+
+	if cached, found := cache.Get("digest1"); !found {
+		t.Error("Expected to find digest1 in cache")
+	} else if cached != info1 {
+		t.Error("Expected to get the same info from cache")
+	}
+
+	// Test cache growth without size limit
+	info2 := &LightweightReleaseInfo{}
+	info3 := &LightweightReleaseInfo{}
+
+	cache.Set("digest2", info2)
+	cache.Set("digest3", info3)
+
+	// Test clearing cache
+	cache.cache = make(map[string]*LightweightReleaseInfo)
+}
+
+func TestModuleDownloaderCache(t *testing.T) {
+	// Test that ModuleDownloader is created with cache
+	ms := &v1alpha1.ModuleSource{}
+	downloader := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil)
+	if downloader.releaseInfoCache == nil {
+		t.Error("Expected ModuleDownloader to have a cache")
+	}
+}
+
+func TestModuleDownloaderWithSharedCache(t *testing.T) {
+	// Test that multiple ModuleDownloader instances can share the same cache
+	ms := &v1alpha1.ModuleSource{}
+	sharedCache := NewReleaseImageInfoCache()
+
+	downloader1 := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
+	downloader2 := NewModuleDownloader(dependency.TestDC, os.TempDir(), ms, log.NewNop(), nil, sharedCache)
+
+	if downloader1.releaseInfoCache != sharedCache {
+		t.Error("Expected downloader1 to use shared cache")
+	}
+
+	if downloader2.releaseInfoCache != sharedCache {
+		t.Error("Expected downloader2 to use shared cache")
+	}
+
+	// Verify both downloaders share the same cache instance
+	if downloader1.releaseInfoCache != downloader2.releaseInfoCache {
+		t.Error("Expected both downloaders to share the same cache instance")
+	}
 }
