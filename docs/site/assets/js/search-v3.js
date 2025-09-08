@@ -267,6 +267,7 @@ class ModuleSearch {
         this.use(lunr.multiLanguage('en', 'ru'));
         this.field('title', { boost: 10 });
         this.field('keywords', { boost: 8 });
+        this.field('module', { boost: 6 });
         this.field('summary', { boost: 3 });
         this.field('content', { boost: 1 });
         this.ref('id');
@@ -278,10 +279,10 @@ class ModuleSearch {
               id: `doc_${index}`,
               title: doc.title || '',
               keywords: doc.keywords || '',
+              module: doc.module || '',
               summary: doc.summary || '',
               content: doc.content || '',
               url: doc.url || '',
-              module: doc.module || '',
               moduletype: doc.moduletype || '',
               type: 'document'
             });
@@ -295,10 +296,10 @@ class ModuleSearch {
               id: `param_${index}`,
               title: param.name || '',
               keywords: param.keywords || '',
+              module: param.module || '',
               resName: param.resName || '',
               content: param.content || '',
               url: param.url || '',
-              module: param.module || '',
               moduletype: param.moduletype || '',
               type: 'parameter'
             });
@@ -312,6 +313,7 @@ class ModuleSearch {
       this.lunrIndex = lunr(function() {
         this.field('title', { boost: 10 });
         this.field('keywords', { boost: 8 });
+        this.field('module', { boost: 6 });
         this.field('summary', { boost: 3 });
         this.field('content', { boost: 1 });
         this.ref('id');
@@ -323,10 +325,10 @@ class ModuleSearch {
               id: `doc_${index}`,
               title: doc.title || '',
               keywords: doc.keywords || '',
+              module: doc.module || '',
               summary: doc.summary || '',
               content: doc.content || '',
               url: doc.url || '',
-              module: doc.module || '',
               type: 'document'
             });
           });
@@ -339,10 +341,10 @@ class ModuleSearch {
               id: `param_${index}`,
               title: param.name || '',
               keywords: param.keywords || '',
+              module: param.module || '',
               resName: param.resName || '',
               content: param.content || '',
               url: param.url || '',
-              module: param.module || '',
               type: 'parameter'
             });
           });
@@ -377,7 +379,7 @@ class ModuleSearch {
 
       const results = this.lunrIndex.search(query);
 
-      // Apply additional boosting for parameters
+      // Apply additional boosting for parameters and module name matches
       const boostedResults = results.map(result => {
         const docId = result.ref;
         let doc;
@@ -394,10 +396,20 @@ class ModuleSearch {
         if (!doc) return result;
 
         let boost = 1;
+
+        // Check if the search query matches the module name
+        const queryLower = query.toLowerCase();
+        const moduleLower = (doc.module || '').toLowerCase();
+
+        if (moduleLower && moduleLower.includes(queryLower)) {
+          boost *= 1.8; // Strong boost for module name matches
+        }
+
+        // Apply existing parameter boosting logic
         if (doc.type === 'parameter' && doc.content && doc.content.includes('resources__prop_name')) {
-          boost = 1.5; // Additional boost for parameters with properties
+          boost *= 1.5; // Additional boost for parameters with properties
         } else if (doc.type === 'parameter') {
-          boost = 1.2; // Moderate boost for parameters
+          boost *= 1.2; // Moderate boost for parameters
         }
 
         return {
