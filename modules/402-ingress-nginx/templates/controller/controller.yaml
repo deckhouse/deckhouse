@@ -194,7 +194,7 @@ spec:
             - sh
             - -c
             - --
-            - "/bin/mkdir /tmp/nginx && chmod 0777 /tmp/*"
+            - "/bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*"
           volumeMounts:
             - mountPath: tmp
               name: tmp-nginx
