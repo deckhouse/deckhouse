@@ -5,6 +5,8 @@ class ModuleSearch {
     this.searchIndex = null;
     this.searchData = null;
     this.lunrIndex = null;
+    this.fuseIndex = null;
+    this.searchDictionary = [];
     this.lastQuery = '';
     this.currentResults = {
       config: [],
@@ -239,13 +241,15 @@ class ModuleSearch {
           }
         });
 
-        console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
+        // console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
       }
 
       // Refresh language detection before building index
       this.refreshLanguageDetection();
 
       this.buildLunrIndex();
+      this.buildSearchDictionary();
+      this.buildFuseIndex();
       this.isDataLoaded = true;
       this.hideLoading();
 
@@ -307,7 +311,7 @@ class ModuleSearch {
         }
       });
 
-      console.log('Built search index with Russian multilingual support');
+      // console.log('Built search index with Russian multilingual support');
     } else {
       // Use default English language support
       this.lunrIndex = lunr(function() {
@@ -351,8 +355,118 @@ class ModuleSearch {
         }
       });
 
-      console.log('Built search index with default English support');
+      // console.log('Built search index with default English support');
     }
+  }
+
+  buildSearchDictionary() {
+    const dictionary = new Set();
+
+    // Extract searchable terms from documents
+    if (this.searchData.documents) {
+      this.searchData.documents.forEach(doc => {
+        // Add title words
+        if (doc.title) {
+          this.extractWords(doc.title).forEach(word => dictionary.add(word));
+        }
+        // Add keywords
+        if (doc.keywords && Array.isArray(doc.keywords)) {
+          doc.keywords.forEach(keyword => {
+            this.extractWords(keyword).forEach(word => dictionary.add(word));
+          });
+        }
+        // Add module name
+        if (doc.module) {
+          this.extractWords(doc.module).forEach(word => dictionary.add(word));
+        }
+        // Add summary words
+        if (doc.summary) {
+          this.extractWords(doc.summary).forEach(word => dictionary.add(word));
+        }
+      });
+    }
+
+    // Extract searchable terms from parameters
+    if (this.searchData.parameters) {
+      this.searchData.parameters.forEach(param => {
+        // Add parameter name
+        if (param.name) {
+          this.extractWords(param.name).forEach(word => dictionary.add(word));
+        }
+        // Add keywords
+        if (param.keywords && Array.isArray(param.keywords)) {
+          param.keywords.forEach(keyword => {
+            this.extractWords(keyword).forEach(word => dictionary.add(word));
+          });
+        }
+        // Add module name
+        if (param.module) {
+          this.extractWords(param.module).forEach(word => dictionary.add(word));
+        }
+        // Add resource name
+        if (param.resName) {
+          this.extractWords(param.resName).forEach(word => dictionary.add(word));
+        }
+      });
+    }
+
+    // Convert to array and sort alphabetically
+    this.searchDictionary = Array.from(dictionary)
+      .filter(word => word.length >= 3) // Filter out very short words
+      .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
+    console.log(`Built search dictionary with ${this.searchDictionary.length} unique terms`);
+  }
+
+  extractWords(text) {
+    if (!text) return [];
+
+    // Extract words from text, handling various separators and special characters
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, ' ') // Replace special chars with spaces
+      .replace(/[-_]/g, ' ') // Replace hyphens and underscores with spaces
+      .split(/\s+/)
+      .filter(word => word.length >= 2) // Filter out very short words
+      .filter(word => !/^\d+$/.test(word)); // Filter out pure numbers
+  }
+
+  buildFuseIndex() {
+    if (typeof Fuse === 'undefined') {
+      console.warn('Fuse.js not available, fuzzy search disabled');
+      return;
+    }
+
+    // console.log('Building Fuse.js index with dictionary size:', this.searchDictionary.length);
+    // console.log('Sample dictionary terms:', this.searchDictionary.slice(0, 10));
+
+    // Create Fuse.js index for fuzzy search
+    this.fuseIndex = new Fuse(this.searchDictionary, {
+      threshold: 0.8, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
+      distance: 100,  // Maximum distance for fuzzy matching
+      includeScore: true,
+      minMatchCharLength: 2
+    });
+
+    console.log('Built Fuse.js index for fuzzy search');
+  }
+
+  getFuzzySuggestions(query) {
+    if (!this.fuseIndex || !query.trim()) {
+      return [];
+    }
+
+    // Get fuzzy matches from the dictionary
+    const fuzzyResults = this.fuseIndex.search(query);
+
+    // Return top 5 suggestions with scores
+    return fuzzyResults.slice(0, 5);
+  }
+
+  clearFuzzySearchMessages() {
+    // Remove any existing fuzzy search messages and suggestions
+    const existingMessages = this.searchResults.querySelectorAll('.fuzzy-search-message, .fuzzy-suggestions');
+    existingMessages.forEach(message => message.remove());
   }
 
   async handleSearch(query) {
@@ -377,7 +491,35 @@ class ModuleSearch {
       this.lastQuery = query;
       this.resetPagination();
 
-      const results = this.lunrIndex.search(query);
+      // Clear any existing fuzzy search messages
+      this.clearFuzzySearchMessages();
+
+      // First try exact search
+      let results = this.lunrIndex.search(query);
+
+      // If no results and fuzzy search is available, try fuzzy search
+      if (results.length === 0 && this.fuseIndex) {
+        const fuzzySuggestions = this.getFuzzySuggestions(query);
+
+          if (fuzzySuggestions.length > 0) {
+            // Try searching with the best fuzzy suggestion
+            const bestSuggestion = fuzzySuggestions[0].item;
+            console.log(`No exact results for "${query}", trying fuzzy suggestion: "${bestSuggestion}"`);
+            results = this.lunrIndex.search(bestSuggestion);
+          }
+      }
+
+      // If still no results, try searching with individual words from fuzzy suggestions
+      if (results.length === 0 && this.fuseIndex) {
+        const fuzzySuggestions = this.getFuzzySuggestions(query);
+        for (const suggestion of fuzzySuggestions.slice(0, 3)) { // Try top 3 suggestions
+          const wordResults = this.lunrIndex.search(suggestion.item);
+          if (wordResults.length > 0) {
+            results = wordResults;
+            break;
+          }
+        }
+      }
 
       // Apply additional boosting for parameters and module name matches
       const boostedResults = results.map(result => {
@@ -658,17 +800,17 @@ class ModuleSearch {
   }
 
   buildTargetUrl(originalTargetUrl, moduleType = null) {
-    console.debug('buildTargetUrl called with:', originalTargetUrl, 'moduleType:', moduleType);
+    // console.debug('buildTargetUrl called with:', originalTargetUrl, 'moduleType:', moduleType);
 
     // If originalTargetUrl is already a full URL or starts with http/https, return as is
     if (originalTargetUrl && (originalTargetUrl.startsWith('http://') || originalTargetUrl.startsWith('https://'))) {
-      console.debug('Full URL detected, returning as is:', originalTargetUrl);
+      // console.debug('Full URL detected, returning as is:', originalTargetUrl);
       return originalTargetUrl;
     }
 
     // If originalTargetUrl is empty or just '#', return current page
     if (!originalTargetUrl || originalTargetUrl === '#') {
-      console.debug('Empty URL, returning current page:', window.location.pathname);
+      // console.debug('Empty URL, returning current page:', window.location.pathname);
       return window.location.pathname;
     }
 
@@ -680,19 +822,19 @@ class ModuleSearch {
     const isModuleResult = moduleType !== null ? true : false;
     const isEmbeddedModuleResult = moduleType === 'embedded';
 
-    console.debug('Meta tag found:', relativeCurrentPageURL ? relativeCurrentPageURL.content : 'none');
-    console.debug('Module type:', moduleType);
-    console.debug('Is result for embedded module:', isEmbeddedModuleResult);
-    console.debug('Is a current page versioned:', isCurrentPageVersioned);
-    console.debug('Is a current page a module:', isCurrentModulePage);
+    // console.debug('Meta tag found:', relativeCurrentPageURL ? relativeCurrentPageURL.content : 'none');
+    // console.debug('Module type:', moduleType);
+    // console.debug('Is result for embedded module:', isEmbeddedModuleResult);
+    // console.debug('Is a current page versioned:', isCurrentPageVersioned);
+    // console.debug('Is a current page a module:', isCurrentModulePage);
 
     if (relativeCurrentPageURL && relativeCurrentPageURL.content) {
       relativeCurrentPageURL = relativeCurrentPageURL.content;
-      console.debug('Current page relative:', relativeCurrentPageURL);
+      // console.debug('Current page relative:', relativeCurrentPageURL);
 
       // Extract relative path from originalTargetUrl
       let targetModifiedPath = originalTargetUrl;
-      console.debug('Initial target modified path:', targetModifiedPath);
+      // console.debug('Initial target modified path:', targetModifiedPath);
 
       // Calculate base URL by subtracting page:url:relative from current page URL
       const currentPageUrl = window.location.pathname;
@@ -703,22 +845,22 @@ class ModuleSearch {
       relativeCurrentPageURL = relativeCurrentPageURL.startsWith('./') ?
         relativeCurrentPageURL.substring(2) : relativeCurrentPageURL;
 
-      console.debug('Current page URL:', currentPageUrl);
-      console.debug('Clean relative path:', relativeCurrentPageURL);
+      // console.debug('Current page URL:', currentPageUrl);
+      // console.debug('Clean relative path:', relativeCurrentPageURL);
 
       // Find the base URL
       let baseUrl = currentPageUrlWithoutVersion;
       if (isCurrentModulePage && currentPageUrlWithoutVersion.endsWith(relativeCurrentPageURL)) {
         baseUrl = currentPageUrlWithoutVersion.substring(0, currentPageUrlWithoutVersion.length - relativeCurrentPageURL.length);
-        console.debug('Base URL calculated:', baseUrl);
+        // console.debug('Base URL calculated:', baseUrl);
       } else if (isCurrentPageVersioned && isModuleResult ) {
         baseUrl = '/';
-        console.debug('Base URL calculated (from versioned page to module):', baseUrl);
+        // console.debug('Base URL calculated (from versioned page to module):', baseUrl);
       } else if (isCurrentPageVersioned && !isModuleResult ) {
         baseUrl = currentPageUrl.substring(0, currentPageUrl.length - relativeCurrentPageURL.length);
-        console.debug('Base URL calculated (versioned page):', baseUrl);
+        // console.debug('Base URL calculated (versioned page):', baseUrl);
       } else {
-        console.debug('Current URL does not end with relative path, using full URL as base');
+        // console.debug('Current URL does not end with relative path, using full URL as base');
       }
 
       // Construct absolute URL using the base URL
@@ -732,21 +874,21 @@ class ModuleSearch {
           // Insert the current version into the URL for modules pages
           result = result.replace(/\/modules\/([^/]+)\//, `/modules/$1/${currentPageVersion}/`);
         }
-        console.debug('Final URL construction:', {
-          baseUrl,
-          targetModifiedPath: targetModifiedPath,
-          result
-        });
+        // console.debug('Final URL construction:', {
+        //   baseUrl,
+        //   targetModifiedPath: targetModifiedPath,
+        //   result
+        // });
 
         return result;
       }
 
-      console.debug('No target relative path, returning base URL:', baseUrl);
+      // console.debug('No target relative path, returning base URL:', baseUrl);
       return baseUrl;
     }
 
     // Fallback: return original URL as is
-    console.debug('No meta tag found, returning original URL:', originalTargetUrl);
+    // console.debug('No meta tag found, returning original URL:', originalTargetUrl);
     return originalTargetUrl;
   }
 

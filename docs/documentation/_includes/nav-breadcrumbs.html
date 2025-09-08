@@ -32,6 +32,7 @@
   <!--end search-->
   <!--loading search JS-->
   {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
   <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
   <!--end loading search JS-->
 </div>
