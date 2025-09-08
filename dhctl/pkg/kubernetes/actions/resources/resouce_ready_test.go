@@ -164,7 +164,7 @@ status:
       lastTimestamp: "2024-12-09T20:00:46Z"
     synced: "True"
   error: ""
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.30"
   nodes: 0
   ready: 0
   upToDate: 0
