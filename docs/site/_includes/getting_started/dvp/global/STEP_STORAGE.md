@@ -118,16 +118,15 @@ Create a StorageClass:
 
 ```bash
 sudo -i d8 k apply -f - <<EOF
- ---
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStorageClass
- metadata:
-   name: sds-r1
- spec:
-   replication: None
-   storagePool: sds-pool
-   reclaimPolicy: Delete
-   topology: Ignored
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStorageClass
+metadata:
+  name: sds-r1
+spec:
+  replication: None
+  storagePool: sds-pool
+  reclaimPolicy: Delete
+  topology: Ignored
 EOF
 ```
 

@@ -90,14 +90,14 @@ vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484
 
 ```bash
 sudo -i d8 k apply -f - <<EOF
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStoragePool
- metadata:
-   name: sds-pool
- spec:
-   type: LVM
-   lvmVolumeGroups:
-     - name: vg-on-dvp-worker
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStoragePool
+metadata:
+  name: sds-pool
+spec:
+  type: LVM
+  lvmVolumeGroups:
+    - name: vg-on-dvp-worker
 EOF
 ```
 
