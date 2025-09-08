@@ -40,7 +40,7 @@ toc: false
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+docker run --privileged --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -78,7 +78,7 @@ curl -sSf https://deckhouse.ru/download/installer | bash
               <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+docker run --privileged --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
@@ -106,7 +106,7 @@ curl -sSf https://deckhouse.ru/download/installer | bash
             <p>Выполните команду:</p>
 {% capture command %}
 ```bash
-docker run --privileged -ti -v /tmp/d8installer:/tmp/d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 -r /tmp/d8installer --base-addr=0.0.0.0 registry.deckhouse.ru/deckhouse/installer:latest
+docker run --privileged --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/mnt/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/c/Users/%USERNAME%/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
