@@ -149,31 +149,6 @@ and can be enabled using the ModuleConfig object, and will be enabled by default
 
 {% raw %}
 
-## Module auto-update logic
-
-![Module auto-update logic](../../../images/architecture/module-development/module_update_flow.svg)
-
-> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
-
-1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
-
-1. **Module disabling**. When a module is disabled (`disable module <module name>`):
-   - The module stops receiving new releases.
-   - The currently deployed version remains in the cluster with the `Deployed` status.
-
-1. **Behavior on re-enabling**.
-
-   If the module is re-enabled within 72 hours:
-   - The previously deployed version (ModuleRelease v1.0.0) is used.
-   - New releases are checked.
-   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
-   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](/modules/deckhouse/configuration.html#parameters-update)
-
-   If the module is re-enabled after 72 hours:
-   - The old version is deleted (`delete ModuleRelease v1.0.0`).
-   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
-   - The cycle starts again as if the module was enabled for the first time (see step 1).
-
 ## How ModulePullOverride works
 
 After creating ModulePullOverride, the corresponding module will not consider ModuleUpdatePolicy, and will also not load and create ModuleRelease objects. The module will be loaded upon every change of the `imageDigest` parameter, after which it will be applied in the cluster. The ModuleSource status will have `overridden: true`, which indicates that ModulePullOverride is being used instead of ModuleUpdatePolicy. Also, the corresponding Module object will have an `IsOverridden` field in its status, and the module version from `imageTag`.
