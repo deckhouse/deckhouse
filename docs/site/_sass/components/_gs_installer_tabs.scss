@@ -186,14 +186,25 @@ select:focus {
 }
 
 .download-btn {
-  padding: 8px 16px;
-  background-color: white;
-  border: 2px;
+  display: inline-block;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: 28px;
+  padding: 0 15px;
+  border-radius: 10px;
+  text-decoration: none !important;
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 600;
+  font-style: normal;
+  font-stretch: normal;
+  letter-spacing: normal;
+  box-sizing: border-box;
   border: 2px solid rgba(0, 102, 255, 0.1);
   color: #0066ff;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
+  background-color: white;
+  margin-left: 12px;
 }
 
 .download-btn:hover {

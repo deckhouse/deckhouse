@@ -55,17 +55,16 @@ curl -sSf https://deckhouse.ru/download/installer | bash
 {{ command | markdownify }}
             </div>
             <div id="tab-mac-content-file" class="tab-content">
-              <div class="download-container">
-                <h3>Скачать установщик</h3>
-                <div class="file-upload-block">
-                  <div class="file-name">d8install-darwin-arm64</div>
-                  <a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-arm64" class="download-btn">Скачать</a>
-                </div>
-                <div class="file-upload-block">
-                  <div class="file-name">d8install-darwin-amd64</div>
-                  <a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-amd64" class="download-btn">Скачать</a>
-                </div>
-              </div>
+              <p>Скачайте установщик: <a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-arm64" class="download-btn">d8install-darwin-arm64</a><a href="https://installer.ui.foxtrot-dev.ru/latest/d8install-darwin-amd64" class="download-btn">d8install-darwin-amd64</a></p>
+              <p>Запустите его, выполнив команды ниже. Например, для архитектуры arm64:</p>
+{% capture command %}
+```bash
+chmod +x d8install-darwin-arm64
+xattr -c d8install-darwin-arm64
+./d8install-darwin-arm64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
             </div>
           </div>
           <div id="tab-linux" class="tab-content">
@@ -93,13 +92,15 @@ curl -sSf https://deckhouse.ru/download/installer | bash
 {{ command | markdownify }}
             </div>
             <div id="tab-linux-content-file" class="tab-content">
-              <div class="download-container">
-                <h3>Скачать установщик</h3>
-                <div class="file-upload-block">
-                  <div class="file-name">d8install-linux-arm64</div>
-                  <a class="download-btn" href="https://installer.ui.foxtrot-dev.ru/v0.3.0/d8install-linux-amd64">Скачать</a>
-                </div>
-              </div>
+              <p>Скачайте установщик: <a href="https://installer.ui.foxtrot-dev.ru/v0.3.0/d8install-linux-amd64" class="download-btn">d8install-linux-amd64</a></p>
+              <p>Запустите его, выполнив команды:</p>
+{% capture command %}
+```bash
+chmod +x d8install-linux-amd64
+./d8install-linux-amd64 -b
+```
+{% endcapture %}
+{{ command | markdownify }}
             </div>
           </div>
           <div id="tab-windows" class="tab-content">
