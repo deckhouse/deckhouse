@@ -52,3 +52,7 @@ This patch also includes refactored password complexity checks - making them muc
 ### 009-oauth2-cve.patch
 
 Fixes CVE-2025-22868
+
+### 010-fix-password-connector.patch
+
+This patch fixes a critical bug in the password connector. Previously, the login logic assumed that all password connectors must have a locally stored password in the database, which is incorrect. This functionality should only be executed for password connectors with a passwordDB implementation.

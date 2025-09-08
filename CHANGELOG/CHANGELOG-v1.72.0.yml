@@ -1,5 +1,7 @@
 candi:
   fixes:
+    - summary: recoverring step 000_preflight_checks.sh
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15148
     - summary: Fixed deletion of NodeUsers.
       pull_request: https://github.com/deckhouse/deckhouse/pull/13240
     - summary: Fixed default AWS subnets tags for LB controller autodiscovery.
@@ -98,6 +100,8 @@ control-plane-manager:
         Kube-apiserver will be restarted to migrate to the AuthenticationConfiguration configuration
         file.
   fixes:
+    - summary: Promoted etcd member if needed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15011
     - summary: Add different api version for "apiserver.config.k8s.io" depends kube version
       pull_request: https://github.com/deckhouse/deckhouse/pull/14872
     - summary: Promoted etcd member if needed.
@@ -129,6 +133,8 @@ deckhouse:
     - summary: Separated queues for critical and functional modules.
       pull_request: https://github.com/deckhouse/deckhouse/pull/13906
   fixes:
+    - summary: Restore binaries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15273
     - summary: use ep slices in discovery k8s versions hook
       pull_request: https://github.com/deckhouse/deckhouse/pull/15135
     - summary: Dont ensure releases of disabled modules.
@@ -137,6 +143,8 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/15092
     - summary: Remove bundle enum
       pull_request: https://github.com/deckhouse/deckhouse/pull/15042
+    - summary: Fix source creating.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14989
     - summary: fix for edition checking hook
       pull_request: https://github.com/deckhouse/deckhouse/pull/14730
     - summary: Fixed a helm issue with patching arrays in deckhouse deployment.
@@ -191,6 +199,14 @@ dhctl:
     - summary: Added password authentication support to dhctl.
       pull_request: https://github.com/deckhouse/deckhouse/pull/13240
   fixes:
+    - summary: Add logic for re-prompt ssh key passphrase and handle error.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15265
+    - summary: Fix legacy SSH tunnel preflight check panic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15104
+    - summary: Fix sudo with password behavior.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15096
+    - summary: Improve SSH client start logic.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15007
     - summary: Fix SSH connection string.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14945
     - summary: Fix tunnel string in preflight checks.
@@ -216,6 +232,10 @@ docs:
     - summary: Updated CAPS resources API version.
       pull_request: https://github.com/deckhouse/deckhouse/pull/13445
   fixes:
+    - summary: Fix TargetSampleLimitExceeded alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15347
+    - summary: Updated table with revision comparison.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15017
     - summary: Update edition comparison table for DVP.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14958
     - summary: Fixed `sudo -i` command in GS pages.
@@ -262,6 +282,10 @@ local-path-provisioner:
       pull_request: https://github.com/deckhouse/deckhouse/pull/14596
 metallb:
   fixes:
+    - summary: >-
+        Fixed the Deckhouse controller queue freezing issue that occurs when Service was deleted,
+        but child resource L2LBService wasn't.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14966
     - summary: Fixed IP pool exhaustion on LoadBalancer deletion.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14315
 monitoring-applications:
@@ -285,6 +309,8 @@ node-local-dns:
       pull_request: https://github.com/deckhouse/deckhouse/pull/14672
 node-manager:
   features:
+    - summary: Add and increase lease duration timeouts to CAPS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15349
     - summary: Added SSH password auth to CAPS controller manager.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14811
     - summary: Bumped Cluster API from 1.7.5 to 1.10.4.
@@ -292,6 +318,14 @@ node-manager:
     - summary: Updated go.mod dependencies.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14327
   fixes:
+    - summary: Add rbac permission for getting DaemonSets for CAPI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15377
+    - summary: Decrease lease timeouts and increase log verbosity for CAPI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15377
+    - summary: Upgrade CAPI version and increase lease duration timeouts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15349
+    - summary: capi rbac fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15012
     - summary: Fix DCGM build.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14879
     - summary: added placeholder for required field in `MachineDeployment` template
@@ -347,12 +381,25 @@ tools:
       pull_request: https://github.com/deckhouse/deckhouse/pull/14722
 user-authn:
   features:
+    - summary: Add documentation examples for PasswordPolicy and 2FA
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15270
+      impact: >-
+        Provides administrators with clear examples for configuring password policies, user
+        creation, group management, and enabling two-factor authentication.
     - summary: >-
         Added implement password policy logic for local user accounts. Now it is possible to set
         complexity level of passwords, failed attempts number to block the user, keep password
         history and force renewing the password after specified amount of time.
       pull_request: https://github.com/deckhouse/deckhouse/pull/14993
   fixes:
+    - summary: >-
+        Fix critical bug in password connector that caused login failures for LDAP, Crowd, and
+        Keystone connectors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15370
+    - summary: >-
+        Fix critical bug in password connector that caused login failures for LDAP, Crowd, and
+        Keystone connectors.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15359
     - summary: Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15269
       impact: >-
