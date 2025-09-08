@@ -39,11 +39,14 @@
  - **[docs]** Added the registry module docs. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
  - **[docs]** Updated CAPS resources API version. [#13445](https://github.com/deckhouse/deckhouse/pull/13445)
  - **[node-local-dns]** The `enableLogs' option has been added to the ModuleConfig, which logs all DNS queries when enabled. [#14672](https://github.com/deckhouse/deckhouse/pull/14672)
+ - **[node-manager]** Add and increase lease duration timeouts to CAPS. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Added SSH password auth to CAPS controller manager. [#14811](https://github.com/deckhouse/deckhouse/pull/14811)
  - **[node-manager]** Bumped Cluster API from 1.7.5 to 1.10.4. [#14603](https://github.com/deckhouse/deckhouse/pull/14603)
  - **[node-manager]** Updated go.mod dependencies. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
  - **[registry]** Added a relax registry check mode for switching between deckhouse editions. [#14860](https://github.com/deckhouse/deckhouse/pull/14860)
  - **[registry]** Added the registry module. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
+ - **[user-authn]** Add documentation examples for PasswordPolicy and 2FA [#15270](https://github.com/deckhouse/deckhouse/pull/15270)
+    Provides administrators with clear examples for configuring password policies, user creation, group management, and enabling two-factor authentication.
  - **[user-authn]** Added implement password policy logic for local user accounts. Now it is possible to set complexity level of passwords, failed attempts number to block the user, keep password history and force renewing the password after specified amount of time. [#14993](https://github.com/deckhouse/deckhouse/pull/14993)
 
 ## Fixes
@@ -74,9 +77,12 @@
  - **[ingress-nginx]** Re-enabled validation and updated documentation. [#14368](https://github.com/deckhouse/deckhouse/pull/14368)
  - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15236](https://github.com/deckhouse/deckhouse/pull/15236)
  - **[istio]** Added api-proxy support for short-lived ServiceAccount tokens. [#14137](https://github.com/deckhouse/deckhouse/pull/14137)
+ - **[metallb]** Fixed the Deckhouse controller queue freezing issue that occurs when Service was deleted, but child resource L2LBService wasn't. [#14966](https://github.com/deckhouse/deckhouse/pull/14966)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#14315](https://github.com/deckhouse/deckhouse/pull/14315)
  - **[monitoring-deckhouse]** Fixed ModuleRelease alerts by eliminating many-to-many joins; observability alert now evaluates correctly. [#14908](https://github.com/deckhouse/deckhouse/pull/14908)
     Prometheus rules only; no component restarts. Alerts for module manual approval and unmet requirements will start firing as expected.
+ - **[node-manager]** Add rbac permission for getting DaemonSets for CAPI. [#15377](https://github.com/deckhouse/deckhouse/pull/15377)
+ - **[node-manager]** Upgrade CAPI version and increase lease duration timeouts. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Fixed calculation of memory for standby holder. [#14522](https://github.com/deckhouse/deckhouse/pull/14522)
  - **[node-manager]** Correct processing of the NodeUser in the bootstrap configuration. [#14151](https://github.com/deckhouse/deckhouse/pull/14151)
  - **[prometheus]** Fix securityContext indentation in the Prometheus main and longterm resources. [#15102](https://github.com/deckhouse/deckhouse/pull/15102)
@@ -84,6 +90,8 @@
  - **[prometheus]** Suppress Grafana-related alerts when the Grafana is disabled in the ModuleConfig. [#14981](https://github.com/deckhouse/deckhouse/pull/14981)
     default
  - **[prometheus]** Fix remote write dropping valid samples after restart due to missing series from snapshot. [#14849](https://github.com/deckhouse/deckhouse/pull/14849)
+ - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15370](https://github.com/deckhouse/deckhouse/pull/15370)
+ - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15359](https://github.com/deckhouse/deckhouse/pull/15359)
  - **[user-authn]** Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create. [#15269](https://github.com/deckhouse/deckhouse/pull/15269)
     Fixes a bug where creating new User resources failed due to missing oldObject in validation; password immutability is still enforced on update.
  - **[user-authz]** Rewrited user-authz module access hook from bash to Python. [#14695](https://github.com/deckhouse/deckhouse/pull/14695)
