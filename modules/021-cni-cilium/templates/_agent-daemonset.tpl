@@ -109,6 +109,7 @@ spec:
               command:
               - /cni-uninstall.sh
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -150,6 +151,17 @@ spec:
             drop:
               - ALL
         volumeMounts:
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features.h
+          name: write-files
+          subPath: features.h
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_skb.h
+          name: write-files
+          subPath: features_skb.h
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_xdp.h
+          name: write-files
+          subPath: features_xdp.h
+        - name: tmp
+          mountPath: /root/.config
         - mountPath: /sys/fs/bpf
           mountPropagation: HostToContainer
           name: bpf-maps
@@ -179,6 +191,24 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
+        - mountPath: /usr/sbin/iptables
+          name: sbin-iptables
+          subPath: iptables
+        - mountPath: /usr/sbin/iptables-save
+          name: sbin-iptables
+          subPath: iptables-save
+        - mountPath: /usr/sbin/iptables-restore
+          name: sbin-iptables
+          subPath: iptables-restore
+        - mountPath: /usr/sbin/ip6tables
+          name: sbin-iptables
+          subPath: ip6tables
+        - mountPath: /usr/sbin/ip6tables-save
+          name: sbin-iptables
+          subPath: ip6tables-save
+        - mountPath: /usr/sbin/ip6tables-restore
+          name: sbin-iptables
+          subPath: ip6tables-restore
         - name: hubble-tls
           mountPath: /var/lib/cilium/tls/hubble
           readOnly: true
@@ -187,7 +217,7 @@ spec:
         resources:
         {{ include "helm_lib_resources_management_pod_resources" (list $context.Values.cniCilium.resourcesManagement) | nindent 10 }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4241"
@@ -235,6 +265,44 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
+      - name: touch-files
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        securityContext:
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+          - --
+          - "/bin/touch /tmp/features.h /tmp/features_skb.h /tmp/features_xdp.h && chmod 0666 /tmp/*"
+        volumeMounts:
+          - name: write-files
+            mountPath: /tmp/
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+      - name: sbin-iptables
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        securityContext:
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore; do
+              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+          done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+        volumeMounts:
+          - name: sbin-iptables
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
@@ -273,6 +341,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -291,6 +360,24 @@ spec:
           readOnly: true
         - name: xtables-lock
           mountPath: /run/xtables.lock
+        - mountPath: /usr/sbin/iptables
+          name: sbin-iptables
+          subPath: iptables
+        - mountPath: /usr/sbin/iptables-save
+          name: sbin-iptables
+          subPath: iptables-save
+        - mountPath: /usr/sbin/iptables-restore
+          name: sbin-iptables
+          subPath: iptables-restore
+        - mountPath: /usr/sbin/ip6tables
+          name: sbin-iptables
+          subPath: ip6tables
+        - mountPath: /usr/sbin/ip6tables-save
+          name: sbin-iptables
+          subPath: ip6tables-save
+        - mountPath: /usr/sbin/ip6tables-restore
+          name: sbin-iptables
+          subPath: ip6tables-restore
       {{- if eq $context.Values.cniCilium.internal.mode "VXLAN" }}
       - name: handle-vxlan-offload
         image: {{ include "helm_lib_module_common_image" (list $context "vxlanOffloadingFixer") }}
@@ -305,6 +392,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           capabilities:
             add:
               - NET_ADMIN
@@ -339,6 +427,7 @@ spec:
         - name: tmp
           mountPath: /tmp
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
         resources:
           requests:
@@ -364,6 +453,7 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -394,6 +484,7 @@ spec:
           rm /hostbin/cilium-sysctlfix
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: s0
@@ -423,6 +514,7 @@ spec:
         - --
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: true
         volumeMounts:
         - name: bpf-maps
@@ -459,6 +551,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -508,6 +601,7 @@ spec:
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -522,6 +616,10 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
+      - name: write-files
+        emptyDir: {}
+      - name: sbin-iptables
+        emptyDir: {}
       - name: tmp
         emptyDir: {}
       - name: host-proc-sys-net
