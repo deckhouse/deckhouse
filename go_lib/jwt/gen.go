@@ -25,6 +25,45 @@ import (
 
 type payloadMap map[string]interface{}
 
+type JWTClaims struct {
+	Iss   string `json:"iss"`
+	Aud   string `json:"aud"`
+	Sub   string `json:"sub"`
+	Scope string `json:"scope"`
+	Nbf   int64  `json:"nbf"`
+	Exp   int64  `json:"exp"`
+}
+
+func IsJWTValid(tokenString string) (bool, *JWTClaims, error) {
+	if tokenString == "" {
+		return false, nil, nil
+	}
+
+	token, err := jose.ParseSigned(tokenString)
+	if err != nil {
+		return false, nil, err
+	}
+
+	payload := token.UnsafePayloadWithoutVerification()
+
+	var claims JWTClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return false, nil, err
+	}
+
+	now := time.Now().UTC().Unix()
+	if claims.Exp <= now {
+		return false, &claims, nil
+	}
+
+	// Check if token is not yet valid
+	if claims.Nbf > now {
+		return false, &claims, nil
+	}
+
+	return true, &claims, nil
+}
+
 func GenerateJWT(privKeyPEMBytes []byte, claims map[string]string, ttl time.Duration) (string, error) {
 	keyBlock, _ := pem.Decode(privKeyPEMBytes)
 	key, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
