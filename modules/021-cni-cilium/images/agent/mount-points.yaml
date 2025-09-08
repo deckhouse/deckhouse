@@ -13,3 +13,4 @@ dirs:
   - /hostproc
   - /hostbin
   - /root/.config
+  - /etc/config
