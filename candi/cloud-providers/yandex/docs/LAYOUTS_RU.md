@@ -164,6 +164,10 @@ dhcpOptions:
 
 Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
 
+При указании параметра `withNATInstance.internalSubnetCIDR` NAT-инстанс будет создан в единственном экземпляре в зоне `a`.
+
+При указании параметра `withNATInstance.internalSubnetID` NAT-инстанс будет создан в единственном экземпляре в зоне, указанной в настройках обозначенной сети.
+
 Если `withNATInstance.externalSubnetID` указан в дополнение к предыдущим, NAT-инстанс будет подключен к нему через вторичный интерфейс.
 
 ![Схема размещения WithNATInstance в Yandex Cloud](../../images/cloud-provider-yandex/yandex-withnatinstance.png)
