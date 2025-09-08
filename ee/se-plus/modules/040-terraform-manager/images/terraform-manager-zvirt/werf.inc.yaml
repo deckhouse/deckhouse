@@ -3,8 +3,6 @@ fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "prov
 git:
   - add: /{{ .ModulePath }}candi/cloud-providers/zvirt
     to: /deckhouse/candi/cloud-providers/zvirt
-    owner: 64535
-    group: 64535
 import:
   - image: terraform-provider-ovirt
     add: /terraform-provider-ovirt
