@@ -9,16 +9,13 @@
         {{- if .File -}}
         {{- $moduleName := .File.Dir | replaceRE "^modules/([^/]+)/.*" "$1" -}}
         {{- $moduleData := index $modulesData $moduleName -}}
-        {{- if $moduleData -}}
-          {{- $isExternal := eq $moduleData.external "true" -}}
-          {{- if $isExternal -}}
             {{- if not $first -}},{{- end -}}
             {{- $first = false -}}
             {
               "title": {{ .Title | jsonify }},
               "url": {{ .RelPermalink | replaceRE "/(readme.html?|index.html?)$" "/" |jsonify }},
               {{- $keywords := slice -}}
-              {{- if $moduleData.tags -}}
+              {{- if and $moduleData $moduleData.tags -}}
                 {{- $keywords = $keywords | append $moduleData.tags -}}
               {{- end -}}
               {{- if .Params.search -}}
@@ -32,8 +29,6 @@
               "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
               "content": {{ .Content | plainify | jsonify }}
             }
-          {{- end -}}
-        {{- end -}}
         {{- end -}}
       {{- end -}}
     {{- end -}}
@@ -49,15 +44,10 @@
       {{- continue -}}
     {{- end }}
     {{- if not $firstModule }},{{- end }}
-    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" $firstModule) }}
     {{- $firstModule = false }}
+    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" $firstModule) }}
   {{- end -}}
 ]}
 {{- else -}}
-{
-  "title": {{ .Title | jsonify }},
-  "url": {{ .RelPermalink | jsonify }},
-  "summary": {{ if .Summary }}{{ .Summary | plainify | jsonify }}{{ else if .Description }}{{ .Description | plainify | jsonify }}{{ else }}""{{ end }},
-  "content": {{ .Content | plainify | jsonify }}
-}
+{}
 {{- end -}}
