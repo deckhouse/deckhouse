@@ -34,7 +34,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -48,12 +48,19 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "true" }}
+  - apt-get update
+  - apt-get install -y make bash
+{{- else }}
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache openssh-client make bash
+{{- end }}
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - DIFF="" GIT_VERSION="$(cat GIT_VERSION)" GIT_HASH="$(cat GIT_HASH)" SOURCE_DATE_EPOCH="$(cat SOURCE_DATE_EPOCH)" make falcosidekick
+  - export DIFF="" GIT_VERSION="$(cat GIT_VERSION)" GIT_HASH="$(cat GIT_HASH)" SOURCE_DATE_EPOCH="$(cat SOURCE_DATE_EPOCH)" 
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make falcosidekick`) | indent 6 }}
   - chown -R 64535:64535 falcosidekick
   - chmod 0755 falcosidekick
