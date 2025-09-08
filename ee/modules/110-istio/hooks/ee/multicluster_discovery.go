@@ -277,13 +277,15 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
 
 		// Always patch private metadata to ensure JWT is stored in CRD status
+		input.Logger.Info("about to patch CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
 		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
+			input.Logger.Error("failed to patch CRD with JWT", slog.String("name", multiclusterInfo.Name), log.Err(err))
 			return err
 		}
 
 		// Debug: Log about patched the CRD
-		input.Logger.Info("patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
+		input.Logger.Info("successfully patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
 	}
 	return nil
 }
