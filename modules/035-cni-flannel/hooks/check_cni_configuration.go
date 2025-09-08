@@ -290,8 +290,8 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	// Let's check what was created earlier: MC or Secret.
-	if cniSecret.CreationTimestamp.After(cniModuleConfigs[0].CreationTimestamp.Time) {
+	// Let's check what was created earlier: MC(+10m) or Secret.
+	if cniSecret.CreationTimestamp.After(cniModuleConfigs[0].CreationTimestamp.Time.Add(10 * time.Minute)) {
 		annotateSecret(input)
 		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)

@@ -95,7 +95,7 @@ data:
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
-	cniSecretYAML := func(cniName, data string) string {
+	cniSecretYAML := func(cniName, data string, creationTime *time.Time, annotations map[string]string) string {
 		secretData := make(map[string][]byte)
 		secretData["cni"] = []byte(cniName)
 		if data != "" {
@@ -107,38 +107,19 @@ data:
 				Kind:       "Secret",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "d8-cni-configuration",
-				Namespace: "kube-system",
+				Name:        "d8-cni-configuration",
+				Namespace:   "kube-system",
+				Annotations: annotations,
 			},
 			Data: secretData,
+		}
+		if creationTime != nil {
+			s.ObjectMeta.CreationTimestamp = metav1.NewTime(*creationTime)
 		}
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniSecretWithAnnotationYAML := func(cniName, data string) string {
-		secretData := make(map[string][]byte)
-		secretData["cni"] = []byte(cniName)
-		if data != "" {
-			secretData[cniName] = []byte(data)
-		}
-		s := &v1core.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "d8-cni-configuration",
-				Namespace: "kube-system",
-				Annotations: map[string]string{
-					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
-				},
-			},
-			Data: secretData,
-		}
-		marshaled, _ := yaml.Marshal(s)
-		return string(marshaled)
-	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
+	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -154,6 +135,9 @@ data:
 				Settings: settings,
 				Enabled:  enabled,
 			},
+		}
+		if creationTime != nil {
+			mc.ObjectMeta.CreationTimestamp = metav1.NewTime(*creationTime)
 		}
 		marshaled, _ := yaml.Marshal(mc)
 		return string(marshaled)
@@ -182,7 +166,7 @@ data:
 	Context("Cluster has cni secret but key `cni` does not equal `simple-bridge`", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(anotherCni, ""),
+				cniSecretYAML(anotherCni, "", nil, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -207,7 +191,9 @@ data:
 	Context("Cluster has cni secret with priority annotation", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretWithAnnotationYAML(cni, ``),
+				cniSecretYAML(cni, ``, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
+				}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -232,7 +218,7 @@ data:
 	Context("Cluster has cni secret, key `cni` eq `simple-bridge`, but cni MC does not exist", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, ``),
+				cniSecretYAML(cni, ``, nil, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -261,8 +247,8 @@ data:
 			requirements.RemoveValue(cniConfigurationSettledKey)
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			resources := []string{
-				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, ``, nil, nil),
+				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -286,8 +272,8 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", false)
 			resources := []string{
-				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, ``, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -312,8 +298,8 @@ data:
 	Context("Cluster has cni secret, key `cni` eq `simple-bridge`, cni MC exist and enabled but secret key `simple-bridge` does not exist", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, ``, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -338,8 +324,8 @@ data:
 	Context("Cluster has cni secret, key `cni` eq `simple-bridge`, cni MC exist and enabled but secret key `simple-bridge` exist and it is empty", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, `{}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, `{}`, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -364,8 +350,8 @@ data:
 	Context("Cluster has cni secret, key `cni` eq `simple-bridge`, cni MC exist and enabled", func() {
 		BeforeEach(func() {
 			resources := []string{
-				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, ``, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -389,25 +375,12 @@ data:
 
 	Context("Cluster has cni secret with annotation having non-standard priority value", func() {
 		BeforeEach(func() {
-			secretData := make(map[string][]byte)
-			secretData["cni"] = []byte(cni)
-			secretData[cni] = []byte(``)
-			s := &v1core.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "d8-cni-configuration",
-					Namespace: "kube-system",
-					Annotations: map[string]string{
-						"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
-					},
-				},
-				Data: secretData,
+			resources := []string{
+				cniSecretYAML(cni, ``, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
+				}),
 			}
-			marshaled, _ := yaml.Marshal(s)
-			f.KubeStateSet(string(marshaled))
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
@@ -431,8 +404,8 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			resources := []string{
-				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, nil, v1alpha1.SettingsValues{}),
+				cniSecretYAML(cni, ``, nil, nil),
+				cniMCYAML(cniName, nil, v1alpha1.SettingsValues{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -457,45 +430,12 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 
-			// Create MC first (earlier timestamp)
-			mc := &v1alpha1.ModuleConfig{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "deckhouse.io/v1alpha1",
-					Kind:       "ModuleConfig",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              cniName,
-					CreationTimestamp: metav1.NewTime(time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)),
-				},
-				Spec: v1alpha1.ModuleConfigSpec{
-					Version:  1,
-					Settings: v1alpha1.SettingsValues{},
-					Enabled:  ptr.To(true),
-				},
-			}
-			mcYAML, _ := yaml.Marshal(mc)
-
-			// Create secret later (later timestamp)
-			secretData := make(map[string][]byte)
-			secretData["cni"] = []byte(cni)
-			secretData[cni] = []byte(``)
-			secret := &v1core.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "v1",
-					Kind:       "Secret",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:              "d8-cni-configuration",
-					Namespace:         "kube-system",
-					CreationTimestamp: metav1.NewTime(time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC)), // 1 day later
-				},
-				Data: secretData,
-			}
-			secretYAML, _ := yaml.Marshal(secret)
+			mcTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)     // earlier timestamp
+			secretTime := time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC) // 1 day later
 
 			resources := []string{
-				string(secretYAML),
-				string(mcYAML),
+				cniSecretYAML(cni, ``, &secretTime, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -503,6 +443,130 @@ data:
 		})
 
 		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret created after MC)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desired-cni-moduleconfig")
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
+		})
+	})
+
+	Context("Cluster is bootstrapped, has cni secret created just within 10 minutes after MC, so Secret takes priority", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+
+			mcTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+			secretTime := time.Date(2023, 1, 1, 12, 5, 0, 0, time.UTC) // 5 minutes later
+
+			resources := []string{
+				cniSecretYAML(cni, ``, &secretTime, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret always matches MC for simple-bridge)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desired-cni-moduleconfig")
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
+		})
+	})
+
+	Context("Cluster is bootstrapped, has cni secret created exactly 10 minutes after MC, so Secret takes priority", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+
+			mcTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+			secretTime := time.Date(2023, 1, 1, 12, 10, 0, 0, time.UTC) // exactly 10 minutes later
+
+			resources := []string{
+				cniSecretYAML(cni, ``, &secretTime, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret always matches MC for simple-bridge)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desired-cni-moduleconfig")
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
+		})
+	})
+
+	Context("Cluster is bootstrapped, has cni secret created just after 10 minutes threshold, so MC takes priority", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+
+			mcTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+			secretTime := time.Date(2023, 1, 1, 12, 10, 1, 0, time.UTC) // 10 minutes and 1 second later
+
+			resources := []string{
+				cniSecretYAML(cni, ``, &secretTime, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret created after 10min threshold)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			value, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeTrue())
+			Expect(value).To(BeEquivalentTo("true"))
+			checkMetric(f.MetricsCollector.CollectedMetrics(), 0.0)
+			cm := f.KubernetesResource("ConfigMap", "d8-system", "desired-cni-moduleconfig")
+			Expect(cm.Exists()).To(BeFalse())
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations`).Exists()).To(BeTrue())
+			Expect(secret.Field(`metadata.annotations.network\.deckhouse\.io/cni-configuration-source-priority`).String()).To(Equal("ModuleConfig"))
+		})
+	})
+
+	Context("Cluster is bootstrapped, has cni secret created much earlier than MC, so Secret takes priority", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+
+			secretTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC) // 1 day earlier
+			mcTime := time.Date(2023, 1, 2, 12, 0, 0, 0, time.UTC)     // 1 day later
+
+			resources := []string{
+				cniSecretYAML(cni, ``, &secretTime, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should execute successfully, set req=true and metric=0 and should not create desired mc (secret always matches MC for simple-bridge)", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(cniConfigurationSettledKey)
 			Expect(exists).To(BeTrue())
