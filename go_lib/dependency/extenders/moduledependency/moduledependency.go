@@ -267,10 +267,20 @@ func (e *Extender) IsTerminator() bool {
 }
 
 // GetTopologicalHints implements TopologicalExtender interface of the addon-operator
-func (e *Extender) GetTopologicalHints(moduleName string) []string {
-	hints := make([]string, 0)
+func (e *Extender) GetTopologicalHints(moduleName string) []extenders.Hint {
+	hints := make([]extenders.Hint, 0)
 	if req, found := e.modules[moduleName]; found {
-		hints = append(hints, req.matcher.GetConstraintsNames()...)
+		for _, parent := range req.matcher.GetConstraintsNames() {
+			optional := false
+			if _, ok := req.optional[parent]; ok {
+				optional = true
+			}
+
+			hints = append(hints, extenders.Hint{
+				Name:     parent,
+				Optional: optional,
+			})
+		}
 	}
 
 	return hints
