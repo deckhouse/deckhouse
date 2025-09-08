@@ -463,25 +463,24 @@ func processRemovingLabels(input *go_hook.HookInput, nodeToLabel map[string][]st
 		// between k8s nodes and ciliumnodes CR, so we drop labels in ciliumnodes CR from here
 		// cilium agent on live nodes will choose new egress gateway only when ciliumnodes CR
 		// will be updated
-		input.PatchCollector.PatchWithMutatingFunc(removeLabels(labels), "v1", "Node", "", keyName)
-		input.PatchCollector.PatchWithMutatingFunc(removeLabels(labels), "cilium.io/v2", "CiliumNode", "", keyName)
+		removeLabels(input, labels, "v1", "Node", "", keyName)
+		removeLabels(input, labels, "cilium.io/v2", "CiliumNode", "", keyName)
 	}
 }
 
-func removeLabels(labels []string) func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	return func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		objCopy := obj.DeepCopy()
-
-		nodeLabels := objCopy.GetLabels()
-
-		for _, label := range labels {
-			delete(nodeLabels, label)
-		}
-
-		objCopy.SetLabels(nodeLabels)
-
-		return objCopy, nil
+func removeLabels(input *go_hook.HookInput, labels []string, apiVersion string, kind string, namespace string, name string) {
+	setLabels := make(map[string]interface{}, len(labels))
+	for _, label := range labels {
+		setLabels[label] = nil
 	}
+
+	patch := map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"labels": setLabels,
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(patch, apiVersion, kind, namespace, name)
 }
 
 func processAddingLabels(input *go_hook.HookInput, nodeToLabel map[string][]string) {
