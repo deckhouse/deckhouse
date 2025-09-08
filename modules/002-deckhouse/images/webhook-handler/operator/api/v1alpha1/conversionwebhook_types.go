@@ -18,8 +18,43 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// Important: Run "make" to regenerate code after modifying this file
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster,shortName=cwhc
+
+// ConversionWebhook is the Schema for the conversionwebhooks API
+type ConversionWebhook struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is a standard object metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
+
+	// +optional
+	Context []Context `json:"context,omitempty"`
+
+	// spec defines the desired state of ConversionWebhook
+	// +required
+	Conversions []ConversionRule `json:"conversions,omitempty"`
+
+	// status defines the observed state of ConversionWebhook
+	// +optional
+	Status ConversionWebhookStatus `json:"status,omitempty,omitzero"`
+}
+
+type ConversionRule struct {
+	FromVersion string                   `json:"fromVersion"`
+	ToVersion   string                   `json:"toVersion"`
+	Handler     ConversionWebhookHandler `json:"handler"`
+}
+
+type ConversionWebhookHandler struct {
+	// this is a python script handler for object
+	Python string `json:"python,omitempty"`
+}
 
 // ConversionWebhookSpec defines the desired state of ConversionWebhook
 type ConversionWebhookSpec struct {
@@ -37,26 +72,6 @@ type ConversionWebhookSpec struct {
 type ConversionWebhookStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-
-// ConversionWebhook is the Schema for the conversionwebhooks API
-type ConversionWebhook struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// metadata is a standard object metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
-
-	// spec defines the desired state of ConversionWebhook
-	// +required
-	Spec ConversionWebhookSpec `json:"spec"`
-
-	// status defines the observed state of ConversionWebhook
-	// +optional
-	Status ConversionWebhookStatus `json:"status,omitempty,omitzero"`
 }
 
 // +kubebuilder:object:root=true
