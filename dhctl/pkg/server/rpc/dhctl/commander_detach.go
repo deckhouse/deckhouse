@@ -41,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -145,7 +144,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream:   p.logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DefaultWriter,
+		DebugStream: p.logOptions.DebugWriter,
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -196,27 +195,12 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.schemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
-		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
-		}
-		return nil
+	_, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
+		CommanderMode:       p.request.Options.CommanderMode,
+		SchemaStore:         s.schemaStore,
+		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
+	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}

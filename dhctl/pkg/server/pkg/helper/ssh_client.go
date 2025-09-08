@@ -93,7 +93,13 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 		sshClient = gossh.NewClient(sess, keys)
 	}
 
+	err = sshClient.Start()
+	if err != nil {
+		return nil, cleanuper.AsFunc(), fmt.Errorf("starting ssh client: %w", err)
+	}
+
 	cleanuper.Add(func() error {
+		sshClient.Stop()
 		return nil
 	})
 

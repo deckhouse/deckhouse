@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -286,13 +285,6 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.ConvergeResult{Err: err.Error()}
-	}
-
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.ConvergeResult{Err: err.Error()}
-		}
 	}
 
 	checkParams.KubeClient = kubeClient
