@@ -267,7 +267,7 @@ class ModuleSearch {
         this.use(lunr.multiLanguage('en', 'ru'));
         this.field('title', { boost: 10 });
         this.field('keywords', { boost: 8 });
-        this.field('summary', { boost: 5 });
+        this.field('summary', { boost: 3 });
         this.field('content', { boost: 1 });
         this.ref('id');
 
@@ -312,7 +312,7 @@ class ModuleSearch {
       this.lunrIndex = lunr(function() {
         this.field('title', { boost: 10 });
         this.field('keywords', { boost: 8 });
-        this.field('summary', { boost: 5 });
+        this.field('summary', { boost: 3 });
         this.field('content', { boost: 1 });
         this.ref('id');
 

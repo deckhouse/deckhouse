@@ -1,6 +1,7 @@
 ---
-title: "Console"
-permalink: ru/user/web/console.html
+title: "Веб-интерфейс платформы"
+permalink: ru/user/web/ui.html
+search: веб-интерфейс
 lang: ru
 ---
 
