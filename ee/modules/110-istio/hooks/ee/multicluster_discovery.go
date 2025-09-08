@@ -98,11 +98,16 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		}
 	}
 
-	// Debug Log
-	if existingAPIJWT == "" {
-		// No valid JWT found - will generate new one
+	// Debug: Log what we found in the CRD status
+	if multicluster.Status.MetadataCache.Private != nil {
+		// We have private metadata, check if JWT exists
+		if multicluster.Status.MetadataCache.Private.APIJWT != "" {
+			// JWT exists in CRD, but validation failed
+		} else {
+			// No JWT in CRD status
+		}
 	} else {
-		// Found valid JWT - will reuse it
+		// No private metadata in CRD status
 	}
 
 	me := multicluster.Spec.MetadataEndpoint
@@ -209,6 +214,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		}
 
 		var apiJWT string
+		input.Logger.Info("JWT decision", slog.String("name", multiclusterInfo.Name), slog.String("existingJWT", multiclusterInfo.ExistingAPIJWT))
 		if multiclusterInfo.ExistingAPIJWT != "" {
 			// Use existing valid JWT
 			apiJWT = multiclusterInfo.ExistingAPIJWT
