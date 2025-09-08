@@ -266,13 +266,10 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		}
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
 
-		// Only patch private metadata if we generated a new JWT
-		shouldPatchPrivate := multiclusterInfo.ExistingAPIJWT == ""
-		if shouldPatchPrivate {
-			err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
-			if err != nil {
-				return err
-			}
+		// Always patch private metadata to ensure JWT is stored in CRD status
+		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
