@@ -215,10 +215,9 @@ spec:
               type: object
             type: array
           conversions:
-            description: spec defines the desired state of ConversionWebhook
             items:
               properties:
-                fromVersion:
+                from:
                   type: string
                 handler:
                   properties:
@@ -226,14 +225,16 @@ spec:
                       description: this is a python script handler for object
                       type: string
                   type: object
-                toVersion:
+                to:
                   type: string
               required:
-              - fromVersion
+              - from
               - handler
-              - toVersion
+              - to
               type: object
             type: array
+          foo:
+            type: string
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -247,8 +248,6 @@ spec:
           status:
             description: status defines the observed state of ConversionWebhook
             type: object
-        required:
-        - conversions
         type: object
     served: true
     storage: true
