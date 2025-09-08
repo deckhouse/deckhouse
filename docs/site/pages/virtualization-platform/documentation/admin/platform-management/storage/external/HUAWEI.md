@@ -3,14 +3,14 @@ title: "Huawei data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
 ---
 
-Deckhouse provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](/modules/csi-huawei/cr.html#huaweistorageclass). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
+Deckhouse Virtualization Platform (DVP) provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](/modules/csi-huawei/cr.html#huaweistorageclass). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.huawei.com` CSI driver is not allowed.  
-Only Huawei Dorado storage systems are supported. For other Huawei storage systems, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+Only Huawei Dorado storage systems are supported. For other Huawei storage systems, contact the [technical support](https://deckhouse.io/tech-support/).
 {% endalert %}
 
-This page provides instructions on connecting Huawei Dorado to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.
+This page provides instructions on connecting Huawei Dorado to DVP, configuring the connection, creating StorageClass, and verifying storage functionality.
 
 ## System requirements
 
@@ -26,7 +26,7 @@ Note that all commands must be run on a machine that has administrator access to
 To support Huawei Dorado storage systems, enable the `csi-huawei` module. This will ensure that all cluster nodes have:
 
 - Registration of the CSI driver.
-- Launch of service pods for the `csi-huawei` components.
+- Launch of service VMs for the `csi-huawei` components.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -106,8 +106,8 @@ To create a StorageClass, you need to use the [HuaweiStorageClass](/modules/csi-
 
 ### Module health verification
 
-To verify module health, ensure that all pods in the `d8-csi-huawei` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify module health, ensure that all VMs in the `d8-csi-huawei` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-huawei get pod -owide -w
+d8 k -n d8-csi-huawei get vm -owide -w
 ```

@@ -37,7 +37,7 @@ Enabling the `sds-node-configurator` module:
    EOF
    ```
 
-1. Wait for the module to reach the `Ready` state. At this stage, it is not necessary to check the pods in the `d8-sds-node-configurator` namespace.
+1. Wait for the module to reach the `Ready` state. At this stage, it is not necessary to check the VMs in the `d8-sds-node-configurator` namespace.
 
    ```shell
    d8 k get modules sds-node-configurator -w
@@ -45,7 +45,7 @@ Enabling the `sds-node-configurator` module:
 
 Enabling the `sds-local-volume` module:
 
-1. Activate the `sds-local-volume` module. The example below starts the module with default settings, which will create service pods for the `sds-local-volume` component on all cluster nodes:
+1. Activate the `sds-local-volume` module. The example below starts the module with default settings, which will create service VMs for the `sds-local-volume` component on all cluster nodes:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -65,34 +65,34 @@ Enabling the `sds-local-volume` module:
    d8 k get modules sds-local-volume -w
    ```
 
-1. Ensure that all pods in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are running on all nodes where LVM resources are planned to be used.
+1. Ensure that all VMs in the `d8-sds-local-volume` and `d8-sds-node-configurator` namespaces are in the `Running` or `Completed` state and are running on all nodes where LVM resources are planned to be used.
 
    ```shell
-   d8 k -n d8-sds-local-volume get pod -owide -w
-   d8 k -n d8-sds-node-configurator get pod -o wide -w
+   d8 k -n d8-sds-local-volume get vm -owide -w
+   d8 k -n d8-sds-node-configurator get vm -o wide -w
    ```
 
 ### Preparing nodes for storage creation
 
-For storage to function correctly on nodes, the `sds-local-volume-csi-node` pods must be running on the selected nodes.
+For storage to function correctly on nodes, the `sds-local-volume-csi-node` VMs must be running on the selected nodes.
 
-By default, these pods are launched on all cluster nodes. You can verify their presence using the command:
+By default, these VMs are launched on all cluster nodes. You can verify their presence using the command:
 
 ```shell
-d8 k -n d8-sds-local-volume get pod -owide
+d8 k -n d8-sds-local-volume get vm -owide
 ```
 
-The placement of `sds-local-volume-csi-node` pods is managed by specific labels (`nodeSelector`). These labels are set in the [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) parameter of the module.
+The placement of `sds-local-volume-csi-node` VMs is managed by specific labels (`nodeSelector`). These labels are set in the [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) parameter of the module.
 
 ### Configuring storage on nodes
 
 To configure storage on nodes, you need to create LVM volume groups using [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources. This example creates a Thick storage.
 
 {% alert level="warning" %}
-Before creating an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource, ensure that the `sds-local-volume-csi-node` pod is running on the respective node. This can be checked with the command:
+Before creating an [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource, ensure that the `sds-local-volume-csi-node` VM is running on the respective node. This can be checked with the command:
 
 ```shell
-d8 k -n d8-sds-local-volume get pod -owide
+d8 k -n d8-sds-local-volume get vm -owide
 ```
 
 {% endalert %}
@@ -301,4 +301,4 @@ When a block in a thin volume is freed via `discard` by the guest operating syst
 ## System requirements and recommendations
 
 - Use stock kernels provided with [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
-- Do not use another SDS (Software Defined Storage) to provide disks for SDS Deckhouse.
+- Do not use another SDS (Software Defined Storage) to provide disks for SDS DVP.

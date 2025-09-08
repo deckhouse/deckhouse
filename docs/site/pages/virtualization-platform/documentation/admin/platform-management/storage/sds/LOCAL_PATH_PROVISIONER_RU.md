@@ -4,13 +4,13 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform предоставляет возможность настраивать локальные хранилища Local Path Provisioner. Это простое решение без поддержки снимков и ограничений на размер, которое лучше всего подходит для разработки, тестирования и небольших кластеров. Данное хранилище использует локальное дисковое пространство узлов Kubernetes для создания PersistentVolume, не полагаясь на внешние системы хранения данных.
+Deckhouse Virtualization Platform (DVP) предоставляет возможность настраивать локальные хранилища Local Path Provisioner. Это простое решение без поддержки снимков и ограничений на размер, которое лучше всего подходит для разработки, тестирования и небольших кластеров. Данное хранилище использует локальное дисковое пространство узлов Kubernetes для создания PersistentVolume, не полагаясь на внешние системы хранения данных.
 
 ## Принцип работы
 
-Для каждого ресурса [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении подов.
+Для каждого ресурса [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении ВМ.
 
-При запросе диска подом происходит следующее:
+При запросе диска ВМ происходит следующее:
 
 - создаётся PersistentVolume с типом `HostPath`;
 - на нужном узле создается директория, путь к которой формируется из параметра `path`, имени PV и PVC.
@@ -78,4 +78,4 @@ spec:
    storageClass: localpath-system
    ```
 
-1. Дождитесь перезапуска подов Prometheus.
+1. Дождитесь перезапуска ВМ Prometheus.
