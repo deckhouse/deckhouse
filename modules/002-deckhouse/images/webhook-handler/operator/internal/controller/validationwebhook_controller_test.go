@@ -74,7 +74,7 @@ func TestTemplateNoError(t *testing.T) {
 
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/sample.yaml")
+	vh, err := getStructFromYamlFile("testdata/validationwebhook-sample.yaml")
 	assert.NoError(t, err)
 
 	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)

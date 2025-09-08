@@ -1,51 +1,37 @@
 #!/usr/bin/python3
 from typing import Optional
 
-# Copyright 2024 Flant JSC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from deckhouse import hook
 from dotmap import DotMap
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 config = """
 configVersion: v1
 kubernetesValidating:
-- name: prometheusremotewrite-policy.deckhouse.io
-  group: main
+- group: main
+  name: prometheusremotewrite-policy.deckhouse.io
   rules:
-  - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["v1alpha1", "v1"]
-    operations:  ["CREATE", "UPDATE"]
-    resources:   ["prometheusremotewrites"]
-    scope:       "Cluster"
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - v1alpha1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - prometheusremotewrites
+    scope: Cluster
 kubernetes:
 - name: prometheusremotewrites
-  group: main
-  executeHookOnEvent: []
-  executeHookOnSynchronization: false
-  keepFullObjectsInMemory: false
   apiVersion: deckhouse.io/v1
-  kind: PrometheusRemoteWrite
+  group: main
   jqFilter: |
     {
       "name": .metadata.name,
       "url": .spec.url,
     }
+  kind: PrometheusRemoteWrite
 """
-
 
 def main(ctx: hook.Context):
     try:
@@ -54,7 +40,6 @@ def main(ctx: hook.Context):
         validate(binding_context, ctx.output.validations)
     except Exception as e:
         ctx.output.validations.error(str(e))
-
 
 def validate(ctx: DotMap, output: hook.ValidationsCollector):
     operation = ctx.review.request.operation
@@ -93,10 +78,10 @@ def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     if len(ca) == 0:
         return None
     try:
-        x509.load_pem_x509_certificate(ca.encode(), default_backend())
         return None
     except Exception as e:
         return f"Certificate verification failed: {e}"
-    
+
+
 if __name__ == "__main__":
     hook.run(main, config=config)
