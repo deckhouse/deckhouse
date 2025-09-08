@@ -4,9 +4,14 @@ permalink: ru/module-development/development/
 lang: ru
 ---
 
-{% raw %}
-
 При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../cr.html#modulepulloverride).
+
+{% alert level="warning" %}
+Ресурс ModulePullOverride предназначен **только для использования в средах разработки и отладки**.
+Его применение в production-кластерах **не рекомендуется**. Поддержка ресурса может быть исключена в следующих версиях Deckhouse Kubernetes Platform.
+{% endalert %}
+
+{% raw %}
 
 Пример ModulePullOverride:
 
