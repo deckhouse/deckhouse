@@ -4,7 +4,7 @@
   "documents": [
     {{- $first := true -}}
     {{- range .Site.Pages -}}
-      {{- if and (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") -}}
+      {{- if and (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix .RelPermalink "/configuration.html")) (not (hasSuffix .RelPermalink "/cr.html")) -}}
         {{- $moduleName := .File.Dir | replaceRE "^modules/([^/]+)/.*" "$1" -}}
         {{- $moduleData := index $modulesData $moduleName -}}
         {{- if $moduleData -}}
