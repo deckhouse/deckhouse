@@ -39,3 +39,34 @@ type NamespaceSelector struct {
 	NameSelector  *NameSelector         `json:"nameSelector,omitempty"`
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
+
+type Context struct {
+	Name       string            `json:"name"`
+	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
+}
+
+type KubernetesContext struct {
+	Name                         string                `json:"name,omitempty"`
+	WatchEventTypes              []WatchEventType      `json:"watchEvent,omitempty"`
+	ExecuteHookOnEvents          []WatchEventType      `json:"executeHookOnEvent,omitempty"`
+	ExecuteHookOnSynchronization bool                  `json:"executeHookOnSynchronization,omitempty"`
+	WaitForSynchronization       string                `json:"waitForSynchronization,omitempty"`
+	KeepFullObjectsInMemory      bool                  `json:"keepFullObjectsInMemory,omitempty"`
+	Mode                         KubeEventMode         `json:"mode,omitempty"`
+	ApiVersion                   string                `json:"apiVersion,omitempty"`
+	Kind                         string                `json:"kind,omitempty"`
+	NameSelector                 *NameSelector         `json:"nameSelector,omitempty"`
+	LabelSelector                *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	FieldSelector                *FieldSelector        `json:"fieldSelector,omitempty"`
+	Namespace                    *NamespaceSelector    `json:"namespace,omitempty"`
+	JqFilter                     string                `json:"jqFilter,omitempty"`
+	AllowFailure                 bool                  `json:"allowFailure,omitempty"`
+	ResynchronizationPeriod      string                `json:"resynchronizationPeriod,omitempty"`
+	IncludeSnapshotsFrom         []string              `json:"includeSnapshotsFrom,omitempty"`
+	Queue                        string                `json:"queue,omitempty"`
+	Group                        string                `json:"group,omitempty"`
+}
+
+type JqFilter struct {
+	NodeName string `json:"nodeName"`
+}
