@@ -588,6 +588,7 @@ class ModuleSearch {
 
       // First try exact search
       let results = this.lunrIndex.search(query);
+      let highlightQuery = query; // Default to original query for highlighting
 
       // If no results and fuzzy search is available, try fuzzy search
       if (results.length === 0 && this.fuseIndex) {
@@ -598,6 +599,8 @@ class ModuleSearch {
             const bestSuggestion = fuzzySuggestions[0].item;
             // Using fuzzy suggestion for better results
             results = this.lunrIndex.search(bestSuggestion);
+            // Use the fuzzy suggestion for highlighting
+            highlightQuery = bestSuggestion;
           }
       }
 
@@ -608,6 +611,8 @@ class ModuleSearch {
           const wordResults = this.lunrIndex.search(suggestion.item);
           if (wordResults.length > 0) {
             results = wordResults;
+            // Use the fuzzy suggestion for highlighting
+            highlightQuery = suggestion.item;
             break;
           }
         }
@@ -657,6 +662,7 @@ class ModuleSearch {
 
       // Store current results and display them
       this.currentResults = this.groupResults(boostedResults);
+      this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
       this.displayResults();
 
     } catch (error) {
@@ -714,7 +720,7 @@ class ModuleSearch {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.renderResultGroup(this.currentResults.config, this.lastQuery, 'config')}
+          ${this.renderResultGroup(this.currentResults.config, this.currentHighlightQuery || this.lastQuery, 'config')}
         </div>
       `;
     }
@@ -724,7 +730,7 @@ class ModuleSearch {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.other, this.lastQuery, 'other')}
+          ${this.renderResultGroup(this.currentResults.other, this.currentHighlightQuery || this.lastQuery, 'other')}
         </div>
       `;
     }
