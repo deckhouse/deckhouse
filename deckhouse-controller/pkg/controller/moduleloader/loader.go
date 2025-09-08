@@ -32,6 +32,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -302,12 +304,8 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// OPTIMIZATION: Make cleanup async to not block module loading startup!
 	// Cleanup is non-critical housekeeping that can happen in background
 	go func() {
-		cleanupStart := time.Now()
 		if err := l.cleanupDeletedModules(ctx); err != nil {
 			l.logger.Warn("async cleanup failed", slog.String("error", err.Error()))
-		} else {
-			cleanupTook := time.Since(cleanupStart)
-			l.logger.Debug("async module cleanup completed", slog.Int64("cleanup_ms", cleanupTook.Milliseconds()))
 		}
 	}()
 
@@ -316,77 +314,91 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 // cleanupDeletedModules removes modules that no longer exist and updates status for modules without configs
 func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
-	l.logger.Debug("cleanup: starting module cleanup process")
+	ctx, span := otel.Tracer("module-loader").Start(ctx, "cleanupDeletedModules")
+	defer span.End()
 
 	// clear deleted embedded modules
-	listStart := time.Now()
+	ctx, listSpan := otel.Tracer("module-loader").Start(ctx, "listModules")
 	modulesList := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
+		listSpan.RecordError(err)
+		listSpan.End()
 		return fmt.Errorf("list all modules: %w", err)
 	}
-	l.logger.Debug("cleanup: listed modules",
-		slog.Int("count", len(modulesList.Items)),
-		slog.Int64("took_ms", time.Since(listStart).Milliseconds()))
+	listSpan.SetAttributes(attribute.Int("modules.count", len(modulesList.Items)))
+	listSpan.End()
 
-	configListStart := time.Now()
+	ctx, configListSpan := otel.Tracer("module-loader").Start(ctx, "listModuleConfigs")
 	moduleConfigs := new(v1alpha1.ModuleConfigList)
 	if err := l.client.List(ctx, moduleConfigs); err != nil {
+		configListSpan.RecordError(err)
+		configListSpan.End()
 		return fmt.Errorf("list module configs: %w", err)
 	}
-	l.logger.Debug("cleanup: listed module configs",
-		slog.Int("count", len(moduleConfigs.Items)),
-		slog.Int64("took_ms", time.Since(configListStart).Milliseconds()))
+	configListSpan.SetAttributes(attribute.Int("moduleConfigs.count", len(moduleConfigs.Items)))
+	configListSpan.End()
 
-	processStart := time.Now()
+	ctx, processSpan := otel.Tracer("module-loader").Start(ctx, "processModules")
+	defer processSpan.End()
+
 	deletedCount := 0
 	statusUpdatedCount := 0
 
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
-			deleteStart := time.Now()
-			l.logger.Debug("cleanup: deleting embedded module", slog.String("name", module.Name))
+			ctx, deleteSpan := otel.Tracer("module-loader").Start(ctx, "deleteEmbeddedModule")
+			deleteSpan.SetAttributes(attribute.String("module.name", module.Name))
+
 			if err := l.client.Delete(ctx, &module); err != nil {
+				deleteSpan.RecordError(err)
+				deleteSpan.End()
 				return fmt.Errorf("delete the '%s' embedded module: %w", module.Name, err)
 			}
 			deletedCount++
-			l.logger.Debug("cleanup: deleted embedded module",
-				slog.String("name", module.Name),
-				slog.Int64("took_ms", time.Since(deleteStart).Milliseconds()))
+			deleteSpan.End()
 		}
 
 		var found bool
-		configSearchStart := time.Now()
+		ctx, configSearchSpan := otel.Tracer("module-loader").Start(ctx, "searchModuleConfig")
+		configSearchSpan.SetAttributes(attribute.String("module.name", module.Name))
+
 		for _, config := range moduleConfigs.Items {
 			if config.GetName() == module.Name {
 				found = true
 				break
 			}
 		}
-		configSearchTime := time.Since(configSearchStart)
+		configSearchSpan.SetAttributes(attribute.Bool("config.found", found))
+		configSearchSpan.End()
 
 		if !found {
-			statusUpdateStart := time.Now()
-			l.logger.Debug("cleanup: updating status for module without config", slog.String("name", module.Name))
+			ctx, statusUpdateSpan := otel.Tracer("module-loader").Start(ctx, "updateModuleStatus")
+			statusUpdateSpan.SetAttributes(attribute.String("module.name", module.Name))
+
 			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
 				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 				return nil
 			})
 			if err != nil {
+				statusUpdateSpan.RecordError(err)
+				statusUpdateSpan.End()
 				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 			}
 			statusUpdatedCount++
-			l.logger.Debug("cleanup: updated status for module",
-				slog.String("name", module.Name),
-				slog.Int64("config_search_ms", configSearchTime.Milliseconds()),
-				slog.Int64("status_update_ms", time.Since(statusUpdateStart).Milliseconds()))
+			statusUpdateSpan.End()
 		}
 	}
 
-	l.logger.Debug("cleanup: processing modules completed",
-		slog.Int("total_modules", len(modulesList.Items)),
-		slog.Int("deleted_modules", deletedCount),
-		slog.Int("status_updated_modules", statusUpdatedCount),
-		slog.Int64("total_process_ms", time.Since(processStart).Milliseconds()))
+	processSpan.SetAttributes(
+		attribute.Int("total_modules", len(modulesList.Items)),
+		attribute.Int("deleted_modules", deletedCount),
+		attribute.Int("status_updated_modules", statusUpdatedCount),
+	)
+	span.SetAttributes(
+		attribute.Int("total_modules", len(modulesList.Items)),
+		attribute.Int("deleted_modules", deletedCount),
+		attribute.Int("status_updated_modules", statusUpdatedCount),
+	)
 
 	return nil
 }
