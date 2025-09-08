@@ -98,6 +98,12 @@ class ModuleSearch {
     setupEventListeners() {
     // Load search index on focus
     this.searchInput.addEventListener('focus', () => {
+      // Show loading state when user first focuses on search
+      if (!this.isDataLoaded) {
+        this.showLoading();
+        this.searchInput.disabled = true;
+        this.searchInput.placeholder = this.t('loading');
+      }
       this.loadSearchIndex();
       // Show search results container when focused (even if empty)
       this.searchResults.style.display = 'flex';
@@ -121,27 +127,42 @@ class ModuleSearch {
           relatedTarget.closest('.searchV3')
         );
 
-        if (!isClickingOnSearch && !isBlurToSearch) {
+        // Don't hide search results if index is still loading or if there are loading/error messages
+        const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
+        if (!isClickingOnSearch && !isBlurToSearch && !hasLoadingOrError) {
           this.searchResults.style.display = 'none';
         }
       }, 150);
     });
 
     this.searchInput.addEventListener('input', (e) => {
+      // Don't allow searching until index is loaded
+      if (!this.isDataLoaded) {
+        return;
+      }
+      
       const query = e.target.value.trim();
       if (query.length > 0) {
         // Show search results when user starts typing
         this.searchResults.style.display = 'flex';
         this.handleSearch(query);
       } else {
-        // Hide search results when search is cleared
-        this.searchResults.style.display = 'none';
+        // Hide search results when search is cleared, but not if there are loading/error messages
+        const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
+        if (!hasLoadingOrError) {
+          this.searchResults.style.display = 'none';
+        }
       }
     });
 
     this.searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        // Don't allow searching until index is loaded
+        if (!this.isDataLoaded) {
+          return;
+        }
+        
         const query = e.target.value.trim();
         if (query.length > 0) {
           this.searchResults.style.display = 'flex';
@@ -168,8 +189,11 @@ class ModuleSearch {
         return;
       }
 
-      // Close search results when clicking outside
-      this.searchResults.style.display = 'none';
+      // Close search results when clicking outside, but not if there are loading/error messages
+      const hasLoadingOrError = this.searchResults.querySelector('.loading, .no-results');
+      if (!hasLoadingOrError) {
+        this.searchResults.style.display = 'none';
+      }
     });
 
     // Prevent search results from closing when clicking on buttons inside results
@@ -253,10 +277,24 @@ class ModuleSearch {
       this.isDataLoaded = true;
       this.hideLoading();
 
+      // Re-enable search input
+      this.searchInput.disabled = false;
+      this.searchInput.placeholder = this.t('ready');
+
+      // Keep focus on search input after loading
+      this.searchInput.focus();
+
       // Show message that search index is loaded and ready
       this.showMessage(this.t('ready'));
     } catch (error) {
       console.error('Error loading search index:', error);
+      // Re-enable search input even on error
+      this.searchInput.disabled = false;
+      this.searchInput.placeholder = this.t('ready');
+      
+      // Keep focus on search input after error
+      this.searchInput.focus();
+      
       this.showError('Failed to load search index. Please try again later.');
     }
   }
@@ -992,7 +1030,12 @@ class ModuleSearch {
 
   showLoading() {
     this.searchResults.style.display = 'flex';
-    this.searchResults.innerHTML = `<div class="loading">${this.t('loading')}</div>`;
+    this.searchResults.innerHTML = `
+      <div class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">${this.t('loading')}</div>
+      </div>
+    `;
   }
 
   hideLoading() {
