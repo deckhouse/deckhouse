@@ -1032,8 +1032,8 @@ class ModuleSearch {
     this.searchResults.style.display = 'flex';
     this.searchResults.innerHTML = `
       <div class="loading">
-        <div class="spinner"></div>
         <div class="loading-text">${this.t('loading')}</div>
+        <div class="spinner-small"></div>
       </div>
     `;
   }

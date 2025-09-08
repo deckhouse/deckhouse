@@ -276,9 +276,27 @@
 }
 
 .searchV3 .loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 1rem;
   text-align: center;
+  gap: 0.5rem;
   color: #666;
+}
+
+.searchV3 .spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e0e0e0;
+  border-top: 2px solid #4075FF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Custom Scrollbar for Search Results */
