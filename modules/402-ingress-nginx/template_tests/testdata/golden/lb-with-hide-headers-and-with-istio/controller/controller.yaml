@@ -6,14 +6,14 @@ metadata:
     app: controller
     heritage: deckhouse
     module: ingress-nginx
-    name: test-lbwpp
-  name: controller-test-lbwpp
+    name: test
+  name: controller-test
   namespace: d8-ingress-nginx
 spec:
   targetRef:
     apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
-    name: controller-test-lbwpp
+    name: controller-test
   updatePolicy:
     updateMode: "Off"
 ---
@@ -24,29 +24,29 @@ metadata:
     app: controller
     heritage: deckhouse
     module: ingress-nginx
-    name: test-lbwpp
-  name: controller-test-lbwpp
+    name: test
+  name: controller-test
   namespace: d8-ingress-nginx
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
       app: controller
-      name: test-lbwpp
+      name: test
 ---
 apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: b4004269eecc01dbcf5b68aa944d8083fab21bafd890588e279f4494b923569a
+    ingress-nginx-controller.deckhouse.io/checksum: 2e762afccf2bf7d43998cbcdb0302d579e6fe5d4bfa054597f006bf275adf12a
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
-    ingress-nginx-controller.deckhouse.io/inlet: LoadBalancerWithProxyProtocol
+    ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller
     heritage: deckhouse
     module: ingress-nginx
-    name: test-lbwpp
-  name: controller-test-lbwpp
+    name: test
+  name: controller-test
   namespace: d8-ingress-nginx
 spec:
   minReadySeconds: 60
@@ -54,27 +54,27 @@ spec:
   selector:
     matchLabels:
       app: controller
-      name: test-lbwpp
+      name: test
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
-        name: test-lbwpp
+        name: test
     spec:
       automountServiceAccountToken: true
       containers:
       - args:
         - /nginx-ingress-controller
-        - --configmap=$(POD_NAMESPACE)/test-lbwpp-config
+        - --configmap=$(POD_NAMESPACE)/test-config
         - --v=2
         - --ingress-class=nginx
         - --healthz-port=10254
         - --http-port=80
         - --https-port=443
         - --update-status=true
-        - --publish-service=d8-ingress-nginx/test-lbwpp-load-balancer
+        - --publish-service=d8-ingress-nginx/test-load-balancer
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
         - --watch-ingress-without-class=true
@@ -123,9 +123,9 @@ spec:
           timeoutSeconds: 5
         resources:
           requests:
-            cpu: 350m
+            cpu: 100m
             ephemeral-storage: 150Mi
-            memory: 500Mi
+            memory: 200Mi
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
@@ -235,7 +235,7 @@ spec:
         name: uwsgi-temp-path
       - name: secret-nginx-auth-tls
         secret:
-          secretName: ingress-nginx-test-lbwpp-auth-tls
+          secretName: ingress-nginx-test-auth-tls
       - configMap:
           name: d8-ingress-telemetry-config
         name: telemetry-config-file
