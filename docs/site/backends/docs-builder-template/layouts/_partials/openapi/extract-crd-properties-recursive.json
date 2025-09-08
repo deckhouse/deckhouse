@@ -26,7 +26,7 @@
         "name" $paramName
         "module" $moduleName
         "moduletype" "source"
-        "url" (printf "/modules/%s/cr.html#%s-%s-%s" $moduleName ($kind | lower) ($versionName | lower) (delimit $currentAncestors "-" | lower))
+        "url" (printf "/modules/%s/%s/cr.html#%s-%s-%s" $moduleName $moduleChannel ($kind | lower) ($versionName | lower) (delimit $currentAncestors "-" | lower))
         "path" (printf "%s-%s-%s" ($kind | lower) $versionName $paramPath)
         "content" $description
         "resName" $kind }}

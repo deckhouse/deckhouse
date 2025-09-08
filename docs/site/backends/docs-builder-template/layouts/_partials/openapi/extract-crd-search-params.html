@@ -85,7 +85,7 @@
     "name" $kind
     "module" $moduleName
     "moduletype" "source"
-    "url" (printf "/modules/%s/cr.html#%s" $moduleName ( $crdName | lower))
+    "url" (printf "/modules/%s/%s/cr.html#%s" $moduleName $moduleChannel ( $crdName | lower))
     "path" (printf "%s-%s" ($kind | lower) $versionName)
     "content" $description
     "resName" $kind

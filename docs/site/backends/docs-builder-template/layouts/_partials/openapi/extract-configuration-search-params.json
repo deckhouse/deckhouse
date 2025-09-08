@@ -28,8 +28,8 @@
         "name" $paramName
         "module" $moduleName
         "moduletype" "source"
-        "url" (printf "/modules/%s/configuration.html#parameters-%s" $moduleName (delimit $currentAncestors "-" | lower))
-        "path" (cond $resourceName (printf "%s.%s.crds.%s.%s" $moduleName $moduleChannel $resourceName $paramPath) (printf "%s.%s.%s" $moduleName $moduleChannel $paramPath))
+        "url" (printf "/modules/%s/%s/configuration.html#parameters-%s" $moduleName $moduleChannel (delimit $currentAncestors "-" | lower))
+        "path" $paramPath
         "content" $description }}
 
       {{- if $resourceName }}
