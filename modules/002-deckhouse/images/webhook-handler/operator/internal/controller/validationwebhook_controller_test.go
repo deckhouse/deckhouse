@@ -23,7 +23,7 @@ func setupTestReconciler() *ValidationWebhookReconciler {
 	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
 
 	// init template file
-	tpl, err := os.ReadFile("templates/webhook.tpl")
+	tpl, err := os.ReadFile("templates/validationwebhook.tpl")
 	if err != nil {
 		panic(err)
 	}
@@ -74,14 +74,14 @@ func TestTemplateNoError(t *testing.T) {
 
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/validationwebhook-sample.yaml")
+	vh, err := getStructFromYamlFile("testdata/validating/validationwebhook-sample.yaml")
 	assert.NoError(t, err)
 
 	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
-	ref, err := os.ReadFile("testdata/golden/validationwebhook-sample.py")
+	ref, err := os.ReadFile("testdata/validating/golden/validationwebhook-sample.py")
 	assert.NoError(t, err)
 	res, err := os.ReadFile("hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py")
 	assert.NoError(t, err)
@@ -91,14 +91,14 @@ func TestTemplateNoError(t *testing.T) {
 func TestTemplateNoContext(t *testing.T) {
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/sample_without_context.yaml")
+	vh, err := getStructFromYamlFile("testdata/validating/sample_without_context.yaml")
 	assert.NoError(t, err)
 
 	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
-	ref, err := os.ReadFile("testdata/golden/sample_without_context.py")
+	ref, err := os.ReadFile("testdata/validating/golden/sample_without_context.py")
 	assert.NoError(t, err)
 	res, err := os.ReadFile("hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py")
 	assert.NoError(t, err)
@@ -108,14 +108,14 @@ func TestTemplateNoContext(t *testing.T) {
 func TestTemplateTwoContext(t *testing.T) {
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/sample_two_context.yaml")
+	vh, err := getStructFromYamlFile("testdata/validating/sample_two_context.yaml")
 	assert.NoError(t, err)
 
 	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
 	// test equality
-	ref, err := os.ReadFile("testdata/golden/sample_two_context.py")
+	ref, err := os.ReadFile("testdata/validating/golden/sample_two_context.py")
 	assert.NoError(t, err)
 	res, err := os.ReadFile("hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py")
 	assert.NoError(t, err)
@@ -126,13 +126,13 @@ func TestTemplateTwoContext(t *testing.T) {
 func TestTemplateEqual(t *testing.T) {
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/prometheusremotewrite.yaml")
+	vh, err := getStructFromYamlFile("testdata/validating/prometheusremotewrite.yaml")
 	assert.NoError(t, err)
 
 	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
 	assert.NoError(t, err)
 
-	ref, err := os.ReadFile("testdata/golden/prometheusremotewrite.py")
+	ref, err := os.ReadFile("testdata/validating/golden/prometheusremotewrite.py")
 	assert.NoError(t, err)
 
 	res, err := os.ReadFile("hooks/prometheusremotewrite/webhooks/validating/prometheusremotewrite.py")
