@@ -4,6 +4,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 var (
 	ValidationWebhookFinalizer = "validationwebhooks.deckhouse.io/finalizer"
+	ConversionWebhookFinalizer = "conversionwebhooks.deckhouse.io/finalizer"
 )
 
 type WatchEventType string
