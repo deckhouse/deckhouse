@@ -589,16 +589,16 @@ disable:
 ```yaml
 accessibility:
   editions:
-    _default:                   # Настройка по умолчанию, если отсутствует конфигурация для конкретной редакции.
-      available: true           # Признак доступности модуля в той или иной редакции.
-      enabledInBundles:         # Наборы модулей, в которых модуль будет включен по умолчанию.
+    _default:
+      available: true
+      enabledInBundles:
         - Default
         - Managed
-    ce:                         # Настройки доступности модуля в DKP Community Edition.
-      available: false          # Переопределение: модуль недоступен в DKP Community Edition.
-    ee:                         # Настройки доступности модуля в DKP Enterprise Edition.
-      available: true           # Переопределение: модуль доступен в DKP Enterprise Edition.
-      enabledInBundles:         # Переопределение: модуль будет включен по умолчанию только в наборе модулей Managed.
+    ce:
+      available: false
+    ee:
+      available: true
+      enabledInBundles:
         - Managed   
 ```
 
@@ -609,7 +609,7 @@ accessibility:
   Для каждой редакции можно задать собственные настройки доступности.
 - `_default` — *Объект.* Настройка по умолчанию, если отсутствует конфигурация для конкретной редакции.
 - `available` — *Булевый.* Определяет, доступен ли модуль в рамках указанной редакции.
-- `enabledInBundles` — *Массив строк.* Наборы модулей, в которых модуль будет включен по умолчанию.
+- `enabledInBundles` — *Массив строк.* Наборы модулей, в которых модуль будет включён по умолчанию.
   Поддерживаемые наборы модулей (состав каждого из наборов доступен [на этой странице](../../../v1/#наборы-модулей)):
   - `Default` — рекомендованный набор модулей для работы кластера.
     Включает средства мониторинга, контроля авторизации, организации работы сети и другие необходимые компоненты.
@@ -653,6 +653,24 @@ accessibility:
       enabledInBundles:
         - Managed
         - Default
+```
+
+В следующем примере модуль будет доступен во всех редакциях DKP.
+Модуль будет включён в наборах модулей `Default` и `Managed` во всех редакциях,
+кроме DKP Basic Edition и DKP Community Edition.
+
+```yaml
+accessibility:
+  editions:
+    _default:                   
+      available: true           
+      enabledInBundles:         
+        - Default
+        - Managed
+    be:
+      available: false
+    ce:                         
+      available: false
 ```
 
 {% endraw %}
