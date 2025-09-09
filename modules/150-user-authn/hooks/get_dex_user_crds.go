@@ -266,12 +266,12 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var group = &Password{}
-	err := sdk.FromUnstructured(obj, group)
+	password := &Password{}
+	err := sdk.FromUnstructured(obj, password)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
-	return group, nil
+	return password, nil
 }
 
 func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {
