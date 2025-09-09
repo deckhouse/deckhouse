@@ -1,7 +1,7 @@
 ---
 title: "Web interface of the platform"
 permalink: en/user/web/ui.html
-search: "web UI", "web interface"
+search: web UI, web interface
 ---
 
 The `console` module's web UI is designed for managing the cluster.

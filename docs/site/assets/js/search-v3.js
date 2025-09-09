@@ -88,6 +88,29 @@ class ModuleSearch {
     }
   }
 
+  // Parse search index paths with boost levels
+  parseSearchIndexPaths(searchIndexPath) {
+    const paths = searchIndexPath.split(',').map(path => path.trim());
+    
+    return paths.map(path => {
+      // Check if path contains boost level (format: "path:boost")
+      const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
+      
+      if (boostMatch) {
+        return {
+          path: boostMatch[1].trim(),
+          boost: parseFloat(boostMatch[2])
+        };
+      } else {
+        // Default boost level of 1.0 if not specified
+        return {
+          path: path,
+          boost: 1.0
+        };
+      }
+    });
+  }
+
   async init() {
     this.setupEventListeners();
 
@@ -218,49 +241,68 @@ class ModuleSearch {
     try {
       this.showLoading();
 
-      // Check if searchIndexPath contains multiple comma-separated paths
-      const indexPaths = this.options.searchIndexPath.split(',').map(path => path.trim());
+      // Parse search index paths with boost levels
+      const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
 
-      if (indexPaths.length === 1) {
+      if (indexConfigs.length === 1) {
         // Single index file
-        const response = await fetch(indexPaths[0]);
+        const config = indexConfigs[0];
+        const response = await fetch(config.path);
         if (!response.ok) {
           throw new Error(`Failed to load search index: ${response.status}`);
         }
         this.searchData = await response.json();
+        this.searchData.boostLevel = config.boost;
       } else {
         // Multiple index files - load and merge them
-        console.log(`Loading ${indexPaths.length} search index files:`, indexPaths);
+        console.log(`Loading ${indexConfigs.length} search index files:`, indexConfigs.map(c => `${c.path} (boost: ${c.boost})`));
 
         const responses = await Promise.all(
-          indexPaths.map(async (path) => {
+          indexConfigs.map(async (config) => {
             try {
-              const response = await fetch(path);
+              const response = await fetch(config.path);
               if (!response.ok) {
-                console.warn(`Failed to load search index: ${path} (${response.status})`);
-                return { documents: [], parameters: [] };
+                console.warn(`Failed to load search index: ${config.path} (${response.status})`);
+                return { documents: [], parameters: [], boost: config.boost };
               }
-              return await response.json();
+              const data = await response.json();
+              data.boost = config.boost;
+              return data;
             } catch (error) {
-              console.warn(`Error loading search index: ${path}`, error);
-              return { documents: [], parameters: [] };
+              console.warn(`Error loading search index: ${config.path}`, error);
+              return { documents: [], parameters: [], boost: config.boost };
             }
           })
         );
 
-        // Merge all search indexes
+        // Merge all search indexes with boost information
         this.searchData = {
           documents: [],
-          parameters: []
+          parameters: [],
+          indexBoosts: {} // Store boost levels for each index
         };
 
         responses.forEach((indexData, index) => {
           if (indexData && indexData.documents) {
-            this.searchData.documents = this.searchData.documents.concat(indexData.documents);
+            // Add boost information to each document
+            const boostedDocuments = indexData.documents.map(doc => ({
+              ...doc,
+              _indexBoost: indexData.boost,
+              _indexSource: indexConfigs[index].path
+            }));
+            this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
           }
           if (indexData && indexData.parameters) {
-            this.searchData.parameters = this.searchData.parameters.concat(indexData.parameters);
+            // Add boost information to each parameter
+            const boostedParameters = indexData.parameters.map(param => ({
+              ...param,
+              _indexBoost: indexData.boost,
+              _indexSource: indexConfigs[index].path
+            }));
+            this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
           }
+          // Store boost level for this index
+          this.searchData.indexBoosts[indexConfigs[index].path] = indexData.boost;
         });
 
         // console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
@@ -654,7 +696,7 @@ class ModuleSearch {
         }
       }
 
-      // Apply additional boosting for parameters and module name matches
+      // Apply additional boosting for parameters, module name matches, and index boost levels
       const boostedResults = results.map(result => {
         const docId = result.ref;
         let doc;
@@ -671,6 +713,11 @@ class ModuleSearch {
         if (!doc) return result;
 
         let boost = 1;
+
+        // Apply index boost level if available
+        if (doc._indexBoost) {
+          boost *= doc._indexBoost;
+        }
 
         // Check if the search query matches the module name
         const queryLower = query.toLowerCase();
