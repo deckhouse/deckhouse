@@ -221,7 +221,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	tpl, err := os.ReadFile("internal/controller/templates/validationwebhook.tpl")
+	validationTpl, err := os.ReadFile("internal/controller/templates/validationwebhook.tpl")
+	if err != nil {
+		setupLog.Error(err, "unable to read template file")
+		os.Exit(1)
+	}
+	conversionTpl, err := os.ReadFile("internal/controller/templates/conversionwebhook.tpl")
 	if err != nil {
 		setupLog.Error(err, "unable to read template file")
 		os.Exit(1)
@@ -309,7 +314,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
-		PythonTemplate:    string(tpl),
+		PythonTemplate:    string(validationTpl),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ValidationWebhook")
 		os.Exit(1)
@@ -319,6 +324,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
+		PythonTemplate:    string(conversionTpl),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ConversionWebhook")
 		os.Exit(1)
