@@ -184,7 +184,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	if !vcdAffinityRule.DeletionTimestamp.IsZero() && controllerutil.ContainsFinalizer(vcdAffinityRule, finalizer) {
-		err := r.deleteVMAffinityRule(vcdAffinityRule, vdcClient)
+		err := r.deleteVMAffinityRule(ctx, vcdAffinityRule, vdcClient)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 		}
@@ -203,7 +203,7 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if vcdAffinityRule.Status.RuleID != "" {
 			r.Logger.Info("deleting affinity rule from VCD API due to insufficient VM count")
 
-			err = r.deleteVMAffinityRule(vcdAffinityRule, vdcClient)
+			err = r.deleteVMAffinityRule(ctx, vcdAffinityRule, vdcClient)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 			}
@@ -302,7 +302,7 @@ func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAf
 	}, nil
 }
 
-func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(resource *v1alpha1.VCDAffinityRule, vdc *govcd.Vdc) error {
+func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(ctx context.Context, resource *v1alpha1.VCDAffinityRule, vdc *govcd.Vdc) error {
 	if resource.Status.RuleID != "" {
 		r.Logger.Info("deleting affinity rule from VCD API by id", slog.String("ruleID", resource.Status.RuleID))
 		vmAffinityRule, err := vdc.GetVmAffinityRuleById(resource.Status.RuleID)
@@ -314,6 +314,11 @@ func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(resource *v1alpha1.VCDA
 		err = vmAffinityRule.Delete()
 		if err != nil {
 			return fmt.Errorf("failed to delete vm affinity rule: %w", err)
+		}
+
+		resource.Status.RuleID = ""
+		if err := r.Status().Update(ctx, resource); err != nil {
+			return fmt.Errorf("failed to update vcdaffinityrule status after deletion: %w", err)
 		}
 
 		return nil
