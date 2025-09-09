@@ -111,6 +111,24 @@ properties:
                   type: string
                 rootCA:
                   type: string
+      remoteSecrets:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-examples: ["istio-remote-secret-sec"]
+            namespace:
+              type: string
+              x-examples: ["d8-istio"]
+            clusterName:
+              type: string
+              x-examples: ["sec"]
+            kubeconfig:
+              type: string
+              x-examples: ["apiVersion: v1\nkind: Config\n..."]
       remoteAuthnKeypair:
         type: object
         default: {}
