@@ -22,7 +22,7 @@ The configuration capabilities of `Namespace` do not fully meet modern developme
 The functionality of projects allows addressing these issues.
 
 {% alert level="warning" %}
-The `secret-copier` module [cannot be used together](../secret-copier/) with `multitenancy-manager` module.
+The [`secret-copier`](../secret-copier/) module cannot be used together with `multitenancy-manager` module.
 {% endalert %}
 
 ## Advantages of the module
@@ -52,8 +52,9 @@ To create projects, the following [Custom Resources](https://kubernetes.io/docs/
 * [Project](./cr.html#project) — a resource that describes a specific project.
 
 When creating a [Project](./cr.html#project) resource from a specific [ProjectTemplate](./cr.html#projecttemplate), the following happens:
-1. The [parameters](./cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [openAPI](./cr.html#projecttemplate-v1alpha1-spec-parametersschema) field of [ProjectTemplate](./cr.html#projecttemplate));
-1. Rendering of the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [parameters](./cr.html#projecttemplate-v1alpha1-spec-parametersschema) field of the [Project](./cr.html#project) resource;
+1. The [parameters](./cr.html#project-v1alpha2-spec-parameters) passed are validated against the OpenAPI specification (the [`parametersSchema.openAPIV3Schema`
+](./cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) field of [ProjectTemplate](./cr.html#projecttemplate));
+1. Rendering of the [resources template](./cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) is performed using [Helm](https://helm.sh/docs/). Values for rendering are taken from the [`parameters`](./cr.html#project-v1alpha2-spec-parameters) field of the [Project](./cr.html#project) resource;
 1. A `Namespace` is created with a name matching the name of [Project](./cr.html#project);
 1. All resources described in the template are created in sequence.
 

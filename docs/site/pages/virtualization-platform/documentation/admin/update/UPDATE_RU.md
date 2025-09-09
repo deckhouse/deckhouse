@@ -122,7 +122,7 @@ d8 k get modulereleases
 
 Чтобы применить обновление немедленно, установите в соответствующем ресурсе [DeckhouseRelease](../../../reference/cr/deckhouserelease.html) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
-> В этом случае будут проигнорированы окна обновления, настройки [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](../../../reference/mc.html#parameters-update-disruptionapprovalmode). Обновление применится сразу после установки аннотации.
+> В этом случае будут проигнорированы окна обновления, настройки [canary-release](../../../reference/cr/deckhouserelease.html#deckhouserelease-v1alpha1-spec-applyafter) и режим [ручного обновления кластера](../../../reference/mc.html#parameters-update-mode). Обновление применится сразу после установки аннотации.
 
 Пример команды установки аннотации пропуска окон обновлений для версии `v1.56.2`:
 

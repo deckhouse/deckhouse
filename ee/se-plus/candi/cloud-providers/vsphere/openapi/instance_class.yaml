@@ -97,7 +97,7 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Whether to enable or disable nested [hardware virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
+                        Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
                       type: boolean
                     cpuShares:
                       description: |

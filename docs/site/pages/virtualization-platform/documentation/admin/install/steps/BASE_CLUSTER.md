@@ -218,7 +218,7 @@ master-0       Ready    control-plane,master   5m      v1.29.10
 List of checks performed by the installer before starting platform installation:
 
 1. General checks:
-   - The values of the parameters [PublicDomainTemplate](/products/virtualization-platform/reference/mc.html#global-parameters-modules-publicdomaintemplate) and [clusterDomain](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) do not match.
    - The authentication data for the container image registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters;
