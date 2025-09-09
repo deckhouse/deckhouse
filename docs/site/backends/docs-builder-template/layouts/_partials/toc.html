@@ -71,6 +71,7 @@
 
         $(window).on('load', function() {
             const hash = window.location.hash;
+            console.log(hash)
             if(hash) {
                 const target = decodeURIComponent(hash);
                 const targetElement = $(target);
