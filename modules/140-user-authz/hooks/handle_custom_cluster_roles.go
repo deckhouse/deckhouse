@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -73,8 +74,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, customClusterRolesHandler)
 
-func customClusterRolesHandler(input *go_hook.HookInput) error {
-	customClusterRoles, err := snapshotsToInternalValuesCustomClusterRoles(input.NewSnapshots.Get(customClusterRoleSnapshots))
+func customClusterRolesHandler(_ context.Context, input *go_hook.HookInput) error {
+	customClusterRoles, err := snapshotsToInternalValuesCustomClusterRoles(input.Snapshots.Get(customClusterRoleSnapshots))
 	if err != nil {
 		return fmt.Errorf("failed to convert custom cluster roles snapshots: %w", err)
 	}

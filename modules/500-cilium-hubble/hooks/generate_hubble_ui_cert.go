@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -53,8 +54,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateHubbleUICert)
 
-func generateHubbleUICert(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("hubble-ui-client-certs")
+func generateHubbleUICert(ctx context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("hubble-ui-client-certs")
 
 	if len(snaps) > 0 {
 		var adm certificate.Certificate
@@ -69,7 +70,7 @@ func generateHubbleUICert(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ca := genCAAuthority(input)
+	ca := genCAAuthority(ctx, input)
 
 	const cn = "*.hubble-ui.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.Logger,

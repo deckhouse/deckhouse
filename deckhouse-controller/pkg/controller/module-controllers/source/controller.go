@@ -465,7 +465,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				continue
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, policy.Spec.ReleaseChannel, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
 				availableModule.Error = err.Error()

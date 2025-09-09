@@ -17,6 +17,7 @@ limitations under the License.
 package dynamic_probe
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -87,12 +88,12 @@ var _ = sdk.RegisterFunc(
 )
 
 // collectDynamicNames sets names of objects to internal values
-func collectDynamicNames(input *go_hook.HookInput) error {
+func collectDynamicNames(_ context.Context, input *go_hook.HookInput) error {
 	// Input, empty strings mean invalidated data
 	var (
-		ingressNames   = parseSingleStringSet(input.NewSnapshots.Get("upmeter_discovery_ingress_controllers")).Delete("").Slice()
-		nodeGroupNames = parseSingleStringSet(input.NewSnapshots.Get("upmeter_discovery_nodegroups")).Delete("").Slice()
-		loc            = parseCloudLocations(input.NewSnapshots.Get("cloud_provider_secret"))
+		ingressNames   = parseSingleStringSet(input.Snapshots.Get("upmeter_discovery_ingress_controllers")).Delete("").Slice()
+		nodeGroupNames = parseSingleStringSet(input.Snapshots.Get("upmeter_discovery_nodegroups")).Delete("").Slice()
+		loc            = parseCloudLocations(input.Snapshots.Get("cloud_provider_secret"))
 	)
 
 	// Populate values. `zonePrefix` is for cloud zones that are passed around without region
