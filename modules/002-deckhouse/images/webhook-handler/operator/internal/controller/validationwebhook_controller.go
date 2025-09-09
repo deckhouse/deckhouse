@@ -119,9 +119,9 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
-	buf, err := templater.RenderTemplate(r.PythonTemplate, vh)
+	buf, err := templater.RenderValidationTemplate(r.PythonTemplate, vh)
 	if err != nil {
-		return res, fmt.Errorf("")
+		return res, fmt.Errorf("render template: %w", err)
 	}
 
 	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py

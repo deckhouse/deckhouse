@@ -17,17 +17,17 @@ conversions:
     to: v1alpha2
     handler:
       python: |
-        def v1alpha1_to_v1alpha2(obj: Object, context: Context) -> tuple[Object, Optional[str]]:
+        def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
           ...
 
-        def v1alpha2_to_v1alpha1(obj: Object, context: Context) -> tuple[Object, Optional[str]]:
+        def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
           ...
   - from: v1alpha2
     to: v1alpha3
     handler:
       python: |
-        def v1alpha2_to_v1alpha3(obj: Object, context: Context) -> tuple[Object, Optional[str]]:
+        def v1alpha2_to_v1alpha3(self, o: dict) -> typing.Tuple[str | None, dict]:
           ...
 
-        def v1alpha3_to_v1alpha2(obj: Object, context: Context) -> tuple[Object, Optional[str]]:
+        def v1alpha3_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
           ...

@@ -1,13 +1,12 @@
 #!/usr/bin/python3
-from typing import Optional
 
-from deckhouse import hook
+import typing
+
 from dotmap import DotMap
+from deckhouse import hook, utils
 
 config = """
 configVersion: v1
-kubernetesValidating:
-{{ list .ValidatingWebhook | toYaml }}
 {{- if (ge (len .Context) 1) }}
 kubernetes:
 {{- range .Context}}
@@ -15,17 +14,23 @@ kubernetes:
 {{ toYaml .Kubernetes | indent 2 }}
 {{- end }}
 {{- end }}
+{{- if (ge (len .KubernetesCustomResourceConversion) 1) }}
+kubernetesCustomResourceConversion:
+{{ toYaml .KubernetesCustomResourceConversion }}
+{{- end }}
 """
 
-def main(ctx: hook.Context):
-    try:
-        # DotMap is a dict with dot notation
-        binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
-    except Exception as e:
-        ctx.output.validations.error(str(e))
+class Conversion(utils.BaseConversionHook):
+    def __init__(self, ctx: hook.Context):
+        super().__init__(ctx)
 
-{{ .Handler.Python }}
+{{- range .Conversions}}
+{{ .Handler.Python | indent 4 }}
+{{- end }}
+
+def main(ctx: hook.Context):
+    Conversion(ctx).run()
+
 
 if __name__ == "__main__":
     hook.run(main, config=config)
