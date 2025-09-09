@@ -642,8 +642,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1019,8 +1029,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1396,8 +1416,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1773,8 +1803,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -2150,8 +2190,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -2527,8 +2577,18 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+
+          echo STAGE_REGISTRY_PATH
+          echo $STAGE_REGISTRY_PATH > base64
+          echo DEV_REGISTRY_PATH
+          echo $DEV_REGISTRY_PATH > base64
             export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             export WERF_REPO="${DEV_REGISTRY_PATH}"
+
+          echo REGISTRY_PATH
+          echo $REGISTRY_PATH > base64
+          echo WERF_REPO
+          echo $WERF_REPO > base64
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
