@@ -11,7 +11,7 @@ context:
       apiVersion: v1
       kind: ConfigMap
       nameSelector:
-        matchNames: "d8-cluster-configuration"
+        matchNames: ["d8-cluster-configuration"]
 conversions:
   - from: v1alpha1
     to: v1alpha2

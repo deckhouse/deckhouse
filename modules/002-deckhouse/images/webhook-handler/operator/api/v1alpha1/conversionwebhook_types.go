@@ -34,20 +34,34 @@ type ConversionWebhook struct {
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
 	// +optional
-	Foo *string `json:"foo,omitempty"`
-
-	// +optional
 	Context []Context `json:"context,omitempty"`
 
 	// +optional
-	Conversions []ConversionRule `json:"conversions,omitempty"`
+	KubernetesCustomResourceConversion []KubernetesConversionConfigV1 `json:"kubernetesCustomResourceConversion,omitempty"`
+
+	// +optional
+	Conversions []Conversions `json:"conversions,omitempty"`
 
 	// status defines the observed state of ConversionWebhook
 	// +optional
 	Status ConversionWebhookStatus `json:"status,omitempty,omitzero"`
 }
 
+// version 1 of kubernetes conversion configuration
+type KubernetesConversionConfigV1 struct {
+	Name                 string           `json:"name,omitempty"`
+	IncludeSnapshotsFrom []string         `json:"includeSnapshotsFrom,omitempty"`
+	Group                string           `json:"group,omitempty"`
+	CrdName              string           `json:"crdName,omitempty"`
+	Conversions          []ConversionRule `json:"conversions,omitempty"`
+}
+
 type ConversionRule struct {
+	FromVersion string `json:"fromVersion"`
+	ToVersion   string `json:"toVersion"`
+}
+
+type Conversions struct {
 	FromVersion string                    `json:"from"`
 	ToVersion   string                    `json:"to"`
 	Handler     *ConversionWebhookHandler `json:"handler"`
