@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -60,8 +61,8 @@ func applySecertMTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	return true, nil
 }
 
-func istioMTLSswitchHook(input *go_hook.HookInput) error {
-	if len(input.Snapshots["prometheus_secret_mtls"]) == 1 {
+func istioMTLSswitchHook(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("prometheus_secret_mtls")) == 1 {
 		input.Values.Set(mTLSSwitchPath, true)
 	} else {
 		input.Values.Set(mTLSSwitchPath, false)

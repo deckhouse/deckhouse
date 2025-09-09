@@ -36,7 +36,7 @@
           1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
 
              ```bash
-             kubectl -n d8-system get configmap desired-cni-moduleconfig -o yaml
+             d8 k -n d8-system get configmap desired-cni-moduleconfig -o yaml
              ```
 
           1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.

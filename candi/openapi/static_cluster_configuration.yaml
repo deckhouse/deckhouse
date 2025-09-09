@@ -9,7 +9,7 @@ apiVersions:
       To change the `StaticClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit static-cluster-configuration
+      d8 p edit static-cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind]

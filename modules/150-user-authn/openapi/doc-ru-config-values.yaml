@@ -18,7 +18,7 @@ properties:
 
               В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
 
-              Получить выпущенный сертификат можно следующей командой: `kubectl -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
+              Получить выпущенный сертификат можно следующей командой: `d8 k -n d8-user-authn get secrets kubernetes-api-ca-key-pair -oyaml`.
 
               В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
           global:
@@ -45,7 +45,7 @@ properties:
         masterURI:
           description: |
             Если планируется использовать TCP-прокси, для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет через TCP-балансер (например, `192.168.0.15`), необходимо перегенерировать сертификаты для API-серверов:
-            * отредактировать `kubeadm-config`: `kubectl -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
+            * отредактировать `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
             * сохранить получившийся конфиг: `kubeadm config view > kubeadmconf.yaml`;
             * удалить старые сертификаты API-сервера: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
             * перевыпустить новые сертификаты: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;

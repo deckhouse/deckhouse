@@ -362,7 +362,82 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 	return ctrl.Result{}, nil
 }
 
-// handleDeployedRelease handles deployed releases
+// patchManualRelease modify deckhouse release with approved status
+func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.ModuleRelease, us *releaseUpdater.Settings) error {
+	if us.Mode.String() != v1alpha2.UpdateModeManual.String() {
+		return nil
+	}
+
+	patch := client.MergeFrom(release.DeepCopy())
+
+	release.SetApprovedStatus(release.GetManuallyApproved())
+
+	err := r.client.Status().Patch(ctx, release, patch)
+	if err != nil {
+		return fmt.Errorf("patch approved status: %w", err)
+	}
+
+	return nil
+}
+
+// handleDeployedRelease manages the lifecycle and maintenance of successfully deployed module releases.
+// This function ensures deployed releases remain in a consistent, operational state while handling
+// various post-deployment scenarios including reloads, registry updates, cleanup operations, and
+// status synchronization with dependent Kubernetes resources.
+//
+// Processing Pipeline:
+//  1. Pending Release Detection: Check for conflicting pending releases that may affect readiness
+//  2. Module Readiness Updates: Update module conditions based on deployment and pending states
+//  3. Administrative Actions: Handle reload requests and registry specification changes
+//  4. Metadata Maintenance: Ensure proper finalizers, labels, and annotations are present
+//  5. Source Finalizer Management: Protect module sources from deletion while releases exist
+//  6. Override Detection: Respect module pull overrides that may bypass normal processing
+//  7. Documentation Updates: Synchronize module documentation with deployed release version
+//  8. Cleanup Operations: Remove outdated releases while preserving required retention count
+//  9. Settings Ownership: Maintain proper ownership of ModuleSettingsDefinition resources
+//
+// Pending Release Impact on Readiness:
+//   - If pending releases exist with lower versions: Module readiness remains uncertain
+//   - If no conflicting pending releases: Module is considered fully ready
+//   - Readiness state affects whether new releases can be deployed safely
+//
+// Administrative Operations:
+//   - Reload Requests: Triggered by 'reload=true' annotation, forces module re-deployment
+//   - Registry Updates: Handles changes to registry configuration requiring OpenAPI schema refresh
+//   - Both operations trigger immediate Deckhouse restart for module activation
+//
+// Resource Ownership and Protection:
+//   - Deployed releases add finalizers to prevent premature deletion
+//   - ModuleSource resources gain finalizers to prevent deletion while releases exist
+//   - ModuleSettingsDefinition ownership is established for proper lifecycle management
+//   - Documentation resources are linked to releases for coordinated updates
+//
+// Override Handling:
+//   - ModulePullOverride resources can bypass normal release processing
+//   - When overrides exist, deployed releases skip most maintenance operations
+//   - Override detection prevents conflicts between manual and automated operations
+//
+// Example Scenarios:
+//
+//	Scenario 1 - Standard Deployed Release Maintenance:
+//	Input: Deployed v1.68.0, No pending releases, No overrides
+//	Flow: Readiness✓→Metadata✓→Documentation✓→Cleanup✓→Settings✓
+//	Result: RequeueAfter 0s, all maintenance completed
+//
+//	Scenario 2 - Reload Request Processing:
+//	Input: Deployed v1.68.0 with reload=true annotation
+//	Flow: Reload Detection→Module Re-deployment→Restart Trigger
+//	Result: RequeueAfter 0s, modulesChangedReason set
+//
+//	Scenario 3 - Registry Update Handling:
+//	Input: Deployed v1.68.0 with registrySpecChanged annotation
+//	Flow: Registry Detection→OpenAPI Update→Annotation Cleanup→Update
+//	Result: RequeueAfter via requeue=true, registry changes applied
+//
+//	Scenario 4 - Override Bypass:
+//	Input: Deployed v1.68.0, ModulePullOverride exists
+//	Flow: Override Detection→Early Return
+//	Result: RequeueAfter 0s, minimal processing
 func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleDeployedRelease")
 	defer span.End()
@@ -551,7 +626,85 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	return res, nil
 }
 
-// handlePendingRelease handles pending releases
+// handlePendingRelease orchestrates the processing of pending module releases through a comprehensive
+// evaluation pipeline. This function implements the core release deployment logic that balances
+// safety, operational windows, approvals, and technical constraints to determine when and how
+// a pending release should be deployed.
+//
+// Processing Pipeline:
+//  1. Update Policy Resolution: Determine applicable update policies and validation rules
+//  2. Task Calculation: Evaluate release precedence, constraints, and readiness
+//  3. Force Release Handling: Process administratively forced releases bypassing normal flow
+//  4. Task Type Processing: Handle Skip/Await/Process decisions from task calculator
+//  5. Module Readiness Check: Ensure target module is in stable state for updates
+//  6. Requirements Validation: Verify technical prerequisites and compatibility
+//  7. Pre-Apply Checks: Validate deployment timing, windows, and approvals
+//  8. Release Deployment: Execute the actual module deployment process
+//
+// Update Policy Resolution:
+//   - If release has associated policy label: retrieve and validate specified policy
+//   - If no policy specified: auto-discover appropriate policy based on module name
+//   - Handle missing policies with graceful degradation and user feedback
+//   - Support for manual approval workflows and ignore policies
+//
+// Task Calculation Results:
+//   - Process: Release is ready for deployment (passes all checks)
+//   - Skip: Release should be bypassed (superseded by newer/force releases)
+//   - Await: Release must wait for dependencies (previous releases, constraints)
+//
+// Force Release Workflow:
+//   - Bypasses all safety checks (windows, requirements, approvals)
+//   - Intended for emergency deployments and administrative overrides
+//   - Logs warnings for audit trail and operational awareness
+//   - Triggers immediate Deckhouse restart for rapid deployment
+//
+// Module Readiness Requirements:
+//   - Non-single releases: Must wait for currently deployed module to be ready
+//   - Patch releases: Can proceed if target module is available
+//   - Major/minor releases: Stricter readiness requirements for stability
+//   - Prevents cascading failures during module transitions
+//
+// Technical Requirements Validation:
+//   - Kubernetes version compatibility checks
+//   - Cluster resource availability verification
+//   - Dependency module status validation
+//   - Custom requirement extensions through pluggable checkers
+//
+// Pre-Apply Deployment Checks:
+//   - Maintenance window compliance for disruption minimization
+//   - Manual approval workflows for controlled deployments
+//   - Notification delivery for stakeholder awareness
+//   - Cooldown period enforcement between major releases
+//   - Canary deployment scheduling for gradual rollouts
+//
+// Side Effects:
+//   - Module filesystem changes (download, symlink updates)
+//   - Kubernetes resource status updates (release, module conditions)
+//   - Deckhouse restart triggers for module activation
+//   - Notification delivery to configured channels
+//   - Metric updates for operational monitoring
+//
+// Example Scenarios:
+//
+//	Scenario 1 - Successful Minor Release:
+//	Input: Pending v1.68.0, Policy: Auto, Windows: [9-17], Module: Ready
+//	Flow: Policy→Task(Process)→Ready✓→Requirements✓→Windows✓→Deploy→Restart
+//	Result: RequeueAfter 15s, modulesChangedReason set
+//
+//	Scenario 2 - Awaiting Previous Release:
+//	Input: Pending v1.68.0, Previous v1.67.0 still Pending
+//	Flow: Policy→Task(Await)→Status Update
+//	Result: RequeueAfter 15s, no deployment
+//
+//	Scenario 3 - Force Release Emergency:
+//	Input: Pending v1.68.0 with force=true annotation
+//	Flow: Policy→Task(Process)→Force Detected→Immediate Deploy
+//	Result: No requeue, immediate restart triggered
+//
+//	Scenario 4 - Manual Approval Required:
+//	Input: Pending v2.0.0, Policy: Manual, Approved: false
+//	Flow: Policy→Task(Process)→Ready✓→Requirements✓→Approval✗
+//	Result: RequeueAfter 15s, awaiting approval
 func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "handlePendingRelease")
 	defer span.End()
@@ -630,7 +783,19 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		return res, err
 	}
 
-	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, logger)
+	us := &releaseUpdater.Settings{
+		NotificationConfig: config,
+		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
+		Windows:            policy.Spec.Update.Windows,
+		Subject:            releaseUpdater.SubjectModule,
+	}
+
+	err = r.patchManualRelease(ctx, release, us)
+	if err != nil {
+		return res, err
+	}
+
+	taskCalculator := releaseUpdater.NewModuleReleaseTaskCalculator(r.client, policy.Spec.ReleaseChannel, logger)
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {
@@ -757,13 +922,6 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	logger.Debug("requirements checks passed")
 
-	us := &releaseUpdater.Settings{
-		NotificationConfig: config,
-		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
-		Windows:            policy.Spec.Update.Windows,
-		Subject:            releaseUpdater.SubjectModule,
-	}
-
 	// handling error inside function
 	err = r.PreApplyReleaseCheck(ctx, release, task, us, metricLabels)
 	if err != nil {
@@ -874,12 +1032,73 @@ func (r *reconciler) ApplyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 	return nil
 }
 
-// runReleaseDeploy
+// runReleaseDeploy executes the complete module release deployment process from download to activation.
+// This function coordinates the essential steps required to safely deploy a new module version while
+// maintaining system consistency and providing rollback capabilities through proper status transitions.
 //
-// 1) download module
-// 2) bump previous deployment status superseded (retry if error)
-// 3) bump release annotations (retry if error)
-// 3) bump release status to deployed (retry if error)
+// Core Deployment Pipeline:
+//  1. Module Download: Fetch and validate the specified module version from registry
+//  2. Status Transition: Mark previously deployed release as superseded for proper lifecycle
+//  3. Metadata Update: Apply deployment annotations and finalizers for resource protection
+//  4. Status Finalization: Update release status to deployed with deployment metrics
+//
+// The function implements a transactional approach where each step includes retry mechanisms
+// to ensure deployment consistency even under concurrent modifications or temporary failures.
+//
+// Module Download Process:
+//   - Creates isolated temporary directory for download operations
+//   - Fetches module artifacts from configured registry using authentication
+//   - Validates module configuration against current cluster values
+//   - Copies validated module to permanent location with version-specific path
+//   - Updates filesystem symlinks to activate the new module version
+//   - Disables previous module hooks to prevent execution during transition
+//
+// Status Management Strategy:
+//   - Previously deployed releases are marked as "superseded" to maintain audit trail
+//   - Current release transitions through annotated states for tracking deployment progress
+//   - Finalizers protect filesystem resources from premature cleanup
+//   - Labels enable efficient querying and monitoring of release states
+//
+// Deployment States and Annotations:
+//   - isUpdating=true: Indicates deployment is in progress
+//   - notified=false: Tracks notification delivery status
+//   - Status labels updated to reflect deployment state
+//   - Finalizers added to protect filesystem resources
+//   - Administrative annotations cleared (force, reinstall, applyNow)
+//
+// Module Validation Process:
+//   - Configuration validation against current cluster values or ModuleConfig
+//   - Schema validation for module structure and dependencies
+//   - Compatibility checks for Kubernetes version requirements
+//   - Graceful handling of validation failures with informative status updates
+//
+// Retry and Resilience:
+//   - Exponential backoff for Kubernetes API operations
+//   - Separate retry logic for metadata and status updates
+//   - Idempotent operations where possible to support safe retries
+//   - Detailed error context for debugging and operational support
+//
+// Example Scenarios:
+//
+//	Scenario 1 - Initial Module Deployment:
+//	Input: Pending v1.68.0, No previous deployment
+//	Flow: Download→Validate→Install→Status(Deployed)
+//	Result: Module active, metrics updated, no superseded release
+//
+//	Scenario 2 - Module Version Upgrade:
+//	Input: Pending v1.69.0, Currently deployed v1.68.0
+//	Flow: Download→Validate→Supersede(v1.68.0)→Install→Status(Deployed)
+//	Result: v1.69.0 active, v1.68.0 marked superseded
+//
+//	Scenario 3 - Module Reload (Same Version):
+//	Input: Deployed v1.68.0 with reload annotation
+//	Flow: Download→Validate→Reinstall→Status(Deployed)
+//	Result: Same version redeployed, configuration refreshed
+//
+//	Scenario 4 - Validation Failure:
+//	Input: Pending v1.69.0 with invalid configuration
+//	Flow: Download→Validate✗→Status(Suspended/Pending)
+//	Result: Deployment halted, detailed error message provided
 func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.ModuleRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "runReleaseDeploy")
 	defer span.End()
@@ -1220,20 +1439,63 @@ type TimeResult struct {
 	Notified bool
 }
 
-// DeployTimeCalculate calculate time for release deploy
+// DeployTimeCalculate performs comprehensive timing analysis and notification coordination to determine
+// the optimal deployment window for a module release. This function implements differentiated timing
+// logic based on release type (patch vs minor) while handling notification delivery, policy compliance,
+// and disruption approval requirements.
 //
-// If patch, calculate by checking this conditions:
-// - Canary
-// - Notify
-// - Window
-// - ManualApproved
+// Processing Pipeline:
+//  1. Release Type Analysis: Determine if release is patch or minor/major version
+//  2. Disruption Check: For minor releases, validate disruption approval requirements
+//  3. Timing Calculation: Calculate deployment timing using specialized time services
+//  4. Notification Delivery: Send appropriate notifications based on release type
+//  5. Result Processing: Apply policy-specific timing adjustments and scheduling
 //
-// If minor, calculate by checking this conditions:
-// - Cooldown
-// - Canary
-// - Notify
-// - Window
-// - Manual Approved
+// Patch Release Workflow:
+//   - Lower risk profile allows more flexible deployment timing
+//   - Evaluated conditions: Canary settings, notifications, maintenance windows, manual approvals
+//   - Simplified notification workflow with patch-specific messaging
+//   - Immediate deployment possible if all conditions are satisfied
+//
+// Minor Release Workflow:
+//   - Higher risk profile requires additional safety measures
+//   - Evaluated conditions: Cooldown periods, canary settings, notifications, windows, approvals
+//   - Disruption approval validation through specialized checker
+//   - Enhanced notification workflow with detailed change communication
+//   - Extended validation period before deployment authorization
+//
+// Disruption Approval System:
+//   - Minor releases undergo disruption impact assessment
+//   - Configurable approval requirements based on organizational policies
+//   - Blocks deployment until explicit approval is granted
+//   - Provides detailed reasoning for approval requirements
+//
+// Notification Integration:
+//   - Patch notifications: Lightweight, focused on immediate changes
+//   - Minor notifications: Comprehensive, includes impact assessment and timing
+//   - Notification delivery failure blocks deployment for safety
+//
+// Example Scenarios:
+//
+//	Scenario 1 - Immediate Patch Deployment:
+//	Input: Patch release, within window, notifications enabled
+//	Flow: Patch Check→Notify→Calculate→Process
+//	Result: nil (immediate deployment approved)
+//
+//	Scenario 2 - Minor Release with Disruption Block:
+//	Input: Minor release, no disruption approval
+//	Flow: Minor Check→Disruption✗→Block
+//	Result: TimeResult{Message: "disruption approval required"}
+//
+//	Scenario 3 - Notification Delivery Failure:
+//	Input: Any release, notification channel unavailable
+//	Flow: Calculate→Notify✗→Block
+//	Result: TimeResult{Message: "Release is blocked, failed to send release notification"}
+//
+//	Scenario 4 - Scheduled Minor Deployment:
+//	Input: Minor release, outside window, approved
+//	Flow: Minor Check→Disruption✓→Calculate→Notify→Schedule
+//	Result: TimeResult{ReleaseApplyAfterTime: next_window_start, Notified: true}
 func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Release, task *releaseUpdater.Task, us *releaseUpdater.Settings, metricLabels releaseUpdater.MetricLabels) *TimeResult {
 	releaseNotifier := releaseUpdater.NewReleaseNotifier(us)
 	timeChecker := releaseUpdater.NewDeployTimeService(r.dependencyContainer, us, r.log)

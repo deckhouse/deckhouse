@@ -16,6 +16,6 @@ title: "Cloud provider — GCP: FAQ"
 Префикс кластера можно узнать, воспользовавшись следующей командой:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
   | base64 -d | grep prefix
 ```

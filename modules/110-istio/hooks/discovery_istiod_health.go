@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -127,14 +128,14 @@ func applyIstioModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return obj.GetName(), nil
 }
 
-func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
+func discoveryIstiodHealthHook(_ context.Context, input *go_hook.HookInput) error {
 	var isGlobalVersionIstiodReady bool
 	var injectorGlobalFullVer string
 	if !input.Values.Get("istio.internal.globalVersion").Exists() {
 		return nil
 	}
 
-	webhookSnaps := input.NewSnapshots.Get("istio_sidecar_injector_global_webhook")
+	webhookSnaps := input.Snapshots.Get("istio_sidecar_injector_global_webhook")
 	if len(webhookSnaps) == 1 {
 		err := webhookSnaps[0].UnmarshalTo(&injectorGlobalFullVer)
 		if err != nil {
@@ -152,7 +153,7 @@ func discoveryIstiodHealthHook(input *go_hook.HookInput) error {
 		versionMap[ver] = istioInfo
 	}
 
-	for pod, err := range sdkobjectpatch.SnapshotIter[istiodPod](input.NewSnapshots.Get("istiod_pods")) {
+	for pod, err := range sdkobjectpatch.SnapshotIter[istiodPod](input.Snapshots.Get("istiod_pods")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'istiod_pods' snapshot: %w", err)
 		}

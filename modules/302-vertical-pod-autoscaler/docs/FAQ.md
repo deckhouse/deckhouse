@@ -7,7 +7,7 @@ title: "The vertical-pod-autoscaler module: FAQ"
 You can view the VPA recommendations after the [VerticalPodAutoscaler](cr.html#verticalpodautoscaler) custom resource is created using the following command:
 
 ```shell
-kubectl describe vpa my-app-vpa
+d8 k describe vpa my-app-vpa
 ```
 
 The `status` will have the following parameters:

@@ -19,11 +19,11 @@
           1. Verify that the module's components are up and running:
           
              ```bash
-             kubectl get pods -n d8-admission-policy-engine
+             d8 k get pods -n d8-admission-policy-engine
              ```
           
           2. Check logs for issues, such as missing constraint templates or incomplete CRD creation:
           
              ```bash
-             kubectl logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
+             d8 k logs -n d8-system -lapp=deckhouse --tail=1000 | grep admission-policy-engine
              ```

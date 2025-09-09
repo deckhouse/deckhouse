@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -73,8 +74,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, calculateNodesCapacity)
 
-func calculateNodesCapacity(input *go_hook.HookInput) error {
-	nodeSnap := input.NewSnapshots.Get("nodes")
+func calculateNodesCapacity(_ context.Context, input *go_hook.HookInput) error {
+	nodeSnap := input.Snapshots.Get("nodes")
 
 	if len(nodeSnap) == 0 {
 		return fmt.Errorf("no nodes snapshot found")

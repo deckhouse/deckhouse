@@ -51,13 +51,13 @@ If you need to rotate the certificate manually (e.g., due to certificate corrupt
 1. Delete the secret `openvpn-pki-server` in the namespace `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-server
    ```
 
 1. Restart the OpenVPN pods to trigger the generation of a new certificate:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 A new certificate will be generated automatically when the pods start.
@@ -75,13 +75,13 @@ If you choose to revoke certificates, you can rotate them later (Renew) after th
 1. Delete secrets `openvpn-pki-ca` and `openvpn-pki-server` in the namespace `d8-openvpn`:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
+   d8 k -n d8-openvpn delete secrets openvpn-pki-ca openvpn-pki-server
    ```
 
 1. Restart OpenVPN pods:
 
    ```shell
-   kubectl -n d8-openvpn rollout restart sts openvpn
+   d8 k -n d8-openvpn rollout restart sts openvpn
    ```
 
 1. [Rotate certificates](#how-to-revoke-rotate-or-delete-a-user-certificate) of revoked users, or create new ones.
@@ -89,5 +89,5 @@ If you choose to revoke certificates, you can rotate them later (Renew) after th
 1. Delete all revoked certificate secrets:
 
    ```shell
-   kubectl -n d8-openvpn delete secrets -l revokedForever=true
+   d8 k -n d8-openvpn delete secrets -l revokedForever=true
    ```

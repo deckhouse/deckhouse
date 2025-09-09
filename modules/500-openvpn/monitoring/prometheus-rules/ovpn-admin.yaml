@@ -15,7 +15,7 @@
           Check the certificate information and make sure it actually expires:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```
 
           Renew or delete the expired certificate.
@@ -39,7 +39,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```
 
     - alert: OpenVPNClientCertificateExpired
@@ -60,7 +60,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```
 
     - alert: OpenVPNServerCertificateExpiresTomorrow
@@ -82,7 +82,7 @@
           Check the certificate information and make sure it actually expires:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```          
 
     - alert: OpenVPNServerCertificateExpired
@@ -103,7 +103,7 @@
 
           Check the certificate information and make sure it actually expires.
           ```shell
-          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```          
 
     - alert: OpenVPNServerCACertificateExpiringSoon
@@ -125,7 +125,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```                              
 
     - alert: OpenVPNServerCACertificateExpiringInAWeek
@@ -147,7 +147,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```               
 
     - alert: OpenVPNServerCACertificateExpiresTomorrow 
@@ -168,7 +168,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```       
 
           The hook should rotate CA and server certificates before expiry.
@@ -191,7 +191,7 @@
           View certificate details to display the exact expiration date:
 
           ```shell
-          kubectl -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
           ```       
 
           The hook should rotate CA and server certificates before expiry.

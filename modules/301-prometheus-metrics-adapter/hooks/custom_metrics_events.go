@@ -15,12 +15,15 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/301-prometheus-metrics-adapter/hooks/internal"
 )
@@ -90,9 +93,11 @@ func applyMetricFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *go_hook.HookInput, snapName, metricType string) {
-	for _, m := range input.Snapshots[snapName] {
-		metric := m.(internal.CustomMetric)
+func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *go_hook.HookInput, snapName, metricType string) error {
+	for metric, err := range sdkobjectpatch.SnapshotIter[internal.CustomMetric](input.Snapshots.Get(snapName)) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'CustomMetric' snapshots: %w", err)
+		}
 
 		if _, ok := internal.AllMetricsTypes[metricType]; !ok {
 			input.Logger.Warn("Incorrect custom metric type. Skip", slog.String("type", metric.Type))
@@ -101,20 +106,26 @@ func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *
 
 		state.AddMetric(&metric)
 	}
+
+	return nil
 }
 
 // this hook move custom metrics queries from our k8s resources into values.
 // from values, we generate config for
 // prometheus-adapter and prometheus reverse proxy with helm templates
 // see ../templates/config-map.yaml
-func setCustomMetricsQueriesToValues(input *go_hook.HookInput) error {
+func setCustomMetricsQueriesToValues(_ context.Context, input *go_hook.HookInput) error {
 	state := internal.NewMetricsQueryValues()
 
 	for metricType := range internal.AllMetricsTypes {
-		addQueriesToStateFromSnapshots(state, input, MetricKind(metricType), metricType)
+		if err := addQueriesToStateFromSnapshots(state, input, MetricKind(metricType), metricType); err != nil {
+			return fmt.Errorf("failed to add queries to state from snapshots: %w", err)
+		}
 		// yes, for namespace type we do not have cluster metrics
 		// but iteration over snapshot skip it
-		addQueriesToStateFromSnapshots(state, input, ClusterMetricKind(metricType), metricType)
+		if err := addQueriesToStateFromSnapshots(state, input, ClusterMetricKind(metricType), metricType); err != nil {
+			return fmt.Errorf("failed to add queries to state from snapshots: %w", err)
+		}
 	}
 
 	// replace all queries fully

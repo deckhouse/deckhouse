@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"crypto/sha256"
 	"fmt"
 	"strings"
@@ -230,8 +231,8 @@ func applyEgressAgentPodFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func handleEgressGateways(input *go_hook.HookInput) error {
-	EgressGatewayStates, err := egressGatewayStatesFromSnapshots(input)
+func handleEgressGateways(ctx context.Context, input *go_hook.HookInput) error {
+	EgressGatewayStates, err := egressGatewayStatesFromSnapshots(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 	nodesToLabel := make(map[string][]string)
 	nodesToUnlabel := make(map[string][]string)
 
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.Snapshots, "nodes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
 	}
@@ -285,7 +286,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 	}
 
-	ciliumPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.NewSnapshots, "cilium_agent_pods")
+	ciliumPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.Snapshots, "cilium_agent_pods")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cilium_agent_pods snapshot: %w", err)
 	}
@@ -304,7 +305,7 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 	}
 
-	egressAgentPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.NewSnapshots, "egress_agent_pods")
+	egressAgentPods, err := sdkobjectpatch.UnmarshalToStruct[PodInfo](input.Snapshots, "egress_agent_pods")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal egress_agent_pods snapshot: %w", err)
 	}
@@ -323,12 +324,12 @@ func handleEgressGateways(input *go_hook.HookInput) error {
 		}
 	}
 	// Evaluate desired nodes
-	egressInternalMap, err := egressGatewayMapFromSnapshots(input)
+	egressInternalMap, err := egressGatewayMapFromSnapshots(ctx, input)
 	if err != nil {
 		return err
 	}
 
-	egressGatewayInstances, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInstanceInfo](input.NewSnapshots, "egressgatewayinstances")
+	egressGatewayInstances, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInstanceInfo](input.Snapshots, "egressgatewayinstances")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal egressgatewayinstances snapshot: %w", err)
 	}
@@ -508,8 +509,8 @@ func appendLabels(labels []string) func(obj *unstructured.Unstructured) (*unstru
 }
 
 // map[<eg name>]egressGatewayState
-func egressGatewayStatesFromSnapshots(input *go_hook.HookInput) (map[string]egressGatewayState, error) {
-	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+func egressGatewayStatesFromSnapshots(_ context.Context, input *go_hook.HookInput) (map[string]egressGatewayState, error) {
+	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.Snapshots, "egressgateways")
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
 	}
@@ -535,8 +536,8 @@ func egressGatewayStatesFromSnapshots(input *go_hook.HookInput) (map[string]egre
 	return result, nil
 }
 
-func egressGatewayMapFromSnapshots(input *go_hook.HookInput) (map[string]EgressGatewayInfo, error) {
-	objs, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+func egressGatewayMapFromSnapshots(_ context.Context, input *go_hook.HookInput) (map[string]EgressGatewayInfo, error) {
+	objs, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.Snapshots, "egressgateways")
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -51,8 +52,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverCloudProviderHandler)
 
-func discoverCloudProviderHandler(input *go_hook.HookInput) error {
-	secret := input.NewSnapshots.Get("cloud_provider_secret")
+func discoverCloudProviderHandler(_ context.Context, input *go_hook.HookInput) error {
+	secret := input.Snapshots.Get("cloud_provider_secret")
 	if len(secret) == 0 {
 		if input.Values.Exists("nodeManager.internal.cloudProvider") {
 			input.Values.Remove("nodeManager.internal.cloudProvider")

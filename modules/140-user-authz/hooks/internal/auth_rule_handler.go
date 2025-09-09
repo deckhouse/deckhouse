@@ -17,6 +17,7 @@ limitations under the License.
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
@@ -51,9 +52,9 @@ func ApplyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return car, nil
 }
 
-func AuthorizationRulesHandler(valuesPath, snapshotKey string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		authorizationRules, err := snapshotsToAuthorizationRulesSlice(input.NewSnapshots.Get(snapshotKey))
+func AuthorizationRulesHandler(valuesPath, snapshotKey string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
+		authorizationRules, err := snapshotsToAuthorizationRulesSlice(input.Snapshots.Get(snapshotKey))
 		if err != nil {
 			return fmt.Errorf("failed to convert '%s' snapshot to authorization rules: %w", snapshotKey, err)
 		}

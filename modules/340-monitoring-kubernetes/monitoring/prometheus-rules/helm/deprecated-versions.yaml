@@ -13,7 +13,7 @@
       description: |
         To list all affected resources, run the following Prometheus query:
         
-        ```promql
+        ```prometheus
         max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 1
         ```
 
@@ -35,7 +35,7 @@
       description: |
         To list all affected resources, run the following Prometheus query:
         
-        ```promql
+        ```prometheus
         max by (helm_release_namespace, helm_release_name, helm_version, resource_namespace, resource_name, api_version, kind, k8s_version) (resource_versions_compatibility) == 2
         ```
 
