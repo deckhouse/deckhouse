@@ -105,7 +105,7 @@ data:
 
             set $module "$1";
             set $module_doc "$2";
-            set $channel_name "stable:
+            set $channel_name "stable";
 
             rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/index.html break;
             rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/$module_doc break;
@@ -143,7 +143,7 @@ data:
             }
 
             # Redirect for channel names to their corresponding versions for modules served from S3.
-            rewrite ^/modules/[^/]+/(rock-solid|stable|early-access|beta|alpha)/$ /modules/$module/$channel_version/$module_doc redirect;
+            rewrite ^/modules/[^/]+/(rock-solid|stable|early-access|beta|alpha)/$lang/modules/$module/$channel_version/$module_doc redirect;
         }
 
         # Requests for modules without channel and version in URL - /module/NAME/...
