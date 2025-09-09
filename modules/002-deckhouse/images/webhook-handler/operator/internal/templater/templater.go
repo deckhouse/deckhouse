@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func RenderTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebhook) (*bytes.Buffer, error) {
-	tplt, err := template.New("test").Funcs(template.FuncMap{
+func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebhook) (*bytes.Buffer, error) {
+	tplt, err := template.New("validation").Funcs(template.FuncMap{
 		"toYaml": toYAML,
 		"indent": indent,
 		"list":   list,
@@ -38,6 +38,30 @@ func RenderTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebhook) (*byt
 	var buf bytes.Buffer
 
 	err = tplt.Execute(&buf, vh)
+	if err != nil {
+		return nil, fmt.Errorf("template execute: %w", err)
+	}
+
+	// debug
+	// log.Info("template", slog.String("template", buf.String()))
+	fmt.Println(buf.String())
+
+	return &buf, nil
+}
+
+func RenderConversionTemplate(tpl string, cwh *deckhouseiov1alpha1.ConversionWebhook) (*bytes.Buffer, error) {
+	tplt, err := template.New("conversion").Funcs(template.FuncMap{
+		"toYaml": toYAML,
+		"indent": indent,
+		"list":   list,
+	}).Parse(tpl)
+	if err != nil {
+		return nil, fmt.Errorf("template parse: %w", err)
+	}
+
+	var buf bytes.Buffer
+
+	err = tplt.Execute(&buf, cwh)
 	if err != nil {
 		return nil, fmt.Errorf("template execute: %w", err)
 	}
