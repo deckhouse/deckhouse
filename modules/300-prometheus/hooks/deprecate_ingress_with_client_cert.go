@@ -106,7 +106,7 @@ func ingressWithClientCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func handleIngressWithClientCert(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("ingress")
+	snaps := input.Snapshots.Get("ingress")
 
 	if len(snaps) == 0 {
 		return nil
