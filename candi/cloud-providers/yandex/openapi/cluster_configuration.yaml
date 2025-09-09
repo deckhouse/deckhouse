@@ -415,7 +415,7 @@ apiVersions:
             description: |
               Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
 
-              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../../modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
+              > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
             type: object
             default: {"cores": 2, "memory": 2048}
             x-doc-default: {}
