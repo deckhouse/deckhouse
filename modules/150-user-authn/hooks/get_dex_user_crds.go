@@ -37,7 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type expirePatch struct {
+type userStatusPatch struct {
 	ExpireAt string      `json:"expireAt,omitempty"`
 	Groups   []string    `json:"groups"`
 	Lock     DexUserLock `json:"lock"`
@@ -114,10 +114,7 @@ type DexGroupStatus struct {
 }
 
 type Password struct {
-	// what?
-	UserID   string `json:"userID"`
-	Username string `json:"username"`
-	// what?
+	Username    string     `json:"username"`
 	Email       string     `json:"email"`
 	LockedUntil *time.Time `json:"lockedUntil"`
 }
@@ -224,7 +221,7 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			ExpireAt:    expireAt,
 		})
 
-		patch := expirePatch{
+		patch := userStatusPatch{
 			Groups: groups,
 			Lock:   lock,
 		}
@@ -235,11 +232,7 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			"status": patch,
 		}
 
-		input.Logger.Info(
-			"Update groups in user status",
-			slog.String("name", dexUser.Name),
-			slog.String("groups", strings.Join(patchMap["status"].(expirePatch).Groups, ",")),
-		)
+		input.Logger.Info("Sync user status", slog.Any("patch", patch))
 		input.PatchCollector.PatchWithMerge(patchMap, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
