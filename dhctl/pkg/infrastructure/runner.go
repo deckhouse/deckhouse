@@ -793,7 +793,7 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 			}
 		}
 	}
-
+	log.DebugF("hasMasterDestruction: %s\n", hasMasterInstanceDestructiveChanges)
 	return &DestructiveChangesReport{
 		Changes:              destructiveChanges,
 		hasMasterDestruction: hasMasterInstanceDestructiveChanges,

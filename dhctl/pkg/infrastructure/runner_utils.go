@@ -65,6 +65,7 @@ type ChangeOp struct {
 
 // no in init function because config.InfrastructureVersions loaded dynamically
 var cloudNameToUseOpenTofu map[string]struct{}
+var DVPVMKind = "VirtualMachine"
 
 func getCloudNameToUseOpentofuMap(filename string) (map[string]struct{}, error) {
 	if cloudNameToUseOpenTofu != nil {
@@ -142,14 +143,44 @@ func NeedToUseOpentofu(metaConfig *config.MetaConfig) bool {
 }
 
 func IsMasterInstanceDestructiveChanged(_ context.Context, rc ResourceChange, rm map[string]string) bool {
-	for providerKey, vmType := range rm {
-		// ex: providerKey = "yandex-cloud/yandex"
-		// rc.ProviderName = "registry.terraform.io/yandex-cloud/yandex"
-		if strings.Contains(rc.ProviderName, providerKey) {
-			return rc.Type == vmType
-		}
-	}
-	return false
+    for providerKey, vmType := range rm {
+        // ex: providerKey = "yandex-cloud/yandex"
+        // rc.ProviderName = "registry.terraform.io/yandex-cloud/yandex"
+        if !strings.Contains(rc.ProviderName, providerKey) {
+            continue
+        }
+
+        if rc.Type != vmType {
+            return false
+        }
+        // DVP
+        if vmType == "kubernetes_manifest" {
+            return isKubernetesManifestVirtualMachine(rc.Change)
+        }
+
+        return true
+    }
+    return false
+}
+
+func isKubernetesManifestVirtualMachine(change ChangeOp) bool {
+    return strings.EqualFold(extractManifestKind(change.After), DVPVMKind)
+}
+
+func extractManifestKind(state map[string]interface{}) string {
+    v, ok := state["manifest"]
+    if !ok || v == nil {
+        return ""
+    }
+    mv, ok := v.(map[string]interface{})
+    if !ok {
+        return ""
+    }
+    if kind, ok := mv["kind"].(string); ok {
+		log.DebugF("extractManifestKind: %s\n", kind)
+        return kind
+    }
+    return ""
 }
 
 func LoadProviderVMTypesFromYAML(path string) (map[string]string, error) {
