@@ -22,66 +22,6 @@ import (
 	"sync"
 )
 
-type PhaseWithSubPhases struct {
-	Phase     OperationPhase      `json:"phase"`
-	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
-}
-
-var BootstrapPhases = []PhaseWithSubPhases{
-	{Phase: BaseInfraPhase},
-	{Phase: RegistryPackagesProxyPhase},
-	{Phase: ExecuteBashibleBundlePhase},
-	{
-		Phase: InstallDeckhousePhase,
-		SubPhases: []OperationSubPhase{
-			InstallDeckhouseSubPhaseConnect,
-			InstallDeckhouseSubPhaseInstall,
-			InstallDeckhouseSubPhaseWait,
-		},
-	},
-	{Phase: InstallAdditionalMastersAndStaticNodes},
-	{Phase: CreateResourcesPhase},
-	{Phase: ExecPostBootstrapPhase},
-	{Phase: FinalizationPhase},
-}
-
-var ConvergePhases = []PhaseWithSubPhases{
-	{Phase: BaseInfraPhase},
-	{Phase: InstallDeckhousePhase},
-	{Phase: AllNodesPhase},
-	{Phase: ScaleToMultiMasterPhase},
-	{Phase: DeckhouseConfigurationPhase},
-}
-
-var CheckPhases = []PhaseWithSubPhases{ // currently no phases for this operation
-	{Phase: OperationPhase(OperationCheck)},
-}
-
-var DestroyPhases = []PhaseWithSubPhases{
-	{Phase: DeleteResourcesPhase},
-	{Phase: AllNodesPhase},
-	{Phase: BaseInfraPhase},
-}
-
-var CommanderAttachPhases = []PhaseWithSubPhases{
-	{Phase: CommanderAttachScanPhase},
-	{Phase: CommanderAttachCheckPhase},
-	{Phase: CommanderAttachCheckPhase},
-}
-
-var CommanderDetachPhases = []PhaseWithSubPhases{ // currently no phases for this operation
-	{Phase: OperationPhase(OperationCommanderDetach)},
-}
-
-var operationPhases = map[Operation][]PhaseWithSubPhases{
-	OperationBootstrap:       BootstrapPhases,
-	OperationConverge:        ConvergePhases,
-	OperationCheck:           CheckPhases,
-	OperationDestroy:         DestroyPhases,
-	OperationCommanderAttach: CommanderAttachPhases,
-	OperationCommanderDetach: CommanderDetachPhases,
-}
-
 type OnProgressFunc func(Progress) error
 
 type ProgressTracker struct {
@@ -106,37 +46,74 @@ type Progress struct {
 	Phases []PhaseWithSubPhases `json:"phases"`
 }
 
+func (p Progress) Clone() Progress {
+	clonedPhases := make([]PhaseWithSubPhases, len(p.Phases))
+	for i, phase := range p.Phases {
+		clonedPhase := PhaseWithSubPhases{
+			Phase:     phase.Phase,
+			SubPhases: slices.Clone(phase.SubPhases),
+		}
+
+		if phase.Action != nil {
+			clonedAction := *phase.Action
+			clonedPhase.Action = &clonedAction
+		}
+
+		clonedPhases[i] = clonedPhase
+	}
+
+	return Progress{
+		Operation:         p.Operation,
+		Progress:          p.Progress,
+		CompletedPhase:    p.CompletedPhase,
+		CurrentPhase:      p.CurrentPhase,
+		NextPhase:         p.NextPhase,
+		CompletedSubPhase: p.CompletedSubPhase,
+		CurrentSubPhase:   p.CurrentSubPhase,
+		NextSubPhase:      p.NextSubPhase,
+		Phases:            clonedPhases,
+	}
+}
+
+type ProgressOpts struct {
+	Action PhaseAction
+}
+
 func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error) *ProgressTracker {
+	phases, _ := operationPhases(operation)
+
 	return &ProgressTracker{
-		progress:       Progress{Operation: operation, Progress: 0, Phases: operationPhases[operation]},
+		progress:       Progress{Operation: operation, Progress: 0, Phases: phases},
 		onProgressFunc: onProgressFunc,
 	}
 }
 
-func (p *ProgressTracker) LastCompletedPhase(
+func (p *ProgressTracker) FindLastCompletedPhase(
 	completedPhase, nextPhase OperationPhase,
-) OperationPhase {
+) (OperationPhase, bool) {
 	if completedPhase != "" {
-		return completedPhase
+		return completedPhase, false
 	}
 
 	if nextPhase == "" {
-		return completedPhase
+		return completedPhase, false
 	}
 
-	phases, ok := operationPhases[p.progress.Operation]
+	phases, ok := operationPhases(p.progress.Operation)
 	if !ok {
-		return completedPhase
+		return completedPhase, false
 	}
 
 	nextPhaseIndex := slices.IndexFunc(phases, func(phases PhaseWithSubPhases) bool {
 		return phases.Phase == nextPhase
 	})
 
-	return nOrEmpty(phases, nextPhaseIndex-1).Phase
+	return nOrEmpty(phases, nextPhaseIndex-1).Phase, true
 }
 
-func (p *ProgressTracker) Progress(completedPhase OperationPhase, completedSubPhase OperationSubPhase) error {
+func (p *ProgressTracker) Progress(
+	completedPhase OperationPhase, completedSubPhase OperationSubPhase, opts ProgressOpts,
+) error {
 	if p.onProgressFunc == nil {
 		return nil
 	}
@@ -145,18 +122,18 @@ func (p *ProgressTracker) Progress(completedPhase OperationPhase, completedSubPh
 
 	var progress Progress
 	if completedPhase == "" && completedSubPhase == "" || completedPhase != "" {
-		progress = calculatePhaseProgress(p.progress, completedPhase)
+		progress = calculatePhaseProgress(p.progress, completedPhase, opts)
 	} else {
-		progress = calculateSubPhaseProgress(p.progress, completedSubPhase)
+		progress = calculateSubPhaseProgress(p.progress, completedSubPhase, opts)
 	}
 
 	p.progress = progress
 	p.mx.Unlock()
 
-	return p.onProgressFunc(progress)
+	return p.onProgressFunc(progress.Clone())
 }
 
-func calculatePhaseProgress(p Progress, completedPhase OperationPhase) Progress {
+func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts ProgressOpts) Progress {
 	progress := Progress{
 		Operation:       p.Operation,
 		Phases:          p.Phases,
@@ -167,7 +144,7 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase) Progress 
 	}
 
 	// return progress as is if there is no known phases for given operation
-	phases, ok := operationPhases[p.Operation]
+	phases, ok := operationPhases(p.Operation)
 	if !ok {
 		return progress
 	}
@@ -190,6 +167,14 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase) Progress 
 	}
 	currentPhaseIndex := completedPhaseIndex + 1
 
+	// iterate over all previous phases, if action was nil, set action
+	// if current action is skip, then skip all previous nil actions
+	for i := 0; i <= completedPhaseIndex; i++ {
+		if p.Phases[i].Action == nil {
+			p.Phases[i].Action = &opts.Action
+		}
+	}
+
 	// get current phase and first sub phase if exists
 	curPhase := nOrEmpty(phases, currentPhaseIndex)
 	nextPhase := nOrEmpty(phases, currentPhaseIndex+1)
@@ -204,7 +189,7 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase) Progress 
 	return progress
 }
 
-func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase) Progress {
+func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, _ ProgressOpts) Progress {
 	progress := Progress{
 		Operation:         p.Operation,
 		Phases:            p.Phases,
@@ -218,7 +203,7 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase) 
 	}
 
 	// return progress as is if there is no known phases for given operation
-	phases, ok := operationPhases[p.Operation]
+	phases, ok := operationPhases(p.Operation)
 	if !ok {
 		return progress
 	}
@@ -228,6 +213,7 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase) 
 	for _, phase := range phases {
 		if phase.Phase == p.CurrentPhase {
 			currentPhase = phase
+			break
 		}
 	}
 
@@ -260,6 +246,11 @@ func WriteProgress(path string) OnProgressFunc {
 
 		if _, err = file.WriteString(string(jsonData) + "\n"); err != nil {
 			return fmt.Errorf("writing progress: %w", err)
+		}
+
+		err = file.Sync()
+		if err != nil {
+			return fmt.Errorf("syncing progress: %w", err)
 		}
 
 		return nil
