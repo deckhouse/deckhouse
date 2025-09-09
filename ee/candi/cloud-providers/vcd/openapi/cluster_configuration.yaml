@@ -153,8 +153,8 @@ apiVersions:
                     polarity:
                       type: string
                       description: |
-                        The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
-                      enum: [Affinity, AntiAffinity]
+                        The polarity of the affinity rule. One of `Affinity` or `Anti-Affinity`.
+                      enum: [Affinity, Anti-Affinity]
                     required:
                       type: boolean
                       description: |
@@ -295,8 +295,8 @@ apiVersions:
                       polarity:
                         type: string
                         description: |
-                          The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
-                        enum: [Affinity, AntiAffinity]
+                          The polarity of the affinity rule. One of `Affinity` or `Anti-Affinity`.
+                        enum: [Affinity, Anti-Affinity]
                       required:
                         type: boolean
                         description: |
