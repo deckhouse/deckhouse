@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -93,7 +94,7 @@ func applyMetricFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 }
 
 func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *go_hook.HookInput, snapName, metricType string) error {
-	for metric, err := range sdkobjectpatch.SnapshotIter[internal.CustomMetric](input.NewSnapshots.Get(snapName)) {
+	for metric, err := range sdkobjectpatch.SnapshotIter[internal.CustomMetric](input.Snapshots.Get(snapName)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'CustomMetric' snapshots: %w", err)
 		}
@@ -113,7 +114,7 @@ func addQueriesToStateFromSnapshots(state *internal.MetricsQueriesState, input *
 // from values, we generate config for
 // prometheus-adapter and prometheus reverse proxy with helm templates
 // see ../templates/config-map.yaml
-func setCustomMetricsQueriesToValues(input *go_hook.HookInput) error {
+func setCustomMetricsQueriesToValues(_ context.Context, input *go_hook.HookInput) error {
 	state := internal.NewMetricsQueryValues()
 
 	for metricType := range internal.AllMetricsTypes {

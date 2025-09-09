@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -106,27 +107,27 @@ func applyMigrationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	return secret.Name, nil
 }
 
-func migration(input *go_hook.HookInput) error {
+func migration(_ context.Context, input *go_hook.HookInput) error {
 	// We stopped using the disk, so this option is no longer needed. To avoid validation errors, before removing storageClass from the spec, we need to remove it from the config in all existing installations.
 	// TODO Handle as v0->v1 conversion on migrating to DeckhouseConfig objects in PR#1729.
 	// input.ConfigValues.Remove("openvpn.storageClass")
 
-	migrated := len(input.NewSnapshots.Get("easyrsa_migrated")) > 0
+	migrated := len(input.Snapshots.Get("easyrsa_migrated")) > 0
 
 	// if pvc does not exist then no migration is required
-	if len(input.NewSnapshots.Get("openvpn_pvc")) == 0 {
+	if len(input.Snapshots.Get("openvpn_pvc")) == 0 {
 		migrated = true
 	} else {
 		// if pvc exists, then get storageClassName from it and set effectiveStorageClass
 		var pvc string
-		err := input.NewSnapshots.Get("openvpn_pvc")[0].UnmarshalTo(&pvc)
+		err := input.Snapshots.Get("openvpn_pvc")[0].UnmarshalTo(&pvc)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal pvc: %w", err)
 		}
 		input.Values.Set("openvpn.internal.effectiveStorageClass", pvc)
 	}
 
-	statefulsets := input.NewSnapshots.Get("openvpn_sts")
+	statefulsets := input.Snapshots.Get("openvpn_sts")
 
 	if len(statefulsets) > 0 {
 		var sts string

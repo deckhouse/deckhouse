@@ -17,6 +17,7 @@ limitations under the License.
 package cluster_configuration
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -50,7 +51,7 @@ func RegisterHook(handler Handler) bool {
 				FilterFunc: applyProviderClusterConfigurationSecretFilter,
 			},
 		},
-	}, func(input *go_hook.HookInput) error {
+	}, func(_ context.Context, input *go_hook.HookInput) error {
 		return clusterConfiguration(input, handler)
 	})
 }
@@ -72,7 +73,7 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
 		secretFound           bool
 	)
 
-	snaps := input.NewSnapshots.Get("provider_cluster_configuration")
+	snaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(snaps) > 0 {
 		secretFound = true
 		var secret = new(v1.Secret)

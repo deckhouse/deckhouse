@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -100,11 +101,11 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}, nil
 }
 
-func setProxyFailoverLabel(input *go_hook.HookInput) error {
+func setProxyFailoverLabel(_ context.Context, input *go_hook.HookInput) error {
 	// Collect nodes that have a Ready proxy-failover Pod running
-	nodesWithRunningFailover := make(map[string]struct{}, len(input.NewSnapshots.Get("proxyFailoverPods"))) // All active nodes
+	nodesWithRunningFailover := make(map[string]struct{}, len(input.Snapshots.Get("proxyFailoverPods"))) // All active nodes
 
-	for pod, err := range sdkobjectpatch.SnapshotIter[Pod](input.NewSnapshots.Get("proxyFailoverPods")) {
+	for pod, err := range sdkobjectpatch.SnapshotIter[Pod](input.Snapshots.Get("proxyFailoverPods")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'proxyFailoverPods' snapshots: %w", err)
 		}
@@ -115,7 +116,7 @@ func setProxyFailoverLabel(input *go_hook.HookInput) error {
 	}
 
 	// Add the label to nodes that have a proxy-failover Pod and don't have the label yet
-	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.NewSnapshots.Get("nodes")) {
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.Snapshots.Get("nodes")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
 		}

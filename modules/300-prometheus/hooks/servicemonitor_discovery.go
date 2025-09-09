@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -62,10 +63,10 @@ func filterServiceMonitor(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return sm, nil
 }
 
-func serviceMonitorHandler(input *go_hook.HookInput) error {
+func serviceMonitorHandler(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_servicemonitors")
 
-	snaps := input.NewSnapshots.Get("servicemonitors")
+	snaps := input.Snapshots.Get("servicemonitors")
 
 	for serviceMon, err := range sdkobjectpatch.SnapshotIter[serviceMonitor](snaps) {
 		if err != nil {

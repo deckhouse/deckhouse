@@ -70,7 +70,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(purgeOrphanResources))
 
-func purgeOrphanResources(input *go_hook.HookInput, dc dependency.Container) error {
+func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	patch, err := json.Marshal(deleteFinalizersPatch)
 	if err != nil {
 		return err

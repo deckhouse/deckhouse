@@ -186,7 +186,7 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 
 	migrateToTofuStatus := CheckStatusInSync
 
-	if infrastructureprovider.NeedToUseOpentofu(metaConfig) && hasTerraformState {
+	if infrastructure.NeedToUseOpentofu(metaConfig) && hasTerraformState {
 		checkStatus = checkStatus.CombineStatus(CheckStatusOutOfSync)
 		migrateToTofuStatus = CheckStatusOutOfSync
 	}

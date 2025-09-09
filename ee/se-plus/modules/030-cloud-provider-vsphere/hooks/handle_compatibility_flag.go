@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -64,7 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleStorageClasses)
 
-func handleStorageClasses(input *go_hook.HookInput) error {
+func handleStorageClasses(_ context.Context, input *go_hook.HookInput) error {
 	// We use `none` in internal values against empty string `` for cleaner conditions in Helm templates.
 	compatibilityFlag := "none"
 	if v, ok := input.Values.GetOk("cloudProviderVsphere.storageClass.compatibilityFlag"); ok {
@@ -72,7 +73,7 @@ func handleStorageClasses(input *go_hook.HookInput) error {
 	}
 	input.Values.Set("cloudProviderVsphere.internal.compatibilityFlag", compatibilityFlag)
 
-	storageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.NewSnapshots, "module_storageclasses")
+	storageClasses, err := sdkobjectpatch.UnmarshalToStruct[StorageClass](input.Snapshots, "module_storageclasses")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal module_storageclasses snapshot: %w", err)
 	}

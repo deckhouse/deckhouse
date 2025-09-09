@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -60,18 +61,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var sts appsv1.StatefulSet
 	if err := sdk.FromUnstructured(obj, &sts); err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if len(sts.Spec.VolumeClaimTemplates) == 0 {
 		log.Debug("StatefulSet has no VolumeClaimTemplates", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
-		return "", nil
+		return nil, nil
 	}
 
 	quantity, ok := sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests[corev1.ResourceStorage]
 	if !ok {
 		log.Debug("No storage resource request found in VolumeClaimTemplate", slog.String("namespace", sts.Namespace), slog.String("name", sts.Name))
-		return "", nil
+		return nil, nil
 	}
 
 	return &StatefulSetStorage{
@@ -83,8 +84,8 @@ func applyStsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func removeStsUpmeter(input *go_hook.HookInput) error {
-	stsSnapshot := input.NewSnapshots.Get("sts")
+func removeStsUpmeter(_ context.Context, input *go_hook.HookInput) error {
+	stsSnapshot := input.Snapshots.Get("sts")
 	if len(stsSnapshot) > 0 {
 		for sts, err := range sdkobjectpatch.SnapshotIter[StatefulSetStorage](stsSnapshot) {
 			if err != nil {

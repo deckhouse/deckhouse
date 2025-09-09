@@ -174,7 +174,7 @@ func rawMessageToString(message json.RawMessage) (string, error) {
 	return result, err
 }
 
-func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
+func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
@@ -186,7 +186,7 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 
 	var isAutomaticK8s bool
 	var kubernetesVersion string
-	kubernetesVersionSnapshots := input.NewSnapshots.Get("kubernetesVersion")
+	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
 	if len(kubernetesVersionSnapshots) > 0 {
 		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
 		if err != nil {

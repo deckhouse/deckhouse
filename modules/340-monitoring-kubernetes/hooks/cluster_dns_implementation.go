@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -67,7 +68,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, setDNSImplementation)
 
-func setDNSImplementation(input *go_hook.HookInput) error {
+func setDNSImplementation(_ context.Context, input *go_hook.HookInput) error {
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
 
 	if enabledModules.Has("kube-dns") {
@@ -75,7 +76,7 @@ func setDNSImplementation(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	kubeDNSDeployments := input.NewSnapshots.Get("kube_dns_deployment")
+	kubeDNSDeployments := input.Snapshots.Get("kube_dns_deployment")
 
 	if len(kubeDNSDeployments) != 1 {
 		return errors.New("ERROR: can't determine cluster DNS implementation")

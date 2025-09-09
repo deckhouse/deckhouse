@@ -24,13 +24,13 @@
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -n {{$labels.secret_namespace}} "$cert"
+             d8 k describe cert -n {{$labels.secret_namespace}} "$cert"
              ```
 
   - alert: CertificateSecretExpired
@@ -57,11 +57,11 @@
           1. Retrieve the certificate name from the Secret:
 
              ```bash
-             cert=$(kubectl get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
+             cert=$(d8 k get secret -n {{$labels.secret_namespace}} {{$labels.secret_name}} -o 'jsonpath={.metadata.annotations.cert-manager\.io/certificate-name}')
              ```
 
           2. Check the certificate status and investigate why it hasn't been updated:
 
              ```bash
-             kubectl describe cert -m {{$labels.secret_namespace}} "$cert"
+             d8 k describe cert -m {{$labels.secret_namespace}} "$cert"
              ```

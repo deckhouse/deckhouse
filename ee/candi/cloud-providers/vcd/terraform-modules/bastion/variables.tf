@@ -52,6 +52,11 @@ variable "root_disk_size_gb" {
   type = number
 }
 
+variable "metadata" {
+  type    = map(string)
+  default = {}
+}
+
 locals {
   name           = format("%s-bastion", var.prefix)
   template_parts = split("/", var.template)

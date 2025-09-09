@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,10 +75,10 @@ func createConfigMapWithUUID(patch go_hook.PatchCollector, clusterUUID string) {
 // discoveryClusterUUID
 // There is CM kube-system/d8-cluster-uuid with cluster uuid. Hook must store it to `global.discovery.clusterUUID`.
 // Or generate uuid and create CM
-func discoveryClusterUUID(input *go_hook.HookInput) error {
+func discoveryClusterUUID(_ context.Context, input *go_hook.HookInput) error {
 	const valPath = "global.discovery.clusterUUID"
 
-	uuidSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "cluster_uuid")
+	uuidSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cluster_uuid")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cluster_uuid snapshot: %w", err)
 	}

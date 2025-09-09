@@ -67,6 +67,7 @@
  - **[cloud-provider-huaweicloud]** Fixed documentation and examples for huaweicloud provider. [#14225](https://github.com/deckhouse/deckhouse/pull/14225)
  - **[cloud-provider-vsphere]** ignore ept_rvi_mode and hv_mode [#14882](https://github.com/deckhouse/deckhouse/pull/14882)
  - **[cloud-provider-vsphere]** Added /tmp emptyDir for csi-node-legacy. [#14208](https://github.com/deckhouse/deckhouse/pull/14208)
+ - **[cni-cilium]** Fixed the infinite loop in the "cilium migration" bashible step and improved synchronization between bashible and safe-agent-updater. [#15262](https://github.com/deckhouse/deckhouse/pull/15262)
  - **[cni-cilium]** Add a compatibility check for the Cilium version and the kernel version, if WireGuard is installed on the node [#15155](https://github.com/deckhouse/deckhouse/pull/15155)
     If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
  - **[cni-cilium]** Added a migration mechanism, which was implemented through the node group disruptive updates with approval. [#14977](https://github.com/deckhouse/deckhouse/pull/14977)

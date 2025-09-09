@@ -33,7 +33,7 @@ var (
 func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name string) (map[TKey]TValue, error) {
 	ret := make(map[TKey]TValue)
 
-	snapshot := input.NewSnapshots.Get(name)
+	snapshot := input.Snapshots.Get(name)
 	for val, err := range sdkobjectpatch.SnapshotIter[KeyValue[TKey, TValue]](snapshot) {
 		if err != nil {
 			return ret, fmt.Errorf("value of type %T not convertible to KeyValue: %w", val, err)
@@ -48,7 +48,7 @@ func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name s
 func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue, error) {
 	var value TValue
 
-	snapshot := input.NewSnapshots.Get(name)
+	snapshot := input.Snapshots.Get(name)
 	snapLen := len(snapshot)
 
 	if snapLen != 1 {
@@ -66,7 +66,7 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 }
 
 func SnapshotToList[TValue any](input *go_hook.HookInput, name string) ([]TValue, error) {
-	snapshot := input.NewSnapshots.Get(name)
+	snapshot := input.Snapshots.Get(name)
 	ret := make([]TValue, 0, len(snapshot))
 	for snap, err := range sdkobjectpatch.SnapshotIter[TValue](snapshot) {
 		if err != nil {

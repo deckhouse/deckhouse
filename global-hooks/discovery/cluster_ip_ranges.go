@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"log/slog"
 	"regexp"
 
@@ -161,7 +162,7 @@ func applyServiceSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string) string {
 	subnets := make([]string, 0)
 	for _, s := range snapshotsNames {
-		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, s)
+		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, s)
 		if err != nil {
 			input.Logger.Warn("failed to unmarshal snapshot", slog.String("snapshot", s), log.Err(err))
 			continue
@@ -180,8 +181,8 @@ func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string)
 	return ""
 }
 
-func discoveryClusterIPRanges(input *go_hook.HookInput) error {
-	clusterConfigSnap := input.NewSnapshots.Get(clusterConfigurationSnapName)
+func discoveryClusterIPRanges(_ context.Context, input *go_hook.HookInput) error {
+	clusterConfigSnap := input.Snapshots.Get(clusterConfigurationSnapName)
 	if len(clusterConfigSnap) > 0 {
 		return nil
 	}

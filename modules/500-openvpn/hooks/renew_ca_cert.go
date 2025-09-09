@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -77,8 +78,8 @@ func applyCASecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	return CertInfo{certData}, nil
 }
 
-func checkServerCertExpiry(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("openvpn_pki_ca")
+func checkServerCertExpiry(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("openvpn_pki_ca")
 
 	if len(snaps) == 0 {
 		input.Logger.Warn("Secret openvpn-pki-server or openvpn-pki-ca not found, skipping")
