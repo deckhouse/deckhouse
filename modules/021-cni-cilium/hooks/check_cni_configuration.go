@@ -223,31 +223,31 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
 	// Skip if in the secret key "cilium" does not exist or empty.
-	secretMatchesMc := true
+	secretMatchesMC := true
 	if cniSecret.Cilium != (ciliumConfigStruct{}) {
 		switch cniSecret.Cilium.Mode {
 		case "VXLAN":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "VXLAN" {
 				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "VXLAN"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		case "Direct":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "Disabled" {
 				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		case "DirectWithNodeRoutes":
 			value, ok := input.ConfigValues.GetOk("cniCilium.tunnelMode")
 			if !ok || value.String() != "Disabled" {
 				desiredCNIModuleConfig.Spec.Settings["tunnelMode"] = "Disabled"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 			value, ok = input.ConfigValues.GetOk("cniCilium.createNodeRoutes")
 			if !ok || !value.Bool() {
 				desiredCNIModuleConfig.Spec.Settings["createNodeRoutes"] = true
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		default:
 			input.Logger.Warn("An unknown cilium mode was specified in the d8-cni-configuration secret, so the default cni mode will be used instead.", slog.String("specified mode", cniSecret.Cilium.Mode))
@@ -258,13 +258,13 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 			if !ok || value.String() != cniSecret.Cilium.MasqueradeMode {
 				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = cniSecret.Cilium.MasqueradeMode
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniCilium.masqueradeMode")
 			if !ok || value.String() != "BPF" {
 				desiredCNIModuleConfig.Spec.Settings["masqueradeMode"] = "BPF"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		default:
 			input.Logger.Warn("An unknown cilium masqueradeMode was specified in the d8-cni-configuration secret, so the default cni masqueradeMode will be used instead.", slog.String("specified masqueradeMode", cniSecret.Cilium.Mode))
@@ -288,12 +288,12 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if cniModuleConfigs[0].Spec.Enabled == nil {
-		secretMatchesMc = false
+		secretMatchesMC = false
 	}
 
 	// If the secret matches MC, then we should
 	// - add an annotation to the secret (to activate new_logic)
-	if secretMatchesMc {
+	if secretMatchesMC {
 		annotateSecret(input)
 		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
