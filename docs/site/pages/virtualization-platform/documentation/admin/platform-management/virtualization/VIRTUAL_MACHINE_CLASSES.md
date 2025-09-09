@@ -175,7 +175,7 @@ The `.spec.sizingPolicy` block allows you to set sizing policies for virtual mac
 {% alert level="warning" %}
 Changes in the `.spec.sizingPolicy` block can also affect virtual machines. For virtual machines whose sizing policy will not meet the new policy requirements, the `SizingPolicyMatched` condition in the `.status.conditions` block will be false (`status: False`).
 
-When configuring `sizingPolicy`, be sure to consider the [CPU topology](./user_guide.html#automatic-cpu-topology-configuration) for virtual machines.
+When configuring `sizingPolicy`, be sure to consider the [CPU topology](../../../user/resource-management/virtual-machines.html#automatic-cpu-topology-configuration) for virtual machines.
 {% endalert %}
 
 The `cores` block is mandatory and specifies the range of cores to which the rule described in the same block applies.

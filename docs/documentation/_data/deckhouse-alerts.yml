@@ -6081,7 +6081,7 @@ alerts:
       description: |-
         Defining additional scrape configurations using Secrets will be deprecated in `prometheus-operator` versions later than v0.65.1.
 
-        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/202212-scrape-config.md) instead.
+        Migrate to using the [ScrapeConfig custom resource](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/proposals/implemented/202212-scrape-config.md) instead.
       summary: |
         AdditionalScrapeConfigs from Secrets will be deprecated soon.
       severity: "8"
