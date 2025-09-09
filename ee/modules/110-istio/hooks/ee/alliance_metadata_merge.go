@@ -157,27 +157,30 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
 	}
 
-	// Decode the base64-encoded kubeconfig
+	// Handle the kubeconfig data - it might be base64-encoded or raw YAML
 	secDataStr := string(secData)
+	var kubeconfigBytes []byte
 
-	// Clean up the base64 string (remove whitespace, newlines, etc.)
-	secDataStr = strings.ReplaceAll(secDataStr, "\n", "")
-	secDataStr = strings.ReplaceAll(secDataStr, "\r", "")
-	secDataStr = strings.ReplaceAll(secDataStr, " ", "")
-	secDataStr = strings.TrimSpace(secDataStr)
+	// Check if the data looks like base64 (contains only base64 characters)
+	if isBase64String(secDataStr) {
+		// Clean up the base64 string (remove whitespace, newlines, etc.)
+		cleanData := strings.ReplaceAll(secDataStr, "\n", "")
+		cleanData = strings.ReplaceAll(cleanData, "\r", "")
+		cleanData = strings.ReplaceAll(cleanData, " ", "")
+		cleanData = strings.TrimSpace(cleanData)
 
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(secDataStr)
-	if err != nil {
-		// Try URL encoding as fallback
-		kubeconfigBytes, err = base64.URLEncoding.DecodeString(secDataStr)
+		var err error
+		kubeconfigBytes, err = base64.StdEncoding.DecodeString(cleanData)
 		if err != nil {
-			// Log the problematic data for debugging (first 50 chars)
-			debugData := secDataStr
-			if len(debugData) > 50 {
-				debugData = debugData[:50] + "..."
+			// Try URL encoding as fallback
+			kubeconfigBytes, err = base64.URLEncoding.DecodeString(cleanData)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
 			}
-			return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v (data preview: %q)", secretName, err, debugData)
 		}
+	} else {
+		// Data is already decoded (raw YAML)
+		kubeconfigBytes = secData
 	}
 
 	return IstioRemoteSecretData{
@@ -186,6 +189,35 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		ClusterName: clusterName,
 		Kubeconfig:  string(kubeconfigBytes),
 	}, nil
+}
+
+// Checks if a string looks like base64-encoded data
+func isBase64String(s string) bool {
+	// Base64 strings should only contain A-Z, a-z, 0-9, +, /, and = (padding)
+	// and should not contain common YAML keywords
+	base64Chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+	// If the string contains YAML keywords, it's likely raw YAML
+	yamlKeywords := []string{"apiVersion:", "kind:", "clusters:", "contexts:", "users:"}
+	for _, keyword := range yamlKeywords {
+		if strings.Contains(s, keyword) {
+			return false
+		}
+	}
+
+	// Check if all characters are valid base64 characters
+	for _, char := range s {
+		if !strings.ContainsRune(base64Chars, char) && char != '\n' && char != '\r' && char != ' ' {
+			return false
+		}
+	}
+
+	// If it's very short, it's probably not base64
+	if len(strings.TrimSpace(s)) < 10 {
+		return false
+	}
+
+	return true
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
