@@ -84,8 +84,8 @@ spec:
                     polarity:
                       type: string
                       description: |
-                        The polarity of the affinity rule. One of `Affinity` or `Anti-Affinity`.
-                      enum: [Affinity, Anti-Affinity]
+                        The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+                      enum: [Affinity, AntiAffinity]
                     required:
                       type: boolean
                       description: |
