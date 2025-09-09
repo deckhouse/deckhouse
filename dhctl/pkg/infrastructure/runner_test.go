@@ -48,19 +48,25 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 	tests := []struct {
 		name    string
 		plan    string
-		changes *PlanDestructiveChanges
+		changes *DestructiveChangesReport
 		err     error
 	}{
 		{
 			name:    "Empty Changes",
 			plan:    "./mocks/checkplan/empty.json",
-			changes: nil,
+			changes:  &DestructiveChangesReport{Changes:(*PlanDestructiveChanges)(nil), hasMasterDestruction:false},
 			err:     nil,
 		},
 		{
 			name:    "Has destructive changes",
 			plan:    "./mocks/checkplan/destructively_changed.json",
-			changes: destructivelyChanged,
+			changes: destructiveChangesReport,
+		},
+		{
+			name:    "Has destructive changes but without VM",
+			plan:    "./mocks/checkplan/destructively_changed_without_vm.json",
+			changes: destructiveChangesReportWithoutVM,
+			err:     nil,
 		},
 	}
 
@@ -315,4 +321,83 @@ var destructivelyChanged = &PlanDestructiveChanges{
 			Type: "yandex_compute_instance",
 		},
 	},
+}
+
+
+var destructiveChangesReport = &DestructiveChangesReport{Changes: destructivelyChanged, hasMasterDestruction: true}
+
+var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
+	ResourcesDeleted: nil,
+	ResourcesRecreated: []ValueChange{
+		{
+			CurrentValue: map[string]any{
+				"created_at": "2021-02-26T09:41:43Z",
+				"description": "",
+				"external_ipv4_address": []any{
+					map[string]any{
+						"address": "203.0.113.10",
+						"zone_id": "ru-central1-c",
+					},
+				},
+				"folder_id": "test",
+				"id":        "addr-old",
+				"labels":    map[string]any{},
+				"name":      "kube-master-eip",
+				"timeouts":  nil,
+			},
+			NextValue: map[string]any{
+				"description": "",
+				"external_ipv4_address": []any{
+					map[string]any{
+						"zone_id": "ru-central1-c",
+					},
+				},
+				"labels":   map[string]any{},
+				"name":     "kube-master-eip",
+				"timeouts": nil,
+			},
+			Type: "yandex_vpc_address",
+		},
+	},
+	Provider: "",
+}
+
+var destructiveChangesReportWithoutVM = &DestructiveChangesReport{
+	Changes:              destructivelyChangedWithoutVM,
+	hasMasterDestruction: false,
+}
+
+func TestNeedToUseOpentofu(t *testing.T) {
+	metaConfig := &config.MetaConfig{}
+
+	metaConfig.ProviderName = "Yandex"
+	require.True(t, NeedToUseOpentofu(metaConfig))
+
+	notTofuProviders := []string{
+		"OpenStack",
+		"AWS",
+		"GCP",
+		"vSphere",
+		"Azure",
+		"VCD",
+		"Huaweicloud",
+	}
+
+	for _, provider := range notTofuProviders {
+		conf := &config.MetaConfig{}
+		conf.ProviderName = provider
+
+		require.False(t, NeedToUseOpentofu(conf))
+	}
+}
+
+func TestGetCloudsUseOpentofu(t *testing.T) {
+	m, err := getCloudNameToUseOpentofuMap(config.InfrastructureVersions)
+	require.NoError(t, err)
+
+	require.Len(t, m, 4)
+	require.Contains(t, m, "yandex")
+	require.Contains(t, m, "dynamix")
+	require.Contains(t, m, "zvirt")
+	require.Contains(t, m, "dvp")
 }
