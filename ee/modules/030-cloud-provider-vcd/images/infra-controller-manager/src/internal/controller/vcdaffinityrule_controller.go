@@ -293,11 +293,13 @@ func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAf
 		VMReference: vmReference,
 	}
 
+	ruleEnabled := true
+
 	return &types.VmAffinityRule{
 		Name:         resource.GetName(),
 		Polarity:     resource.Spec.Polarity,
-		IsEnabled:    &resource.Spec.Enabled,
-		IsMandatory:  &resource.Spec.Mandatory,
+		IsEnabled:    &ruleEnabled,
+		IsMandatory:  &resource.Spec.Required,
 		VmReferences: vmReferences,
 	}, nil
 }
