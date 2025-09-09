@@ -18,15 +18,7 @@ DKP позволяет:
 
 Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../architecture/logging.html).
 
-Для настройки сбора и доставки логов в кластере Deckhouse используются три кастомных ресурса:
-
-- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
-  включая правила сбора, фильтрации и парсинга;
-- [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
-  в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
-- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
-
-Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса PodLoggingConfig.
+Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
 
 ## Настройка сбора логов из приложения
 
@@ -96,3 +88,56 @@ DKP позволяет:
    ```shell
    d8 k apply -f pod-logging-config.yaml
    ```
+   
+## Примеры
+
+### Создание source в namespace и чтение логов всех подов в этом NS с направлением их в Loki
+
+Следующий pipeline создает source в namespace `test-whispers`, читает логи всех подов в этом NS и пишет их в Loki:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PodLoggingConfig
+metadata:
+  name: whispers-logs
+  namespace: tests-whispers
+spec:
+  clusterDestinationRefs:
+    - loki-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Чтение только подов в указанном namespace и с определенным label
+
+Пример чтения только подов, имеющих label `app=booking`, в namespace `test-whispers`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PodLoggingConfig
+metadata:
+  name: whispers-logs
+  namespace: tests-whispers
+spec:
+  labelSelector:
+    matchLabels:
+      app: booking
+  clusterDestinationRefs:
+    - loki-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
