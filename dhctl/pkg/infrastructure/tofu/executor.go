@@ -21,12 +21,26 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+type initEntry struct {
+    once sync.Once
+    err  error
+}
+
+var initOnceByKey sync.Map
+
+func getInitOnceKey(pluginsDir, workingDir string) *initEntry {
+    key := pluginsDir + "|" + workingDir
+    v, _ := initOnceByKey.LoadOrStore(key, &initEntry{})
+    return v.(*initEntry)
+}
 
 func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 	fullArgs := args
@@ -41,12 +55,13 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
 
-	cmd.Env = append(
-		os.Environ(),
-		"TF_IN_AUTOMATION=yes",
-		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
-		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-	)
+    cmd.Env = append(
+        os.Environ(),
+        "TF_IN_AUTOMATION=yes",
+        "TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
+        "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
+        "TF_PLUGIN_CACHE_DIR="+filepath.Join(app.TmpDirName, "tf_plugin_cache"),
+    )
 
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
@@ -77,17 +92,22 @@ func NewExecutor(workingDir string, looger log.Logger) *Executor {
 }
 
 func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
-	args := []string{
-		"init",
-		fmt.Sprintf("-plugin-dir=%s", pluginsDir),
-		"-no-color",
-		"-input=false",
-	}
+    onceKey := getInitOnceKey(pluginsDir, e.workingDir)
+    e.logger.LogDebugF("tofu.Init called: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
+    onceKey.once.Do(func() {
+        e.logger.LogDebugF("tofu.Init executing once for key=%q\n", pluginsDir+"|"+e.workingDir)
+        args := []string{
+            "init",
+            fmt.Sprintf("-plugin-dir=%s", pluginsDir),
+            "-no-color",
+            "-input=false",
+        }
 
-	e.cmd = tofuCmd(ctx, e.workingDir, args...)
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
-
-	return err
+        e.cmd = tofuCmd(ctx, e.workingDir, args...)
+        _, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+        onceKey.err = err
+    })
+    return onceKey.err
 }
 
 func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) error {

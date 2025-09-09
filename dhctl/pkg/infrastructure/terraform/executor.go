@@ -20,12 +20,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+type initEntry struct {
+	once sync.Once
+	err  error
+}
+
+var initOnceByKey sync.Map
+
+func getInitOnceKey(pluginsDir, workingDir string) *initEntry {
+	key := pluginsDir + "|" + workingDir
+	v, _ := initOnceByKey.LoadOrStore(key, &initEntry{})
+	return v.(*initEntry)
+}
 
 func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "terraform", args...)
@@ -65,20 +79,25 @@ func NewExecutor(workingDir string, looger log.Logger) *Executor {
 }
 
 func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
-	args := []string{
-		"init",
-		fmt.Sprintf("-plugin-dir=%s", pluginsDir),
-		"-get-plugins=false",
-		"-no-color",
-		"-input=false",
-		e.workingDir,
-	}
+	onceKey := getInitOnceKey(pluginsDir, e.workingDir)
+	e.logger.LogDebugF("terraform.Init called: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
+	onceKey.once.Do(func() {
+		e.logger.LogDebugF("terraform.Init executing once for key=%q\n", pluginsDir+"|"+e.workingDir)
+		args := []string{
+			"init",
+			fmt.Sprintf("-plugin-dir=%s", pluginsDir),
+			"-get-plugins=false",
+			"-no-color",
+			"-input=false",
+			e.workingDir,
+		}
 
-	e.cmd = terraformCmd(ctx, args...)
+		e.cmd = terraformCmd(ctx, args...)
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
-
-	return err
+		_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+		onceKey.err = err
+	})
+	return onceKey.err
 }
 
 func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) error {
