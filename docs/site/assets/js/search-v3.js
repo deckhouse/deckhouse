@@ -1122,7 +1122,7 @@ class ModuleSearch {
       }
 
       // Construct absolute URL using the base URL
-      if (relativeCurrentPageURL) {
+      if (relativeCurrentPageURL || relativeCurrentPageURL === '') {
         // Remove leading slash from target path to avoid // in the result
         targetModifiedPath = targetModifiedPath.startsWith('/') ?
           targetModifiedPath.substring(1) : targetModifiedPath;
