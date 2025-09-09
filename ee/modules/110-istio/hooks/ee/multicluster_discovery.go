@@ -278,14 +278,23 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 
 		// Always patch private metadata to ensure JWT is stored in CRD status
 		input.Logger.Info("about to patch CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
-		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
-		if err != nil {
-			input.Logger.Error("failed to patch CRD with JWT", slog.String("name", multiclusterInfo.Name), log.Err(err))
-			return err
+
+		// Create a unique patch to minimize conflicts
+		uniquePatch := map[string]interface{}{
+			"status": map[string]interface{}{
+				"metadataCache": map[string]interface{}{
+					"private":                   privateMetadata,
+					"privateLastFetchTimestamp": time.Now().UTC().Format(time.RFC3339),
+					// Add a unique timestamp to help identify this specific patch
+					"jwtPatchTimestamp": time.Now().UTC().Format(time.RFC3339Nano),
+				},
+			},
 		}
 
+		input.PatchCollector.PatchWithMerge(uniquePatch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", multiclusterInfo.Name, object_patch.WithSubresource("/status"))
+
 		// Debug: Log about patched the CRD
-		input.Logger.Info("successfully patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
+		input.Logger.Info("successfully patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."), slog.String("timestamp", time.Now().UTC().Format(time.RFC3339Nano)), slog.String("jwt_expiry", privateMetadata.JWTExpiryTime))
 	}
 	return nil
 }
