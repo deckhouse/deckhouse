@@ -341,13 +341,21 @@ entries:
         #    ru: Модули
         #  url: /virtualization-platform/reference/modules.html
         - title:
-            en: Modules settings
-            ru: Настройки модулей
-          url: /virtualization-platform/reference/mc.html
-        - title:
-            en: Custom Resources
-            ru: Custom Resources
-          url: /virtualization-platform/reference/cr/
+            en: API
+            ru: API
+          folders:
+            - title:
+                en: ClusterConfiguration
+                ru: ClusterConfiguration
+              url: /virtualization-platform/reference/cr/clusterconfiguration.html
+            - title:
+                en: StaticClusterConfiguration
+                ru: StaticClusterConfiguration
+              url: /virtualization-platform/reference/cr/staticclusterconfiguration.html
+            - title:
+                en: InitConfiguration
+                ru: InitConfiguration
+              url: /virtualization-platform/reference/cr/initconfiguration.html
         - title:
             en: Console utilities
             ru: Консольные утилиты

@@ -1,0 +1,13 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+[Integrity control] --> [Integrity control\n when starting containers]
+[Integrity control] --> [Integrity control\n of running containers]
+[Integrity control\n of running containers] <-- [Built-in rules]
+[Integrity control\n of running containers] <-- [Custom rules]
+@enduml

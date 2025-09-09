@@ -54,13 +54,21 @@ markup:
     style: native
     tabWidth: 4
 
+# Output formats
+outputs:
+  home:
+    - HTML
+  page:
+    - HTML
+  section:
+    - HTML
+
 # "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
 - "404"
 - home
 - robotsTXT
 - RSS
-#- section
 - sitemap
 - taxonomy
 - term
