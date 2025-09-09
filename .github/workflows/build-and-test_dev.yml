@@ -32,6 +32,7 @@ env:
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  STAGE_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
@@ -462,6 +463,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -618,8 +639,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -637,8 +660,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -674,17 +695,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -817,6 +838,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -973,8 +1014,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -992,8 +1035,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1029,17 +1070,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1172,6 +1213,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -1328,8 +1389,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -1347,8 +1410,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1384,17 +1445,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1527,6 +1588,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -1683,8 +1764,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -1702,8 +1785,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -1739,17 +1820,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -1882,6 +1963,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -2038,8 +2139,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -2057,8 +2160,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -2094,17 +2195,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
@@ -2237,6 +2338,26 @@ jobs:
           logout: false
       # </template: login_readonly_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
         id: check_rw_registry
@@ -2393,8 +2514,10 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
+            export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DEV_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
-          export WERF_REPO="${DEV_REGISTRY_PATH}"
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
@@ -2412,8 +2535,6 @@ jobs:
 
             export WERF_DISABLE_META_TAGS=true
           else
-            # Other build, set deckhouse registry as secondary
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
             export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
@@ -2449,17 +2570,17 @@ jobs:
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
             echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
-            publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'dev' "${REGISTRY_PATH}:${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install:${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev' "${REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
             fi
           else
             echo "Branch unset, skipping branch publish."
