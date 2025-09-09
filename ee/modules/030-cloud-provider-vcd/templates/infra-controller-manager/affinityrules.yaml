@@ -1,5 +1,5 @@
 {{- if .Values.cloudProviderVcd.internal.affinityRules }}
-{{ $prefix := .Values.global.clusterConfiguration.prefix | required "global.clusterConfiguration.prefix is required" }}
+{{ $prefix := .Values.global.clusterConfiguration.cloud.prefix | required "global.clusterConfiguration.cloud.prefix is required" }}
 {{- range .Values.cloudProviderVcd.internal.affinityRules }}
 ---
 apiVersion: deckhouse.io/v1alpha1
