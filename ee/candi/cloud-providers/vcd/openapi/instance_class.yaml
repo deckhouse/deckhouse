@@ -78,7 +78,6 @@ spec:
                     > **Warning.** Changing the `additionalMetadata` will cause the recreation of CloudEphemeral NodeGroups referring the VCDInstanceClass.
                 affinityRule:
                   type: object
-                  additionalProperties: false
                   description: |
                     Affinity rule for ephemeral nodes.
                   properties:
