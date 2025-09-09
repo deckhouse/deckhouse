@@ -8,8 +8,9 @@ metadata:
   name: {{ printf "%s-%s" $prefix .nodeGroupName | trunc 63 | trimSuffix "-" }}
   {{- include "helm_lib_module_labels" (list $ . (dict "app" "infra-controller-manager")) | nindent 2 }}
 spec:
+  enabled: "true"
   polarity: {{ .polarity | toString | quote }}
-  required: {{ .required | toString | quote }}
+  mandatory: {{ .required | toString | quote }}
   nodeLabelSelector:
     node.deckhouse.io/group: {{ .nodeGroupName | toString | quote }}
 {{- end }}
