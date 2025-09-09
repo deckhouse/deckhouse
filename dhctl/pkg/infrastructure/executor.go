@@ -16,7 +16,6 @@ package infrastructure
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"os/exec"
@@ -57,8 +56,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	}
 
 	var (
-		wg     sync.WaitGroup
-		errBuf bytes.Buffer
+		wg sync.WaitGroup
 	)
 
 	wg.Add(2)
@@ -71,11 +69,6 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 			txt := e.Text()
 			log.DebugLn(txt)
 
-			if !app.IsDebug {
-				if !infrastructureLogsMatcher.MatchString(txt) {
-					errBuf.WriteString(txt + "\n")
-				}
-			}
 		}
 	}()
 
@@ -95,7 +88,6 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != hasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
-		err = fmt.Errorf(errBuf.String())
 		if app.IsDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
 		}
