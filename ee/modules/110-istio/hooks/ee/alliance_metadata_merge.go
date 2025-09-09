@@ -158,9 +158,26 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	// Decode the base64-encoded kubeconfig
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(string(secData))
+	secDataStr := string(secData)
+
+	// Clean up the base64 string (remove whitespace, newlines, etc.)
+	secDataStr = strings.ReplaceAll(secDataStr, "\n", "")
+	secDataStr = strings.ReplaceAll(secDataStr, "\r", "")
+	secDataStr = strings.ReplaceAll(secDataStr, " ", "")
+	secDataStr = strings.TrimSpace(secDataStr)
+
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(secDataStr)
 	if err != nil {
-		return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
+		// Try URL encoding as fallback
+		kubeconfigBytes, err = base64.URLEncoding.DecodeString(secDataStr)
+		if err != nil {
+			// Log the problematic data for debugging (first 50 chars)
+			debugData := secDataStr
+			if len(debugData) > 50 {
+				debugData = debugData[:50] + "..."
+			}
+			return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v (data preview: %q)", secretName, err, debugData)
+		}
 	}
 
 	return IstioRemoteSecretData{
