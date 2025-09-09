@@ -238,18 +238,11 @@ multiclustersLoop:
 			"scope": "api",
 		}
 
-		if multiclusterInfo.APIJWT != "" {
-			input.Logger.Info("using existing valid JWT from CRD status", slog.String("name", multiclusterInfo.Name))
-		} else {
-			// until the bug won't be solved https://github.com/istio/istio/issues/37925
-			// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
-			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
-			if err != nil {
-				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
-				continue multiclustersLoop
-			}
-
-			input.Logger.Info("generated new JWT", slog.String("name", multiclusterInfo.Name))
+		// Use the same in-memory cache as multicluster_discovery
+		multiclusterInfo.APIJWT, err = getOrCreateJWT(multiclusterInfo.Name, privKey, claims, time.Hour*24*366, input.Logger)
+		if err != nil {
+			input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
+			continue multiclustersLoop
 		}
 
 		multiclusterInfo.Public = nil

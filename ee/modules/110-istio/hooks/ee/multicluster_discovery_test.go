@@ -208,7 +208,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 
 			logOutput := string(f.LoggerOutput.Contents())
-			Expect(logOutput).To(ContainSubstring("generated new API JWT for multicluster"))
+			Expect(logOutput).To(ContainSubstring("generated and cached new JWT for multicluster"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-0"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-1"))
 			Expect(logOutput).To(ContainSubstring("proper-multicluster-2"))
