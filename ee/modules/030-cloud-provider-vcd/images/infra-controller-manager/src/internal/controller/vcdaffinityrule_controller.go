@@ -308,11 +308,6 @@ func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(ctx context.Context, re
 		vmAffinityRule, err := vdc.GetVmAffinityRuleById(resource.Status.RuleID)
 
 		if err != nil {
-			resource.Status.RuleID = ""
-			if err := r.Status().Update(ctx, resource); err != nil {
-				return fmt.Errorf("failed to update vcdaffinityrule status after deletion: %w", err)
-			}
-			
 			return fmt.Errorf("failed to get vm affinity rule by id: %w", err)
 		}
 
