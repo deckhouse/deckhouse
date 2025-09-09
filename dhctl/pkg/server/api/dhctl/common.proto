@@ -33,6 +33,7 @@ message Progress {
   message PhaseWithSubPhases {
     string phase = 1;
     repeated string sub_phases = 2;
+    string action = 3;
   }
 
   string operation = 1;

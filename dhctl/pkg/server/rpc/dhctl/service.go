@@ -26,6 +26,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -261,6 +262,7 @@ func convertProgress(p phases.Progress) *pb.Progress {
 
 		allPhases = append(allPhases, &pb.Progress_PhaseWithSubPhases{
 			Phase:     string(phase.Phase),
+			Action:    string(ptr.Deref(phase.Action, phases.PhaseActionDefault)),
 			SubPhases: subPhases,
 		})
 	}

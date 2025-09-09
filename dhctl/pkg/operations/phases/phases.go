@@ -24,6 +24,12 @@ type (
 	OperationSubPhase string
 )
 
+type PhaseAction string
+
+func (a PhaseAction) IsZero() bool {
+	return a == ""
+}
+
 const (
 	OperationBootstrap       Operation = "Bootstrap"
 	OperationConverge        Operation = "Converge"
@@ -72,3 +78,85 @@ const (
 	InstallDeckhouseSubPhaseInstall OperationSubPhase = "InstallDeckhouse"
 	InstallDeckhouseSubPhaseWait    OperationSubPhase = "WaitForFirstMasterReady"
 )
+
+const (
+	PhaseActionDefault PhaseAction = ""
+	PhaseActionSkip    PhaseAction = "skip"
+)
+
+type PhaseWithSubPhases struct {
+	Phase     OperationPhase      `json:"phase"`
+	Action    *PhaseAction        `json:"action,omitempty,omitzero"`
+	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
+}
+
+func BootstrapPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: BaseInfraPhase},
+		{Phase: RegistryPackagesProxyPhase},
+		{Phase: ExecuteBashibleBundlePhase},
+		{
+			Phase: InstallDeckhousePhase,
+			SubPhases: []OperationSubPhase{
+				InstallDeckhouseSubPhaseConnect,
+				InstallDeckhouseSubPhaseInstall,
+				InstallDeckhouseSubPhaseWait,
+			},
+		},
+		{Phase: InstallAdditionalMastersAndStaticNodes},
+		{Phase: CreateResourcesPhase},
+		{Phase: ExecPostBootstrapPhase},
+		{Phase: FinalizationPhase},
+	}
+}
+
+func ConvergePhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: BaseInfraPhase},
+		{Phase: InstallDeckhousePhase},
+		{Phase: AllNodesPhase},
+		{Phase: ScaleToMultiMasterPhase},
+		{Phase: DeckhouseConfigurationPhase},
+	}
+}
+
+func CheckPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{ // currently no phases for this operation
+		{Phase: OperationPhase(OperationCheck)},
+	}
+}
+
+func DestroyPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: DeleteResourcesPhase},
+		{Phase: AllNodesPhase},
+		{Phase: BaseInfraPhase},
+	}
+}
+
+func CommanderAttachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: CommanderAttachScanPhase},
+		{Phase: CommanderAttachCheckPhase},
+		{Phase: CommanderAttachCheckPhase},
+	}
+}
+
+func CommanderDetachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{ // currently no phases for this operation
+		{Phase: OperationPhase(OperationCommanderDetach)},
+	}
+}
+
+func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
+	phase, ok := map[Operation][]PhaseWithSubPhases{
+		OperationBootstrap:       BootstrapPhases(),
+		OperationConverge:        ConvergePhases(),
+		OperationCheck:           CheckPhases(),
+		OperationDestroy:         DestroyPhases(),
+		OperationCommanderAttach: CommanderAttachPhases(),
+		OperationCommanderDetach: CommanderDetachPhases(),
+	}[operation]
+
+	return phase, ok
+}
