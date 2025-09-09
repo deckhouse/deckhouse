@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -66,20 +67,42 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	go func() {
 		defer wg.Done()
 
-		e := bufio.NewScanner(stderr)
-		for e.Scan() {
-			txt := e.Text()
-			log.DebugLn(txt)
+		reader := bufio.NewReader(stderr)
+		buf := make([]byte, 1024)
 
+		for {
+			n, err := reader.Read(buf)
+			if n > 0 {
+				chunk := buf[:n]
+				log.DebugLn(string(chunk))
+			}
+			if err != nil {
+				if err != io.EOF {
+					log.DebugF("Error reading stderr: %v", err)
+				}
+				break
+			}
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		s := bufio.NewScanner(stdout)
-		for s.Scan() {
-			logger.LogInfoLn(s.Text())
+		reader := bufio.NewReader(stdout)
+		buf := make([]byte, 1024)
+
+		for {
+			n, err := reader.Read(buf)
+			if n > 0 {
+				chunk := buf[:n]
+				log.InfoLn(string(chunk))
+			}
+			if err != nil {
+				if err != io.EOF {
+					log.DebugF("Error reading stdout: %v", err)
+				}
+				break
+			}
 		}
 	}()
 
