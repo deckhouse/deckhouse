@@ -217,7 +217,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	tpl, err := os.ReadFile("internal/controller/templates/webhook.tpl")
+	tpl, err := os.ReadFile("internal/controller/templates/validationwebhook.tpl")
 	if err != nil {
 		setupLog.Error(err, "unable to read template file")
 		os.Exit(1)
