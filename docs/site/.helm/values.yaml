@@ -55,7 +55,7 @@ vrouter:
   locationVersions: "/products/kubernetes-platform/documentation"
   logLevel:
     web-stage: trace
-    _default: trace
+    _default: debug
     web-production: info
   pathStatic:
     _default: root

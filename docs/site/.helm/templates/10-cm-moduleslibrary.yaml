@@ -105,9 +105,10 @@ data:
 
             set $module "$1";
             set $module_doc "$2";
+            set $channel_name "stable:
 
-            rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/v1.71/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/v1.71/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
@@ -197,10 +198,7 @@ data:
 
             rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /modules-{{ $.Values.werf.env }}/$channel/$lang/modules/$module/index.html break;
             rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /modules-{{ $.Values.werf.env }}/$channel/$lang/modules/$module/$module_doc break;
-            #rewrite ^/(.+) /modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/$lang/$1 break;
 
-            #try_files @s3 =404;
-            #try_files /$lang/embedded-modules/$1 /$lang/embedded-modules/$1/index.html /$lang/embedded-modules/$1/ /$lang/modules/$1 /$lang/modules/$1/index.html /$lang/modules/$1/ =404;
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
             proxy_cache_key         $uri;
@@ -220,74 +218,8 @@ data:
             proxy_pass              https://{{ .Values.global.doc_s3_bucket_public_url }};
         }
 
-
-        # Internal redirect to serve module docs from sources
-        #location ~* ^/(ru|en)/modules/([^/]+)/(rock-solid|stable|early-access|beta|alpha)/(.*)$ {
-        #    internal;
-        #    set $module "$2";
-        #    set $channel "$3";
-        #    set $module_doc "$4";
-        #    try_files /$lang/modules/$module/$channel/$module_doc /$lang/modules/$module/$channel/$module_doc/readme.html /$lang/modules/$module/$channel/$module_doc/ =404;
-        #}
-
         location / {
             try_files $uri $uri/ =404;
         }
-
-        ## TODO TMP Redirect channel names to their corresponding versions
-        #location ~ ^/modules/test/(alpha|beta|ea|stable|rock-solid)$ {
-        #    set $channel_name $1;
-        #    return 301 /$channel_version;
-        #}
-
-        #        # Redirects for modules folders
-        #        location ~* ^/(ru|en)/modules/([^/.]+)$ {
-        #            set $platform_module_folder_path "platform/$1/modules/$2";
-        #            set $platform_module_url "/$1/platform/modules/$2/";
-        #            set $ext_module_folder_path "modules/$1/$2";
-        #            set $ext_module_url "/$1/modules/$2/";
-        #
-        #            if (-d $document_root/$platform_module_folder_path) {
-        #                return 301 $platform_module_url$is_args$args;
-        #            }
-        #
-        #            if (-d $document_root/$ext_module_folder_path) {
-        #                return 301 $ext_module_url$is_args$args;
-        #            }
-        #        }
-
-        #        location ~* ^/(ru|en)/modules/([^/]+)/(.*)$ {
-        #            set $platform_module_folder_path "platform/$1/modules/$2";
-        #            set $platform_module_url "/$1/platform/modules/$2/$3";
-        #            set $lang "$1";
-        #            set $module "$2";
-        #            set $module_doc "$3";
-        #
-        #            if (-d $document_root/$platform_module_folder_path) {
-        #               return 301 $platform_module_url$is_args$args;
-        #            }
-        #
-        #            # Redirect to stable version for module from source (doc for such modules is always has URL /LANG/modules/NAME/stable/DOC_URL).
-        #            rewrite ^/(ru|en)/modules/([^/]+)/(?!(rock-solid|stable|early-access|beta|alpha))(.*)$ /$1/modules/$2/stable/$3$is_args$args redirect;
-        #
-        #            # Serve modules from sources
-        #            try_files /modules/$lang/$module/$module_doc /modules/$lang/$module/$module_doc/ =404;
-        #        }
-
-        # Internal modules
-        #location ~* ^/(ru|en)/platform/(.*) {
-        #    try_files /platform/$1/$2 /platform/$1/$2/index.html =404;
-        #}
-
-        #location ~* ^/platform/(ru|en)/(.*) {
-        #    internal;
-        #    try_files $uri $uri/ =404;
-        #}
-
-        #location ~* ^/modules/(ru|en)/([^0-9]+[^/]+)/(.*)$ {
-        #    internal;
-        #    try_files $uri $uri/ =404;
-        #}
-
       }
     }

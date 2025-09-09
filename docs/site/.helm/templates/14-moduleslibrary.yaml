@@ -82,8 +82,6 @@ spec:
               name: modules-searchindex-ru
             - mountPath: /cache
               name: download-cache
-            #- name: config
-            #  mountPath: /app/config
             - name: nginx-config
               mountPath: /etc/nginx/nginx.conf
               subPath: nginx.conf
