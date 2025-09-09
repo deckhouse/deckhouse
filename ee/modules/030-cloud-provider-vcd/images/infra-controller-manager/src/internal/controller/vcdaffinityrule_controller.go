@@ -295,9 +295,14 @@ func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAf
 
 	ruleEnabled := true
 
+	polarity := convertPolarity(resource.Spec.Polarity)
+	if polarity == "" {
+		return nil, fmt.Errorf("invalid polarity: %s", resource.Spec.Polarity)
+	}
+
 	return &types.VmAffinityRule{
 		Name:         resource.GetName(),
-		Polarity:     resource.Spec.Polarity,
+		Polarity:     polarity,
 		IsEnabled:    &ruleEnabled,
 		IsMandatory:  &resource.Spec.Required,
 		VmReferences: vmReferences,
@@ -346,4 +351,15 @@ func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(ctx context.Context, re
 	}
 
 	return nil
+}
+
+func convertPolarity(polarity string) string {
+	switch polarity {
+	case "Affinity":
+		return "Affinity"
+	case "AntiAffinity", "Anti-Affinity":
+		return "Anti-Affinity"
+	default:
+		return ""
+	}
 }

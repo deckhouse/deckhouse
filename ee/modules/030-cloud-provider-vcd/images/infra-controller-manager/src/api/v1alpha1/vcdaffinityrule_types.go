@@ -21,6 +21,8 @@ type VCDAffinityRuleSpec struct {
 	Required bool `json:"required,omitempty"`
 
 	// Polarity is TODO
+	// +kubebuilder:validation:Enum=Affinity;AntiAffinity
+	// +kubebuilder:validation:Required
 	Polarity string `json:"polarity,omitempty"`
 
 	// NodeLabelSelector is TODO
