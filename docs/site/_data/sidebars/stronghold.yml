@@ -218,21 +218,25 @@ entries:
             ru: Основные понятия
           folders:
             - title:
-                en: Authentication
-                ru: Аутентификация
-              url: /stronghold/documentation/user/concepts/auth.html
-            - title:
-                en: Identity
-                ru: Сущности
-              url: /stronghold/documentation/user/concepts/identity.html
-            - title:
                 en: Leases
                 ru: Аренда
               url: /stronghold/documentation/user/concepts/lease.html
             - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /stronghold/documentation/user/concepts/auth.html
+            - title:
+                en: Response wrapping
+                ru: Обёртывание ответа
+              url: /stronghold/documentation/user/concepts/response-wrapping.html
+            - title:
                 en: Policy
                 ru: Политики
               url: /stronghold/documentation/user/concepts/policy.html
+            - title:
+                en: Identity
+                ru: Сущности
+              url: /stronghold/documentation/user/concepts/identity.html
             - title:
                 en: Token
                 ru: Токен
@@ -381,6 +385,10 @@ entries:
                     en: MySQL
                     ru: MySQL
                   url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
+        - title:
+            en: Deckhouse Stronghold Administrator's Guide to the Automatic Snapshot API
+            ru: Руководство администратора Deckhouse Stronghold по API автоматического бэкапа
+          url: /stronghold/documentation/user/auto-snapshot.html
     - title:
         en: Reference
         ru: Справка
