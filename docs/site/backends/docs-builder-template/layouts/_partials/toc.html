@@ -74,7 +74,6 @@
             if(hash) {
                 const target = decodeURIComponent(hash);
                 const targetElement = $(target);
-                console.log(targetElement)
 
                 if(targetElement.length && targetElement.offset()) {
                     const scrollOffset = targetElement.offset().top - headerHeight;
