@@ -233,8 +233,6 @@ spec:
               - to
               type: object
             type: array
-          foo:
-            type: string
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -243,6 +241,34 @@ spec:
               In CamelCase.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
+          kubernetesCustomResourceConversion:
+            items:
+              description: version 1 of kubernetes conversion configuration
+              properties:
+                conversions:
+                  items:
+                    properties:
+                      fromVersion:
+                        type: string
+                      toVersion:
+                        type: string
+                    required:
+                    - fromVersion
+                    - toVersion
+                    type: object
+                  type: array
+                crdName:
+                  type: string
+                group:
+                  type: string
+                includeSnapshotsFrom:
+                  items:
+                    type: string
+                  type: array
+                name:
+                  type: string
+              type: object
+            type: array
           metadata:
             type: object
           status:
