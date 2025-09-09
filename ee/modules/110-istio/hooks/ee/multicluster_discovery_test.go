@@ -206,12 +206,7 @@ status:
 
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
-
-			logOutput := string(f.LoggerOutput.Contents())
-			Expect(logOutput).To(ContainSubstring("generated and cached new JWT for multicluster"))
-			Expect(logOutput).To(ContainSubstring("proper-multicluster-0"))
-			Expect(logOutput).To(ContainSubstring("proper-multicluster-1"))
-			Expect(logOutput).To(ContainSubstring("proper-multicluster-2"))
+			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			tPub0, err := time.Parse(time.RFC3339, f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.publicLastFetchTimestamp").String())
 			Expect(err).ShouldNot(HaveOccurred())

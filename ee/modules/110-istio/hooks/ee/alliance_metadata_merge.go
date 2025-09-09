@@ -7,6 +7,7 @@ package ee
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -101,7 +104,6 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	var apiHost string
 	var networkName string
 	var p *eeCrd.AlliancePublicMetadata
-	var apiJWT string
 
 	if multicluster.Status.MetadataCache.Private != nil {
 		if multicluster.Status.MetadataCache.Private.IngressGateways != nil {
@@ -109,17 +111,6 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		}
 		apiHost = multicluster.Status.MetadataCache.Private.APIHost
 		networkName = multicluster.Status.MetadataCache.Private.NetworkName
-
-		// Check if we have an existing valid JWT
-		if multicluster.Status.MetadataCache.Private.APIJWT != "" {
-			// Validate the existing JWT
-			isValid, _, err := jwt.IsJWTValid(multicluster.Status.MetadataCache.Private.APIJWT)
-			if err == nil && isValid {
-				// Use existing JWT if it's still valid
-				apiJWT = multicluster.Status.MetadataCache.Private.APIJWT
-			}
-			// If JWT is invalid or expired, apiJWT will remain empty and will be generated later
-		}
 	}
 	if multicluster.Status.MetadataCache.Public != nil {
 		p = multicluster.Status.MetadataCache.Public
@@ -133,9 +124,50 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
 		APIHost:              apiHost,
 		NetworkName:          networkName,
-		APIJWT:               apiJWT,
 		IngressGateways:      igs,
 		Public:               p,
+	}, nil
+}
+
+// IstioRemoteSecretData represents the data extracted from an istio-remote-secret
+type IstioRemoteSecretData struct {
+	Name        string `json:"name"`
+	Namespace   string `json:"namespace"`
+	ClusterName string `json:"clusterName"`
+	Kubeconfig  string `json:"kubeconfig"`
+}
+
+func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert k8s secret to struct: %v", err)
+	}
+
+	// Extract cluster name from secret name (istio-remote-secret-<cluster-name>)
+	secretName := secret.GetName()
+	if !strings.HasPrefix(secretName, "istio-remote-secret-") {
+		return nil, fmt.Errorf("secret %s is not an istio remote secret", secretName)
+	}
+	clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+
+	// Get the base64-encoded kubeconfig from the field named after the cluster
+	secData, exists := secret.Data[clusterName]
+	if !exists {
+		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
+	}
+
+	// Decode the base64-encoded kubeconfig
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(string(secData))
+	if err != nil {
+		return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
+	}
+
+	return IstioRemoteSecretData{
+		Name:        secretName,
+		Namespace:   secret.GetNamespace(),
+		ClusterName: clusterName,
+		Kubeconfig:  string(kubeconfigBytes),
 	}, nil
 }
 
@@ -154,6 +186,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "IstioMulticlusters",
 			FilterFunc: applyMulticlusterMergeFilter,
 		},
+		{
+			Name:       "istioRemoteSecrets",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			FilterFunc: applyIstioRemoteSecretFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"istio/multiCluster": "true",
+				},
+			},
+			NamespaceSelector: lib.NsSelector(),
+		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
 		// until the bug won't be solved https://github.com/istio/istio/issues/37925
@@ -171,6 +215,30 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 	var remotePublicMetadata = make(map[string]eeCrd.AlliancePublicMetadata)
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
+
+	// Process istio remote secrets
+	var istioRemoteSecrets = make([]IstioRemoteSecretData, 0)
+	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretData](input.Snapshots.Get("istioRemoteSecrets")) {
+		if err != nil {
+			input.Logger.Warn("cannot iterate over istio remote secrets", log.Err(err))
+			continue
+		}
+
+		input.Logger.Info("processing istio remote secret",
+			slog.String("name", secretInfo.Name),
+			slog.String("namespace", secretInfo.Namespace),
+			slog.String("clusterName", secretInfo.ClusterName))
+
+		// Log the decoded kubeconfig for debugging (be careful with sensitive data in production)
+		input.Logger.Debug("decoded kubeconfig",
+			slog.String("clusterName", secretInfo.ClusterName),
+			slog.String("kubeconfig", secretInfo.Kubeconfig))
+
+		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
+	}
+
+	// Store the processed secrets in values
+	input.Values.Set("istio.internal.remoteSecrets", istioRemoteSecrets)
 
 federationsLoop:
 	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.Snapshots.Get("federations")) {
@@ -237,9 +305,9 @@ multiclustersLoop:
 			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
 			"scope": "api",
 		}
-
-		// Use the same in-memory cache as multicluster_discovery
-		multiclusterInfo.APIJWT, err = getOrCreateJWT(multiclusterInfo.Name, privKey, claims, time.Hour*24*366, input.Logger)
+		// until the bug won't be solved https://github.com/istio/istio/issues/37925
+		// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
+		multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
 		if err != nil {
 			input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
 			continue multiclustersLoop

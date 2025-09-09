@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,56 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/square/go-jose/v3"
 )
-
-// Global in-memory JWT cache to work around CRD status persistence issues
-var (
-	jwtCache      = make(map[string]cachedJWT)
-	jwtCacheMutex sync.RWMutex
-)
-
-type cachedJWT struct {
-	JWT        string
-	ExpiryTime time.Time
-	CreatedAt  time.Time
-}
-
-// getOrCreateJWT returns a cached JWT if valid, otherwise creates a new one
-func getOrCreateJWT(clusterName string, privKey []byte, claims map[string]string, ttl time.Duration, logger go_hook.Logger) (string, error) {
-	jwt, _, err := getOrCreateJWTWithStatus(clusterName, privKey, claims, ttl, logger)
-	return jwt, err
-}
-
-// getOrCreateJWTWithStatus returns a cached JWT if valid, otherwise creates a new one, and indicates if it's new
-func getOrCreateJWTWithStatus(clusterName string, privKey []byte, claims map[string]string, ttl time.Duration, logger go_hook.Logger) (string, bool, error) {
-	jwtCacheMutex.RLock()
-	cached, exists := jwtCache[clusterName]
-	jwtCacheMutex.RUnlock()
-
-	// Check if cached JWT is still valid
-	if exists && time.Now().Before(cached.ExpiryTime) {
-		logger.Info("reusing cached JWT for multicluster", "name", clusterName, "expires_at", cached.ExpiryTime.Format(time.RFC3339))
-		return cached.JWT, false, nil // false = not new, reused from cache
-	}
-
-	// Generate new JWT
-	newJWT, err := jwt.GenerateJWT(privKey, claims, ttl)
-	if err != nil {
-		return "", false, err
-	}
-
-	// Cache the new JWT
-	jwtCacheMutex.Lock()
-	jwtCache[clusterName] = cachedJWT{
-		JWT:        newJWT,
-		ExpiryTime: time.Now().Add(ttl),
-		CreatedAt:  time.Now(),
-	}
-	jwtCacheMutex.Unlock()
-
-	logger.Info("generated and cached new JWT for multicluster", "name", clusterName, "expires_at", time.Now().Add(ttl).Format(time.RFC3339))
-	return newJWT, true, nil // true = new JWT generated
-}
 
 var (
 	multiclusterMetricsGroup = "multicluster_discovery"
@@ -94,7 +45,6 @@ type IstioMulticlusterDiscoveryCrdInfo struct {
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
-	ExistingAPIJWT           string
 }
 
 func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
@@ -133,32 +83,6 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		clusterUUID = multicluster.Status.MetadataCache.Public.ClusterUUID
 	}
 
-	// Check if we have an existing valid JWT
-	var existingAPIJWT string
-	if multicluster.Status.MetadataCache.Private != nil && multicluster.Status.MetadataCache.Private.APIJWT != "" {
-		// Validate the existing JWT
-		isValid, _, err := jwt.IsJWTValid(multicluster.Status.MetadataCache.Private.APIJWT)
-		if err != nil {
-			// JWT validation error - will generate new one
-		} else if !isValid {
-			// JWT expired or invalid - will generate new one
-		} else {
-			// Use existing JWT if it's still valid
-			existingAPIJWT = multicluster.Status.MetadataCache.Private.APIJWT
-		}
-	}
-
-	// Debug: Log what we found in the CRD status
-	if multicluster.Status.MetadataCache.Private != nil {
-		if multicluster.Status.MetadataCache.Private.APIJWT != "" {
-			fmt.Printf("DEBUG: Found JWT in CRD: %s...\n", multicluster.Status.MetadataCache.Private.APIJWT[:50])
-		} else {
-			fmt.Printf("DEBUG: No JWT in CRD status for %s\n", multicluster.GetName())
-		}
-	} else {
-		fmt.Printf("DEBUG: No private metadata in CRD status for %s\n", multicluster.GetName())
-	}
-
 	me := multicluster.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
@@ -170,8 +94,77 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 		ClusterUUID:              clusterUUID,
 		PublicMetadataEndpoint:   me + "/public/public.json",
 		PrivateMetadataEndpoint:  me + "/private/multicluster.json",
-		ExistingAPIJWT:           existingAPIJWT,
 	}, nil
+}
+
+// TokenValidationResult represents the result of token validation
+type TokenValidationResult struct {
+	IsValid   bool      `json:"isValid"`
+	IsExpired bool      `json:"isExpired"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Error     string    `json:"error,omitempty"`
+}
+
+// Validates a JWT token and checks if it's expired
+func validateJWTToken(tokenString string) TokenValidationResult {
+	if tokenString == "" {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token is empty",
+		}
+	}
+
+	// Parse the JWT token
+	token, err := jose.ParseSigned(tokenString)
+	if err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to parse token: %v", err),
+		}
+	}
+
+	// Check expiration time
+	payload := token.UnsafePayloadWithoutVerification()
+
+	// Parse the payload
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to unmarshal claims: %v", err),
+		}
+	}
+
+	// Check if exp claim exists
+	expClaim, exists := claims["exp"]
+	if !exists {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token has no expiration claim",
+		}
+	}
+
+	var expTime time.Time
+	switch exp := expClaim.(type) {
+	case float64:
+		expTime = time.Unix(int64(exp), 0)
+	case int64:
+		expTime = time.Unix(exp, 0)
+	default:
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "invalid expiration claim format",
+		}
+	}
+
+	now := time.Now()
+	isExpired := now.After(expTime)
+
+	return TokenValidationResult{
+		IsValid:   !isExpired,
+		IsExpired: isExpired,
+		ExpiresAt: expTime,
+	}
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -200,6 +193,49 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
 		input.Logger.Warn("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
+	}
+
+	// Read existing multiclusters with their generated tokens from alliance_metadata_merge hook
+	multiclusters := input.Values.Get("istio.internal.multiclusters")
+	if multiclusters.Exists() {
+		input.Logger.Info("found multiclusters with tokens", slog.Int("count", len(multiclusters.Array())))
+
+		for i, multiclusterValue := range multiclusters.Array() {
+			multiclusterName := multiclusterValue.Get("name").String()
+			existingToken := multiclusterValue.Get("apiJWT").String()
+
+			input.Logger.Info("processing multicluster token",
+				slog.Int("index", i),
+				slog.String("multiclusterName", multiclusterName),
+				slog.Bool("hasToken", existingToken != ""))
+
+			// Token validation logic
+			if existingToken == "" {
+				// Token doesn't exist - this shouldn't happen as alliance_metadata_merge generates them
+				input.Logger.Warn("no token found for multicluster",
+					slog.String("multiclusterName", multiclusterName))
+				continue
+			}
+
+			// Validate the existing token
+			validationResult := validateJWTToken(existingToken)
+
+			if validationResult.Error != "" {
+				input.Logger.Warn("token validation failed",
+					slog.String("multiclusterName", multiclusterName),
+					slog.String("error", validationResult.Error))
+			} else if validationResult.IsExpired {
+				input.Logger.Info("token is expired",
+					slog.String("multiclusterName", multiclusterName),
+					slog.String("expiredAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+			} else {
+				input.Logger.Info("token is valid",
+					slog.String("multiclusterName", multiclusterName),
+					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+			}
+		}
+	} else {
+		input.Logger.Debug("no multiclusters found")
 	}
 
 	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.Snapshots.Get("multiclusters")) {
@@ -248,7 +284,6 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 
 		// TODO Make independent public and private fetch?
 		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
-
 		claims := map[string]string{
 			"iss":   "d8-istio",
 			"aud":   publicMetadata.ClusterUUID,
@@ -261,20 +296,6 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-
-		// Use in-memory cache for JWT to work around CRD status persistence issues
-		apiClaims := map[string]string{
-			"iss":   "d8-istio",
-			"aud":   publicMetadata.ClusterUUID,
-			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
-			"scope": "api",
-		}
-		apiJWT, isNewJWT, err := getOrCreateJWTWithStatus(multiclusterInfo.Name, privKey, apiClaims, time.Hour*24*366, input.Logger) // 1 year
-		if err != nil {
-			input.Logger.Warn("can't generate API JWT for IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
-			continue
-		}
-
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))
@@ -292,54 +313,15 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
-
 		if privateMetadata.NetworkName == "" || privateMetadata.APIHost == "" || privateMetadata.IngressGateways == nil {
 			input.Logger.Warn("bad private metadata format in endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 0)
-
-		// Only store and patch CRD when JWT is newly generated, not when reused from cache
-		if isNewJWT {
-			// Preserve JWT fields before unmarshaling remote data
-			// The remote response doesn't include our JWT, so we need to preserve it
-			savedAPIJWT := apiJWT
-			savedJWTExpiryTime := time.Now().Add(time.Hour * 24 * 366).Format(time.RFC3339)
-
-			// Restore JWT fields after unmarshaling remote data
-			// The remote response overwrites these fields, so we need to restore them
-			privateMetadata.APIJWT = savedAPIJWT
-			privateMetadata.JWTExpiryTime = savedJWTExpiryTime
-
-			input.Logger.Info("stored new API JWT for multicluster", slog.String("name", multiclusterInfo.Name), slog.String("expires_at", privateMetadata.JWTExpiryTime))
-
-			// Only patch CRD when JWT is newly generated
-			input.Logger.Info("about to patch CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."))
-
-			// Create a unique patch to minimize conflicts
-			uniquePatch := map[string]interface{}{
-				"status": map[string]interface{}{
-					"metadataCache": map[string]interface{}{
-						"private":                   privateMetadata,
-						"privateLastFetchTimestamp": time.Now().UTC().Format(time.RFC3339),
-						// Add a unique timestamp to help identify this specific patch
-						"jwtPatchTimestamp": time.Now().UTC().Format(time.RFC3339Nano),
-					},
-				},
-			}
-
-			input.PatchCollector.PatchWithMerge(uniquePatch, "deckhouse.io/v1alpha1", "IstioMulticluster", "", multiclusterInfo.Name, object_patch.WithSubresource("/status"))
-
-			// Debug: Log about patched the CRD
-			input.Logger.Info("successfully patched CRD with JWT", slog.String("name", multiclusterInfo.Name), slog.String("jwt", savedAPIJWT[:50]+"..."), slog.String("timestamp", time.Now().UTC().Format(time.RFC3339Nano)), slog.String("jwt_expiry", privateMetadata.JWTExpiryTime))
-
-			// CRITICAL: Add a verification step to ensure the JWT was actually stored
-			// This helps identify if the patch operation is failing silently
-			input.Logger.Info("JWT patch operation completed", slog.String("name", multiclusterInfo.Name), slog.String("patch_timestamp", time.Now().UTC().Format(time.RFC3339Nano)))
-		} else {
-			// JWT was reused from cache, no need to store or patch CRD
-			input.Logger.Info("skipped CRD patch - JWT reused from cache", slog.String("name", multiclusterInfo.Name))
+		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
