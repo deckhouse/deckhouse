@@ -312,13 +312,10 @@ window.addEventListener("load", function() {
   openDiagram()
 });
 
-// document.addEventListener('DOMContentLoaded', function() {
+// $(window).on('load', function() {
+//     const hash = window.location.href;
+//     console.log(hash)
+//     if(hash) {
 
-//   const hash = window.location.hash;
-//   if(hash) {
-//     const targetElement = document.querySelector(`.sidebar__submenu-item.active a[href="${hash}"]`);
-
-//   }
-
-//       console.log(hash)
-// })
+//     }
+// });

@@ -69,7 +69,7 @@
         });
 
         $(window).on('load', function() {
-            const hash = window.location.hash;
+            const hash = window.location.href;
             if(hash) {
                 const target = decodeURIComponent(hash);
                 const targetElement = $(target);
