@@ -418,6 +418,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -801,6 +802,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1184,6 +1186,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1567,6 +1570,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1950,6 +1954,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -2333,6 +2338,7 @@ jobs:
           fi
             export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
             export WERF_REPO="${STAGE_REGISTRY_PATH}"
+            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
