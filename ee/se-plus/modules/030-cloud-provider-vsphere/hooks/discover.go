@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -72,13 +73,13 @@ func applyCloudProviderDiscoveryDataSecretFilter(obj *unstructured.Unstructured)
 }
 
 func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	storageClass := &storage.StorageClass{}
-	err := sdk.FromUnstructured(obj, storageClass)
+	sc := &storage.StorageClass{}
+	err := sdk.FromUnstructured(obj, sc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert kubernetes object: %v", err)
 	}
 
-	return storageClass, nil
+	return sc, nil
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
