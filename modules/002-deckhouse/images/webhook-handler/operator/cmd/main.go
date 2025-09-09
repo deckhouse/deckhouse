@@ -255,7 +255,7 @@ func main() {
 		slog.Int("PID", cmd.Process.Pid),
 	)
 	// non-blocking sync variable to know that we need to reload shell-operator
-	var isReloadShellNeed *atomic.Bool
+	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
 
 	// go-routine that reloads shell-operator no more than once in 30s
@@ -305,7 +305,7 @@ func main() {
 	}()
 
 	if err := (&controller.ValidationWebhookReconciler{
-		IsReloadShellNeed: isReloadShellNeed,
+		IsReloadShellNeed: &isReloadShellNeed,
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
@@ -315,7 +315,7 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&controller.ConversionWebhookReconciler{
-		IsReloadShellNeed: isReloadShellNeed,
+		IsReloadShellNeed: &isReloadShellNeed,
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
