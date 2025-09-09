@@ -16,9 +16,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Build and test for release branches
+name: Build and test for main branch
 
-# On every push to release branches.
+# On every push to main branch.
 on:
   push:
     branches:
