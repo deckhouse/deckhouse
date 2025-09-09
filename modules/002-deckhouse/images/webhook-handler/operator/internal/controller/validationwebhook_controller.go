@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync/atomic"
@@ -38,10 +39,9 @@ type ValidationWebhookReconciler struct {
 	IsReloadShellNeed *atomic.Bool
 	Client            client.Client
 	Scheme            *runtime.Scheme
-	// init logger as in docs builder (watcher)
-	Logger *log.Logger
-	// Go template with python webhook
-	Template string
+	Logger            *log.Logger
+	// Go template with python validating webhook
+	PythonTemplate string
 }
 
 // +kubebuilder:rbac:groups=deckhouse.io,resources=validationwebhooks,verbs=get;list;watch;create;update;patch;delete
@@ -83,9 +83,9 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// resource marked as "to delete"
 	r.Logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
 	if !webhook.DeletionTimestamp.IsZero() {
-		// TODO: finalizer deletion logic
 		r.Logger.Debug("validating webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
+		// TODO: retries
 		res, err := r.handleDeleteValidatingWebhook(ctx, webhook)
 		if err != nil {
 			r.Logger.Warn("delete validating webhook", log.Err(err))
@@ -97,7 +97,7 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	res, err = r.handleProcessValidatingWebhook(ctx, webhook)
 	if err != nil {
-		r.Logger.Warn("bla bla", log.Err(err))
+		r.Logger.Warn("process validating webhook", log.Err(err))
 
 		return res, err
 	}
@@ -110,30 +110,22 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 
 	_, _ = ctx, vh
 
-	// logic for processing validation webhook
-	// 1) MkdirAll to folder
-	// 2) Open template (maybe once at startup?)
-	// 3) Render template
-	// 4) Write to file (add finalizer)
-	// 5) write finalizer
-	// 6) kill shell-operator binary (we can start shell operator as library too?)
-
 	// hooks/002-deckhouse/webhooks/validating/
-	err := os.MkdirAll("hooks/"+vh.Name+"/webhooks/validating/", 0777)
+	webhookDir := "hooks/" + vh.Name + "/webhooks/validating/"
+	err := os.MkdirAll(webhookDir, 0777)
 	if err != nil {
 		log.Error("create dir: %w", err)
-		// TODO: requeue and wrap error
-		return res, err
+		res.Requeue = true
+		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
-	buf, err := templater.RenderTemplate(r.Template, vh)
+	buf, err := templater.RenderTemplate(r.PythonTemplate, vh)
 	if err != nil {
-		// TODO: wrap error
-		return res, err
+		return res, fmt.Errorf("")
 	}
 
 	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py
-	err = os.WriteFile("hooks/"+vh.Name+"/webhooks/validating/"+vh.Name+".py", buf.Bytes(), 0755)
+	err = os.WriteFile(webhookDir+vh.Name+".py", buf.Bytes(), 0755)
 	if err != nil {
 		log.Error("create file: %w", err)
 	}
@@ -145,7 +137,9 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 
 		err = r.Client.Update(ctx, vh)
 		if err != nil {
-			log.Warn("add finalizer err", slog.String("err", err.Error()))
+			res.Requeue = true
+			os.Remove(webhookDir + vh.Name + ".py")
+			return res, fmt.Errorf("add finalizer: %w", err)
 		}
 	}
 
@@ -159,13 +153,12 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 
 	_, _ = ctx, vh
 
-	// logic for processing validation webhook deletion
-	// 1) delete file
-
-	err := os.Remove("hooks/" + vh.Name + "/webhooks/validating/" + vh.Name + ".py")
-	if err != nil {
-		log.Error("error delete file for webhook %s: %w", vh.Name, err)
-		return res, err
+	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py
+	webhookDir := "hooks/" + vh.Name + "/webhooks/validating/"
+	err := os.Remove(webhookDir + vh.Name + ".py")
+	if err != nil && !os.IsNotExist(err) {
+		res.Requeue = true
+		return res, fmt.Errorf("error delete webhook file %s: %w", webhookDir+vh.Name+".py", err)
 	}
 
 	// remove finalizer
@@ -175,7 +168,8 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 
 		err = r.Client.Update(ctx, vh)
 		if err != nil {
-			log.Warn("remove finalizer err", slog.String("err", err.Error()))
+			res.Requeue = true
+			return res, fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
 		}
 	}
 
