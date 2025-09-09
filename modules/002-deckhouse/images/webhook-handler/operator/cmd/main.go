@@ -19,7 +19,9 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,6 +74,8 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	// healthcheck value
+	var isAlive bool = true
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -251,7 +255,7 @@ func main() {
 		slog.Int("PID", cmd.Process.Pid),
 	)
 	// non-blocking sync variable to know that we need to reload shell-operator
-	var isReloadShellNeed atomic.Bool
+	var isReloadShellNeed *atomic.Bool
 	isReloadShellNeed.Store(false)
 
 	// go-routine that reloads shell-operator no more than once in 30s
@@ -267,6 +271,8 @@ func main() {
 				if err != nil {
 					log.Error("sigterm shell-operator: %w", err)
 				}
+
+				// TODO: what if SIGTERM don't killed shell-operator?
 				// err = cmd.Process.Kill()
 				// if err != nil {
 				// 	log.Error("kill shell-operator: %w", err)
@@ -289,6 +295,7 @@ func main() {
 				err = cmd.Start()
 				if err != nil {
 					log.Error("start shell-operator: %w", err)
+					isAlive = false
 				}
 				logger.Info("new shell-operator PID",
 					slog.Int("PID", cmd.Process.Pid),
@@ -298,17 +305,17 @@ func main() {
 	}()
 
 	if err := (&controller.ValidationWebhookReconciler{
-		IsReloadShellNeed: &isReloadShellNeed,
+		IsReloadShellNeed: isReloadShellNeed,
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
-		Template:          string(tpl),
+		PythonTemplate:    string(tpl),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ValidationWebhook")
 		os.Exit(1)
 	}
 	if err := (&controller.ConversionWebhookReconciler{
-		IsReloadShellNeed: &isReloadShellNeed,
+		IsReloadShellNeed: isReloadShellNeed,
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Logger:            logger,
@@ -334,10 +341,16 @@ func main() {
 		}
 	}
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("healthz", func(req *http.Request) error {
+		if !isAlive {
+			return fmt.Errorf("something went wrong")
+		}
+		return nil
+	}); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
+	// TODO: wait for preflight checks
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
