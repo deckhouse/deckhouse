@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -105,8 +106,8 @@ func ingressWithClientCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return nil, nil
 }
 
-func handleIngressWithClientCert(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("ingress")
+func handleIngressWithClientCert(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("ingress")
 
 	if len(snaps) == 0 {
 		return nil
