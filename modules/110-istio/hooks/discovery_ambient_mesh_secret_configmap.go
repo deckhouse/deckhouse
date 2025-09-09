@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -69,8 +70,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, monitorAmbientModeConfigMap)
 
-func monitorAmbientModeConfigMap(input *go_hook.HookInput) error {
-	configMapSnaps := input.NewSnapshots.Get("ambientmode_configmap")
+func monitorAmbientModeConfigMap(_ context.Context, input *go_hook.HookInput) error {
+	configMapSnaps := input.Snapshots.Get("ambientmode_configmap")
 	if len(configMapSnaps) == 0 {
 		// ConfigMap doesn't exist
 		input.Values.Set(ambientModeValuesKey, false)

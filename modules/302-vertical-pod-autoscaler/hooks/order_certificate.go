@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -94,13 +95,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, vpaCertHandler)
 
-func vpaCertHandler(input *go_hook.HookInput) error {
+func vpaCertHandler(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		vpaCert vpaCertSecretData
 		err     error
 	)
 
-	snapshots := input.NewSnapshots.Get("VPACertSecret")
+	snapshots := input.Snapshots.Get("VPACertSecret")
 
 	shouldGenerateNewCert := true
 

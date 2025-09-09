@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,8 +75,8 @@ type providerIDNode struct {
 	NeedPatch bool
 }
 
-func handleSetProviderID(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("nodes")
+func handleSetProviderID(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[providerIDNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'node' snapshots: %w", err)

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -103,8 +104,8 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 	}, nil
 }
 
-func grafanaAlertsChannelsHandler(input *go_hook.HookInput) error {
-	alertsChannelsRaw := input.NewSnapshots.Get("grafana_alerts_channels")
+func grafanaAlertsChannelsHandler(_ context.Context, input *go_hook.HookInput) error {
+	alertsChannelsRaw := input.Snapshots.Get("grafana_alerts_channels")
 
 	alertsChannels := make([]*GrafanaAlertsChannel, 0)
 

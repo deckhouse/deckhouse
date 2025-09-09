@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -147,11 +148,11 @@ func filterIngress(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}, nil
 }
 
-func domainMetricHandler(input *go_hook.HookInput) error {
+func domainMetricHandler(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("deckhouse_exported_domains")
 	globalHTTPSMode := input.ConfigValues.Get("global.modules.https.mode").String()
 
-	for domain, err := range sdkobjectpatch.SnapshotIter[exportedWebInterface](input.NewSnapshots.Get("ingresses")) {
+	for domain, err := range sdkobjectpatch.SnapshotIter[exportedWebInterface](input.Snapshots.Get("ingresses")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ingresses' snapshots: %w", err)
 		}

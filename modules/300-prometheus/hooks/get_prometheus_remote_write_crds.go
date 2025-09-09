@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -59,9 +60,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, remoteWriteHandler)
 
-func remoteWriteHandler(input *go_hook.HookInput) error {
+func remoteWriteHandler(_ context.Context, input *go_hook.HookInput) error {
 	var prw []RemoteWrite
-	prw, err := sdkobjectpatch.UnmarshalToStruct[RemoteWrite](input.NewSnapshots, "prometheusremotewrite")
+	prw, err := sdkobjectpatch.UnmarshalToStruct[RemoteWrite](input.Snapshots, "prometheusremotewrite")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'prometheusremotewrite' snapshot: %w", err)
 	}
