@@ -1,6 +1,7 @@
 ---
-title: "Console"
-permalink: en/user/web/console.html
+title: "Web interface of the platform"
+permalink: en/user/web/ui.html
+search: web UI, web interface
 ---
 
 The `console` module's web UI is designed for managing the cluster.

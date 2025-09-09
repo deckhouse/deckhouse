@@ -3093,27 +3093,27 @@ jobs:
           echo "Use werf_dir $WERF_DIR"
           type werf && source $(werf ci-env github --verbose --as-file)
 
-          echo "werf stage image web-backend:"
+          echo "werf stage image web-router:"
           werf stage image web-backend | tr 'a-z' 'A-Z'
-          docker pull $(werf stage image web-backend) || true
+          docker pull $(werf stage image web-router) || true
 
           echo "werf stage image web-frontend:"
           werf stage image web-frontend | tr 'a-z' 'A-Z'
           docker pull $(werf stage image web-frontend) || true
 
-          echo "Copying files from the web-backend container..."
-          docker cp $(docker create --rm $(werf stage image web-backend)):/app/root ${_TMPDIR}/backend
+          echo "Copying files from the web-router container..."
+          docker cp $(docker create --rm $(werf stage image web-router)):/app/root ${_TMPDIR}/backend
           echo "Copying files from the web-frontend container..."
           docker cp $(docker create --rm $(werf stage image web-frontend)):/app ${_TMPDIR}/frontend
 
           # Extract documentation content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo "werf stage image docs/web:"
-          werf stage image docs/web | tr 'a-z' 'A-Z'
-          docker pull $(werf stage image docs/web)
-          echo "Copying DKP documentation files from the docs/web container..."
-          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/dkp-documentation
+          echo "werf stage image website-docs/web:"
+          werf stage image website-docs/web | tr 'a-z' 'A-Z'
+          docker pull $(werf stage image website-docs/web)
+          echo "Copying DKP documentation files from the website-docs/web container..."
+          docker cp $(docker create --rm $(werf stage image website-docs/web)):/app ${_TMPDIR}/dkp-documentation
 
           # Create EN site structure.
           echo "Create site structure in ${_TMPDIR}"
@@ -3351,6 +3351,11 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
           WERF_SET_DCNAME: "web.dc_name=prod-25"
+          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_PROD }}"
+          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
+          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
       # </template: deploy_doc_template>
 
 
@@ -3444,6 +3449,11 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
           WERF_SET_WEB_ENV: "web.env=web-stage"
           WERF_SET_DCNAME: "web.dc_name=dev"
+          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
+          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
+          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
       # </template: deploy_doc_template>
 
 
@@ -3519,6 +3529,7 @@ jobs:
           WERF_SET_WEB_ENV: "web.env=web-production"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
           WERF_SET_DCNAME: "web.dc_name=prod-25"
+          WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url=${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_PROD }}"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"
           WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
@@ -3595,6 +3606,11 @@ jobs:
           WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
           WERF_SET_WEB_ENV: "web.env=web-production"
           WERF_SET_DCNAME: "web.dc_name=prod-25"
+          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_PROD }}"
+          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
+          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
       # </template: deploy_doc_template>
 
   list_changed_modules:

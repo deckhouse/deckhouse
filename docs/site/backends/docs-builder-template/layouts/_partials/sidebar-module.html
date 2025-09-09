@@ -48,9 +48,7 @@
 
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
       {{- if $.IsPage }}
-      {{- if and $currentModuleName $currentModuleChannel }}
-        {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
-      {{- end }}
+        {{- "<!--#include virtual=\"/includes/channel-menu-module.html\" -->"  | safeHTML }}
       {{- end }}
     </div>
   </div>
@@ -83,7 +81,7 @@
   {{- end }}
   {{- if $pageTitle }}
        <li class="sidebar__item {{ if eq .ctx.Page .Page }}active{{ end }}">
-          <a href="{{ if .Page.IsPage }}{{ replaceRE "/readme.html$" "/" .Page.RelPermalink }}{{ else }}#{{ end }}">
+          <a href="{{ if .Page.IsPage }}./{{ replaceRE "readme.html$" "" (path.Base .Page.RelPermalink) }}{{ else }}#{{ end }}">
           {{- $pageTitle -}}
           </a>
       </li>

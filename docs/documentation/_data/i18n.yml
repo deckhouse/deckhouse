@@ -181,6 +181,9 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_modules:
+    en: Search by modules documentation...
+    ru: Поиск по документации модулей...
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -202,6 +205,9 @@ common:
   versions:
     en: versions
     ru: версии
+  version_of_module:
+    en: Module version
+    ru: Версия модуля
   version_of_schema:
     en: Schema version
     ru: Версия схемы

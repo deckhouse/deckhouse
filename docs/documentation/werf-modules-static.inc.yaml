@@ -1,5 +1,5 @@
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}/static
+image: {{ .ModuleName }}/modules-embeded/static-artifact
 from: {{ .Images.BASE_JEKYLL }}
 final: false
 shell:
@@ -20,7 +20,6 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-{{ if .BuildModules }}
         #echo '[] Creating modules.yml ...'
         #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
         ## Creating list of ALL the modules...
@@ -79,33 +78,14 @@ shell:
         mkdir -p _data/schemas/crds/
         find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
 
-{{ else }}{{/* .BuildModules */}}
-
-        echo
-        echo '[] Preparing OSS license info...'
-        export OSS_SOURCE_DIR=/src/modules-metadata
-        export OSS_TARGET_FILE=/srv/jekyll-data/documentation/_data/ossinfo.yaml
-        bash _tools/modules_generate_ossinfo.sh
-
-        echo "Render global OpenAPI DKP schemas..."
-        bash _tools/prepare_resources.sh
-{{ end }}{{/* .BuildModules */}}
-
-        echo '[] Extracting the default Kubernetes version...'
-        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
-
-        echo '[] Filling in the array of supported OS & K8S versions...'
-        cd _data
-        yq eval version_map.yml -j > version_map.json && rm version_map.yml
-        jq -MsS '.[0] * .[1]' version_map.json version_map_addition.json | yq eval -P >> supported_versions.yml
-
         echo '[] Converting editions structure...'
+        cd /srv/jekyll-data/documentation/_data
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
-{{ if ne .ModuleName "docs" }}
+{{ if eq .ModuleName "documentation" }}
         # Syncing file from the documentation to the main site...
         cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
-        cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
+        cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
         grep -rl '](https://deckhouse.io' /srv/jekyll-data/documentation/_data/schemas/ | \
@@ -127,13 +107,7 @@ shell:
         echo '[] Generating static files of the documentation part...'
         cd ..
         mkdir -m 777 -p /app/_site/
-{{ if eq .ModuleName "docs" }}
-        {{- if eq .Mode "development" }}
-        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
-        {{- else }}
-        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
-        {{- end }}
-{{ else }}
+{{ if eq .ModuleName "documentation" }}
         JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
 
         echo '[] Generating static files of the main part...'
@@ -147,6 +121,12 @@ shell:
         cp -Rf /app/_site/site/ru /app/_site/documentation/
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
+{{ else }}
+        {{- if eq .Mode "development" }}
+        JEKYLL_ENV=development jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml --profile -t
+        {{- else }}
+        JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
+        {{- end }}
 {{ end }}
 git:
 - add: /{{ .ModulePath }}docs
@@ -154,24 +134,25 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-{{ if eq .ModuleName "docs" }}
+# if eq .ModuleName "documentation"
     - site/_config.yml
     - site/_includes/head.html
     - site/Gemfile
     - site/Gemfile.lock
-{{ else }}
-    - site
-{{ end }}
+#{ else
+#    - site
+# end
     - documentation
   excludePaths:
     - '**/werf*.yaml'
-    - '**/docker-compose.yml'
+    - '**/docker-compose*.yml'
     - '**/Makefile'
     - '**/.werf'
     - '**/.helm'
-    - documentation/pages/internal
+    - documentation/pages
     - documentation/config
-{{ if ne .ModuleName "docs" }}
+    - documentation/assets
+{{ if eq .ModuleName "documentation" }}
     - site/pages/*.html
     - site/_includes/footer.html
     - site/_data/topnav.*
@@ -185,7 +166,7 @@ git:
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
-{{ if ne .ModuleName "docs" }}
+{{ if eq .ModuleName "documentation" }}
 - add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
   to: /srv/jekyll-data/site/_includes/footer.html
   stageDependencies:
@@ -193,6 +174,21 @@ git:
     - '**/*'
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
-{{ if .BuildModules }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}
+---
+# Image, containing static files of all the embedded modules for loading into the storage
+image: {{ .ModuleName }}/modules-embeded/static
+{{ if eq .ModuleName "documentation" }}
+fromImage: common/distroless
+{{ else if or (eq $.Env "local") (eq $.Env "development") }}
+fromImage: builder/alpine-3.20
+{{ else }}
+# TODO: Use the different image
+from: amazon/aws-cli:2.28.16
+#fromImage: base/distroless
 {{ end }}
+import:
+- image: {{ .ModuleName }}/modules-embeded/static-artifact
+  add: /app/_site/
+  to: /embedded-modules
+  before: setup

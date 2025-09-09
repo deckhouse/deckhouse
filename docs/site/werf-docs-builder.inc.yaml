@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if ne .ModuleName "docs" }}
+{{ if eq .ModuleName "documentation" }}
 fromImage: common/distroless
 {{ else }}
 fromImage: builder/scratch
@@ -21,7 +21,7 @@ imageSpec:
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
     to: /app/hugo
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
 {{- include "image mount points" . | nindent 2 }}
     excludePaths:
     - config/production/
@@ -95,7 +95,7 @@ fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -113,7 +113,7 @@ shell:
   - go build -ldflags '-s -w' .
   - chown -R 64535:64535 /src
   - chmod 0700 /src/docs-builder
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact

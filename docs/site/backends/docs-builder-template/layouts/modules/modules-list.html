@@ -10,6 +10,24 @@
       {{- partial "breadcrumbs" . }}
     </ol>
   </div>
+
+  <!--start search-->
+  <div class="searchV3">
+    <div class="container">
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="{{ T "search_placeholder_text" }}" class="input"
+        data-search-index-path="/modules/search-embedded-modules-index.json:1.0,/modules/search-external-modules-index.json:1.0"
+        >
+        <div id="search-results" class="results" style="display: none"></div>
+      </div>
+    </div>
+  </div>
+  <!--end search-->
+  <!--loading search JS-->
+  <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}"></script>
+  <script type="text/javascript" src="/assets/js/search-v3.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}"></script>
+  <!--end loading search JS-->
+
 </div>
 
 <div class="layout-sidebar layout-sidebar__tile">

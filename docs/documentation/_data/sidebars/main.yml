@@ -994,6 +994,10 @@ entries:
                 ru: Веб-интерфейсы
               folders:
                 - title:
+                    en: Web UI
+                    ru: Веб-интерфейс платформы
+                  url: /user/web/ui.html
+                - title:
                     en: Grafana
                     ru: Grafana
                   url: /user/web/grafana.html
@@ -1006,16 +1010,12 @@ entries:
                     ru: Генератор kubeconfig
                   url: /user/web/kubeconfig.html
                 - title:
-                    en: Console
-                    ru: Console
-                  url: /user/web/console.html
-                - title:
                     en: Downloading Deckhouse utilities
                     ru: Загрузка утилит Deckhouse
                   url: /user/web/deckhouse-tools.html
                 - title:
-                    en: Stronghold
-                    ru: Stronghold
+                    en: Secret management
+                    ru: Управление секретами
                   url: /user/web/stronghold.html
                 - title:
                     en: Visualizing cluster network stack

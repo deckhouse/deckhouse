@@ -1,5 +1,6 @@
 allowed_values: допустимые значения
-search-placeholder: Поиск...
+search_placeholder_text: Поиск...
+search_placeholder_text_modules: Поиск по документации модулей...
 modules: модули
 modules2: модулей
 module: модуль
@@ -7,6 +8,7 @@ module_versions: Версии модуля
 module_version: Версия модуля
 deckhouse: deckhouse
 documentation: документация
+Documentation: Документация
 modules_documentation: Документация модулей
 modules_list: Список модулей
 category: категория
@@ -57,6 +59,7 @@ reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
 show_more: Показать ещё
+show_more_pattern: "Показать ещё %s"
 element_of_array: элемент массива
 x-kubernetes-int-or-string: строка или число
 of_x-kubernetes-int-or-string: строк или чисел
@@ -73,8 +76,9 @@ of_string: строк
 boolean: булевый
 of_boolean: булевых значений
 version: версия
-version_of_module: "Версия модуля ###"
+version_of_module: "Версия модуля"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
 parameters: параметры
+api: API
 no_custom_configuration: У модуля нет параметров для настройки.
