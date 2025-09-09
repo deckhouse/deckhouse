@@ -87,7 +87,13 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) setLastState(stateCache 
 }
 
 func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, completedPhaseData OperationPhaseDataT, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
-	err := pec.progressTracker.Progress(pec.progressTracker.LastCompletedPhase(completedPhase, nextPhase), "")
+	lastCompletedPhase, skipped := pec.progressTracker.FindLastCompletedPhase(completedPhase, nextPhase)
+	opts := ProgressOpts{}
+	if skipped {
+		opts.Action = PhaseActionSkip
+	}
+
+	err := pec.progressTracker.Progress(lastCompletedPhase, "", opts)
 	if err != nil {
 		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
 	}
@@ -169,7 +175,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(stateCache
 
 // CompleteSubPhase completes specified sub phase.
 func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
-	err := pec.progressTracker.Progress("", completedSubPhase)
+	err := pec.progressTracker.Progress("", completedSubPhase, ProgressOpts{})
 	if err != nil {
 		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
 	}
