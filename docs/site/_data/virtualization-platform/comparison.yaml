@@ -117,6 +117,29 @@ featureSections:
           ce: supported
           ee: supported
       - title:
+          ru: Консистентные снимки дисков
+          en: Consistent disk snapshots
+        editions:
+          ce: partly
+          ee: partly
+        restriction_message:
+          ce:
+            en: |
+              Available with <a target='_blank' href='https://deckhouse.o/products/kubernetes-platform/pricing/'>restrictions</a>
+            ru: |
+              Доступно <a target='_blank' href='https://deckhouse.ru/products/kubernetes-platform/pricing/'>с ограничениями</a>
+          ee:
+            en: |
+              The storage must <a terget='_blank' href='https://deckhouse.io/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>support snapshots</a>
+            ru: |
+              Хранилище должно <a terget='_blank' href='https://deckhouse.ru/products/kubernetes-platform/?dkp-scheme=data-storage#blocks'>поддерживать снимки</a>
+      - title:
+          ru: Восстановление дисков из снимка
+          en: Restore disks from snapshot
+        editions:
+          ce: supported
+          ee: supported
+      - title:
           ru: Консистентные снимки дисков и конфигурации ВМ
           en: Consistent snapshots of VM disks and configuration
         editions:
