@@ -223,26 +223,26 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
 	// Skip if in the secret key "flannel" does not exist or empty.
-	secretMatchesMc := true
+	secretMatchesMC := true
 	if cniSecret.Flannel != (flannelConfigStruct{}) {
 		switch cniSecret.Flannel.PodNetworkMode {
 		case "host-gw":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
 				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		case "vxlan":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "VXLAN" {
 				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "VXLAN"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		case "":
 			value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
 			if !ok || value.String() != "HostGW" {
 				desiredCNIModuleConfig.Spec.Settings["podNetworkMode"] = "HostGW"
-				secretMatchesMc = false
+				secretMatchesMC = false
 			}
 		default:
 			input.Logger.Warn("An unknown flannel podNetworkMode was specified in the d8-cni-configuration secret, so the default cni podNetworkMode will be used instead.", slog.String("specified podNetworkMode", cniSecret.Flannel.PodNetworkMode))
@@ -266,12 +266,12 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if cniModuleConfigs[0].Spec.Enabled == nil {
-		secretMatchesMc = false
+		secretMatchesMC = false
 	}
 
 	// If the secret matches MC, then we should
 	// - add an annotation to the secret (to activate new_logic)
-	if secretMatchesMc {
+	if secretMatchesMC {
 		annotateSecret(input)
 		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)

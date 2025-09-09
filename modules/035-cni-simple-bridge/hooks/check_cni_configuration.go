@@ -221,7 +221,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 		desiredCNIModuleConfig.Spec.Settings = cniModuleConfig.DeepCopy().Spec.Settings
 	}
 	// Generate the desired CNIModuleConfig based on existing secret and MC and compare them at the same time.
-	secretMatchesMc := true
+	secretMatchesMC := true
 
 	// If MC does not exist, then we should
 	// - add an annotation to the secret (to activate new_logic)
@@ -240,12 +240,12 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	if cniModuleConfigs[0].Spec.Enabled == nil {
-		secretMatchesMc = false
+		secretMatchesMC = false
 	}
 
 	// If the secret matches MC, then we should
 	// - add an annotation to the secret (to activate new_logic)
-	if secretMatchesMc {
+	if secretMatchesMC {
 		annotateSecret(input)
 		setMetricAndRequirementsValue(input, cniConfigurationIsSettled)
 		input.PatchCollector.Delete("v1", "ConfigMap", "d8-system", desiredCNIModuleConfigName)
