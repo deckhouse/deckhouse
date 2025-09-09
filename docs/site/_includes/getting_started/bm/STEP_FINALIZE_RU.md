@@ -91,7 +91,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта (bootstrap-скрипт).</p>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта.</p>
     
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
