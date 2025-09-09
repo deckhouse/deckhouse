@@ -40,7 +40,7 @@
   ],
   "parameters": [
   {{- $modulesStablestList := partial "get-stablest-modules-list.html" . }}
-  {{- $firstModule := true }}
+  {{- $allParameters := slice }}
   {{- range $modulesStablestList }}
     {{- $moduleChannel := index . "channel" }}
     {{- $moduleName := index . "name" }}
@@ -48,11 +48,19 @@
     {{- if not $moduleData }}
       {{- continue -}}
     {{- end }}
-    {{- if not $firstModule }},{{- end }}
-    {{- $firstModule = false }}
-    {{- partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" $firstModule) }}
+    {{- $moduleParams := partial "openapi/module-search-index.json" (dict "name" $moduleName "channel" $moduleChannel "data" $moduleData "lang" $.Lang "firstModule" false) }}
+    {{- if $moduleParams }}
+      {{- $allParameters = $allParameters | append $moduleParams }}
+    {{- end }}
   {{- end -}}
-]}
+  {{- $first := true }}
+  {{- range $allParameters }}
+    {{- if not $first }},{{- end }}
+    {{- $first = false }}
+    {{ . | jsonify }}
+  {{- end }}
+  ]
+}
 {{- else -}}
 {}
 {{- end -}}

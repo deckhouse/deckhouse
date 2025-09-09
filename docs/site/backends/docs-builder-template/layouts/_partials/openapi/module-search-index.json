@@ -24,4 +24,4 @@
       {{- end }}
     {{- end }}
 {{- end }}
-{{- $allSearchParams | jsonify }}
+{{- return $allSearchParams }}

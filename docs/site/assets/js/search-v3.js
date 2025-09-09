@@ -91,11 +91,11 @@ class ModuleSearch {
   // Parse search index paths with boost levels
   parseSearchIndexPaths(searchIndexPath) {
     const paths = searchIndexPath.split(',').map(path => path.trim());
-    
+
     return paths.map(path => {
       // Check if path contains boost level (format: "path:boost")
       const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
-      
+
       if (boostMatch) {
         return {
           path: boostMatch[1].trim(),
@@ -163,7 +163,7 @@ class ModuleSearch {
       if (!this.isDataLoaded) {
         return;
       }
-      
+
       const query = e.target.value.trim();
       if (query.length > 0) {
         // Show search results when user starts typing
@@ -183,7 +183,7 @@ class ModuleSearch {
         if (!this.isDataLoaded) {
           return;
         }
-        
+
         const query = e.target.value.trim();
         if (query.length > 0) {
           this.searchResults.style.display = 'flex';
@@ -291,6 +291,7 @@ class ModuleSearch {
               _indexSource: indexConfigs[index].path
             }));
             this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
+            console.log(`Added ${indexData.documents.length} documents from ${indexConfigs[index].path}`);
           }
           if (indexData && indexData.parameters) {
             // Add boost information to each parameter
@@ -300,12 +301,13 @@ class ModuleSearch {
               _indexSource: indexConfigs[index].path
             }));
             this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
+            console.log(`Added ${indexData.parameters.length} parameters from ${indexConfigs[index].path}`);
           }
           // Store boost level for this index
           this.searchData.indexBoosts[indexConfigs[index].path] = indexData.boost;
         });
 
-        // console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
+        console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
       }
 
       // Refresh language detection before building index
@@ -331,10 +333,10 @@ class ModuleSearch {
       // Re-enable search input even on error
       this.searchInput.disabled = false;
       this.searchInput.placeholder = this.t('ready');
-      
+
       // Keep focus on search input after error
       this.searchInput.focus();
-      
+
       this.showError('Failed to load search index. Please try again later.');
     }
   }
@@ -355,10 +357,11 @@ class ModuleSearch {
         this.ref('id');
 
         // Add documents from the documents array
+        let docCounter = 0;
         if (searchData.documents) {
-          searchData.documents.forEach((doc, index) => {
+          searchData.documents.forEach((doc) => {
             this.add({
-              id: `doc_${index}`,
+              id: `doc_${docCounter}`,
               title: doc.title || '',
               keywords: doc.keywords || '',
               module: doc.module || '',
@@ -368,14 +371,16 @@ class ModuleSearch {
               moduletype: doc.moduletype || '',
               type: 'document'
             });
+            docCounter++;
           });
         }
 
         // Add parameters from the parameters array
+        let paramCounter = 0;
         if (searchData.parameters) {
-          searchData.parameters.forEach((param, index) => {
+          searchData.parameters.forEach((param) => {
             this.add({
-              id: `param_${index}`,
+              id: `param_${paramCounter}`,
               title: param.name || '',
               keywords: param.keywords || '',
               module: param.module || '',
@@ -385,6 +390,7 @@ class ModuleSearch {
               moduletype: param.moduletype || '',
               type: 'parameter'
             });
+            paramCounter++;
           });
         }
       });
@@ -401,10 +407,11 @@ class ModuleSearch {
         this.ref('id');
 
         // Add documents from the documents array
+        let docCounter = 0;
         if (searchData.documents) {
-          searchData.documents.forEach((doc, index) => {
+          searchData.documents.forEach((doc) => {
             this.add({
-              id: `doc_${index}`,
+              id: `doc_${docCounter}`,
               title: doc.title || '',
               keywords: doc.keywords || '',
               module: doc.module || '',
@@ -413,14 +420,16 @@ class ModuleSearch {
               url: doc.url || '',
               type: 'document'
             });
+            docCounter++;
           });
         }
 
         // Add parameters from the parameters array
+        let paramCounter = 0;
         if (searchData.parameters) {
-          searchData.parameters.forEach((param, index) => {
+          searchData.parameters.forEach((param) => {
             this.add({
-              id: `param_${index}`,
+              id: `param_${paramCounter}`,
               title: param.name || '',
               keywords: param.keywords || '',
               module: param.module || '',
@@ -429,6 +438,7 @@ class ModuleSearch {
               url: param.url || '',
               type: 'parameter'
             });
+            paramCounter++;
           });
         }
       });
@@ -639,6 +649,48 @@ class ModuleSearch {
     existingMessages.forEach(message => message.remove());
   }
 
+  // Check if query looks like a URL and sanitize it for search
+  sanitizeQueryForSearch(query) {
+    // Check if the query looks like a URL
+    const urlPattern = /^https?:\/\/[^\s]+$/i;
+    if (urlPattern.test(query)) {
+      // Extract domain and path from URL for searching
+      try {
+        const url = new URL(query);
+        // Extract meaningful parts: domain and path segments
+        const domain = url.hostname.replace(/^www\./, ''); // Remove www prefix
+        const pathSegments = url.pathname.split('/').filter(segment => segment.length > 0);
+
+        // Create search terms from URL parts
+        const searchTerms = [domain, ...pathSegments].join(' ');
+        console.log(`URL detected, sanitized query: "${query}" -> "${searchTerms}"`);
+        return searchTerms;
+      } catch (e) {
+        // If URL parsing fails, just remove the protocol and special characters
+        const sanitized = query.replace(/^https?:\/\//, '').replace(/[^\w\s-]/g, ' ').trim();
+        console.log(`URL parsing failed, basic sanitization: "${query}" -> "${sanitized}"`);
+        return sanitized;
+      }
+    }
+
+    // Check for other problematic patterns that might cause Lunr parsing errors
+    // Remove or escape special characters that might be interpreted as field names
+    const problematicPatterns = [
+      /^[a-zA-Z]+:/, // Pattern like "field:value" that might be interpreted as field query
+    ];
+
+    for (const pattern of problematicPatterns) {
+      if (pattern.test(query)) {
+        // Replace colons with spaces to prevent field interpretation
+        const sanitized = query.replace(/:/g, ' ').trim();
+        console.log(`Problematic pattern detected, sanitized: "${query}" -> "${sanitized}"`);
+        return sanitized;
+      }
+    }
+
+    return query;
+  }
+
   async handleSearch(query) {
     if (!query.trim()) {
 
@@ -658,19 +710,44 @@ class ModuleSearch {
     }
 
     try {
-      this.lastQuery = query;
+      // Sanitize the query to handle URLs and other problematic patterns
+      const sanitizedQuery = this.sanitizeQueryForSearch(query);
+
+      this.lastQuery = query; // Keep original query for display
       this.resetPagination();
 
       // Clear any existing fuzzy search messages
       this.clearFuzzySearchMessages();
 
-      // First try exact search
-      let results = this.lunrIndex.search(query);
-      let highlightQuery = query; // Default to original query for highlighting
+      // First try exact search with sanitized query
+      let results = [];
+      let highlightQuery = sanitizedQuery; // Use sanitized query for highlighting
+
+      try {
+        results = this.lunrIndex.search(sanitizedQuery);
+      } catch (error) {
+        console.warn('Lunr search error with sanitized query:', error);
+        // If sanitized query still fails, try a more aggressive sanitization
+        const fallbackQuery = sanitizedQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (fallbackQuery !== sanitizedQuery) {
+          try {
+            results = this.lunrIndex.search(fallbackQuery);
+            highlightQuery = fallbackQuery;
+            console.log(`Fallback search successful with: "${fallbackQuery}"`);
+          } catch (fallbackError) {
+            console.error('Fallback search also failed:', fallbackError);
+            this.showError('Search query contains invalid characters. Please try a different search term.');
+            return;
+          }
+        } else {
+          this.showError('Search query contains invalid characters. Please try a different search term.');
+          return;
+        }
+      }
 
       // If no results and fuzzy search is available, try fuzzy search
       if (results.length === 0 && this.fuseIndex) {
-        const fuzzySuggestions = this.getFuzzySuggestions(query);
+        const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
 
           if (fuzzySuggestions.length > 0) {
             // Try searching with the best fuzzy suggestion
@@ -684,7 +761,7 @@ class ModuleSearch {
 
       // If still no results, try searching with individual words from fuzzy suggestions
       if (results.length === 0 && this.fuseIndex) {
-        const fuzzySuggestions = this.getFuzzySuggestions(query);
+        const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
         for (const suggestion of fuzzySuggestions.slice(0, 3)) { // Try top 3 suggestions
           const wordResults = this.lunrIndex.search(suggestion.item);
           if (wordResults.length > 0) {
@@ -720,7 +797,7 @@ class ModuleSearch {
         }
 
         // Check if the search query matches the module name
-        const queryLower = query.toLowerCase();
+        const queryLower = sanitizedQuery.toLowerCase();
         const moduleLower = (doc.module || '').toLowerCase();
 
         if (moduleLower && moduleLower.includes(queryLower)) {
