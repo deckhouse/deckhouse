@@ -42,11 +42,13 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	if err != nil {
 		return 1, fmt.Errorf("stdout pipe: %v", err)
 	}
+	defer stdout.Close()
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return 1, fmt.Errorf("stderr pipe: %v", err)
 	}
+	defer stderr.Close()
 
 	log.DebugLn(cmd.String())
 	err = cmd.Start()
