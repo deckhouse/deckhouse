@@ -17,11 +17,8 @@ type VCDAffinityRuleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Enabled is TODO
-	Enabled bool `json:"enabled,omitempty"`
-
-	// Mandatory is TODO
-	Mandatory bool `json:"mandatory,omitempty"`
+	// Required is TODO
+	Required bool `json:"required,omitempty"`
 
 	// Polarity is TODO
 	Polarity string `json:"polarity,omitempty"`
