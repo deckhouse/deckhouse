@@ -20,25 +20,19 @@ import (
 	"strings"
 )
 
-type ModeType = string
+type CheckModeType = string
 
 const (
-	ModeUnmanaged ModeType = "Unmanaged"
-	ModeDirect    ModeType = "Direct"
-	ModeProxy     ModeType = "Proxy"
-	ModeLocal     ModeType = "Local"
+	Default CheckModeType = "Default"
+	Relax   CheckModeType = "Relax"
 )
 
-func ToModeType(mode string) ModeType {
+func ToCheckModeType(mode string) CheckModeType {
 	val := strings.ToLower(mode)
 	switch val {
-	case "direct":
-		return ModeDirect
-	case "proxy":
-		return ModeProxy
-	case "local":
-		return ModeLocal
+	case "relax":
+		return Relax
 	default:
-		return ModeUnmanaged
+		return Default
 	}
 }
