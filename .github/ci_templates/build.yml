@@ -69,9 +69,6 @@ steps:
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
-      DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-      DECKHOUSE_STAGE_REGISTRY_USER: ${{ secrets.DECKHOUSE_STAGE_REGISTRY_USER }}
-      DECKHOUSE_STAGE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_STAGE_REGISTRY_PASSWORD }}
       COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -132,25 +129,15 @@ steps:
         SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
       fi
 
-      echo STAGE_REGISTRY_PATH
-      echo $STAGE_REGISTRY_PATH > base64
-      echo DEV_REGISTRY_PATH
-      echo $DEV_REGISTRY_PATH > base64
-
 
       {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-        export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-        export WERF_REPO="${STAGE_REGISTRY_PATH}"
+        export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+        export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
         export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
       {!{- else }!}
-        export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
-        export WERF_REPO="${DEV_REGISTRY_PATH}"
+        export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+        export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
       {!{- end }!}
-
-      echo REGISTRY_PATH
-      echo $REGISTRY_PATH > base64
-      echo WERF_REPO
-      echo $WERF_REPO > base64
 
       if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
         # Release tag build, set deckhouse registry as final
