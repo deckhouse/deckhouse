@@ -34,10 +34,11 @@ type initEntry struct {
 }
 
 var initOnceByKey sync.Map
+var initMutex sync.Mutex
 
-func getInitOnceKey(pluginsDir, workingDir string) *initEntry {
-	key := pluginsDir + "|" + workingDir
-	v, _ := initOnceByKey.LoadOrStore(key, &initEntry{})
+
+func getInitOnceKey(workingDir string) *initEntry {
+	v, _ := initOnceByKey.LoadOrStore(workingDir, &initEntry{})
 	return v.(*initEntry)
 }
 
@@ -79,7 +80,18 @@ func NewExecutor(workingDir string, looger log.Logger) *Executor {
 }
 
 func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
-	onceKey := getInitOnceKey(pluginsDir, e.workingDir)
+    initMutex.Lock()
+    defer initMutex.Unlock()
+
+    lockFilePath := filepath.Join(e.workingDir, ".terraform.lock.hcl")
+    _, statErr := os.Stat(lockFilePath)
+		if  os.IsNotExist(statErr) {
+			e.logger.LogDebugF("terraform.Init .terraform.lock.hcl IsNotExist: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
+        // Init runs again when lock file is missing
+        initOnceByKey.Delete(e.workingDir)
+    }
+
+	onceKey := getInitOnceKey(e.workingDir)
 	e.logger.LogDebugF("terraform.Init called: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
 	onceKey.once.Do(func() {
 		e.logger.LogDebugF("terraform.Init executing once for key=%q\n", pluginsDir+"|"+e.workingDir)
