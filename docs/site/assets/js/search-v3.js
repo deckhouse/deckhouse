@@ -942,7 +942,7 @@ class ModuleSearch {
       }
 
       html += `
-        <a href="${this.buildTargetUrl(doc.url, doc.moduletype)}" class="result-item">
+        <a href="${this.buildTargetUrl(doc.url, doc.moduletype, doc.module)}" class="result-item">
           <div class="result-title">${title}</div>
           ${module}
           <div class="result-description">${description}</div>
@@ -1057,8 +1057,8 @@ class ModuleSearch {
     return text.replace(regex, '<mark>$1</mark>');
   }
 
-  buildTargetUrl(originalTargetUrl, moduleType = null) {
-    // console.debug('buildTargetUrl called with:', originalTargetUrl, 'moduleType:', moduleType);
+  buildTargetUrl(originalTargetUrl, moduleType = null, moduleName = null) {
+    // console.debug('buildTargetUrl called with:', originalTargetUrl, 'moduleType:', moduleType, 'moduleName:', moduleName);
 
     // If originalTargetUrl is already a full URL or starts with http/https, return as is
     if (originalTargetUrl && (originalTargetUrl.startsWith('http://') || originalTargetUrl.startsWith('https://'))) {
@@ -1077,7 +1077,7 @@ class ModuleSearch {
     const isCurrentPageVersioned = CurrentPageVersionedMeta && CurrentPageVersionedMeta.content === 'true';
     const isCurrentModulePage = document.querySelector('meta[name="page:module:type"]') !== null ? true : false;
     let relativeCurrentPageURL = document.querySelector('meta[name="page:url:relative"]');
-    const isModuleResult = moduleType !== null ? true : false;
+    const isModuleResult = (moduleType !== null && moduleName !== null && moduleName !== 'global');
     const isEmbeddedModuleResult = moduleType === 'embedded';
 
     // console.debug('Meta tag found:', relativeCurrentPageURL ? relativeCurrentPageURL.content : 'none');
@@ -1118,7 +1118,7 @@ class ModuleSearch {
         baseUrl = currentPageUrl.substring(0, currentPageUrl.length - relativeCurrentPageURL.length);
         // console.debug('Base URL calculated (versioned page):', baseUrl);
       } else {
-        // console.debug('Current URL does not end with relative path, using full URL as base');
+        console.debug('Current URL does not end with relative path, using full URL as base');
       }
 
       // Construct absolute URL using the base URL
