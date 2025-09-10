@@ -217,7 +217,7 @@ func (ar *updateApprover) approveUpdates(input *go_hook.HookInput) error {
 		approvedNodes := make(map[updateApprovalNode]struct{}, countToApprove)
 
 		//     Allow one node, if 100% nodes in NodeGroup are ready
-		if ng.Status.Desired == ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
+		if ng.Status.Desired <= ng.Status.Ready || ng.NodeType != ngv1.NodeTypeCloudEphemeral {
 			allReady := true
 			for _, ngn := range nodeGroupNodes {
 				if !ngn.IsReady {
