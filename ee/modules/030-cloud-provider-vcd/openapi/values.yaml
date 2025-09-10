@@ -150,6 +150,22 @@ properties:
                       at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                     additionalProperties:
                       type: string
+                  affinityRule:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Affinity rule for master nodes.
+                    properties:
+                      polarity:
+                        type: string
+                        description: |
+                          The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+                        enum: [Affinity, AntiAffinity]
+                      required:
+                        type: boolean
+                        description: |
+                          If true, the rule is required. If false, the rule is preferred.
+                        x-doc-default: false
           nodeGroups:
             type: array
             description: |
@@ -278,6 +294,22 @@ properties:
                         at the root of the spec. This field will take precedence over the existing metadata in cases of duplicate keys.
                       additionalProperties:
                         type: string
+                    affinityRule:
+                      type: object
+                      additionalProperties: false
+                      description: |
+                        Affinity rule for nodes.
+                      properties:
+                        polarity:
+                          type: string
+                          description: |
+                            The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+                          enum: [Affinity, AntiAffinity]
+                        required:
+                          type: boolean
+                          description: |
+                            If true, the rule is required. If false, the rule is preferred.
+                          x-doc-default: false
           bastion:
             type: object
             additionalProperties: false
@@ -650,3 +682,25 @@ properties:
         description: |
           If set to `true`, an API version below `37.2` will be used.
         x-doc-default: false
+      affinityRules:
+        type: array
+        additionalProperties: false
+        description: |
+          A list of affinity rules that will be applied to node groups and master nodes.
+        items:
+          type: object
+          properties:
+            polarity:
+              type: string
+              description: |
+                The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+              enum: [Affinity, AntiAffinity]
+            required:
+              type: boolean
+              description: |
+                If true, the rule is required. If false, the rule is preferred.
+              x-doc-default: false
+            nodeGroupName:
+              type: string
+              description: |
+                The name of the node group to which the affinity rule will be applied.
