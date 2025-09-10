@@ -220,22 +220,21 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			// Validate the existing token
 			validationResult := validateJWTToken(existingToken)
 
-			if validationResult.Error != "" {
+			switch {
+			case validationResult.Error != "":
 				input.Logger.Warn("token validation failed",
 					slog.String("multiclusterName", multiclusterName),
 					slog.String("error", validationResult.Error))
-			} else if validationResult.IsExpired {
+			case validationResult.IsExpired:
 				input.Logger.Info("token is expired",
 					slog.String("multiclusterName", multiclusterName),
 					slog.String("expiredAt", validationResult.ExpiresAt.Format(time.RFC3339)))
-			} else {
+			default:
 				input.Logger.Info("token is valid",
 					slog.String("multiclusterName", multiclusterName),
 					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 			}
 		}
-	} else {
-        // no multiclusters configured, this is normal for single-cluster setups
 	}
 
 	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.Snapshots.Get("multiclusters")) {
