@@ -377,6 +377,17 @@ function bootstrap_static() {
   done
 
   attempt=0
+  until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" "sudo zypper remove -y containerd"; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
   until $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
