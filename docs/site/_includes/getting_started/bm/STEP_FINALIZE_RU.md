@@ -127,7 +127,7 @@ EOF
 <div markdown="1">
 ```shell
 NODE_GROUP=worker
-d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
 ```
 </div>
   </li>
