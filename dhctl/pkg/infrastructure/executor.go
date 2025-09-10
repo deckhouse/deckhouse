@@ -51,13 +51,6 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	}
 	defer stderr.Close()
 
-	log.DebugLn(cmd.String())
-	err = cmd.Start()
-	if err != nil {
-		log.ErrorF("Cannot start cmd: %v\n", err)
-		return cmd.ProcessState.ExitCode(), err
-	}
-
 	var (
 		wg sync.WaitGroup
 	)
@@ -105,6 +98,13 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 			}
 		}
 	}()
+
+	log.DebugLn(cmd.String())
+	err = cmd.Start()
+	if err != nil {
+		log.ErrorF("Cannot start cmd: %v\n", err)
+		return cmd.ProcessState.ExitCode(), err
+	}
 
 	wg.Wait()
 
