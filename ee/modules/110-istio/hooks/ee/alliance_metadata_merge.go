@@ -137,6 +137,41 @@ type IstioRemoteSecretData struct {
 	Kubeconfig  string `json:"kubeconfig"`
 }
 
+// Simplified struct for storing only essential token data
+type IstioRemoteSecretToken struct {
+	Name  string `json:"name"`
+	Token string `json:"token"`
+}
+
+// parseKubeconfig extracts the token from a kubeconfig string
+func parseKubeconfig(kubeconfigStr string) (string, error) {
+	lines := strings.Split(kubeconfigStr, "\n")
+	inUsersSection := false
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		if line == "users:" {
+			inUsersSection = true
+			continue
+		}
+
+		if inUsersSection {
+			if strings.HasPrefix(line, "token:") {
+				token := strings.TrimSpace(strings.TrimPrefix(line, "token:"))
+				return token, nil
+			}
+		}
+
+		// Reset users section flag if we encounter other top-level sections
+		if inUsersSection && (line == "clusters:" || line == "contexts:" || line == "apiVersion:" || line == "kind:") {
+			inUsersSection = false
+		}
+	}
+
+	return "", fmt.Errorf("token not found in kubeconfig")
+}
+
 func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
@@ -261,8 +296,8 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	// Process istio remote secrets
-	var istioRemoteSecrets = make([]IstioRemoteSecretData, 0)
+	// Process istio remote secrets and extract only tokens
+	var istioRemoteSecrets = make([]IstioRemoteSecretToken, 0)
 	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretData](input.Snapshots.Get("istioRemoteSecrets")) {
 		if err != nil {
 			input.Logger.Warn("cannot iterate over istio remote secrets", log.Err(err))
@@ -274,7 +309,20 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 			slog.String("namespace", secretInfo.Namespace),
 			slog.String("clusterName", secretInfo.ClusterName))
 
-		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
+		// Extract token from kubeconfig
+		token, err := parseKubeconfig(secretInfo.Kubeconfig)
+		if err != nil {
+			input.Logger.Warn("cannot extract token from kubeconfig",
+				slog.String("name", secretInfo.Name),
+				slog.String("error", err.Error()))
+			continue
+		}
+
+		// Store only name and token
+		istioRemoteSecrets = append(istioRemoteSecrets, IstioRemoteSecretToken{
+			Name:  secretInfo.Name,
+			Token: token,
+		})
 	}
 
 	// Store the processed secrets in values

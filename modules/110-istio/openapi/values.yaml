@@ -120,15 +120,9 @@ properties:
             name:
               type: string
               x-examples: ["istio-remote-secret-sec"]
-            namespace:
+            token:
               type: string
-              x-examples: ["d8-istio"]
-            clusterName:
-              type: string
-              x-examples: ["sec"]
-            kubeconfig:
-              type: string
-              x-examples: ["apiVersion: v1\nkind: Config\n..."]
+              x-examples: ["eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."]
       remoteAuthnKeypair:
         type: object
         default: {}
