@@ -89,6 +89,8 @@ spec:
           value: "true"
         - name: DHCTL_CLI_ALLOWED_COMMANDS
           value: "terraform converge-exporter check"
+        - name: TF_LOG
+          value: "WARN"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         resources:
           requests:
