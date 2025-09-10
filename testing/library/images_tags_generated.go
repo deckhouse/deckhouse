@@ -334,7 +334,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"snat":    "imageHash-networkGateway-snat",
 	},
 	"networkPolicyEngine": map[string]interface{}{
-		"kubeRouter": "imageHash-networkPolicyEngine-kubeRouter",
+		"iptablesWrapperInit": "imageHash-networkPolicyEngine-iptablesWrapperInit",
+		"kubeRouter":          "imageHash-networkPolicyEngine-kubeRouter",
 	},
 	"nodeLocalDns": map[string]interface{}{
 		"coredns":                    "imageHash-nodeLocalDns-coredns",
