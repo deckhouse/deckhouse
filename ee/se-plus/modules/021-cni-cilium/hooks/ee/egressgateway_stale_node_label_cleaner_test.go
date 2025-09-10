@@ -42,6 +42,15 @@ spec:
   podCIDR: 10.111.1.0/24
   podCIDRs:
     - 10.111.1.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
 `
 
 var nodeWithoutNodeRoleButWithLabels = `
@@ -57,6 +66,14 @@ spec:
   podCIDR: 10.111.2.0/24
   podCIDRs:
     - 10.111.2.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
 `
 
 var nodeWithoutNodeRoleWithoutLabels = `
@@ -69,6 +86,11 @@ spec:
   podCIDR: 10.111.3.0/24
   podCIDRs:
     - 10.111.3.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
 `
 
 var nodeWithMultipleActiveLabels = `
@@ -85,11 +107,21 @@ spec:
   podCIDR: 10.111.4.0/24
   podCIDRs:
     - 10.111.4.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-4
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-prod: ""
 `
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: egress_label_cleaner", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGateway", false)
+	f.RegisterCRD("cilium.io", "v2", "CiliumNode", false)
 
 	Context("Node with correct NodeSelector and labels", func() {
 		BeforeEach(func() {
@@ -142,6 +174,10 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: egress_label_cleaner", func(
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-dev"))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-prod"))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/member"))
+
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-dev"))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-prod"))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-4").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/member"))
 		})
 	})
 })
