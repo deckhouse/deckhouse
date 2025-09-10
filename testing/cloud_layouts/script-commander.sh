@@ -377,6 +377,17 @@ function bootstrap_static() {
   done
 
   attempt=0
+  until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" "sudo zypper remove -y containerd"; do
+    attempt=$(( attempt + 1 ))
+    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
+      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      return 1
+    fi
+    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    sleep 5
+  done
+
+  attempt=0
   until $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
@@ -400,7 +411,15 @@ function bootstrap_static() {
        cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
 apt-get update
-apt-get install -y docker.io docker-compose wget curl
+apt-get install -y docker.io docker-compose wget curl chrony
+# setup chrony
+cat << 'CONF' > /etc/chrony.conf
+server time.google.com iburst
+local stratum 10
+allow 192.168.199.0/24
+CONF
+systemctl enable --now chronyd
+chronyc tracking
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
 # DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
