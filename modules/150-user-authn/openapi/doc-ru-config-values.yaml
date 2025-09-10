@@ -61,6 +61,9 @@ properties:
         description:
           description: |
             Текстовое описание, содержащее информацию о том, чем этот метод аутентификации отличается от других.
+  authRequestsLimit:
+    type: integer
+    description: Максимальное количество AuthRequest объектов.
   passwordPolicy:
     type: object
     default: null
