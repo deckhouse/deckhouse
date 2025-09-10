@@ -200,7 +200,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 	if multiclusters.Exists() {
 		multiclusterCount := len(multiclusters.Array())
 		if multiclusterCount > 0 {
-			input.Logger.Debug("validating multicluster tokens", slog.Int("count", multiclusterCount))
+			input.Logger.Info("validating multicluster tokens", slog.Int("count", multiclusterCount))
 		}
 
 		for _, multiclusterValue := range multiclusters.Array() {
@@ -228,8 +228,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 					slog.String("multiclusterName", multiclusterName),
 					slog.String("expiredAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 			default:
-				// Only log valid tokens at debug level to reduce noise
-				input.Logger.Debug("token is valid",
+				// Log valid tokens at info level but less frequently (every 5 minutes instead of every minute)
+				input.Logger.Info("token is valid",
 					slog.String("multiclusterName", multiclusterName),
 					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 			}
