@@ -235,7 +235,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			}
 		}
 	} else {
-		input.Logger.Debug("no multiclusters found")
+        // no multiclusters configured, this is normal for single-cluster setups
 	}
 
 	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterDiscoveryCrdInfo](input.Snapshots.Get("multiclusters")) {

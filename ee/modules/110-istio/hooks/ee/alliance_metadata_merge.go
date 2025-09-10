@@ -129,7 +129,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-// IstioRemoteSecretData represents the data extracted from an istio-remote-secret
+// Represents the data extracted from an istio-remote-secret
 type IstioRemoteSecretData struct {
 	Name        string `json:"name"`
 	Namespace   string `json:"namespace"`
@@ -144,7 +144,6 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf("cannot convert k8s secret to struct: %v", err)
 	}
 
-	// Extract cluster name from secret name (istio-remote-secret-<cluster-name>)
 	secretName := secret.GetName()
 	if !strings.HasPrefix(secretName, "istio-remote-secret-") {
 		return nil, fmt.Errorf("secret %s is not an istio remote secret", secretName)
@@ -163,7 +162,6 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	// Check if the data looks like base64 (contains only base64 characters)
 	if isBase64String(secDataStr) {
-		// Clean up the base64 string (remove whitespace, newlines, etc.)
 		cleanData := strings.ReplaceAll(secDataStr, "\n", "")
 		cleanData = strings.ReplaceAll(cleanData, "\r", "")
 		cleanData = strings.ReplaceAll(cleanData, " ", "")
@@ -172,14 +170,12 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		var err error
 		kubeconfigBytes, err = base64.StdEncoding.DecodeString(cleanData)
 		if err != nil {
-			// Try URL encoding as fallback
 			kubeconfigBytes, err = base64.URLEncoding.DecodeString(cleanData)
 			if err != nil {
 				return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
 			}
 		}
 	} else {
-		// Data is already decoded (raw YAML)
 		kubeconfigBytes = secData
 	}
 
@@ -277,11 +273,6 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 			slog.String("name", secretInfo.Name),
 			slog.String("namespace", secretInfo.Namespace),
 			slog.String("clusterName", secretInfo.ClusterName))
-
-		// Log the decoded kubeconfig for debugging (be careful with sensitive data in production)
-		input.Logger.Debug("decoded kubeconfig",
-			slog.String("clusterName", secretInfo.ClusterName),
-			slog.String("kubeconfig", secretInfo.Kubeconfig))
 
 		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
 	}
