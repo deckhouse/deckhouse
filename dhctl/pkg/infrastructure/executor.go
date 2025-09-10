@@ -39,11 +39,11 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		Setpgid: true,
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stdout pipe: %v", err)
-	}
-	defer stdout.Close()
+	// stdout, err := cmd.StdoutPipe()
+	// if err != nil {
+	// 	return 1, fmt.Errorf("stdout pipe: %v", err)
+	// }
+	// defer stdout.Close()
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
@@ -55,7 +55,8 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		wg sync.WaitGroup
 	)
 
-	wg.Add(2)
+	// wg.Add(2)
+	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
@@ -78,26 +79,26 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		}
 	}()
 
-	go func() {
-		defer wg.Done()
+	// go func() {
+	// 	defer wg.Done()
 
-		reader := bufio.NewReader(stdout)
-		buf := make([]byte, 1024)
+	// 	reader := bufio.NewReader(stdout)
+	// 	buf := make([]byte, 1024)
 
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				chunk := buf[:n]
-				log.InfoLn(string(chunk))
-			}
-			if err != nil {
-				if err != io.EOF {
-					log.DebugF("Error reading stdout: %v", err)
-				}
-				break
-			}
-		}
-	}()
+	// 	for {
+	// 		n, err := reader.Read(buf)
+	// 		if n > 0 {
+	// 			chunk := buf[:n]
+	// 			log.InfoLn(string(chunk))
+	// 		}
+	// 		if err != nil {
+	// 			if err != io.EOF {
+	// 				log.DebugF("Error reading stdout: %v", err)
+	// 			}
+	// 			break
+	// 		}
+	// 	}
+	// }()
 
 	log.DebugLn(cmd.String())
 	err = cmd.Start()
