@@ -79,17 +79,23 @@ spec:
                 affinityRule:
                   type: object
                   description: |
-                    Affinity rule for ephemeral nodes.
+                    Specifies the affinity rule applied only to virtual machines of node groups referencing this instance class within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
                   properties:
                     polarity:
                       type: string
                       description: |
-                        The polarity of the affinity rule. One of `Affinity` or `AntiAffinity`.
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
                       enum: [Affinity, AntiAffinity]
                     required:
                       type: boolean
                       description: |
-                        If true, the rule is required. If false, the rule is preferred.
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
                       x-doc-default: false
             status:
               type: object
