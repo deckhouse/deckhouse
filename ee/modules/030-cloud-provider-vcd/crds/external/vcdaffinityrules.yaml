@@ -54,16 +54,23 @@ spec:
               nodeLabelSelector:
                 additionalProperties:
                   type: string
-                description: NodeLabelSelector is TODO
+                description: |-
+                  NodeLabelSelector is a selector for the nodes that this rule applies to.
+                  Empty selector means that the rule applies to all nodes.
                 type: object
               polarity:
-                description: Polarity is TODO
+                description: |-
+                  The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                  `Affinity` means that nodes should be placed on the same host,
+                  while `AntiAffinity` means they should be placed on different hosts.
                 enum:
                 - Affinity
                 - AntiAffinity
                 type: string
               required:
-                description: Required is TODO
+                description: |-
+                  Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                  If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
                 type: boolean
             required:
             - polarity
@@ -72,25 +79,30 @@ spec:
             description: VCDAffinityRuleStatus defines the observed state of VCDAffinityRule.
             properties:
               message:
-                description: Message is TODO
+                description: Message is text description of the current status of
+                  the rule.
                 type: string
               nodeCount:
-                description: NodeCount is TODO
+                description: NodeCount is the number of nodes that are affected by
+                  the rule.
                 type: integer
               nodes:
-                description: Nodes is TODO
+                description: Nodes is a list of nodes that are affected by the rule.
+                  Each node has a name and an ID.
                 items:
                   properties:
                     ID:
-                      description: ID is TODO
+                      description: ID is the unique identifier for the node from the
+                        VCD API.
                       type: string
                     name:
-                      description: Name is TODO
+                      description: Name is the name of the node.
                       type: string
                   type: object
                 type: array
               ruleID:
-                description: Rule ID is TODO
+                description: Rule ID is a unique identifier for the rule from the
+                  VCD API.
                 type: string
             type: object
         type: object

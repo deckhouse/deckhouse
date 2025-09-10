@@ -17,15 +17,21 @@ type VCDAffinityRuleSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Required is TODO
+	// Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+	// If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+	// +optional
 	Required bool `json:"required,omitempty"`
 
-	// Polarity is TODO
+	// The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+	// `Affinity` means that nodes should be placed on the same host,
+	// while `AntiAffinity` means they should be placed on different hosts.
 	// +kubebuilder:validation:Enum=Affinity;AntiAffinity
 	// +kubebuilder:validation:Required
 	Polarity string `json:"polarity,omitempty"`
 
-	// NodeLabelSelector is TODO
+	// NodeLabelSelector is a selector for the nodes that this rule applies to.
+	// Empty selector means that the rule applies to all nodes.
+	// +optional
 	NodeLabelSelector map[string]string `json:"nodeLabelSelector,omitempty"`
 }
 
@@ -34,23 +40,23 @@ type VCDAffinityRuleStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Message is TODO
+	// Message is text description of the current status of the rule.
 	Message string `json:"message,omitempty"`
 
-	// Rule ID is TODO
+	// Rule ID is a unique identifier for the rule from the VCD API.
 	RuleID string `json:"ruleID,omitempty"`
 
-	// Nodes is TODO
+	// Nodes is a list of nodes that are affected by the rule. Each node has a name and an ID.
 	Nodes []VCDAffinityRuleStatusNode `json:"nodes,omitempty"`
 
-	// NodeCount is TODO
+	// NodeCount is the number of nodes that are affected by the rule.
 	NodeCount int `json:"nodeCount,omitempty"`
 }
 
 type VCDAffinityRuleStatusNode struct {
-	// Name is TODO
+	// Name is the name of the node.
 	Name string `json:"name,omitempty"`
-	// ID is TODO
+	// ID is the unique identifier for the node from the VCD API.
 	ID string `json:"ID,omitempty"`
 }
 
