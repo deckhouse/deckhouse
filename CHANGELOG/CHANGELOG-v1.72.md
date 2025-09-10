@@ -69,6 +69,7 @@
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Fix ssh client initialising in Commander Attach and Commander Detach operations [#15380](https://github.com/deckhouse/deckhouse/pull/15380)
  - **[docs]** Added documentation for the new registry configuration in Containerd. [#14790](https://github.com/deckhouse/deckhouse/pull/14790)
  - **[extended-monitoring]** Exclude PVCs with block volume mode from space and inodes monitoring. [#14859](https://github.com/deckhouse/deckhouse/pull/14859)
     free space monitoring for the PVCs in the Block volumeMode is meaningless and will be disabled
@@ -99,6 +100,8 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images. [#14979](https://github.com/deckhouse/deckhouse/pull/14979)
+    Kubernetes control-plane components will restart, kubelet will restart
  - **[candi]** Added support for new patch versions of Kubernetes. [#14834](https://github.com/deckhouse/deckhouse/pull/14834)
     Kubernetes control-plane components will restart, kubelet will restart
  - **[deckhouse]** Remove module weight constraints. [#15131](https://github.com/deckhouse/deckhouse/pull/15131)

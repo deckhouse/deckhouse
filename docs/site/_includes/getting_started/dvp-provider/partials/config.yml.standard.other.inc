@@ -110,7 +110,6 @@ layout: Standard
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    rootDiskSize: 40
     # [<en>] Virtual machine settings for the created master node.
     # [<ru>] Настройки виртуальной машины для созданного master-узла.
     virtualMachine:
