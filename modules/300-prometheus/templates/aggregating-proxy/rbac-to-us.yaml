@@ -48,9 +48,9 @@ subjects:
     namespace: kube-system
 {{- end }}
 {{- if and (.Values.global.enabledModules | has "flant-integration") (.Values.global.enabledModules | has "observability" | not) }}
-- kind: ServiceAccount
-  name: pricing
-  namespace: d8-flant-integration
+  - kind: ServiceAccount
+    name: pricing
+    namespace: d8-flant-integration
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
