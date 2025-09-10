@@ -17,6 +17,7 @@ package infrastructure
 import (
 	"context"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -32,7 +33,7 @@ type RunnerInterface interface {
 	GetState() ([]byte, error)
 	GetStep() string
 	GetChangesInPlan() int
-	GetPlanDestructiveChanges() *PlanDestructiveChanges
+	GetPlanDestructiveChanges() *plan.DestructiveChanges
 	GetPlanPath() string
 	GetLogger() log.Logger
 	WorkerDir() string
