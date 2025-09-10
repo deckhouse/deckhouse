@@ -1,4 +1,9 @@
 linters-settings:
+  module:
+    exclude-rules:
+      license:
+        directories:
+          - images/webhook-handler/operator/internal/controller/testdata
   openapi:
     exclude-rules:
       enum:
