@@ -1,0 +1,9 @@
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: authrequest-quota
+  namespace: d8-user-authn
+spec:
+  hard:
+    count/authrequests.dex.coreos.com: {{ .Values.userAuthn.internal.authRequestsLimit | quote }}

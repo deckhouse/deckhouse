@@ -92,6 +92,10 @@ properties:
             A CA for accessing the API:
             * If the parameter is not set, Kubernetes CA is used.
             * We recommend using a self-signed certificate (and specify it as masterCA) if an HTTP proxy (that terminates HTTPS traffic) is used for exposing.
+  authRequestsLimit:
+    type: integer
+    default: 1000
+    description: Maximum number of AuthRequest objects.
   passwordPolicy:
     type: object
     default: null
