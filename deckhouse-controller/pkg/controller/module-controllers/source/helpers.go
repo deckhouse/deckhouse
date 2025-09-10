@@ -199,7 +199,7 @@ func (r *reconciler) needToEnsureRelease(
 			return false
 		}
 
-		if len(module.Properties.AvailableSources) > 1 && (source.Name != "deckhouse") {
+		if len(module.Properties.AvailableSources) > 1 && source.Name != "deckhouse" {
 			return false
 		}
 	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
