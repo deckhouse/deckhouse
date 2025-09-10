@@ -1623,6 +1623,34 @@ entries:
           ru: Программно-определяемые хранилища
         folders:
           - title:
+              en: Local path provisioner storage
+              ru: Локальное хранилище Local Path Provisioner
+            folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /modules/local-path-provisioner/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/local-path-provisioner/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/local-path-provisioner/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/local-path-provisioner/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/local-path-provisioner/faq.html
+          - title:
               en: Local storage based on LVM
               ru: Локальное хранилище на основе LVM
             url: /storage/admin/sds/lvm-local.html
