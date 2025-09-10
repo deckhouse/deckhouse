@@ -30,7 +30,6 @@ var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "User", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "Group", false)
-	f.RegisterCRD("dex.coreos.com", "v1", "Password", true)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -98,11 +97,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
 }]`))
 
 				Expect(
@@ -182,11 +177,7 @@ spec:
     "userID": "admin"
   },
   "encodedName": "mfsg22lonzsxq5camv4gc3lqnrss4y3pnxf7fhheqqrcgji",
-  "status": {
-    "lock": {
-      "state": false
-    }
-  }
+  "status": {}
 }]`))
 				})
 			})
@@ -226,11 +217,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   },
   {
     "name": "user",
@@ -240,11 +227,7 @@ spec:
       "userID": "user"
     },
     "encodedName": "ovzwk4samv4gc3lqnrss4y3pnxf7fhheqqrcgji",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 		})
@@ -275,11 +258,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`[]`))
@@ -348,11 +327,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`["group-1", "group-2", "group-3"]`))
@@ -403,11 +378,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 
@@ -460,11 +431,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`["group-1"]`))
@@ -502,11 +469,7 @@ status:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 			Expect(f.KubernetesGlobalResource("User", "admin").Field("status.groups").String()).To(MatchUnorderedJSON(`[]`))
@@ -541,115 +504,7 @@ spec:
       "userID": "admin"
     },
     "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
-  }
-]`))
-		})
-	})
-
-	Context("Cluster with local password and linked user", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: admin
-spec:
-  email: admin@example.com
-  password: password
-  userID: myadmin
----
-apiVersion: dex.coreos.com/v1
-email: admin@example.com
-hash: JDJhJDEwJDJiMmNVOENQaE9UYUdyczFIUlF1QXVlUzdKVFQ1WkhzSFN6WWlGUG0xbGVaY2s3TWM4VDRXCg==
-hashUpdatedAt: "0001-01-01T00:00:00Z"
-incorrectPasswordLoginAttempts: 0
-kind: Password
-lockedUntil: "2077-01-01T00:00:00Z"
-metadata:
-  name: mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji
-userID: myadmin
-username: admin
-`))
-			f.RunHook()
-		})
-		It("User Must sync lock fields with password", func() {
-			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchUnorderedJSON(`
-[
-  {
-    "name": "admin",
-    "spec": {
-      "email": "admin@example.com",
-      "password": "password",
-      "userID": "admin"
-    },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": true,
-        "reason": "PasswordPolicyLockout",
-        "message": "Locked due to too many failed login attempts",
-        "until": "2077-01-01T00:00:00Z"
-      }
-    }
-  }
-]`))
-		})
-	})
-
-	Context("Cluster with local password and linked user with locked state", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: admin
-spec:
-  email: admin@example.com
-  password: password
-  userID: myadmin
-  lock:
-    message: Locked due to too many failed login attempts
-    reason: PasswordPolicyLockout
-    state: true
-    until: "0001-01-01T00:00:00Z"
----
-apiVersion: dex.coreos.com/v1
-email: admin@example.com
-hash: JDJhJDEwJDJiMmNVOENQaE9UYUdyczFIUlF1QXVlUzdKVFQ1WkhzSFN6WWlGUG0xbGVaY2s3TWM4VDRXCg==
-hashUpdatedAt: "0001-01-01T00:00:00Z"
-incorrectPasswordLoginAttempts: 0
-kind: Password
-lockedUntil: "0001-01-01T00:00:00Z"
-metadata:
-  name: mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji
-userID: myadmin
-username: admin
-`))
-			f.RunHook()
-		})
-		It("User must sync lock fields with Password", func() {
-			Expect(f.ValuesGet("userAuthn.internal.dexUsersCRDs").String()).To(MatchUnorderedJSON(`
-[
-  {
-    "name": "admin",
-    "spec": {
-      "email": "admin@example.com",
-      "password": "password",
-      "userID": "admin"
-    },
-    "encodedName": "mfsg22loibsxqylnobwgkltdn5w4x4u44scceizf",
-    "status": {
-      "lock": {
-        "state": false
-      }
-    }
+    "status": {}
   }
 ]`))
 		})

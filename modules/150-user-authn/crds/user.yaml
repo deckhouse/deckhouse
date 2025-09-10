@@ -92,36 +92,6 @@ spec:
                     Static user groups.
                   items:
                     type: string
-                lock:
-                  type: object
-                  description: |
-                    Information about user account lock.
-                    If present with `state: true`, the user cannot authenticate until the specified time
-                    or until the lock is manually lifted by an administrator.
-                  properties:
-                    state:
-                      type: boolean
-                      description: |
-                        Indicates whether the user account is currently locked.
-                        - `true` — account is locked.
-                        - `false` — account is active.
-                    reason:
-                      type: string
-                      enum:
-                        - PasswordPolicyLockout
-                      description: |
-                        Machine-readable reason for the account lock.
-                        Used for programmatic checks and policy enforcement.
-                    message:
-                      type: string
-                      description: |
-                        Human-readable explanation of the lock reason.
-                    until:
-                      type: string
-                      format: date-time
-                      description: |
-                        The time until which the user is locked, in RFC3339 format.
-                        After this time, the account lock will be automatically lifted.
       subresources: &subresources
         status: {}
       additionalPrinterColumns: &additionalPrinterColumns
@@ -212,35 +182,5 @@ spec:
                     Static user groups.
                   items:
                     type: string
-                lock:
-                  type: object
-                  description: |
-                    Information about user account lock.
-                    If present, the user cannot authenticate until the specified time
-                    or until the lock is manually lifted by an administrator.
-                  properties:
-                    state:
-                      type: boolean
-                      description: |
-                        Indicates whether the user account is currently locked.
-                        - `true` — account is locked.
-                        - `false` — account is active.
-                    reason:
-                      type: string
-                      enum:
-                        - PasswordPolicyLockout
-                      description: |
-                        Machine-readable reason for the account lock.
-                        Used for programmatic checks and policy enforcement.
-                    message:
-                      type: string
-                      description: |
-                        Human-readable explanation of the lock reason.
-                    until:
-                      type: string
-                      format: date-time
-                      description: |
-                        The time until which the user is locked, in RFC3339 format.
-                        After this time, the account lock will be automatically lifted.
       subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns
