@@ -7,6 +7,7 @@ package hooks
 
 import (
 	"fmt"
+	"context"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -58,7 +59,7 @@ func applyInstanceClassFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 	return nil, nil
 }
 
-func handleAffinityRules(input *go_hook.HookInput) error {
+func handleAffinityRules(_ context.Context, input *go_hook.HookInput) error {
 	affinityRules := make([]affinityRule, 0)
 
 	if masterAffinityRule, ok := input.Values.GetOk("cloudProviderVcd.internal.providerClusterConfiguration.masterNodeGroup.instanceClass.affinityRule"); ok {
@@ -84,7 +85,7 @@ func handleAffinityRules(input *go_hook.HookInput) error {
 		}
 	}
 
-	vcdInstanceClasses, err := sdkobjectpatch.UnmarshalToStruct[vcdInstanceClass](input.NewSnapshots, "affinity_rules_from_vcdinstanceclass")
+	vcdInstanceClasses, err := sdkobjectpatch.UnmarshalToStruct[vcdInstanceClass](input.Snapshots, "affinity_rules_from_vcdinstanceclass")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal affinity rules from VCDInstanceClasses: %w", err)
 	}
