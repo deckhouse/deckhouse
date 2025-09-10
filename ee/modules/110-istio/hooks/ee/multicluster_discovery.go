@@ -180,17 +180,20 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "0 */5 * * *"}, // Run every 5 minutes instead of every minute
+		{Name: "cron", Crontab: "* * * * *"}, // Run every minute for testing
 	},
 }, dependency.WithExternalDependencies(multiclusterDiscovery))
 
 func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(multiclusterMetricsGroup)
 
-	if !input.Values.Get("istio.multicluster.enabled").Bool() {
+	multiclusterEnabled := input.Values.Get("istio.multicluster.enabled").Bool()
+	if !multiclusterEnabled {
 		return nil
 	}
-	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
+
+	authnKeypairExists := input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists()
+	if !authnKeypairExists {
 		input.Logger.Warn("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
 	}
