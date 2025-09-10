@@ -134,6 +134,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	}
 
 	args = append(args, e.workingDir)
+	args = append(args, " > /dev/null")
 
 	e.cmd = terraformCmd(ctx, args...)
 
