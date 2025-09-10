@@ -180,7 +180,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "* * * * *"}, // Run every minute for testing
+		{Name: "cron", Crontab: "0 */5 * * *"}, // Run every 5 minutes to prevent memory leak
 	},
 }, dependency.WithExternalDependencies(multiclusterDiscovery))
 
