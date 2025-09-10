@@ -1,7 +1,6 @@
 @startuml
 !theme bluegray
 skinparam DefaultFontSize 16
-skinparam handwritten false
 skinparam ArrowFontStyle italic
 skinparam DefaultTextAlignment center
 skinparam backgroundColor transparent
@@ -9,20 +8,17 @@ skinparam Shadowing false
 
 start
 
-:Запрос модуля;
-:Проверка редакции;
-:Загрузка настроек доступности;
-
 if (Модуль\nдоступен в редакции?) then (Нет)
-  :Phase: Unavailable\n(недоступен);
-  stop
+  :Модуль недоступен;
+  detach
 else (Да)
   if (Модуль включён\nв наборе модулей?) then (Да)
     :Автовключение модуля;
+    detach
   else (Нет)
     :Требуется\nвключение вручную;
+    detach
   endif
 endif
 
-stop
 @enduml
