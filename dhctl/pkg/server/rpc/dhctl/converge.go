@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -183,16 +184,20 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -228,7 +233,15 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	infrastructureContext := infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	tmpDir := s.params.TmpDir
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           tmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           log.GetDefaultLogger(),
+	})
+
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {
@@ -270,6 +283,9 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		InfrastructureContext:      infrastructureContext,
 		ApproveDestructiveChangeID: p.request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,
+		ProviderGetter:             providerGetter,
+		TmpDir:                     tmpDir,
+		Logger:                     log.GetDefaultLogger(),
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
@@ -280,7 +296,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
 			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
 		},
-		SchemaStore:         s.schemaStore,
+		SchemaStore:         s.params.SchemaStore,
 		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
 	cleanuper.Add(cleanup)

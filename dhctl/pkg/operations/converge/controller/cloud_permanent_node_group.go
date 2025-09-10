@@ -34,7 +34,7 @@ type CloudPermanentNodeGroupController struct {
 
 func NewCloudPermanentNodeGroupController(controller *NodeGroupController) *CloudPermanentNodeGroupController {
 	cloudPermanentNodeGroupController := &CloudPermanentNodeGroupController{NodeGroupController: controller}
-	cloudPermanentNodeGroupController.layoutStep = "static-node"
+	cloudPermanentNodeGroupController.layoutStep = infrastructure.StaticNodeStep
 	cloudPermanentNodeGroupController.nodeGroup = cloudPermanentNodeGroupController
 
 	return cloudPermanentNodeGroupController
@@ -121,7 +121,7 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	// Node group settings are only for the static node.
 	nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(c.name)
 
-	nodeRunner := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
+	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupName:   c.name,
 		NodeGroupStep:   c.layoutStep,
@@ -135,6 +135,10 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		},
 		Hook: &infrastructure.DummyHook{},
 	}, ctx.ChangesSettings().AutomaticSettings)
+
+	if err != nil {
+		return err
+	}
 
 	outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), nodeRunner, nodeName, infrastructure.OnlyState)
 	if err != nil {

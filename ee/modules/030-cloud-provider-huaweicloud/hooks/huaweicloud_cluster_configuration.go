@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
@@ -22,4 +23,4 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderHuaweicloud.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
 	input.Values.Set("cloudProviderHuaweicloud.internal.providerDiscoveryData", providerDiscoveryData.Object)
 	return nil
-})
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))

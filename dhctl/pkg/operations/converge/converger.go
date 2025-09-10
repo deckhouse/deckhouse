@@ -59,6 +59,10 @@ type Params struct {
 	ApproveDestructiveChangeID string
 
 	InfrastructureContext *infrastructure.Context
+	ProviderGetter        infrastructure.CloudProviderGetter
+
+	TmpDir string
+	Logger log.Logger
 
 	CheckHasTerraformStateBeforeMigration bool
 }
@@ -188,9 +192,20 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.Params.ProviderGetter,
+		}, c.Params.CommanderModeParams)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.Params.ProviderGetter,
+			Logger:         c.Logger,
+		})
 	}
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
@@ -322,9 +337,21 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		}, c.Params.CommanderModeParams)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		})
 	}
 
 	metaConfig, err := convergeCtx.MetaConfig()
@@ -334,7 +361,16 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	needAutomaticTofuMigrationForCommander := false
 
-	if infrastructure.NeedToUseOpentofu(metaConfig) {
+	if c.ProviderGetter == nil {
+		return nil, fmt.Errorf("Provider getter not set")
+	}
+
+	provider, err := c.ProviderGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if provider.NeedToUseTofu() {
 		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
 		if !c.CommanderMode {
 			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
@@ -350,7 +386,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
 	}
 
-	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
+	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, c.TmpDir)
 
 	phasesToSkip := make([]phases.OperationPhase, 0)
 	if !c.CommanderMode {
@@ -426,14 +462,32 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), c.Params.ChangesSettings)
+	convergeCtx = convergectx.NewContext(context.Background(), convergectx.Params{
+		KubeClient:   kubeCl,
+		Cache:        cache.Global(),
+		ChangeParams: c.Params.ChangesSettings,
+		Logger:       c.Logger,
+	})
 
 	metaConfig, err := convergeCtx.MetaConfig()
 	if err != nil {
 		return err
 	}
 
-	if infrastructure.NeedToUseOpentofu(metaConfig) {
+	if c.ProviderGetter == nil {
+		return fmt.Errorf("Provider getter not set")
+	}
+
+	// todo flexible autoconverger provider getter
+	providersGetterCtx, cancel := convergeCtx.WithTimeout(10 * time.Second)
+
+	provider, err := c.ProviderGetter(providersGetterCtx, metaConfig)
+	cancel()
+	if err != nil {
+		return err
+	}
+
+	if provider.NeedToUseTofu() {
 		convergeCtx.WithStateChecker(infrastructurestate.CheckCanIConvergeTerraformStateWhenWeUseTofu)
 	}
 
@@ -446,7 +500,7 @@ func (c *Converger) AutoConverge() error {
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
+	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, c.TmpDir)).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
