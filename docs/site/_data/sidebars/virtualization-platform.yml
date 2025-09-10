@@ -145,29 +145,85 @@ entries:
                 ru: Управление сетью
               folders:
                 - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /virtualization-platform/documentation/admin/platform-management/network/
+                - title:
                     en: VM Networks
                     ru: Сети виртуальных машин
                   url: /virtualization-platform/documentation/admin/platform-management/network/vm-network.html
                 - title:
-                    en: Setup Ingress
-                    ru: Настройка Ingress
-                  url: /virtualization-platform/documentation/admin/platform-management/network/ingress.html
+                    en: Internal network configuration
+                    ru: Настройка внутренней сети
+                  url: /virtualization-platform/documentation/admin/platform-management/network/internal/configuration.html
                 - title:
-                    en: Egress
-                    ru: Управление исходящим трафиком
-                  url: /virtualization-platform/documentation/admin/platform-management/network/egress.html
+                    en: Network policy configuration
+                    ru: Настройка сетевых политик
+                  url: /virtualization-platform/documentation/admin/platform-management/network/policy/configuration.html
                 - title:
-                    en: Routing
-                    ru: Настройка маршрутизации
-                  url: /virtualization-platform/documentation/admin/platform-management/network/routing.html
+                    en: Incoming traffic balancing
+                    ru: Балансировка входящего трафика
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /virtualization-platform/documentation/admin/platform-management/network/ingress/
+                    - title:
+                        en: NLB
+                        ru: NLB
+                      folders:
+                        - title:
+                            en: Balancing with MetalLB
+                            ru: Балансировка средствами MetalLB
+                          url: /virtualization-platform/documentation/admin/platform-management/network/ingress/nlb/metallb.html
+                        - title:
+                            en: External balancer
+                            ru: Внешний балансировщик
+                          url: /virtualization-platform/documentation/admin/platform-management/network/ingress/nlb/cloud-balancing.html
+                    - title:
+                        en: ALB
+                        ru: ALB
+                      folders:
+                        - title:
+                            en: ALB with NGINX Ingress controller
+                            ru: ALB средствами NGINX Ingress controller
+                          url: /virtualization-platform/documentation/admin/platform-management/network/ingress/alb/nginx.html
+                    - title:
+                        en: Ensuring high availability and fault tolerance (keepalived)
+                        ru: Обеспечение высокой доступности и отказоустойчивости (keepalived)
+                      url: /virtualization-platform/documentation/admin/platform-management/network/ingress/keepalived.html
                 - title:
-                    en: DNS settings
-                    ru: Настройка DNS
-                  url: /virtualization-platform/documentation/admin/platform-management/network/dns.html
+                    en: Outgoing traffic balancing
+                    ru: Балансировка исходящего трафика
+                  folders:
+                    - title:
+                        en: Egress Gateway
+                        ru: Egress Gateway
+                      url: /virtualization-platform/documentation/admin/platform-management/network/egress/gateway.html
                 - title:
-                    en: NTP settings
-                    ru: Настройка NTP
-                  url: /virtualization-platform/documentation/admin/platform-management/network/ntp.html
+                    en: Other network configuration options
+                    ru: Другие возможности настройки сети
+                  folders:
+                    - title:
+                        en: Managing static routes and ip rules on cluster nodes
+                        ru: Управление статичными маршрутами и правилами ip rule на узлах кластера
+                      url: /virtualization-platform/documentation/admin/platform-management/network/other/static-routes.html
+                    - title:
+                        en: Managing DNS
+                        ru: Управление DNS
+                      url: /virtualization-platform/documentation/admin/platform-management/network/other/dns.html
+                    - title:
+                        en: Caching DNS requests on cluster nodes
+                        ru: Кэширование DNS-запросов на узлах кластера
+                      url: /virtualization-platform/documentation/admin/platform-management/network/other/dns-caching.html
+                    - title:
+                        en: BpfLB operation modes for external traffic processing
+                        ru: Режимы работы bpfLB для обработки внешнего трафика
+                      url: /virtualization-platform/documentation/admin/platform-management/network/other/bpflb.html
+                    - title:
+                        en: Synchronizing time on nodes
+                        ru: Синхронизация времени на узлах
+                      url: /virtualization-platform/documentation/admin/platform-management/network/other/ntp.html
             - title:
                 en: Storage management
                 ru: Настройка хранилищ

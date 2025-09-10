@@ -90,13 +90,13 @@ If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` mo
 
 ## Module health check
 
-To verify the health of the module, ensure that all VMs in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify the health of the module, ensure that all pods in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-nfs get vm -owide -w
+d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-As a result, the list of all VMs in the `d8-csi-nfs` namespace will be displayed:
+As a result, the list of all pods in the `d8-csi-nfs` namespace will be displayed:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES

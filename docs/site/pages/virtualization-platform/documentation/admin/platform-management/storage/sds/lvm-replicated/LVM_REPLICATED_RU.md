@@ -73,8 +73,8 @@ sds-replicated-volume              Embedded  Available   True       True
 Чтобы проверить, что в пространствах имен `d8-sds-replicated-volume` и `d8-sds-node-configurator` все ВМ в состоянии `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы DRBD, можно использовать команды:
 
 ```shell
-d8 k -n d8-sds-replicated-volume get vm -w
-d8 k -n d8-sds-node-configurator get vm -w
+d8 k -n d8-sds-replicated-volume get pod -w
+d8 k -n d8-sds-node-configurator get pod -w
 ```
 
 {% alert level="info" %}

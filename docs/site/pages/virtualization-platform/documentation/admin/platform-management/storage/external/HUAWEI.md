@@ -106,8 +106,8 @@ To create a StorageClass, you need to use the [HuaweiStorageClass](/modules/csi-
 
 ### Module health verification
 
-To verify module health, ensure that all VMs in the `d8-csi-huawei` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify module health, ensure that all pods in the `d8-csi-huawei` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-huawei get vm -owide -w
+d8 k -n d8-csi-huawei get pod -owide -w
 ```

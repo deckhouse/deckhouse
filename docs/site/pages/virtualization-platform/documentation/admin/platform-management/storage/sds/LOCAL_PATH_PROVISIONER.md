@@ -7,7 +7,7 @@ Deckhouse Virtualization Platform (DVP) provides the ability to configure local 
 
 ## How it works
 
-For each [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling VMs.
+For each [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) resource, a corresponding `StorageClass` object is created. The list of nodes allowed to use the StorageClass is defined by the `nodeGroups` field and is used when scheduling pods.
 
 When a VM requests a disk, the following occurs:
 - A PersistentVolume of type `HostPath` is created;
@@ -76,4 +76,4 @@ spec:
    storageClass: localpath-system
    ```
 
-1. Wait for Prometheus VMs to restart.
+1. Wait for Prometheus pods to restart.

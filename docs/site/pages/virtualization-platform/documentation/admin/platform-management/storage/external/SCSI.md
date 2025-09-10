@@ -36,7 +36,7 @@ All commands should be executed on a machine with access to the Kubernetes API a
 Enable the `csi-scsi-generic` module. This will ensure that the following happens on all cluster nodes:
 
 - The CSI driver is registered.
-- Auxiliary VMs for the `csi-scsi-generic` components are launched.
+- Auxiliary pods for the `csi-scsi-generic` components are launched.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -136,8 +136,8 @@ d8 k get scsistorageclasses.storage.deckhouse.io <name-of-scsistorageclass>
 
 ### Module health check
 
-Check the status of VMs in the `d8-csi-scsi-generic` namespace using the following command. All VMs should be in the `Running` or `Completed` state and deployed on all nodes.
+Check the status of pods in the `d8-csi-scsi-generic` namespace using the following command. All pods should be in the `Running` or `Completed` state and deployed on all nodes.
 
 ```shell
-d8 k -n d8-csi-scsi-generic get vm -owide -w
+d8 k -n d8-csi-scsi-generic get pod -owide -w
 ```

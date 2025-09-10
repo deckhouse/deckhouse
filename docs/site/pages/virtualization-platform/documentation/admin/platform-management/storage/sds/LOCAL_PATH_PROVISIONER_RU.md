@@ -78,4 +78,4 @@ spec:
    storageClass: localpath-system
    ```
 
-1. Дождитесь перезапуска ВМ Prometheus.
+1. Дождитесь перезапуска подов Prometheus.

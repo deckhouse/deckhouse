@@ -26,7 +26,7 @@ Note that all commands must be run on a machine that has administrator access to
 Enable the `csi-hpe` module. This will result in the following actions across all cluster nodes:
 
 - Registration of the CSI driver.
-- Launch of service VMs for the `csi-hpe` components.
+- Launch of service pods for the `csi-hpe` components.
 
 ```shell
 d8 k apply -f - <<EOF
@@ -100,8 +100,8 @@ To create a StorageClass, you need to use the [HPEStorageClass](/modules/csi-hpe
 
 ### Module health verification
 
-To verify module health, ensure that all VMs in the `d8-csi-hpe` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
+To verify module health, ensure that all pods in the `d8-csi-hpe` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
-d8 k -n d8-csi-hpe get vm -owide -w
+d8 k -n d8-csi-hpe get pod -owide -w
 ```

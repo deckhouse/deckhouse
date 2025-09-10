@@ -38,7 +38,7 @@ lang: ru
    EOF
    ```
 
-1. Дождитесь состояния модуля `Ready`. На этом этапе не требуется проверять ВМ в пространстве имен `d8-sds-node-configurator`.
+1. Дождитесь состояния модуля `Ready`. На этом этапе не требуется проверять поды в пространстве имен `d8-sds-node-configurator`.
 
    ```shell
    d8 k get modules sds-node-configurator -w
@@ -46,7 +46,7 @@ lang: ru
 
 Включение модуля `sds-local-volume`:
 
-1. Активируйте модуль `sds-local-volume`. Пример ниже запускает модуль с настройками по умолчанию, что приведет к созданию служебных ВМ компонента `sds-local-volume` на всех узлах кластера:
+1. Активируйте модуль `sds-local-volume`. Пример ниже запускает модуль с настройками по умолчанию, что приведет к созданию служебных подов компонента `sds-local-volume` на всех узлах кластера:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -66,34 +66,34 @@ lang: ru
    d8 k get modules sds-local-volume -w
    ```
 
-1. Убедитесь, что в пространствах имен `d8-sds-local-volume` и `d8-sds-node-configurator` все ВМ находятся в статусе `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM.
+1. Убедитесь, что в пространствах имен `d8-sds-local-volume` и `d8-sds-node-configurator` все поды находятся в статусе `Running` или `Completed` и запущены на всех узлах, где планируется использовать ресурсы LVM.
 
    ```shell
-   d8 k -n d8-sds-local-volume get vm -owide -w
-   d8 k -n d8-sds-node-configurator get vm -o wide -w
+   d8 k -n d8-sds-local-volume get pod -owide -w
+   d8 k -n d8-sds-node-configurator get pod -o wide -w
    ```
 
 ### Подготовка узлов к созданию хранилищ
 
-Для корректной работы хранилищ на узлах необходимо, чтобы ВМ `sds-local-volume-csi-node` были запущены на выбранных узлах.
+Для корректной работы хранилищ на узлах необходимо, чтобы поды `sds-local-volume-csi-node` были запущены на выбранных узлах.
 
-По умолчанию эти ВМ запускаются на всех узлах кластера. Проверить их наличие можно с помощью команды:
+По умолчанию эти поды запускаются на всех узлах кластера. Проверить их наличие можно с помощью команды:
 
 ```shell
-d8 k -n d8-sds-local-volume get vm -owide
+d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-Размещение ВМ `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
+Размещение подов `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
 
 ### Настройка хранилища на узлах
 
 Для настройки хранилища на узлах необходимо создать группы томов LVM с использованием ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). В данном примере создается хранилище Thick.
 
 {% alert level="warning" %}
-Перед созданием ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) убедитесь, что на данном узле запущена ВМ `sds-local-volume-csi-node`. Это можно сделать командой:
+Перед созданием ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) убедитесь, что на данном узле запущен под `sds-local-volume-csi-node`. Это можно сделать командой:
 
 ```shell
-d8 k -n d8-sds-local-volume get vm -owide
+d8 k -n d8-sds-local-volume get pod -owide
 ```
 
 {% endalert %}

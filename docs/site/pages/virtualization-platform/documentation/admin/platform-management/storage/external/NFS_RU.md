@@ -91,13 +91,13 @@ nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true
 
 ### Проверка работоспособности модуля
 
-Для проверки работоспособности модуля убедитесь, что все ВМ в пространстве имён `d8-csi-nfs`находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
+Для проверки работоспособности модуля убедитесь, что все поды в пространстве имён `d8-csi-nfs`находятся в статусе `Running` или `Completed` и запущены на каждом узле кластера:
 
 ```shell
-d8 k -n d8-csi-nfs get vm -owide -w
+d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-В результате будет выведен список всех ВМ в пространстве имен `d8-csi-nfs`:
+В результате будет выведен список всех подов в пространстве имен `d8-csi-nfs`:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES

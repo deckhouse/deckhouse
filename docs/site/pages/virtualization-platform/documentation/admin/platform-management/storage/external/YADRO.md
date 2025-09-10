@@ -83,10 +83,10 @@ EOF
 
 ## Ensuring the module works
 
-To make sure the `csi-yadro-tatlin-unified` is working properly, check the VM status in the `d8-csi-yadro-tatlin-unified` namespace. All VMs must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` VMs must be running on all nodes.
+To make sure the `csi-yadro-tatlin-unified` is working properly, check the pod status in the `d8-csi-yadro-tatlin-unified` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` pods must be running on all nodes.
 
 To check that the module works, run the following command:
 
 ```shell
-d8 k -n d8-csi-yadro-tatlin-unified get vm -owide -w
+d8 k -n d8-csi-yadro-tatlin-unified get pod -owide -w
 ```

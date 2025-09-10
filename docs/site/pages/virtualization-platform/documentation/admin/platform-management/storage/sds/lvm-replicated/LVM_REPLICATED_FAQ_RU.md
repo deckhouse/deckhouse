@@ -198,10 +198,10 @@ lang: ru
    d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor resource list --faulty
    ```
 
-3. Проверьте, что все ВМ в пространстве имён `d8-sds-replicated-volume` находятся в состоянии `Running`:
+3. Проверьте, что все поды в пространстве имён `d8-sds-replicated-volume` находятся в состоянии `Running`:
 
    ```shell
-   d8 k -n d8-sds-replicated-volume get vms | grep -v Running
+   d8 k -n d8-sds-replicated-volume get pods | grep -v Running
    ```
 
 ### Пример удаления узла из LINSTOR и Kubernetes
@@ -270,13 +270,13 @@ linstor node list -s AutoplaceTarget
 
 ### Ошибка запуска linstor-node при загрузке DRBD‑модуля
 
-1. Проверьте состояние ВМ `linstor-node`:
+1. Проверьте состояние пода `linstor-node`:
 
    ```shell
-   d8 k get vm -n d8-sds-replicated-volume -l app=linstor-node
+   d8 k get pod -n d8-sds-replicated-volume -l app=linstor-node
    ```
 
-1. Если некоторые ВМ находятся в состоянии `Init`, проверьте версию DRBD и логи bashible на узле:
+1. Если некоторые поды находятся в состоянии `Init`, проверьте версию DRBD и логи bashible на узле:
 
    ```shell
    cat /proc/drbd
@@ -295,11 +295,11 @@ linstor node list -s AutoplaceTarget
 
 - Включён Secure Boot. Поскольку DRBD компилируется динамически (аналог dkms) без цифровой подписи, модуль не поддерживается при включённом Secure Boot.
 
-### Ошибка FailedMount при запуске ВМ
+### Ошибка FailedMount при запуске пода
 
-#### При зависании ВМ на стадии ContainerCreating
+#### При зависании пода на стадии ContainerCreating
 
-Если ВМ зависла на стадии `ContainerCreating`, а в выводе команды `d8 k describe vm` присутствуют ошибки аналогичные той, что представлена ниже, значит устройство смонтировано на одном из других узлов:
+Если под завис на стадии `ContainerCreating`, а в выводе команды `d8 k describe pod` присутствуют ошибки аналогичные той, что представлена ниже, значит устройство смонтировано на одном из других узлов:
 
 ```console
 rpc error: code = Internal desc = NodePublishVolume failed for pvc-b3e51b8a-9733-4d9a-bf34-84e0fee3168d: checking
@@ -475,7 +475,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    d8 k apply -f ./backup/
    ```
 
-## Отсутствие служебных ВМ sds-replicated-volume на выбранном узле
+## Отсутствие служебных подов sds-replicated-volume на выбранном узле
 
 С высокой вероятностью проблемы связаны с лейблами на узлах.
 
@@ -591,7 +591,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
 
-1. Дождитесь, пока все ВМ в пространстве имён `d8-sds-replicated-volume` и `d8-sds-node-configurator` перейдут в состояние `Ready` или `Completed`:
+1. Дождитесь, пока все поды в пространстве имён `d8-sds-replicated-volume` и `d8-sds-node-configurator` перейдут в состояние `Ready` или `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-node-configurator
@@ -621,13 +621,13 @@ StorageClass в данном модуле управляются через ре
 | linstor.csi.linbit.com/placementCount: "2" | replication: "Availability" | | Будут создаваться две реплики тома с данными                  |
 | linstor.csi.linbit.com/placementCount: "3" | replication: "ConsistencyAndAvailability" | Да | Будут создаваться три реплики тома с данными                   |
 | linstor.csi.linbit.com/storagePool: "name" | storagePool: "name"   | | Название используемого storage pool для хранения               |
-| linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" | | Запрещен удаленный доступ ВМ к томам с данными (только локальный доступ к диску в пределах узла) |
+| linstor.csi.linbit.com/allowRemoteVolumeAccess: "false" | volumeAccess: "Local" | | Запрещен удаленный доступ подов к томам с данными (только локальный доступ к диску в пределах узла) |
 
 Дополнительно можно задавать параметры:
 
 - `reclaimPolicy` (Delete, Retain) — соответствует параметру `reclaimPolicy` у старого StorageClass;
-- `zones` — перечисление зон, которые нужно использовать для размещения ресурсов (прямое указание названия зон в облаке). Обратите внимание, что удаленный доступ ВМ к тому с данными возможен только в пределах одной зоны;
-- `volumeAccess` может принимать значения `Local` (доступ строго в пределах узла), `EventuallyLocal` (реплика данных будет синхронизироваться на узле с запущенной ВМ спустя некоторое время после запуска), `PreferablyLocal` (удаленный доступ ВМ к тому с данными разрешен, `volumeBindingMode: WaitForFirstConsumer`), `Any` (удаленный доступ ВМ к тому с данными разрешен, `volumeBindingMode: Immediate`);
+- `zones` — перечисление зон, которые нужно использовать для размещения ресурсов (прямое указание названия зон в облаке). Обратите внимание, что удаленный доступ подов к тому с данными возможен только в пределах одной зоны;
+- `volumeAccess` может принимать значения `Local` (доступ строго в пределах узла), `EventuallyLocal` (реплика данных будет синхронизироваться на узле с запущенным подом спустя некоторое время после запуска), `PreferablyLocal` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: WaitForFirstConsumer`), `Any` (удаленный доступ пода к тому с данными разрешен, `volumeBindingMode: Immediate`);
 - при необходимости использовать `volumeBindingMode: Immediate` нужно выставлять параметр ReplicatedStorageClass `volumeAccess` равным `Any`.
 
 ### Миграция на ReplicatedStoragePool
@@ -693,7 +693,7 @@ StorageClass в данном модуле управляются через ре
    d8 k get moduleconfig sds-replicated-volume -oyaml
    ```
 
-1. Дождитесь, пока все ВМ в пространстве имён `d8-sds-replicated-volume` перейдут в состояние `Ready` или `Completed`:
+1. Дождитесь, пока все поды в пространстве имён `d8-sds-replicated-volume` перейдут в состояние `Ready` или `Completed`:
 
    ```shell
    d8 k get po -n d8-sds-replicated-volume

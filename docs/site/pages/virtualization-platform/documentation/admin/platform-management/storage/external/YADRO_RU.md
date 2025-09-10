@@ -84,10 +84,10 @@ EOF
 
 ## Проверка работоспособности модуля
 
-Для того чтобы проверить работоспособность модуля `csi-yadro-tatlin-unified`, необходимо проверить состояние ВМ в пространстве имён `d8-csi-yadro-tatlin-unified`. Все ВМ должны быть в состоянии `Running` или `Completed`, ВМ `csi-yadro-tatlin-unified` должны быть запущены на всех узлах.
+Для того чтобы проверить работоспособность модуля `csi-yadro-tatlin-unified`, необходимо проверить состояние подов в пространстве имён `d8-csi-yadro-tatlin-unified`. Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-yadro-tatlin-unified` должны быть запущены на всех узлах.
 
 Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
-d8 k -n d8-csi-yadro-tatlin-unified get vm -owide -w
+d8 k -n d8-csi-yadro-tatlin-unified get pod -owide -w
 ```
