@@ -287,8 +287,9 @@ run: |
   export LAYOUT_STATIC_BASTION_IP=80.249.129.56
   {!{- end }!}
   {!{- if eq $provider "static" }!}
-  export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
   export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
+  export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
+  export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
   export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- end }!}
   {!{- if and (eq $script_arg "run-test") $run_from_issue_or_pr }!}

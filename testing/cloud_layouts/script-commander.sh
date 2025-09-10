@@ -278,10 +278,13 @@ function prepare_environment() {
 }
 
 function get_opentofu() {
+  rm -rf $cwd/plugins
   CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
   docker cp "${CONTAINER_ID}:/bin/opentofu" $cwd/opentofu
+  docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
+  cp -r $cwd/plugins/registry.terraform.io/terraform-provider-openstack $cwd/plugins/registry.opentofu.org/terraform-provider-openstack
 }
 
 function bootstrap_static() {
@@ -291,7 +294,7 @@ function bootstrap_static() {
 
   get_opentofu
 
- $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+ $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
  $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 
   if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
@@ -358,10 +361,10 @@ function bootstrap_static() {
   until $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      >&2 echo "ERROR: redos worker instance couldn't get bootstrapped"
       return 1
     fi
-    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    >&2 echo "ERROR: redos worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
     sleep 5
   done
 
@@ -369,10 +372,10 @@ function bootstrap_static() {
   until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
     attempt=$(( attempt + 1 ))
     if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: worker instance couldn't get bootstrapped"
+      >&2 echo "ERROR: opensuse worker instance couldn't get bootstrapped"
       return 1
     fi
-    >&2 echo "ERROR: worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
+    >&2 echo "ERROR: opensuse worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
     sleep 5
   done
 
@@ -390,9 +393,18 @@ function bootstrap_static() {
 
   D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
   D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+
+  D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+  D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+  D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+
   E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
   E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  IMAGES_REPO="e2e-registry.foxtrot-dev.ru/sys/deckhouse-oss"
+  E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+
+  IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
+  D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     # Install http/https proxy on bastion node
@@ -400,7 +412,20 @@ function bootstrap_static() {
        cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
 apt-get update
-apt-get install -y docker.io docker-compose wget curl
+apt-get install -y docker.io docker-compose wget curl chrony
+# setup chrony
+cat << 'CONF' > /etc/chrony/chrony.conf
+bindaddress 0.0.0.0
+bindaddress ::
+server time.google.com iburst
+local stratum 10
+allow 192.168.199.0/24
+CONF
+echo DAEMON_OPTS="-F 1 -f /etc/chrony/chrony.conf" > /etc/default/chrony
+systemctl daemon-reexec
+systemctl enable --now chronyd
+systemctl restart chronyd 
+chronyc tracking
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
 # DOWNLOAD_URL=\$(wget -qO- "\${URL}" | grep browser_download_url | cut -d '"' -f 4 | grep linux-amd64 | grep -v sha256sum)
@@ -410,8 +435,7 @@ URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
 # fi
 # download
 DOWNLOAD_URL=https://github.com/deckhouse/deckhouse-cli/releases/download/v0.15.0/d8-v0.15.0-linux-amd64.tar.gz
-wget -q "\${DOWNLOAD_URL}" -O /tmp/d8.tar.gz
-# install
+wget -qL "\${DOWNLOAD_URL}" -O /tmp/d8.tar.gz
 file /tmp/d8.tar.gz
 mkdir d8cli
 tar -xf /tmp/d8.tar.gz -C d8cli
@@ -419,12 +443,26 @@ mv ./d8cli/linux-amd64/bin/d8 /usr/bin/d8
 
 d8 --version
 
+#download crane
+wget -q "https://github.com/google/go-containerregistry/releases/download/v0.20.6/go-containerregistry_Linux_x86_64.tar.gz" -O "/tmp/crane.tar.gz"
+mkdir crane
+tar -xf /tmp/crane.tar.gz -C crane
+mv crane/crane /usr/bin/crane
+
+crane version
+
 # pull
+d8 mirror pull d8-modules \
+  --source "${D8_MODULES_URL}" \
+  --source-login "${D8_MODULES_USER}" \
+  --source-password "${D8_MODULES_PASSWORD}" \
+  --include-module commander-agent --include-module commander --include-module prompp  --include-module pod-reloader  --include-module runtime-audit-engine --no-platform  --no-security-db
+
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}" \
-  --include-module commander-agent --include-module commander --include-module prompp
+  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
+d8 mirror push d8-modules "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 
 # Checking that it's FE-UPGRADE
 # Extracting major and minor versions from DECKHOUSE_IMAGE_TAG
@@ -449,12 +487,19 @@ echo "Deckhouse Minor Version: \$dh_minor"
 
 # Check that the major versions match and the minor differs by +1
 if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor + 1))" ]; then
-    >&2 echo "Pull both versions of fe-upgrade"
+    >&2 echo "Mirroring the updated version..."
     # pull
     d8 mirror pull d8-upgrade --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-    --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
+    --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DECKHOUSE_IMAGE_TAG}"
     # push
-    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login $E2E_REGISTRY_USER --registry-password $E2E_REGISTRY_PASSWORD
+    d8 mirror push d8-upgrade "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
+    >&2 echo "Copying the release-channel images..."
+    crane auth login "${D8_MIRROR_HOST}" -u "${D8_MIRROR_USER}" -p "${D8_MIRROR_PASSWORD}"
+    crane auth login "${E2E_REGISTRY_HOST}" -u "${E2E_REGISTRY_USER}" -p "${E2E_REGISTRY_PASSWORD}"
+    crane copy "${D8_MIRROR_HOST}/sys/deckhouse-oss/release-channel:beta" "${IMAGES_REPO}/release-channel:beta"
+    crane copy "${IMAGES_REPO}:${DECKHOUSE_IMAGE_TAG}" "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}"
+    crane auth logout "${D8_MIRROR_HOST}"
+    crane auth logout "${E2E_REGISTRY_HOST}"
 fi
 
 set +x
@@ -802,7 +847,6 @@ function wait_upmeter_green() {
 function check_resources_state_results() {
   echo "Check applied resource status..."
   response=$(get_cluster_status)
-#  errors=$(jq -r '.resources_state_results[] | select(.errors) | .errors' <<< "$response"') # We waiting fix
   errors=$(jq -c '
     .resources_state_results[]
     | select(.errors)
@@ -841,7 +885,7 @@ function update_release_channel() {
 # trigger_deckhouse_update sets the release channel for the cluster, prompting it to upgrade to the next version.
 function trigger_deckhouse_update() {
   >&2 echo "Setting Deckhouse release channel to Beta."
-  if ! $ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+  if ! $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
@@ -866,7 +910,7 @@ END_SCRIPT
   testRunAttempts=20
   for ((i=1; i<=$testRunAttempts; i++)); do
     >&2 echo "Check DeckhouseRelease..."
-    deployedVersion="$($ssh_command -i "$ssh_private_key_path" $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}")"
+    deployedVersion="$($ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}")"
     if [[ "${expectedVersion}" == "${deployedVersion}" ]]; then
       return 0
     elif [[ $i -lt $testRunAttempts ]]; then
@@ -1223,11 +1267,8 @@ function cleanup() {
   if [[ ${PROVIDER} == "Static" ]]; then
     get_opentofu
     cd $cwd
-     $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+     $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
      $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-    # TODO tofu in  image has different architecture, to delete, mac os debug
-    # tofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    # tofu destroy -auto-approve -no-color || return $?
   fi
 
   return 0

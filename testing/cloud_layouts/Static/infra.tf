@@ -10,7 +10,7 @@ terraform {
   required_providers {
     openstack = {
       source  = "terraform-provider-openstack/openstack"
-      version = "= 1.53.0"
+      version = "= 1.54.1"
     }
   }
 }
@@ -150,7 +150,7 @@ data "openstack_images_image_v2" "redos_image" {
 data "openstack_images_image_v2" "opensuse_image" {
   most_recent = true
   visibility  = "shared"
-  name        = "openSUSE-Leap-15.6"
+  name        = "openSUSE-Leap-15.6-nocontainerd"
 }
 
 data "openstack_images_image_v2" "rosa_image" {
