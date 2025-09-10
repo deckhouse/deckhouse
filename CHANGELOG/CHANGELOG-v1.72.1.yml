@@ -12,11 +12,4 @@ node-manager:
   fixes:
     - summary: Some minor fixes for nvidia gpu templates to improve security.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15327
-user-authn:
-  features:
-    - summary: Add `status.lock` fields (`state`, `reason`, `message`, `until`) to the User CR
-      pull_request: https://github.com/deckhouse/deckhouse/pull/15158
-      impact: >-
-        User lock information is now available directly in the User CR, improving visibility and
-        integration with external systems
 

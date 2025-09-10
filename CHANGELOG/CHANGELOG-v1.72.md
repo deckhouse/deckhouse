@@ -45,8 +45,6 @@
  - **[node-manager]** Updated go.mod dependencies. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
  - **[registry]** Added a relax registry check mode for switching between deckhouse editions. [#14860](https://github.com/deckhouse/deckhouse/pull/14860)
  - **[registry]** Added the registry module. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
- - **[user-authn]** Add `status.lock` fields (`state`, `reason`, `message`, `until`) to the User CR [#15158](https://github.com/deckhouse/deckhouse/pull/15158)
-    User lock information is now available directly in the User CR, improving visibility and integration with external systems
  - **[user-authn]** Add documentation examples for PasswordPolicy and 2FA [#15270](https://github.com/deckhouse/deckhouse/pull/15270)
     Provides administrators with clear examples for configuring password policies, user creation, group management, and enabling two-factor authentication.
  - **[user-authn]** Added implement password policy logic for local user accounts. Now it is possible to set complexity level of passwords, failed attempts number to block the user, keep password history and force renewing the password after specified amount of time. [#14993](https://github.com/deckhouse/deckhouse/pull/14993)
