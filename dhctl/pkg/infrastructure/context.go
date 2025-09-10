@@ -15,6 +15,7 @@
 package infrastructure
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -24,14 +25,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
+type CloudProviderGetter func(ctx context.Context, metaConfig *config.MetaConfig) (CloudProvider, error)
+
 type Context struct {
 	infrastructureRunnerByName    map[string]RunnerInterface
 	infrastructureRunnerByNameMux sync.Mutex
-	provider                      ExecutorProvider
+	provider                      CloudProviderGetter
 	stateChecker                  StateChecker
 }
 
-func NewContextWithProvider(provider ExecutorProvider) *Context {
+func NewContextWithProvider(provider CloudProviderGetter) *Context {
 	return &Context{
 		infrastructureRunnerByName: make(map[string]RunnerInterface),
 		provider:                   provider,
@@ -44,7 +47,7 @@ func NewContext() *Context {
 	}
 }
 
-func (f *Context) SetExecutorProvider(provider ExecutorProvider) {
+func (f *Context) SetCloudProviderGetter(provider CloudProviderGetter) {
 	f.provider = provider
 }
 
@@ -52,18 +55,8 @@ func (f *Context) WithStateChecker(checker StateChecker) {
 	f.stateChecker = checker
 }
 
-func (f *Context) getOrCreateRunner(name string, createFunc func() RunnerInterface) RunnerInterface {
-	f.infrastructureRunnerByNameMux.Lock()
-	defer f.infrastructureRunnerByNameMux.Unlock()
-
-	// FIXME
-	//if r, hasKey := f.infrastructureRunnerByNameMux[name]; hasKey {
-	//	return r
-	//}
-
-	r := createFunc()
-	f.infrastructureRunnerByName[name] = r
-	return r
+func (f *Context) CloudProviderGetter() CloudProviderGetter {
+	return f.provider
 }
 
 func applyAutomaticSettingsForChangesRunner(r *Runner, stateChecker StateChecker) *Runner {
@@ -113,95 +106,113 @@ func applyAutomaticApproveSettings(r *Runner, settings AutoApproveSettings, stat
 	return r
 }
 
-// TODO(dhctl-for-commander): Use same tf-runner for check & converge in commander mode only, keep things as-is without changes
-func (f *Context) GetCheckBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("check.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout), func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter for GetCheckBaseInfraRunner must be set")
+	}
 
-			if opts.CommanderMode {
-				r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache, f.provider).
-					WithVariables(metaConfig.MarshalConfig())
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			} else {
-				r := NewImmutableRunnerFromConfig(metaConfig, "base-infrastructure", f.provider).
-					WithVariables(metaConfig.MarshalConfig())
-				if opts.ClusterState != nil {
-					r.WithState(opts.ClusterState)
-				}
+	if opts.CommanderMode {
+		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+			WithVariables(metaConfig.MarshalConfig())
 
-				tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			}
-		})
+		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+		tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
+	}
+
+	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+		WithVariables(metaConfig.MarshalConfig())
+	if opts.ClusterState != nil {
+		r.WithState(opts.ClusterState)
+	}
+
+	tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
-func (f *Context) GetCheckNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("check.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, opts NodeRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter for GetCheckNodeRunner must be set")
+	}
 
-			if opts.CommanderMode {
-				r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache, f.provider).
-					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-					WithName(opts.NodeName).
-					WithHook(opts.Hook)
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			} else {
-				r := NewImmutableRunnerFromConfig(metaConfig, opts.NodeGroupStep, f.provider).
-					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-					WithState(opts.NodeState).
-					WithName(opts.NodeName)
+	if opts.CommanderMode {
+		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+			WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+			WithName(opts.NodeName).
+			WithHook(opts.Hook)
 
-				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			}
-		})
+		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+		tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
+	}
+
+	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithState(opts.NodeState).
+		WithName(opts.NodeName)
+
+	tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
-func (f *Context) GetCheckNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("check.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.LayoutStep),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
-			if opts.CommanderMode {
-				r := NewRunnerFromConfig(metaConfig, opts.LayoutStep, opts.StateCache, f.provider).
-					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-					WithName(opts.NodeName).
-					WithAllowedCachedState(true)
+func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetCheckNodeDeleteRunner must be set")
+	}
 
-				r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			} else {
-				r := NewImmutableRunnerFromConfig(metaConfig, opts.LayoutStep, f.provider).
-					WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-					WithName(opts.NodeName).
-					WithState(opts.NodeState)
+	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-				tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
-				return applyAutomaticSettingsForChangesRunner(r, f.stateChecker)
-			}
-		})
+	if opts.CommanderMode {
+		r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+			WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+			WithName(opts.NodeName).
+			WithAllowedCachedState(true)
+
+		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+		tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
+	}
+
+	r := NewImmutableRunnerFromConfig(metaConfig, executor).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithName(opts.NodeName).
+		WithState(opts.NodeState)
+
+	tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
-// TODO: use same runner in check+converge only in commander mode, use as-is otherwise, implement destroy and bootstrap
 type BaseInfraRunnerOptions struct {
 	CommanderMode                    bool
 	StateCache                       dstate.Cache
@@ -209,33 +220,39 @@ type BaseInfraRunnerOptions struct {
 	AdditionalStateSaverDestinations []SaverDestination
 }
 
-func (f *Context) GetConvergeBaseInfraRunner(metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("converge.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetConvergeBaseInfraRunner(ctx context.Context, metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions, automaticSettings AutomaticSettings) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetConvergeBaseInfraRunner must be set")
+	}
 
-			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", opts.StateCache, f.provider).
-				WithSkipChangesOnDeny(true).
-				WithVariables(metaConfig.MarshalConfig())
-			if opts.ClusterState != nil {
-				r = r.WithState(opts.ClusterState)
-			}
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		WithSkipChangesOnDeny(true).
+		WithVariables(metaConfig.MarshalConfig())
+	if opts.ClusterState != nil {
+		r = r.WithState(opts.ClusterState)
+	}
 
-			return applyAutomaticSettings(r, automaticSettings, f.stateChecker)
-		})
+	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+	tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+
+	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
 type NodeRunnerOptions struct {
 	NodeName        string
 	NodeGroupName   string
-	NodeGroupStep   string
+	NodeGroupStep   Step
 	NodeIndex       int
 	NodeState       []byte
 	NodeCloudConfig string
@@ -246,36 +263,42 @@ type NodeRunnerOptions struct {
 	Hook                             InfraActionHook
 }
 
-func (f *Context) GetConvergeNodeRunner(metaConfig *config.MetaConfig, opts NodeRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("converge.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, opts NodeRunnerOptions, automaticSettings AutomaticSettings) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter for GetConvergeNodeRunner must be set")
+	}
 
-			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, opts.StateCache, f.provider).
-				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-				WithSkipChangesOnDeny(true).
-				WithName(opts.NodeName).
-				WithHook(opts.Hook)
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			if opts.NodeState != nil {
-				r = r.WithState(opts.NodeState)
-			}
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithSkipChangesOnDeny(true).
+		WithName(opts.NodeName).
+		WithHook(opts.Hook)
 
-			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+	if opts.NodeState != nil {
+		r = r.WithState(opts.NodeState)
+	}
 
-			return applyAutomaticSettings(r, automaticSettings, f.stateChecker)
-		})
+	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+	tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+
+	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
 type NodeDeleteRunnerOptions struct {
 	NodeName        string
 	NodeGroupName   string
-	LayoutStep      string
+	LayoutStep      Step
 	NodeIndex       int
 	NodeState       []byte
 	NodeCloudConfig string
@@ -286,108 +309,125 @@ type NodeDeleteRunnerOptions struct {
 	Hook                             InfraActionHook
 }
 
-func (f *Context) GetConvergeNodeDeleteRunner(metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions, automaticSettings AutomaticSettings) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("converge.node-delete.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.LayoutStep),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetConvergeNodeDeleteRunner(ctx context.Context, metaConfig *config.MetaConfig, opts NodeDeleteRunnerOptions, automaticSettings AutomaticSettings) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetConvergeNodeDeleteRunner for must be set")
+	}
 
-			r := NewRunnerFromConfig(metaConfig, opts.LayoutStep, opts.StateCache, f.provider).
-				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
-				WithName(opts.NodeName).
-				WithAllowedCachedState(true).
-				WithSkipChangesOnDeny(true).
-				WithHook(opts.Hook)
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			if opts.NodeState != nil {
-				r = r.WithState(opts.NodeState)
-			}
+	executor, err := cloudProvider.Executor(ctx, opts.LayoutStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+	r := NewRunnerFromConfig(metaConfig, opts.StateCache, executor).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithName(opts.NodeName).
+		WithAllowedCachedState(true).
+		WithSkipChangesOnDeny(true).
+		WithHook(opts.Hook)
 
-			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+	if opts.NodeState != nil {
+		r = r.WithState(opts.NodeState)
+	}
 
-			return applyAutomaticSettings(r, automaticSettings, f.stateChecker)
-		})
+	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
+
+	tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+
+	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
-func (f *Context) GetBootstrapBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache) RunnerInterface {
-	return f.getOrCreateRunner(
-		fmt.Sprintf("bootstrap.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout),
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+func (f *Context) GetBootstrapBaseInfraRunner(ctx context.Context, metaConfig *config.MetaConfig, stateCache dstate.Cache) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetBootstrapBaseInfraRunner must be set")
+	}
 
-			r := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache, f.provider).
-				WithVariables(metaConfig.MarshalConfig())
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			return applyAutomaticSettingsForBootstrap(r, f.stateChecker)
-		},
-	)
+	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+		WithVariables(metaConfig.MarshalConfig())
+
+	tomb.RegisterOnShutdown("base-infrastructure", r.Stop)
+
+	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil
 }
 
 type BootstrapNodeRunnerOptions struct {
 	NodeName                         string
 	NodeGroupName                    string
-	NodeGroupStep                    string
+	NodeGroupStep                    Step
 	NodeIndex                        int
 	NodeCloudConfig                  string
 	AdditionalStateSaverDestinations []SaverDestination
 	RunnerLogger                     log.Logger
 }
 
-func (f *Context) GetBootstrapNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) RunnerInterface {
-	name := fmt.Sprintf("bootstrap.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep)
+func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, stateCache dstate.Cache, opts BootstrapNodeRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetBootstrapNodeRunner must be set")
+	}
 
-	return f.getOrCreateRunner(
-		name,
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			nodeConfig := metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			r := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache, f.provider).
-				WithVariables(nodeConfig).
-				WithName(opts.NodeName).
-				WithLogger(opts.RunnerLogger)
+	nodeConfig := metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)
 
-			tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
+		WithVariables(nodeConfig).
+		WithName(opts.NodeName).
+		WithLogger(opts.RunnerLogger)
 
-			return applyAutomaticSettingsForBootstrap(r, f.stateChecker)
-		},
-	)
+	tomb.RegisterOnShutdown(opts.NodeName, r.Stop)
+
+	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil
 }
 
 type DestroyBaseInfraRunnerOptions struct {
 	AutoApproveSettings
 }
 
-func (f *Context) GetDestroyBaseInfraRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyBaseInfraRunnerOptions) RunnerInterface {
-	name := fmt.Sprintf("destroy.base-infrastructure.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout)
+func (f *Context) GetDestroyBaseInfraRunner(ctx context.Context, metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyBaseInfraRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter GetDestroyBaseInfraRunner must be set")
+	}
 
-	return f.getOrCreateRunner(
-		name,
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			runner := NewRunnerFromConfig(metaConfig, "base-infrastructure", stateCache, f.provider).
-				WithVariables(metaConfig.MarshalConfig()).
-				WithAllowedCachedState(true)
+	executor, err := cloudProvider.Executor(ctx, BaseInfraStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			tomb.RegisterOnShutdown("base-infrastructure", runner.Stop)
+	runner := NewRunnerFromConfig(metaConfig, stateCache, executor).
+		WithVariables(metaConfig.MarshalConfig()).
+		WithAllowedCachedState(true)
 
-			return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings, f.stateChecker)
-		},
-	)
+	tomb.RegisterOnShutdown("base-infrastructure", runner.Stop)
+
+	return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings, f.stateChecker), nil
 }
 
 type DestroyNodeRunnerOptions struct {
@@ -395,28 +435,31 @@ type DestroyNodeRunnerOptions struct {
 
 	NodeName      string
 	NodeGroupName string
-	NodeGroupStep string
+	NodeGroupStep Step
 	NodeIndex     int
 }
 
-func (f *Context) GetDestroyNodeRunner(metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyNodeRunnerOptions) RunnerInterface {
-	name := fmt.Sprintf("destroy.node.%s.%s.%s.%s", metaConfig.ProviderName, metaConfig.ClusterPrefix, metaConfig.Layout, opts.NodeGroupStep)
+func (f *Context) GetDestroyNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, stateCache dstate.Cache, opts DestroyNodeRunnerOptions) (RunnerInterface, error) {
+	if f.provider == nil {
+		return nil, fmt.Errorf("Cloud provider getter for GetDestroyNodeRunner must be set")
+	}
 
-	return f.getOrCreateRunner(
-		name,
-		func() RunnerInterface {
-			if f.provider == nil {
-				panic("Executor provider must be set")
-			}
+	cloudProvider, err := f.provider(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
 
-			runner := NewRunnerFromConfig(metaConfig, opts.NodeGroupStep, stateCache, f.provider).
-				WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, "")).
-				WithName(opts.NodeName).
-				WithAllowedCachedState(true)
+	executor, err := cloudProvider.Executor(ctx, opts.NodeGroupStep, log.GetDefaultLogger())
+	if err != nil {
+		return nil, err
+	}
 
-			tomb.RegisterOnShutdown(opts.NodeName, runner.Stop)
+	runner := NewRunnerFromConfig(metaConfig, stateCache, executor).
+		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, "")).
+		WithName(opts.NodeName).
+		WithAllowedCachedState(true)
 
-			return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings, f.stateChecker)
-		},
-	)
+	tomb.RegisterOnShutdown(opts.NodeName, runner.Stop)
+
+	return applyAutomaticApproveSettings(runner, opts.AutoApproveSettings, f.stateChecker), nil
 }

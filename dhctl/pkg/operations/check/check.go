@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -53,10 +54,10 @@ type ClusterCheckResult struct {
 }
 
 type NodeCheckResult struct {
-	Group              string                                 `json:"group,omitempty"`
-	Name               string                                 `json:"name,omitempty"`
-	Status             string                                 `json:"status,omitempty"`
-	DestructiveChanges *infrastructure.PlanDestructiveChanges `json:"destructive_changes,omitempty"`
+	Group              string                   `json:"group,omitempty"`
+	Name               string                   `json:"name,omitempty"`
+	Status             string                   `json:"status,omitempty"`
+	DestructiveChanges *plan.DestructiveChanges `json:"destructive_changes,omitempty"`
 }
 
 type NodeGroupCheckResult struct {
@@ -68,13 +69,13 @@ type Statistics struct {
 	Node               []NodeCheckResult                     `json:"nodes,omitempty"`
 	NodeTemplates      []NodeGroupCheckResult                `json:"node_templates,omitempty"`
 	Cluster            ClusterCheckResult                    `json:"cluster,omitempty"`
-	InfrastructurePlan []infrastructure.Plan                 `json:"terraform_plan,omitempty"`
+	InfrastructurePlan []plan.Plan                           `json:"terraform_plan,omitempty"`
 	TerraformVersion   *infrastructurestate.TerraformVersion `json:"terraform_version,omitempty"`
 }
 
 type NodeGroupOptions struct {
 	Name            string
-	LayoutStep      string
+	LayoutStep      infrastructure.Step
 	CloudConfig     string
 	DesiredReplicas int
 	State           map[string][]byte
@@ -114,17 +115,9 @@ func (s Statistics) Format(outputFormat string) ([]byte, error) {
 	return data, nil
 }
 
-func getStepByNodeGroupName(nodeGroupName string) string {
-	step := "static-node"
-	if nodeGroupName == global.MasterNodeGroupName {
-		step = "master-node"
-	}
-	return step
-}
-
 type ClusterStateCheckResult struct {
 	Change             int
-	Plan               infrastructure.Plan
+	Plan               plan.Plan
 	DestructiveChanges *infrastructure.BaseInfrastructureDestructiveChanges
 	IsTerraformState   bool
 }
@@ -149,15 +142,18 @@ func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, met
 		stateSavers = append(stateSavers, infrastructurestate.NewClusterStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl)))
 	}
 
-	baseRunner := infrastructureContext.GetCheckBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
+	baseRunner, err := infrastructureContext.GetCheckBaseInfraRunner(ctx, metaConfig, infrastructure.BaseInfraRunnerOptions{
 		CommanderMode: opts.CommanderMode,
 
 		StateCache:                       opts.StateCache,
 		ClusterState:                     clusterState,
 		AdditionalStateSaverDestinations: stateSavers,
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	change, plan, destructiveChanges, err := infrastructure.CheckBaseInfrastructurePipeline(ctx, baseRunner, "Kubernetes cluster")
+	change, pl, destructiveChanges, err := infrastructure.CheckBaseInfrastructurePipeline(ctx, baseRunner, "Kubernetes cluster")
 	if err != nil {
 		return nil, err
 	}
@@ -174,16 +170,16 @@ func checkClusterState(ctx context.Context, kubeCl *client.KubernetesClient, met
 
 	return &ClusterStateCheckResult{
 		Change:             change,
-		Plan:               plan,
+		Plan:               pl,
 		DestructiveChanges: destructiveChanges,
 		IsTerraformState:   isTerraformState,
 	}, nil
 }
 
-func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupInfrastructureState, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (int, infrastructure.Plan, *infrastructure.PlanDestructiveChanges, error) {
+func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeGroupState *state.NodeGroupInfrastructureState, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (int, plan.Plan, *plan.DestructiveChanges, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		return infrastructure.PlanHasNoChanges, nil, nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
+		return plan.HasNoChanges, nil, nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
 	}
 
 	cfg := metaConfig
@@ -192,15 +188,16 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 		if err != nil {
 			log.ErrorLn(err)
 		} else {
-			cfg, err = metaConfig.DeepCopy().Prepare()
+			// we use dummy preparator because metaConfig was prepared early
+			cfg, err = metaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
 			if err != nil {
-				return infrastructure.PlanHasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
+				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
 			}
 			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
 
-	pipelineForMaster := nodeGroup.LayoutStep == "master-node"
+	pipelineForMaster := nodeGroup.LayoutStep == infrastructure.MasterNodeStep
 	nodeGroupName := nodeGroup.Name
 	if pipelineForMaster {
 		nodeGroupName = global.MasterNodeGroupName
@@ -210,7 +207,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 	if opts.CommanderMode {
 		stateSavers = append(stateSavers, infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nil))
 	}
-	nodeRunner := infrastructureContext.GetCheckNodeDeleteRunner(cfg, infrastructure.NodeDeleteRunnerOptions{
+	nodeRunner, err := infrastructureContext.GetCheckNodeDeleteRunner(ctx, cfg, infrastructure.NodeDeleteRunnerOptions{
 		NodeName:                         nodeName,
 		NodeGroupName:                    nodeGroup.Name,
 		LayoutStep:                       nodeGroup.LayoutStep,
@@ -221,14 +218,17 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 		StateCache:                       opts.StateCache,
 		AdditionalStateSaverDestinations: stateSavers,
 	})
+	if err != nil {
+		return plan.HasNoChanges, nil, nil, err
+	}
 
 	return infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, true)
 }
 
 type NodeStateCheckResult struct {
 	Change             int
-	Plan               infrastructure.Plan
-	DestructiveChanges *infrastructure.PlanDestructiveChanges
+	Plan               plan.Plan
+	DestructiveChanges *plan.DestructiveChanges
 	IsTerraformState   bool
 }
 
@@ -238,7 +238,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		return nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
 	}
 
-	pipelineForMaster := nodeGroup.LayoutStep == "master-node"
+	pipelineForMaster := nodeGroup.LayoutStep == infrastructure.MasterNodeStep
 
 	nodeGroupName := nodeGroup.Name
 	var nodeGroupSettingsFromConfig []byte
@@ -254,7 +254,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		stateSavers = append(stateSavers, infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettingsFromConfig))
 	}
 
-	nodeRunner := infrastructureContext.GetCheckNodeRunner(metaConfig, infrastructure.NodeRunnerOptions{
+	nodeRunner, err := infrastructureContext.GetCheckNodeRunner(ctx, metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupName:   nodeGroup.Name,
 		NodeGroupStep:   nodeGroup.LayoutStep,
@@ -266,8 +266,11 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		StateCache:                       opts.StateCache,
 		AdditionalStateSaverDestinations: stateSavers,
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	change, plan, destructiveChanges, err := infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, false)
+	change, pl, destructiveChanges, err := infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, false)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +287,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 
 	return &NodeStateCheckResult{
 		Change:             change,
-		Plan:               plan,
+		Plan:               pl,
 		DestructiveChanges: destructiveChanges,
 		IsTerraformState:   isTerraformState,
 	}, nil
@@ -310,9 +313,9 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 	case err != nil:
 		statistics.Cluster.Status = ErrorStatus
 		allErrs = multierror.Append(allErrs, err)
-	case baseRes.Change == infrastructure.PlanHasChanges:
+	case baseRes.Change == plan.HasChanges:
 		statistics.Cluster.Status = ChangedStatus
-	case baseRes.Change == infrastructure.PlanHasDestructiveChanges:
+	case baseRes.Change == plan.HasDestructiveChanges:
 		statistics.Cluster.Status = DestructiveStatus
 		statistics.Cluster.DestructiveChanges = baseRes.DestructiveChanges
 	}
@@ -381,7 +384,7 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		nodeGroupState := nodesState[nodeGroupName]
 		replicas := metaConfig.GetReplicasByNodeGroupName(nodeGroupName)
-		layoutStep := getStepByNodeGroupName(nodeGroupName)
+		layoutStep := infrastructure.GetStepByNodeGroupName(nodeGroupName)
 
 		if replicas > len(nodeGroupState.State) {
 			insufficientQuantity := len(nodeGroupState.State)
@@ -469,9 +472,9 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 			case err != nil:
 				checkResult.Status = ErrorStatus
 				allErrs = multierror.Append(allErrs, fmt.Errorf("node %s: %v", name, err))
-			case nodeRes.Change == infrastructure.PlanHasChanges:
+			case nodeRes.Change == plan.HasChanges:
 				checkResult.Status = ChangedStatus
-			case nodeRes.Change == infrastructure.PlanHasDestructiveChanges:
+			case nodeRes.Change == plan.HasDestructiveChanges:
 				checkResult.Status = DestructiveStatus
 				checkResult.DestructiveChanges = nodeRes.DestructiveChanges
 			}

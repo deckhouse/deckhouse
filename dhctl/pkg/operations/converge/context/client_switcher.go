@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -38,12 +39,14 @@ import (
 type KubeClientSwitcher struct {
 	ctx        *Context
 	lockRunner *lock.InLockRunner
+	tmpDir     string
 }
 
-func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner) *KubeClientSwitcher {
+func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, tmpDir string) *KubeClientSwitcher {
 	return &KubeClientSwitcher{
 		ctx:        ctx,
 		lockRunner: lockRunner,
+		tmpDir:     tmpDir,
 	}
 }
 
@@ -85,10 +88,14 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 	return s.replaceKubeClient(convergeState, nodesState)
 }
 
+func (s *KubeClientSwitcher) tmpDirForConverger() string {
+	return filepath.Join(s.tmpDir, "converger")
+}
+
 func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[string][]byte) (err error) {
 	log.DebugLn("Starting replacing kube client")
 
-	tmpDir := filepath.Join(app.CacheDir, "converge")
+	tmpDir := s.tmpDirForConverger()
 
 	err = os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
@@ -134,8 +141,19 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 			return fmt.Errorf("failed to write infrastructure state: %w", err)
 		}
 
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           log.GetDefaultLogger(),
+		})
+
 		// yes working dir for output is not required
-		executor := infrastructureprovider.ExecutorProvider(metaConfig)("", log.GetDefaultLogger())
+		provider, err := providerGetter(s.ctx.Ctx(), metaConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create executor for node %s: %w", nodeName, err)
+		}
+
+		executor, err := provider.OutputExecutor(s.ctx.Ctx(), log.GetDefaultLogger())
 
 		ipAddress, err := infrastructure.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath, executor)
 		if err != nil {

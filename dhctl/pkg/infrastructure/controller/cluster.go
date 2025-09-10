@@ -20,6 +20,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -42,15 +44,14 @@ type ClusterInfra struct {
 	cache                 state.Cache
 	infrastructureContext *infrastructure.Context
 
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-}
+	tmpDir string
 
-func NewClusterInfra(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context) *ClusterInfra {
-	return NewClusterInfraWithOptions(terraState, cache, infrastructureContext, ClusterInfraOptions{})
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
 type ClusterInfraOptions struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	TmpDir                 string
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {
@@ -60,6 +61,7 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infra
 		infrastructureContext: infrastructureContext,
 
 		PhasedExecutionContext: opts.PhasedExecutionContext,
+		tmpDir:                 opts.TmpDir,
 	}
 }
 
@@ -70,7 +72,13 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.infrastructureContext == nil {
-		r.infrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           r.tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           log.GetDefaultLogger(),
+		})
+
+		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	}
 
 	clusterState, nodesState, err := r.stateLoader.PopulateClusterState(ctx)
@@ -87,7 +95,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	for nodeGroupName, nodeGroupStates := range nodesState {
-		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.infrastructureContext)
+		ngController, err := NewNodesController(ctx, metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.infrastructureContext)
 		if err != nil {
 			return err
 		}

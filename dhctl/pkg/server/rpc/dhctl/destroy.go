@@ -27,6 +27,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -181,16 +182,20 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -230,7 +235,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
-			s.schemaStore,
+			s.params.SchemaStore,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -264,7 +269,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 	}
 
-	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,
@@ -275,6 +280,8 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
+		TmpDir: s.params.TmpDir,
+		Logger: log.GetDefaultLogger(),
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

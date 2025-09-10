@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -68,6 +69,8 @@ type ConvergeExporter struct {
 	OneGaugeMetrics map[string]prometheus.Gauge
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
+
+	tmpDir string
 }
 
 var (
@@ -92,7 +95,14 @@ var (
 	}
 )
 
-func NewConvergeExporter(address, path string, interval time.Duration) *ConvergeExporter {
+type ExporterParams struct {
+	Address  string
+	Path     string
+	Interval time.Duration
+	TmpDir   string
+}
+
+func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 	var sshClient node.SSHClient
 	var err error
 	if app.SSHLegacyMode {
@@ -110,11 +120,11 @@ func NewConvergeExporter(address, path string, interval time.Duration) *Converge
 	}
 
 	return &ConvergeExporter{
-		MetricsPath:           path,
-		ListenAddress:         address,
+		MetricsPath:           params.Path,
+		ListenAddress:         params.Address,
 		kubeCl:                kubeCl,
 		infrastructureContext: infrastructure.NewContext(),
-		CheckInterval:         interval,
+		CheckInterval:         params.Interval,
 
 		existedEntities: newPreviouslyExistedEntities(),
 
@@ -251,7 +261,13 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
-	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl)
+	metaConfig, err := config.ParseConfigInCluster(
+		ctx,
+		c.kubeCl,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+		),
+	)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
@@ -265,7 +281,20 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 		return nil, false
 	}
 
-	c.infrastructureContext.SetExecutorProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           c.tmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           log.GetDefaultLogger(),
+	})
+
+	provider, err := providerGetter(ctx, metaConfig)
+	if err != nil {
+		log.ErrorLn(err)
+		c.CounterMetrics["errors"].WithLabelValues().Inc()
+		return nil, false
+	}
+
+	c.infrastructureContext.SetCloudProviderGetter(providerGetter)
 
 	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{})
 	if err != nil {
@@ -276,7 +305,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 		// the CheckState call is a combination of errors from all infrastructure utility runs.
 	}
 
-	if !infrastructure.NeedToUseOpentofu(metaConfig) {
+	if !provider.NeedToUseTofu() {
 		hasTerraformState = false
 	}
 

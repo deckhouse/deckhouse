@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -50,6 +51,8 @@ type Params struct {
 	OnProgressFunc        phases.OnProgressFunc
 	AttachResources       AttachResources
 	ScanOnly              *bool
+	TmpDir                string
+	Logger                log.Logger
 }
 
 type AttachResources struct {
@@ -82,7 +85,14 @@ func NewAttacher(params *Params) *Attacher {
 
 func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	kubeClient, metaConfig, err := i.prepare(ctx)
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           i.Params.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           log.GetDefaultLogger(),
+	})
+
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare cluster attach to commander: %w", err)
 	}
@@ -174,7 +184,13 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
 
-		metaConfig, err = config.ParseConfigInCluster(ctx, kubeClient)
+		metaConfig, err = config.ParseConfigInCluster(
+			ctx,
+			kubeClient,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
+			),
+		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
 		}
@@ -335,6 +351,7 @@ func (i *Attacher) check(
 				[]byte(scanResult.ProviderSpecificClusterConfiguration),
 			),
 			InfrastructureContext: i.Params.InfrastructureContext,
+			TmpDir:                i.Params.TmpDir,
 		})
 
 		res, err = checker.Check(ctx)

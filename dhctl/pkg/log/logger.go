@@ -631,6 +631,12 @@ type SilentLogger struct {
 	t *TeeLogger
 }
 
+func NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: nil,
+	}
+}
+
 func (d *SilentLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
 }

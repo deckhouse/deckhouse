@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -43,7 +44,12 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		exporter := operations.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
+		exporter := operations.NewConvergeExporter(operations.ExporterParams{
+			Address:  app.ListenAddress,
+			Path:     app.MetricsPath,
+			Interval: app.CheckInterval,
+			TmpDir:   app.TmpDirName,
+		})
 		exporter.Start(context.Background())
 		return nil
 	})
@@ -89,7 +95,13 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigInCluster(ctx, kubeCl)
+		metaConfig, err := config.ParseConfigInCluster(
+			ctx,
+			kubeCl,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
+		)
 		if err != nil {
 			return err
 		}
@@ -99,8 +111,19 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           app.TmpDirName,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           log.GetDefaultLogger(),
+		})
+
+		provider, err := providerGetter(ctx, metaConfig)
+		if err != nil {
+			return err
+		}
+
 		statistic, needMigrationToTofu, err := check.CheckState(
-			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)), check.CheckStateOptions{},
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter), check.CheckStateOptions{},
 		)
 		if err != nil {
 			return err
@@ -112,7 +135,8 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		fmt.Print(string(data))
-		if infrastructure.NeedToUseOpentofu(metaConfig) && needMigrationToTofu {
+
+		if provider.NeedToUseTofu() && needMigrationToTofu {
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
 		return nil

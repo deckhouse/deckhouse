@@ -24,13 +24,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type Params struct {
@@ -43,13 +46,23 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 
 	KubeClient *client.KubernetesClient // optional
+
+	TmpDir string
+	Logger log.Logger
 }
 
 type Checker struct {
 	*Params
+
+	logger log.Logger
 }
 
 func NewChecker(params *Params) *Checker {
+	logger := params.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	if !params.CommanderMode {
 		panic("check operation currently supported only in commander mode")
 	}
@@ -61,6 +74,7 @@ func NewChecker(params *Params) *Checker {
 
 	return &Checker{
 		Params: params,
+		logger: logger,
 	}
 }
 
@@ -70,9 +84,15 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		return nil, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
 	if c.InfrastructureContext == nil {
-		c.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           c.TmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           log.GetDefaultLogger(),
+		})
+
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
@@ -134,7 +154,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}
@@ -186,7 +206,17 @@ func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClien
 
 	migrateToTofuStatus := CheckStatusInSync
 
-	if infrastructure.NeedToUseOpentofu(metaConfig) && hasTerraformState {
+	providerGetter := infrastructureContext.CloudProviderGetter()
+	if providerGetter == nil {
+		return nil, fmt.Errorf("Infrastructure context does not have a provider getter")
+	}
+
+	provider, err := providerGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if provider.NeedToUseTofu() && hasTerraformState {
 		checkStatus = checkStatus.CombineStatus(CheckStatusOutOfSync)
 		migrateToTofuStatus = CheckStatusOutOfSync
 	}

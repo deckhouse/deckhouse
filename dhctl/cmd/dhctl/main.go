@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"os"
 	"path"
 	"path/filepath"
@@ -491,6 +492,7 @@ func initGlobalVars() {
 	app.InitGlobalVars(dhctlPath)
 	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
+	infrastructure.InitGlobalVars(dhctlPath)
 }
 
 func checkCommand(name string, allowedCommands []string) (bool, []string) {
