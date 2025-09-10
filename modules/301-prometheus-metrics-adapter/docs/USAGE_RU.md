@@ -440,28 +440,28 @@ spec:
 ### Как получить список кастомных метрик?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/
 ```
 
 ### Как получить значение метрики, привязанной к объекту?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/rps_1m
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/mymetric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/services/*/my-service-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/rps_1m
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/ingresses/*/mymetric
 ```
 
 ### Как получить значение метрики, созданной через `NamespaceMetric`?
 
 ```shell
-kubectl get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
+d8 k get --raw /apis/custom.metrics.k8s.io/v1beta1/namespaces/my-namespace/metrics/my-ns-metric
 ```
 
 ### Как получить external-метрики?
 
 ```shell
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1
-kubectl get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1
+d8 k get --raw /apis/external.metrics.k8s.io/v1beta1/namespaces/d8-ingress-nginx/d8_ingress_nginx_ds_cpu_utilization
 ```
 
 {% endraw %}

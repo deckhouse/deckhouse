@@ -17,12 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -53,19 +57,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleExcludes)
 
-func handleExcludes(input *go_hook.HookInput) error {
+func handleExcludes(_ context.Context, input *go_hook.HookInput) error {
 	nss := make([]string, 0)
 	ings := make([]string, 0)
 
-	snap := input.Snapshots["labeled_ingress"]
-	for _, sn := range snap {
-		res := sn.(discardedIngress)
+	snaps := input.Snapshots.Get("labeled_ingress")
+	for res, err := range sdkobjectpatch.SnapshotIter[discardedIngress](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'labeled_ingress' snapshots: %w", err)
+		}
+
 		ings = append(ings, res.String())
 	}
 
-	snap = input.Snapshots["labeled_ns"]
-	for _, sn := range snap {
-		res := sn.(discardedIngress)
+	snaps = input.Snapshots.Get("labeled_ns")
+	for res, err := range sdkobjectpatch.SnapshotIter[discardedIngress](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'labeled_ns' snapshots: %w", err)
+		}
+
 		nss = append(nss, res.Name)
 	}
 

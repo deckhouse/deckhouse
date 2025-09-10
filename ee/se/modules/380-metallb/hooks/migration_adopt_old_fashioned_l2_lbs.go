@@ -27,7 +27,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        "/modules/metallb/discovery",
 }, dependency.WithExternalDependencies(discoveryServicesForMigrate))
 
-func discoveryServicesForMigrate(input *go_hook.HookInput, dc dependency.Container) error {
+func discoveryServicesForMigrate(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err

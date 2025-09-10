@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,7 +31,7 @@ const (
 )
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	BeforeHookCheck: func(input *go_hook.HookInput) bool {
+	BeforeHookCheck: func(_ context.Context, input *go_hook.HookInput) bool {
 		if len(input.Values.Get("kubeDns.clusterDomainAliases").Array()) == 0 {
 			input.Logger.Debug("No Domain aliases provided. Interrupting hook execution.")
 			return false

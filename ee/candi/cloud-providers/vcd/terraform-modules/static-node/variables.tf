@@ -51,4 +51,8 @@ locals {
   node_group_name       = local.ng.name
   main_ip_addresses     = lookup(local.instance_class, "mainNetworkIPAddresses", [])
   main_network_name     = var.providerClusterConfiguration.mainNetwork
+  metadata = merge(
+    (contains(keys(var.providerClusterConfiguration), "metadata") ? var.providerClusterConfiguration.metadata : {}),
+    (contains(keys(local.instance_class), "additionalMetadata") ? local.instance_class.additionalMetadata : {}),
+  )
 }

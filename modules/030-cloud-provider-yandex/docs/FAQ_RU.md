@@ -51,7 +51,7 @@ reserved: true
 Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан как используемый по умолчанию.
 
 ```shell
-kubectl edit mc global
+d8 k edit mc global
 ```
 
 ## Добавление CloudStatic-узлов в кластер
@@ -61,7 +61,7 @@ kubectl edit mc global
 `nodeNetworkCIDR` кластера можно узнать, воспользовавшись следующей командой:
 
 ```shell
-kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
 
 ## Как создать кластер в новом VPC и развернуть bastion-хост для доступа к узлам?

@@ -29,12 +29,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestUpdateDeployContainersImagesToNewRepo(t *testing.T) {
@@ -432,107 +436,71 @@ func Test_getCAContent(t *testing.T) {
 	}
 }
 
-func Test_checkRegistryModuleMode(t *testing.T) {
-	const expectedErr = "registry is currently managed by the \"registry\" module. This command may be used only in 'Unmanaged' registry mode."
+func Test_moduleEnabled(t *testing.T) {
+	t.Helper()
+
+	toUnstructured := func(resourceYAML string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(resourceYAML), obj)
+		require.NoError(t, err)
+		return obj
+	}
 
 	tests := []struct {
-		name      string
-		secret    *v1.Secret
-		expectErr bool
+		name           string
+		module         *unstructured.Unstructured
+		expectedEnable bool
 	}{
 		{
-			name:      "Secret not found, should pass",
-			secret:    nil,
-			expectErr: false,
+			name:           "Module does not exist",
+			module:         nil,
+			expectedEnable: false,
 		},
 		{
-			name: "Mode Unmanaged, target Unmanaged, should pass",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data: map[string][]byte{
-					"mode":        []byte(registry_const.ModeUnmanaged),
-					"target_mode": []byte(registry_const.ModeUnmanaged),
-				},
-			},
-			expectErr: false,
+			name: "Module exists and enabled",
+			module: toUnstructured(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: registry
+status:
+  conditions:
+  - type: %q
+    status: "True"
+`, deckhousev1alpha1.ModuleConditionEnabledByModuleManager)),
+			expectedEnable: true,
 		},
 		{
-			name: "Mode empty, target empty, should pass",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data:       map[string][]byte{},
-			},
-			expectErr: false,
-		},
-		{
-			name: "Mode Unmanaged, target empty, should pass",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data:       map[string][]byte{"mode": []byte(registry_const.ModeUnmanaged)},
-			},
-			expectErr: false,
-		},
-		{
-			name: "Mode Direct, should be blocked",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data:       map[string][]byte{"mode": []byte(registry_const.ModeDirect)},
-			},
-			expectErr: true,
-		},
-		{
-			name: "Mode Proxy, should be blocked",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data:       map[string][]byte{"mode": []byte(registry_const.ModeProxy)},
-			},
-			expectErr: true,
-		},
-		{
-			name: "Transitioning to Direct, should be blocked",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data: map[string][]byte{
-					"mode":        []byte(registry_const.ModeUnmanaged),
-					"target_mode": []byte(registry_const.ModeDirect),
-				},
-			},
-			expectErr: true,
-		},
-		{
-			name: "Transitioning to Proxy, should be blocked",
-			secret: &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: registryStateSecretName, Namespace: d8SystemNS},
-				Data: map[string][]byte{
-					"mode":        []byte(registry_const.ModeUnmanaged),
-					"target_mode": []byte(registry_const.ModeProxy),
-				},
-			},
-			expectErr: true,
+			name: "Module exists and disabled",
+			module: toUnstructured(`
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: registry
+status:
+  conditions: []
+`),
+			expectedEnable: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			kubeCl := kclient.NewFakeKubernetesClient()
-			if tt.secret != nil {
-				_, err := kubeCl.CoreV1().Secrets(d8SystemNS).Create(context.Background(), tt.secret, metav1.CreateOptions{})
-				if err != nil {
-					t.Fatalf("Failed to create fake secret: %v", err)
-				}
+
+			if tt.module != nil {
+				_, err := kubeCl.
+					Dynamic().
+					Resource(deckhousev1alpha1.ModuleGVR).
+					Namespace("").
+					Create(ctx, tt.module, metav1.CreateOptions{})
+				require.NoError(t, err, "failed to create test module")
 			}
 
-			err := checkRegistryModuleMode(context.Background(), kubeCl)
-
-			if tt.expectErr {
-				if err == nil {
-					t.Errorf("expected an error, but got nil")
-				} else if err.Error() != expectedErr {
-					t.Errorf("expected error message to be '%s', but got '%s'", expectedErr, err.Error())
-				}
-			} else if err != nil {
-				t.Errorf("did not expect an error, but got: %v", err)
-			}
+			enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedEnable, enabled)
 		})
 	}
 }

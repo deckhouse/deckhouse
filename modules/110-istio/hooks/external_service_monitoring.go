@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -53,9 +54,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleExternalNameService)
 
-func handleExternalNameService(input *go_hook.HookInput) error {
+func handleExternalNameService(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_istio_service")
-	snapshot := input.NewSnapshots.Get("services")
+	snapshot := input.Snapshots.Get("services")
 
 	for service, err := range sdkobjectpatch.SnapshotIter[externalService](snapshot) {
 		if err != nil {

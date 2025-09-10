@@ -72,6 +72,9 @@ const labels = {
   'deploy/web/test2': { type: 'deploy-web', env: 'test2' },
   'deploy/web/test3': { type: 'deploy-web', env: 'test3' },
   'deploy/web/test4': { type: 'deploy-web', env: 'test4' },
+  'deploy/web/test5': { type: 'deploy-web', env: 'test5' },
+  'deploy/web/test6': { type: 'deploy-web', env: 'test6' },
+  'deploy/web/test7': { type: 'deploy-web', env: 'test7' },
   'deploy/web/stage': { type: 'deploy-web', env: 'stage' },
 
   // Edition for build-and-test workflow

@@ -71,6 +71,12 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
 final: false
 fromImage: common/src-artifact
+git:
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/opentofu
+  to: /patches
+  stageDependencies:
+    install:
+      - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -78,6 +84,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ .TF.opentofu }} $(cat /run/secrets/SOURCE_REPO)/opentofu/opentofu.git /src
   - cd /src
+  - git apply /patches/*.patch --verbose
   - rm -rf .git
 ---
 # use artifact for one place import for base and install images

@@ -17,7 +17,7 @@
    - at least 4 CPU cores
    - at least 8 GB of RAM
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
-   - [supported OS](/products/virtualization-platform/documentation/admin/install/requirements.html#supported-os-for-platform-nodes)
+   - [supported OS](/products/virtualization-platform/documentation/about/requirements.html#supported-os-for-platform-nodes)
    - Linux kernel version >= `5.8`
    - CPU with x86_64 architecture supporting Intel-VT (VMX) or AMD-V (SVM) instructions
    - **Unique hostname** within servers (virtual machines) of the cluster

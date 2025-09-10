@@ -19,17 +19,24 @@ package api
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -115,13 +122,22 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
 
-	ports := lb.CreateLoadBalancerPorts(service)
-	vmLabels := map[string]string{}
-	vmLabels = getNodesSelectorLabels(loadBalancer.Nodes)
+	lbKey := lbLabelKey(name)
+	klog.InfoS("updateLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
+	nodes := loadBalancer.Nodes
+	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filtredNpdes
+		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
+	}
+	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
+		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+		return nil, err
+	}
 
+	ports := lb.CreateLoadBalancerPorts(service)
+	svc.Spec.Selector = map[string]string{lbKey: "loadbalancer"}
 	svc.Labels = map[string]string{}
 	svc.Spec.Ports = []corev1.ServicePort{}
-	svc.Spec.Selector = map[string]string{}
 	svc.Spec.ExternalIPs = []string{}
 	svc.Spec.LoadBalancerClass = nil
 	svc.Spec.LoadBalancerIP = ""
@@ -132,9 +148,6 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	}
 	if len(ports) > 0 {
 		svc.Spec.Ports = ports
-	}
-	if len(vmLabels) > 0 {
-		svc.Spec.Selector = vmLabels
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
@@ -175,10 +188,19 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 	name := loadBalancer.Name
 	service := loadBalancer.Service
 	serviceLabels := loadBalancer.ServiceLabels
+	lbKey := lbLabelKey(name)
+	klog.InfoS("createLoadBalancerService: start", "lbName", name, "lbKey", lbKey)
+	nodes := loadBalancer.Nodes
+	if filtredNpdes, err := lb.filterHealthyNodes(ctx, service, loadBalancer.Nodes); err == nil {
+		nodes = filtredNpdes
+		klog.InfoS("updateLoadBalancerService: filtered nodes", "lbName", name, "filteredNodes", nodes)
+	}
+	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
+		klog.Errorf("Failed to ensure node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+		return nil, err
+	}
 
 	ports := lb.CreateLoadBalancerPorts(service)
-	vmLabels := map[string]string{}
-	vmLabels = getNodesSelectorLabels(loadBalancer.Nodes)
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -191,10 +213,8 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Ports:                 ports,
 			Type:                  corev1.ServiceTypeLoadBalancer,
 			ExternalTrafficPolicy: service.Spec.ExternalTrafficPolicy,
+			Selector:              map[string]string{lbKey: "loadbalancer"},
 		},
-	}
-	if len(vmLabels) > 0 {
-		svc.Spec.Selector = vmLabels
 	}
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
@@ -250,7 +270,15 @@ func (lb *LoadBalancerService) pollLoadBalancer(ctx context.Context, name string
 		})
 }
 
-func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) error {
+func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, name string) (retErr error) {
+	defer func() {
+		if err := lb.removeVMLabelsByKey(ctx, lbLabelKey(name)); err != nil {
+			klog.Errorf("Failed to remove node labels for LoadBalancer %q in namespace %q: %v", name, lb.namespace, err)
+			if retErr == nil {
+				retErr = err
+			}
+		}
+	}()
 	svc, err := lb.GetLoadBalancerByName(ctx, name)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
@@ -266,10 +294,116 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 	return nil
 }
 
-func getNodesSelectorLabels(nodes []*corev1.Node) map[string]string {
-	labels := make(map[string]string)
-	for _, node := range nodes {
-		labels[DVPVMHostnameLabel] = node.Name
+func (lb *LoadBalancerService) removeVMLabelsByKey(ctx context.Context, lbKey string) error {
+	var vmList v1alpha2.VirtualMachineList
+	if err := lb.client.List(ctx, &vmList, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"}),
+	}); err != nil {
+		return err
 	}
-	return labels
+
+	cs := &ComputeService{Service: lb.Service}
+	for i := range vmList.Items {
+		vm := &vmList.Items[i]
+		hostname := vm.Labels[DVPVMHostnameLabel]
+		if hostname == "" {
+			continue
+		}
+		if err := cs.RemoveVMLabelByHostname(ctx, hostname, lbKey); err != nil && !k8serrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (lb *LoadBalancerService) ensureNodeLabels(
+	ctx context.Context,
+	nodes []*corev1.Node,
+	lbKey string,
+) error {
+	desired := make(map[string]struct{}, len(nodes))
+	hostnames := make([]string, 0, len(nodes))
+	for _, in := range nodes {
+		desired[in.Name] = struct{}{}
+		hostnames = append(hostnames, in.Name)
+	}
+
+	cs := &ComputeService{Service: lb.Service}
+
+	for _, h := range hostnames {
+		if err := cs.EnsureVMLabelByHostname(ctx, h, lbKey, "loadbalancer"); err != nil {
+			return fmt.Errorf("ensure VM label for hostname %q: %w", h, err)
+		}
+		klog.V(2).InfoS("ensureNodeLabels: set VM label OK", "hostname", h, "lbKey", lbKey)
+	}
+
+	var vml v1alpha2.VirtualMachineList
+	if err := lb.client.List(ctx, &vml, &client.ListOptions{
+		Namespace:     lb.namespace,
+		LabelSelector: labels.SelectorFromSet(labels.Set{lbKey: "loadbalancer"}),
+	}); err != nil {
+		return fmt.Errorf("list VMs by %s=loadbalancer: %w", lbKey, err)
+	}
+
+	for i := range vml.Items {
+		vm := &vml.Items[i]
+		hostname := vm.Labels[DVPVMHostnameLabel]
+		if hostname == "" {
+			continue
+		}
+		if _, ok := desired[hostname]; ok {
+			continue
+		}
+		if err := cs.RemoveVMLabelByHostname(ctx, hostname, lbKey); err != nil && !k8serrors.IsNotFound(err) {
+			return fmt.Errorf("remove VM label for hostname %q: %w", hostname, err)
+		}
+		klog.V(2).InfoS("ensureNodeLabels: removed VM label", "hostname", hostname, "lbKey", lbKey)
+	}
+
+	return nil
+}
+
+func lbLabelKey(lbName string) string {
+	prittyfied := strings.ToLower(strings.ReplaceAll(lbName, "-", ""))
+	max := 63 - len(DVPLoadBalancerLabelPrefix)
+	if len(prittyfied) > max {
+		prittyfied = prittyfied[:max]
+	}
+	return DVPLoadBalancerLabelPrefix + prittyfied
+}
+
+func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *corev1.Service, nodes []*corev1.Node) ([]*corev1.Node, error) {
+	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal ||
+		svc.Spec.HealthCheckNodePort == 0 {
+		return nodes, nil
+	}
+
+	cs := &ComputeService{Service: lb.Service}
+	client := &http.Client{Timeout: 3 * time.Second}
+
+	healthy := make([]*corev1.Node, 0, len(nodes))
+	for _, n := range nodes {
+		vm, err := cs.GetVMByHostname(ctx, n.Name)
+		if err != nil {
+			continue
+		}
+		ips, _, err := cs.GetVMIPAddresses(vm)
+		if err != nil || len(ips) == 0 {
+			continue
+		}
+
+		url := "http://" + net.JoinHostPort(ips[0], strconv.Itoa(int(svc.Spec.HealthCheckNodePort))) + "/healthz"
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		resp, err := client.Do(req)
+		if err == nil && resp != nil && resp.StatusCode == http.StatusOK {
+			_ = resp.Body.Close()
+			healthy = append(healthy, n)
+			continue
+		}
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+	}
+	return healthy, nil
 }
