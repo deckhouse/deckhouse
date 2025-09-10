@@ -696,6 +696,7 @@ properties:
         description: |
           A list of affinity rules that will be applied to node groups and master nodes.
         items:
+          required: [polarity]
           type: object
           properties:
             polarity:
