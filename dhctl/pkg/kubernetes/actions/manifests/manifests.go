@@ -307,6 +307,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/deckhouse/downloaded",
 			},
 		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
+		},
 	}
 
 	deckhouseInitContainer := apiv1.Container{
@@ -322,6 +325,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse",
 			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
 		},
 	}
 
