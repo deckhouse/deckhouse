@@ -127,7 +127,7 @@ spec:
               name: deckhouse
       containers:
         - name: deckhouse
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             capabilities:
               add:
@@ -278,6 +278,10 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /dev/loop-control
+            name: loop-control
+          - mountPath: /dev/mapper/control
+            name: dm-control
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
             name: chroot
@@ -342,6 +346,14 @@ spec:
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
       volumes:
+      - name: loop-control
+        hostPath:
+          path: /dev/loop-control
+          type: CharDevice
+      - name: dm-control
+        hostPath:
+          path: /dev/mapper/control
+          type: CharDevice
       - emptyDir:
           medium: Memory
         name: tmp
