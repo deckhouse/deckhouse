@@ -462,6 +462,14 @@ multiclustersLoop:
 		existingToken := ""
 		shouldGenerateNewToken := true
 
+		currentAPIJWTPreview := multiclusterInfo.APIJWT
+		if len(multiclusterInfo.APIJWT) > 20 {
+			currentAPIJWTPreview = multiclusterInfo.APIJWT[:20] + "..."
+		}
+		input.Logger.Info("starting token reuse logic for multicluster",
+			slog.String("name", multiclusterInfo.Name),
+			slog.String("currentAPIJWT", currentAPIJWTPreview))
+
 		// Look for existing token in remote secrets
 		// The secret name format is "istio-remote-secret-{clusterName}"
 		// We need to find the secret that matches this multicluster
