@@ -36,10 +36,12 @@ import (
 
 // ValidationWebhookReconciler reconciles a ValidationWebhook object
 type ValidationWebhookReconciler struct {
+	// Set to true if shell operator needs to be reloaded
 	IsReloadShellNeed *atomic.Bool
 	Client            client.Client
 	Scheme            *runtime.Scheme
-	Logger            *log.Logger
+	// Slog logger
+	Logger *log.Logger
 	// Go template with python validating webhook
 	PythonTemplate string
 }
@@ -50,11 +52,6 @@ type ValidationWebhookReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ValidationWebhook object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -110,7 +107,7 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 
 	_, _ = ctx, vh
 
-	// hooks/002-deckhouse/webhooks/validating/
+	// example path: hooks/002-deckhouse/webhooks/validating/
 	webhookDir := "hooks/" + vh.Name + "/webhooks/validating/"
 	err := os.MkdirAll(webhookDir, 0777)
 	if err != nil {
@@ -130,6 +127,8 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		log.Error("create file: %w", err)
 	}
 
+	r.IsReloadShellNeed.Store(true)
+
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
 		r.Logger.Debug("add finalizer")
@@ -142,8 +141,6 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
 	}
-
-	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }
@@ -161,6 +158,8 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 		return res, fmt.Errorf("error delete webhook file %s: %w", webhookDir+vh.Name+".py", err)
 	}
 
+	r.IsReloadShellNeed.Store(true)
+
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
 		r.Logger.Debug("remove finalizer")
@@ -172,8 +171,6 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 			return res, fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
 		}
 	}
-
-	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }

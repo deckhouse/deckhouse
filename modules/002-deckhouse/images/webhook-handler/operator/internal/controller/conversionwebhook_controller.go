@@ -34,10 +34,11 @@ import (
 
 // ConversionWebhookReconciler reconciles a ConversionWebhook object
 type ConversionWebhookReconciler struct {
+	// Set to true if shell operator needs to be reloaded
 	IsReloadShellNeed *atomic.Bool
 	Client            client.Client
 	Scheme            *runtime.Scheme
-	// init logger as in docs builder (watcher)
+	// Slog logger
 	Logger *log.Logger
 	// Go template with python conversion webhook
 	PythonTemplate string
@@ -49,11 +50,6 @@ type ConversionWebhookReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ConversionWebhook object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
 func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -84,7 +80,6 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if !webhook.DeletionTimestamp.IsZero() {
 		r.Logger.Debug("conversion webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
-		// TODO: finalizer deletion logic
 		res, err := r.handleDeleteConversionWebhook(ctx, webhook)
 		if err != nil {
 			r.Logger.Warn("delete conversion webhook", log.Err(err))
@@ -109,7 +104,7 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 
 	_, _ = ctx, cwh
 
-	// hooks/002-deckhouse/webhooks/conversion/
+	// example path: hooks/002-deckhouse/webhooks/conversion/
 	webhookDir := "hooks/" + cwh.Name + "/webhooks/conversion/"
 	err := os.MkdirAll(webhookDir, 0777)
 	if err != nil {
@@ -129,6 +124,8 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 		log.Error("create file: %w", err)
 	}
 
+	r.IsReloadShellNeed.Store(true)
+
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
 		r.Logger.Debug("add finalizer")
@@ -141,8 +138,6 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
 	}
-
-	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }
@@ -160,6 +155,8 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 		return res, fmt.Errorf("error delete webhook file %s: %w", filePath, err)
 	}
 
+	r.IsReloadShellNeed.Store(true)
+
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
 		r.Logger.Debug("remove finalizer")
@@ -171,8 +168,6 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 			return res, fmt.Errorf("remove finalizer for %s: %w", cwh.Name, err)
 		}
 	}
-
-	r.IsReloadShellNeed.Store(true)
 
 	return res, nil
 }

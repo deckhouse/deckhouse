@@ -19,6 +19,7 @@ kubernetesCustomResourceConversion:
 {{- range .Conversions }}
   - name: {{.From}}_to_{{.To}}
     crdName: {{ $.Name}}
+    conversions:
     - fromVersion: {{ getGroup $.Name }}/{{.From}}
       toVersion: {{ getGroup $.Name }}/{{.To}}
 {{- if .IncludeSnapshotsFrom }}

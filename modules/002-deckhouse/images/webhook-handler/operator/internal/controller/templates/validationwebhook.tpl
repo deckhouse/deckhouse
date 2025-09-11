@@ -6,8 +6,10 @@ from dotmap import DotMap
 
 config = """
 configVersion: v1
+{{- if .ValidatingWebhook }}
 kubernetesValidating:
 {{ list .ValidatingWebhook | toYaml }}
+{{- end }}
 {{- if (ge (len .Context) 1) }}
 kubernetes:
 {{- range .Context}}
