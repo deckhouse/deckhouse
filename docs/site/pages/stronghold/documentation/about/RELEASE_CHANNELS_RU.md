@@ -1,6 +1,6 @@
 ---
 title: "Каналы обновлений"
-permalink: ru/stronghold/documentation/about/update-channels.html
+permalink: ru/stronghold/documentation/about/release-channels.html
 lang: ru
 ---
 

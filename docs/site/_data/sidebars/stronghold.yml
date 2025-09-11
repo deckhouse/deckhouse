@@ -13,9 +13,9 @@ entries:
             ru: Редакции
           url: /stronghold/documentation/about/editions.html
         - title:
-            en: Update channels
+            en: Release channels
             ru: Каналы обновлений
-          url: /stronghold/documentation/about/update-channels.html
+          url: /stronghold/documentation/about/release-channels.html
         - title:
             en: Requirements
             ru: Требования

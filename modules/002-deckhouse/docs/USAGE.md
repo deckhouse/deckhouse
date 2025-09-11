@@ -115,7 +115,7 @@ spec:
         webhook: https://release-webhook.mydomain.com
 ```
 
-After a new minor Deckhouse version appears on the selected update channel, but before it is applied in the cluster, a [POST request](configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
+After a new minor Deckhouse version appears on the selected release channel, but before it is applied in the cluster, a [POST request](configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
 
 The [minimalNotificationTime](configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows you to postpone the update installation for the specified period, providing time to react to the notification while respecting update windows. If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same duration, which may lead to the update being deferred indefinitely.
 
