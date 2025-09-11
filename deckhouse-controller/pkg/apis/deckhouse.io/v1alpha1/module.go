@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -285,6 +286,8 @@ func (m *Module) SetConditionTrue(condName string, opts ...ConditionOption) {
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
 			if cond.Status != corev1.ConditionTrue {
+				fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+					m.Name, condName, cond.Status, corev1.ConditionTrue, "", "", settings.Timer().Format(time.RFC3339))
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionTrue
 			}
@@ -301,6 +304,8 @@ func (m *Module) SetConditionTrue(condName string, opts ...ConditionOption) {
 		LastProbeTime:      metav1.Time{Time: settings.Timer()},
 		LastTransitionTime: metav1.Time{Time: settings.Timer()},
 	})
+	fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+		m.Name, condName, "<absent>", corev1.ConditionTrue, "", "", settings.Timer().Format(time.RFC3339))
 }
 
 func (m *Module) SetConditionFalse(condName, reason, message string, opts ...ConditionOption) {
@@ -316,6 +321,8 @@ func (m *Module) SetConditionFalse(condName, reason, message string, opts ...Con
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
 			if cond.Status != corev1.ConditionFalse {
+				fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+					m.Name, condName, cond.Status, corev1.ConditionFalse, reason, message, settings.Timer().Format(time.RFC3339))
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionFalse
 			}
@@ -337,6 +344,8 @@ func (m *Module) SetConditionFalse(condName, reason, message string, opts ...Con
 		LastProbeTime:      metav1.Time{Time: settings.Timer()},
 		LastTransitionTime: metav1.Time{Time: settings.Timer()},
 	})
+	fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+		m.Name, condName, "<absent>", corev1.ConditionFalse, reason, message, settings.Timer().Format(time.RFC3339))
 }
 
 func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...ConditionOption) {
@@ -352,6 +361,8 @@ func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...C
 		if cond.Type == condName {
 			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
 			if cond.Status != corev1.ConditionUnknown {
+				fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+					m.Name, condName, cond.Status, corev1.ConditionUnknown, reason, message, settings.Timer().Format(time.RFC3339))
 				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
 				m.Status.Conditions[idx].Status = corev1.ConditionUnknown
 			}
@@ -373,6 +384,8 @@ func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...C
 		LastProbeTime:      metav1.Time{Time: settings.Timer()},
 		LastTransitionTime: metav1.Time{Time: settings.Timer()},
 	})
+	fmt.Printf("module %s: condition %s status change %s -> %s reason=%q message=%q at %s\n",
+		m.Name, condName, "<absent>", corev1.ConditionUnknown, reason, message, settings.Timer().Format(time.RFC3339))
 }
 
 func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
