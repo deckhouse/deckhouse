@@ -263,7 +263,7 @@ spec:
         volumeMounts:
         - name: cni-path
           mountPath: /hostbin
-      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent
