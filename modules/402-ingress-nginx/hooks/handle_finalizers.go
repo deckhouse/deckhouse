@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -136,14 +137,14 @@ func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hoo
 	return wh.Name, nil
 }
 
-func handleFinalizers(input *go_hook.HookInput) error {
+func handleFinalizers(_ context.Context, input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
-	serviceNames := set.NewFromSnapshot(input.NewSnapshots.Get("services"))
-	daemonSetNames := set.NewFromSnapshot(input.NewSnapshots.Get("daemonsetscruise"))
-	validationWebhooks := set.NewFromSnapshot(input.NewSnapshots.Get("valwebhookconfnginx"))
+	serviceNames := set.NewFromSnapshot(input.Snapshots.Get("services"))
+	daemonSetNames := set.NewFromSnapshot(input.Snapshots.Get("daemonsetscruise"))
+	validationWebhooks := set.NewFromSnapshot(input.Snapshots.Get("valwebhookconfnginx"))
 
-	for controller, err := range sdkobjectpatch.SnapshotIter[IngressControllerWithFinalizer](input.NewSnapshots.Get("controller")) {
+	for controller, err := range sdkobjectpatch.SnapshotIter[IngressControllerWithFinalizer](input.Snapshots.Get("controller")) {
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed convert shanpshot %s  to IngressControllerWithFinalizer type with error %v", controller.Name, err))
 		}

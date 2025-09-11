@@ -6,6 +6,8 @@ properties:
     type: object
     default: {}
     properties:
+      cniSecretData:
+        type: string
       providerClusterConfiguration:
         type: object
         additionalProperties: false

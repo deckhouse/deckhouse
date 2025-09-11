@@ -84,7 +84,7 @@ management tool.
   ```
 
 1. Use the `/config` endpoint to configure Stronghold to talk to Kubernetes. Use
-  `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
+  `d8 k cluster-info` to validate the Kubernetes host address and TCP port.
   For the list of available configuration options, please see the
   [API documentation](/api-docs/auth/kubernetes).
 
@@ -200,7 +200,7 @@ bindings on the set of service accounts you want to be able to authenticate with
 Stronghold. Each client of Stronghold would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl create clusterrolebinding myapp-client-auth-delegator \
+d8 k create clusterrolebinding myapp-client-auth-delegator \
   --clusterrole=system:auth-delegator \
   --group=group1 \
   --serviceaccount=default:svcaccount1 \
@@ -214,7 +214,7 @@ and use that as the `token_reviewer_jwt`. In this example, the `myapp` service
 account would need the `system:auth-delegator` ClusterRole:
 
 ```bash
-kubectl apply -f - <<EOF
+d8 k apply -f - <<EOF
 apiVersion: v1
 kind: Secret
 metadata:
@@ -265,7 +265,7 @@ unable to check this value directly, you can run the following and look for the
 
 ```bash
 echo '{"apiVersion": "authentication.k8s.io/v1", "kind": "TokenRequest"}' \
-  | kubectl create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
+  | d8 k create -f- --raw /api/v1/namespaces/default/serviceaccounts/default/token \
   | jq -r '.status.token' \
   | cut -d . -f2 \
   | base64 -d
@@ -275,7 +275,7 @@ Most clusters will also have that information available at the
 `.well-known/openid-configuration` endpoint:
 
 ```bash
-kubectl get --raw /.well-known/openid-configuration | jq -r .issuer
+d8 k get --raw /.well-known/openid-configuration | jq -r .issuer
 ```
 
 This value is then used when configuring Kubernetes auth, e.g.:

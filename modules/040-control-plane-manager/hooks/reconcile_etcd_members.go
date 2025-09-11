@@ -94,8 +94,8 @@ type recicleEtcdNode struct {
 	Name string
 }
 
-func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
-	snaps := input.NewSnapshots.Get("master_nodes")
+func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	snaps := input.Snapshots.Get("master_nodes")
 
 	if len(snaps) == 0 {
 		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")

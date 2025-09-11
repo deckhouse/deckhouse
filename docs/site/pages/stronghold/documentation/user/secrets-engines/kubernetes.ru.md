@@ -65,7 +65,7 @@ rules:
   verbs: ["bind", "escalate", "create", "update", "delete"]
 ```
 
-Создайте эту роль в Kubernetes (например, с помощью `kubectl apply -f`).
+Создайте эту роль в Kubernetes (например, с помощью `d8 k apply -f`).
 
 Более того, если вы хотите использовать ограничение выбор меток (label) для возможности выборки пространств имен,
 в которых может действовать роль, вам нужно будет предоставить разрешение Stronghold на чтение пространств имен.
@@ -130,7 +130,7 @@ subjects:
 имен `test`, которое вы можете создать, если оно еще не существует.
 
 ```shell-session
-$ kubectl create namespace test
+$ d8 k create namespace test
 namespace/test created
 ```
 
@@ -170,7 +170,7 @@ subjects:
  namespace: test
 ```
 
-Вы можете создать эти объекты с помощью команды `kubectl apply -f`.
+Вы можете создать эти объекты с помощью команды `d8 k apply -f`.
 
 Включите механизм секретов Kubernetes:
 
@@ -218,10 +218,10 @@ service_account_token      eyJHbGci0iJSUzI1NiIsImtpZCI6ImlrUEE...
 ```
 
 Вы можете использовать указанный выше токен учетной записи сервиса (`eyJHbG...`) для любого
-авторизированного запроса к Kubernetes API. Авторизацией управляют привязки ролей к учетной записи сервиса.
+авторизованного запроса к Kubernetes API. Авторизацией управляют привязки ролей к учетной записи сервиса.
 
 ```shell-session
-$ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
+$ curl -sk $(d8 k config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
 {
   "kind": "PodList",
@@ -236,7 +236,7 @@ $ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.serv
 После истечения срока [аренды](../concepts/lease.html), можно удостовериться, что токен был отозван и больше не может быть использован для запросов к Kubernetes API.
 
 ```shell-session
-$ curl -sk $(kubectl config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
+$ curl -sk $(d8 k config view --minify -o 'jsonpath={.clusters[].cluster.server}')/api/v1/namespaces/test/pods \
     --header "Authorization: Bearer eyJHbGci0iJSUzI1Ni..."
 {
   "kind": "Status",
@@ -296,7 +296,7 @@ $ echo 'eyJhbGc...' | cut -d'.' -f2 | base64 -d  | jq -r '.iat,.exp|todate'
 
 Токены в Kubernetes имеют формат JWT, а значит, используют механизм "утверждений" (claims).
 Одним из таких является утверждение `aud` (аудитория) - это строка или массив строк, которые
-идентифицируют получателей, для которых предназначен JWT. Для более подробной информаци ознакомьтесь со спецификацией [JWT audience claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3)
+идентифицируют получателей, для которых предназначен JWT. Для более подробной информации ознакомьтесь со спецификацией [JWT audience claim](https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3)
 
 Вы можете задать аудитории по умолчанию (`token_default_audiences`) при создании или настройке роли Stronghold.
 Если явно не задано, по умолчанию кластер Kubernetes будет использовать свои значения аудитории для токенов учетной записи сервиса.
@@ -351,7 +351,7 @@ $ stronghold write kubernetes/roles/auto-managed-sa-role \
 
 {% alert %}
 Учетной записи сервиса Stronghold также потребуется доступ к ресурсам, к которым она предоставляет доступ.
-Это можно сделать для приведенных выше примеров с помощью команды `kubectl -n test create rolebinding --role test-role-list-pods --serviceaccount=stronghold:stronghold stronghold stronghold-test-role-abilities`.
+Это можно сделать для приведенных выше примеров с помощью команды `d8 k -n test create rolebinding --role test-role-list-pods --serviceaccount=stronghold:stronghold stronghold stronghold-test-role-abilities`.
 Так Kubernetes предотвращает эскалацию привилегий. Более подробную информацию вы можете прочитать в документации к [Kubernetes RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#privilege-escalation-prevention-and-bootstrapping).
 {% endalert %}
 

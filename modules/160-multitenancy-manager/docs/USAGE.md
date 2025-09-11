@@ -32,7 +32,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
 To list all available parameters for a project template, execute the command:
 
 ```shell
-kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
+d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
 ## Creating a project
@@ -70,10 +70,10 @@ kubectl get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.paramet
 3. To check the status of the project, execute the command:
 
    ```shell
-   kubectl get projects my-project
+   d8 k get projects my-project
    ```
 
-   A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `kubectl get projects my-project -o yaml`) to get more detailed information about the error.
+   A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
 ### Creating a project automatically for a namespace
 
@@ -82,19 +82,19 @@ You can create a new project for a namespace. To do this, add the `projects.deck
 1. Create a new namespace:
 
    ```shell
-   kubectl create ns test
+   d8 k create ns test
    ```
 
 1. Add the annotation:
 
    ```shell
-   kubectl annotate ns test projects.deckhouse.io/adopt=""
+   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Make sure that the project was created:
 
    ```shell
-   kubectl get projects
+   d8 k get projects
    ```
 
    A new project corresponding to the namespace will appear in the project list:
@@ -125,7 +125,7 @@ To create your own template:
 2. Copy it to a separate file, for example, `my-project-template.yaml` using the command:
 
    ```shell
-   kubectl get projecttemplates default -o yaml > my-project-template.yaml
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
 3. Edit the `my-project-template.yaml` file, make the necessary changes.
@@ -138,13 +138,13 @@ To create your own template:
 5. Apply your new template with the command:
 
    ```shell
-   kubectl apply -f my-project-template.yaml
+   d8 k apply -f my-project-template.yaml
    ```
 
 6. Check the availability of the new template with the command:
 
    ```shell
-   kubectl get projecttemplates <NEW_TEMPLATE_NAME>
+   d8 k get projecttemplates <NEW_TEMPLATE_NAME>
    ```
 
 {% endraw %}

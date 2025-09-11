@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -88,7 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleChaosMonkey)
 
-func handleChaosMonkey(input *go_hook.HookInput) error {
+func handleChaosMonkey(ctx context.Context, input *go_hook.HookInput) error {
 	random := time.Now().UnixNano()
 	testRandomSeed := os.Getenv("D8_TEST_RANDOM_SEED")
 	if testRandomSeed != "" {
@@ -97,7 +98,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 	}
 	randomizer := rand.New(rand.NewSource(random))
 
-	nodeGroups, machines, nodes, err := prepareChaosData(input)
+	nodeGroups, machines, nodes, err := prepareChaosData(ctx, input)
 	if err != nil {
 		input.Logger.Info(err.Error()) // just info message, already have a victim
 		return nil
@@ -141,8 +142,8 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 	return nil
 }
 
-func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]chaosMachine, map[string][]chaosNode, error) {
-	snaps := input.NewSnapshots.Get("machines")
+func prepareChaosData(_ context.Context, input *go_hook.HookInput) ([]chaosNodeGroup, map[string]chaosMachine, map[string][]chaosNode, error) {
+	snaps := input.Snapshots.Get("machines")
 	machines := make(map[string]chaosMachine, len(snaps)) // map by node name
 	for machine, err := range sdkobjectpatch.SnapshotIter[chaosMachine](snaps) {
 		if err != nil {
@@ -156,7 +157,7 @@ func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]ch
 	}
 
 	// collect NodeGroup with Enabled chaos monkey
-	snaps = input.NewSnapshots.Get("ngs")
+	snaps = input.Snapshots.Get("ngs")
 	nodeGroups := make([]chaosNodeGroup, 0)
 	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[chaosNodeGroup](snaps) {
 		if err != nil {
@@ -172,7 +173,7 @@ func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]ch
 
 	// map nodes by NodeGroup
 	nodes := make(map[string][]chaosNode)
-	snaps = input.NewSnapshots.Get("nodes")
+	snaps = input.Snapshots.Get("nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[chaosNode](snaps) {
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)

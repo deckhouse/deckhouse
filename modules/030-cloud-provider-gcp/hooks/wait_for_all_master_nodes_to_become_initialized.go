@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(waitForAllMasterNodesToBecomeInitialized))
 
-func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Container) (bool, error) {
+func isAllMasterNodesInitialized(_ context.Context, input *go_hook.HookInput, dc dependency.Container) (bool, error) {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		input.Logger.Error(err.Error())
@@ -57,10 +57,10 @@ func isAllMasterNodesInitialized(input *go_hook.HookInput, dc dependency.Contain
 	return true, nil
 }
 
-func waitForAllMasterNodesToBecomeInitialized(input *go_hook.HookInput, dc dependency.Container) error {
+func waitForAllMasterNodesToBecomeInitialized(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 120*time.Second, false, func(_ context.Context) (bool, error) {
 		input.Logger.Info("waiting for master nodes to become initialized by cloud provider")
-		ok, err := isAllMasterNodesInitialized(input, dc)
+		ok, err := isAllMasterNodesInitialized(ctx, input, dc)
 		if ok {
 			return true, nil
 		}

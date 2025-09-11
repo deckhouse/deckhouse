@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -59,9 +60,9 @@ func filterTokenSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return string(secret.Data["token"]), nil
 }
 
-func handleTokens(input *go_hook.HookInput) error {
+func handleTokens(_ context.Context, input *go_hook.HookInput) error {
 	var token string
-	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "token")
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "token")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'token' snapshot: %w", err)
 	}

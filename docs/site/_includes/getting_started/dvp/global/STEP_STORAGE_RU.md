@@ -1,9 +1,22 @@
+{% alert level="warning" %}
+На этом этапе приведен пример настройки программно-определяемого хранилища на основе DRBD.
+Если вы хотите использовать другой типа хранилища, ознакомьтесь с разделом [«Настройка хранилища»](../../documentation/admin/install/steps/storage.html).
+{% endalert %}
+
 На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для создания хранения метрик компонент кластер и дисков виртуальных машин.
 
 Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
 
 ```shell
 sudo -i d8 k create -f - <<EOF
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: snapshot-controller
+spec:
+  enabled: true
+  version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -82,14 +95,14 @@ vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484
 
 ```bash
 sudo -i d8 k apply -f - <<EOF
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStoragePool
- metadata:
-   name: sds-pool
- spec:
-   type: LVM
-   lvmVolumeGroups:
-     - name: vg-on-dvp-worker
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStoragePool
+metadata:
+  name: sds-pool
+spec:
+  type: LVM
+  lvmVolumeGroups:
+    - name: vg-on-dvp-worker
 EOF
 ```
 
@@ -110,16 +123,15 @@ sds-pool     Completed   LVM    87d
 
 ```bash
 sudo -i d8 k apply -f - <<EOF
- ---
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStorageClass
- metadata:
-   name: sds-r1
- spec:
-   replication: None
-   storagePool: sds-pool
-   reclaimPolicy: Delete
-   topology: Ignored
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStorageClass
+metadata:
+  name: sds-r1
+spec:
+  replication: None
+  storagePool: sds-pool
+  reclaimPolicy: Delete
+  topology: Ignored
 EOF
 ```
 

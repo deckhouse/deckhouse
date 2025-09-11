@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -55,8 +56,8 @@ func applyDeckhouseNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	return roles, nil
 }
 
-func countDeckhouseNodes(input *go_hook.HookInput) error {
-	nodeRoles, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.NewSnapshots, "node_roles")
+func countDeckhouseNodes(_ context.Context, input *go_hook.HookInput) error {
+	nodeRoles, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.Snapshots, "node_roles")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal node_roles snapshot: %w", err)
 	}
