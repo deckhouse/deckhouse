@@ -491,12 +491,27 @@ multiclustersLoop:
 		}
 
 		if existingToken != "" {
+			tokenPreview := existingToken
+			if len(existingToken) > 20 {
+				tokenPreview = existingToken[:20] + "..."
+			}
+			input.Logger.Info("validating existing token",
+				slog.String("name", multiclusterInfo.Name),
+				slog.String("tokenPreview", tokenPreview))
+
 			validationResult := validateJWTToken(existingToken)
+			input.Logger.Info("token validation result",
+				slog.String("name", multiclusterInfo.Name),
+				slog.Bool("isValid", validationResult.IsValid),
+				slog.Bool("isExpired", validationResult.IsExpired),
+				slog.String("error", validationResult.Error),
+				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+
 			if validationResult.IsValid && !validationResult.IsExpired {
 				// Token is still valid, reuse it
 				shouldGenerateNewToken = false
 				multiclusterInfo.APIJWT = existingToken
-				input.Logger.Debug("reusing existing valid token for multicluster",
+				input.Logger.Info("reusing existing valid token for multicluster",
 					slog.String("name", multiclusterInfo.Name),
 					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 			} else {
@@ -505,6 +520,9 @@ multiclustersLoop:
 					slog.String("error", validationResult.Error),
 					slog.Bool("isExpired", validationResult.IsExpired))
 			}
+		} else {
+			input.Logger.Info("no existing token found, will generate new token",
+				slog.String("name", multiclusterInfo.Name))
 		}
 
 		if shouldGenerateNewToken {

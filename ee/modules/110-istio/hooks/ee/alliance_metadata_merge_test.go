@@ -439,8 +439,8 @@ status:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-public\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-only-public\""))
 
-			// there should be 14 log messages (including 2 new token generation messages and 2 new "no remote secrets found" messages)
-			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(14))
+			// there should be 16 log messages (including 2 new token generation messages, 2 new "no existing token found" messages, and 2 new "checking remote secrets" messages)
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(16))
 		})
 	})
 })
