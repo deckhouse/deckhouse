@@ -14,13 +14,13 @@
 
 {!{- $ctx := . }!}
 
-name: Build and test for release branches
+name: Build and test for main branch
 
-# On every push to release branches.
+# On every push to main branch.
 on:
   push:
     branches:
-      - 'release-*'
+      - 'main'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}

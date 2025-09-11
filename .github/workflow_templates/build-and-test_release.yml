@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# on push to default branch or on tags
+# on push to tags
 {!{- $ctx := dict -}!}
 {!{- $ctx = coll.Merge $ctx . }!}
 

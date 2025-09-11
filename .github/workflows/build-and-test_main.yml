@@ -16,30 +16,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# on push to tags
+name: Build and test for main branch
 
-name: Build and test for release
-
+# On every push to main branch.
 on:
-  workflow_dispatch:
-    inputs:
-      issue_id:
-        description: 'Id of issue where label was set'
-        required: false
-      issue_number:
-        description: 'Number of issue where label was set'
-        required: false
-      comment_id:
-        description: 'Id of comment in issue where to put workflow run status'
-        required: false
-      editions:
-        description: 'Comma-separated list of editions to build'
-        required: false
-        type: string
-      svace_enabled:
-        description: 'Enable svace build and analyze'
-        type: boolean
-        required: false
+  push:
+    branches:
+      - 'main'
 
 env:
 
@@ -72,7 +55,12 @@ env:
   DECKHOUSE_PRIVATE_REPO: "${{secrets.DECKHOUSE_PRIVATE_REPO}}"
   # </template: git_source_envs>
 
-# Cancel in-progress jobs for the same tag/branch.
+  # <template: dmt_envs>
+  DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
+  DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
+  # </template: dmt_envs>
+
+# Cancel in-progress jobs for the same branch.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -160,124 +148,31 @@ jobs:
             core.setCommandEcho(false)
 
   # </template: git_info_job>
-  detect_editions:
-    name: Detect editions
-    runs-on: ubuntu-latest
-    outputs:
-      BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
-      BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
-      BUILD_BE: ${{steps.detect_editions.outputs.BUILD_BE}}
-      BUILD_SE: ${{steps.detect_editions.outputs.BUILD_SE}}
-      BUILD_SE-plus: ${{steps.detect_editions.outputs.BUILD_SE-plus}}
-    steps:
-      - name: Detect editions
-        id: detect_editions
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
         env:
-          EDITIONS: ${{ github.event.inputs.editions }}
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          echo "Input allowed editions: '${EDITIONS}'"
-
-          EMPTY_EDITIONS=yes
-
-          for edition in CE EE BE SE SE-plus ; do
-            if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
-              echo "  - enable build of ${edition} edition."
-              echo "BUILD_${edition}=true" >> $GITHUB_OUTPUT
-              EMPTY_EDITIONS=no
-            fi
-          done
-
-          if [[ $EMPTY_EDITIONS == "yes" ]] ; then
-            echo "No editions requested. Building only FE."
-          fi
-
-  check_branch_name:
-    name: Check branch name
-    runs-on: ubuntu-latest
-    steps:
-
-    # <template: checkout_step>
-    - name: Checkout sources
-      uses: actions/checkout@v3.5.2
-
-    # </template: checkout_step>
-      with:
-        fetch-depth: 0
-    - name: Check branch name
-      id: check_branch_name
-      env:
-        CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-      run: |
-        if [ -z "${CI_COMMIT_TAG}" ]; then
-          exit 0 # Skip job if there is no tag
-        fi
-        TAG_NAME="${GITHUB_REF#refs/tags/}" # Remove "refs/tags/" prefix
-        echo "TAG_NAME=${TAG_NAME}"
-        MAJOR=$(echo "$TAG_NAME" | cut -d'.' -f1 | tr -d 'v')
-        MINOR=$(echo "$TAG_NAME" | cut -d'.' -f2)
-        RELEASE_BRANCH_NAME="release-${MAJOR}.${MINOR}"
-        echo "RELEASE_BRANCH_NAME=${RELEASE_BRANCH_NAME}"
-        echo "GITHUB_SHA=${GITHUB_SHA}"
-        echo "Current commit in branch:"
-        git branch -r --contains ${GITHUB_SHA}
-        # grep returns exit code 1 if branch not found
-        git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
-
-
-  # <template: check_changelog_template>
-  check_changelog:
-    name: Check changelog
-    runs-on: ubuntu-latest
-    steps:
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-      - name: Check for tag
-        run: |
-          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
-            echo "Not a tag push, skipping changelog check."
-            exit 0
-          fi
-
-          TAG_VERSION="${GITHUB_REF#refs/tags/}"
-          FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
-
-          if [ ! -f "$FILE" ]; then
-            echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
-            exit 1
-          else
-            echo "✅ Changelog file $FILE found."
-          fi
-  # </template: check_changelog_template>
-
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - check_changelog
     env:
       WERF_ENV: "FE"
-      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
-      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled }}
     # <template: build_template>
     runs-on: [self-hosted, large]
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
-
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
 
 
       # <template: import_secrets>
@@ -651,11 +546,10 @@ jobs:
 
   build_ee:
     name: Build EE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
-      - detect_editions
     env:
       WERF_ENV: "EE"
     # <template: build_template>
@@ -663,15 +557,6 @@ jobs:
     outputs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
-
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
 
 
       # <template: import_secrets>
@@ -1045,11 +930,10 @@ jobs:
 
   build_se:
     name: Build SE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
-      - detect_editions
     env:
       WERF_ENV: "SE"
     # <template: build_template>
@@ -1059,15 +943,6 @@ jobs:
     steps:
 
 
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1425,13 +1300,24 @@ jobs:
     # </template: build_template>
 
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
   build_se_plus:
     name: Build SE-plus
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
-      - detect_editions
     env:
       WERF_ENV: "SE-plus"
     # <template: build_template>
@@ -1441,15 +1327,6 @@ jobs:
     steps:
 
 
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -1807,13 +1684,24 @@ jobs:
     # </template: build_template>
 
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
   build_be:
     name: Build BE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
-      - detect_editions
     env:
       WERF_ENV: "BE"
     # <template: build_template>
@@ -1823,15 +1711,6 @@ jobs:
     steps:
 
 
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -2189,13 +2068,24 @@ jobs:
     # </template: build_template>
 
 
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
+
   build_ce:
     name: Build CE
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
       - git_info
       - build_fe
-      - detect_editions
     env:
       WERF_ENV: "CE"
     # <template: build_template>
@@ -2205,15 +2095,6 @@ jobs:
     steps:
 
 
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-
       # <template: import_secrets>
       - name: Split repository name
         id: split
@@ -2571,28 +2452,21 @@ jobs:
     # </template: build_template>
 
 
-  analyze_deckhouse:
-    if: ${{ github.event.inputs.svace_enabled == 'true' }}
-    name: Deckhouse static analysis
-    needs:
-      - build_fe
-    runs-on: [self-hosted, regular]
-    steps:
-      - uses: deckhouse/modules-actions/svace_analyze@v4
-        with:
-          project_group: "DKP"
-          ci_commit_ref_name: ${{ github.ref_name }}
-          ci_commit_hash: ${{ github.sha }}
-          svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
-          svace_analyze_ssh_user: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
-          svacer_url: "${{ secrets.SVACER_URL }}"
-          svacer_import_user: "${{ secrets.SVACER_IMPORT_USER }}"
-          svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
-          svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
   doc_web_build:
     name: Doc web build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -2680,7 +2554,7 @@ jobs:
 
   main_web_build:
     name: Main web build
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # Wait for success build of modules.
     needs:
       - git_info
@@ -2772,7 +2646,6 @@ jobs:
     name: Tests
     needs:
       - git_info
-      - check_branch_name
 
     # <template: tests_before_build_template>
     runs-on: [self-hosted, regular]
@@ -3187,13 +3060,76 @@ jobs:
           docker run -v ${{github.workspace}}:/deckhouse -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} ginkgo -vet=off ./testing/openapi_cases/
     # </template: tests_template>
 
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' }}
+    runs-on: [self-hosted, large]
+    needs:
+      - git_info
+      - build_fe
+    # <template: security_scan_template>
+    steps:
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: link_bin_step>
+      - name: Link binary cache
+        id: link_bin_step
+        run: |
+          ln -s ~/deckhouse-bin-cache bin
+      # </template: link_bin_step>
+      - name: Running default user validation on ${{env.TAG}}
+        env:
+          TAG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          IMAGE: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+          DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
+        run: |
+          echo "⚓️ 🏎 Running default user validation on ${TAG}..."
+          make cve-base-images-check-default-user
+
+      # <template: unlink_bin_step>
+      - name: Unlink binary cache
+        id: unlink_bin_step
+        if: always()
+        run: |
+          rm bin
+      # </template: unlink_bin_step>
+    # </template: security_scan_template>
+
+
   web_links_test:
     name: Web links test
-    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
       - main_web_build
+    continue-on-error: true
     # <template: web_links_test_template>
     runs-on: [self-hosted, regular]
     steps:
@@ -3443,6 +3379,425 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
+
+
+  deploy_release_doc_prod:
+    name: (Prod) Deploy release documentation
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      # <template: doc_release_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
+      # </template: doc_release_version_template>
+      # <template: deploy_doc_template>
+      - name: Deploy documentation to production
+        uses: werf/actions/converge@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
+          env: web-production
+        env:
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/documentation"
+          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
+          WERF_NAMESPACE: deckhouse-web-production
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DCNAME: "web.dc_name=prod-25"
+      # </template: deploy_doc_template>
+
+
+  deploy_release_doc_stage:
+    name: (Stage) Deploy release documentation
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      # <template: doc_release_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
+      # </template: doc_release_version_template>
+      # <template: deploy_doc_template>
+      - name: Deploy documentation to stage
+        uses: werf/actions/converge@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
+          env: web-stage
+        env:
+          WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/documentation"
+          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
+          WERF_NAMESPACE: deckhouse-web-stage
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_URL: "global.url=deckhouse.stage.flant.com"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru.stage.flant.com"
+          WERF_SET_WEB_ENV: "web.env=web-stage"
+          WERF_SET_DCNAME: "web.dc_name=dev"
+      # </template: deploy_doc_template>
+
+
+  deploy_latest_web_site_prod:
+    name: (Prod) Deploy latest site
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: doc_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_site_template>
+      - name: Deploy site to production
+        uses: werf/actions/converge@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
+          env: web-production
+        env:
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/site"
+          WERF_RELEASE: "deckhouse-site"
+          WERF_NAMESPACE: deckhouse-web-production
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_ACTIVE_RELEASE: "global.active_release=v1"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLmlvIiwgInJ1IiA6ICJkZWNraG91c2UucnUifQ=="
+          WERF_SET_DCNAME: "web.dc_name=prod-25"
+          DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
+          DOC_API_URL: "${{vars.DOC_API_URL}}"
+          WERF_SET_MODULE_WATCHER_AUTHS: "global.moduleWatcherAuths=${{ secrets.MODULE_WATCHER_AUTHS }}"
+      # </template: deploy_site_template>
+
+
+  deploy_latest_web_doc_prod:
+    name: (Prod) Deploy latest doc
+    continue-on-error: true
+    needs:
+      - git_info
+      - doc_web_build
+      - main_web_build
+    if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      # <template: doc_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
+      # </template: doc_version_template>
+      # <template: deploy_doc_template>
+      - name: Deploy documentation to production
+        uses: werf/actions/converge@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+          kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
+          env: web-production
+        env:
+          WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
+          WERF_DIR: "docs/documentation"
+          WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
+          WERF_NAMESPACE: deckhouse-web-production
+          WERF_SET_DOC_VERSION: "global.doc_version=${{ env.DOC_VERSION }}"
+          WERF_SET_URL: "global.url=deckhouse.io"
+          WERF_SET_URL_RU: "global.url_ru=deckhouse.ru"
+          WERF_SET_WEB_ENV: "web.env=web-production"
+          WERF_SET_DCNAME: "web.dc_name=prod-25"
+      # </template: deploy_doc_template>
+
+  list_changed_modules:
+    name: List changed modules
+    needs:
+      - git_info
+      - build_fe
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: [self-hosted, regular]
+    steps:
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12.3'
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+      - name: List changed modules from latest released version
+        id: list_changed_modules
+        env:
+          IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+        run: |
+          TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
+          if [[ -n "${TAG_FROM}" ]]; then
+            export IMAGE_FROM="${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/fe:${TAG_FROM}"
+            python .github/scripts/python/compare_version_modules.py
+          else
+            echo "No released versions exist. Skipping."
+          fi
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh
+      # </template: send_fail_report>
 
   compare_internal_modules:
     name: Compare internal modules
