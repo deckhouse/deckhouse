@@ -62,9 +62,9 @@ type ConversionRule struct {
 }
 
 type Conversions struct {
-	FromVersion string                    `json:"from"`
-	ToVersion   string                    `json:"to"`
-	Handler     *ConversionWebhookHandler `json:"handler"`
+	FromVersion string                   `json:"from"`
+	ToVersion   string                   `json:"to"`
+	Handler     ConversionWebhookHandler `json:"handler"`
 }
 
 type ConversionWebhookHandler struct {
@@ -75,7 +75,6 @@ type ConversionWebhookHandler struct {
 // ConversionWebhookStatus defines the observed state of ConversionWebhook.
 type ConversionWebhookStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
