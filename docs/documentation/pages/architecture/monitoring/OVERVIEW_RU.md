@@ -38,10 +38,10 @@ Deckhouse может интегрироваться с большим колич
 
 Prometheus собирает метрики и выполняет правила:
 
-* Для каждого *target'а* (цель для мониторинга) каждый `scrape_interval` делает HTTP запрос на этот *target*, получает в ответ метрики [в своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу.
-* Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
-  * или шлет алерты;
-  * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*).
+* Для каждого *target* (цели мониторинга) с заданной периодичностью `scrape_interval` Prometheus выполняет HTTP-запрос на этот *target*, получает в ответ метрики в [собственном формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md) и сохраняет их в свою базу данных.
+* Каждый `evaluation_interval` обрабатывает правила (*rules*), на основании чего:
+  * отправляет алерты;
+  * или сохраняет новые метрики (результат выполнения правил) в свою базу данных.
 
 Prometheus устанавливается модулем `prometheus-operator` DKP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:

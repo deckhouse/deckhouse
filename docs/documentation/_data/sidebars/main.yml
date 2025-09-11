@@ -820,7 +820,7 @@ entries:
                       url: /admin/configuration/monitoring/configuring/network-and-pods.html
                     - title:
                         en: Writing Prometheus data to longterm storage
-                        ru: Запись данных Prometheus в longterm storage
+                        ru: Запись данных Prometheus в долговременное хранилище
                       url: /admin/configuration/monitoring/configuring/longterm-storage.html
                     - title:
                         en: Configuring external access
