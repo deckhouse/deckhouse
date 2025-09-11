@@ -38005,6 +38005,13 @@
           "subcommands": null
         },
         {
+          "name": "namespace",
+          "description": "Interact with namespaces",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "operator",
           "description": "Perform operator-specific tasks",
           "aliases": null,
@@ -38428,6 +38435,11 @@
                 "show-empty": {
                   "description": "Show empty queues.",
                   "shorthand": "e",
+                  "global": false
+                },
+                "watch": {
+                  "description": "Watch for changes to the queue list.",
+                  "shorthand": "w",
                   "global": false
                 }
               },
@@ -39302,7 +39314,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=cnupt: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
@@ -39455,7 +39467,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=cnupt: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
