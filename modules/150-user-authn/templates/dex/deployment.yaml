@@ -99,6 +99,8 @@ spec:
               fieldPath: metadata.namespace
         - name: DEX_EXPAND_ENV
           value: "false"
+        - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
+          value: "true"
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https

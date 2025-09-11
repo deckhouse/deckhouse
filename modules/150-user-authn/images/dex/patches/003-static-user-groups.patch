@@ -1,9 +1,9 @@
-diff --git i/cmd/dex/config.go w/cmd/dex/config.go
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
 index aa49a181..527d0754 100644
---- i/cmd/dex/config.go
-+++ w/cmd/dex/config.go
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
 @@ -95,11 +95,12 @@ type password storage.Password
-
+ 
  func (p *password) UnmarshalJSON(b []byte) error {
  	var data struct {
 -		Email       string `json:"email"`
@@ -28,34 +28,34 @@ index aa49a181..527d0754 100644
  	})
  	if len(data.Hash) == 0 && len(data.HashFromEnv) > 0 {
  		data.Hash = os.Getenv(data.HashFromEnv)
-diff --git i/server/server.go w/server/server.go
-index 8c046296..72f68510 100644
---- i/server/server.go
-+++ w/server/server.go
-@@ -555,6 +555,7 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
+diff --git a/server/server.go b/server/server.go
+index 70e8ae75..90b1c076 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -569,6 +569,7 @@ func (db passwordDB) Login(ctx context.Context, s connector.Scopes, email, passw
  		Username:      p.Username,
  		Email:         p.Email,
  		EmailVerified: true,
 +		Groups:        p.Groups,
  	}, true, nil
  }
-
-@@ -579,6 +580,7 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
+ 
+@@ -593,6 +594,7 @@ func (db passwordDB) Refresh(ctx context.Context, s connector.Scopes, identity c
  	// No other fields are expected to be refreshable as email is effectively used
  	// as an ID and this implementation doesn't deal with groups.
  	identity.Username = p.Username
 +	identity.Groups = p.Groups
-
+ 
  	return identity, nil
  }
-diff --git i/storage/kubernetes/types.go w/storage/kubernetes/types.go
-index c126ddc0..38c910b5 100644
---- i/storage/kubernetes/types.go
-+++ w/storage/kubernetes/types.go
-@@ -431,9 +431,10 @@ type Password struct {
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 4c1a1efa..c683ed11 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -438,9 +438,10 @@ type Password struct {
  	// This field is IMMUTABLE. Do not change.
  	Email string `json:"email,omitempty"`
-
+ 
 -	Hash     []byte `json:"hash,omitempty"`
 -	Username string `json:"username,omitempty"`
 -	UserID   string `json:"userID,omitempty"`
@@ -64,28 +64,28 @@ index c126ddc0..38c910b5 100644
 +	UserID   string   `json:"userID,omitempty"`
 +	Groups   []string `json:"groups,omitempty"`
  }
-
+ 
  // PasswordList is a list of Passwords.
-@@ -458,6 +459,7 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
+@@ -465,6 +466,7 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
  		Hash:     p.Hash,
  		Username: p.Username,
  		UserID:   p.UserID,
 +		Groups:   p.Groups,
  	}
  }
-
-@@ -467,6 +469,7 @@ func toStoragePassword(p Password) storage.Password {
+ 
+@@ -474,6 +476,7 @@ func toStoragePassword(p Password) storage.Password {
  		Hash:     p.Hash,
  		Username: p.Username,
  		UserID:   p.UserID,
 +		Groups:   p.Groups,
  	}
  }
-
-diff --git i/storage/sql/crud.go w/storage/sql/crud.go
+ 
+diff --git a/storage/sql/crud.go b/storage/sql/crud.go
 index a9ca3816..10a737b8 100644
---- i/storage/sql/crud.go
-+++ w/storage/sql/crud.go
+--- a/storage/sql/crud.go
++++ b/storage/sql/crud.go
 @@ -598,13 +598,13 @@ func (c *conn) CreatePassword(ctx context.Context, p storage.Password) error {
  	p.Email = strings.ToLower(p.Email)
  	_, err := c.Exec(`
@@ -136,7 +136,7 @@ index a9ca3816..10a737b8 100644
  	`)
  	if err != nil {
 @@ -680,7 +680,7 @@ func (c *conn) ListPasswords(ctx context.Context) ([]storage.Password, error) {
-
+ 
  func scanPassword(s scanner) (p storage.Password, err error) {
  	err = s.Scan(
 -		&p.Email, &p.Hash, &p.Username, &p.UserID,
@@ -144,17 +144,17 @@ index a9ca3816..10a737b8 100644
  	)
  	if err != nil {
  		if err == sql.ErrNoRows {
-diff --git i/storage/storage.go w/storage/storage.go
-index 574b0a5a..fb93d027 100644
---- i/storage/storage.go
-+++ w/storage/storage.go
-@@ -354,6 +354,9 @@ type Password struct {
-
+diff --git a/storage/storage.go b/storage/storage.go
+index dac3115c..cbfa44b6 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -357,6 +357,9 @@ type Password struct {
+ 
  	// Randomly generated user ID. This is NOT the primary ID of the Password object.
  	UserID string `json:"userID"`
 +
 +	// Groups assigned to the user
 +	Groups []string `json:"groups"`
  }
-
+ 
  // Connector is an object that contains the metadata about connectors used to login to Dex.

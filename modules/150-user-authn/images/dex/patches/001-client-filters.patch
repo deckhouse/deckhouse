@@ -1,7 +1,7 @@
-diff --git i/server/handlers.go w/server/handlers.go
-index a00b290b..f628342a 100644
---- i/server/handlers.go
-+++ w/server/handlers.go
+diff --git a/server/handlers.go b/server/handlers.go
+index f8d0ed64..93266b8d 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
 @@ -21,7 +21,10 @@ import (
  	"github.com/go-jose/go-jose/v4"
  	"github.com/gorilla/mux"
@@ -39,10 +39,10 @@ index a00b290b..f628342a 100644
  	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
  		a.LoggedIn = true
  		a.Claims = claims
-diff --git i/storage/kubernetes/types.go w/storage/kubernetes/types.go
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
 index c126ddc0..4c1a1efa 100644
---- i/storage/kubernetes/types.go
-+++ w/storage/kubernetes/types.go
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
 @@ -251,6 +251,9 @@ type Client struct {
  
  	Name    string `json:"name,omitempty"`
@@ -97,10 +97,10 @@ index c126ddc0..4c1a1efa 100644
  	}
  }
  
-diff --git i/storage/storage.go w/storage/storage.go
+diff --git a/storage/storage.go b/storage/storage.go
 index 574b0a5a..dac3115c 100644
---- i/storage/storage.go
-+++ w/storage/storage.go
+--- a/storage/storage.go
++++ b/storage/storage.go
 @@ -171,6 +171,9 @@ type Client struct {
  	// Name and LogoURL used when displaying this client to the end user.
  	Name    string `json:"name" yaml:"name"`
