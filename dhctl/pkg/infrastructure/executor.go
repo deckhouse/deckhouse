@@ -16,9 +16,9 @@ package infrastructure
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -51,8 +51,11 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	}
 	defer stderr.Close()
 
+	log.DebugLn(cmd.String())
+
 	var (
-		wg sync.WaitGroup
+		wg     sync.WaitGroup
+		errBuf bytes.Buffer
 	)
 
 	wg.Add(2)
@@ -60,20 +63,15 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	go func() {
 		defer wg.Done()
 
-		reader := bufio.NewReader(stderr)
-		buf := make([]byte, 1024)
+		e := bufio.NewScanner(stderr)
+		for e.Scan() {
+			txt := e.Text()
+			log.DebugLn(txt)
 
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				chunk := buf[:n]
-				log.DebugLn(string(chunk))
-			}
-			if err != nil {
-				if err != io.EOF {
-					log.DebugF("Error reading stderr: %v", err)
+			if !app.IsDebug {
+				if !infrastructureLogsMatcher.MatchString(txt) {
+					errBuf.WriteString(txt + "\n")
 				}
-				break
 			}
 		}
 	}()
@@ -81,25 +79,12 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	go func() {
 		defer wg.Done()
 
-		reader := bufio.NewReader(stdout)
-		buf := make([]byte, 1024)
-
-		for {
-			n, err := reader.Read(buf)
-			if n > 0 {
-				chunk := buf[:n]
-				log.InfoLn(string(chunk))
-			}
-			if err != nil {
-				if err != io.EOF {
-					log.DebugF("Error reading stdout: %v", err)
-				}
-				break
-			}
+		s := bufio.NewScanner(stdout)
+		for s.Scan() {
+			logger.LogInfoLn(s.Text())
 		}
 	}()
 
-	log.DebugLn(cmd.String())
 	err = cmd.Start()
 	if err != nil {
 		log.ErrorF("Cannot start cmd: %v\n", err)
@@ -113,6 +98,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != hasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
+		err = fmt.Errorf(errBuf.String())
 		if app.IsDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
 		}

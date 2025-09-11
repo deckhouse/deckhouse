@@ -501,7 +501,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 	})
 }
 
-func (r *Runner) Plan(ctx context.Context, destroy bool) error {
+func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
@@ -519,6 +519,7 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 				VariablesPath:    r.variablesPath,
 				OutPath:          tmpFile.Name(),
 				DetailedExitCode: true,
+				NoOutput:         noout,
 			})
 		})
 

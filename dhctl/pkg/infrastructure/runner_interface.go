@@ -23,7 +23,7 @@ import (
 type RunnerInterface interface {
 	Init(ctx context.Context) error
 	Apply(ctx context.Context) error
-	Plan(ctx context.Context, destroy bool) error
+	Plan(ctx context.Context, destroy, noout bool) error
 	Destroy(ctx context.Context) error
 	Stop()
 
