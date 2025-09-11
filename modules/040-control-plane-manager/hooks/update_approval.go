@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -149,9 +150,9 @@ type approvedPod struct {
 	NodeName string
 }
 
-func handleUpdateApproval(input *go_hook.HookInput) error {
+func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snaps := input.NewSnapshots.Get("nodes")
+	snaps := input.Snapshots.Get("nodes")
 	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
@@ -161,7 +162,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	}
 
 	// Remove approved annotations if pod is ready and node has annotation
-	snaps = input.NewSnapshots.Get("control_plane_manager")
+	snaps = input.Snapshots.Get("control_plane_manager")
 	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'control_plane_manager' snapshots: %v", err)

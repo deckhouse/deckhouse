@@ -16,6 +16,6 @@ For the VMs, you want to add to a cluster as nodes, add a `Network Tag` similar 
 You can find out `prefix` using the command:
 
 ```shell
-kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
   | base64 -d | grep prefix
 ```

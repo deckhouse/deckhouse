@@ -7,7 +7,7 @@ title: "The deckhouse module: FAQ"
 First, you have to exec in Deckhouse Pod:
 
 ```shell
-kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
+d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- bash
 ```
 
 Then you have to select which node you want to run kube-bench.
@@ -15,19 +15,19 @@ Then you have to select which node you want to run kube-bench.
 * Run on random node:
 
   ```shell
-  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl create -f -
+  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k create -f -
   ```
 
 * Run on specific node, e.g. control-plane node:
 
   ```shell
-  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | kubectl apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | kubectl create -f -
+  curl -s https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml | d8 k apply -f - --dry-run=client -o json | jq '.spec.template.spec.tolerations=[{"operator": "Exists"}] | .spec.template.spec.nodeSelector={"node-role.kubernetes.io/control-plane": ""}' | d8 k create -f -
   ```
 
 Then you can check report:
 
 ```shell
-kubectl logs job.batch/kube-bench
+d8 k logs job.batch/kube-bench
 ```
 
 {% alert level="warning" %}
@@ -41,9 +41,7 @@ We always appreciate helping users with debugging complex issues. Please follow 
 1. Collect all the necessary information by running the following command:
 
    ```sh
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
-     -- deckhouse-controller collect-debug-info \
-     > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
+   d8 p collect-debug-info > deckhouse-debug-$(date +"%Y_%m_%d").tar.gz
    ```
 
 2. Send the archive to the [Deckhouse team](https://github.com/deckhouse/deckhouse/issues/new/choose) for further debugging.
@@ -154,7 +152,7 @@ Data that will be collected:
 Run the following command:
 
 ```shell
-kubectl -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
+d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 ```
 
 More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
@@ -164,7 +162,7 @@ More info in [official documentation](https://kubernetes.io/docs/tasks/debug/deb
 Run the following command:
 
 ```shell
-kubectl debug node/mynode -it --image=ubuntu
+d8 k debug node/mynode -it --image=ubuntu
 ```
 
 More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#node-shell-session).

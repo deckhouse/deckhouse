@@ -109,8 +109,13 @@ spec:
   {{- end }}
 
         ports:
+        {{- if (hasPrefix "1.25" $fullVersion) }}
+        - containerPort: 8443
+          name: https-metrics
+        {{- else}}
         - containerPort: 8383
           name: http-metrics
+        {{- end }}
           protocol: TCP
         env:
           - name: WATCH_NAMESPACE

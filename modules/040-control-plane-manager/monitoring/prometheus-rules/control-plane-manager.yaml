@@ -34,7 +34,7 @@
         To resolve this issue, check the status of the `kube-system/d8-control-plane-manager` DaemonSet and its pods by running the following command:
 
         ```bash
-        kubectl -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
+        d8 k -n kube-system get daemonset,pod --selector=app=d8-control-plane-manager
         ```
   - alert: D8KubernetesVersionIsDeprecated
     for: 10m
@@ -95,7 +95,7 @@
         Example of applying an additional audit policy:
 
         ```bash
-        kubectl apply -f - <<EOF
+        d8 k apply -f - <<EOF
         apiVersion: v1
         kind: Secret
         metadata:

@@ -65,7 +65,7 @@ To do this, use the [`instancePrefix`](../node-manager/configuration.html#parame
 
 To set up a hybrid cluster, follow these steps:
 
-1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Delete flannel from kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.

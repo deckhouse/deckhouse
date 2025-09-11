@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -90,7 +90,7 @@ apiVersions:
                 description: |
                   Список дополнительных лейблов.
 
-                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).                  
+                  Подробно про лейблы можно прочитать [в документации Google Cloud](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
           zones: &NodeGroupZones_ru
             description: |
                 Список зон, в которых допустимо создавать узлы.
@@ -114,7 +114,7 @@ apiVersions:
                 taints:
                   description: |
                     Аналогично полю `.spec.taints` из объекта [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core).
-                  
+
                     > Доступны только поля `effect`, `key`, `values`.
             additionalNetworkTags:
               description: |

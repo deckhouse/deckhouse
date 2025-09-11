@@ -68,7 +68,7 @@
 {%- if include.mode=='documentation' %}
   {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
-  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
 <!-- multilang -->
 {%- if page.multilang %}

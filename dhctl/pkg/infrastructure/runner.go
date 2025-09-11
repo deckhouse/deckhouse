@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -62,8 +63,10 @@ var (
 	ErrInfrastructureApplyAborted = errors.New("Infrastructure apply aborted.")
 )
 
-type ExecutorProvider func(string, log.Logger) Executor
-type StateChecker func([]byte) error
+type (
+	ExecutorProvider func(string, log.Logger) Executor
+	StateChecker     func([]byte) error
+)
 
 type AutoApproveSettings struct {
 	AutoApprove bool
@@ -96,8 +99,8 @@ type Runner struct {
 	allowedCachedState     bool
 	changesInPlan          int
 	planDestructiveChanges *PlanDestructiveChanges
-
-	stateCache state.Cache
+	hasMasterDestruction   bool
+	stateCache             state.Cache
 
 	stateSaver   *StateSaver
 	stateChecker StateChecker
@@ -114,7 +117,10 @@ type Runner struct {
 	infraExecutor                       Executor
 	infraExecutorProvider               ExecutorProvider
 
-	hook InfraActionHook
+    hook InfraActionHook
+
+    vmTypeMu  sync.Mutex
+    vmTypeMap map[string]string
 }
 
 func NewRunner(cfg *config.MetaConfig, step string, stateCache state.Cache, executorProvider ExecutorProvider) *Runner {
@@ -255,6 +261,7 @@ func (r *Runner) WithAutoDismissDestructiveChanges(flag bool) *Runner {
 	r.changeSettings.AutoDismissDestructive = flag
 	return r
 }
+
 func (r *Runner) WithAutoDismissChanges(flag bool) *Runner {
 	r.changeSettings.AutoDismissChanges = flag
 	return r
@@ -369,7 +376,7 @@ func (r *Runner) Init(ctx context.Context) error {
 }
 
 func (r *Runner) stateName() string {
-	return fmt.Sprintf("%s.tfstate", r.name)
+    return fmt.Sprintf("%s.tfstate", r.name)
 }
 
 func (r *Runner) getHook() InfraActionHook {
@@ -468,7 +475,6 @@ func (r *Runner) Apply(ctx context.Context) error {
 
 				return r.stateChecker(st)
 			})
-
 			if err != nil {
 				return err
 			}
@@ -524,13 +530,15 @@ func (r *Runner) Plan(ctx context.Context, destroy bool) error {
 
 		if exitCode == hasChangesExitCode {
 			r.changesInPlan = PlanHasChanges
-			destructiveChanges, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
+			report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
+			destructiveChanges := report.Changes
 			if err != nil {
 				return err
 			}
 			if destructiveChanges != nil {
 				r.changesInPlan = PlanHasDestructiveChanges
 				r.planDestructiveChanges = destructiveChanges
+				r.hasMasterDestruction = report.hasMasterDestruction
 			}
 		} else if err != nil {
 			return err
@@ -562,7 +570,6 @@ func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]
 		result = res
 		return 0, nil
 	})
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -601,7 +608,6 @@ func (r *Runner) Destroy(ctx context.Context) error {
 
 		return 0, err
 	})
-
 	if err != nil {
 		return fmt.Errorf("Cannot prepare terrafrom destroy plan: %w", err)
 	}
@@ -680,6 +686,10 @@ func (r *Runner) GetChangesInPlan() int {
 	return r.changesInPlan
 }
 
+func (r *Runner) GetMasterDestruction() bool {
+	return r.hasMasterDestruction
+}
+
 func (r *Runner) GetPlanDestructiveChanges() *PlanDestructiveChanges {
 	return r.planDestructiveChanges
 }
@@ -720,23 +730,17 @@ func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ct
 	return exitCode, err
 }
 
-type Plan map[string]any
-
-type PlanDestructiveChanges struct {
-	ResourcesDeleted   []ValueChange `json:"resources_deleted,omitempty"`
-	ResourcesRecreated []ValueChange `json:"resourced_recreated,omitempty"`
-}
-
-type ValueChange struct {
-	CurrentValue interface{} `json:"current_value,omitempty"`
-	NextValue    interface{} `json:"next_value,omitempty"`
-	Type         string      `json:"type,omitempty"`
-}
-
-func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*PlanDestructiveChanges, error) {
+func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string) (*DestructiveChangesReport, error) {
 	var result []byte
+	var providerName string
+	var hasMasterInstanceDestructiveChanges bool
 
-	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+    resTypeMap, err := r.getProviderVMTypes()
+    if err != nil {
+        return nil, err
+    }
+
+	_, err = r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		res, err := r.infraExecutor.Show(ctx, planFile)
 		if err != nil {
 			return 0, err
@@ -745,7 +749,6 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		result = res
 		return 0, nil
 	})
-
 	if err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
@@ -754,19 +757,8 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return nil, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	var changes struct {
-		ResourcesChanges []struct {
-			Change struct {
-				Actions []string               `json:"actions"`
-				Before  map[string]interface{} `json:"before,omitempty"`
-				After   map[string]interface{} `json:"after,omitempty"`
-			} `json:"change"`
-			Type string `json:"type"`
-		} `json:"resource_changes"`
-	}
-
-	err = json.Unmarshal(result, &changes)
-	if err != nil {
+	var plan TfPlan
+	if err := json.Unmarshal(result, &plan); err != nil {
 		return nil, err
 	}
 
@@ -778,8 +770,14 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 		return destructiveChanges
 	}
 
-	for _, resource := range changes.ResourcesChanges {
+	for _, resource := range plan.ResourceChanges {
 		if hasAction(resource.Change.Actions, "delete") {
+			if providerName == "" && resource.ProviderName != "" {
+				providerName = resource.ProviderName
+			}
+			if !hasMasterInstanceDestructiveChanges {
+				hasMasterInstanceDestructiveChanges = IsMasterInstanceDestructiveChanged(ctx, resource, resTypeMap)
+			}
 			if hasAction(resource.Change.Actions, "create") {
 				// recreate
 				getOrCreateDestructiveChanges().ResourcesRecreated = append(getOrCreateDestructiveChanges().ResourcesRecreated, ValueChange{
@@ -795,8 +793,11 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 			}
 		}
 	}
-
-	return destructiveChanges, nil
+	log.DebugF("hasMasterDestruction: %s\n", hasMasterInstanceDestructiveChanges)
+	return &DestructiveChangesReport{
+		Changes:              destructiveChanges,
+		hasMasterDestruction: hasMasterInstanceDestructiveChanges,
+	}, nil
 }
 
 func hasAction(actions []string, findAction string) bool {

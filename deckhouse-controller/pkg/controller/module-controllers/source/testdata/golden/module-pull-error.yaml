@@ -21,11 +21,11 @@ status:
   - checksum: 'sha256:'
     name: enabledmodule
     version: v1.2.3
-  - name: errormodule
-    policy: test-alpha
-    pullError: |-
+  - error: |-
       get image info: fetch image error: GET https://registry.deckhouse.io/v2/deckhouse/ee/modules/errormodule/release/manifests/alpha:
             MANIFEST_UNKNOWN: manifest unknown; map[Tag:alpha]
+    name: errormodule
+    policy: test-alpha
     version: unknown
   modulesCount: 2
   phase: Active

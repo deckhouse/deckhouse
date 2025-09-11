@@ -87,8 +87,8 @@ func (c *Reconciler) Start() {
 	defer c.logger.Info("Stop cloud data discoverer fully")
 
 	c.logger.Info("Start cloud data discoverer")
-	c.logger.Info("Address:", c.listenAddress)
-	c.logger.Info("Checks interval:", c.checkInterval)
+	c.logger.Info("Address:", "address", c.listenAddress)
+	c.logger.Info("Checks interval:", "checks_interval", c.checkInterval)
 
 	// channels to stop converge loop
 	doneCh := make(chan struct{})
@@ -474,6 +474,8 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 			if err != nil {
 				return fmt.Errorf("Cannot create cloud data resource: %v", err)
 			}
+			c.updateResourceErrorMetric.WithLabelValues().Set(0.0)
+			return nil
 
 		} else if errGetting != nil {
 			return fmt.Errorf("Cannot check d8-cloud-provider-discovery-data secret before creating it: %v", errGetting)

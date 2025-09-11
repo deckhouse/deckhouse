@@ -14,7 +14,7 @@ description: Периодическое сканирование на уязви
 Чтобы снова включить сканирование для пространства имён `default`, необходимо установить у него метку командой:
 
 ```shell
-kubectl label namespace default security-scanning.deckhouse.io/enabled=""
+d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 ```
 
 ## Где просматривать результаты сканирования

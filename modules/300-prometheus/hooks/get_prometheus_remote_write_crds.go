@@ -17,11 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type RemoteWrite struct {
@@ -57,8 +60,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, remoteWriteHandler)
 
-func remoteWriteHandler(input *go_hook.HookInput) error {
-	prw := input.Snapshots["prometheusremotewrite"]
+func remoteWriteHandler(_ context.Context, input *go_hook.HookInput) error {
+	var prw []RemoteWrite
+	prw, err := sdkobjectpatch.UnmarshalToStruct[RemoteWrite](input.Snapshots, "prometheusremotewrite")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'prometheusremotewrite' snapshot: %w", err)
+	}
 
 	if len(prw) == 0 {
 		input.Values.Set("prometheus.internal.remoteWrite", make([]interface{}, 0))

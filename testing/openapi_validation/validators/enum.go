@@ -136,6 +136,11 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
+		"modules/030-csi-vsphere/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.discoveryData.properties.apiVersion",

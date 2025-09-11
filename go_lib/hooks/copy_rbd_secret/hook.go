@@ -17,6 +17,7 @@ limitations under the License.
 package copy_rbd_secret
 
 import (
+	"context"
 	"errors"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -100,7 +101,7 @@ func filterSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 }
 
 func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) error {
-	secretSnap := input.NewSnapshots.Get("rbd_secret")
+	secretSnap := input.Snapshots.Get("rbd_secret")
 	if len(secretSnap) == 0 {
 		return nil
 	}
@@ -129,7 +130,7 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 		}
 	}
 
-	storageClassSnap := input.NewSnapshots.Get("rbd_storageclass")
+	storageClassSnap := input.Snapshots.Get("rbd_storageclass")
 
 	for storageClass, err := range sdkobjectpatch.SnapshotIter[storageClassObject](storageClassSnap) {
 		if err != nil {
@@ -168,8 +169,8 @@ func copyRBDSecretHandlerWithArgs(input *go_hook.HookInput, namespace string) er
 	return nil
 }
 
-func copyRBDSecretHandler(namespace string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
+func copyRBDSecretHandler(namespace string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
 		err := copyRBDSecretHandlerWithArgs(input, namespace)
 		if err != nil {
 			return err

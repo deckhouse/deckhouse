@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -83,8 +84,8 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 // - from any other service selected by label 'k8s-app=kube-dns'
 //   if there are no more ClusterIP services with same label in namespace
 
-func discoveryDNSAddress(input *go_hook.HookInput) error {
-	services, err := sdkobjectpatch.UnmarshalToStruct[ServiceAddr](input.NewSnapshots, "dns_cluster_ip")
+func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
+	services, err := sdkobjectpatch.UnmarshalToStruct[ServiceAddr](input.Snapshots, "dns_cluster_ip")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal dns_cluster_ip snapshot: %w", err)
 	}

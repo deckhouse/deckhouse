@@ -46,7 +46,7 @@ type etcdInstance struct {
 }
 
 func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints []string) (etcd.Client, error) {
-	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "etcd-certificate")
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, "etcd-certificate")
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal etcd-certificate: %w", err)
 	}

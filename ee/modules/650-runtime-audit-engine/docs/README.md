@@ -23,10 +23,11 @@ This module:
 
 The module uses the eBPF Falco driver to ingest syscall data. It is better suited for environments where loading a kernel module is prohibited or unsupported, such as GKE, EKS, and other managed Kubernetes solutions.
 The eBPF driver has the following requirements:
-* Linux kernel version >= 5.8.
-* Enabled [eBPF](https://www.kernel.org/doc/html/v5.8/bpf/btf.html). You can verify it as follows:
-  - Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, eBPF support is enabled.
-  - Run `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — the parameter must be set for eBPF to function properly.
+
+* Linux kernel version >= 5.8 with eBPF support.
+* [BPF Type Format (BTF)](https://www.kernel.org/doc/html/v5.8/bpf/btf.html) support enabled. You can verify it as follows:
+  * Run `ls -lah /sys/kernel/btf/vmlinux` — if the file exists, BTF is supported.
+  * Run `grep -E "CONFIG_DEBUG_INFO_BTF=(y|m)" /boot/config-*` — if the parameter is enabled, BTF is supported.
 
 > eBPF probes may not work on some systems.
 
@@ -109,7 +110,7 @@ There is also an additional set of built-in rules:
 To list all `falco` audit rules, run:
 
 ```shell
-kubectl -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
+d8 k -n d8-runtime-audit-engine exec -it daemonsets/runtime-audit-engine -c falco -- falco -L
 ```
 
 {% alert level="info" %}

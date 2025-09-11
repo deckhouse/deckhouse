@@ -265,13 +265,13 @@ To disable statistics collection, add label `ingress.deckhouse.io/discard-metric
 Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
 
 ```shell
-kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+d8 k label ns review-1 ingress.deckhouse.io/discard-metrics=true
 ```
 
 Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
 
 ```shell
-kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+d8 k label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
 
 ## How do I correctly drain a node running an IngressNginxController's pods?
@@ -283,16 +283,16 @@ There are two ways to gracefully drain a node running IngressNginxController.
     The annotation will be automatically removed after the operation completes.
 
     ```shell
-    kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+    d8 k annotate node <node_name> update.node.deckhouse.io/draining=user
     ```
 
-1. Using kubectl drain.
+1. Using d8 k drain.
 
-    When using the standard kubectl drain command, you must specify the `--force` flag even if `--ignore-daemonsets` is present,
+    When using the standard d8 k drain command, you must specify the `--force` flag even if `--ignore-daemonsets` is present,
     since IngressNginxController is deployed using Advanced DaemonSet:
 
     ```shell
-    kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+    d8 k drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
     ```
 
 ## How to enable Web Application Firewall (WAF)?

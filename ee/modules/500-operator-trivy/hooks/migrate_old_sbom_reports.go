@@ -55,8 +55,8 @@ var sbomGVR = schema.GroupVersionResource{
 	Resource: "sbomreports",
 }
 
-func handleReports(input *go_hook.HookInput, dc dependency.Container) error {
-	sn := input.NewSnapshots.Get("namespaces")
+func handleReports(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	sn := input.Snapshots.Get("namespaces")
 	if len(sn) == 0 {
 		return nil
 	}

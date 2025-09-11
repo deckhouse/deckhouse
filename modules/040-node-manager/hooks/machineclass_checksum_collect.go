@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -107,12 +108,12 @@ func filterMachineDeploymentForChecksumCalculation(obj *unstructured.Unstructure
 	return result, nil
 }
 
-func saveMachineClassChecksum(input *go_hook.HookInput) error {
+func saveMachineClassChecksum(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Exists(machineDeploymentsInternalValuesPath) {
 		input.Values.Set(machineDeploymentsInternalValuesPath, map[string]interface{}{})
 	}
 
-	rawMDs := input.NewSnapshots.Get("machine_deployments")
+	rawMDs := input.Snapshots.Get("machine_deployments")
 	if len(rawMDs) == 0 {
 		return nil
 	}

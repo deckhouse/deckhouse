@@ -19,6 +19,14 @@ sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: snapshot-controller
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: sds-node-configurator
 spec:
   enabled: true
@@ -49,7 +57,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 Configuring the storage involves combining the available block devices on the nodes into pools, from which a StorageClass will then be created.
 
 1. Retrieve the available block devices:
-  
+
    ```shell
    sudo -i d8 k get blockdevices.storage.deckhouse.io
    ```
@@ -68,7 +76,7 @@ Configuring the storage involves combining the available block devices on the no
    On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
 
    To create the LVMVolumeGroup resource on the node, use the following commands:
-  
+
    ```yaml
    export NODE_NAME="dvp-worker-1"
    export DEV_NAME="dev-40bf7a561aee502f20b81cf1eff873a0455a95cb"
@@ -95,7 +103,7 @@ Configuring the storage involves combining the available block devices on the no
    Repeat the actions for each node whose block device is planned to be used. In the example, this includes all three nodes: `master-0`, `dvp-master-1`, and `dvp-master-2`.
 
    Wait for all the created LVMVolumeGroup resources to transition to the `Ready` state:
-  
+
    ```shell
    sudo -i d8 k get lvg -w
    ```
@@ -147,7 +155,7 @@ Configuring the storage involves combining the available block devices on the no
 
    - `replication` — replication parameters, for 2 replicas, the value `Availability` will be used;
    - `storagePool` — the name of the pool created earlier, in this example, it is `sds-pool`.
-  
+
    Other parameters are described in the [ReplicatedStorageClass resource documentation](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
 
    ```yaml

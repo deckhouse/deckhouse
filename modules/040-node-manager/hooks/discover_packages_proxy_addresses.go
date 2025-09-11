@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -78,8 +79,8 @@ func packagesProxyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return fmt.Sprintf("%s:%d", pod.Status.HostIP, packagesProxyPort), nil
 }
 
-func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("packages_proxy"))
+func handlePackagesProxyEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("packages_proxy"))
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {

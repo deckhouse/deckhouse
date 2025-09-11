@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -63,8 +64,8 @@ func applyDefaultStorageClassFilter(obj *unstructured.Unstructured) (go_hook.Fil
 	}, nil
 }
 
-func discoveryDefaultStorageClass(input *go_hook.HookInput) error {
-	storageClassesSnap, err := sdkobjectpatch.UnmarshalToStruct[storageClass](input.NewSnapshots, "default_sc")
+func discoveryDefaultStorageClass(_ context.Context, input *go_hook.HookInput) error {
+	storageClassesSnap, err := sdkobjectpatch.UnmarshalToStruct[storageClass](input.Snapshots, "default_sc")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal default_sc snapshot: %w", err)
 	}

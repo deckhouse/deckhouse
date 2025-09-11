@@ -26,10 +26,33 @@ set -Eeo pipefail
 `
 (index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
 
-
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
+bb-kubectl-exec() {
+  local kubeconfig="/etc/kubernetes/kubelet.conf"
+  local args=""
+{{ if eq .runType "Normal" }}
+  local kube_server
+  kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
+  if [[ -n "$kube_server" ]]; then
+    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
+    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
+    # checking local kubernetes-api-proxy availability
+    if ! nc -z "$host" "$port"; then
+      for server in {{ .normal.apiserverEndpoints | join " " }}; do
+        host=$(echo "$server" | cut -d: -f1)
+        port=$(echo "$server" | cut -d: -f2)
+        # select the first available control plane
+        if nc -z "$host" "$port"; then
+          args="--server=https://$server"
+          break
+        fi
+      done
+    fi
+  fi
+{{ end }}
+  kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
 }
+# make the function available in $step
+export -f bb-kubectl-exec
 
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
@@ -47,7 +70,7 @@ function bb-event-error-create() {
     nodeName=$(bb-d8-node-name)
     eventLog="/var/lib/bashible/step.log"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      kubectl_exec apply -f - <<EOF || true
+      bb-kubectl-exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
@@ -72,7 +95,7 @@ function bb-event-info-create() {
     eventName="$(echo -n "$(bb-d8-node-name)")-$1"
     nodeName="$(bb-d8-node-name)"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      kubectl_exec apply -f - <<EOF || true
+      bb-kubectl-exec apply -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
@@ -96,7 +119,7 @@ EOF
 function annotate_node() {
   echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
-  until error=$(kubectl_exec annotate node $(bb-d8-node-name) --overwrite ${@} 2>&1); do
+  until error=$(bb-kubectl-exec annotate node $(bb-d8-node-name) --overwrite ${@} 2>&1); do
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
@@ -117,7 +140,7 @@ function get_secret() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until kubectl_exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
+    until bb-kubectl-exec -n d8-cloud-instance-manager get secret "$secret" -o json; do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -154,7 +177,7 @@ function get_bundle() {
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     attempt=0
-    until kubectl_exec get "$resource" "$name" -o json; do
+    until bb-kubectl-exec get "$resource" "$name" -o json; do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -211,7 +234,7 @@ function main() {
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-    if tmp="$(kubectl_exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
+    if tmp="$(bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
       NODE_GROUP="$tmp"
       if [ "${NODE_GROUP}" == "null" ] ; then
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
@@ -249,7 +272,7 @@ function main() {
 
 {{ if eq .runType "Normal" }}
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      REBOOT_ANNOTATION="$( kubectl_exec get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
+      REBOOT_ANNOTATION="$( bb-kubectl-exec get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."update.node.deckhouse.io/reboot"' )"
     else
       REBOOT_ANNOTATION=null
   fi

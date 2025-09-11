@@ -53,7 +53,7 @@ func storageClassFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, err
 	return true, nil
 }
 
-func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
+func setupDefaultStorageClass(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const paramPath = "global.defaultClusterStorageClass"
 	defaultClusterStorageClass := input.Values.Get(paramPath).String()
 

@@ -19,6 +19,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -178,10 +179,10 @@ func filterResources(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return resource, nil
 }
 
-func grafanaV8ResourcesHandler(input *go_hook.HookInput) error {
+func grafanaV8ResourcesHandler(_ context.Context, input *go_hook.HookInput) error {
 	resources := make([][]GrafanaV8Resource, 0)
 	for _, resource := range []string{"grafana-v8-deployments", "grafana-v8-services", "grafana-v8-ingresses", "grafana-v8-pdb"} {
-		snapshots, err := sdkobjectpatch.UnmarshalToStruct[GrafanaV8Resource](input.NewSnapshots, resource)
+		snapshots, err := sdkobjectpatch.UnmarshalToStruct[GrafanaV8Resource](input.Snapshots, resource)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal %s snapshot: %w", resource, err)
 		}

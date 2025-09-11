@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -91,8 +92,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, setKubeDNSPolicy)
 
-func setKubeDNSPolicy(input *go_hook.HookInput) error {
-	nodes := input.NewSnapshots.Get("node_roles")
+func setKubeDNSPolicy(_ context.Context, input *go_hook.HookInput) error {
+	nodes := input.Snapshots.Get("node_roles")
 	nodesRolesCounters := make(map[string]int)
 
 	for node, err := range sdkobjectpatch.SnapshotIter[k8sNode](nodes) {

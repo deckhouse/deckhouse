@@ -20,6 +20,14 @@ sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
+  name: snapshot-controller
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
   name: sds-node-configurator
 spec:
   enabled: true
@@ -50,13 +58,13 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 Настройка хранилища включает в себя объединение доступных блочных устройств на узлах в пулы, из которых затем будет создан StorageClass.
 
 1. Получите доступные блочные устройства:
-  
+
    ```shell
    sudo -i d8 k get blockdevices.storage.deckhouse.io
    ```
-  
+
    Пример вывода с дополнительными дисками sda:
-  
+
    ```console
    NAME                                           NODE           CONSUMABLE   SIZE          PATH        AGE
    dev-93640bc74158c6e491a2f257b5e0177309588db0   master-0       false        468851544Ki   /dev/sda    8m28s
@@ -69,7 +77,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
 
    Для создания ресурса LVMVolumeGroup на узле используйте следующие команды:
-  
+
    ```yaml
    export NODE_NAME="dvp-worker-1"
    export DEV_NAME="dev-40bf7a561aee502f20b81cf1eff873a0455a95cb"
@@ -96,11 +104,11 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
    Повторите действия для каждого узла, блочное устройство которого планируется использовать. В примере это все три узла: `master-0`, `dvp-master-1` и `dvp-master-2`.
 
    Дождитесь, что все созданные ресурсы LVMVolumeGroup перейдут в состояние `Ready`:
-  
+
    ```shell
    sudo -i d8 k get lvg -w
    ```
-  
+
    Пример вывода:
 
    ```console
@@ -128,13 +136,13 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
         - name: vg-on-master
    EOF
    ```
-  
+
    Дождитесь, когда ресурс перейдет в состояние `Completed`:
-  
+
    ```shell
    sudo -i d8 k get rsp data -w
    ```
-  
+
    Пример вывода:
 
    ```console
@@ -148,7 +156,7 @@ sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 
    - `replication` — параметры репликации, для 2 реплик будет использоваться значение `Availability`;
    - `storagePool` — имя созданного ранее пула, в данном примере указывается `sds-pool`.
-  
+
    Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
 
    ```yaml

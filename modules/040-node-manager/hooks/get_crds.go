@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -203,7 +204,7 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 
 var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 
-func getCRDsHandler(input *go_hook.HookInput) error {
+func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Detect InstanceClass kind and change binding if needed.
 	kindInUse, kindFromSecret := detectInstanceClassKind(input, getCRDsHookConfig)
 
@@ -265,10 +266,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
-	// Default zones. Take them from input.NewSnapshots.Get("machine_deployments")
-	// and from input.NewSnapshots.Get("cloud_provider_secret").zones
+	// Default zones. Take them from input.Snapshots.Get("machine_deployments")
+	// and from input.Snapshots.Get("cloud_provider_secret").zones
 	defaultZones := set.New()
-	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.NewSnapshots.Get("machine_deployments")) {
+	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.Snapshots.Get("machine_deployments")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'machine_deployments' snapshots: %w", err)
 		}
@@ -276,7 +277,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		defaultZones.Add(machineInfo.Zone)
 	}
 
-	cloudProviderSecrets, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.NewSnapshots, "cloud_provider_secret")
+	cloudProviderSecrets, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "cloud_provider_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
 	}
@@ -307,7 +308,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
 	instanceTypeCatalog := new(capacity.InstanceTypesCatalog)
-	iCatalogRaws := input.NewSnapshots.Get("instance_types_catalog")
+	iCatalogRaws := input.Snapshots.Get("instance_types_catalog")
 
 	if len(iCatalogRaws) == 1 {
 		err := iCatalogRaws[0].UnmarshalTo(instanceTypeCatalog)
@@ -316,7 +317,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 	}
 
-	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.NewSnapshots.Get("ngs")) {
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.Snapshots.Get("ngs")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
 		}
@@ -338,7 +339,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
-			for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.NewSnapshots.Get("ics")) {
+			for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.Snapshots.Get("ics")) {
 				if err != nil {
 					return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
 				}
@@ -544,9 +545,9 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
 
-	if len(input.NewSnapshots.Get("ngs")) != len(finalNodeGroups) {
+	if len(input.Snapshots.Get("ngs")) != len(finalNodeGroups) {
 		return fmt.Errorf("incorrect final nodegroups count (%d) should be %d in snapshots. See errors above for additional information",
-			len(finalNodeGroups), len(input.NewSnapshots.Get("ngs")))
+			len(finalNodeGroups), len(input.Snapshots.Get("ngs")))
 	}
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
@@ -599,7 +600,7 @@ var epochTimestampAccessor = func() int64 {
 
 var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
 	var fromSecret string
-	secretInfoSnapshots := input.NewSnapshots.Get("cloud_provider_secret")
+	secretInfoSnapshots := input.Snapshots.Get("cloud_provider_secret")
 
 	if len(secretInfoSnapshots) > 0 {
 		var secretInfo map[string]interface{}

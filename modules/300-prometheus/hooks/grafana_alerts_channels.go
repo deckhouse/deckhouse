@@ -17,12 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/300-prometheus/hooks/internal/v1alpha1"
 )
@@ -101,14 +104,17 @@ func filterGrafanaAlertsChannelCRD(obj *unstructured.Unstructured) (go_hook.Filt
 	}, nil
 }
 
-func grafanaAlertsChannelsHandler(input *go_hook.HookInput) error {
-	alertsChannelsRaw := input.Snapshots["grafana_alerts_channels"]
+func grafanaAlertsChannelsHandler(_ context.Context, input *go_hook.HookInput) error {
+	alertsChannelsRaw := input.Snapshots.Get("grafana_alerts_channels")
 
 	alertsChannels := make([]*GrafanaAlertsChannel, 0)
 
-	for _, nchRaw := range alertsChannelsRaw {
-		nch := nchRaw.(*GrafanaAlertsChannel)
-		alertsChannels = append(alertsChannels, nch)
+	for nchRaw, err := range sdkobjectpatch.SnapshotIter[GrafanaAlertsChannel](alertsChannelsRaw) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over grafana_alerts_channels: %w", err)
+		}
+
+		alertsChannels = append(alertsChannels, &nchRaw)
 	}
 
 	cfg := GrafanaAlertsChannelsConfig{

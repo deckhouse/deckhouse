@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
@@ -56,7 +57,7 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	err := sdk.FromUnstructured(obj, &extenderCR)
 	return extenderCR.Webhooks, err
 }
-func handleExtenders(input *go_hook.HookInput) error {
+func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 	type extenderConfig struct {
 		URLPrefix string `yaml:"urlPrefix" json:"urlPrefix"`
 		Weight    int    `yaml:"weight" json:"weight"`
@@ -68,7 +69,7 @@ func handleExtenders(input *go_hook.HookInput) error {
 
 	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
-	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.NewSnapshots.Get("kube_scheduler_extenders")) {
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.Snapshots.Get("kube_scheduler_extenders")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
 		}

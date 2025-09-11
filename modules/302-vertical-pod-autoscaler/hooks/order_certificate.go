@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -92,18 +95,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, vpaCertHandler)
 
-func vpaCertHandler(input *go_hook.HookInput) error {
+func vpaCertHandler(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		vpaCert vpaCertSecretData
 		err     error
 	)
 
-	snapshots := input.Snapshots["VPACertSecret"]
+	snapshots := input.Snapshots.Get("VPACertSecret")
 
 	shouldGenerateNewCert := true
 
-	if len(snapshots) > 0 {
-		vpaCert = *snapshots[0].(*vpaCertSecretData)
+	for vpaCert, err = range sdkobjectpatch.SnapshotIter[vpaCertSecretData](snapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'VPACertSecret' snapshots: %w", err)
+		}
+
 		shouldGenerateNewCert, err = certificate.IsCertificateExpiringSoon([]byte(vpaCert.ServerCert), time.Hour*7*24)
 		if err != nil {
 			return err

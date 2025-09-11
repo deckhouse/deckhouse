@@ -15,6 +15,7 @@
 package lease
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,5 +31,24 @@ func TestRenewRetryCount(t *testing.T) {
 		}
 
 		require.Equal(t, 40, lockConf.RenewRetries())
+	})
+}
+
+func TestTryRenewNilLease(t *testing.T) {
+	t.Run("Nil lease should return error, not panic", func(t *testing.T) {
+		lock := &LeaseLock{
+			config: LeaseLockConfig{
+				Identity: "test-id",
+			},
+		}
+
+		ctx := context.Background()
+
+		require.NotPanics(t, func() {
+			lease, err := lock.tryRenew(ctx, nil, true)
+			require.Nil(t, lease)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "Lease is nil")
+		})
 	})
 }

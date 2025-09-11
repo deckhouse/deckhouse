@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -43,10 +44,10 @@ var (
 
 // This hook adds node-role.kubernetes.io/control-plane label to all nodes with
 // node-role.kubernetes.io/master label. And vice versa.
-func applyBothNodeRoles(input *go_hook.HookInput) error {
+func applyBothNodeRoles(_ context.Context, input *go_hook.HookInput) error {
 	nodes := make([]labeledNode, 0)
 	for _, snapshotName := range []string{"master_nodes", "control_plane_nodes"} {
-		snapshots, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.NewSnapshots, snapshotName)
+		snapshots, err := sdkobjectpatch.UnmarshalToStruct[labeledNode](input.Snapshots, snapshotName)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal %s snapshot: %w", snapshotName, err)
 		}

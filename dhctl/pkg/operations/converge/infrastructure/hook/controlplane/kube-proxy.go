@@ -101,7 +101,11 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 		if app.SSHLegacyMode {
 			sshClient = clissh.NewClientFromFlags()
 		} else {
-			sshClient = gossh.NewClientFromFlags()
+			var err error
+			sshClient, err = gossh.NewClientFromFlags()
+			if err != nil {
+				return false, err
+			}
 		}
 
 	}

@@ -1,9 +1,5 @@
 ## Patches
 
-## 001-go-mod.patch
-
-Fix vulnerabilities in components.
-
 ### 001-add-pdb.patch
 
 Adds an extra spec field `.spec.replicas` which is set by the kruise controller every time an advanced daemonset set is reconcilied. The replicas value is calculated based on
@@ -12,6 +8,7 @@ Adds /scale subresource to advanced daemonset CRD so that a PDB could enforce it
 Adds some extra logic to the kruise controller to deal with relevant PDB's (to make them resync when necessary) and timely update replicas' count in some corner cases.
 
 ### 002-stick-to-maxunavailable.patch
+
 In case DaemonSet has surge == 0, Kruise Controller still able to designate more pods as allowed for replacement than
 maxUnavailable settings allows, resulting in parallel update instead of gradual.
 We impose additional condition to check if the list of the pods, marked by the controller as Unavailable, is bigger than maxUnavailable
@@ -41,3 +38,7 @@ Remove CRD check of `BroadcastJob` and `ImagePullJob`. We don't need them for Da
 ### 007-fix-informer.patch
 
 Addopts multi-namespace cache instead of using sharedindexinformer for getting necessary listers, as controller-runtime since v0.15.0+ doesn't provide sharedindexinformers for namespaced caches anymore, breaking openkruise logic https://github.com/openkruise/kruise/issues/1764.
+
+### 008-go-mod.patch
+
+Fix vulnerabilities in components.

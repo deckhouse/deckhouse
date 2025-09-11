@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +43,8 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return obj.GetName(), nil
 }
 
-func handleNamespaces(input *go_hook.HookInput) error {
-	snap := input.NewSnapshots.Get("namespaces")
+func handleNamespaces(_ context.Context, input *go_hook.HookInput) error {
+	snap := input.Snapshots.Get("namespaces")
 	if len(snap) == 0 {
 		input.Logger.Warn("trivy namespaces not found")
 		return nil

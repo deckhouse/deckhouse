@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -76,7 +77,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverDexCA)
 
-func discoverDexCA(input *go_hook.HookInput) error {
+func discoverDexCA(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		dexCAPath = "userAuthn.internal.discoveredDexCA"
 
@@ -109,7 +110,7 @@ func discoverDexCA(input *go_hook.HookInput) error {
 	case doNotNeedCAMode:
 		input.Values.Remove(dexCAPath)
 	case fromIngressSecretCAMode:
-		dexCASnapshots := input.NewSnapshots.Get("secret")
+		dexCASnapshots := input.Snapshots.Get("secret")
 		for dexCAFromSnapshot, err := range sdkobjectpatch.SnapshotIter[DexCA](dexCASnapshots) {
 			if err != nil {
 				return fmt.Errorf("cannot convert dex ca certificate from snaphots: failed to iterate over 'secret' snapshot: %w", err)

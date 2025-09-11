@@ -108,6 +108,19 @@ spec:
 EOF
 ```
 
+How to restore a disk from a previously created snapshot in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "VM Disks" section.
+- Click "Create Disk".
+- In the form that opens, enter a name for the disk in the "Disk Name" field.
+- In the "Source" field, make sure the "Snapshots" checkbox is selected.
+- From the drop-down list, select the disk snapshot you want to restore from.
+- In the "Size" field, set a size that is the same or larger than the size of the original disk.
+- In the "StorageClass Name" field, enter the "StorageClass" of the original disk.
+- Click the "Create" button.
+- The disk status is displayed at the top left, under the disk name.
+
 ## Creating Virtual Machine Snapshots
 
 A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The [VirtualMachineSnapshot](../../../reference/cr/virtualmachinesnapshot.html) resource is used to create virtual machine snapshots.
@@ -141,6 +154,9 @@ Snapshots can be used to realize the following scenarios:
 - [Creating disk snapshots](#creating-disk-snapshots)
 - [Restoring disks from snapshots](#restoring-disks-from-snapshots)
 - [Creating Virtual Machine Snapshots](#creating-virtual-machine-snapshots)
+  - [Types of snapshots](#types-of-snapshots)
+    - [Scenarios for using snapshots](#scenarios-for-using-snapshots)
+    - [Creating snapshots](#creating-snapshots)
 - [Restore from snapshots](#restore-from-snapshots)
   - [Restore a virtual machine](#restore-a-virtual-machine)
   - [Creating a VM clone / Using a VM snapshot as a template for creating a VM](#creating-a-vm-clone--using-a-vm-snapshot-as-a-template-for-creating-a-vm)
@@ -233,6 +249,20 @@ status:
     kind: VirtualDisk
     name: linux-vm-root
 ```
+
+How to create a VM snapshot in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- Go to the "Snapshots" tab.
+- Click the "Create" button.
+- In the form that opens, enter `linux-vm-snapshot` in the "Snapshot name" field.
+- On the "Configuration" tab, select `Never` in the "IP address conversion policy" field.
+- Enable the "Consistency Guarantee" switch.
+- In the "Snapshot Storage Class" field, select a class for the disk snapshot.
+- Click the "Create" button.
+- The snapshot status is displayed at the top left, under the snapshot name.
 
 ## Restore from snapshots
 

@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -70,12 +71,12 @@ func applyServiceFilterForAlerts(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
+func checkServicesForDeprecatedAnnotations(_ context.Context, input *go_hook.HookInput) error {
 	// Check ModuleConfig version and pools
 	input.MetricsCollector.Expire("D8MetallbUpdateMCVersionRequired")
 	input.MetricsCollector.Expire("D8MetallbObsoleteLayer2PoolsAreUsed")
 
-	mcSnaps := input.NewSnapshots.Get("module_config")
+	mcSnaps := input.Snapshots.Get("module_config")
 	if len(mcSnaps) != 1 {
 		return nil
 	}
@@ -117,7 +118,7 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 		"metallb.universe.tf/allow-shared-ip",
 	}
 
-	serviceSnaps := input.NewSnapshots.Get("services")
+	serviceSnaps := input.Snapshots.Get("services")
 	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfoForAlert](serviceSnaps) {
 		if err != nil {
 			input.Logger.Warn("iterate over services", log.Err(err))

@@ -34,5 +34,8 @@ data:
   {{- $_ := set $vcdValues "password" $providerClusterConfiguration.provider.password }}
   {{- $_ := set $vcdValues "apiToken" $providerClusterConfiguration.provider.apiToken }}
   {{- $_ := set $vcdValues "insecure" $providerClusterConfiguration.provider.insecure }}
+  {{- if $providerClusterConfiguration.metadata }}
+    {{- $_ := set $vcdValues "metadata" $providerClusterConfiguration.metadata }}
+  {{- end }}
 
   vcd: {{ $vcdValues | toJson | b64enc | quote }}

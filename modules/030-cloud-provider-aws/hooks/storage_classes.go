@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -93,7 +94,7 @@ func excludeCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 	return false
 }
 
-func storageClasses(input *go_hook.HookInput) error {
+func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	provision := input.Values.Get("cloudProviderAws.storageClass.provision").Array()
 
 	provisionExcludeNames := make([]gjson.Result, 0, len(provision))
@@ -159,7 +160,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	rawSCs, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.NewSnapshots, "module_storageclasses")
+	rawSCs, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.Snapshots, "module_storageclasses")
 	if err != nil {
 		return fmt.Errorf("unmarshal snapshot module_storageclasses: %w", err)
 	}

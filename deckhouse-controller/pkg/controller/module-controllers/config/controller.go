@@ -25,6 +25,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/shell-operator/pkg/metric"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -256,7 +257,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
-		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			releases := new(v1alpha1.ModuleReleaseList)
 			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
@@ -509,7 +510,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false
 		}
 
@@ -523,12 +524,12 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			}
 		}
 
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
 
 		return true
@@ -538,7 +539,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("enable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			return false
 		}
 		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)

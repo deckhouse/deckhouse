@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net"
@@ -207,7 +208,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, generateConfig)
 
 func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.CommonTLSSpec, error) {
-	for secret, err := range sdkobjectpatch.SnapshotIter[corev1.Secret](input.NewSnapshots.Get("tls-secrets")) {
+	for secret, err := range sdkobjectpatch.SnapshotIter[corev1.Secret](input.Snapshots.Get("tls-secrets")) {
 		if err != nil {
 			continue
 		}
@@ -265,19 +266,19 @@ func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec)
 	}
 }
 
-func generateConfig(input *go_hook.HookInput) error {
-	if len(input.NewSnapshots.Get("namespace")) < 1 {
+func generateConfig(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("namespace")) < 1 {
 		// there is no namespace to manipulate the config map, the hook will create it later on afterHelm
 		input.Values.Set("logShipper.internal.activated", false)
 		return nil
 	}
 
-	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ClusterLogDestination](input.NewSnapshots, "cluster_log_destination")
+	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ClusterLogDestination](input.Snapshots, "cluster_log_destination")
 	if err != nil {
 		return fmt.Errorf("unmarshal destinations: %w", err)
 	}
 
-	tokens, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "token")
+	tokens, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "token")
 	if err != nil {
 		return fmt.Errorf("unmarshal token: %w", err)
 	}
@@ -287,7 +288,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		token = tokens[0]
 	}
 
-	lokiEndpoints, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.NewSnapshots, "loki_endpoint")
+	lokiEndpoints, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.Snapshots, "loki_endpoint")
 	if err != nil {
 		return fmt.Errorf("unmarshal loki endpoint: %w", err)
 	}
@@ -325,7 +326,12 @@ func generateConfig(input *go_hook.HookInput) error {
 		destinations = append(destinations, *d)
 	}
 
-	configContent, err := composer.FromInput(input, destinations).Do()
+	composerFromInput, err := composer.FromInput(input, destinations)
+	if err != nil {
+		return err
+	}
+
+	configContent, err := composerFromInput.Do()
 	if err != nil {
 		return err
 	}

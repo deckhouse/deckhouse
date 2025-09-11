@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -64,7 +65,7 @@ func filterControlPlane(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}, nil
 }
 
-func updateControlPlane(input *go_hook.HookInput) error {
+func updateControlPlane(_ context.Context, input *go_hook.HookInput) error {
 	statusPatch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"initialized":                 true,
@@ -72,7 +73,7 @@ func updateControlPlane(input *go_hook.HookInput) error {
 			"externalManagedControlPlane": true,
 		},
 	}
-	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.NewSnapshots.Get("control_plane")) {
+	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.Snapshots.Get("control_plane")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'control_plane' classes: %w", err)
 		}

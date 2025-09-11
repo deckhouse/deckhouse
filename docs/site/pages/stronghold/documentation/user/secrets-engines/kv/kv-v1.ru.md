@@ -60,7 +60,7 @@ d8 stronghold secrets enable -version=1 kv
    Success! Data deleted (if it existed) at: kv/my-secret
    ```
 
-   Вы также можете использовать механизм [password policy] для генерации произвольных значений.
+   Вы также можете использовать механизм password policy для генерации произвольных значений.
 
 1. Создать политику для паролей:
 

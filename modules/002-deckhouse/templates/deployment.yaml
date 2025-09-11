@@ -1,11 +1,6 @@
 {{- define "deckhouse_resources" }}
-{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
-cpu: 100m
-memory: 300Mi
-{{- else }}
 cpu: 150m
-memory: 600Mi
-{{- end }}
+memory: 500Mi
 {{- end }}
 
 {{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
@@ -120,7 +115,7 @@ spec:
         - name: init-downloaded-modules
           image: {{ include "helm_lib_module_image" (list . "init") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
+          command: ['sh', '-c', 'mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -337,9 +332,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-{{- end }}
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -353,7 +346,7 @@ spec:
           medium: Memory
         name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
-      - emptyDir:
+      - emptyDir: {}
         name: chroot
 {{- end }}
       - emptyDir:

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -68,8 +69,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, clusterConfiguration)
 
-func clusterConfiguration(input *go_hook.HookInput) error {
-	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.NewSnapshots, "clusterConfiguration")
+func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.Snapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}

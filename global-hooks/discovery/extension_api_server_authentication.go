@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -49,8 +50,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // here is CM kube-system/extension-apiserver-authentication with CA
 // for verification requests to our custom modules from clients inside cluster,
 // hook must store it to `global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA`.
-func discoveryExtentsionAPIServerCA(input *go_hook.HookInput) error {
-	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "extension_api_server_authentication")
+func discoveryExtentsionAPIServerCA(_ context.Context, input *go_hook.HookInput) error {
+	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "extension_api_server_authentication")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal extension_api_server_authentication snapshot: %w", err)
 	}

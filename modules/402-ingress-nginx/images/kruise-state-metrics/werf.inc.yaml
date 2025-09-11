@@ -1,8 +1,7 @@
 {{- $commit := "b081f2ae9e011fd92fd23f6efa209601f5a20a01" }}
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+fromImage: builder/src
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -22,18 +21,18 @@ shell:
     - rm -rf ./vendor ./.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.24
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-  add: /src
-  to: /src
-  before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
 shell:
   setup:
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
@@ -44,12 +43,12 @@ shell:
     - chmod 0700 /tmp/kruise-state-metrics
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+fromImage: base/distroless
 import:
- - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-   add: /tmp/kruise-state-metrics
-   to: /kruise-state-metrics
-   before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /tmp/kruise-state-metrics
+    to: /kruise-state-metrics
+    before: setup
 imageSpec:
   config:
     entrypoint: ["/kruise-state-metrics"]

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -59,13 +60,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, kubernetesDexClientAppSecret)
 
-func kubernetesDexClientAppSecret(input *go_hook.HookInput) error {
+func kubernetesDexClientAppSecret(_ context.Context, input *go_hook.HookInput) error {
 	secretPath := "userAuthn.internal.kubernetesDexClientAppSecret"
 	if input.Values.Exists(secretPath) && input.Values.Get(secretPath).String() != "" {
 		return nil
 	}
 
-	kubernetesSecrets := input.NewSnapshots.Get("kubernetes_secret")
+	kubernetesSecrets := input.Snapshots.Get("kubernetes_secret")
 	if len(kubernetesSecrets) > 0 {
 		var secretContent []byte
 		err := kubernetesSecrets[0].UnmarshalTo(&secretContent)

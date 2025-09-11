@@ -51,19 +51,19 @@
         1. Check the state of the `d8-log-shipper/log-shipper-agent` DaemonSet:
 
            ```shell
-           kubectl -n d8-log-shipper get daemonsets --selector=app=log-shipper
+           d8 k -n d8-log-shipper get daemonsets --selector=app=log-shipper
            ```
 
         1. Check the state of the `d8-log-shipper/log-shipper-agent` pods:
 
            ```shell
-           kubectl -n d8-log-shipper get pods --selector=app=log-shipper-agent
+           d8 k -n d8-log-shipper get pods --selector=app=log-shipper-agent
            ```
 
         1. If you know where the DaemonSet should be scheduled, run the following command to identify the problematic nodes:
 
            ```shell
-           kubectl -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
+           d8 k -n d8-log-shipper get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="log-shipper-agent")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
            ```
 
   - alert: D8LogShipperDestinationErrors
@@ -90,7 +90,7 @@
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
         ```
 
   - alert: D8LogShipperCollectLogErrors
@@ -117,7 +117,7 @@
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
         ```
 
   - alert: D8LogShipperLogsDroppedByRateLimit
@@ -143,5 +143,5 @@
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        kubectl -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
+        d8 k -n d8-log-shipper get pods -o wide | grep {{ $labels.node }}
         ```

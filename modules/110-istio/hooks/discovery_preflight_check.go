@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -78,9 +79,9 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	return kubernetesVersion, err
 }
 
-func discoveryIsK8sVersionAutomatic(input *go_hook.HookInput) error {
+func discoveryIsK8sVersionAutomatic(_ context.Context, input *go_hook.HookInput) error {
 	var kubernetesVersionStr string
-	clusterConfigurationSnapshots := input.NewSnapshots.Get("cluster-configuration")
+	clusterConfigurationSnapshots := input.Snapshots.Get("cluster-configuration")
 	if len(clusterConfigurationSnapshots) == 0 {
 		versionParts := strings.Split(input.Values.Get("global.discovery.kubernetesVersion").String(), ".")
 		if len(versionParts) < 2 {

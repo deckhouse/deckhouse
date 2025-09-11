@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -69,8 +70,8 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func removeSecretGrfana(input *go_hook.HookInput) error {
-	if secretSnapshot := input.NewSnapshots.Get("secret"); len(secretSnapshot) > 0 {
+func removeSecretGrfana(_ context.Context, input *go_hook.HookInput) error {
+	if secretSnapshot := input.Snapshots.Get("secret"); len(secretSnapshot) > 0 {
 		for secret, err := range sdkobjectpatch.SnapshotIter[Secret](secretSnapshot) {
 			if err != nil {
 				return fmt.Errorf("cannot iterate over secret snapshot: %v", err)

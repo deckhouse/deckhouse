@@ -92,5 +92,5 @@ The `csi-yadro` pods must be running on all nodes.
 To check that the module works, run the following command:
 
 ```shell
-kubectl -n d8-csi-yadro get pod -owide -w
+d8 k -n d8-csi-yadro get pod -owide -w
 ```

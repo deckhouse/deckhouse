@@ -16,7 +16,7 @@ To configure, follow these steps:
    * Fill in `Local` and `Another VPC` fields.
 1. Switch to the region where vpc-b is running.
 1. Click `VPC` -> `VPC Peering Connections`.
-1. Select the newly created perring connection and click `Action "Accept Request"`.
+1. Select the newly created peering connection and click `Action "Accept Request"`.
 1. Add routes to vpc-b's CIDR over a peering connection to the vpc-a's routing tables.
 1. Add routes to vpc-a's CIDR over a peering connection to the vpc-b's routing tables.
 
@@ -80,13 +80,13 @@ To add a pre-created VM as a node to a cluster, follow these steps:
    * You can find out the `cluster_uuid` using the command:
 
      ```shell
-     kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+     d8 k -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
      ```
 
    * You can find out `prefix` using the command:
 
      ```shell
-     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+     d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
        | base64 -d | grep prefix
      ```
 
@@ -96,7 +96,7 @@ Set the new size in the corresponding PersistentVolumeClaim resource, in the `sp
 
 The operation is fully automatic and takes up to one minute. No further action is required.
 
-The progress of the process can be observed in events using the command `kubectl describe pvc`.
+The progress of the process can be observed in events using the command `d8 k describe pvc`.
 
 > After modifying a volume, you must wait at least six hours and ensure that the volume is in the `in-use` or `available` state before you can modify the same volume. This is sometimes referred to as a cooldown period. You can find details in the [official documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
 

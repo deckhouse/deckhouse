@@ -19,12 +19,14 @@ source /deckhouse/shell_lib.sh
 function __main__() {
   enabled::disable_module_if_cluster_is_not_bootstraped
 
+  # Check if publicDomainTemplate is set
   if ! values::has global.modules.publicDomainTemplate ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
     echo "spec.settings.modules.publicDomainTemplate is not set in the global configuration, configure it in ModuleConfig/global." > "$MODULE_ENABLED_REASON"
     return
   fi
 
+  # Check HTTPS mode
   https_mode=$(values::get_first_defined dashboard.https.mode global.modules.https.mode)
   if [ "$https_mode" = "Disabled" ]; then
     echo "false" > "$MODULE_ENABLED_RESULT"
@@ -32,24 +34,21 @@ function __main__() {
     return
   fi
 
-  if ! values::array_has global.enabledModules "user-authz" ; then
-    echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "'user-authz' module needs to be enabled." > "$MODULE_ENABLED_REASON"
+  # If user-authn is enabled
+  if values::array_has global.enabledModules "user-authn"; then
+    echo "true" > $MODULE_ENABLED_RESULT
     return
   fi
 
-  if values::array_has global.enabledModules "user-authn" ; then
-    echo "true" > "$MODULE_ENABLED_RESULT"
-    return
-  fi
-
+  # If user-authn is not enabled, check for external authentication URLs
   if values::has dashboard.auth.externalAuthentication.authSignInURL && \
-     values::has dashboard.auth.externalAuthentication.authURL ; then
-    echo "true" > "$MODULE_ENABLED_RESULT"
-  else
-    echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "required values settings.auth.externalAuthentication.authSignInURL and settings auth.externalAuthentication.authURL - set it in ModuleConfig/dashboard. " > "$MODULE_ENABLED_REASON"
+      values::has dashboard.auth.externalAuthentication.authURL ; then
+    echo "true" > $MODULE_ENABLED_RESULT
+    return
   fi
+
+  echo "false" > "$MODULE_ENABLED_RESULT"
+  echo "required values settings.auth.externalAuthentication.authSignInURL and settings auth.externalAuthentication.authURL - set it in ModuleConfig/dashboard. " > "$MODULE_ENABLED_REASON"
 }
 
 

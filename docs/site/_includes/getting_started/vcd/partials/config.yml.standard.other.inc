@@ -141,12 +141,12 @@ spec:
   # [<en>] IP range from the address pool.
   # [<ru>] Диапазон IP-адресов из пула.
   addressPool:
-    - 192.168.207.100-192.168.207.101  # <- замените на свои свободные IP в сети frontend-нод
+    - 192.168.207.100-192.168.207.101  # <- замените на свои свободные IP в сети frontend-узлов
   # [<en>] Set false to apply this class only when explicitly requested.
   # [<ru>] False — класс используется только при явном указании.
   isDefault: false
   # [<en>] Limit allocation to nodes with the frontend role.
-  # [<ru>] Ограничить выдачу IP-адресов только нодам с ролью frontend.
+  # [<ru>] Ограничить выдачу IP-адресов только узлам с ролью frontend.
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   type: L2

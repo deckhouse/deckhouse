@@ -30,13 +30,13 @@
         1. Check the `kube-state-metrics` pods:
         
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=kube-state-metrics
+           d8 k -n d8-monitoring describe pod -l app=kube-state-metrics
            ```
 
         2. Check the deployment logs:
         
            ```bash
-           kubectl -n d8-monitoring describe deploy kube-state-metrics
+           d8 k -n d8-monitoring describe deploy kube-state-metrics
            ```
 
   # kube_persistentvolume_is_local migration.
