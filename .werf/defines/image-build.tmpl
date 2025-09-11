@@ -5,6 +5,8 @@
 #   - SVACE_ANALYZE_HOST - svace analyze server host
 #   - ProjectName - project name which will be used in svacer (report server)
 #   - Commit.Hash - build commit hash, which is used to distinct artifacts on the analyze server and to add into import custom field
+#   - SvaceBuildOptions - optional parameter; might be used for javascript and python svacing
+#   - SvaceImportSettings - dict, which can contain ProjectName and Branch fields, to override default behavior of the futher analysis job
 # Svace build uploads gathered artifacts to the analyze server
 
 {{- define "image-build.build" }}
