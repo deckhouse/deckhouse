@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -36,9 +37,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type expirePatch struct {
-	ExpireAt string   `json:"expireAt,omitempty"`
-	Groups   []string `json:"groups"`
+type userStatusPatch struct {
+	ExpireAt string      `json:"expireAt,omitempty"`
+	Groups   []string    `json:"groups"`
+	Lock     DexUserLock `json:"lock"`
 }
 
 type DexUserInternalValues struct {
@@ -67,7 +69,21 @@ type DexUserSpec struct {
 }
 
 type DexUserStatus struct {
-	ExpireAt string `json:"expireAt,omitempty"`
+	ExpireAt string      `json:"expireAt,omitempty"`
+	Lock     DexUserLock `json:"lock"`
+}
+
+type DexUserLockReason string
+
+const (
+	PasswordPolicyLockout = DexUserLockReason("PasswordPolicyLockout")
+)
+
+type DexUserLock struct {
+	State   bool               `json:"state"`
+	Reason  *DexUserLockReason `json:"reason,omitempty"`
+	Message *string            `json:"message,omitempty"`
+	Until   *string            `json:"until,omitempty"`
 }
 
 type DexGroup struct {
@@ -97,6 +113,12 @@ type DexGroupStatus struct {
 	} `json:"errors,omitempty"`
 }
 
+type Password struct {
+	Username    string     `json:"username"`
+	Email       string     `json:"email"`
+	LockedUntil *time.Time `json:"lockedUntil"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/user-authn",
@@ -115,6 +137,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "Group",
 			FilterFunc: applyDexGroupFilter,
+		},
+		{
+			Name:       "passwords",
+			ApiVersion: "dex.coreos.com/v1",
+			Kind:       "Password",
+			FilterFunc: applyPasswordFilter,
 		},
 	},
 }, getDexUsers)
@@ -138,6 +166,15 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.Snapshots.Get("users")) {
 		if err != nil {
 			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
+		}
+
+		userNameToPassword := make(map[string]Password)
+		for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+			if err != nil {
+				return fmt.Errorf("cannot convert user to password: cannot iterate over 'passwords' snapshot: %v", err)
+			}
+
+			userNameToPassword[password.Username] = password
 		}
 
 		var groups []string
@@ -164,6 +201,18 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			expireAt = dexUser.Status.ExpireAt
 		}
 
+		lock := DexUserLock{}
+		password, ok := userNameToPassword[dexUser.Name]
+		if ok && password.LockedUntil != nil && password.LockedUntil.After(time.Now()) {
+			lock = DexUserLock{
+				State:   true,
+				Reason:  lo.ToPtr(PasswordPolicyLockout),
+				Message: lo.ToPtr("Locked due to too many failed login attempts"),
+				Until:   lo.ToPtr(password.LockedUntil.Format(time.RFC3339)),
+			}
+		}
+		dexUser.Status.Lock = lock
+
 		users = append(users, DexUserInternalValues{
 			Name:        dexUser.Name,
 			EncodedName: encoding.ToFnvLikeDex(strings.ToLower(dexUser.Spec.Email)),
@@ -172,24 +221,19 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			ExpireAt:    expireAt,
 		})
 
-		var patch map[string]interface{}
-		if expireAt == "" {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					Groups: groups,
-				},
-			}
-		} else {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					ExpireAt: expireAt,
-					Groups:   groups,
-				},
-			}
+		patch := userStatusPatch{
+			Groups: groups,
+			Lock:   lock,
+		}
+		if expireAt != "" {
+			patch.ExpireAt = expireAt
+		}
+		patchMap := map[string]any{
+			"status": patch,
 		}
 
-		input.Logger.Info("Update groups in user status", slog.String("name", dexUser.Name), slog.String("groups", strings.Join(patch["status"].(expirePatch).Groups, ",")))
-		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
+		input.Logger.Info("Sync user status", slog.Any("patch", patch))
+		input.PatchCollector.PatchWithMerge(patchMap, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)
@@ -212,6 +256,15 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
 	return user, nil
+}
+
+func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	password := &Password{}
+	err := sdk.FromUnstructured(obj, password)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	}
+	return password, nil
 }
 
 func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {

@@ -67,7 +67,9 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
-        - args:
+        - name: controller
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          args:
             - --metrics-bind-address=:8080
             {{- if .Values.serviceWithHealthchecks.debug }}
             - --debugging=true
