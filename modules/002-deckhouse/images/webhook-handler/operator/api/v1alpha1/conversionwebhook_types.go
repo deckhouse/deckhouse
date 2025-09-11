@@ -37,9 +37,6 @@ type ConversionWebhook struct {
 	Context []Context `json:"context,omitempty"`
 
 	// +optional
-	KubernetesCustomResourceConversion []KubernetesConversionConfigV1 `json:"kubernetesCustomResourceConversion,omitempty"`
-
-	// +optional
 	Conversions []Conversions `json:"conversions,omitempty"`
 
 	// status defines the observed state of ConversionWebhook
@@ -62,9 +59,10 @@ type ConversionRule struct {
 }
 
 type Conversions struct {
-	FromVersion string                   `json:"from"`
-	ToVersion   string                   `json:"to"`
-	Handler     ConversionWebhookHandler `json:"handler"`
+	From                 string                   `json:"from"`
+	To                   string                   `json:"to"`
+	IncludeSnapshotsFrom []string                 `json:"includeSnapshotsFrom,omitempty"`
+	Handler              ConversionWebhookHandler `json:"handler"`
 }
 
 type ConversionWebhookHandler struct {

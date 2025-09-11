@@ -25,12 +25,18 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+var defaultFuncMap = template.FuncMap{
+	"toYaml":   toYAML,
+	"indent":   indent,
+	"list":     list,
+	"split":    strings.Split,
+	"join":     strings.Join,
+	"getGroup": getGroup,
+	// "slice":    slice,
+}
+
 func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebhook) (*bytes.Buffer, error) {
-	tplt, err := template.New("validation").Funcs(template.FuncMap{
-		"toYaml": toYAML,
-		"indent": indent,
-		"list":   list,
-	}).Parse(tpl)
+	tplt, err := template.New("validation").Funcs(defaultFuncMap).Parse(tpl)
 	if err != nil {
 		return nil, fmt.Errorf("template parse: %w", err)
 	}
@@ -50,11 +56,7 @@ func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebh
 }
 
 func RenderConversionTemplate(tpl string, cwh *deckhouseiov1alpha1.ConversionWebhook) (*bytes.Buffer, error) {
-	tplt, err := template.New("conversion").Funcs(template.FuncMap{
-		"toYaml": toYAML,
-		"indent": indent,
-		"list":   list,
-	}).Parse(tpl)
+	tplt, err := template.New("conversion").Funcs(defaultFuncMap).Parse(tpl)
 	if err != nil {
 		return nil, fmt.Errorf("template parse: %w", err)
 	}
@@ -105,3 +107,16 @@ func indent(spaces int, s string) string {
 func list(objs ...any) []any {
 	return objs
 }
+
+// get CRD group from CRD name
+func getGroup(name string) string {
+	words := strings.Split(name, ".")
+	if len(words) >= 1 {
+		words = words[1:]
+	}
+	return strings.Join(words, ".")
+}
+
+// func slice(s string, i, j int) string {
+// 	return s[i:j]
+// }

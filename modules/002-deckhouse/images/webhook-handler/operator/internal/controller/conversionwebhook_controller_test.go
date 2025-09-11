@@ -25,6 +25,7 @@ import (
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/assert"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -84,12 +85,12 @@ func getConversionStructFromYamlFile(filename string) (*deckhouseiov1alpha1.Conv
 // --- TEST-CASES ---
 // ------------------
 
-func TestTemplateNoError2(t *testing.T) {
+func TestConversionTemplateNoError(t *testing.T) {
 	// setup
 	r := setupTestConversionReconciler()
 	ctx := context.TODO()
 
-	cwh, err := getConversionStructFromYamlFile("testdata/conversion/conversionwebhook-sample.yaml")
+	cwh, err := getConversionStructFromYamlFile("testdata/conversion/crontabs.stable.example.com.yaml")
 	assert.NoError(t, err)
 
 	err = r.Client.Create(ctx, cwh)
@@ -99,26 +100,49 @@ func TestTemplateNoError2(t *testing.T) {
 	assert.NoError(t, err)
 
 	// test equality
-	// ref, err := os.ReadFile("testdata/validating/golden/validationwebhook-sample.py")
-	// assert.NoError(t, err)
+	ref, err := os.ReadFile("testdata/conversion/golden/crontabs.stable.example.com.py")
+	assert.NoError(t, err)
 
-	// res, err := os.ReadFile("hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py")
-	// assert.NoError(t, err)
-	// assert.Equal(t, string(ref), string(res))
+	res, err := os.ReadFile("hooks/crontabs.stable.example.com/webhooks/conversion/crontabs.stable.example.com.py")
+	assert.NoError(t, err)
+	assert.Equal(t, string(ref), string(res))
 
-	// // test delete
-	// err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
-	// assert.NoError(t, err)
+	// test delete
+	err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
+	assert.NoError(t, err)
 
-	// err = r.Client.Delete(ctx, cwh)
-	// assert.NoError(t, err)
+	err = r.Client.Delete(ctx, cwh)
+	assert.NoError(t, err)
 
-	// _, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
-	// assert.NoError(t, err)
+	_, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
+	assert.NoError(t, err)
 
-	// err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
-	// assert.True(t, apierrors.IsNotFound(err))
+	err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
+	assert.True(t, apierrors.IsNotFound(err))
 
-	// _, err = os.ReadFile("hooks/validationwebhook-sample/webhooks/validating/validationwebhook-sample.py")
-	// assert.True(t, os.IsNotExist(err))
+	_, err = os.ReadFile("hooks/crontabs.stable.example.com/webhooks/conversion/crontabs.stable.example.com.py")
+	assert.True(t, os.IsNotExist(err))
+}
+
+func TestConversionTemplateEqual(t *testing.T) {
+	// setup
+	r := setupTestConversionReconciler()
+	ctx := context.TODO()
+
+	cwh, err := getConversionStructFromYamlFile("testdata/conversion/nodegroups.deckhouse.io.yaml")
+	assert.NoError(t, err)
+
+	err = r.Client.Create(ctx, cwh)
+	assert.NoError(t, err)
+
+	_, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
+	assert.NoError(t, err)
+
+	// test equality
+	ref, err := os.ReadFile("testdata/conversion/golden/nodegroups.deckhouse.io.py")
+	assert.NoError(t, err)
+
+	res, err := os.ReadFile("hooks/nodegroups.deckhouse.io/webhooks/conversion/nodegroups.deckhouse.io.py")
+	assert.NoError(t, err)
+	assert.Equal(t, string(ref), string(res))
 }
