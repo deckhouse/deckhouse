@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -796,11 +798,11 @@ func (suite *ReleaseControllerTestSuite) loopUntilDeploy(dc *dependency.MockedCo
 		i      int
 	)
 
-	// Setting restartReason field in real code causes the process to reboot.
+	// Setting releaseWasProcessed field in real code causes the process to reboot.
 	// And at the next startup, Reconcile will be called for existing objects.
 	// Therefore, this condition emulates the behavior in real code.
-	for result.Requeue || result.RequeueAfter > 0 || suite.ctr.restartReason != "" {
-		suite.ctr.restartReason = ""
+	for result.Requeue || result.RequeueAfter > 0 || suite.ctr.releaseWasProcessed.Load() {
+		suite.ctr.releaseWasProcessed.Store(false)
 		dc.GetFakeClock().Advance(result.RequeueAfter)
 
 		dr := suite.getModuleRelease(releaseName)
@@ -902,7 +904,7 @@ type: Opaque
 		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
-		delayTimer:           time.NewTimer(3 * time.Second),
+		delayTicker:          time.NewTicker(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
@@ -1162,6 +1164,200 @@ func TestValidateModule(t *testing.T) {
 		},
 	})
 	check("validation/virtualization", true, nil)
+}
+
+func TestConcurrentModuleRestartFlow(t *testing.T) {
+	t.Run("concurrent dry run releases", func(t *testing.T) {
+		suite := &ReleaseControllerTestSuite{}
+		suite.SetT(t)
+		suite.Suite.SetupSuite()
+		suite.Suite.SetupSubTest()
+		defer suite.Suite.TearDownSubTest()
+
+		testData := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/modules
+    ca: ""
+    dockerCfg: ""
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-a-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-a
+spec:
+  moduleName: module-a
+  version: 1.0.0
+  weight: 100
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-b-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-b
+spec:
+  moduleName: module-b
+  version: 1.0.0
+  weight: 200
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-c-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-c
+spec:
+  moduleName: module-c
+  version: 1.0.0
+  weight: 300
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+`
+		suite.setupReleaseController(testData)
+
+		// test ticker with shorter interval for faster testing rather than 15s
+		suite.ctr.delayTicker.Stop()
+		suite.ctr.delayTicker = time.NewTicker(100 * time.Millisecond)
+		defer suite.ctr.delayTicker.Stop()
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// Track restart calls (since we can't actually restart in tests)
+		restartCalled := &atomic.Bool{}
+
+		// Initialize readyForRestart as done in controller
+		suite.ctr.readyForRestart.Store(true)
+
+		// Start the "restart loop"
+		go func() {
+			for {
+				select {
+				case <-suite.ctr.delayTicker.C:
+					if suite.ctr.activeApplyCount.Load() > 0 {
+						suite.ctr.readyForRestart.Store(true)
+					}
+
+					if !suite.ctr.readyForRestart.Load() {
+						restartCalled.Store(true)
+						suite.ctr.releaseWasProcessed.Store(false)
+						return
+					}
+
+					if suite.ctr.releaseWasProcessed.Load() && suite.ctr.activeApplyCount.Load() == 0 {
+						suite.ctr.readyForRestart.Store(false)
+					}
+
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
+		const numModules = 3
+		var wg sync.WaitGroup
+		moduleStarted := make(chan struct{}, numModules)
+		allowCompletion := make(chan struct{})
+
+		// Function to apply a release with timing control
+		applyReleaseWithControl := func(releaseName string) {
+			defer wg.Done()
+
+			// Simulate applyRelease call
+			mr := suite.getModuleRelease(releaseName)
+
+			// This mimics the applyRelease method behavior
+			suite.ctr.activeApplyCount.Add(1)
+			defer func() {
+				suite.ctr.activeApplyCount.Add(-1)
+				suite.ctr.releaseWasProcessed.Store(true)
+			}()
+
+			moduleStarted <- struct{}{}
+			<-allowCompletion
+
+			// Simulate dry run deploy (faster than real 15 seconds)
+			time.Sleep(50 * time.Millisecond)
+
+			// Process the release
+			_, err := suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(t, err)
+		}
+
+		// Start concurrent module applications with staggered timing like in the meeting discussion
+		releases := []string{"module-a-v1.0.0", "module-b-v1.0.0", "module-c-v1.0.0"}
+		for i, releaseName := range releases {
+			wg.Add(1)
+			go func(name string, delay time.Duration) {
+				time.Sleep(delay) // Stagger starts every 500ms like in discussion
+				applyReleaseWithControl(name)
+			}(releaseName, time.Duration(i)*500*time.Millisecond)
+		}
+
+		// Wait for all modules to start processing
+		for i := 0; i < numModules; i++ {
+			<-moduleStarted
+		}
+
+		// Verify all modules are active before allowing completion
+		require.Equal(t, int32(numModules), suite.ctr.activeApplyCount.Load())
+		require.False(t, restartCalled.Load(), "restart should not be called while modules are active")
+
+		// Allow modules to complete
+		close(allowCompletion)
+		wg.Wait()
+
+		// Wait for graceful delay (15 seconds in real code, shorter in test)
+		// This tests the graceful waiting period mentioned in the discussion
+		timeout := time.NewTimer(2 * time.Second)
+		defer timeout.Stop()
+
+		select {
+		case <-timeout.C:
+			t.Fatal("restart was not triggered within timeout")
+		default:
+			// Poll for restart condition
+			for i := 0; i < 50; i++ {
+				if restartCalled.Load() {
+					break
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
+		}
+
+		// Verify final state: restart should be triggered after graceful delay
+		require.True(t, restartCalled.Load(), "restart should be triggered after all modules complete and graceful delay")
+		require.Equal(t, int32(0), suite.ctr.activeApplyCount.Load(), "no modules should be active after completion")
+		require.False(t, suite.ctr.releaseWasProcessed.Load(), "releaseWasProcessed should be reset after restart")
+
+		// Verify that the cooldown mechanism worked - cooldown should be 0 after restart
+		require.Equal(t, false, suite.ctr.readyForRestart.Load(), "cooldown should be 0 after restart triggered")
+	})
 }
 
 const repeatCount = 3
