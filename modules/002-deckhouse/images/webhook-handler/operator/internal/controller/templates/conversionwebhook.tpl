@@ -14,9 +14,18 @@ kubernetes:
 {{ toYaml .Kubernetes | indent 2 }}
 {{- end }}
 {{- end }}
-{{- if (ge (len .KubernetesCustomResourceConversion) 1) }}
+{{- if (ge (len .Conversions) 1) }}
 kubernetesCustomResourceConversion:
-{{ toYaml .KubernetesCustomResourceConversion }}
+{{- range .Conversions }}
+  - name: {{.From}}_to_{{.To}}
+    crdName: {{ $.Name}}
+    - fromVersion: {{ getGroup $.Name }}/{{.From}}
+      toVersion: {{ getGroup $.Name }}/{{.To}}
+{{- if .IncludeSnapshotsFrom }}
+    includeSnapshotsFrom:
+{{ toYaml .IncludeSnapshotsFrom | indent 6 }}
+{{- end }}
+{{- end }}
 {{- end }}
 """
 
