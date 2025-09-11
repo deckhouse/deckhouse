@@ -1,0 +1,7 @@
+docs:
+  fixes:
+    - summary: >-
+        Added the Local path provisioner storage section to the documentation sidebar, including
+        Overview, Examples, Reference, and FAQ entries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15438
+
