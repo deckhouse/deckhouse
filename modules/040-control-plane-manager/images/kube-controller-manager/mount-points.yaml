@@ -6,3 +6,5 @@ dirs:
  - /etc/ssl/certs
  - /usr/libexec/kubernetes/kubelet-plugins/volume/exec
  - /usr/share/ca-certificates
+ - /etc/ca-certificates
+ - /usr/local/share/ca-certificates
