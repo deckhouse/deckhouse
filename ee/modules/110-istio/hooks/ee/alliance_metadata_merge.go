@@ -8,6 +8,7 @@ package ee
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/square/go-jose/v3"
 )
 
 type IstioFederationMergeCrdInfo struct {
@@ -170,6 +172,76 @@ func parseKubeconfig(kubeconfigStr string) (string, error) {
 	}
 
 	return "", fmt.Errorf("token not found in kubeconfig")
+}
+
+// TokenValidationResult represents the result of token validation
+type TokenValidationResult struct {
+	IsValid   bool      `json:"isValid"`
+	IsExpired bool      `json:"isExpired"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Error     string    `json:"error,omitempty"`
+}
+
+// validateJWTToken validates a JWT token and checks if it's expired
+func validateJWTToken(tokenString string) TokenValidationResult {
+	if tokenString == "" {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token is empty",
+		}
+	}
+
+	// Parse the JWT token
+	token, err := jose.ParseSigned(tokenString)
+	if err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to parse token: %v", err),
+		}
+	}
+
+	// Check expiration time
+	payload := token.UnsafePayloadWithoutVerification()
+
+	// Parse the payload
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to unmarshal claims: %v", err),
+		}
+	}
+
+	// Check if exp claim exists
+	expClaim, exists := claims["exp"]
+	if !exists {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token has no expiration claim",
+		}
+	}
+
+	var expTime time.Time
+	switch exp := expClaim.(type) {
+	case float64:
+		expTime = time.Unix(int64(exp), 0)
+	case int64:
+		expTime = time.Unix(exp, 0)
+	default:
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "invalid expiration claim format",
+		}
+	}
+
+	now := time.Now()
+	isExpired := now.After(expTime)
+
+	return TokenValidationResult{
+		IsValid:   !isExpired,
+		IsExpired: isExpired,
+		ExpiresAt: expTime,
+	}
 }
 
 func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -386,19 +458,44 @@ multiclustersLoop:
 			continue multiclustersLoop
 		}
 
-		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
-		claims := map[string]string{
-			"iss":   "d8-istio",
-			"aud":   multiclusterInfo.Public.ClusterUUID,
-			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
-			"scope": "api",
+		// Check if we already have a valid token before generating a new one
+		existingToken := multiclusterInfo.APIJWT
+		shouldGenerateNewToken := true
+
+		if existingToken != "" {
+			validationResult := validateJWTToken(existingToken)
+			if validationResult.IsValid && !validationResult.IsExpired {
+				// Token is still valid, reuse it
+				shouldGenerateNewToken = false
+				input.Logger.Debug("reusing existing valid token for multicluster",
+					slog.String("name", multiclusterInfo.Name),
+					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+			} else {
+				input.Logger.Info("existing token is invalid or expired, generating new token",
+					slog.String("name", multiclusterInfo.Name),
+					slog.String("error", validationResult.Error),
+					slog.Bool("isExpired", validationResult.IsExpired))
+			}
 		}
-		// until the bug won't be solved https://github.com/istio/istio/issues/37925
-		// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
-		multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
-		if err != nil {
-			input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
-			continue multiclustersLoop
+
+		if shouldGenerateNewToken {
+			privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
+			claims := map[string]string{
+				"iss":   "d8-istio",
+				"aud":   multiclusterInfo.Public.ClusterUUID,
+				"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
+				"scope": "api",
+			}
+			// until the bug won't be solved https://github.com/istio/istio/issues/37925
+			// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
+			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
+			if err != nil {
+				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
+				continue multiclustersLoop
+			}
+
+			input.Logger.Info("generated new token for multicluster",
+				slog.String("name", multiclusterInfo.Name))
 		}
 
 		multiclusterInfo.Public = nil
