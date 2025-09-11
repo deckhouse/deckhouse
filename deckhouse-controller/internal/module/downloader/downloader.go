@@ -58,7 +58,7 @@ type ExtractFunc func(ctx context.Context, rc io.ReadCloser) error
 
 // Extract downloads the module image and allows us to inject into tar extraction process via ExtractFunc
 func (d *Downloader) Extract(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string, f ExtractFunc) error {
-	_, span := otel.Tracer(tracerName).Start(ctx, "Download")
+	_, span := otel.Tracer(tracerName).Start(ctx, "Extract")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("module", module))

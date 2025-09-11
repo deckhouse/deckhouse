@@ -147,7 +147,7 @@ func (i *Installer) Install(ctx context.Context, module, version, modulePath str
 	return nil
 }
 
-// Uninstall disables(umount the image) and deletes rgw module(delete all images)
+// Uninstall disables(umount the image) and deletes the module(delete all images)
 func (i *Installer) Uninstall(ctx context.Context, module string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
 	defer span.End()
@@ -272,19 +272,12 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	}
 
 	logger.Debug("verify erofs image hash", slog.String("path", imagePath))
-	// err = i.verifyImageHash(ctx, imagePath)
-	// if err != nil && !os.IsNotExist(err) {
-	// 	return fmt.Errorf("verify image hash: %w", err)
-	// }
 
-	// if the image hash does not exist - create it
-	// if os.IsNotExist(err) {
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	hash, err := erofs.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		return fmt.Errorf("create image hash: %w", err)
 	}
-	// }
 
 	logger.Debug("create device mapper", slog.String("path", imagePath))
 	if err = erofs.CreateMapper(ctx, imagePath, hash); err != nil {
