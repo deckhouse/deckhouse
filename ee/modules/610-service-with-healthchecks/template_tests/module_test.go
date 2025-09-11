@@ -118,6 +118,8 @@ debug: true
       drop:
       - ALL
     readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
 `
 )
 
