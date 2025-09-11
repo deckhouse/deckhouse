@@ -109,7 +109,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
-		{Name: "cron", Crontab: "0 */5 * * *"},
+		{Name: "cron", Crontab: "* * * * *"},
 	},
 }, dependency.WithExternalDependencies(multiclusterDiscovery))
 
