@@ -74,8 +74,9 @@ func handleAffinityRules(_ context.Context, input *go_hook.HookInput) error {
 		for _, ng := range nodeGroups.Array() {
 			ngMap := ng.Map()
 			ngName := ngMap["name"].String()
+			ngInstanceClass := ngMap["instanceClass"].Map()
 
-			if ngAffinityRule, ok := ngMap["affinityRule"]; ok {
+			if ngAffinityRule, ok := ngInstanceClass["affinityRule"]; ok {
 				affinityRules = append(affinityRules, affinityRule{
 					Polarity:      ngAffinityRule.Map()["polarity"].String(),
 					Required:      ngAffinityRule.Map()["required"].Bool(),
