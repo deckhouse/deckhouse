@@ -6,24 +6,24 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
---- a/pkg/provider/azure_vmss.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
-+++ b/pkg/provider/azure_vmss.go	(date 1742471634907)
-@@ -430,6 +430,25 @@
- 	vmManagementType, err := ss.getVMManagementTypeByProviderID(providerID, azcache.CacheReadTypeUnsafe)
+--- a/pkg/provider/azure_vmss.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
++++ b/pkg/provider/azure_vmss.go	(date 1742473658056)
+@@ -448,6 +448,25 @@
+ 	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
  	if err != nil {
  		klog.Errorf("Failed to check VM management type: %v", err)
 +
 +		if vmManagementType == ManagedByUnknownVMSet {
 +			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
 +
-+			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(providerID)
++			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
 +			if err != nil {
 +				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
 +			} else {
 +				return nodeName, nil
 +			}
 +
-+			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(providerID)
++			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
 +			if err != nil {
 +				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
 +			} else {
@@ -40,9 +40,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
---- a/pkg/provider/azure_instance_metadata.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
-+++ b/pkg/provider/azure_instance_metadata.go	(date 1742471634912)
-@@ -107,12 +107,12 @@
+--- a/pkg/provider/azure_instance_metadata.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
++++ b/pkg/provider/azure_instance_metadata.go	(date 1742471800406)
+@@ -108,12 +108,12 @@
  }
  
  // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
@@ -63,11 +63,11 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
---- a/pkg/provider/azure.go	(revision cedcbf22e1e16274960c7c933a3a6407ec1d0d13)
-+++ b/pkg/provider/azure.go	(date 1742471634919)
-@@ -629,7 +629,7 @@
+--- a/pkg/provider/azure.go	(revision b8981af52775d1fa800338f434e3413d92bacec6)
++++ b/pkg/provider/azure.go	(date 1742471800412)
+@@ -338,7 +338,7 @@
  	az.Config = *config
- 	az.Environment = *env
+ 	az.Environment = env
  	az.ResourceRequestBackoff = resourceRequestBackoff
 -	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
 +	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)

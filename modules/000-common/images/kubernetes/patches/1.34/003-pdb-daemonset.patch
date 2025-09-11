@@ -14,7 +14,7 @@ diff --git a/pkg/controller/disruption/disruption.go b/pkg/controller/disruption
 index 2527e31480e..f7eac243e16 100644
 --- a/pkg/controller/disruption/disruption.go
 +++ b/pkg/controller/disruption/disruption.go
-@@ -102,6 +102,9 @@ type DisruptionController struct {
+@@ -102,6 +102,9 @@
  	ssLister       appsv1listers.StatefulSetLister
  	ssListerSynced cache.InformerSynced
  
@@ -22,8 +22,8 @@ index 2527e31480e..f7eac243e16 100644
 +	dsListerSynced cache.InformerSynced
 +
  	// PodDisruptionBudget keys that need to be synced.
- 	queue        workqueue.RateLimitingInterface
- 	recheckQueue workqueue.DelayingInterface
+ 	queue        workqueue.TypedRateLimitingInterface[string]
+ 	recheckQueue workqueue.TypedDelayingInterface[string]
 @@ -137,6 +140,7 @@ func NewDisruptionController(
  	rsInformer appsv1informers.ReplicaSetInformer,
  	dInformer appsv1informers.DeploymentInformer,
