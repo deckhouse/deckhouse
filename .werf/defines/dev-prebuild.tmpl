@@ -115,4 +115,11 @@ git:
   stageDependencies:
     install:
     - "**/*"
+- add: /tools/mounts/mountdir
+  to: /var/run/addon-operator
+  owner: 64535
+  group: 64535
+  stageDependencies:
+    install:
+    - "**/*"
 {{- end }}
