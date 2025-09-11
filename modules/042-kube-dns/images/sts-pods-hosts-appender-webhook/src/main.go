@@ -96,6 +96,7 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 
 	runAsUser := int64(65534)
 	runAsGroup := int64(65534)
+	readOnlyRootFileSystem := true
 	initContainer := corev1.Container{
 		Name:         "render-etc-hosts-with-cluster-domain-aliases",
 		Image:        os.Getenv("INIT_CONTAINER_IMAGE"),
@@ -113,8 +114,9 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"all"},
 			},
-			RunAsUser:  &runAsUser,
-			RunAsGroup: &runAsGroup,
+			RunAsUser:              &runAsUser,
+			RunAsGroup:             &runAsGroup,
+			ReadOnlyRootFilesystem: &readOnlyRootFileSystem,
 		},
 	}
 
