@@ -159,8 +159,13 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		return nil, fmt.Errorf("get manifest: %w", err)
 	}
 
-	// check module sign
-	if _, ok := manifest.Annotations[ImageAnnotationSignature]; !ok {
+	// manifest must exist
+	if manifest == nil {
+		return nil, fmt.Errorf("manifest is nil")
+	}
+
+	// check that the module sign annotation exists
+	if len(manifest.Annotations[ImageAnnotationSignature]) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
 		s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
 	}
 
