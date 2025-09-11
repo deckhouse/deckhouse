@@ -97,3 +97,6 @@ https://github.com/kubernetes/ingress-nginx/pull/13830
 ### 016-disable-error-logs.patch
 
 Disabling log messages such as "Error obtaining Endpoints for Service...".
+
+### 017-skip-tls-verification-maxmind.patch
+Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
