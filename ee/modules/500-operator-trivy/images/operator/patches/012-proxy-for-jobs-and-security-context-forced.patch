@@ -76,7 +76,7 @@ index 198c824d..e09ef042 100644
 +
 +func applyDeckhouseSecurityContext(securityContext *corev1.SecurityContext) {
 +	securityContext.ReadOnlyRootFilesystem = ptr.To(true)
-+	securityContext.AllowPrivilegeEscalation = ptr.To(true)
++	securityContext.AllowPrivilegeEscalation = ptr.To(false)
 +	securityContext.RunAsUser = ptr.To(int64(64535))
 +	securityContext.RunAsGroup = ptr.To(int64(64535))
 +	securityContext.RunAsNonRoot = ptr.To(true)
