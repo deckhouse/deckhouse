@@ -535,7 +535,7 @@ multiclustersLoop:
 			}
 			// until the bug won't be solved https://github.com/istio/istio/issues/37925
 			// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
-			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
+			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Minute*1)
 			if err != nil {
 				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
 				continue multiclustersLoop
