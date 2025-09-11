@@ -119,7 +119,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 	if !input.Values.Get("istio.multicluster.enabled").Bool() {
 		return nil
 	}
-    if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
+	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
 		input.Logger.Warn("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
 	}
