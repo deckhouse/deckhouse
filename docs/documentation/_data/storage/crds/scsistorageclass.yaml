@@ -5,7 +5,7 @@ metadata:
   name: scsistorageclasses.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: csi-scsi-generic
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -58,7 +58,8 @@ spec:
                   matchExpressions:
                     type: array
                     description: |
-                      An array of label selector requirements. Each requirement specifies a key, an operator, and an optional list of values. An SCSIDevice must meet these conditions to be selected.
+                      An array of label selector requirements. Each requirement specifies a key, an operator,
+                      and an optional list of values. An SCSIDevice must meet these conditions to be selected.
                     items:
                       type: object
                       properties:
@@ -92,13 +93,13 @@ spec:
               volumeCleanup:
                 type: string
                 description: |
-                  VolumeCleanup defines the policy for cleaning up the SCSI device when the PersistentVolume is deleted. If ommited, no cleanup will be performed:
+                  VolumeCleanup defines the policy for cleaning up the SCSI device when the PersistentVolume is deleted. If omitted, no cleanup will be performed.
 
-                  - `Discard` — sends a SCSI TRIM or discard command to the device, marking the blocks as free without necessarily overwriting
+                  - `Discard`: Sends a SCSI TRIM or discard command to the device, marking the blocks as free without necessarily overwriting
                     the data. This option is typically faster but may not securely erase data.
-                  - `RandomFillSinglePass` — overwrites the entire device with random data in a single pass.
+                  - `RandomFillSinglePass`: Overwrites the entire device with random data in a single pass.
                     This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
-                  - `RandomFillThreePass` — overwrites the device with random data in three separate passes.
+                  - `RandomFillThreePass`: Overwrites the device with random data in three separate passes.
                     This option is not recommended for solid-state drives, as it reduces the lifespan of the drive.
                 enum:
                   - Discard
@@ -112,16 +113,16 @@ spec:
               phase:
                 type: string
                 description: |
-                  The Storage class current state:
-                  - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                  - `Create` — if everything went fine.
+                  The Storage class current state. Might be: 
+                  - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                  - `Created`: If everything went fine.
                 enum:
                   - Failed
                   - Created
               reason:
                 type: string
                 description: |
-                  Additional information about the current state of the Storage Class.
+                  Additional information about the current state of the StorageClass.
     subresources:
       status: {}
     additionalPrinterColumns:

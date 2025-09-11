@@ -55,9 +55,9 @@ spec:
                   minLength: 1
                 reclaimPolicy:
                   description: |
-                    The storage class's reclaim policy:
-                    - `Delete` — if the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well;
-                    - `Retain` — if the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
+                    The storage class's reclaim policy. Might be:
+                    - `Delete`: If the Persistent Volume Claim is deleted, deletes the Persistent Volume and its associated storage as well.
+                    - `Retain`: If the Persistent Volume Claim is deleted, remains the Persistent Volume and its associated storage.
                   type: string
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -67,7 +67,9 @@ spec:
                     - Retain
                 type:
                   description: |
-                    The type of the storage class.
+                    The type of the storage class. Might be:
+                    - `CephFS`: CephFS storage type.
+                    - `RBD`: Rados Block Device storage type.
                   type: string
                   x-kubernetes-validations:
                     - rule: self == oldSelf
@@ -122,9 +124,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The Storage class current state:
-                    - `Failed` - if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Created` - if everything went fine.
+                    The Storage class current state. Might be: 
+                    - `Failed`: The controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: Everything went fine.
                   enum:
                     - Failed
                     - Created

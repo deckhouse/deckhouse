@@ -4,33 +4,163 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Хранит информацию из ресурсов lvmvolumegroups для миграции их типа с LvmVolumeGroup на LVMVolumeGroup.
+            Ресурс, сохраняющий состояние lvmvolumegroups ресурсов для совершения миграции kind с LvmVolumeGroup до LVMVolumeGroup.
           properties:
             spec:
               properties:
                 type:
                   description: |
-                    Тип группы томов (Volume Group):
-                    - `Local` — локальная, если используемые устройства не распределены (не Shared LUN).
+                    Тип Volume Group. Может быть: 
+                    - Local, то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
                 blockDeviceNames:
                   description: |
-                    Массив имен ресурсов блочных устройств для создания группы томов (Volume Group).
-
-                    > Выбранные блочные устройства должны принадлежать одному узлу для локальной группы томов (Local Volume Group).
+                    Массив имен ресурсов block device для создания Volume Group.
+                    
+                    > Обратите внимание, что выбранные блок-девайсы должны принадлежать одному узлу для Volume Group с типом 'Local'.
                 actualVGNameOnTheNode:
                   description: |
-                    Желаемое имя группы томов (Volume Group). Должно быть уникальным для узла, на котором оно находится.
+                    Желаемое имя для Volume Group. Должно быть уникальным в рамках узла, на котором будет располагаться.
+                    
+                    > Неизменяемое поле.
                 thinPools:
                   description: |
-                    Желаемая конфигурация thin-пула.
+                    Желаемая конфигурация для Thin-pool'ов текущей Volume Group.
                   items:
                     properties:
                       name:
                         description: |
-                          Желаемое имя thin-пула.
+                          Желаемое имя thin pool.
+                          
+                          > Неизменяемое поле.
                       size:
                         description: |
-                          Желаемый размер thin-пула. Может быть указан как число или процент от общего объема VG.
+                          Желаемый размер thin pool. Может быть указан как в численном, так и процентном отношении к общему размеру VG. 
+                          
+                          > Обратите внимание, что при указании размера в процентах thin pool будет автоматически расширен при расширении VG.
                       allocationLimit:
                         description: |
-                          Лимит перераспределения thin-пула. По умолчанию 150%.
+                          Максимальная степень расширения thin pool-а. По умолчанию 150%.
+            status:
+              properties:
+                thinPoolReady:
+                  description: |
+                    Показывает количество здоровых Thin-pool к общему.
+                configurationApplied:
+                  description: |
+                    Показывает, была ли успешно применена последняя конфигурация.
+                phase:
+                  description: |
+                    Общее состояние ресурса LVMVolumeGroup.
+                conditions:
+                  description: |
+                    Состояния ресурса LVMVolumeGroup.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип состояния.
+                      status:
+                        description: |
+                          Статус состояния.
+                      reason:
+                        description: |
+                          Причина текущего статуса.
+                      message:
+                        description: |
+                          Дополнительная информация о текущем состоянии ресурса.
+                      lastTransitionTime:
+                        description: |
+                          Время обновления состояния.
+                      observedGeneration:
+                        description: |
+                          Версия ресурса на момент проставления состояния.
+                vgUUID:
+                  description: |
+                    Уникальный идентификатор Volume Group.
+                vgSize:
+                  description: |
+                    Ёмкость Volume Group.
+                vgFree:
+                  description: |
+                    Свободное пространство Volume Group.
+                allocatedSize:
+                  description: |
+                    Текущее занятое место на Volume Group.
+                thinPools:
+                  description: |
+                    Текущее состояние Thin-pool'ов в Volume Group.
+                    
+                    > Поле может быть пустым в случае отсутствия Thin-pool'ов в Volume Group.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Имя Thin-pool.
+                      actualSize:
+                        description: |
+                          Ёмкость Thin-pool.
+                      usedSize:
+                        description: |
+                          Используемый размер Thin-pool.
+                      allocatedSize:
+                        description: |
+                          Общий размер запрошенных LV в thin-pool.
+                      allocationLimit:
+                        description: |
+                          Максимальная степень расширения thin pool-а. По умолчанию 150%.
+                      availableSpace:
+                        description: |
+                          Свободное место в Thin-pool.
+                      ready:
+                        description: |
+                          Состояние здоровья Thin-pool.
+                      message:
+                        description: |
+                          Дополнительная информация о состоянии Thin-pool.
+                nodes:
+                  description: |
+                    Информация об узлах, на которых расположена Volume Group.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Имя узла.
+                      devices:
+                        description: |
+                          Информация об используемых в Volume Group девайсах на текущем узле.
+                        items:
+                          properties:
+                            path:
+                              description: |
+                                Путь девайса на узле (например, /dev/sda).
+                            pvSize:
+                              description: |
+                                Размер Physical Volume.
+                            devSize:
+                              description: |
+                                Размер девайса.
+                            pvUUID:
+                              description: |
+                                Уникальный идентификатор LVM Physical Volume.
+                            blockDevice:
+                              description: |
+                                Имя соответствующего ресурса BlockDevice.
+      additionalPrinterColumns:
+        - jsonPath: .status.thinPoolReady
+          description: Текущее и общее количество Thin pools.
+        - jsonPath: .status.configurationApplied
+          description: Если последняя конфигурация была успешно применена.
+        - jsonPath: .status.phase
+          description: Фаза ресурса.
+        - jsonPath: .status.nodes..name
+          description: Узел, на котором находится VG.
+        - jsonPath: .status.vgSize
+          description: Общий размер VG.
+        - jsonPath: .status.allocatedSize
+          description: Фактический размер VG.
+        - jsonPath: .spec.actualVGNameOnTheNode
+          description: Фактическое имя VG.
+        - jsonPath: .spec.type
+          description: Тип Volume Group.
+        - jsonPath: .metadata.creationTimestamp
+          description: Возраст этого ресурса.

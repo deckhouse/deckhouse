@@ -23,6 +23,9 @@ spec:
           type: object
           description: |
             Ceph cluster connection parameters.
+          x-kubernetes-validations:
+            - rule: 'oldSelf == null || (has(self.spec.cephFS) == has(oldSelf.spec.cephFS) && (!has(self.spec.cephFS) || self.spec.cephFS == oldSelf.spec.cephFS))'
+              message: "The spec.cephFS field is immutable (cannot be added, removed, or changed)."
           required:
             - spec
           properties:
@@ -58,6 +61,19 @@ spec:
                     Ceph user key.
                   type: string
                   minLength: 1
+                cephFS:
+                  description: |
+                    CephFS specific parameters (Cluster wide).
+                  type: object
+                  properties:
+                    subvolumeGroup:
+                      description: |
+                        CephFS subvolume group name.
+                      type: string
+                      x-kubernetes-validations:
+                        - rule: self == oldSelf
+                          message: Value is immutable.
+                      minLength: 1
             status:
               type: object
               description: |
@@ -66,9 +82,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of resources managed by the CephClusterConnection custom resource:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Created` — if everything went fine.
+                    The current state of resources managed by the CephClusterConnection custom resource. Might be:
+                    - `Failed`: If the controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: If everything went fine.
                   enum:
                     - Failed
                     - Created
@@ -89,4 +105,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource.
+          description: The age of this resource

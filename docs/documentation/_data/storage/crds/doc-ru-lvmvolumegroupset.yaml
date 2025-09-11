@@ -17,10 +17,10 @@ spec:
                   properties:
                     matchLabels:
                       description: |
-                        Желаемые метки.
+                        Желаемые метки для выбора узлов.
                     matchExpressions:
                       description: |
-                        Желаемые выражения.
+                        Желаемые выражения для выбора узлов.
                 lvmVolumeGroupTemplate:
                   description: |
                     Общий шаблон для LVMVolumeGroup ресурсов, созданных с помощью данного ресурса.
@@ -31,10 +31,10 @@ spec:
                       properties:
                         matchLabels:
                           description: |
-                            Желаемые метки.
+                            Желаемые метки для выбора block device ресурсов.
                         matchExpressions:
                           description: |
-                            Желаемые выражения.
+                            Желаемые выражения для выбора block device ресурсов.
                     metadata:
                       description: |
                         Метаинформация для LVMVolumeGroup ресурсов.
@@ -44,49 +44,71 @@ spec:
                             Обязательные метки для LVMVolumeGroup ресурсов.
                     type:
                       description: |
-                        Тип Volume Group:
-                        - `Local` — то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
+                        Тип Volume Group. Может быть: 
+                        - Local, то есть локальным, если используемые девайсы не являются распределенными (не Shared LUN).
                     actualVGNameOnTheNode:
                       description: |
                         Желаемое имя для Volume Group. Должно быть уникальным в рамках узла, на котором будет располагаться.
-
+                        
                         > Неизменяемое поле.
                         > Обратите внимание, что указанное имя Volume Group будет одинаковым для каждого LVMVolumeGroup ресурса.
                     thinPools:
                       description: |
-                        Желаемая конфигурация для thin-пулов текущей Volume Group.
-
+                        Желаемая конфигурация для Thin-pool'ов текущей Volume Group.
+                        
                         > Обратите внимание, что данная конфигурация будет одинаковой для каждого LVMVolumeGroup ресурса.
                       items:
                         properties:
                           name:
                             description: |
-                              Желаемое имя thin-пула.
-
+                              Желаемое имя thin pool.
+                              
                               > Неизменяемое поле.
                           size:
                             description: |
-                              Желаемый размер thin-пула. Может быть указан как в численном, так и процентном отношении к общему размеру VG.
-
-                              > Обратите внимание, что при указании размера в процентах thin-пул будет автоматически расширен при расширении VG.
+                              Желаемый размер thin pool. Может быть указан как в численном, так и процентном отношении к общему размеру VG. 
+                              
+                              > Обратите внимание, что при указании размера в процентах thin pool будет автоматически расширен при расширении VG.
                           allocationLimit:
                             description: |
-                              Максимальная степень расширения thin-пула. По умолчанию 150%.
+                              Максимальная степень расширения thin pool-а. По умолчанию 150%.
             status:
-              type: object
               properties:
                 createdLVMVolumeGroups:
                   description: |
                     Короткая информация о LVMVolumeGroup ресурсах, созданных по текущему ресурсу.
+                  items:
+                    properties:
+                      lvmVolumeGroupName:
+                        description: |
+                          Имя созданного ресурса LVMVolumeGroup.
+                      nodeName:
+                        description: |
+                          Имя узла, на котором был создан LVMVolumeGroup.
                 currentLVMVolumeGroupsCount:
                   description: |
-                    Текущее количество созданных LVMVolumeGroup ресурсов.
+                    Показывает текущее количество созданных LVMVolumeGroup ресурсов.
                 desiredLVMVolumeGroupsCount:
                   description: |
-                    Желаемое количество созданных LVMVolumeGroup ресурсов.
+                    Показывает желаемое количество созданных LVMVolumeGroup ресурсов.
                 phase:
                   description: |
-                    Показывает статус создания LVMVolumeGroup ресурсов.
+                    Показывает фазу создания LVMVolumeGroup ресурсов.
                 reason:
                   description: |
-                    Показывает причину текущего статуса.
+                    Показывает причину текущей фазы.
+      additionalPrinterColumns:
+        - jsonPath: .spec.strategy
+          description: Указанная стратегия создания LVMVolumeGroups.
+        - jsonPath: .spec.lvmVolumeGroupTemplate.actualVGNameOnTheNode
+          description: Фактическое имя VG.
+        - jsonPath: .spec.lvmVolumeGroupTemplate.type
+          description: Тип Volume Group.
+        - jsonPath: .status.currentLVMVolumeGroupsCount
+          description: Текущее количество созданных LVMVolumeGroups.
+        - jsonPath: .status.desiredLVMVolumeGroupsCount
+          description: Желаемое количество созданных LVMVolumeGroups.
+        - jsonPath: .status.phase
+          description: Фаза ресурса.
+        - jsonPath: .metadata.creationTimestamp
+          description: Возраст этого ресурса.

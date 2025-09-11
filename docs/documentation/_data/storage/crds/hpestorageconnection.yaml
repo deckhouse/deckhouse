@@ -40,23 +40,23 @@ spec:
                   properties:
                     backendAddress:
                       description: |
-                        HPE storage address.
+                        HPE storage address
                       type: string
                     username:
                       description: |
-                        HPE storage username.
+                        HPE storage username
                       type: string
                     password:
                       description: |
-                        HPE storage password, Base64 encoded.
+                        HPE storage password, base64 encoded
                       type: string
                     serviceName:
                       description: |
-                        HPE service name.
+                        HPE service name
                       type: string
                     servicePort:
                       description: |
-                        HPE service port.
+                        HPE service port
                       type: string
             status:
               type: object
@@ -66,9 +66,9 @@ spec:
                 phase:
                   type: string
                   description: |
-                    The current state of resources managed by the HPEClusterConnection custom resource:
-                    - `Failed` — if the controller received incorrect resource configuration or some errors occurred during the operation;
-                    - `Created` — if everything went fine.
+                    The current state of resources managed by the HPEClusterConnection custom resource. Might be:
+                    - `Failed`: The controller received incorrect resource configuration or some errors occurred during the operation.
+                    - `Created`: Everything went fine.
                   enum:
                     - Failed
                     - Created
@@ -89,4 +89,4 @@ spec:
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
-          description: The age of this resource.
+          description: The age of this resource

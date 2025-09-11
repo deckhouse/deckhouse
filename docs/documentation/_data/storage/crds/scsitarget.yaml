@@ -5,7 +5,7 @@ metadata:
   name: scsitargets.storage.deckhouse.io
   labels:
     heritage: deckhouse
-    module: storage
+    module: csi-scsi-generic
     backup.deckhouse.io/cluster-config: "true"
 spec:
   group: storage.deckhouse.io
@@ -38,8 +38,7 @@ spec:
             properties:
               deviceTemplate:
                 type: object
-                description: DeviceTemplate defines the metadata for dynamically created.
-                  devices.
+                description: DeviceTemplate defines the metadata for dynamically created devices.
                 properties:
                   metadata:
                     type: object
@@ -98,7 +97,5 @@ spec:
                 description: ConflictMessage contains information about label conflicts, if any.
                 type: string
             type: object
-
-
     subresources:
       status: {}
