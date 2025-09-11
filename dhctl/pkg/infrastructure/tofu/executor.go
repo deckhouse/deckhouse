@@ -55,13 +55,12 @@ func tofuCmd(ctx context.Context, workingDir string, args ...string) *exec.Cmd {
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
 
-    cmd.Env = append(
-        os.Environ(),
-        "TF_IN_AUTOMATION=yes",
-        "TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
-        "TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
-        "TF_PLUGIN_CACHE_DIR="+filepath.Join(app.TmpDirName, "tf_plugin_cache"),
-    )
+	cmd.Env = append(
+		os.Environ(),
+		"TF_IN_AUTOMATION=yes",
+		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
+		"TF_DATA_DIR="+filepath.Join(app.TmpDirName, "tf_dhctl"),
+	)
 
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
