@@ -3,3 +3,4 @@ dirs:
 - /etc/openvpn/ccd
 files:
 - /etc/openvpn/openvpn.conf
+- /run/xtables.lock
