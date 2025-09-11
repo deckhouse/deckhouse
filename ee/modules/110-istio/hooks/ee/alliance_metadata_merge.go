@@ -458,15 +458,34 @@ multiclustersLoop:
 			continue multiclustersLoop
 		}
 
-		// Check if we already have a valid token before generating a new one
-		existingToken := multiclusterInfo.APIJWT
+		// Check if we already have a valid token from remote secrets before generating a new one
+		existingToken := ""
 		shouldGenerateNewToken := true
+
+		// Look for existing token in remote secrets
+		// The secret name format is "istio-remote-secret-{clusterName}"
+		// We need to find the secret that matches this multicluster
+		remoteSecrets := input.Values.Get("istio.internal.remoteSecrets")
+		if remoteSecrets.Exists() {
+			for _, secretValue := range remoteSecrets.Array() {
+				secretName := secretValue.Get("name").String()
+				// Extract cluster name from secret name (remove "istio-remote-secret-" prefix)
+				if strings.HasPrefix(secretName, "istio-remote-secret-") {
+					clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+					if clusterName == multiclusterInfo.Name {
+						existingToken = secretValue.Get("token").String()
+						break
+					}
+				}
+			}
+		}
 
 		if existingToken != "" {
 			validationResult := validateJWTToken(existingToken)
 			if validationResult.IsValid && !validationResult.IsExpired {
 				// Token is still valid, reuse it
 				shouldGenerateNewToken = false
+				multiclusterInfo.APIJWT = existingToken
 				input.Logger.Debug("reusing existing valid token for multicluster",
 					slog.String("name", multiclusterInfo.Name),
 					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
