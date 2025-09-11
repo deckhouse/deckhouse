@@ -82,9 +82,45 @@ spec:
       terminationGracePeriodSeconds: 420
       imagePullSecrets:
         - name: deckhouse-registry
+      initContainers:
+        - name: touch-files
+          image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+          command:
+            - sh
+            - -c
+            - --
+            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf && chmod 0666 /tmp/*"
+          volumeMounts:
+            - name: write-files
+              mountPath: /tmp/
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
+        - name: mkdir-nginx
+          image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - --
+            - "/bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*"
+          volumeMounts:
+            - mountPath: tmp
+              name: tmp-nginx
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
       containers:
         - name: validator
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
+          securityContext:
+            readOnlyRootFilesystem: true
           env:
             - name: POD_NAME
               valueFrom:
@@ -156,6 +192,24 @@ spec:
             - name: webhook-cert
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
+            - mountPath: /chroot/etc/resolv.conf
+              name: write-files
+              subPath: resolv.conf
+            - mountPath: /chroot/etc/nginx/nginx.conf
+              name: write-files
+              subPath: nginx.conf
+            - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+              name: write-files
+              subPath: opentelemetry.toml
+            - mountPath: /chroot/etc/ingress-controller/ssl
+              name: tmp-ssl
+            - mountPath: /tmp
+              name: tmp-nginx
+            - mountPath: /chroot/tmp
+              name: tmp-nginx
+            - mountPath: /chroot/var/log/nginx/error.log
+              name: write-files
+              subPath: error.log
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -163,6 +217,12 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
+        - name: write-files
+          emptyDir: {}
+        - name: tmp-ssl
+          emptyDir: {}
+        - name: tmp-nginx
+          emptyDir: {}
 {{- end }}
 
 {{- $ctx := . }}
