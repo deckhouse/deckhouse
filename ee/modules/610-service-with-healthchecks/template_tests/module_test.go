@@ -70,8 +70,6 @@ debug: true
     capabilities:
       drop:
         - ALL
-      add:
-      - NET_RAW
     runAsUser:   64535
     runAsGroup:  64535
     runAsNonRoot: true

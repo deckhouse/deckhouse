@@ -317,13 +317,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
+			"sh", "-c", `mkdir -p /tmp/downloaded/modules && chown -hR 64535 /tmp/downloaded /tmp/downloaded/modules && chmod 0700 /tmp/downloaded /tmp/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				Name:      "deckhouse",
 				ReadOnly:  false,
-				MountPath: "/deckhouse",
+				MountPath: "/tmp",
 			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
