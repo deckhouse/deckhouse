@@ -354,8 +354,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		// until the bug won't be solved https://github.com/istio/istio/issues/37925
 		// {Name: "cron", Crontab: "0 3 * * *"}, // once a day to refresh apiJWT
-		// {Name: "cron", Crontab: "0 3 1 * *"}, // once a month to refresh apiJWT
-		{Name: "cron", Crontab: "*/5 * * * *"}, // every 5 minutes to check token expiration and reuse valid tokens
+		{Name: "cron", Crontab: "0 3 1 * *"}, // once a month to refresh apiJWT
 	},
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, metadataMerge)
@@ -544,7 +543,7 @@ multiclustersLoop:
 			}
 			// until the bug won't be solved https://github.com/istio/istio/issues/37925
 			// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
-			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Minute*1)
+			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
 			if err != nil {
 				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
 				continue multiclustersLoop
