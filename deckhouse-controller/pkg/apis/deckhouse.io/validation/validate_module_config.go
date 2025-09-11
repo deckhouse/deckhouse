@@ -46,7 +46,7 @@ type AnnotationsOnly struct {
 
 type EnabledOnly struct {
 	Spec struct {
-		Enabled *bool `json:"enabled,omitempty"`
+		Enabled *bool `json:"enabled"`
 	} `json:"spec,omitempty"`
 }
 type ObjectMeta struct {
