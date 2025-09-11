@@ -386,8 +386,8 @@ entries:
                     ru: MySQL
                   url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
         - title:
-            en: Deckhouse Stronghold Administrator's Guide to the Automatic Snapshot API
-            ru: Руководство администратора Deckhouse Stronghold по API автоматического бэкапа
+            en: Automatic backup API guide
+            ru: Руководство по API автоматического резервного копирования
           url: /stronghold/documentation/user/auto-snapshot.html
     - title:
         en: Reference
