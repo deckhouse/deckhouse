@@ -5,17 +5,17 @@ lang: ru
 ---
 
 {% alert %}
-Начиная с версии 1.71 Deckhouse Kubernetes Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
+Начиная с версии 1.71, в Deckhouse Kubernetes Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
 {% endalert %}
 
 ## Что делает Prometheus?
 
 Prometheus собирает метрики и выполняет правила:
 
-* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
-* Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
-  * или шлет алерты
-  * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)
+* Для каждого *target* (цели мониторинга) с заданной периодичностью `scrape_interval` Prometheus выполняет HTTP-запрос на этот *target*, получает в ответ метрики в [собственном формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md) и сохраняет их в свою базу данных.
+* Каждый `evaluation_interval` обрабатывает правила (*rules*), на основании чего:
+  * отправляет алерты;
+  * или сохраняет новые метрики (результат выполнения правил) в свою базу данных.
 
 ## Как работает Prometheus?
 
@@ -30,7 +30,7 @@ Prometheus устанавливается модулем `prometheus-operator` D
   - создает секреты с необходимыми для работы Prometheus конфигурационными файлами (`prometheus.yaml` — конфигурация Prometheus, и `configmaps.json` — конфигурация для `prometheus-config-reloader`);
   - следит за ресурсами `ServiceMonitor` и `PrometheusRule` и на их основании обновляет конфигурационные файлы *Prometheus* через внесение изменений в секреты.
 
-Включить модуль можно с испольщованием следующего ModuleConfig:
+Включить модуль можно с использованием следующего ModuleConfig:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -53,7 +53,7 @@ spec:
       value: monitoring
 ```
 
-Полное описание всех настроек доступно [в документации](/products/kubernetes-platform/documentation/v1/modules/prometheus/configuration.html).
+Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
 
 ## Как настраивается Prometheus?
 

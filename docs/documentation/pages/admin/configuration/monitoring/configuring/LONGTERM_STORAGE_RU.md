@@ -1,10 +1,10 @@
 ---
-title: "Запись данных Prometheus в longterm storage"
+title: "Запись данных Prometheus в долговременное хранилище"
 permalink: ru/admin/configuration/monitoring/configuring/longterm-storage.html
 lang: ru
 ---
 
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка этого механизма реализована с помощью кастомного ресурса `PrometheusRemoteWrite`.
+Prometheus поддерживает механизм remote_write для отправки данных из локального экземпляра Prometheus в отдельное долговременное хранилище (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка этого механизма реализована с помощью кастомного ресурса PrometheusRemoteWrite.
 
 {% alert level="info" %}
 Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
@@ -12,7 +12,7 @@ lang: ru
 
 ## Пример минимального PrometheusRemoteWrite
 
-Ниже приведён пример минимальной конфигурации кастомного ресурса `PrometheusRemoteWrite`:
+Ниже приведён пример минимальной конфигурации кастомного ресурса PrometheusRemoteWrite:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -25,7 +25,7 @@ spec:
 
 ## Пример расширенного PrometheusRemoteWrite
 
-Ниже приведён пример расширенной конфигурации кастомного ресурса `PrometheusRemoteWrite`:
+Ниже приведён пример расширенной конфигурации кастомного ресурса PrometheusRemoteWrite:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -46,4 +46,4 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-С полным описанием полей кастомного ресурса можно ознакомиться [в документации](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#prometheusremotewrite).
+С полным описанием полей кастомного ресурса можно ознакомиться [в документации модуля `prometheus`](/modules/prometheus/cr.html#prometheusremotewrite).

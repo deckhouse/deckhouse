@@ -4,11 +4,11 @@ permalink: ru/admin/configuration/monitoring/sla.html
 lang: ru
 ---
 
-DKP может собирать статистику о доступности компонентов кластера и компонентам самого Deckhouse. Благодаря этим данным можно оценить степень выполнения SLA на компонентах, а также получить информацию о доступности в веб-интерфейсе.
+DKP может собирать статистику о доступности компонентов кластера и компонентов самого Deckhouse. Эти данные позволяют оценить степень выполнения SLA, а также получить информацию о доступности в веб-интерфейсе.
 
-Кроме того, с помощью кастомного ресурса [UpmeterRemoteWrite](/reference/cr/upmeterremotewrite/) можно экспортировать метрики доступности по протоколу Prometheus Remote Write.
+Кроме того, с помощью кастомного ресурса [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) можно экспортировать метрики доступности по протоколу Prometheus Remote Write.
 
-Чтобы начать собирать метрики доступности и включить [интерфейс](#интерфейс), включите модуль `upmeter` в веб-интерфейсе (Deckhouse Console), или с помощью следующей команды:
+Чтобы начать собирать метрики доступности и активировать [интерфейс](#интерфейс), включите модуль `upmeter` [в веб-интерфейсе Deckhouse](/modules/console/stable/) или с помощью следующей команды:
 
 ```shell
 d8 platform module enable upmeter
@@ -29,7 +29,7 @@ spec:
   settings:
 ```
 
-Перечень всех настроек доступен [в документации](/products/kubernetes-platform/documentation/v1/modules/upmeter/configuration.html#параметры).
+Перечень всех настроек доступен [в документации модуля](/modules/upmeter/configuration.html).
 
 ## Интерфейс
 
@@ -84,31 +84,31 @@ spec:
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
-Если эти варианты отключены, то модуль включит basic auth со сгенерированным паролем.
+По умолчанию для аутентификации используется модуль [`user-authn`](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
+Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
 Посмотреть сгенерированный пароль можно командой:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.webui.password'
 ```
 
 Чтобы сгенерировать новый пароль, нужно удалить Secret:
 
 ```shell
-kubectl -n d8-upmeter delete secret/basic-auth-webui
+d8 k -n d8-upmeter delete secret/basic-auth-webui
 ```
 
 Посмотреть сгенерированный пароль для страницы статуса можно командой:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values upmeter -o json | jq '.upmeter.internal.auth.status.password'
 ```
 
 Чтобы сгенерировать новый пароль для страницы статуса, нужно удалить секрет:
 
 ```shell
-kubectl -n d8-upmeter delete secret/basic-auth-status
+d8 k -n d8-upmeter delete secret/basic-auth-status
 ```
 
 > **Внимание!** Параметры `auth.status.password` и `auth.webui.password` больше не поддерживаются.
