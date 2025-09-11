@@ -4,18 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/name: operator
     app.kubernetes.io/managed-by: kustomize
-  name: conversionwebhook-sample
-kubernetesCustomResourceConversion:
-  - name: v1beta1_to_v1
-    crdName: crontabs.stable.example.com
-    conversions:
-    - fromVersion: stable.example.com/v1beta1
-      toVersion: stable.example.com/v1
-  - name: v1_to_v1beta1
-    crdName: crontabs.stable.example.com
-    conversions:
-    - fromVersion: stable.example.com/v1
-      toVersion: stable.example.com/v1beta1
+  name: crontabs.stable.example.com
 conversions:
   - from: v1alpha1
     to: v1alpha2
@@ -32,7 +21,10 @@ conversions:
 
             return None, obj.toDict()
 
-
+  - from: v1alpha2
+    to: v1alpha1
+    handler:
+      python: |
         def v1_to_v1beta1(self, o: dict) -> typing.Tuple[None, dict]:
             obj = DotMap(o)
 
