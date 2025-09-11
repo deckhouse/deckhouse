@@ -214,8 +214,11 @@
  - **[openvpn]** The logic of clearing expired certificates has been changed. [#14033](https://github.com/deckhouse/deckhouse/pull/14033)
  - **[openvpn]** Added e2e test for `OpenVPN`. [#13061](https://github.com/deckhouse/deckhouse/pull/13061)
  - **[operator-trivy]** Set proxy env for updater and operator. [#13337](https://github.com/deckhouse/deckhouse/pull/13337)
+ - **[runtime-audit-engine]** Update CI file [#15410](https://github.com/deckhouse/deckhouse/pull/15410)
+ - **[runtime-audit-engine]** Disable VPA for Falco until it's memory leak is fixed [#14984](https://github.com/deckhouse/deckhouse/pull/14984)
  - **[runtime-audit-engine]** Fixed CVE's: CVE-2025-30204, CVE-2025-29923, CVE-2025-22869, CVE-2025-22870, CVE-2025-22872, CVE-2025-22868, CVE-2025-8556, CVE-2025-54410, GHSA-fv92-fjc5-jj9h [#15113](https://github.com/deckhouse/deckhouse/pull/15113)
  - **[runtime-audit-engine]** Limit memory consumption by falco containers [#14818](https://github.com/deckhouse/deckhouse/pull/14818)
  - **[runtime-audit-engine]** Removed deprecated `falco_events` metric. [#13228](https://github.com/deckhouse/deckhouse/pull/13228)
     Dashboards and alerts based on the `falco_events` metric might be broken.
+ - **[user-authz]** Fix CVE-2025-22868 [#15120](https://github.com/deckhouse/deckhouse/pull/15120)
 
