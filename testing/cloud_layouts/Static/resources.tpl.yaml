@@ -110,6 +110,24 @@ spec:
     kind: SSHCredentials
     name: caps-rosa
 ---
+apiVersion: deckhouse.io/v1alpha2
+kind: SSHCredentials
+metadata:
+  name: caps-debian
+spec:
+  privateSSHKey: '${b64_SSH_KEY}'
+  user: '${WORKER_DEBIAN_USER}'
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: StaticInstance
+metadata:
+  name: static-debian
+spec:
+  address: '${WORKER_DEBIAN_IP}'
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps-debian
+---
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -117,7 +135,7 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    count: 3
+    count: 4
   disruptions:
     approvalMode: Manual
   nodeTemplate:

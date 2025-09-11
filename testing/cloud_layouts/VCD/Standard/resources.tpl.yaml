@@ -7,7 +7,7 @@ spec:
   rootDiskSizeGb: 30
   sizingPolicy: ${VCD_ORG}-MSK
   storageProfile: Fast vHDD
-  template: private-templates/debian-12
+  template: private-templates/debian-13
 
 ---
 apiVersion: deckhouse.io/v1
@@ -40,7 +40,7 @@ spec:
   rootDiskSizeGb: 30
   sizingPolicy: ${VCD_ORG}-MSK
   storageProfile: Fast vHDD
-  template: private-templates/debian-12
+  template: private-templates/debian-13
 
 ---
 apiVersion: deckhouse.io/v1
