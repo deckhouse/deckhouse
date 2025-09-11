@@ -1,155 +1,80 @@
 ---
-title: "Response Wrapping"
+title: "Response wrapping"
 permalink: en/stronghold/documentation/user/concepts/response-wrapping.html
 lang: en
-description: Wrapping responses in cubbyholes for secure distribution.
+description: Response wrapping in Cubbyhole storage for secure distribution.
 ---
 
-# Response wrapping
+In many deployment scenarios of Deckhouse Stronghold, clients interact directly with Stronghold and use the returned secrets. However, in some cases, it may be more appropriate to separate privileges so that one trusted party interacts with most of the Stronghold API and then passes the secrets to the final consumer.
 
-## Overview
+The more intermediaries involved in secret transmission, the higher the risk of accidental disclosure, especially if the secret is transmitted in plaintext. For example, you may need to deliver a private TLS key to a machine where, due to security policy, the decryption key can't be stored in persistent storage. In this case, encrypting the key before transfer is not possible.
 
-In many Stronghold deployments, clients can access Stronghold directly and consume returned secrets. In other situations, it may make sense to or be desired to separate privileges such that one trusted entity is responsible for interacting with most of the Stronghold API and passing secrets to the end consumer.
+To address such scenarios, Stronghold provides the _response wrapping_ feature. Instead of returning the response directly to the HTTP client, Stronghold stores it in the [`cubbyhole`](../secrets-engines/cubbyhole.html). Access to the stored content is granted only through a one-time token that Stronghold returns to the client.
 
-However, the more relays a secret travels through, the more possibilities for accidental disclosure, especially if the secret is being transmitted in plaintext. For instance, you may wish to get a TLS private key to a machine that has been cold-booted, but since you do not want to store a decryption key in persistent storage, you cannot encrypt this key in transit.
+From a logical perspective, the response is wrapped in a token that must be unwrapped to access the data. From a functional perspective, the token authorizes access to Stronghold's "key holder" and allows the data to be decrypted.
 
-To help address this problem, Stronghold includes a feature called _response wrapping_. When requested, Stronghold can take the response it would have sent to an HTTP client and instead insert it into the [`cubbyhole`](../secrets-engines/cubbyhole.html) of a single-use token, returning that single-use token instead.
+This method provides a reliable mechanism for secure information exchange across various environments. Response wrapping solves three key tasks:
 
-Logically speaking, the response is wrapped by the token, and retrieving it requires an unwrap operation against this token. Functionally speaking, the token provides authorization to use an encryption key from Stronghold's keyring to decrypt the data.
+- **Hiding sensitive information**. The value transmitted over the network is not the secret itself but a token to access it. Even if intercepted or logged, it does not contain confidential information.
+- **Abuse detection**. A token can only be unwrapped by a single party. If a client receives a token that cannot be unwrapped, it is a reason to initiate a security incident investigation. Before unwrapping, the client can verify the token's origin through Stronghold.
+- **Expiration enforcement**. A token has its own time-to-live (TTL), separate from the TTL of the secret (and usually much shorter). If the client does not unwrap the token in time, it expires.
 
-This provides a powerful mechanism for information sharing in many environments. In the types of scenarios, described above, often the best practical option is to provide _cover_ for the secret information, be able to _detect malfeasance_ (interception, tampering), and limit _lifetime_ of the secret's exposure. Response wrapping performs all three of these duties:
+## Response wrapping tokens
 
-- It provides _cover_ by ensuring that the value being transmitted across the
-  wire is not the actual secret but a reference to such a secret, namely the
-  response-wrapping token. Information stored in logs or captured along the
-  way do not directly see the sensitive information.
-- It provides _malfeasance detection_ by ensuring that only a single party can
-  ever unwrap the token and see what's inside. A client receiving a token that
-  cannot be unwrapped can trigger an immediate security incident. In addition,
-  a client can inspect a given token before unwrapping to ensure that its
-  origin is from the expected location in Stronghold.
-- It _limits the lifetime_ of secret exposure because the response-wrapping
-  token has a lifetime that is separate from the wrapped secret (and often can
-  be much shorter), so if a client fails to come up and unwrap the token, the
-  token can expire very quickly.
+When wrapping is applied, Stronghold does not return the original API response directly. Instead, the client receives the following token metadata:
 
-## Response-Wrapping tokens
+- TTL — token lifetime.
+- Token — token value.
+- Creation time — time when the token was generated.
+- Creation path — API endpoint that triggered the response generation.
+- Wrapped token ID — indicates the wrapped token (for example, during authentication or token creation). This is useful for orchestration systems (such as Nomad), as it allows token lifetime management without disclosing the token.
 
-When a response is wrapped, the normal API response from Stronghold does not contain
-the original secret, but rather contains a set of information related to the
-response-wrapping token:
+Currently, Stronghold does not support signing of response wrapping tokens, since it does not provide significant additional protection. If the server endpoint is correct, token validation is performed by interacting with Stronghold itself.
+A signed token would not eliminate the need to verify it with the server, because the token does not contain the sensitive data itself—it is only a mechanism to access it. Therefore, Stronghold will not return the data without confirming the token's validity.
 
-- TTL: The TTL of the response-wrapping token itself
-- Token: The actual token value
-- Creation Time: The time that the response-wrapping token was created
-- Creation Path: The API path that was called in the original request
-- Wrapped Accessor: If the wrapped response is an authentication response
-  containing a Stronghold token, this is the value of the wrapped token's accessor.
-  This is useful for orchestration systems (such as Nomad) to be able to control
-  the lifetime of secrets based on their knowledge of the lifetime of jobs,
-  without having to actually unwrap the response-wrapping token or gain
-  knowledge of the token ID inside.
+Even if an attacker redirects a client to a fake server, they can substitute the public signing key.
+In theory, you could cache a previously valid key, but that would also require caching the previously valid address (in most cases, the Stronghold address will not change or will be set via service discovery).
 
-Stronghold currently does not provide signed response-wrapping tokens, as it
-provides little extra protection. If you are being pointed to the correct Stronghold
-server, token validation is performed by interacting with the server itself; a
-signed token does not remove the need to validate the token with the server,
-since the token is not carrying data but merely an access mechanism and the
-server will not release data without validating it. If you are being attacked
-and pointed to the wrong Stronghold server, the same attacker could trivially give
-you the wrong signing public key that corresponds to the wrong Stronghold server.
-You could cache a previously valid key, but could also cache a previously valid
-address (and in most cases the Stronghold address will not change or will be set via
-a service discovery mechanism). As such, we rely on the fact that the token
-itself is not carrying authoritative data and do not sign it.
+Thus, Stronghold relies on the fact that the token does not contain sensitive data and therefore does not require signing.
 
-## Response-Wrapping token operations
+## Operations with wrapping tokens
 
-Via the `sys/wrapping` path, several operations can be run against wrapping
-tokens:
+The following operations are available under the `sys/wrapping/` path:
 
-- **Lookup** (`sys/wrapping/lookup`)**:** This allows fetching the response-wrapping
-  token's creation time, creation path, and TTL. This path is unauthenticated
-  and available to response-wrapping tokens themselves. In other words, a
-  response-wrapping token holder wishing to perform validation is always
-  allowed to look up the properties of the token.
-- **Unwrap** (`sys/wrapping/unwrap`)**:** Unwrap the token, returning the response
-  inside. The response that is returned will be the original wire-format
-  response; it can be used directly with API clients.
-- **Rewrap** (`sys/wrapping/rewrap`)**:** Allows migrating the wrapped data to a new
-  response-wrapping token. This can be useful for long-lived secrets. For
-  example, an organization may wish (or be required in a compliance scenario)
-  to have the `pki` backend's root CA key be returned in a long-lived
-  response-wrapping token to ensure that nobody has seen the key (easily
-  verified by performing lookups on the response-wrapping token) but available
-  for signing CRLs in case they ever accidentally change or lose the `pki`
-  mount. Often, compliance schemes require periodic rotation of secrets, so
-  this helps achieve that compliance goal without actually exposing what's
-  inside.
-- **Wrap** (`sys/wrapping/wrap`)**:** A helper endpoint that echoes back the data sent
-  to it in a response-wrapping token. Note that blocking access to this
-  endpoint does not remove the ability for arbitrary data to be wrapped, as it
-  can be done elsewhere in Stronghold.
+- **Lookup** (`sys/wrapping/lookup`): Returns the token's creation time, path, and TTL. The path does not require authentication.
+  The token holder can always require its properties via this endpoint.
+- **Unwrap** (`sys/wrapping/unwrap`): Unwraps the token, returning the stored response in its original API format.
+- **Rewrap** (`sys/wrapping/rewrap`): Rewraps already wrapped data into a new token. This is useful for secrets with long lifetimes. For example, an organization may want (or be required by security policy) to have the backend `pki` root CA key returned in a long-lived wrapping token—ensuring the key is never exposed (which can be verified via token lookup)—but still needs access to the key to sign a CRL if the `pki` mount is changed or lost. Security policies often require secret rotation, and this operation enables it without risk of exposure.
+- **Wrap** (`sys/wrapping/wrap`): Returns data wrapped in a token.
+  > Even if access to this path is restricted, wrapping can still be performed through other Stronghold API methods.
 
-## Response-Wrapping token creation
+## Creating a wrapping token
 
-Response wrapping is per-request and is triggered by providing to Stronghold the
-desired TTL for a response-wrapping token for that request. This is set by the
-client using the `X-Vault-Wrap-TTL` header and can be either an integer number
-of seconds or a string duration of seconds (`15s`), minutes (`20m`), or hours
-(`25h`). When using the Stronghold CLI, you can set this via the `-wrap-ttl`
-parameter. When using the Go API, wrapping is triggered by [setting a helper
-function](https://godoc.org/github.com/hashicorp/vault/api#Client.SetWrappingLookupFunc)
-that tells the API the conditions under which to request wrapping, by mapping
-an operation and path to a desired TTL.
+Response wrapping is performed per request and is triggered by specifying the desired TTL.
+The TTL is set by the client using the `X-Vault-Wrap-TTL` header and can be either an integer (in seconds) or a string (`15s`, `20m`, `25h`).
+In the Stronghold CLI, this is done with the `-wrap-ttl` option.
+In the Go API, the [`SetWrappingLookupFunc`](https://godoc.org/github.com/hashicorp/vault/api#Client.SetWrappingLookupFunc) function is used. It instructs the API under which conditions wrapping should be requested by matching the operation and path with the desired TTL.
 
-If a client requests wrapping:
+Wrapping process:
 
-1. The original HTTP response is serialized
-2. A new single-use token is generated with the TTL supplied by the client
-3. Internally, the original serialized response is stored in the single-use
-   token's cubbyhole
-4. A new response is generated, with the token ID, TTL, and path stored in the
-   new response's wrap information object
-5. The new response is returned to the caller
+1. The original HTTP response is serialized.
+2. A one-time token is generated with the TTL set by the client.
+3. The response is stored in the `cubbyhole` associated with the token.
+4. A new response is generated with additional fields containing token information (ID, TTL, and path).
+5. The new response is returned to the client.
 
-Note that policies can control minimum/maximum wrapping TTLs; see the [policies
-concepts page](policy.html) for
-more information.
+{% alert level="info" %}
+The minimum and maximum TTL of wrapping tokens is controlled by [policies](policy.html).
+{% endalert %}
 
-## Response-Wrapping token validation
+## Verifying a wrapping token
 
-Proper validation of response-wrapping tokens is essential to ensure that any
-malfeasance is detected. It's also pretty straightforward.
+To reduce abuse risks, it is recommended to validate wrapping tokens using the following procedure:
 
-Validation is best performed by the following steps:
+1. If the client expected a token but did not receive one, it may have been intercepted by an attacker. Start an incident investigation.
+1. Perform a lookup on the token. If the token has expired or been revoked, this does not always mean a leak (for example, the client started too late). However, investigation is still required. Using the Stronghold audit log, check whether the token was unwrapped.
+1. Compare the token’s creation path with the expected one. For example, if you expected a TLS key or certificate after unwrapping, the path should likely be `pki/issue/...`. A mismatch may indicate token substitution (most likely if the path starts with `cubbyhole` or `sys/wrapping/wrap`).
+   > Pay special attention to the `kv` secrets engine. If you expect the secret to come from `secret/foo`, but an attacker passes a token with the path `secret/bar`, simply checking the `secret/` prefix is insufficient.
+1. After verifying the prefix, unwrap the token. If unwrapping fails, initiate an incident investigation.
 
-1. If a client has been expecting delivery of a response-wrapping token and
-   none arrives, this may be due to an attacker intercepting the token and then
-   preventing it from traveling further. This should cause an alert to trigger
-   an immediate investigation.
-2. Perform a lookup on the response-wrapping token. This immediately tells you
-   if the token has already been unwrapped or is expired (or otherwise
-   revoked). If the lookup indicates that a token is invalid, it does not
-   necessarily mean that the data was intercepted (for instance, perhaps the
-   client took a long time to start up and the TTL expired) but should trigger
-   an alert for immediate investigation, likely with the assistance of Stronghold's
-   audit logs to see if the token really was unwrapped.
-3. With the token information in hand, validate that the creation path matches
-   expectations. If you expect to find a TLS key/certificate inside, chances
-   are the path should be something like `pki/issue/...`. If the path is not
-   what you expect, it is possible that the data contained inside was read and
-   then put into a new response-wrapping token. (This is especially likely if
-   the path starts with `cubbyhole` or `sys/wrapping/wrap`.) Particular care
-   should be taken with `kv` secrets engine: exact matches on the path are best
-   there. For example, if you expect a secret to come from `secret/foo` and
-   the interceptor provides a token with `secret/bar` as the path, simply
-   checking for a prefix of `secret/` is not enough.
-4. After prefix validation, unwrap the token. If the unwrap fails, the response
-   is similar to if the initial lookup fails: trigger an alert for immediate
-   investigation.
-
-Following those steps provides very strong assurance that the data contained
-within the response-wrapping token has never been seen by anyone other than the
-intended client and that any interception or tampering has resulted in a
-security alert.
+By following these steps, you can be sure that only the intended client has seen the data inside the wrapping token, and any attempt at substitution or interception will be detected.

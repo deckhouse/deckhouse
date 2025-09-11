@@ -1,61 +1,66 @@
 ---
-title: "Deckhouse Stronghold Administrator's Guide to the Automatic Snapshot API"
+title: "Automatic backup API guide"
 permalink: en/stronghold/documentation/user/auto-snapshot.html
 lang: en
 description: "Administrator's guide to working with the Deckhouse Stronghold automatic snapshot API."
 ---
 
-Deckhouse Stronghold supports creating schedules for performing automatic backups of the internal storage.
-Since Stronghold stores data on disk in encrypted form, the backup will also contain only encrypted data.
-To access the data, you will need to restore the backup to the Stronghold cluster and perform the storage unseal procedure.
+Deckhouse Stronghold lets you configure a schedule for automatic secret storage backups.
+Since Stronghold stores data on disk in encrypted form, the backup also contains only encrypted data.
+To access the data, you need to restore the backup in a Stronghold cluster and perform the unsealing procedure.
 
-Backups can be saved to a local disk in a selected folder or to S3-compatible storage.
+Backups can be stored either on a local disk in the selected directory or in an S3-compatible storage.
 
-Backup settings can be managed and their status viewed via API, CLI, and UI.
+You can manage backup settings and check their status via the API, the Stronghold CLI, and the web UI.
 
-## Creating/updating automatic snapshot configuration
+## Creating or updating an automatic backup configuration
 
 | Method | Path |
 |--------|------|
-| POST   | /sys/storage/raft/snapshot-auto/config/:name |
+| POST   | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-Sudo privileges are required to interact with this API method.
+Sudo privileges are required to use this API method.
 
-### Parameters
+### Parameter description
 
-- **name (string: &lt;required&gt;)** – Name of the configuration to modify.
+<div class="table__styling--container"></div>
 
-- **interval (integer or string: &lt;required&gt;)** - Time between snapshots. This can be either an integer number of seconds, or a Go duration format string (e.g. 24h)
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `name` | String | Yes | — | Name of the configuration to create or update. |
+| `interval` | Integer or string | Yes | — | Interval between backups. Can be specified in seconds or in Go duration format (for example, `24h`). |
+| `retain` | Integer | No | `3` | Number of backups to keep. When this number is exceeded, the oldest backups are deleted. |
+| `path_prefix` | Immutable string | Yes | — | If `storage_type` is set to local storage, this specifies the backup directory. If set to cloud storage, this specifies the bucket prefix (a leading `/` is ignored, subsequent `/` are optional). |
+| `file_prefix` | Immutable string | No | `stronghold-snapshot` | File or object name prefix for the backup within the directory or bucket specified in `path_prefix`. |
+| `storage_type` | Immutable string | Yes | — | Backup storage type: `local` or `aws-s3` (cloud). The parameters below depend on the selected storage type. |
 
-- **retain (integer: 3)** - How many snapshots are to be kept; when writing a snapshot, if there are more snapshots already stored than this number, the oldest ones will be deleted.
+#### Additional parameters for local storage
 
-- **path_prefix (immutable string: &lt;required&gt;)** - For `storage_type=local`, the directory to write the snapshots in. For s3 storage type, the bucket prefix to use. The trailing `/` is optional.
+<div class="table__styling--container"></div>
 
-- **file_prefix (immutable string: "stronghold-snapshot")** - Within the directory or bucket prefix given by `path_prefix`, the file or object name of snapshot files will start with this string.
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `local_max_space` | Integer | No | `0` | Maximum available space (in bytes) for backups with the given `file_prefix` in the `path_prefix` directory. If available space is insufficient, backup creation fails. A value of `0` disables disk space checks. |
 
-- **storage_type (immutable string: &lt;required&gt;)** - One of `local` or `aws-s3`. The remaining parameters described below are specific to the selected `storage_type` and prefixed accordingly.
+#### Additional parameters for cloud storage
 
-#### storage_type = "local"
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `aws_s3_bucket` | String | Yes | — | Name of the S3 bucket for storing backups. |
+| `aws_s3_region` | String | No | — | Region of the S3 bucket. |
+| `aws_access_key_id` | String | No | — | Key ID for accessing the S3 bucket. |
+| `aws_secret_access_key` | String | No | — | Secret key for accessing the S3 bucket. |
+| `aws_s3_endpoint` | String | No | — | S3 service endpoint. |
+| `aws_s3_disable_tls` | Boolean | No | — | Disables TLS for the S3 endpoint. Used only for testing, usually together with `aws_s3_endpoint`. |
+| `aws_s3_ca_certificate` | String | No | — | CA certificate for the S3 endpoint in PEM format. |
 
-- **local_max_space (integer: 0)** - For `storage_type=local`, the maximum space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory. Snapshot attempts will fail if there is not enough space left in this allowance. A value of 0 (default) disables space checking.
+### Request examples
 
-#### storage_type = "aws-s3"
+#### Creating a configuration
 
-- **aws_s3_bucket (string: &lt;required&gt;)** - S3 bucket to write snapshots to.
-- **aws_s3_region (string)** - AWS region bucket is in.
-- **aws_access_key_id (string)** - AWS access key ID.
-- **aws_secret_access_key (string)** - AWS secret access key.
-- **aws_s3_endpoint (string)** - AWS endpoint. This is typically only set when using a non-AWS S3 implementation like Minio.
-- **aws_s3_disable_tls (boolean)** - Disable TLS for the S3 endpoint. This should only be used for testing purposes, typically in conjunction with `aws_s3_endpoint`.
-- **aws_s3_ca_certificate (string)** - Certificate authority certificate for the `aws_s3_endpoint` in PEM format.
+All required fields must be specified.
 
-### Example
-
-#### Creation
-
-All required fields are specified
-
-```sh
+```shell
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
     "interval":          "5m",
@@ -71,19 +76,19 @@ d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 EOF
 ```
 
-Response:
+Example response:
 
-```sh
+```console
 Key    Value
 ---    -----
 msg    successfully created config
 ```
 
-#### Update
+#### Updating a configuration
 
-You can specify not all fields; existing fields will not be changed
+Not all fields need to be provided. Existing fields remain unchanged if omitted.
 
-```sh
+```shell
 d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 {
     "interval":          "3m",
@@ -94,48 +99,54 @@ d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
 EOF
 ```
 
-Response:
+Example response:
 
-```sh
+```console
 Key    Value
 ---    -----
 msg    successfully updated config
 ```
 
-## List existing automatic snapshot configurations
+## Viewing the list of existing configurations
 
 | Method | Path |
 |--------|------|
-| LIST   | /sys/storage/raft/snapshot-auto/config |
+| LIST   | `/sys/storage/raft/snapshot-auto/config` |
 
-Used to get a list of names of all existing automatic snapshots
+Returns a list of all existing automatic backup configurations.
 
-### Example
+### Request example
 
-`d8 stronghold list sys/storage/raft/snapshot-auto/config`
+```shell
+d8 stronghold list sys/storage/raft/snapshot-auto/config
+```
 
-Response:
+Example response:
 
-```sh
+```console
 Keys
 ----
 s3every5min
 localEvery3min
 ```
 
-## Obtaining automatic snapshot configuration parameters
+## Obtaining configuration parameters
 
 | Method | Path |
 |--------|------|
-|  GET   | /sys/storage/raft/snapshot-auto/config/:name |
+|  GET   | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-### Example
+Returns the parameter values of the specified configuration.
 
-`d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min`
+### Request example
 
-Response:
+```shell
+d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min
+```
 
-```sh
+Example response:
+
+```console
 Key                     Value
 ---                     -----
 interval                300
@@ -150,19 +161,23 @@ aws_s3_region           n/a
 aws_s3_ca_certificate   n/a
 ```
 
-## Deleting the automatic snapshot configuration
+## Deleting a configuration
 
 | Method | Path |
 |--------|------|
-| DELETE | /sys/storage/raft/snapshot-auto/config/:name |
+| DELETE | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-### Example
+Deletes the specified configuration and returns information about the last created backup.
 
-`d8 stronghold delete sys/storage/raft/snapshot-auto/config/s3every5min`
+### Request example
 
-Response:
+```shell
+d8 stronghold delete sys/storage/raft/snapshot-auto/config/s3every5min
+```
 
-```sh
+Example response:
+
+```console
 Key                    Value
 ---                    -----
 consecutive_errors     0
@@ -175,19 +190,23 @@ snapshot_start         2025-01-31T15:24:12Z
 snapshot_url           https://minio.domain.ru/my_bucket/backups/main_stronghold_2025-01-31T15:24:12Z
 ```
 
-## Getting the status of the automatic snapshot
+## Getting backup status
 
 | Method | Path |
 |--------|------|
-|  GET   | /sys/storage/raft/snapshot-auto/status/:name |
+|  GET   | `/sys/storage/raft/snapshot-auto/status/:name` |
 
-### Example
+Returns information about the current status of the specified backup.
 
-`d8 stronghold read sys/storage/raft/snapshot-auto/status/s3every5min`
+### Request example
 
-Response:
+```shell
+d8 stronghold read sys/storage/raft/snapshot-auto/status/s3every5min
+```
 
-```sh
+Example response:
+
+```console
 Key    Value
 ---    -----
 msg    successfully deleted config
