@@ -3,10 +3,10 @@ title: "HSM support"
 permalink: en/stronghold/documentation/admin/standalone/hsm.html
 ---
 
-Stronghold supports Root key encryption using hardware security modules (HSM) such as TPM2, Rutoken ECP 3.0, JaCarta, and other devices that support the PKCS#11 standard.  
+Stronghold supports Root key encryption using hardware security modules (HSM) such as TPM2, Rutoken ECP 3.0, JaCarta, and other devices that support the PKCS11 standard.  
 For testing and development purposes, SoftHSM2 is also supported.  
 
-To use automatic unsealing via PKCS#11, you must first create keys in the HSM and configure Stronghold to use them.
+To use automatic unsealing via PKCS11, you must first create keys in the HSM and configure Stronghold to use them.
 
 ## SoftHSM2
 
