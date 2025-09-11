@@ -50,9 +50,7 @@ d8 p module disable stronghold
 ## Управление доступами
 
 В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/).
-Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [secrets-store-integration](
-  /products/kubernetes-platform/modules/secrets-store-integration/stable/).
-  /products/kubernetes-platform/modules/observability/stable/
+Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [`secrets-store-integration`](/products/kubernetes-platform/modules/secrets-store-integration/stable/).
 
 Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 
@@ -102,7 +100,7 @@ spec:
 
 > Так же нужен опыт работы с утилитой `kubectl`
 
-Ниже приведены варианты организации доступа к модулю через [инлет Ingress](../../../documentation/v1/modules/402-ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
+Ниже приведены варианты организации доступа к модулю через [инлет Ingress](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) и далее процесс включения модуля и проверки работоспособности.
 
 ### Способы организации доступа через инлет Ingress
 
@@ -345,8 +343,8 @@ spec:
 
 ### Не резолвится доменное имя dex.mycompany.tld
 
-Если ваш домен не резолвится через DNS и вы планируете использовать файл hosts, то для работы dex нужно добавить
-адрес балансировщика или IP frontend-узла в кластерный DNS. В его роли можно использовать [модуль kube-dns](../../../documentation/v1/modules/042-kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
+Если ваш домен не резолвится через DNS, и вы планируете использовать файл `hosts`, то для работы Dex нужно добавить
+адрес балансировщика или IP frontend-узла в кластерный DNS. В его роли можно использовать [модуль `kube-dns`](/products/kubernetes-platform/documentation/v1/modules/kube-dns/), чтобы поды могли получить доступ к домену `dex.mycompany.tld` по имени.
 
 Пример получения IP для Ingress `nginx-load-balancer` с типом `LoadBlancer`
 
