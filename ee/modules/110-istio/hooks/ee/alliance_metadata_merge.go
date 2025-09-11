@@ -17,6 +17,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/square/go-jose/v3"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -145,29 +146,28 @@ type IstioRemoteSecretToken struct {
 	Token string `json:"token"`
 }
 
-// parseKubeconfig extracts the token from a kubeconfig string
+// Kubeconfig represents the structure of a kubeconfig file
+type Kubeconfig struct {
+	Users []struct {
+		User struct {
+			Token string `yaml:"token"`
+		} `yaml:"user"`
+	} `yaml:"users"`
+}
+
+// parseKubeconfig extracts the token from a kubeconfig string using YAML unmarshaling
 func parseKubeconfig(kubeconfigStr string) (string, error) {
-	lines := strings.Split(kubeconfigStr, "\n")
-	inUsersSection := false
+	var kubeconfig Kubeconfig
 
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	err := yaml.Unmarshal([]byte(kubeconfigStr), &kubeconfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal kubeconfig: %v", err)
+	}
 
-		if line == "users:" {
-			inUsersSection = true
-			continue
-		}
-
-		if inUsersSection {
-			if strings.HasPrefix(line, "token:") {
-				token := strings.TrimSpace(strings.TrimPrefix(line, "token:"))
-				return token, nil
-			}
-		}
-
-		// Reset users section flag if we encounter other top-level sections
-		if inUsersSection && (line == "clusters:" || line == "contexts:" || line == "apiVersion:" || line == "kind:") {
-			inUsersSection = false
+	// Look for the first user with a token
+	for _, user := range kubeconfig.Users {
+		if user.User.Token != "" {
+			return user.User.Token, nil
 		}
 	}
 
