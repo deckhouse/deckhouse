@@ -8,14 +8,16 @@ from deckhouse import hook, utils
 config = """
 configVersion: v1
 kubernetesCustomResourceConversion:
-  - name: v1alpha1_to_v1alpha2
+  - name: v1beta1_to_v1
     crdName: crontabs.stable.example.com
-    - fromVersion: stable.example.com/v1alpha1
-      toVersion: stable.example.com/v1alpha2
-  - name: v1alpha2_to_v1alpha1
+    conversions:
+    - fromVersion: stable.example.com/v1beta1
+      toVersion: stable.example.com/v1
+  - name: v1_to_v1beta1
     crdName: crontabs.stable.example.com
-    - fromVersion: stable.example.com/v1alpha2
-      toVersion: stable.example.com/v1alpha1
+    conversions:
+    - fromVersion: stable.example.com/v1
+      toVersion: stable.example.com/v1beta1
 """
 
 class Conversion(utils.BaseConversionHook):

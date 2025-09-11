@@ -48,10 +48,6 @@ func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebh
 		return nil, fmt.Errorf("template execute: %w", err)
 	}
 
-	// debug
-	// log.Info("template", slog.String("template", buf.String()))
-	fmt.Println(buf.String())
-
 	return &buf, nil
 }
 
@@ -68,17 +64,11 @@ func RenderConversionTemplate(tpl string, cwh *deckhouseiov1alpha1.ConversionWeb
 		return nil, fmt.Errorf("template execute: %w", err)
 	}
 
-	// debug
-	// log.Info("template", slog.String("template", buf.String()))
-	fmt.Println(buf.String())
-
 	return &buf, nil
 }
 
 // toYAML takes an interface, marshals it to yaml, and returns a string. It will
 // always return a string, even on marshal error (empty string).
-//
-// This is designed to be called from a template.
 func toYAML(v interface{}) string {
 	data, err := json.Marshal(v)
 	if err != nil {
