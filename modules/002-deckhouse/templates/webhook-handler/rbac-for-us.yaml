@@ -32,7 +32,7 @@ rules:
   resources: ["metalloadbalancerclasses"]
   verbs: ["get","list","watch"]
 - apiGroups: ["deckhouse.io"]
-  resources: ["validationwebhooks"]
+  resources: ["validationwebhooks", "conversionwebhooks"]
   verbs: ["get", "list", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
