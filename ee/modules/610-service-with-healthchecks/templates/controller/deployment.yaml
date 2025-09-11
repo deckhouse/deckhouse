@@ -68,7 +68,7 @@ spec:
         - name: deckhouse-registry
       containers:
         - name: controller
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           args:
             - --metrics-bind-address=:8080
             {{- if .Values.serviceWithHealthchecks.debug }}
@@ -76,8 +76,6 @@ spec:
             {{- end }}
           image: {{ include "helm_lib_module_image" (list . "controller") }}
           imagePullPolicy: IfNotPresent
-          name: controller
-          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           livenessProbe:
             httpGet:
               path: /healthz
