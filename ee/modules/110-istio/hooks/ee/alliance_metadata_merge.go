@@ -467,17 +467,33 @@ multiclustersLoop:
 		// We need to find the secret that matches this multicluster
 		remoteSecrets := input.Values.Get("istio.internal.remoteSecrets")
 		if remoteSecrets.Exists() {
+			input.Logger.Debug("checking remote secrets for existing token",
+				slog.String("multiclusterName", multiclusterInfo.Name),
+				slog.Int("remoteSecretsCount", len(remoteSecrets.Array())))
+
 			for _, secretValue := range remoteSecrets.Array() {
 				secretName := secretValue.Get("name").String()
 				// Extract cluster name from secret name (remove "istio-remote-secret-" prefix)
 				if strings.HasPrefix(secretName, "istio-remote-secret-") {
 					clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+					input.Logger.Debug("comparing cluster names",
+						slog.String("secretName", secretName),
+						slog.String("extractedClusterName", clusterName),
+						slog.String("multiclusterName", multiclusterInfo.Name))
+
 					if clusterName == multiclusterInfo.Name {
 						existingToken = secretValue.Get("token").String()
+						input.Logger.Debug("found matching secret for multicluster",
+							slog.String("multiclusterName", multiclusterInfo.Name),
+							slog.String("secretName", secretName),
+							slog.Bool("hasToken", existingToken != ""))
 						break
 					}
 				}
 			}
+		} else {
+			input.Logger.Debug("no remote secrets found in values",
+				slog.String("multiclusterName", multiclusterInfo.Name))
 		}
 
 		if existingToken != "" {
