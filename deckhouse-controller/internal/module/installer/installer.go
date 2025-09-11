@@ -64,14 +64,14 @@ func New(clusterUUID string, dc dependency.Container, logger *log.Logger) *Insta
 	}
 }
 
-// GetInstalled gets all installed modules from downloaded dir
-func (i *Installer) GetInstalled() (map[string]struct{}, error) {
+// GetDownloaded gets all downloaded modules from downloaded dir
+func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	entries, err := os.ReadDir(i.downloaded)
 	if err != nil {
 		return nil, fmt.Errorf("read downloaded dir: %w", err)
 	}
 
-	installed := make(map[string]struct{})
+	downloaded := make(map[string]struct{})
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -82,10 +82,10 @@ func (i *Installer) GetInstalled() (map[string]struct{}, error) {
 			continue
 		}
 
-		installed[entry.Name()] = struct{}{}
+		downloaded[entry.Name()] = struct{}{}
 	}
 
-	return installed, nil
+	return downloaded, nil
 }
 
 // Download downloads module to tmp and returns path to it

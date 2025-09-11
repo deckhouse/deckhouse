@@ -68,6 +68,7 @@ func CreateImage(ctx context.Context, modulePath, imagePath string) error {
 		modulePath,
 	}
 
+	// mkfs.erofs --aufs --quiet -Enoinline_data -T 1750791050 -Uclear -x-1 <imagePath> <modulePath>
 	cmd := exec.CommandContext(ctx, mkfsCommand, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -96,6 +97,7 @@ func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) e
 		imagePath,
 	}
 
+	// mkfs.erofs --tar=f --aufs --quiet -Enoinline_data -T 1750791050 -Uclear -x-1 <imagePath> <modulePath>
 	cmd := exec.CommandContext(ctx, mkfsCommand, args...)
 	cmd.Stdin = rc
 

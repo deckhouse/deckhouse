@@ -304,17 +304,17 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
-	installed, err := l.installer.GetInstalled()
+	downloaded, err := l.installer.GetDownloaded()
 	if err != nil {
-		return fmt.Errorf("get installed module: %w", err)
+		return fmt.Errorf("get idownloaded module: %w", err)
 	}
 
 	// remove modules with release
 	for _, release := range releases.Items {
-		delete(installed, release.GetModuleName())
+		delete(downloaded, release.GetModuleName())
 	}
 
-	for module := range installed {
+	for module := range downloaded {
 		mpo := new(v1alpha2.ModulePullOverride)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
 			continue

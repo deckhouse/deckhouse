@@ -76,6 +76,7 @@ func CreateMapper(ctx context.Context, imagePath, hash string) error {
 		hash,
 	}
 
+	// veritysetup open <imagePath> <module> <hashPath> <hash>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("veritysetup open: %w (output: %s)", err, string(output))
@@ -97,6 +98,7 @@ func CloseMapper(ctx context.Context, module string) error {
 		module,
 	}
 
+	// veritysetup close <module>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		// mapper not found
@@ -153,6 +155,7 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
 	return hash, nil
 }
 
+// veritySetupFormat calls veritysetup utils to create image verity file
 func veritySetupFormat(ctx context.Context, imagePath, hashPath string) (string, error) {
 	args := []string{
 		formatArg,
@@ -164,6 +167,7 @@ func veritySetupFormat(ctx context.Context, imagePath, hashPath string) (string,
 		hashPath,
 	}
 
+	// veritysetup format --data-block-size=4096 --hash-block-size=4096 --salt=<salt> <imagePath> <hashPath>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

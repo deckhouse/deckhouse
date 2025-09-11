@@ -280,6 +280,8 @@ spec:
             name: tmp
           - mountPath: /dev/loop-control
             name: loop-control
+          - mountPath: /dev/mapper/control
+            name: dm-control
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
             name: chroot
@@ -347,6 +349,10 @@ spec:
       - name: loop-control
         hostPath:
           path: /dev/loop-control
+          type: CharDevice
+      - name: dm-control
+        hostPath:
+          path: /dev/mapper/control
           type: CharDevice
       - emptyDir:
           medium: Memory

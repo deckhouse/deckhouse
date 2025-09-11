@@ -38,9 +38,10 @@ func Mount(ctx context.Context, module, mountPath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Mount")
 	defer span.End()
 
+	// /dev/mapper/<module>
 	dmName := fmt.Sprintf(dmTemplate, module)
 
-	span.SetAttributes(attribute.String("dmName", dmName))
+	span.SetAttributes(attribute.String("mapperName", dmName))
 	span.SetAttributes(attribute.String("mountPath", mountPath))
 
 	// create the mount path if it does not exist
