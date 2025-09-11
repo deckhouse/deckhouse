@@ -36,6 +36,10 @@ import (
 	"registry-modules-watcher/internal/metrics"
 )
 
+const (
+	ImageAnnotationSignature = "io.deckhouse.delivery-kit.signature"
+)
+
 // Constants for directory structure
 var (
 	documentationDirs = []string{"docs", "openapi", "openapi/conversions", "crds"}
@@ -148,6 +152,21 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		versionData.TarFile = tarFile
 
 		return versionData, nil
+	}
+
+	manifest, err := releaseImage.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf("get manifest: %w", err)
+	}
+
+	// manifest must exist
+	if manifest == nil {
+		return nil, fmt.Errorf("manifest is nil")
+	}
+
+	// check that the module sign annotation exists
+	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
+		s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
 	}
 
 	// Extract version from image
