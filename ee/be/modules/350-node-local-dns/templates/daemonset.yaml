@@ -73,7 +73,7 @@ spec:
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
 {{- else }}
       - name: iptables-wrapper-init
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
@@ -85,6 +85,8 @@ spec:
         volumeMounts:
         - mountPath: /sbin
           name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
