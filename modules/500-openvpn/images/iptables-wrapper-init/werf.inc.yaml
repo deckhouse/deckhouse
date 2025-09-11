@@ -32,6 +32,8 @@ import:
   add: /relocate
   to: /relocate
   before: setup
+git:
+{{- include "image mount points" $ }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
