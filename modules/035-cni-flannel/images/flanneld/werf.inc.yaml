@@ -1,27 +1,4 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 {{- $flannel_version := "0.26.2" }}
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
-final: false
-shell:
-  install:
-  - mkdir -p /relocate/sbin
-  - |
-    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-    done
-    # broken symlinks are not imported from the artifact
-    touch /sbin/iptables-wrapper
-  - |
-    for mode in legacy nft; do
-      for basecmd in iptables ip6tables; do
-        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-        done
-      done
-    done
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 fromImage: builder/golang-alpine
@@ -92,21 +69,6 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-  add: /relocate
-  to: /
-  before: setup
-- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/dist/flanneld
   to: /opt/bin/flanneld
@@ -115,6 +77,8 @@ import:
   add: /entrypoint
   to: /entrypoint
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/entrypoint"]

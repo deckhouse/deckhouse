@@ -145,7 +145,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"safeAgentUpdater":    "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
-		"flanneld": "imageHash-cniFlannel-flanneld",
+		"flanneld":            "imageHash-cniFlannel-flanneld",
+		"iptablesWrapperInit": "imageHash-cniFlannel-iptablesWrapperInit",
 	},
 	"cniSimpleBridge": map[string]interface{}{
 		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
