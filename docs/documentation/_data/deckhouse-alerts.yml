@@ -2098,16 +2098,19 @@ alerts:
         To check the module release status, run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o yaml
+        kubectl get mr
         ```
 
-        To apply a major release, you must meet the minimum version requirements. To check the update instructions (from-to versions), run the following command:
+        Get all module releases to decide what to do next.{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
 
         ```bash
         kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
-        This will show you the update paths including the from-to versions defined in the release.
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
       summary: |
         Module {{ $labels.moduleName }} is running {{ $labels.majorReleaseDepth }} major versions behind.
       severity: "9"

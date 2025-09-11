@@ -78,6 +78,8 @@ type Task struct {
 	TaskType TaskType
 	Message  string
 
+	IsMajor  bool
+	IsFromTo bool
 	IsPatch  bool
 	IsSingle bool
 	IsLatest bool
@@ -420,9 +422,11 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
 	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
 	isPatch := true
+	isMajor := false
 
 	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
 	if deployedReleaseInfo != nil {
+		isMajor := release.GetVersion().Major() > deployedReleaseInfo.Version.Major()
 		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
 		if endpointIdx >= 0 {
@@ -437,6 +441,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			return &Task{
 				TaskType:            Process,
 				IsPatch:             false,
+				IsMajor:             isMajor,
+				IsFromTo:            true,
 				IsLatest:            endpointIdx == len(releases)-1,
 				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 				QueueDepth:          queueDepthDelta,
@@ -529,6 +535,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 					return &Task{
 						TaskType:            Await,
+						IsMajor:             isMajor,
 						Message:             msg,
 						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 						QueueDepth:          queueDepthDelta,

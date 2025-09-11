@@ -389,7 +389,7 @@
         Deckhouse memory usage is too high.
 
   - alert: D8ModuleOutdatedByMajorVersion
-    expr: sum by (name, moduleName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    expr: sum by (name, moduleName, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
     labels:
       severity_level: "9"
       d8_module: deckhouse
@@ -398,7 +398,7 @@
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
-      plk_ignore_labels: "name"
+      plk_ignore_labels: "name,majorReleaseName,fromToName"
       summary: |
         Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind.
       description: |
@@ -408,13 +408,16 @@
         To check the module release status, run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o yaml
+        kubectl get mr
         ```
 
-        To apply a major release, you must meet the minimum version requirements. To check the update instructions (from-to versions), run the following command:
+        Get all module releases to decide what to do next.{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
 
         ```bash
         kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
-        This will show you the update paths including the from-to versions defined in the release.
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}

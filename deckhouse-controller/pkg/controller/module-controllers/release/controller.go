@@ -891,6 +891,14 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(release)
 	defer func() {
 		metricLabels[releaseUpdater.MajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
+		if task.IsMajor {
+			metricLabels[releaseUpdater.MajorReleaseName] = release.GetName()
+		}
+
+		if task.IsFromTo {
+			metricLabels[releaseUpdater.FromToName] = release.GetName()
+		}
+
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
