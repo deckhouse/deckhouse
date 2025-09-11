@@ -42,7 +42,7 @@ const (
 	SenderDeleteRequestsCountMetric       = "{PREFIX}_sender_delete_requests_count"
 	SenderDeleteRequestsSecondsMetric     = "{PREFIX}_sender_delete_requests_seconds"
 	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_module_validations_no_module_yaml_in_release_image"
-	RegistryScannerNoModuleSign           = "d8_telemetry_module_validations_no_module_sign"
+	RegistryScannerNoModuleSign           = "d8_telemetry_module_validations_no_module_sign_in_release_image"
 	SenderTimeoutRequestsTotalMetric      = "{PREFIX}_sender_timeout_requests_total"
 )
 
