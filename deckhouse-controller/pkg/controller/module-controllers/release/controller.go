@@ -502,15 +502,24 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		}
 	}
 
+	// at least one release for module source is deployed, add finalizer to prevent module source deletion
+	source := new(v1alpha1.ModuleSource)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		r.log.Error("failed to get module source", slog.String("module_source", release.GetModuleSource()), log.Err(err))
+
+		return res, fmt.Errorf("get module source: %w", err)
+	}
+
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
 		// if module is enabled - push runModule task in the main queue
 		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
+		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
+			module.InjectRegistryValue(utils.BuildRegistryValue(source))
+		}
 
 		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		source := release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelSource]
-
-		if err := r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), source, modulePath); err != nil {
+		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), "", modulePath); err != nil {
 			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return res, fmt.Errorf("run module with new open api schema: %w", err)
@@ -543,14 +552,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		}
 
 		return ctrl.Result{Requeue: true}, nil
-	}
-
-	// at least one release for module source is deployed, add finalizer to prevent module source deletion
-	source := new(v1alpha1.ModuleSource)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-		r.log.Error("failed to get module source", slog.String("module_source", release.GetModuleSource()), log.Err(err))
-
-		return res, fmt.Errorf("get module source: %w", err)
 	}
 
 	if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
