@@ -174,6 +174,8 @@ github.com/flant/addon-operator v1.12.2-0.20250912083430-16cfd9a31111 h1:cTHt+z+
 github.com/flant/addon-operator v1.12.2-0.20250912083430-16cfd9a31111/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
 github.com/flant/addon-operator v1.12.2-0.20250912090500-86e340629bb2 h1:IprnMDKScAM2TaJj1IYbHgTAc+o5IrVpXfSJIk1gJTs=
 github.com/flant/addon-operator v1.12.2-0.20250912090500-86e340629bb2/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
+github.com/flant/addon-operator v1.12.2-0.20250912092728-4cae88a41da2 h1:sOG6nb90TD1rbNKpymp9Ezx77ZrPTnevz7DcC49YVhE=
+github.com/flant/addon-operator v1.12.2-0.20250912092728-4cae88a41da2/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.3.1 h1:1SdD799sujXNg2F6Z27le/+qkcKQaKf9Z492YGEhVhc=
