@@ -252,7 +252,13 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
-	log.DebugF("runners in context: %-v\n", c.infrastructureContext.GetRunners())
+	if c.infrastructureContext != nil {
+		runners := c.infrastructureContext.GetRunners()
+		for key, runner := range runners {
+			log.DebugF("got %s runner from context: %-v\n", key, runner)
+		}
+	}
+
 	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)

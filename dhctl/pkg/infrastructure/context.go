@@ -422,5 +422,8 @@ func (f *Context) GetDestroyNodeRunner(metaConfig *config.MetaConfig, stateCache
 }
 
 func (f *Context) GetRunners() map[string]RunnerInterface {
-	return f.infrastructureRunnerByName
+	if f.infrastructureRunnerByName != nil {
+		return f.infrastructureRunnerByName
+	}
+	return nil
 }
