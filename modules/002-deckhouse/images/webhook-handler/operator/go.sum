@@ -39,8 +39,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/kube-client v1.3.1 h1:1SdD799sujXNg2F6Z27le/+qkcKQaKf9Z492YGEhVhc=
 github.com/flant/kube-client v1.3.1/go.mod h1:mql6hsZMgBLAhdj3Emb8TrP5MVdXduFQ2NLjzn6IF0Y=
-github.com/flant/shell-operator v1.10.5-0.20250902150811-9a4e2b2f4c7d h1:NDCZrPEeCVocZClfFjFHJKaRCKm7Yj9AdIPFXOOdKpE=
-github.com/flant/shell-operator v1.10.5-0.20250902150811-9a4e2b2f4c7d/go.mod h1:El4fR63G/anIxQklPbK3CUiGTBcurUzf/4runR7FQhg=
+github.com/flant/shell-operator v1.10.4 h1:OvhnpiRIQUMAvyp7w15t36fOAclclcOFjhFerA67pIE=
+github.com/flant/shell-operator v1.10.4/go.mod h1:El4fR63G/anIxQklPbK3CUiGTBcurUzf/4runR7FQhg=
 github.com/fsnotify/fsnotify v1.7.0 h1:8JEhPFa5W2WU7YfeZzPNqzMP6Lwt7L2715Ggo0nosvA=
 github.com/fsnotify/fsnotify v1.7.0/go.mod h1:40Bi/Hjc2AVfZrqy+aj+yEI+/bRxZnMJyTJwOpGvigM=
 github.com/go-chi/chi/v5 v5.2.2 h1:CMwsvRVTbXVytCk1Wd72Zy1LAsAh9GxMmSNWLHCG618=
