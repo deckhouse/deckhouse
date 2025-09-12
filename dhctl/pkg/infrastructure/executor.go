@@ -42,6 +42,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 
 	var (
 		stdout io.ReadCloser
+		stderr io.ReadCloser
 		err    error
 	)
 	if cmd.Stdout == nil {
@@ -52,11 +53,14 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		defer stdout.Close()
 	}
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stderr pipe: %v", err)
+	if cmd.Stderr == nil {
+		stderr, err = cmd.StderrPipe()
+		if err != nil {
+			return 1, fmt.Errorf("stderr pipe: %v", err)
+		}
+		defer stderr.Close()
+
 	}
-	defer stderr.Close()
 
 	log.DebugLn(cmd.String())
 
@@ -69,6 +73,9 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 
 	go func() {
 		defer wg.Done()
+		if stderr == nil {
+			return
+		}
 
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {

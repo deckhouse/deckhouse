@@ -140,6 +140,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 
 	if opts.NoOutput {
 		e.cmd.Stdout = io.Discard
+		e.cmd.Stderr = io.Discard
 	}
 
 	return infrastructure.Exec(ctx, e.cmd, e.logger)
