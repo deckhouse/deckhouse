@@ -54,6 +54,8 @@ import:
 - image: {{ .ModuleName }}/nginx-static-artifact
   add: /opt/nginx-static
   before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/proxy-failover-controller"]

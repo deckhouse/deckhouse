@@ -1,0 +1,50 @@
+diff --git a/provisioner.go b/provisioner.go
+index ba22720e..d3f7d010 100644
+--- a/provisioner.go
++++ b/provisioner.go
+@@ -41,6 +41,9 @@ const (
+ 	helperScriptDir     = "/script"
+ 	helperDataVolName   = "data"
+ 	helperScriptVolName = "script"
++	// writable directory inside helper pod when root filesystem is read-only
++	workspaceDir     = "/workspace"
++	workspaceVolName = "workspace"
+ 
+ 	envVolDir  = "VOL_DIR"
+ 	envVolMode = "VOL_MODE"
+@@ -589,7 +592,14 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmd []string,
+ 	o.Path = filepath.Clean(o.Path)
+ 	parentDir, volumeDir := filepath.Split(o.Path)
+ 	hostPathType := v1.HostPathDirectoryOrCreate
++	// Volume list starts with workspace (writable emptyDir) and hostPath to parentDir on host
+ 	lpvVolumes := []v1.Volume{
++		{
++			Name: workspaceVolName,
++			VolumeSource: v1.VolumeSource{
++				EmptyDir: &v1.EmptyDirVolumeSource{},
++			},
++		},
+ 		{
+ 			Name: helperDataVolName,
+ 			VolumeSource: v1.VolumeSource{
+@@ -607,6 +617,9 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmd []string,
+ 	}
+ 	helperPod := p.helperPod.DeepCopy()
+ 
++	// ensure workspace volume mounted to container at /workspace
++	addVolumeMount(&helperPod.Spec.Containers[0].VolumeMounts, workspaceVolName, workspaceDir)
++
+ 	keyToPathItems := make([]v1.KeyToPath, 0, 2)
+ 
+ 	if p.config.SetupCommand == "" {
+@@ -640,7 +653,9 @@ func (p *LocalPathProvisioner) createHelperPod(action ActionType, cmd []string,
+ 		scriptMount.MountPath = helperScriptDir
+ 	}
+ 
+-	dataMount := addVolumeMount(&helperPod.Spec.Containers[0].VolumeMounts, helperDataVolName, parentDir)
++	// mount hostPath inside container under /workspace/<parentDir>
++	workspaceParentDir := filepath.Join(workspaceDir, strings.TrimPrefix(parentDir, string(filepath.Separator)))
++	dataMount := addVolumeMount(&helperPod.Spec.Containers[0].VolumeMounts, helperDataVolName, workspaceParentDir)
+ 	parentDir = dataMount.MountPath
+ 	parentDir = strings.TrimSuffix(parentDir, string(filepath.Separator))
+ 	volumeDir = strings.TrimSuffix(volumeDir, string(filepath.Separator))

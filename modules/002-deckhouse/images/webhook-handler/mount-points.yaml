@@ -1,2 +1,7 @@
 dirs:
-  - /deckhouse/
+  - /certs
+  - /var/run
+  - /run
+  - /tmp
+  - /hooks
+  - /.kube

@@ -1,0 +1,9 @@
+dirs:
+ - /etc/ssl/certs
+ - /etc/kubernetes/deckhouse/extra-files
+ - /etc/pki
+ - /etc/kubernetes/pki
+ - /var/log/kube-audit
+ - /usr/share/ca-certificates
+ - /etc/ca-certificates
+ - /usr/local/share/ca-certificates

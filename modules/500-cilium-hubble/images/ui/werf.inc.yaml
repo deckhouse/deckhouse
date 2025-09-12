@@ -65,6 +65,8 @@ import:
   add: /src/server/public
   to: /app
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
@@ -76,6 +78,8 @@ import:
   add: /src/hubble-ui/backend/backend
   to: /usr/local/bin/hubble-ui-backend
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/local/bin/hubble-ui-backend"]
