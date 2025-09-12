@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -39,22 +40,29 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		Setpgid: true,
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stdout pipe: %v", err)
+	var (
+		stdout io.ReadCloser
+		stderr io.ReadCloser
+		err    error
+	)
+	if cmd.Stdout == nil {
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return 1, fmt.Errorf("stdout pipe: %v", err)
+		}
+		defer stdout.Close()
 	}
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stderr pipe: %v", err)
+	if cmd.Stderr == nil {
+		stderr, err = cmd.StderrPipe()
+		if err != nil {
+			return 1, fmt.Errorf("stderr pipe: %v", err)
+		}
+		defer stderr.Close()
+
 	}
 
 	log.DebugLn(cmd.String())
-	err = cmd.Start()
-	if err != nil {
-		log.ErrorF("Cannot start cmd: %v\n", err)
-		return cmd.ProcessState.ExitCode(), err
-	}
 
 	var (
 		wg     sync.WaitGroup
@@ -65,6 +73,9 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 
 	go func() {
 		defer wg.Done()
+		if stderr == nil {
+			return
+		}
 
 		e := bufio.NewScanner(stderr)
 		for e.Scan() {
@@ -81,12 +92,21 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 
 	go func() {
 		defer wg.Done()
+		if stdout == nil {
+			return
+		}
 
 		s := bufio.NewScanner(stdout)
 		for s.Scan() {
 			logger.LogInfoLn(s.Text())
 		}
 	}()
+
+	err = cmd.Start()
+	if err != nil {
+		log.ErrorF("Cannot start cmd: %v\n", err)
+		return cmd.ProcessState.ExitCode(), err
+	}
 
 	wg.Wait()
 
@@ -122,6 +142,7 @@ type PlanOpts struct {
 	VariablesPath    string
 	OutPath          string
 	DetailedExitCode bool
+	NoOutput         bool
 }
 
 type Executor interface {

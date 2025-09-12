@@ -420,3 +420,10 @@ func (f *Context) GetDestroyNodeRunner(metaConfig *config.MetaConfig, stateCache
 		},
 	)
 }
+
+func (f *Context) GetRunners() map[string]RunnerInterface {
+	if f.infrastructureRunnerByName != nil {
+		return f.infrastructureRunnerByName
+	}
+	return nil
+}

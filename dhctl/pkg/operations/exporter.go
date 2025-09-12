@@ -17,6 +17,7 @@ package operations
 import (
 	"context"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -251,6 +252,13 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
+	if c.infrastructureContext != nil {
+		runners := c.infrastructureContext.GetRunners()
+		for key, runner := range runners {
+			log.DebugF("got %s runner from context: %-v\n", key, runner)
+		}
+	}
+
 	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl)
 	if err != nil {
 		log.ErrorLn(err)
@@ -267,7 +275,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 
 	c.infrastructureContext.SetExecutorProvider(infrastructureprovider.ExecutorProvider(metaConfig))
 
-	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{})
+	statistic, hasTerraformState, err := check.CheckState(ctx, c.kubeCl, metaConfig, c.infrastructureContext, check.CheckStateOptions{}, true)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
