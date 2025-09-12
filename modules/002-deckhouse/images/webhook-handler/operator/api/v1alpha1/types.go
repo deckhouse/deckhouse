@@ -56,30 +56,49 @@ type NamespaceSelector struct {
 }
 
 type Context struct {
+	// It is used to distinguish different bindings during runtime.
 	Name       string            `json:"name"`
 	Kubernetes KubernetesContext `json:"kubernetes,omitempty"`
 }
 
 type KubernetesContext struct {
-	Name                         string                `json:"name,omitempty"`
-	WatchEventTypes              []WatchEventType      `json:"watchEvent,omitempty"`
-	ExecuteHookOnEvents          []WatchEventType      `json:"executeHookOnEvent,omitempty"`
-	ExecuteHookOnSynchronization bool                  `json:"executeHookOnSynchronization,omitempty"`
-	WaitForSynchronization       string                `json:"waitForSynchronization,omitempty"`
-	KeepFullObjectsInMemory      bool                  `json:"keepFullObjectsInMemory,omitempty"`
-	Mode                         KubeEventMode         `json:"mode,omitempty"`
-	ApiVersion                   string                `json:"apiVersion,omitempty"`
-	Kind                         string                `json:"kind,omitempty"`
-	NameSelector                 *NameSelector         `json:"nameSelector,omitempty"`
-	LabelSelector                *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	FieldSelector                *FieldSelector        `json:"fieldSelector,omitempty"`
-	Namespace                    *NamespaceSelector    `json:"namespace,omitempty"`
-	JqFilter                     string                `json:"jqFilter,omitempty"`
-	AllowFailure                 bool                  `json:"allowFailure,omitempty"`
-	ResynchronizationPeriod      string                `json:"resynchronizationPeriod,omitempty"`
-	IncludeSnapshotsFrom         []string              `json:"includeSnapshotsFrom,omitempty"`
-	Queue                        string                `json:"queue,omitempty"`
-	Group                        string                `json:"group,omitempty"`
+	WatchEventTypes []WatchEventType `json:"watchEvent,omitempty"`
+	// the list of events which led to a hook’s execution.
+	// By default, all events are used to execute a hook: “Added”, “Modified” and “Deleted”.
+	ExecuteHookOnEvents []WatchEventType `json:"executeHookOnEvent,omitempty"`
+	// if false, Shell-operator skips the hook execution with Synchronization binding context.
+	ExecuteHookOnSynchronization bool   `json:"executeHookOnSynchronization,omitempty"`
+	WaitForSynchronization       string `json:"waitForSynchronization,omitempty"`
+	// if not set or true, dumps of Kubernetes resources are cached
+	// for this binding, and the snapshot includes them as object fields.
+	// Set to false if the hook does not rely on full objects to reduce the memory footprint.
+	KeepFullObjectsInMemory bool          `json:"keepFullObjectsInMemory,omitempty"`
+	Mode                    KubeEventMode `json:"mode,omitempty"`
+	// is an optional group and version of object API.
+	// For example, it is v1 for core objects (Pod, etc.), rbac.authorization.k8s.io/v1beta1 for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
+	ApiVersion string `json:"apiVersion,omitempty"`
+	// is the type of a monitored Kubernetes resource. This field is required.
+	Kind          string                `json:"kind"`
+	NameSelector  *NameSelector         `json:"nameSelector,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	FieldSelector *FieldSelector        `json:"fieldSelector,omitempty"`
+	// filters to choose namespaces.
+	Namespace *NamespaceSelector `json:"namespace,omitempty"`
+	// an optional parameter that specifies event filtering using jq syntax.
+	// The hook will be triggered on the “Modified” event only if the filter result is changed after the last event.
+	JqFilter string `json:"jqFilter,omitempty"`
+	// if true, Shell-operator skips the hook execution errors.
+	// If false or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
+	AllowFailure            bool   `json:"allowFailure,omitempty"`
+	ResynchronizationPeriod string `json:"resynchronizationPeriod,omitempty"`
+	// an array of names of kubernetes bindings in a hook.
+	// When specified, a list of monitored objects from that bindings
+	// will be added to the binding context in a snapshots field. Self-include is also possible.
+	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
+	// a name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the “main” queue.
+	Queue string `json:"queue,omitempty"`
+	// a key to include snapshots from a group of schedule and kubernetes bindings.
+	Group string `json:"group,omitempty"`
 }
 
 type JqFilter struct {
