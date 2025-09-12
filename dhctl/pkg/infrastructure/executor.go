@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -39,11 +40,17 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		Setpgid: true,
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return 1, fmt.Errorf("stdout pipe: %v", err)
+	var (
+		stdout io.ReadCloser
+		err    error
+	)
+	if cmd.Stdout == nil {
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return 1, fmt.Errorf("stdout pipe: %v", err)
+		}
+		defer stdout.Close()
 	}
-	defer stdout.Close()
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
@@ -78,6 +85,9 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 
 	go func() {
 		defer wg.Done()
+		if stdout == nil {
+			return
+		}
 
 		s := bufio.NewScanner(stdout)
 		for s.Scan() {
