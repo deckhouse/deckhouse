@@ -85,6 +85,82 @@ spec:
 
 Для применения приведенной политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый namespace. Политика, приведенная в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
 
+### OperationPolicy: крутилки для Pod’ов (справочник)
+
+- `spec.policies.pods` — объект. Управление операциями на уровне Pod.
+  - `denyTolerations` — объект.
+    - `enabled` (boolean, по умолчанию: false): включает проверку.
+    - `enforcementAction` (string, по умолчанию: "Warn"): действие при нарушении. Допустимые значения: `Warn`, `Deny`, `Dryrun`.
+    - `forbiddenKeys` (string[], по умолчанию: `["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]`): ключи таинтов, толерации к которым запрещены (`spec.tolerations[*].key`).
+    - `exemptNamespaces` (string[], по умолчанию: `["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]`).
+
+Примечания:
+- `denyTolerations` проверяет только ключи толераций (не оператор/значение/эффект).
+- Действие (`enforcementAction`) задаётся локально для каждой крутилки и не зависит от верхнеуровневого `spec.enforcementAction`.
+
+### Примечания
+
+- Теперь операции DELETE обрабатываются Gatekeeper по умолчанию.
+
+### Кастомный пример: запрет удаления Node без метки
+
+Вы можете создать свою политику Gatekeeper, запрещающую удаление Node без специальной метки. Пример ниже использует oldObject для проверки меток удаляемого узла:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customnodedeleteguard
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomNodeDeleteGuard
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredLabelKey:
+              type: string
+            requiredLabelValue:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_delete { input.review.operation == "DELETE" }
+        is_node { input.review.kind.kind == "Node" }
+
+        has_required_label {
+          key := input.parameters.requiredLabelKey
+          val := input.parameters.requiredLabelValue
+          obj := input.review.oldObject
+          obj.metadata.labels[key] == val
+        }
+
+        violation[{"msg": msg}] {
+          is_delete
+          is_node
+          not has_required_label
+          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomNodeDeleteGuard
+metadata:
+  name: require-node-delete-label
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Node"]
+  parameters:
+    requiredLabelKey: "admission.deckhouse.io/allow-delete"
+    requiredLabelValue: "true"
+```
+
 ### Политики безопасности
 
 Модуль предоставляет возможность определять политики безопасности применимо к приложениям (контейнерам), запущенным в кластере.

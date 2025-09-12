@@ -196,6 +196,42 @@ spec:
                         maxReplicas:
                           description: "The maximum number of replicas allowed, inclusive."
                           type: integer
+                    pods:
+                      type: object
+                      description: "Pod-level operation controls."
+                      properties:
+                        denyTolerations:
+                          type: object
+                          description: "Forbid tolerations by taint keys."
+                          properties:
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: "Enable the policy to deny tolerations by keys."
+                            enforcementAction:
+                              type: string
+                              default: "Warn"
+                              description: |
+                                The enforcement action for this policy.
+                                - `Deny` — Deny action.
+                                - `Dryrun` — No action.
+                                - `Warn` — Warning only.
+                              enum:
+                                - Warn
+                                - Deny
+                                - Dryrun
+                            forbiddenKeys:
+                              type: array
+                              description: "Taint keys that Pods are not allowed to tolerate."
+                              default: ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]
+                              items:
+                                type: string
+                            exemptNamespaces:
+                              type: array
+                              description: "Namespaces exempt from this check."
+                              default: ["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]
+                              items:
+                                type: string
                 match:
                   type: object
                   anyOf:
