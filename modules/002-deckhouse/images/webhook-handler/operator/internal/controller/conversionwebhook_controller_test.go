@@ -90,7 +90,7 @@ func TestConversionTemplateNoError(t *testing.T) {
 	r := setupTestConversionReconciler()
 	ctx := context.TODO()
 
-	cwh, err := getConversionStructFromYamlFile("testdata/conversion/crontabs.stable.example.com.yaml")
+	cwh, err := getConversionStructFromYamlFile("testdata/conversion/example.deckhouse.io.yaml")
 	assert.NoError(t, err)
 
 	err = r.Client.Create(ctx, cwh)
@@ -100,10 +100,10 @@ func TestConversionTemplateNoError(t *testing.T) {
 	assert.NoError(t, err)
 
 	// test equality
-	ref, err := os.ReadFile("testdata/conversion/golden/crontabs.stable.example.com.py")
+	ref, err := os.ReadFile("testdata/conversion/golden/example.deckhouse.io.py")
 	assert.NoError(t, err)
 
-	res, err := os.ReadFile("hooks/crontabs.stable.example.com/webhooks/conversion/crontabs.stable.example.com.py")
+	res, err := os.ReadFile("hooks/example.deckhouse.io/webhooks/conversion/example.deckhouse.io.py")
 	assert.NoError(t, err)
 	assert.Equal(t, string(ref), string(res))
 
@@ -120,7 +120,7 @@ func TestConversionTemplateNoError(t *testing.T) {
 	err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
 	assert.True(t, apierrors.IsNotFound(err))
 
-	_, err = os.ReadFile("hooks/crontabs.stable.example.com/webhooks/conversion/crontabs.stable.example.com.py")
+	_, err = os.ReadFile("hooks/example.deckhouse.io/webhooks/conversion/example.deckhouse.io.py")
 	assert.True(t, os.IsNotExist(err))
 }
 
