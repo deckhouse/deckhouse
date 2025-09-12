@@ -111,6 +111,18 @@ properties:
                   type: string
                 rootCA:
                   type: string
+      remoteSecrets:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              x-examples: ["istio-remote-secret-sec"]
+            token:
+              type: string
+              x-examples: ["eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."]
       remoteAuthnKeypair:
         type: object
         default: {}

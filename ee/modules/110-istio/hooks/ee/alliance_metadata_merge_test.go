@@ -439,8 +439,8 @@ status:
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-public\""))
 			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-only-public\""))
 
-			// there should be 10 log messages
-			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
+			// there should be 18 log messages (including 2 new "starting token reuse logic" messages)
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(18))
 		})
 	})
 })
