@@ -36,17 +36,15 @@ type ValidationWebhook struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
-	// +optional
-	Foo *string `json:"foo,omitempty"`
-
 	// ValidatingWebhook describes an webhook and the resources and operations it applies to.
 	// +required
 	ValidatingWebhook *KubernetesAdmissionConfigV1 `json:"validationObject,omitempty"`
 
+	// Run a hook on a Kubernetes object changes.
 	// +optional
 	Context []Context `json:"context,omitempty"`
 
-	// TODO: doc description
+	// Code of the ValidatingWebhook handler
 	// +required
 	Handler ValidationWebhookHandler `json:"handler"`
 
@@ -66,16 +64,24 @@ type ValidationWebhookHandler struct {
 
 // version 1 of kubernetes validation configuration
 type KubernetesAdmissionConfigV1 struct {
-	Name                 string                  `json:"name"`
-	IncludeSnapshotsFrom []string                `json:"includeSnapshotsFrom,omitempty"`
-	Group                string                  `json:"group,omitempty"`
-	Rules                []v1.RuleWithOperations `json:"rules,omitempty"`
-	FailurePolicy        *v1.FailurePolicyType   `json:"failurePolicy,omitempty"`
-	LabelSelector        *metav1.LabelSelector   `json:"labelSelector,omitempty"`
-	Namespace            *NamespaceSelector      `json:"namespace,omitempty"`
-	SideEffects          *v1.SideEffectClass     `json:"sideEffects,omitempty"`
-	TimeoutSeconds       *int32                  `json:"timeoutSeconds,omitempty"`
-	MatchConditions      []v1.MatchCondition     `json:"matchConditions,omitempty"`
+	//  should be a domain with at least three segments separated by dots.
+	Name string `json:"name"`
+	// an array of names of kubernetes bindings in a hook. When specified, a list of monitored objects from these bindings will be added to the binding context in the snapshots field.
+	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
+	// a key to include snapshots from a group of schedule and kubernetes bindings. See grouping.
+	Group string `json:"group,omitempty"`
+	// a required list of rules used to determine if a request to the Kubernetes API server should be sent to the hook.
+	Rules []v1.RuleWithOperations `json:"rules,omitempty"`
+	// defines how errors from the hook are handled.
+	FailurePolicy *v1.FailurePolicyType `json:"failurePolicy,omitempty"`
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+	Namespace     *NamespaceSelector    `json:"namespace,omitempty"`
+	// determine whether the hook is dryRun-aware.
+	SideEffects *v1.SideEffectClass `json:"sideEffects,omitempty"`
+	// a seconds API server should wait for a hook to respond before treating the call as a failure. Default is 10 (seconds).
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
+	// an optional list of match conditions for fine-grained request filtering. Available only since v1.27 of Kubernetes.
+	MatchConditions []v1.MatchCondition `json:"matchConditions,omitempty"`
 }
 
 // ValidationWebhookStatus defines the observed state of ValidationWebhook.

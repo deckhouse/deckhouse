@@ -1,16 +1,97 @@
-# operator
-// TODO(user): Add simple overview of use/purpose
+# Webhook-operator
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+**Webhook-operator** is a Kubernetes operator that allows you to define and manage shell-operator webhooks as Kubernetes resources.  
+It simplifies webhook creation by providing a declarative interface for describing ValidationWebhook and ConversionWebhook Custom Resources (CRDs).
+
+The operator processes CRD resources (`ValidationWebhook`, `ConversionWebhook`) and dynamically generates corresponding webhooks for shell-operator.  
+Validation or conversion logic is defined directly inside the manifest using code.
+
+### Resource Examples
+#### ValidationWebhook
+Validation of Services: deny creation of objects containing the word `test` in the name.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: validationwebhook-sample
+validationObject:
+  name: service.apps.kubernetes.io
+  group: main
+  rules:
+  - apiGroups:   ["*"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["services"]
+    scope:       "*"
+context:
+  - name: services
+    kubernetes:
+      group: main
+      executeHookOnEvent: []
+      executeHookOnSynchronization: false
+      keepFullObjectsInMemory: false
+      apiVersion: v1
+      kind: Service
+handler:
+  python: |
+    def validate(ctx: DotMap, output: hook.ValidationsCollector):
+        resource = ctx.review.request.name
+        if "test" in resource:
+            output.deny("TEST: service with \"test\" in .metadata.name")
+            return
+        output.allow()
+```
+
+#### ConversionWebhook
+Automatic conversion of CRDs between v1beta1 and v1.
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  labels:
+    app.kubernetes.io/name: operator
+    app.kubernetes.io/managed-by: kustomize
+  name: example.deckhouse.io
+conversions:
+  - from: v1beta1
+    to: v1
+    handler:
+      python: |
+        def v1beta1_to_v1(self, o: dict) -> typing.Tuple[None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1"
+            
+            obj.spec.host=obj.spec.hostPort
+            obj.spec.port=obj.spec.hostPort
+            del obj.spec.hostPort
+
+            return None, obj.toDict()
+  - from: v1
+    to: v1beta1
+    handler:
+      python: |
+        def v1_to_v1beta1(self, o: dict) -> typing.Tuple[None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1beta1"
+
+            hostPort = obj.spec.host+":"+obj.spec.port
+            obj.spec.hostPort=hostPort
+            del obj.spec.host
+            del obj.spec.port
+
+            return None, obj.toDict()
+```
 
 ## Getting Started
 
-### Prerequisites
-- go version v1.24.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+### How to setup locally for development
+```bash
+cd modules/002-deckhouse/images/webhook-handler/operator
+minikube start
+```
 
 ### To Deploy on the cluster
 **Build and push your image to the location specified by `IMG`:**
@@ -38,7 +119,7 @@ make deploy IMG=<some-registry>/operator:tag
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
 privileges or be logged in as admin.
 
-**Create instances of your solution**
+**Create sample webhook resources**
 You can apply the samples (examples) from the config/sample:
 
 ```sh
@@ -66,60 +147,8 @@ make uninstall
 make undeploy
 ```
 
-## Project Distribution
-
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/operator:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/operator/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
-
 ## License
-
-Copyright 2025.
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -132,4 +161,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
