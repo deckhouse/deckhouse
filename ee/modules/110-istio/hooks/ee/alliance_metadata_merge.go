@@ -132,14 +132,6 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-// Represents the data extracted from an istio-remote-secret
-type IstioRemoteSecretData struct {
-	Name        string `json:"name"`
-	Namespace   string `json:"namespace"`
-	ClusterName string `json:"clusterName"`
-	Kubeconfig  string `json:"kubeconfig"`
-}
-
 // Simplified struct for storing only essential token data
 type IstioRemoteSecretToken struct {
 	Name  string `json:"name"`
@@ -153,25 +145,6 @@ type Kubeconfig struct {
 			Token string `yaml:"token"`
 		} `yaml:"user"`
 	} `yaml:"users"`
-}
-
-// parseKubeconfig extracts the token from a kubeconfig string using YAML unmarshaling
-func parseKubeconfig(kubeconfigStr string) (string, error) {
-	var kubeconfig Kubeconfig
-
-	err := yaml.Unmarshal([]byte(kubeconfigStr), &kubeconfig)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal kubeconfig: %v", err)
-	}
-
-	// Look for the first user with a token
-	for _, user := range kubeconfig.Users {
-		if user.User.Token != "" {
-			return user.User.Token, nil
-		}
-	}
-
-	return "", fmt.Errorf("token not found in kubeconfig")
 }
 
 // TokenValidationResult represents the result of token validation
@@ -278,11 +251,29 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		kubeconfigBytes = secData
 	}
 
-	return IstioRemoteSecretData{
-		Name:        secretName,
-		Namespace:   secret.GetNamespace(),
-		ClusterName: clusterName,
-		Kubeconfig:  string(kubeconfigBytes),
+	// Extract token from kubeconfig directly
+	var kubeconfig Kubeconfig
+	err = yaml.Unmarshal(kubeconfigBytes, &kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal kubeconfig from secret %s: %v", secretName, err)
+	}
+
+	// Look for the first user with a token
+	var token string
+	for _, user := range kubeconfig.Users {
+		if user.User.Token != "" {
+			token = user.User.Token
+			break
+		}
+	}
+
+	if token == "" {
+		return nil, fmt.Errorf("token not found in kubeconfig from secret %s", secretName)
+	}
+
+	return IstioRemoteSecretToken{
+		Name:  secretName,
+		Token: token,
 	}, nil
 }
 
@@ -362,7 +353,7 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 
 	// Process istio remote secrets and extract only tokens
 	var istioRemoteSecrets = make([]IstioRemoteSecretToken, 0)
-	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretData](input.Snapshots.Get("istioRemoteSecrets")) {
+	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
 		if err != nil {
 			input.Logger.Warn("cannot iterate over istio remote secrets", log.Err(err))
 			continue
@@ -370,23 +361,10 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 
 		input.Logger.Info("processing istio remote secret",
 			slog.String("name", secretInfo.Name),
-			slog.String("namespace", secretInfo.Namespace),
-			slog.String("clusterName", secretInfo.ClusterName))
+			slog.Bool("hasToken", secretInfo.Token != ""))
 
-		// Extract token from kubeconfig
-		token, err := parseKubeconfig(secretInfo.Kubeconfig)
-		if err != nil {
-			input.Logger.Warn("cannot extract token from kubeconfig",
-				slog.String("name", secretInfo.Name),
-				slog.String("error", err.Error()))
-			continue
-		}
-
-		// Store only name and token
-		istioRemoteSecrets = append(istioRemoteSecrets, IstioRemoteSecretToken{
-			Name:  secretInfo.Name,
-			Token: token,
-		})
+		// Token is already extracted in the filter function
+		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
 	}
 
 	// Store the processed secrets in values
