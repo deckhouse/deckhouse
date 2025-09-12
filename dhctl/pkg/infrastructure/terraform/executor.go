@@ -140,6 +140,8 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 
 	e.cmd = terraformCmd(ctx, args...)
 
+	log.DebugF("terraform command: %s", e.cmd.String())
+
 	return infrastructure.Exec(ctx, e.cmd, e.logger)
 }
 
