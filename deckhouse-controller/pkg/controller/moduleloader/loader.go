@@ -205,6 +205,8 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	if reg, ok := l.registries[def.Name]; ok {
 		l.logger.Debug("inject registry value", slog.String("name", def.Name), slog.Any("registry", reg))
 		module.GetBasicModule().InjectRegistryValue(reg)
+	} else {
+		l.logger.Debug("registry value not found", slog.String("name", def.Name))
 	}
 
 	// load conversions
