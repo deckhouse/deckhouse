@@ -17,6 +17,7 @@ package terraform
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -134,13 +135,12 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	}
 
 	args = append(args, e.workingDir)
-	if opts.NoOutput {
-		args = append(args, " > /dev/null")
-	}
 
 	e.cmd = terraformCmd(ctx, args...)
 
-	log.DebugF("terraform command: %s", e.cmd.String())
+	if opts.NoOutput {
+		e.cmd.Stdout = io.Discard
+	}
 
 	return infrastructure.Exec(ctx, e.cmd, e.logger)
 }
