@@ -1,0 +1,24 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8podsdenytolerations
+tests:
+  - name: d8podsdenytolerations
+    template: ../../templates/operation/pods-deny-tolerations.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: allowed-no-tolerations
+        object: allowed_no_tolerations.yaml
+        assertions:
+          - violations: no
+      - name: allowed-exempt-namespace
+        object: allowed_exempt_ns.yaml
+        assertions:
+          - violations: no
+      - name: disallowed-toleration-key
+        object: disallowed_toleration_key.yaml
+        assertions:
+          - violations: yes
+            message: >-
+              tolerations contain forbidden taint key
+

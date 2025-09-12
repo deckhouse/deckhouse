@@ -61,10 +61,18 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			"replicaLimits":{
 					"minReplicas":1,
 					"maxReplicas":10
+			},
+			"pods": {
+				"denyTolerations": {
+					"enabled": true,
+					"enforcementAction": "Warn",
+					"forbiddenKeys": ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"],
+					"exemptNamespaces": ["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]
+				}
 			}
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
-		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
+		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods","nodes","namespaces"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
 		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
 		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
 
@@ -92,6 +100,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8PodsDenyTolerations", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

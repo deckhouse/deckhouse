@@ -154,6 +154,14 @@ type OperationPolicySpec struct {
 			MinReplicas int `json:"minReplicas,omitempty"`
 			MaxReplicas int `json:"maxReplicas,omitempty"`
 		} `json:"replicaLimits,omitempty"`
+		Pods struct {
+			DenyTolerations struct {
+				Enabled           bool     `json:"enabled,omitempty"`
+				EnforcementAction string   `json:"enforcementAction,omitempty"`
+				ForbiddenKeys     []string `json:"forbiddenKeys,omitempty"`
+				ExemptNamespaces  []string `json:"exemptNamespaces,omitempty"`
+			} `json:"denyTolerations,omitempty"`
+		} `json:"pods,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`

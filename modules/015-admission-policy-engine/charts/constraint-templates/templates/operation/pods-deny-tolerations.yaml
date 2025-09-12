@@ -1,0 +1,57 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8podsdenytolerations
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Pods Deny Tolerations"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Denies Pods that specify tolerations for forbidden taint keys, except for exempt namespaces.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8PodsDenyTolerations
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            forbiddenKeys:
+              type: array
+              items:
+                type: string
+              description: "Taint keys that Pods are not allowed to tolerate."
+            exemptNamespaces:
+              type: array
+              items:
+                type: string
+              description: "Namespaces exempt from this policy."
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        is_pod { input.review.kind.kind == "Pod" }
+
+        exempt_ns {
+          ns := input.review.namespace
+          ns == input.parameters.exemptNamespaces[_]
+        }
+
+        has_forbidden_toleration {
+          some i
+          tol := input.review.object.spec.tolerations[i]
+          tol.key == input.parameters.forbiddenKeys[_]
+        }
+
+        violation[{"msg": msg}] {
+          is_pod
+          not exempt_ns
+          has_forbidden_toleration
+          msg := "tolerations contain forbidden taint key"
+        }
+

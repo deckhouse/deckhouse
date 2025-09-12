@@ -18,6 +18,25 @@ spec:
                     - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
                 policies:
                   properties:
+                    pods:
+                      description: |
+                        Настройки для Pod-политик.
+                      properties:
+                        denyTolerations:
+                          description: |
+                            Запрещает использование толераций к указанным ключам таинтов. Проверяются только ключи (`spec.tolerations[*].key`).
+                          properties:
+                            enabled:
+                              description: "Включает проверку. По умолчанию: false."
+                            enforcementAction:
+                              description: |
+                                Действие при нарушении (по умолчанию `Warn`). Допустимые значения: `Warn`, `Deny`, `Dryrun`.
+                            forbiddenKeys:
+                              description: |
+                                Список ключей таинтов, толерации к которым запрещены. По умолчанию: `node-role.kubernetes.io/master`, `node-role.kubernetes.io/control-plane`.
+                            exemptNamespaces:
+                              description: |
+                                Список namespace, исключённых из проверки. По умолчанию: `kube-system`, `d8-system`, `d8-admission-policy-engine`, `gatekeeper-system`.
                     allowedRepos:
                       description: |
                         Список префиксов, которые может иметь образ контейнера.
