@@ -85,18 +85,18 @@ spec:
 
 Для применения приведенной политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый namespace. Политика, приведенная в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
 
-### OperationPolicy: крутилки для Pod’ов (справочник)
+### OperationPolicy: операционные политики для Pod’ов
 
 - `spec.policies.pods` — объект. Управление операциями на уровне Pod.
   - `denyTolerations` — объект.
     - `enabled` (boolean, по умолчанию: false): включает проверку.
     - `enforcementAction` (string, по умолчанию: "Warn"): действие при нарушении. Допустимые значения: `Warn`, `Deny`, `Dryrun`.
-    - `forbiddenKeys` (string[], по умолчанию: `["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]`): ключи таинтов, толерации к которым запрещены (`spec.tolerations[*].key`).
+    - `forbiddenKeys` (string[], по умолчанию: `["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]`): ключи меток-таинтов, допуски к которым запрещены (`spec.tolerations[*].key`).
     - `exemptNamespaces` (string[], по умолчанию: `["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]`).
 
 Примечания:
-- `denyTolerations` проверяет только ключи толераций (не оператор/значение/эффект).
-- Действие (`enforcementAction`) задаётся локально для каждой крутилки и не зависит от верхнеуровневого `spec.enforcementAction`.
+- `denyTolerations` проверяет только ключи допусков (не оператор/значение/эффект).
+- Действие (`enforcementAction`) задаётся локально для каждой настройки и не зависит от верхнего уровня `spec.enforcementAction`.
 
 ### Примечания
 
@@ -104,7 +104,7 @@ spec:
 
 ### Кастомный пример: запрет удаления Node без метки
 
-Вы можете создать свою политику Gatekeeper, запрещающую удаление Node без специальной метки. Пример ниже использует oldObject для проверки меток удаляемого узла:
+Вы можете создать свою политику Gatekeeper, запрещающую удаление Node без специальной метки. Пример ниже использует `oldObject` для проверки меток удаляемого узла:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1

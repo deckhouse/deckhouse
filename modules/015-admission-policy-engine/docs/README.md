@@ -107,7 +107,7 @@ Notes:
 
 ### Custom example: Block Node deletion without a label
 
-You can create your own Gatekeeper policy to block Node deletion unless a special label is present. Example below uses oldObject to check labels on the Node being deleted:
+You can create your own Gatekeeper policy to block Node deletion unless a special label is present. Example below uses `oldObject` to check labels on the Node being deleted:
 
 ```yaml
 apiVersion: templates.gatekeeper.sh/v1

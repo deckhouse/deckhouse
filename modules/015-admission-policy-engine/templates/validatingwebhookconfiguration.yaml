@@ -68,7 +68,6 @@ webhooks:
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods"]
-    operations:
     operations: ["CREATE", "DELETE"]
 
   {{/* Include tracked resources because in the next webhook there is exception for namespaces with 'security.deckhouse.io/trivy-provider' label */}}
