@@ -33,36 +33,33 @@ type ConversionWebhook struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
+	// Run a hook on a Kubernetes object changes.
 	// +optional
 	Context []Context `json:"context,omitempty"`
 
-	// +optional
-	Conversions []Conversions `json:"conversions,omitempty"`
+	// This binding transforms a hook into a handler
+	// for conversions defined in CustomResourceDefinition.
+	// The Shell-operator updates a CRD with .spec.conversion,
+	// starts HTTPS server, and runs hooks to handle ConversionReview requests.
+	// +required
+	Conversions []Conversions `json:"conversions"`
 
 	// status defines the observed state of ConversionWebhook
 	// +optional
 	Status ConversionWebhookStatus `json:"status,omitempty,omitzero"`
 }
 
-// version 1 of kubernetes conversion configuration
-type KubernetesConversionConfigV1 struct {
-	Name                 string           `json:"name,omitempty"`
-	IncludeSnapshotsFrom []string         `json:"includeSnapshotsFrom,omitempty"`
-	Group                string           `json:"group,omitempty"`
-	CrdName              string           `json:"crdName,omitempty"`
-	Conversions          []ConversionRule `json:"conversions,omitempty"`
-}
-
-type ConversionRule struct {
-	FromVersion string `json:"fromVersion"`
-	ToVersion   string `json:"toVersion"`
-}
-
 type Conversions struct {
-	From                 string                   `json:"from"`
-	To                   string                   `json:"to"`
-	IncludeSnapshotsFrom []string                 `json:"includeSnapshotsFrom,omitempty"`
-	Handler              ConversionWebhookHandler `json:"handler"`
+	// a version of a custom resource that hook can convert.
+	From string `json:"from"`
+	// a version of a custom resource that hook can produce.
+	To string `json:"to"`
+	// an array of names of kubernetes bindings in a hook.
+	// When specified, a list of monitored objects from
+	// these bindings will be added to the binding context in the snapshots field.
+	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
+	// Code of the conversion handler
+	Handler ConversionWebhookHandler `json:"handler"`
 }
 
 type ConversionWebhookHandler struct {

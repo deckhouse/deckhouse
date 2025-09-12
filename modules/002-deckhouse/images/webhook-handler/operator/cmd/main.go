@@ -29,16 +29,12 @@ import (
 	"syscall"
 	"time"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-
 	"github.com/deckhouse/deckhouse/pkg/log"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	soapp "github.com/flant/shell-operator/pkg/app"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -242,11 +238,8 @@ func main() {
 	logger := log.NewLogger(
 		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 		log.WithHandlerType(log.TextHandlerType))
-	// cctx, cancel := context.WithCancel(context.Background())
 
 	setupLog.Info("starting shell-operator")
-	// sudo go run ./cmd/shell-operator/ start --hooks-dir $(PWD)/hooks --tmp-dir $(PWD)/tmp --log-type color
-	// cmd := exec.Command("ls", "-l")
 	// syncronous run
 	cmd := exec.Command("./shell-operator")
 	cmd.Stdout = os.Stdout

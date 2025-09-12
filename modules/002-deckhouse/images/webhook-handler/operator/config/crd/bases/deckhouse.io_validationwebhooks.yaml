@@ -29,19 +29,31 @@ spec:
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           context:
+            description: Run a hook on a Kubernetes object changes.
             items:
               properties:
                 kubernetes:
                   properties:
                     allowFailure:
+                      description: |-
+                        if true, Shell-operator skips the hook execution errors.
+                        If false or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
                       type: boolean
                     apiVersion:
+                      description: |-
+                        is an optional group and version of object API.
+                        For example, it is v1 for core objects (Pod, etc.), rbac.authorization.k8s.io/v1beta1 for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
                       type: string
                     executeHookOnEvent:
+                      description: |-
+                        the list of events which led to a hook’s execution.
+                        By default, all events are used to execute a hook: “Added”, “Modified” and “Deleted”.
                       items:
                         type: string
                       type: array
                     executeHookOnSynchronization:
+                      description: if false, Shell-operator skips the hook execution
+                        with Synchronization binding context.
                       type: boolean
                     fieldSelector:
                       properties:
@@ -63,16 +75,31 @@ spec:
                       - matchExpressions
                       type: object
                     group:
+                      description: a key to include snapshots from a group of schedule
+                        and kubernetes bindings.
                       type: string
                     includeSnapshotsFrom:
+                      description: |-
+                        an array of names of kubernetes bindings in a hook.
+                        When specified, a list of monitored objects from that bindings
+                        will be added to the binding context in a snapshots field. Self-include is also possible.
                       items:
                         type: string
                       type: array
                     jqFilter:
+                      description: |-
+                        an optional parameter that specifies event filtering using jq syntax.
+                        The hook will be triggered on the “Modified” event only if the filter result is changed after the last event.
                       type: string
                     keepFullObjectsInMemory:
+                      description: |-
+                        if not set or true, dumps of Kubernetes resources are cached
+                        for this binding, and the snapshot includes them as object fields.
+                        Set to false if the hook does not rely on full objects to reduce the memory footprint.
                       type: boolean
                     kind:
+                      description: is the type of a monitored Kubernetes resource.
+                        This field is required.
                       type: string
                     labelSelector:
                       description: |-
@@ -125,8 +152,6 @@ spec:
                       x-kubernetes-map-type: atomic
                     mode:
                       type: string
-                    name:
-                      type: string
                     nameSelector:
                       properties:
                         matchNames:
@@ -137,6 +162,7 @@ spec:
                       - matchNames
                       type: object
                     namespace:
+                      description: filters to choose namespaces.
                       properties:
                         labelSelector:
                           description: |-
@@ -198,6 +224,8 @@ spec:
                           type: object
                       type: object
                     queue:
+                      description: a name of a separate queue. It can be used to execute
+                        long-running hooks in parallel with hooks in the “main” queue.
                       type: string
                     resynchronizationPeriod:
                       type: string
@@ -207,16 +235,19 @@ spec:
                       items:
                         type: string
                       type: array
+                  required:
+                  - kind
                   type: object
                 name:
+                  description: It is used to distinguish different bindings during
+                    runtime.
                   type: string
               required:
               - name
               type: object
             type: array
-          foo:
-            type: string
           handler:
+            description: Code of the ValidatingWebhook handler
             properties:
               cel:
                 description: this is a cel rules handler for object
@@ -243,12 +274,16 @@ spec:
               and operations it applies to.
             properties:
               failurePolicy:
-                description: FailurePolicyType specifies a failure policy that defines
-                  how unrecognized errors from the admission endpoint are handled.
+                description: defines how errors from the hook are handled.
                 type: string
               group:
+                description: a key to include snapshots from a group of schedule and
+                  kubernetes bindings. See grouping.
                 type: string
               includeSnapshotsFrom:
+                description: an array of names of kubernetes bindings in a hook. When
+                  specified, a list of monitored objects from these bindings will
+                  be added to the binding context in the snapshots field.
                 items:
                   type: string
                 type: array
@@ -302,6 +337,8 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               matchConditions:
+                description: an optional list of match conditions for fine-grained
+                  request filtering. Available only since v1.27 of Kubernetes.
                 items:
                   description: MatchCondition represents a condition which must by
                     fulfilled for a request to be sent to a webhook.
@@ -340,6 +377,8 @@ spec:
                   type: object
                 type: array
               name:
+                description: ' should be a domain with at least three segments separated
+                  by dots.'
                 type: string
               namespace:
                 properties:
@@ -403,6 +442,8 @@ spec:
                     type: object
                 type: object
               rules:
+                description: a required list of rules used to determine if a request
+                  to the Kubernetes API server should be sent to the hook.
                 items:
                   description: |-
                     RuleWithOperations is a tuple of Operations and Resources. It is recommended to make
@@ -472,10 +513,11 @@ spec:
                   type: object
                 type: array
               sideEffects:
-                description: SideEffectClass specifies the types of side effects a
-                  webhook may have.
+                description: determine whether the hook is dryRun-aware.
                 type: string
               timeoutSeconds:
+                description: a seconds API server should wait for a hook to respond
+                  before treating the call as a failure. Default is 10 (seconds).
                 format: int32
                 type: integer
             required:
