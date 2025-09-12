@@ -525,14 +525,25 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 
 		if exitCode == hasChangesExitCode {
 			r.changesInPlan = PlanHasChanges
-			destructiveChanges, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
-			if err != nil {
-				return err
+			if noout {
+				destructiveChanged, err := r.planHasDestructiveChanges(ctx, tmpFile.Name())
+				if err != nil {
+					return err
+				}
+				if destructiveChanged {
+					r.changesInPlan = PlanHasDestructiveChanges
+				}
+			} else {
+				destructiveChanges, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
+				if err != nil {
+					return err
+				}
+				if destructiveChanges != nil {
+					r.changesInPlan = PlanHasDestructiveChanges
+					r.planDestructiveChanges = destructiveChanges
+				}
 			}
-			if destructiveChanges != nil {
-				r.changesInPlan = PlanHasDestructiveChanges
-				r.planDestructiveChanges = destructiveChanges
-			}
+
 		} else if err != nil {
 			return err
 		}
@@ -798,6 +809,50 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 	}
 
 	return destructiveChanges, nil
+}
+
+func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string) (bool, error) {
+	var result []byte
+
+	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
+		res, err := r.infraExecutor.Show(ctx, planFile)
+		if err != nil {
+			return 0, err
+		}
+
+		result = res
+		return 0, nil
+	})
+
+	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+		}
+		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
+	}
+
+	var changes struct {
+		ResourcesChanges []struct {
+			Change struct {
+				Actions []string `json:"actions"`
+			} `json:"change"`
+			Type string `json:"type"`
+		} `json:"resource_changes"`
+	}
+
+	err = json.Unmarshal(result, &changes)
+	if err != nil {
+		return false, err
+	}
+
+	for _, resource := range changes.ResourcesChanges {
+		if hasAction(resource.Change.Actions, "delete") {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func hasAction(actions []string, findAction string) bool {
