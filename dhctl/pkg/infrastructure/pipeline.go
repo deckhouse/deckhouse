@@ -129,6 +129,9 @@ func CheckPipeline(
 		}
 
 		isChange = r.GetChangesInPlan()
+		if noout {
+			return nil
+		}
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
 		executor := r.GetExecutorProvider()(r.WorkerDir(), r.GetLogger())
