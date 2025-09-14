@@ -2705,31 +2705,6 @@ alerts:
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
       markupFormat: markdown
-    - name: D8RuntimeAuditEngineNotScheduledInCluster
-      sourceFile: ee/modules/650-runtime-audit-engine/monitoring/prometheus-rules/runtime-audit-engine.yaml
-      moduleUrl: 650-runtime-audit-engine
-      module: runtime-audit-engine
-      edition: ee
-      description: |
-        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
-
-        Troubleshooting steps:
-
-        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
-
-           ```shell
-           kubectl -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
-           ```
-
-        2. Get a list of nodes where Pods are not in the Ready state:
-
-           ```shell
-           kubectl -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-           ```
-      summary: |
-        Runtime-audit-engine Pods cannot be scheduled.
-      severity: "4"
-      markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
       moduleUrl: 600-secret-copier
