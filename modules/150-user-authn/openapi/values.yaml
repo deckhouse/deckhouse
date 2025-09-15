@@ -187,6 +187,21 @@ properties:
               properties:
                 expireAt:
                   type: string
+                lock:
+                  type: object
+                  required:
+                    - state
+                  properties:
+                    state:
+                      type: boolean
+                    reason:
+                      type: string
+                      enum:
+                        - PasswordPolicyLockout
+                    message:
+                      type: string
+                    until:
+                      type: string
       providers:
         type: array
         default: []

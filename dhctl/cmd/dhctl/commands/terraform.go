@@ -112,7 +112,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		fmt.Print(string(data))
-		if infrastructureprovider.NeedToUseOpentofu(metaConfig) && needMigrationToTofu {
+		if infrastructure.NeedToUseOpentofu(metaConfig) && needMigrationToTofu {
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
 		return nil

@@ -714,9 +714,9 @@ spec:
 
 ### How to add configuration for an additional registry?
 
-Containerd supports two methods for registry configuration: the **old** method and the **new** method.
+Containerd supports two methods for registry configuration: the **deprecated** method and the **actual** method.
 
-To check for the presence of the **old** configuration method, run the following commands on the cluster nodes:  
+To check for the presence of the **deprecated** configuration method, run the following commands on the cluster nodes:  
 
 ```bash
 cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
@@ -729,7 +729,7 @@ cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".regi
 #   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
 ```
 
-To check for the presence of the **new** configuration method, run the following command on the cluster nodes:
+To check for the presence of the **actual** configuration method, run the following command on the cluster nodes:
 
 ```bash
 cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
@@ -745,7 +745,7 @@ This containerd configuration format is deprecated.
 {% endalert %}
 
 {% alert level="info" %}
-Used in containerd v1 when Deckhouse is not managed by the Registry module ([`Unmanaged`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when Deckhouse is not managed by the [Registry module](../registry).
 {% endalert %}
 
 The configuration is described in the main containerd configuration file `/etc/containerd/config.toml`.
@@ -775,9 +775,9 @@ Example configuration file for the `/etc/containerd/conf.d/` directory:
 Adding custom settings through the `toml merge` mechanism causes the containerd service to restart.
 {% endalert %}
 
-##### How to add additional registry auth (old method)?
+##### How to add additional registry auth (deprecated method)?
 
-Example of adding authorization to a additional registry when using the **old** configuration method:
+Example of adding authorization to a additional registry when using the **deprecated** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -785,7 +785,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -825,9 +825,9 @@ spec:
     EOF
 ```
 
-##### How to configure a certificate for an additional registry (old method)?
+##### How to configure a certificate for an additional registry (deprecated method)?
 
-Example of configuring a certificate for an additional registry when using the **old** configuration method:
+Example of configuring a certificate for an additional registry when using the **deprecated** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -835,7 +835,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -883,9 +883,9 @@ spec:
 In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
 
-##### How to add TLS skip verify (old method)?
+##### How to add TLS skip verify (deprecated method)?
 
-Example of adding TLS skip verify when using the **old** configuration method:
+Example of adding TLS skip verify when using the **deprecated** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -893,7 +893,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # To add a file before the '032_configure_containerd.sh' step
+  # To add a file before the '032_configure_containerd.sh' step.
   weight: 31
   bundles:
     - '*'
@@ -939,7 +939,7 @@ crictl pull private.registry.example/image/repo:tag
 {% alert level="info" %}
 Used in containerd v2.
 
-Used in containerd v1 when managed through the Registry module (for example, in [`Direct`](/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-registry) mode).
+Used in containerd v1 when managed through the [`registry` module](../registry) (for example, in [`Direct`](../deckhouse/configuration.html#parameters-registry) mode).
 {% endalert %}
 
 The configuration is defined in the `/etc/containerd/registry.d` directory.  
@@ -959,7 +959,7 @@ Example contents of the `hosts.toml` file:
 
 ```toml
 [host]
-  # Mirror 1
+  # Mirror 1.
   [host."https://${REGISTRY_URL_1}"]
     capabilities = ["pull", "resolve"]
     ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
@@ -968,7 +968,7 @@ Example contents of the `hosts.toml` file:
       username = "${USERNAME}"
       password = "${PASSWORD}"
 
-  # Mirror 2
+  # Mirror 2.
   [host."http://${REGISTRY_URL_2}"]
     capabilities = ["pull", "resolve"]
     skip_verify = true
@@ -978,9 +978,9 @@ Example contents of the `hosts.toml` file:
 Configuration changes do not cause the containerd service to restart.
 {% endalert %}
 
-##### How to add additional registry auth (new method)?
+##### How to add additional registry auth (actual method)?
 
-Example of adding authorization to a additional registry when using the **new** configuration method:
+Example of adding authorization to a additional registry when using the **actual** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -988,7 +988,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required7
   weight: 0
   bundles:
     - '*'
@@ -1022,9 +1022,9 @@ spec:
     EOF
 ```
 
-##### How to configure a certificate for an additional registry (new method)?
+##### How to configure a certificate for an additional registry (actual method)?
 
-Example of configuring a certificate for an additional registry when using the **new** configuration method:
+Example of configuring a certificate for an additional registry when using the **actual** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1032,7 +1032,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
@@ -1075,9 +1075,9 @@ spec:
 In addition to containerd, the certificate can be [added into the OS](examples.html#adding-a-certificate-to-the-os-and-containerd).
 {% endalert %}
 
-##### How to add TLS skip verify (new method)?
+##### How to add TLS skip verify (actual method)?
 
-Example of adding TLS skip verify when using the **new** configuration method:
+Example of adding TLS skip verify when using the **actual** configuration method:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1085,7 +1085,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # The step can be arbitrary, as restarting the containerd service is not required
+  # The step can be arbitrary, as restarting the containerd service is not required.
   weight: 0
   bundles:
     - '*'
@@ -1120,13 +1120,13 @@ spec:
 After applying the configuration file, check access to the registry from the nodes using the following commands:
 
 ```bash
-# Via the CRI interface
+# Via the CRI interface.
 crictl pull private.registry.example/image/repo:tag
 
-# Via ctr with the configuration directory specified
+# Via ctr with the configuration directory specified.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
 
-# Via ctr for an HTTP registry
+# Via ctr for an HTTP registry.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
@@ -1331,7 +1331,7 @@ To add a GPU node to the cluster, perform the following steps:
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure
+     nodeType: CloudStatic   # or Static/CloudEphemeral — depending on your infrastructure.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1618,7 +1618,7 @@ Deckhouse Kubernetes Platform automatically deploys **DCGM Exporter**; GPU metri
 - **TimeSlicing** — time-sharing a single GPU among multiple Pods (default `partitionCount: 4`); Pods still request `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — hardware partitioning of supported GPUs into independent instances; with the `all-1g.5gb` profile the cluster exposes resources like `nvidia.com/mig-1g.5gb`.
 
-See examples in [Examples → GPU nodes](../node-manager/examples.html#example-gpu-nodegroup).
+See examples in [Managing nodes: examples](../node-manager/examples.html#example-gpu-nodegroup) section.
 
 ## How to view available MIG profiles in the cluster?
 
