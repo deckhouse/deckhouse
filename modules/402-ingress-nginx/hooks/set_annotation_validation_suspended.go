@@ -26,8 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
+
+const validationSuspendMetricName = "ingress_nginx_validation_suspended"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -74,18 +78,33 @@ func setAnnotationValidationSuspendedFilterIngressNginxController(obj *unstructu
 func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Context, input *go_hook.HookInput) error {
 	controllersSnapshot := input.Snapshots.Get("ingressNginxControllers")
 	configMapSnapshot := input.Snapshots.Get("ingressNginxControllersConfigMap")
+	configMapExists := len(configMapSnapshot) > 0
 
-	// Exit early if the ConfigMap already exists (annotations were already applied once)
-	// or if there are fewer than 5 controllers (do not proceed with annotation patching)
-	configMapOk := len(configMapSnapshot) > 0
-	if configMapOk || len(controllersSnapshot) < 5 {
+	// Less than 5 controllers → expire the metric
+	if len(controllersSnapshot) < 5 {
+		input.MetricsCollector.Expire(validationSuspendMetricName)
 		return nil
 	}
 
-	for _, item := range controllersSnapshot {
+	// If none of the controllers have the annotation → expire the metric
+	if !controllersHasAnnotationValidationSuspended(controllersSnapshot) && configMapExists {
+		input.MetricsCollector.Expire(validationSuspendMetricName)
+		return nil
+	}
+
+	// If the ConfigMap does not exist → apply annotations to all controllers and set the metric to 1
+	if !configMapExists {
+		setValidationSuspendedAnnotationToAll(controllersSnapshot, input)
+		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
+	}
+
+	return nil
+}
+
+func setValidationSuspendedAnnotationToAll(controllers []pkg.Snapshot, input *go_hook.HookInput) {
+	for _, item := range controllers {
 		var ctrl internal.IngressNginxController
-		err := item.UnmarshalTo(&ctrl)
-		if err != nil {
+		if err := item.UnmarshalTo(&ctrl); err != nil {
 			continue
 		}
 
@@ -98,7 +117,16 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Con
 		}
 		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController", ctrl.Namespace, ctrl.Name)
 	}
+}
 
-	input.MetricsCollector.Set("ingress_nginx_validation_suspended", 1.0, nil)
-	return nil
+func controllersHasAnnotationValidationSuspended(controllers []pkg.Snapshot) bool {
+	for _, item := range controllers {
+		var ctrl internal.IngressNginxController
+		if err := item.UnmarshalTo(&ctrl); err == nil {
+			if _, ok := ctrl.Annotations[internal.IngressNginxControllerSuspendAnnotation]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }

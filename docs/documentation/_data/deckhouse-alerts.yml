@@ -5358,6 +5358,11 @@ alerts:
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+        To find which `ingressnginxcontroller` resources have the annotation, use the following command:
+        ```shell
+          d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
+        ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
       severity: "3"
