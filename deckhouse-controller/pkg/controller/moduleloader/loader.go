@@ -29,7 +29,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -84,6 +84,8 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
+	registries map[string]*addonmodules.Registry
+
 	dependencyContainer dependency.Container
 	exts                *extenders.ExtendersStack
 
@@ -101,6 +103,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
+		registries:           make(map[string]*addonmodules.Registry),
 		embeddedPolicy:       embeddedPolicy,
 		version:              version,
 		dependencyContainer:  dc,
@@ -137,8 +140,8 @@ func (l *Loader) Sync(ctx context.Context) error {
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator
-func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
-	result := make([]*modules.BasicModule, 0, len(l.modules))
+func (l *Loader) LoadModules() ([]*addonmodules.BasicModule, error) {
+	result := make([]*addonmodules.BasicModule, 0, len(l.modules))
 
 	for _, module := range l.modules {
 		result = append(result, module.GetBasicModule())
@@ -149,7 +152,7 @@ func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) {
+func (l *Loader) LoadModule(_, modulePath string) (*addonmodules.BasicModule, error) {
 	if _, err := readDir(modulePath); err != nil {
 		return nil, err
 	}
@@ -196,6 +199,11 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	module, err := moduletypes.NewModule(def, moduleStaticValues, rawConfig, rawValues, l.logger.Named("module"))
 	if err != nil {
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
+	}
+
+	// inject registry value
+	if reg, ok := l.registries[def.Name]; ok {
+		module.GetBasicModule().InjectRegistryValue(reg)
 	}
 
 	// load conversions
@@ -253,12 +261,13 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 }
 
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
-	modules := []string{}
+	var modules []string
 	for _, module := range l.modules {
 		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
 		}
 	}
+
 	return modules
 }
 

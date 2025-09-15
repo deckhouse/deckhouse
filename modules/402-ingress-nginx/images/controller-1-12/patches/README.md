@@ -97,3 +97,7 @@ https://github.com/kubernetes/ingress-nginx/pull/13830
 ### 016-disable-error-logs.patch
 
 Disabling log messages such as "Error obtaining Endpoints for Service...".
+
+### 017-maxmind-alerts.patch
+
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
