@@ -178,6 +178,8 @@ github.com/flant/addon-operator v1.12.2-0.20250912092728-4cae88a41da2 h1:sOG6nb9
 github.com/flant/addon-operator v1.12.2-0.20250912092728-4cae88a41da2/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
 github.com/flant/addon-operator v1.12.2-0.20250912113134-81b699e7f4d7 h1:slFqd8hVB8Nra5+yrUwvqaOmuhhz0n7hzospouazMCs=
 github.com/flant/addon-operator v1.12.2-0.20250912113134-81b699e7f4d7/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
+github.com/flant/addon-operator v1.12.2 h1:Ct6mDnnD8bDSH2HtBizRtca9A0clbnkiVLqWHr/b+No=
+github.com/flant/addon-operator v1.12.2/go.mod h1:AVrhRIO9SBRrF/wAm293WLuBejjB1GI8oR4lHV/lYAY=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.3.1 h1:1SdD799sujXNg2F6Z27le/+qkcKQaKf9Z492YGEhVhc=
