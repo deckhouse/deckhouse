@@ -204,19 +204,18 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
-        {{- if ne $controllerVersion "1.9" }}
+        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         securityContext:
           readOnlyRootFilesystem: true
-          {{- if $crd.spec.nginxProfilingEnabled }}
           runAsNonRoot: false
           runAsUser: 0
           runAsGroup: 0
           capabilities:
             add:
             - SYS_ADMIN
-          {{- end }}
         {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
         {{- end }}
         env:
         - name: POD_NAME
