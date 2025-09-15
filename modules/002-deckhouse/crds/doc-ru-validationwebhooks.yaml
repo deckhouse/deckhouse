@@ -8,260 +8,92 @@ spec:
 
             Один custom resource `ValidationWebhook` описывает обработчик валидации для определенных типов ресурсов и операций.
           properties:
-            apiVersion:
-              description: |
-                Версия API, определяющая схему данного представления объекта.
-                Серверы должны конвертировать распознанные схемы в последнюю внутреннюю версию и
-                могут отклонять нераспознанные значения.
-                Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            context:
-              description: |
-                Запускает хук при изменениях объектов Kubernetes.
-              items:
-                properties:
-                  kubernetes:
+            spec:
+              properties:
+                context:
+                  description: |
+                    Запускает хук при изменениях объектов Kubernetes.
+                  items:
                     properties:
-                      allowFailure:
-                        description: |
-                          Если `true`, Shell-operator игнорирует ошибки выполнения хука.
-                          Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
-                      apiVersion:
-                        description: |
-                          Необязательная группа и версия API объекта.
-                          Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
-                      executeHookOnEvent:
-                        description: |
-                          Список событий, которые приводят к выполнению хука.
-                          По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
-                      executeHookOnSynchronization:
-                        description: |
-                          Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
-                      fieldSelector:
+                      kubernetes:
                         properties:
-                          matchExpressions:
-                            items:
-                              properties:
-                                field:
-                                  description: |
-                                    Имя поля для фильтрации.
-                                operator:
-                                  description: |
-                                    Оператор для сравнения поля со значением.
-                                value:
-                                  description: |
-                                    Значение для сравнения с полем.
-                      group:
-                        description: |
-                          Ключ для включения снимков из группы привязок schedule и kubernetes.
-                      includeSnapshotsFrom:
-                        description: |
-                          Массив имен привязок kubernetes в хуке.
-                          При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots. Возможно само-включение.
-                      jqFilter:
-                        description: |
-                          Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
-                          Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
-                      keepFullObjectsInMemory:
-                        description: |
-                          Если не установлено или `true`, дампы ресурсов Kubernetes кешируются для этой привязки, и снимок включает их как поля объекта.
-                          Установите в `false`, если хук не полагается на полные объекты для уменьшения потребления памяти.
-                      kind:
-                        description: |
-                          Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
-                      labelSelector:
-                        description: |
-                          Селектор меток — это запрос меток для набора ресурсов. Результаты matchLabels и matchExpressions объединяются через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
-                        properties:
-                          matchExpressions:
+                          allowFailure:
                             description: |
-                              matchExpressions — это список требований селектора меток. Требования объединяются через AND.
-                            items:
-                              description: |
-                                Требование селектора меток — это селектор, который содержит значения, ключ и оператор, который связывает ключ и значения.
-                              properties:
-                                key:
-                                  description: |
-                                    Ключ — это ключ метки, к которому применяется селектор.
-                                operator:
-                                  description: |
-                                    Оператор представляет отношение ключа к набору значений.
-                                    Допустимые операторы: In, NotIn, Exists и DoesNotExist.
-                                values:
-                                  description: |
-                                    Значения — это массив строковых значений. Если оператор In или NotIn, массив значений должен быть непустым. Если оператор Exists или DoesNotExist, массив значений должен быть пустым. Этот массив заменяется во время стратегического патча слияния.
-                          matchLabels:
+                              Если `true`, Shell-operator игнорирует ошибки выполнения хука.
+                              Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
+                          apiVersion:
                             description: |
-                              matchLabels — это карта пар {ключ,значение}. Одна пара {ключ,значение} в карте matchLabels эквивалентна элементу matchExpressions, поле ключа которого равно "ключ", оператор равен "In", а массив значений содержит только "значение". Требования объединяются через AND.
-                      mode:
-                        description: |
-                          Режим работы привязки kubernetes.
-                      nameSelector:
-                        properties:
-                          matchNames:
+                              Необязательная группа и версия API объекта.
+                              Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
+                          executeHookOnEvent:
                             description: |
-                              Список имен ресурсов для отслеживания.
-                      namespace:
-                        description: |
-                          Фильтры для выбора пространств имен.
-                        properties:
+                              Список событий, которые приводят к выполнению хука.
+                              По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
+                          executeHookOnSynchronization:
+                            description: |
+                              Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
+                          kind:
+                            description: |
+                              Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
                           labelSelector:
                             description: |
-                              Селектор меток для фильтрации пространств имен.
-                          nameSelector:
+                              Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
+                          namespace:
                             description: |
-                              Селектор имен для фильтрации пространств имен.
-                      queue:
-                        description: |
-                          Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
-                      resynchronizationPeriod:
-                        description: |
-                          Период ресинхронизации для привязки.
-                      waitForSynchronization:
-                        description: |
-                          Время ожидания синхронизации.
-                      watchEvent:
-                        description: |
-                          Список событий для отслеживания.
-                  name:
-                    description: |
-                      Используется для различения разных привязок во время выполнения.
-            handler:
-              description: |
-                Код обработчика ValidatingWebhook.
-              properties:
-                cel:
-                  description: |
-                    CEL-обработчик правил для объекта.
-                python:
-                  description: |
-                    Python-скрипт обработчика для объекта.
-            kind:
-              description: |
-                Kind — это строковое значение, представляющее REST-ресурс, который представляет данный объект.
-                Серверы могут выводить это из конечной точки, на которую клиент отправляет запросы.
-                Не может быть обновлено.
-                В CamelCase.
-                Подробнее: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            metadata:
-              description: |
-                Стандартные метаданные объекта.
-            status:
-              description: |
-                Статус определяет наблюдаемое состояние ValidationWebhook.
-            validationObject:
-              description: |
-                ValidatingWebhook описывает webhook и ресурсы и операции, к которым он применяется.
-              properties:
-                failurePolicy:
-                  description: |
-                    Определяет, как обрабатываются ошибки от хука.
-                group:
-                  description: |
-                    Ключ для включения снимков из группы привязок schedule и kubernetes. См. группировку.
-                includeSnapshotsFrom:
-                  description: |
-                    Массив имен привязок kubernetes в хуке. При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots.
-                labelSelector:
-                  description: |
-                    Селектор меток — это запрос меток для набора ресурсов. Результаты matchLabels и matchExpressions объединяются через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
-                  properties:
-                    matchExpressions:
-                      description: |
-                        matchExpressions — это список требований селектора меток. Требования объединяются через AND.
-                    matchLabels:
-                      description: |
-                        matchLabels — это карта пар {ключ,значение}. Одна пара {ключ,значение} в карте matchLabels эквивалентна элементу matchExpressions.
-                matchConditions:
-                  description: |
-                    Необязательный список условий соответствия для точной фильтрации запросов. Доступно только начиная с версии Kubernetes v1.27.
-                  items:
-                    description: |
-                      MatchCondition представляет условие, которое должно быть выполнено для отправки запроса в webhook.
-                    properties:
-                      expression:
-                        description: |
-                          Expression представляет выражение, которое будет оценено CEL. Должно оцениваться как bool.
-                          CEL-выражения имеют доступ к содержимому AdmissionRequest и Authorizer, организованному в переменные CEL:
-
-                          'object' — объект из входящего запроса. Значение null для DELETE-запросов.
-                          'oldObject' — существующий объект. Значение null для CREATE-запросов.
-                          'request' — атрибуты запроса на допуск (/pkg/apis/admission/types.go#AdmissionRequest).
-                          'authorizer' — CEL Authorizer. Может использоваться для выполнения проверок авторизации для принципала (пользователя или сервисного аккаунта) запроса.
-                            См. https://pkg.go.dev/k8s.io/apiserver/pkg/cel/library#Authz
-                          'authorizer.requestResource' — CEL ResourceCheck, построенный из 'authorizer' и настроенный с ресурсом запроса.
-                          Документация по CEL: https://kubernetes.io/docs/reference/using-api/cel/
-
-                          Обязательно.
+                              Фильтры для выбора пространств имен.
+                            properties:
+                              labelSelector:
+                                description: |
+                                  Селектор меток для фильтрации пространств имен.
+                              nameSelector:
+                                description: |
+                                  Селектор имен для фильтрации пространств имен.
+                          queue:
+                            description: |
+                              Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
                       name:
                         description: |
-                          Name — это идентификатор для этого условия соответствия, используемый для стратегического слияния MatchConditions, а также для предоставления идентификатора для целей логирования. Хорошее имя должно быть описательным для связанного выражения.
-                          Имя должно быть квалифицированным именем, состоящим из буквенно-цифровых символов, '-', '_' или '.', и должно начинаться и заканчиваться буквенно-цифровым символом (например, 'MyName', или 'my.name', или '123-abc', регекс для валидации '([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9]') с необязательным префиксом DNS-поддомена и '/' (например, 'example.com/MyName')
-
-                          Обязательно.
-                name:
+                          Используется для различения разных привязок во время выполнения.
+                handler:
                   description: |
-                    Должно быть доменом с как минимум тремя сегментами, разделенными точками.
-                namespace:
-                  description: |
-                    Фильтры для выбора пространств имен.
+                    Код обработчика ValidatingWebhook.
                   properties:
-                    labelSelector:
+                    cel:
                       description: |
-                        Селектор меток для фильтрации пространств имен.
-                    nameSelector:
+                        CEL-обработчик правил для объекта.
+                    python:
                       description: |
-                        Селектор имен для фильтрации пространств имен.
-                rules:
+                        Python-скрипт обработчика для объекта.
+                validationObject:
                   description: |
-                    Обязательный список правил, используемых для определения, следует ли отправить запрос к Kubernetes API server в хук.
-                  items:
-                    description: |
-                      RuleWithOperations — это кортеж операций и ресурсов. Рекомендуется убедиться, что все расширения кортежа корректны.
-                    properties:
-                      apiGroups:
-                        description: |
-                          APIGroups — это API-группы, к которым принадлежат ресурсы. '*' означает все группы.
-                          Если присутствует '*', длина среза должна быть один.
-                          Обязательно.
-                      apiVersions:
-                        description: |
-                          APIVersions — это API-версии, к которым принадлежат ресурсы. '*' означает все версии.
-                          Если присутствует '*', длина среза должна быть один.
-                          Обязательно.
-                      operations:
-                        description: |
-                          Operations — это операции, которые интересуют admission hook: CREATE, UPDATE, DELETE, CONNECT или * для всех этих операций и любых будущих admission операций, которые могут быть добавлены.
-                          Если присутствует '*', длина среза должна быть один.
-                          Обязательно.
-                      resources:
-                        description: |
-                          Resources — это список ресурсов, к которым применяется это правило.
-
-                          Например:
-                          'pods' означает pods.
-                          'pods/log' означает подресурс log из pods.
-                          '*' означает все ресурсы, но не подресурсы.
-                          'pods/*' означает все подресурсы pods.
-                          '*/scale' означает все подресурсы scale.
-                          '*/*' означает все ресурсы и их подресурсы.
-
-                          Если присутствует подстановочный знак, правило валидации убедится, что ресурсы не перекрываются друг с другом.
-
-                          В зависимости от объемлющего объекта, подресурсы могут быть не разрешены.
-                          Обязательно.
-                      scope:
-                        description: |
-                          scope определяет область действия этого правила.
-                          Допустимые значения: "Cluster", "Namespaced" и "*"
-                          "Cluster" означает, что только кластерные ресурсы будут соответствовать этому правилу.
-                          Объекты Namespace API являются кластерными.
-                          "Namespaced" означает, что только ресурсы с пространством имен будут соответствовать этому правилу.
-                          "*" означает, что нет ограничений по области действия.
-                          Подресурсы соответствуют области действия своего родительского ресурса.
-                          По умолчанию "*".
-                sideEffects:
-                  description: |
-                    Определяет, знает ли хук о dryRun.
-                timeoutSeconds:
-                  description: |
-                    Количество секунд, которое API сервер должен ждать ответа от хука, прежде чем считать вызов неудачным. По умолчанию 10 (секунд).
+                    ValidatingWebhook описывает webhook и ресурсы и операции, к которым он применяется.
+                  properties:
+                    failurePolicy:
+                      description: |
+                        Определяет, как обрабатываются ошибки от хука.
+                    name:
+                      description: |
+                        Должно быть доменом с как минимум тремя сегментами, разделенными точками.
+                    rules:
+                      description: |
+                        Обязательный список правил, используемых для определения, следует ли отправить запрос к Kubernetes API server в хук.
+                      items:
+                        properties:
+                          apiGroups:
+                            description: |
+                              API-группы, к которым принадлежат ресурсы. '*' означает все группы.
+                          apiVersions:
+                            description: |
+                              API-версии, к которым принадлежат ресурсы. '*' означает все версии.
+                          operations:
+                            description: |
+                              Операции, которые интересуют admission hook: CREATE, UPDATE, DELETE, CONNECT или * для всех операций.
+                          resources:
+                            description: |
+                              Список ресурсов, к которым применяется это правило.
+                    sideEffects:
+                      description: |
+                        Определяет, знает ли хук о dryRun.
+                    timeoutSeconds:
+                      description: |
+                        Количество секунд, которое API сервер должен ждать ответа от хука, прежде чем считать вызов неудачным. По умолчанию 10 (секунд).
