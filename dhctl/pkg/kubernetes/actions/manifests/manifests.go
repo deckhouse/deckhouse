@@ -297,6 +297,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/tmp",
 			},
 			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/var/run/addon-operator",
+			},
+			{
 				Name:      "kube",
 				ReadOnly:  false,
 				MountPath: "/.kube",
