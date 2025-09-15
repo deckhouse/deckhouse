@@ -176,7 +176,7 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 	// Check expiration time
 	payload := token.UnsafePayloadWithoutVerification()
 
-	// Parse the payload
+	// Parse the payload to get claims
 	var claims map[string]interface{}
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return TokenValidationResult{
@@ -185,35 +185,20 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 		}
 	}
 
-	// Check if exp claim exists
-	expClaim, exists := claims["exp"]
-	if !exists {
+	expTime := int64(claims["exp"].(float64))
+
+	if expTime < time.Now().UTC().Unix() {
 		return TokenValidationResult{
-			IsValid: false,
-			Error:   "token has no expiration claim",
+			IsValid:   false,
+			IsExpired: true,
+			Error:     "JWT token expired",
 		}
 	}
-
-	var expTime time.Time
-	switch exp := expClaim.(type) {
-	case float64:
-		expTime = time.Unix(int64(exp), 0)
-	case int64:
-		expTime = time.Unix(exp, 0)
-	default:
-		return TokenValidationResult{
-			IsValid: false,
-			Error:   "invalid expiration claim format",
-		}
-	}
-
-	now := time.Now()
-	isExpired := now.After(expTime)
 
 	return TokenValidationResult{
-		IsValid:   !isExpired,
-		IsExpired: isExpired,
-		ExpiresAt: expTime,
+		IsValid:   true,
+		IsExpired: false,
+		ExpiresAt: time.Unix(expTime, 0),
 	}
 }
 
@@ -384,13 +369,8 @@ multiclustersLoop:
 		existingToken := ""
 		shouldGenerateNewToken := true
 
-		currentAPIJWTPreview := multiclusterInfo.APIJWT
-		if len(multiclusterInfo.APIJWT) > 20 {
-			currentAPIJWTPreview = multiclusterInfo.APIJWT[:20] + "..."
-		}
 		input.Logger.Info("starting token reuse logic for multicluster",
-			slog.String("name", multiclusterInfo.Name),
-			slog.String("currentAPIJWT", currentAPIJWTPreview))
+			slog.String("name", multiclusterInfo.Name))
 
 		// Look for existing token in remote secrets
 		input.Logger.Info("checking remote secrets for existing token",
@@ -404,13 +384,8 @@ multiclustersLoop:
 				slog.String("secretName", "istio-remote-secret-"+multiclusterInfo.Name),
 				slog.Bool("hasToken", existingToken != ""))
 
-			tokenPreview := existingToken
-			if len(existingToken) > 20 {
-				tokenPreview = existingToken[:20] + "..."
-			}
 			input.Logger.Info("validating existing token",
-				slog.String("name", multiclusterInfo.Name),
-				slog.String("tokenPreview", tokenPreview))
+				slog.String("name", multiclusterInfo.Name))
 
 			validationResult := validateJWTToken(existingToken)
 			input.Logger.Info("token validation result",
