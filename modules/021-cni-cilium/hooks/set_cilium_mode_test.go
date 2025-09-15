@@ -28,7 +28,15 @@ import (
 )
 
 var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
-	f := HookExecutionConfigInit(`{"cniCilium":{"internal":{}}}`, "")
+
+	const (
+		initValuesString       = `{"cniCilium":{"internal": {}}}`
+		initConfigValuesString = `{"cniCilium":{}}`
+	)
+
+	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("")
