@@ -6,6 +6,7 @@ metadata:
   name: global
   resourceVersion: "999"
 spec:
+  enabled: true
   settings:
     highAvailability: true
     modules:
