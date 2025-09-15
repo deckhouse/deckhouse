@@ -39314,7 +39314,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=cnupt: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
@@ -39467,7 +39467,7 @@
               "global": true
             },
             "username": {
-              "description": "--username=cnupt: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
+              "description": "--username=root: Set this to the user you want to open the SSH connection as; If unassigned, this will be empty and the SSH default will apply",
               "shorthand": "l",
               "global": false
             },
