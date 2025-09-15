@@ -29,6 +29,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -44,6 +45,8 @@ func init() {
 	if env := os.Getenv("GOLDEN"); env != "" {
 		golden, _ = strconv.ParseBool(env)
 	}
+	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func Test(t *testing.T) {
