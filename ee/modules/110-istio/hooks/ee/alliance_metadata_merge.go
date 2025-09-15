@@ -236,19 +236,10 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
 	}
 
-	// Handle the kubeconfig data - it might be base64-encoded or raw YAML
-	secDataStr := string(secData)
-	var kubeconfigBytes []byte
-
-	// Check if the data looks like base64 (contains only base64 characters)
-	if isBase64String(secDataStr) {
-		var err error
-		kubeconfigBytes, err = base64.StdEncoding.DecodeString(secDataStr)
-		if err != nil {
-			return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
-		}
-	} else {
-		kubeconfigBytes = secData
+	// Decode base64-encoded kubeconfig data
+	kubeconfigBytes, err := base64.StdEncoding.DecodeString(string(secData))
+	if err != nil {
+		return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
 	}
 
 	// Extract token from kubeconfig directly
@@ -275,35 +266,6 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		Name:  secretName,
 		Token: token,
 	}, nil
-}
-
-// Checks if a string looks like base64-encoded data
-func isBase64String(s string) bool {
-	// Base64 strings should only contain A-Z, a-z, 0-9, +, /, and = (padding)
-	// and should not contain common YAML keywords
-	base64Chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-
-	// If the string contains YAML keywords, it's likely raw YAML
-	yamlKeywords := []string{"apiVersion:", "kind:", "clusters:", "contexts:", "users:"}
-	for _, keyword := range yamlKeywords {
-		if strings.Contains(s, keyword) {
-			return false
-		}
-	}
-
-	// Check if all characters are valid base64 characters
-	for _, char := range s {
-		if !strings.ContainsRune(base64Chars, char) && char != '\n' && char != '\r' && char != ' ' {
-			return false
-		}
-	}
-
-	// If it's very short, it's probably not base64
-	if len(strings.TrimSpace(s)) < 10 {
-		return false
-	}
-
-	return true
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
