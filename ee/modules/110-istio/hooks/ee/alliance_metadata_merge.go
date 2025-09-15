@@ -351,36 +351,12 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	// Process istio remote secrets and extract only tokens
-	var istioRemoteSecrets = make([]IstioRemoteSecretToken, 0)
-	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
-		if err != nil {
-			input.Logger.Warn("cannot iterate over istio remote secrets", log.Err(err))
-			continue
-		}
-
-		input.Logger.Info("processing istio remote secret",
-			slog.String("name", secretInfo.Name),
-			slog.Bool("hasToken", secretInfo.Token != ""))
-
-		// Token is already extracted in the filter function
-		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
-	}
-
-	// Store the processed secrets in values
-	for _, secretToken := range istioRemoteSecrets {
-		if strings.HasPrefix(secretToken.Name, "istio-remote-secret-") {
-			clusterName := strings.TrimPrefix(secretToken.Name, "istio-remote-secret-")
-
-			for i, mc := range properMulticlusters {
-				if mc.Name == clusterName {
-					properMulticlusters[i].APIJWT = secretToken.Token
-					input.Logger.Info("updated multicluster with token from remote secret",
-						slog.String("cluster", clusterName),
-						slog.String("secret", secretToken.Name))
-					break
-				}
-			}
+	// Create a map of cluster names to tokens from remote secrets for quick lookup
+	secretTokens := make(map[string]string)
+	for secretInfo := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
+		if strings.HasPrefix(secretInfo.Name, "istio-remote-secret-") {
+			clusterName := strings.TrimPrefix(secretInfo.Name, "istio-remote-secret-")
+			secretTokens[clusterName] = secretInfo.Token
 		}
 	}
 
@@ -455,34 +431,17 @@ multiclustersLoop:
 			slog.String("currentAPIJWT", currentAPIJWTPreview))
 
 		// Look for existing token in remote secrets
-		// The secret name format is "istio-remote-secret-{clusterName}"
-		// We need to find the secret that matches this multicluster
 		input.Logger.Info("checking remote secrets for existing token",
 			slog.String("multiclusterName", multiclusterInfo.Name),
-			slog.Int("remoteSecretsCount", len(istioRemoteSecrets)))
+			slog.Int("remoteSecretsCount", len(secretTokens)))
 
-		for _, secretToken := range istioRemoteSecrets {
-			secretName := secretToken.Name
-			// Extract cluster name from secret name (remove "istio-remote-secret-" prefix)
-			if strings.HasPrefix(secretName, "istio-remote-secret-") {
-				clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
-				input.Logger.Info("comparing cluster names",
-					slog.String("secretName", secretName),
-					slog.String("extractedClusterName", clusterName),
-					slog.String("multiclusterName", multiclusterInfo.Name))
+		if token, exists := secretTokens[multiclusterInfo.Name]; exists {
+			existingToken = token
+			input.Logger.Info("found matching secret for multicluster",
+				slog.String("multiclusterName", multiclusterInfo.Name),
+				slog.String("secretName", "istio-remote-secret-"+multiclusterInfo.Name),
+				slog.Bool("hasToken", existingToken != ""))
 
-				if clusterName == multiclusterInfo.Name {
-					existingToken = secretToken.Token
-					input.Logger.Info("found matching secret for multicluster",
-						slog.String("multiclusterName", multiclusterInfo.Name),
-						slog.String("secretName", secretName),
-						slog.Bool("hasToken", existingToken != ""))
-					break
-				}
-			}
-		}
-
-		if existingToken != "" {
 			tokenPreview := existingToken
 			if len(existingToken) > 20 {
 				tokenPreview = existingToken[:20] + "..."
