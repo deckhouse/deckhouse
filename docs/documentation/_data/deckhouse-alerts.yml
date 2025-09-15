@@ -2098,7 +2098,7 @@ alerts:
         To check the module release status, run the following command:
 
         ```bash
-        kubectl get mr
+        kubectl get mr -l module={{ $labels.moduleName }}
         ```
 
         Get all module releases to decide what to do next.{{ if ne $labels.fromToName "nil" }}
