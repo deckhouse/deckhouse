@@ -155,13 +155,14 @@ func (l *Loader) LoadModules() ([]*addonmodules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*addonmodules.BasicModule, error) {
-	if _, err := readDir(modulePath); err != nil {
-		return nil, err
+func (l *Loader) LoadModule(moduleName string) (*addonmodules.BasicModule, error) {
+	modulePath, err := d8utils.GetModuleSymlink(l.symlinksDir, moduleName)
+	if err != nil {
+		return nil, fmt.Errorf("get the module symlink '%s': %w", moduleName, err)
 	}
 
 	// run moduleDefinitionByDir("<module_name>", "/deckhouse-controller/downloaded/<module_name>/<module_version>")
-	def, err := l.moduleDefinitionByDir(filepath.Base(filepath.Dir(modulePath)), modulePath)
+	def, err := l.moduleDefinitionByDir(moduleName, modulePath)
 	if err != nil {
 		return nil, err
 	}
