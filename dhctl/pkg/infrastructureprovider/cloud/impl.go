@@ -172,7 +172,10 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		return nil, err
 	}
 
-	p.logger.LogDebugF("Getting version content for provider %s\n", p.name)
+	stepStr := string(step)
+	stepDir := filepath.Join(modulesDir, "layouts", p.layout, stepStr)
+
+	p.logger.LogDebugF("Got step dir %s provider %s. Getting version content\n", stepDir, p.name)
 
 	vContentProvider := getVersionContentProvider(p.params.Settings, p.name)
 	versionContent, err := vContentProvider(p.params.Settings, p.metaConfig)
@@ -180,22 +183,19 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		return nil, fmt.Errorf("Cannot get version content for provider %s: %w", p.name, err)
 	}
 
-	layout := string(step)
-
-	layoutDir := filepath.Join(modulesDir, "layouts", layout)
-	versionsFile := filepath.Join(layoutDir, "versions.tf")
+	versionsFile := filepath.Join(stepDir, "versions.tf")
 
 	p.logger.LogDebugF("Got version content for provider %s:\n%s\nWrite to destination %s\n", p.name, versionContent, versionsFile)
 
 	err = os.WriteFile(versionsFile, []byte(versionContent), 0644)
 	if err != nil {
-		return nil, fmt.Errorf("cannot write versions %s file for layout %s: %v", versionsFile, layout, err)
+		return nil, fmt.Errorf("Cannot write versions %s file for layout %s with step %s: %v", versionsFile, p.layout, stepStr, err)
 	}
 
 	if !p.params.Settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform executor for provider %s with step %s\n", p.name, step)
+		p.logger.LogDebugF("Create terraform executor for provider %s for layout %s with step %s\n", p.name, p.layout, step)
 		return terraform.NewExecutor(terraform.ExecutorParams{
-			WorkingDir: layoutDir,
+			WorkingDir: stepDir,
 			PluginsDir: pluginsDir,
 			RunExecutorParams: terraform.RunExecutorParams{
 				RootDir:          p.rootDir,
@@ -206,10 +206,10 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		}, logger), nil
 	}
 
-	p.logger.LogDebugF("Create opentofu executor for provider %s with step %s\n", p.name, step)
+	p.logger.LogDebugF("Create opentofu executor for provider %s for layout %s with step %s\n", p.name, p.layout, step)
 
 	return tofu.NewExecutor(tofu.ExecutorParams{
-		WorkingDir: layoutDir,
+		WorkingDir: stepDir,
 		PluginsDir: pluginsDir,
 		RunExecutorParams: tofu.RunExecutorParams{
 			RootDir:     p.rootDir,

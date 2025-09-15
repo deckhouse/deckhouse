@@ -41,8 +41,8 @@ func metaConfigForTesting(provider, prefix, layout string) *config.MetaConfig {
 	return &cfg
 }
 
-func newTestRunner(provider ExecutorProvider) *Runner {
-	return NewRunner(metaConfigForTesting("test-provider", "test-prefix", "test-layout"), "test-step", &cache.DummyCache{}, provider)
+func newTestRunner(executor Executor) *Runner {
+	return NewRunner(metaConfigForTesting("test-provider", "test-prefix", "test-layout"), &cache.DummyCache{}, executor)
 }
 
 func TestCheckPlanDestructiveChanges(t *testing.T) {
@@ -377,30 +377,6 @@ var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
 var destructiveChangesReportWithoutVM = &DestructiveChangesReport{
 	Changes:              destructivelyChangedWithoutVM,
 	hasMasterDestruction: false,
-}
-
-func TestNeedToUseOpentofu(t *testing.T) {
-	metaConfig := &config.MetaConfig{}
-
-	metaConfig.ProviderName = "Yandex"
-	require.True(t, NeedToUseOpentofu(metaConfig))
-
-	notTofuProviders := []string{
-		"OpenStack",
-		"AWS",
-		"GCP",
-		"vSphere",
-		"Azure",
-		"VCD",
-		"Huaweicloud",
-	}
-
-	for _, provider := range notTofuProviders {
-		conf := &config.MetaConfig{}
-		conf.ProviderName = provider
-
-		require.False(t, NeedToUseOpentofu(conf))
-	}
 }
 
 func TestGetCloudsUseOpentofu(t *testing.T) {
