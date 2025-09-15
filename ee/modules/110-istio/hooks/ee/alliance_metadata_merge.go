@@ -7,6 +7,8 @@ package ee
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +16,10 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/square/go-jose/v3"
+	"gopkg.in/yaml.v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -126,6 +132,180 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
+// Simplified struct for storing only essential token data
+type IstioRemoteSecretToken struct {
+	Name  string `json:"name"`
+	Token string `json:"token"`
+}
+
+// Kubeconfig represents the structure of a kubeconfig file
+type Kubeconfig struct {
+	Users []struct {
+		User struct {
+			Token string `yaml:"token"`
+		} `yaml:"user"`
+	} `yaml:"users"`
+}
+
+// TokenValidationResult represents the result of token validation
+type TokenValidationResult struct {
+	IsValid   bool      `json:"isValid"`
+	IsExpired bool      `json:"isExpired"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	Error     string    `json:"error,omitempty"`
+}
+
+// validateJWTToken validates a JWT token and checks if it's expired
+func validateJWTToken(tokenString string) TokenValidationResult {
+	if tokenString == "" {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token is empty",
+		}
+	}
+
+	// Parse the JWT token
+	token, err := jose.ParseSigned(tokenString)
+	if err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to parse token: %v", err),
+		}
+	}
+
+	// Check expiration time
+	payload := token.UnsafePayloadWithoutVerification()
+
+	// Parse the payload
+	var claims map[string]interface{}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   fmt.Sprintf("failed to unmarshal claims: %v", err),
+		}
+	}
+
+	// Check if exp claim exists
+	expClaim, exists := claims["exp"]
+	if !exists {
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "token has no expiration claim",
+		}
+	}
+
+	var expTime time.Time
+	switch exp := expClaim.(type) {
+	case float64:
+		expTime = time.Unix(int64(exp), 0)
+	case int64:
+		expTime = time.Unix(exp, 0)
+	default:
+		return TokenValidationResult{
+			IsValid: false,
+			Error:   "invalid expiration claim format",
+		}
+	}
+
+	now := time.Now()
+	isExpired := now.After(expTime)
+
+	return TokenValidationResult{
+		IsValid:   !isExpired,
+		IsExpired: isExpired,
+		ExpiresAt: expTime,
+	}
+}
+
+func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert k8s secret to struct: %v", err)
+	}
+
+	secretName := secret.GetName()
+	if !strings.HasPrefix(secretName, "istio-remote-secret-") {
+		return nil, fmt.Errorf("secret %s is not an istio remote secret", secretName)
+	}
+	clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+
+	// Get the base64-encoded kubeconfig from the field named after the cluster
+	secData, exists := secret.Data[clusterName]
+	if !exists {
+		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
+	}
+
+	// Handle the kubeconfig data - it might be base64-encoded or raw YAML
+	secDataStr := string(secData)
+	var kubeconfigBytes []byte
+
+	// Check if the data looks like base64 (contains only base64 characters)
+	if isBase64String(secDataStr) {
+		var err error
+		kubeconfigBytes, err = base64.StdEncoding.DecodeString(secDataStr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
+		}
+	} else {
+		kubeconfigBytes = secData
+	}
+
+	// Extract token from kubeconfig directly
+	var kubeconfig Kubeconfig
+	err = yaml.Unmarshal(kubeconfigBytes, &kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal kubeconfig from secret %s: %v", secretName, err)
+	}
+
+	// Look for the first user with a token
+	var token string
+	for _, user := range kubeconfig.Users {
+		if user.User.Token != "" {
+			token = user.User.Token
+			break
+		}
+	}
+
+	if token == "" {
+		return nil, fmt.Errorf("token not found in kubeconfig from secret %s", secretName)
+	}
+
+	return IstioRemoteSecretToken{
+		Name:  secretName,
+		Token: token,
+	}, nil
+}
+
+// Checks if a string looks like base64-encoded data
+func isBase64String(s string) bool {
+	// Base64 strings should only contain A-Z, a-z, 0-9, +, /, and = (padding)
+	// and should not contain common YAML keywords
+	base64Chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
+
+	// If the string contains YAML keywords, it's likely raw YAML
+	yamlKeywords := []string{"apiVersion:", "kind:", "clusters:", "contexts:", "users:"}
+	for _, keyword := range yamlKeywords {
+		if strings.Contains(s, keyword) {
+			return false
+		}
+	}
+
+	// Check if all characters are valid base64 characters
+	for _, char := range s {
+		if !strings.ContainsRune(base64Chars, char) && char != '\n' && char != '\r' && char != ' ' {
+			return false
+		}
+	}
+
+	// If it's very short, it's probably not base64
+	if len(strings.TrimSpace(s)) < 10 {
+		return false
+	}
+
+	return true
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: lib.Queue("alliance"),
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -140,6 +320,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "deckhouse.io/v1alpha1",
 			Kind:       "IstioMulticlusters",
 			FilterFunc: applyMulticlusterMergeFilter,
+		},
+		{
+			Name:       "istioRemoteSecrets",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			FilterFunc: applyIstioRemoteSecretFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"istio/multiCluster": "true",
+				},
+			},
+			NamespaceSelector: lib.NsSelector(),
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -158,6 +350,39 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 	var remotePublicMetadata = make(map[string]eeCrd.AlliancePublicMetadata)
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
+
+	// Process istio remote secrets and extract only tokens
+	var istioRemoteSecrets = make([]IstioRemoteSecretToken, 0)
+	for secretInfo, err := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
+		if err != nil {
+			input.Logger.Warn("cannot iterate over istio remote secrets", log.Err(err))
+			continue
+		}
+
+		input.Logger.Info("processing istio remote secret",
+			slog.String("name", secretInfo.Name),
+			slog.Bool("hasToken", secretInfo.Token != ""))
+
+		// Token is already extracted in the filter function
+		istioRemoteSecrets = append(istioRemoteSecrets, secretInfo)
+	}
+
+	// Store the processed secrets in values
+	for _, secretToken := range istioRemoteSecrets {
+		if strings.HasPrefix(secretToken.Name, "istio-remote-secret-") {
+			clusterName := strings.TrimPrefix(secretToken.Name, "istio-remote-secret-")
+
+			for i, mc := range properMulticlusters {
+				if mc.Name == clusterName {
+					properMulticlusters[i].APIJWT = secretToken.Token
+					input.Logger.Info("updated multicluster with token from remote secret",
+						slog.String("cluster", clusterName),
+						slog.String("secret", secretToken.Name))
+					break
+				}
+			}
+		}
+	}
 
 federationsLoop:
 	for federationInfo, err := range sdkobjectpatch.SnapshotIter[IstioFederationMergeCrdInfo](input.Snapshots.Get("federations")) {
@@ -217,19 +442,99 @@ multiclustersLoop:
 			continue multiclustersLoop
 		}
 
-		privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
-		claims := map[string]string{
-			"iss":   "d8-istio",
-			"aud":   multiclusterInfo.Public.ClusterUUID,
-			"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
-			"scope": "api",
+		// Check if we already have a valid token from remote secrets before generating a new one
+		existingToken := ""
+		shouldGenerateNewToken := true
+
+		currentAPIJWTPreview := multiclusterInfo.APIJWT
+		if len(multiclusterInfo.APIJWT) > 20 {
+			currentAPIJWTPreview = multiclusterInfo.APIJWT[:20] + "..."
 		}
-		// until the bug won't be solved https://github.com/istio/istio/issues/37925
-		// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
-		multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
-		if err != nil {
-			input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
-			continue multiclustersLoop
+		input.Logger.Info("starting token reuse logic for multicluster",
+			slog.String("name", multiclusterInfo.Name),
+			slog.String("currentAPIJWT", currentAPIJWTPreview))
+
+		// Look for existing token in remote secrets
+		// The secret name format is "istio-remote-secret-{clusterName}"
+		// We need to find the secret that matches this multicluster
+		input.Logger.Info("checking remote secrets for existing token",
+			slog.String("multiclusterName", multiclusterInfo.Name),
+			slog.Int("remoteSecretsCount", len(istioRemoteSecrets)))
+
+		for _, secretToken := range istioRemoteSecrets {
+			secretName := secretToken.Name
+			// Extract cluster name from secret name (remove "istio-remote-secret-" prefix)
+			if strings.HasPrefix(secretName, "istio-remote-secret-") {
+				clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+				input.Logger.Info("comparing cluster names",
+					slog.String("secretName", secretName),
+					slog.String("extractedClusterName", clusterName),
+					slog.String("multiclusterName", multiclusterInfo.Name))
+
+				if clusterName == multiclusterInfo.Name {
+					existingToken = secretToken.Token
+					input.Logger.Info("found matching secret for multicluster",
+						slog.String("multiclusterName", multiclusterInfo.Name),
+						slog.String("secretName", secretName),
+						slog.Bool("hasToken", existingToken != ""))
+					break
+				}
+			}
+		}
+
+		if existingToken != "" {
+			tokenPreview := existingToken
+			if len(existingToken) > 20 {
+				tokenPreview = existingToken[:20] + "..."
+			}
+			input.Logger.Info("validating existing token",
+				slog.String("name", multiclusterInfo.Name),
+				slog.String("tokenPreview", tokenPreview))
+
+			validationResult := validateJWTToken(existingToken)
+			input.Logger.Info("token validation result",
+				slog.String("name", multiclusterInfo.Name),
+				slog.Bool("isValid", validationResult.IsValid),
+				slog.Bool("isExpired", validationResult.IsExpired),
+				slog.String("error", validationResult.Error),
+				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+
+			if validationResult.IsValid && !validationResult.IsExpired {
+				// Token is still valid, reuse it
+				shouldGenerateNewToken = false
+				multiclusterInfo.APIJWT = existingToken
+				input.Logger.Info("reusing existing valid token for multicluster",
+					slog.String("name", multiclusterInfo.Name),
+					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
+			} else {
+				input.Logger.Info("existing token is invalid or expired, generating new token",
+					slog.String("name", multiclusterInfo.Name),
+					slog.String("error", validationResult.Error),
+					slog.Bool("isExpired", validationResult.IsExpired))
+			}
+		} else {
+			input.Logger.Info("no existing token found, will generate new token",
+				slog.String("name", multiclusterInfo.Name))
+		}
+
+		if shouldGenerateNewToken {
+			privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
+			claims := map[string]string{
+				"iss":   "d8-istio",
+				"aud":   multiclusterInfo.Public.ClusterUUID,
+				"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
+				"scope": "api",
+			}
+			// until the bug won't be solved https://github.com/istio/istio/issues/37925
+			// multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*25)
+			multiclusterInfo.APIJWT, err = jwt.GenerateJWT(privKey, claims, time.Hour*24*366)
+			if err != nil {
+				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
+				continue multiclustersLoop
+			}
+
+			input.Logger.Info("generated new token for multicluster",
+				slog.String("name", multiclusterInfo.Name))
 		}
 
 		multiclusterInfo.Public = nil
