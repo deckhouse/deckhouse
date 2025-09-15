@@ -1,4 +1,6 @@
 {{- $controllerBranch := "controller-v1.9.5" }}
+{{- $controllerUser := "deckhouse" }}
+{{- $controllerUID := "64535" }}
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -279,7 +281,8 @@ shell:
   - apt-get -y install ca-certificates curl libxml2-devel libyajl libyajl-devel libmaxminddb libmaxminddb-devel libpcre-devel
   setup:
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - |
     bash -eu -c '
     writeDirs=(
@@ -293,7 +296,7 @@ shell:
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
-      chown -R www-data:www-data ${dir};
+      chown -R {{ $controllerUser }}:{{ $controllerUser }} ${dir};
     done'
   - |
     bash -eu -c '
@@ -322,13 +325,13 @@ shell:
     );
     for dir in "${writeDirs[@]}"; do
       mkdir -p ${dir};
-      chown -R www-data:www-data ${dir};
+      chown -R {{ $controllerUser }}:{{ $controllerUser }} ${dir};
     done'
   - mkdir -p /chroot/etc/nginx/geoip
   - mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
   - touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-  - chown -R www-data:www-data /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
   - cp -a /etc/pki /chroot/etc/pki
   - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
@@ -357,6 +360,7 @@ shell:
   - cp -a /usr/local/modsecurity/lib/libmodsecurity.* /chroot/usr/lib64/
   - cp -a /usr/local/nginx /chroot/usr/local/
   - cp -R /src/rootfs/etc/* /chroot/etc/
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - rm -rf /src/rootfs/etc
   - ln -s /etc/nginx/geoip /chroot/etc/ingress-controller/geoip
 
@@ -410,9 +414,11 @@ shell:
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/modules_mount/etc/nginx/modules/otel"
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
-  - adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-  - chown www-data:www-data /usr/bin/nginx
-  - chown www-data:www-data /usr/bin/curl
+  - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
+  - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
+  - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
+  - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc
   - chmod 1777 /tmp
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
@@ -432,9 +438,9 @@ shell:
   - ln -sf /chroot/var/log/nginx /var/log/nginx
   - ln -sf /chroot/modules_mount /modules_mount
   - touch /chroot/var/log/nginx/access.log
-  - chown www-data:www-data /chroot/var/log/nginx/access.log
+  - chown {{ $controllerUser }}:{{ $controllerUser }} /chroot/var/log/nginx/access.log
   - echo "" > /chroot/etc/resolv.conf
-  - chown -R www-data:www-data /var/log /chroot/var/log /chroot/etc/resolv.conf
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /var/log /chroot/var/log /chroot/etc/resolv.conf
   - mknod -m 0666 /chroot/dev/null c 1 3
   - mknod -m 0666 /chroot/dev/random c 1 8
   - mknod -m 0666 /chroot/dev/urandom c 1 9
@@ -456,7 +462,7 @@ shell:
 imageSpec:
   config:
     workingDir: /
-    user: "www-data"
+    user: "{{ $controllerUser }}"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]
