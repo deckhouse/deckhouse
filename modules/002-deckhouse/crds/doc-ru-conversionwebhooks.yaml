@@ -1,260 +1,125 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
-  name: conversionwebhooks.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: deckhouse
-    app: webhook-handler
 spec:
-  group: deckhouse.io
-  names:
-    kind: ConversionWebhook
-    listKind: ConversionWebhookList
-    plural: conversionwebhooks
-    shortNames:
-    - cwhc
-    singular: conversionwebhook
-  scope: Cluster
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: ConversionWebhook is the Schema for the conversionwebhooks API
-        properties:
-          apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
-            type: string
-          context:
-            items:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Custom resource для настройки webhook'ов конвертации версий CRD.
+
+            Один custom resource `ConversionWebhook` описывает обработчики конвертации между версиями пользовательских ресурсов.
+          properties:
+            spec:
               properties:
-                kubernetes:
-                  properties:
-                    allowFailure:
-                      type: boolean
-                    apiVersion:
-                      type: string
-                    executeHookOnEvent:
-                      items:
-                        type: string
-                      type: array
-                    executeHookOnSynchronization:
-                      type: boolean
-                    fieldSelector:
-                      properties:
-                        matchExpressions:
-                          items:
-                            properties:
-                              field:
-                                type: string
-                              operator:
-                                type: string
-                              value:
-                                type: string
-                            required:
-                            - field
-                            - operator
-                            type: object
-                          type: array
-                      required:
-                      - matchExpressions
-                      type: object
-                    group:
-                      type: string
-                    includeSnapshotsFrom:
-                      items:
-                        type: string
-                      type: array
-                    jqFilter:
-                      type: string
-                    keepFullObjectsInMemory:
-                      type: boolean
-                    kind:
-                      type: string
-                    labelSelector:
-                      description: |-
-                        A label selector is a label query over a set of resources. The result of matchLabels and
-                        matchExpressions are ANDed. An empty label selector matches all objects. A null
-                        label selector matches no objects.
-                      properties:
-                        matchExpressions:
-                          description: matchExpressions is a list of label selector
-                            requirements. The requirements are ANDed.
-                          items:
-                            description: |-
-                              A label selector requirement is a selector that contains values, a key, and an operator that
-                              relates the key and values.
-                            properties:
-                              key:
-                                description: key is the label key that the selector
-                                  applies to.
-                                type: string
-                              operator:
-                                description: |-
-                                  operator represents a key's relationship to a set of values.
-                                  Valid operators are In, NotIn, Exists and DoesNotExist.
-                                type: string
-                              values:
-                                description: |-
-                                  values is an array of string values. If the operator is In or NotIn,
-                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                  the values array must be empty. This array is replaced during a strategic
-                                  merge patch.
-                                items:
-                                  type: string
-                                type: array
-                                x-kubernetes-list-type: atomic
-                            required:
-                            - key
-                            - operator
-                            type: object
-                          type: array
-                          x-kubernetes-list-type: atomic
-                        matchLabels:
-                          additionalProperties:
-                            type: string
-                          description: |-
-                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                            map is equivalent to an element of matchExpressions, whose key field is "key", the
-                            operator is "In", and the values array contains only "value". The requirements are ANDed.
-                          type: object
-                      type: object
-                      x-kubernetes-map-type: atomic
-                    mode:
-                      type: string
-                    name:
-                      type: string
-                    nameSelector:
-                      properties:
-                        matchNames:
-                          items:
-                            type: string
-                          type: array
-                      required:
-                      - matchNames
-                      type: object
-                    namespace:
-                      properties:
-                        labelSelector:
-                          description: |-
-                            A label selector is a label query over a set of resources. The result of matchLabels and
-                            matchExpressions are ANDed. An empty label selector matches all objects. A null
-                            label selector matches no objects.
-                          properties:
-                            matchExpressions:
-                              description: matchExpressions is a list of label selector
-                                requirements. The requirements are ANDed.
-                              items:
-                                description: |-
-                                  A label selector requirement is a selector that contains values, a key, and an operator that
-                                  relates the key and values.
-                                properties:
-                                  key:
-                                    description: key is the label key that the selector
-                                      applies to.
-                                    type: string
-                                  operator:
-                                    description: |-
-                                      operator represents a key's relationship to a set of values.
-                                      Valid operators are In, NotIn, Exists and DoesNotExist.
-                                    type: string
-                                  values:
-                                    description: |-
-                                      values is an array of string values. If the operator is In or NotIn,
-                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                      the values array must be empty. This array is replaced during a strategic
-                                      merge patch.
-                                    items:
-                                      type: string
-                                    type: array
-                                    x-kubernetes-list-type: atomic
-                                required:
-                                - key
-                                - operator
-                                type: object
-                              type: array
-                              x-kubernetes-list-type: atomic
-                            matchLabels:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                                map is equivalent to an element of matchExpressions, whose key field is "key", the
-                                operator is "In", and the values array contains only "value". The requirements are ANDed.
-                              type: object
-                          type: object
-                          x-kubernetes-map-type: atomic
-                        nameSelector:
-                          properties:
-                            matchNames:
-                              items:
-                                type: string
-                              type: array
-                          required:
-                          - matchNames
-                          type: object
-                      type: object
-                    queue:
-                      type: string
-                    resynchronizationPeriod:
-                      type: string
-                    waitForSynchronization:
-                      type: string
-                    watchEvent:
-                      items:
-                        type: string
-                      type: array
-                  type: object
-                name:
-                  type: string
-              required:
-              - name
-              type: object
-            type: array
-          conversions:
-            items:
-              properties:
-                from:
-                  type: string
-                handler:
-                  properties:
-                    python:
-                      description: this is a python script handler for object
-                      type: string
-                  type: object
-                includeSnapshotsFrom:
+                context:
+                  description: |
+                    Запускает хук при изменениях объектов Kubernetes.
                   items:
-                    type: string
-                  type: array
-                to:
-                  type: string
-              required:
-              - from
-              - handler
-              - to
-              type: object
-            type: array
-          kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
-            type: string
-          metadata:
-            type: object
-          status:
-            description: status defines the observed state of ConversionWebhook
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+                    properties:
+                      kubernetes:
+                        properties:
+                          allowFailure:
+                            description: |
+                              Если `true`, Shell-operator игнорирует ошибки выполнения хука.
+                              Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
+                          apiVersion:
+                            description: |
+                              Необязательная группа и версия API объекта.
+                              Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
+                          executeHookOnEvent:
+                            description: |
+                              Список событий, которые приводят к выполнению хука.
+                              По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
+                          executeHookOnSynchronization:
+                            description: |
+                              Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
+                          fieldSelector:
+                            properties:
+                              matchExpressions:
+                                items:
+                                  properties:
+                                    field:
+                                      description: |
+                                        Имя поля для фильтрации.
+                                    operator:
+                                      description: |
+                                        Оператор для сравнения поля со значением.
+                                    value:
+                                      description: |
+                                        Значение для сравнения с полем.
+                          group:
+                            description: |
+                              Ключ для включения снимков из группы привязок schedule и kubernetes.
+                          includeSnapshotsFrom:
+                            description: |
+                              Массив имен привязок kubernetes в хуке.
+                              При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots. Возможно само-включение.
+                          jqFilter:
+                            description: |
+                              Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
+                              Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
+                          keepFullObjectsInMemory:
+                            description: |
+                              Если не установлено или `true`, дампы ресурсов Kubernetes кешируются для этой привязки, и снимок включает их как поля объекта.
+                              Установите в `false`, если хук не полагается на полные объекты для уменьшения потребления памяти.
+                          kind:
+                            description: |
+                              Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
+                          labelSelector:
+                            description: |
+                              Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
+                          mode:
+                            description: |
+                              Режим работы привязки kubernetes.
+                          nameSelector:
+                            properties:
+                              matchNames:
+                                description: |
+                                  Список имен ресурсов для отслеживания.
+                          namespace:
+                            description: |
+                              Фильтры для выбора пространств имен.
+                            properties:
+                              labelSelector:
+                                description: |
+                                  Селектор меток для фильтрации пространств имен.
+                              nameSelector:
+                                description: |
+                                  Селектор имен для фильтрации пространств имен.
+                          queue:
+                            description: |
+                              Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
+                          resynchronizationPeriod:
+                            description: |
+                              Период ресинхронизации для привязки.
+                          waitForSynchronization:
+                            description: |
+                              Время ожидания синхронизации.
+                          watchEvent:
+                            description: |
+                              Список событий для отслеживания.
+                      name:
+                        description: |
+                          Используется для различения разных привязок во время выполнения.
+                conversions:
+                  description: |
+                    Эта привязка превращает хук в обработчик для конвертации, определенной в CustomResourceDefinition.
+                    Shell-operator обновляет CRD с помощью .spec.conversion, запускает HTTPS сервер и выполняет хуки для обработки запросов ConversionReview.
+                  items:
+                    properties:
+                      from:
+                        description: |
+                          Версия пользовательского ресурса, которую хук может конвертировать.
+                      handler:
+                        description: |
+                          Код обработчика конвертации.
+                        properties:
+                          python:
+                            description: |
+                              Python скрипт обработчика для объекта.
+                      includeSnapshotsFrom:
+                        description: |
+                          Массив имен привязок kubernetes в хуке.
+                          При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots.
+                      to:
+                        description: |
+                          Версия пользовательского ресурса, которую хук может производить.
