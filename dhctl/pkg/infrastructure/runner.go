@@ -812,10 +812,10 @@ func (r *Runner) getPlanDestructiveChanges(ctx context.Context, planFile string)
 }
 
 func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string) (bool, error) {
-	var result []byte
+	var result []string
 
 	_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
-		res, err := r.infraExecutor.Show(ctx, planFile)
+		res, err := r.infraExecutor.GetActions(ctx, planFile)
 		if err != nil {
 			return 0, err
 		}
@@ -832,22 +832,8 @@ func (r *Runner) planHasDestructiveChanges(ctx context.Context, planFile string)
 		return false, fmt.Errorf("can't get infrastructure plan for %q\n%v", planFile, err)
 	}
 
-	var changes struct {
-		ResourcesChanges []struct {
-			Change struct {
-				Actions []string `json:"actions"`
-			} `json:"change"`
-			Type string `json:"type"`
-		} `json:"resource_changes"`
-	}
-
-	err = json.Unmarshal(result, &changes)
-	if err != nil {
-		return false, err
-	}
-
-	for _, resource := range changes.ResourcesChanges {
-		if hasAction(resource.Change.Actions, "delete") {
+	for _, action := range result {
+		if action == "delete" {
 			return true, nil
 		}
 	}

@@ -15,7 +15,9 @@
 package tofu
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -185,6 +187,46 @@ func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, er
 	e.cmd = tofuCmd(ctx, e.workingDir, args...)
 
 	return e.cmd.Output()
+}
+
+func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+	args := []string{
+		"show",
+		"-json",
+		planPath,
+	}
+
+	cmd1 := tofuCmd(ctx, e.workingDir, args...)
+	cmd2 := exec.CommandContext(ctx, "jq", ".resource_changes[].change.actions")
+
+	stdoutPipe, err := cmd1.StdoutPipe()
+	if err != nil {
+		return actions, fmt.Errorf("failed to pipe stdout: %w", err)
+	}
+	cmd2.Stdin = stdoutPipe
+
+	buf := bytes.NewBuffer(make([]byte, 0, 5000))
+	cmd2.Stdout = buf
+
+	if err := cmd1.Start(); err != nil {
+		return actions, fmt.Errorf("failed to start terraform: %w", err)
+	}
+	if err := cmd2.Run(); err != nil {
+		return actions, fmt.Errorf("failed to run jq: %w", err)
+	}
+	if err := cmd1.Wait(); err != nil {
+		return actions, fmt.Errorf("terraform failed: %w", err)
+	}
+
+	var allActions [][]string
+	if err := json.Unmarshal(buf.Bytes(), &allActions); err != nil {
+		return actions, fmt.Errorf("failed to parse actions: %w", err)
+	}
+	for _, i := range allActions {
+		actions = append(actions, i...)
+	}
+
+	return actions, nil
 }
 
 func (e *Executor) SetExecutorLogger(logger log.Logger) {

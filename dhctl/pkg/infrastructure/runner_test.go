@@ -232,6 +232,12 @@ func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
 	e.logger = logger
 }
 
+func (e *sleepExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+	e.logger.LogWarnLn("Call GetActions on dummy executor")
+
+	return nil, nil
+}
+
 func (e *sleepExecutor) Stop() {
 	close(e.cancelCh)
 }

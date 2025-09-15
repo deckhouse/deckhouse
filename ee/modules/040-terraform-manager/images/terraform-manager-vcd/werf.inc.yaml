@@ -5,6 +5,10 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/vcd
   to: /deckhouse/candi/cloud-providers/vcd
 import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
 {{- range $version := .TF.vcd.versions }}
 - image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd-v{{ $version }}
