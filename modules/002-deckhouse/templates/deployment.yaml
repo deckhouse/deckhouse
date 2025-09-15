@@ -281,7 +281,7 @@ spec:
           volumeMounts:
           - mountPath: /tmp
             name: tmp
-          - mountPath: /var/run/addon-operator
+          - mountPath: /run
             name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot
