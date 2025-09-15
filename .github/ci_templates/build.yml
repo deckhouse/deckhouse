@@ -28,7 +28,11 @@ check_changelog:
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
+{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+runs-on: [self-hosted, stage]
+{!{- else }!}
 runs-on: [self-hosted, large]
+{!{- end }!}
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:

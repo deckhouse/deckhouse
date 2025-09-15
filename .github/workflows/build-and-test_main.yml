@@ -356,6 +356,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -365,7 +366,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -416,9 +417,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -740,6 +740,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -749,7 +750,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -800,9 +801,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1124,6 +1124,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1133,7 +1134,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1184,9 +1185,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1508,6 +1508,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1517,7 +1518,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1568,9 +1569,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -1892,6 +1892,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -1901,7 +1902,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1952,9 +1953,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
@@ -2276,6 +2276,7 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
@@ -2285,7 +2286,7 @@ jobs:
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2336,9 +2337,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+            export REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_PATH}"
+            export WERF_REPO="${DECKHOUSE_DEV_REGISTRY_PATH}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final

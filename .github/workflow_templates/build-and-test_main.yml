@@ -47,7 +47,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   build_ee:
@@ -58,7 +58,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "EE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   build_se:
@@ -69,7 +69,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "SE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   build_se_plus:
@@ -80,7 +80,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "SE-plus"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   build_be:
@@ -91,7 +91,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "BE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   build_ce:
@@ -102,7 +102,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "CE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
   doc_web_build:
