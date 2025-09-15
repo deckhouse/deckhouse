@@ -86,83 +86,7 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
-> **Warning**. The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
-
-- ### OperationPolicy pods knobs 
-
-- `spec.policies.pods` — object. Pod-level operation controls.
-  - `denyTolerations` — object.
-    - `enabled` (boolean, default: false): enable the check.
-    - `enforcementAction` (string, default: "Warn"): action on violation. Allowed: `Warn`, `Deny`, `Dryrun`.
-    - `forbiddenKeys` (string[], default: `["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"]`): taint keys that Pods are not allowed to tolerate (`spec.tolerations[*].key`).
-    - `exemptNamespaces` (string[], default: `["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]`): namespaces exempt from this check.
-
-Notes:
-- `denyTolerations` validates only toleration keys (not operator/value/effect).
-- Enforcement for these knobs is local to the knob and does not depend on the top-level `spec.enforcementAction`.
-
-### Notes
-
-- DELETE operations are now handled by Gatekeeper by default.
-
-### Custom example: Block Node deletion without a label
-
-You can create your own Gatekeeper policy to block Node deletion unless a special label is present. Example below uses `oldObject` to check labels on the Node being deleted:
-
-```yaml
-apiVersion: templates.gatekeeper.sh/v1
-kind: ConstraintTemplate
-metadata:
-  name: d8customnodedeleteguard
-spec:
-  crd:
-    spec:
-      names:
-        kind: D8CustomNodeDeleteGuard
-      validation:
-        openAPIV3Schema:
-          type: object
-          properties:
-            requiredLabelKey:
-              type: string
-            requiredLabelValue:
-              type: string
-  targets:
-    - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.custom
-
-        is_delete { input.review.operation == "DELETE" }
-        is_node { input.review.kind.kind == "Node" }
-
-        has_required_label {
-          key := input.parameters.requiredLabelKey
-          val := input.parameters.requiredLabelValue
-          obj := input.review.oldObject
-          obj.metadata.labels[key] == val
-        }
-
-        violation[{"msg": msg}] {
-          is_delete
-          is_node
-          not has_required_label
-          msg := sprintf("Node deletion is blocked. Add label %q=%q to proceed.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
-        }
----
-apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: D8CustomNodeDeleteGuard
-metadata:
-  name: require-node-delete-label
-spec:
-  enforcementAction: warn
-  match:
-    kinds:
-      - apiGroups: [""]
-        kinds: ["Node"]
-  parameters:
-    requiredLabelKey: "admission.deckhouse.io/allow-delete"
-    requiredLabelValue: "true"
-```
+Briefly: `OperationPolicy` is a Deckhouse CustomResource that describes operational rules. It includes both general settings (`spec.policies.*`) and Pod‑level ones (`spec.policies.pods`). See the full schema and examples in the [OperationPolicy (CRD)](cr.html#operationpolicy) reference.
 
 ### Security policies
 
@@ -233,6 +157,8 @@ spec:
 ```
 
 To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"` on the desired namespace.
+
+> **Warning**. The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
 
 ### Modifying Kubernetes resources
 
