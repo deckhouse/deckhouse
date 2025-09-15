@@ -45,13 +45,6 @@ import (
 func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 	ctx := context.Background()
 
-	ManifestStub := func() (*v1.Manifest, error) {
-		return &v1.Manifest{
-			SchemaVersion: 2,
-			Layers:        []v1.Descriptor{},
-		}, nil
-	}
-
 	var initValues = `{
 "global": {
 	"clusterConfiguration": {
@@ -617,55 +610,90 @@ disable:
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("Prerelease versions are blocked", func() {
-		// Input tags: v1.16.0, v1.17.0-alpha.1, v1.18.0
-		// Expected output: v1.15.0 (restored) + v1.16.0
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
-			"v1.16.0",
-			"v1.17.0-alpha.1", // Should be filtered out by regex
-			"v1.18.0",
-		}, nil)
+	suite.Run("Prerelease versions are forbidden", func() {
+		suite.Run("Prerelease version blocked from channel", func() {
+			tags := []string{
+				"v1.16.0",
+				"v1.17.0-alpha.1", // Should be filtered out by regex
+			}
 
-		// Stable channel returns the latest version
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{
-						"version.json": `{"version": "v1.18.0"}`,
-					}}}, nil
-			},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76880")
-			},
-		}, nil)
+			suite.setupRegistryMocks(tags, "v1.17.0-alpha.1")
 
-		// Mock for current deployed release restoration
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.15.0").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{
-						"version.json": `{"version": "v1.15.0"}`,
-					}}}, nil
-			},
-		}, nil)
+			suite.setupController("prerelease-version-blocked-from-channel.yaml", initValues, embeddedMUP)
 
-		// Mock for step-by-step version v1.16.0
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.16.0").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{
-					FilesContent: map[string]string{
-						"version.json": `{"version": "v1.16.0"}`,
-					}}}, nil
-			},
-		}, nil)
+			repeatTest(func() {
+				_ = suite.ctr.checkDeckhouseRelease(ctx)
+			})
+		})
 
-		suite.setupController("prerelease-version-blocked.yaml", initValues, embeddedMUP)
-		err := suite.ctr.checkDeckhouseRelease(ctx)
-		require.NoError(suite.T(), err)
+		suite.Run("Prerelease versions blocked in step-by-step", func() {
+			// Input tags: v1.16.0, v1.17.0-alpha.1, v1.18.0
+			// Expected output: v1.15.0 (restored) + v1.16.0
+			tags := []string{
+				"v1.16.0",
+				"v1.17.0-alpha.1", // Should be filtered out by regex
+				"v1.18.0",
+			}
+
+			suite.setupRegistryMocks(tags, "v1.18.0")
+
+			suite.setupController("prerelease-version-blocked-with-step-by-step.yaml", initValues, embeddedMUP)
+
+			repeatTest(func() {
+				_ = suite.ctr.checkDeckhouseRelease(ctx)
+			})
+		})
 	})
+}
+
+func (suite *ControllerTestSuite) setupRegistryMocks(tags []string, channelVersion string) {
+	// Setup ListTagsMock
+	dependency.TestDC.CRClient.ListTagsMock.Optional().Return(tags, nil)
+
+	// Additional mock for current deployed release restoration
+	dependency.TestDC.CRClient.ImageMock.Optional().When(minimock.AnyContext, "v1.15.0").Then(&fake.FakeImage{
+		ManifestStub: ManifestStub,
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&fakeLayer{}, &fakeLayer{
+				FilesContent: map[string]string{
+					"version.json": `{"version": "v1.15.0"}`,
+				}}}, nil
+		},
+	}, nil)
+
+	// Setup channel image mock (stable, lts, etc.)
+	dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+		ManifestStub: ManifestStub,
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&fakeLayer{}, &fakeLayer{
+				FilesContent: map[string]string{
+					"version.json": fmt.Sprintf(`{"version": "%s"}`, channelVersion),
+				}}}, nil
+		},
+		DigestStub: func() (v1.Hash, error) {
+			return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76880")
+		},
+	}, nil)
+
+	// Setup image mocks for all tags
+	for _, tag := range tags {
+		dependency.TestDC.CRClient.ImageMock.Optional().When(minimock.AnyContext, tag).Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{
+						"version.json": fmt.Sprintf(`{"version": "%s"}`, tag),
+					}}}, nil
+			},
+		}, nil)
+	}
+}
+
+func ManifestStub() (*v1.Manifest, error) {
+	return &v1.Manifest{
+		SchemaVersion: 2,
+		Layers:        []v1.Descriptor{},
+	}, nil
 }
 
 type fakeLayer struct {
@@ -796,4 +824,12 @@ requirements:
 	})
 
 	return dc
+}
+
+const repeatCount = 3
+
+func repeatTest(fn func()) {
+	for range repeatCount {
+		fn()
+	}
 }
