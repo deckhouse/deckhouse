@@ -12,6 +12,8 @@ git:
 imageSpec:
   config:
     entrypoint: ["/usr/bin/local-path-provisioner"]
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false

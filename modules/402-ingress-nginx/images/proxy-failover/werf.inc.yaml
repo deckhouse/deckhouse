@@ -54,8 +54,17 @@ import:
 - image: {{ .ModuleName }}/nginx-static-artifact
   add: /opt/nginx-static
   before: setup
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /tools/setcap
+  before: setup
 git:
 {{- include "image mount points" . }}
+shell:
+  setup:
+    - /tools/setcap cap_net_raw,cap_net_admin,cap_net_bind_service=+eip /proxy-failover-controller  # Need for run from deckhouse user
 imageSpec:
   config:
+    workingDir: /tools
+    clearWorkingDir: true # a hack to delete the setcap binary from final image
     entrypoint: ["/proxy-failover-controller"]
