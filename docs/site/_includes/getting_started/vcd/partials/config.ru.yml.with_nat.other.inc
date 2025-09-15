@@ -107,122 +107,51 @@ metadata:
 spec:
   enabled: true
 ---
-# [<en>] metallb module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
-# [<ru>] Настройки модуля metallb.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: metallb
-spec:
-  version: 2
-  enabled: true
-  settings:
-    # [<ru>] Настройки metallb-пула для входящего трафика.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
-    # [<en>] Metallb pool settings for incoming traffic.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html#parameters-addresspools
-    addressPools:
-    - addresses:
-        - *!CHANGE_SUBNET_METALLB_POOL*.10/32
-      name: frontend-pool
-      protocol: layer2
----
-# [<en>] Load balancer class for Ingress resources.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
-# [<ru>] Класс балансировщика нагрузки для ресурсов Ingress.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/metallb/cr.html#metalloadbalancerclass
-apiVersion: network.deckhouse.io/v1alpha1
-kind: MetalLoadBalancerClass
-metadata:
-  name: ingress
-spec:
-  # [<en>] IP range from the address pool.
-  # [<ru>] Диапазон IP-адресов из пула.
-  addressPool:
-    - 192.168.207.100-192.168.207.101  # <- замените на свои свободные IP в сети frontend-нод
-  # [<en>] Set false to apply this class only when explicitly requested.
-  # [<ru>] False — класс используется только при явном указании.
-  isDefault: false
-  # [<en>] Limit allocation to nodes with the frontend role.
-  # [<ru>] Ограничить выдачу IP-адресов только нодам с ролью frontend.
-  nodeSelector:
-    node-role.deckhouse.io/frontend: ""
-  type: L2
----
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cluster_configuration.html
 apiVersion: deckhouse.io/v1
-internalNetworkCIDR: 10.15.11.0/24
 kind: VCDClusterConfiguration
-layout: Standard
-masterNodeGroup:
-  instanceClass:
-    etcdDiskSizeGb: 10
-    # [<en>] List of IP addresses for control-plane node.
-    # [<en>] We recommend using .2, .3 .4 addresses, for example: 10.15.11.2.
-    # [<ru>] Список IP-адресов для узлов control-plane.
-    # [<ru>] Рекомендуем использовать .2, .3 .4 адреса, например: 10.15.11.2.
-    mainNetworkIPAddresses:
-    - !CHANGE_SUBNET*.2
-    rootDiskSizeGb: 50
-    sizingPolicy: *!CHANGE_SIZING_POLICY*
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
-    # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
-    # [<en>] Example: "catalog/ubuntu-jammy-22.04".
-    # [<ru>] Имя образа, созданного с учетом каталога размещения образа в vCloudDirector.
-    # [<ru>] Пример: "catalog/ubuntu-jammy-22.04".
-    template: *!CHANGE_TEMPLATE_NAME*
-  replicas: 1
-nodeGroups:
-- instanceClass:
-    mainNetworkIPAddresses:
-    - !CHANGE_SUBNET*.11
-    rootDiskSizeGb: 50
-    sizingPolicy: *!CHANGE_SIZING_POLICY*
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
-    # [<en>] The name of the image, taking into account the vCloudDirector catalog path.
-    # [<en>] Example: "catalog/ubuntu-jammy-22.04".
-    # [<ru>] Имя образа, созданного с учетом каталога размещения образа в vCloudDirector.
-    # [<ru>] Пример: "catalog/ubuntu-jammy-22.04".
-    template: *!CHANGE_TEMPLATE_NAME*
-  name: frontend
-  replicas: 1
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/frontend: ""
-    taints:
-    - effect: NoExecute
-      key: dedicated.deckhouse.io
-      value: frontend
-# [<en>] vCloud Director API access parameters
-# [<ru>] параметры доступа к API vCloud Director
+layout: WithNAT
 provider:
   server: *!CHANGE_SERVER*
   username: *!CHANGE_USERNAME*
   password: *!CHANGE_PASSWORD*
-  # [<ru>] Укажите true, если vCloud Director использует самоподписанный сертификат,
-  # [<ru>] иначе укажите false (или удалите строку с параметром insecure).
-  # [<en>] Set to true if vCloud Director has a self-signed certificate,
-  # [<en>] otherwise set false (or delete the string below with the insecure parameter).
   insecure: *!CHANGE_INSECURE*
-organization: *!CHANGE_ORG*
-virtualApplicationName: *!CHANGE_VAPP*
-virtualDataCenter: *!CHANGE__DC*
-# [<en>] Внутренняя сеть узлов.
-# [<ru>] Internal network name.
-mainNetwork: *!CHANGE_MAIN_NETWORK*
-# [<en>] Public SSH key for accessing cloud nodes.
-# [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
-# [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
-# [<ru>] Этот ключ будет добавлен пользователю на созданных узлах (имя пользователя зависит от используемого образа).
 sshPublicKey: *!CHANGE_SSH_KEY*
+organization: *!CHANGE_ORG*
+virtualDataCenter: *!CHANGE__DC*
+virtualApplicationName: *!CHANGE_VAPP*
+internalNetworkCIDR: 192.168.199.0/24
+internalNetworkDNSServers:
+  - 77.88.8.8
+  - 1.1.1.1
+mainNetwork: internal
+bastion:
+  instanceClass:
+    rootDiskSizeGb: 30
+    sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
+    mainNetworkIPAddress: 192.168.199.10
+edgeGateway:
+  name: *!CHANGE_EDGE_GW_NAME*
+  type: "NSX-T"
+  externalIP: *!CHANGE_EDGE_EXTERNAL_IP*
+  externalPort: 10022
+createDefaultFirewallRules: false
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
+    sizingPolicy: *!CHANGE_SIZING_POLICY*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
+    mainNetworkIPAddresses:
+      - 192.168.199.2
 ---
 # [<en>] Section containing the parameters of instance class for worker nodes.
-# [<en>] hhttps://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cr.html
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
 # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vcd/cr.html
 apiVersion: deckhouse.io/v1
@@ -233,10 +162,6 @@ spec:
   rootDiskSizeGb: 50
   sizingPolicy: *!CHANGE_SIZING_POLICY*
   storageProfile: *!CHANGE_STORAGE_PROFILE*
-  # [<en>] The name of the image, taking into account the vCloudDirector without catalog path.
-  # [<en>] Example: "ubuntu-jammy-22.04".
-  # [<ru>] Имя образа, созданного с без учета каталога размещения образа в vCloudDirector.
-  # [<ru>] Пример: "ubuntu-jammy-22.04".
   template: *!CHANGE_TEMPLATE_NAME*
 ---
 # [<en>] Section containing the parameters of worker node group.
@@ -270,15 +195,24 @@ spec:
   ingressClass: nginx
   # [<en>] The way traffic goes to cluster from the outer network.
   # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: LoadBalancer
-  loadBalancer:
-    loadBalancerClass: ingress
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  # [<en>] Describes on which nodes the Ingress Controller will be located.
+  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
+  # [<en>] You might consider changing this.
+  # [<en>] More examples here.
+  # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  # [<ru>] Возможно, захотите изменить.
+  # [<ru>] Больше примеров здесь
+  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
   nodeSelector:
-    node-role.deckhouse.io/frontend: ""
+    node-role.kubernetes.io/control-plane: ""
   tolerations:
-    - key: dedicated.deckhouse.io
-      operator: Equal
-      value: frontend
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
 ---
 # [<en>] RBAC and authorization settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authz/cr.html#clusterauthorizationrule
@@ -312,8 +246,7 @@ spec:
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
-  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -д '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
   password: <GENERATED_PASSWORD_HASH>
-
