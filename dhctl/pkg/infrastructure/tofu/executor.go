@@ -197,7 +197,7 @@ func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []s
 	}
 
 	cmd1 := tofuCmd(ctx, e.workingDir, args...)
-	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions")
+	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions | if type=='string' then [.] else . end")
 
 	stdoutPipe, err := cmd1.StdoutPipe()
 	if err != nil {
