@@ -30,6 +30,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 type InternalValues struct {
@@ -113,7 +114,7 @@ func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
-	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration))
+	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}

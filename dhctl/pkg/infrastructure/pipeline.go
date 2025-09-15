@@ -51,7 +51,7 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Executor) (string, error) {
+func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (string, error) {
 	result, err := executor.Output(ctx, statePath, "master_ip_address_for_ssh")
 
 	if err != nil {
@@ -131,14 +131,9 @@ func CheckPipeline(
 		isChange = r.GetChangesInPlan()
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
-		executor := r.GetExecutorProvider()(r.WorkerDir(), r.GetLogger())
-		rawPlan, err := executor.Show(ctx, r.GetPlanPath())
+		rawPlan, err := r.ShowPlan(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
-			}
-			return fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+			return err
 		}
 
 		err = json.Unmarshal(rawPlan, &infrastructurePlan)
@@ -219,15 +214,9 @@ func CheckBaseInfrastructurePipeline(
 			} `json:"output_changes"`
 		}
 
-		executor := r.GetExecutorProvider()(r.WorkerDir(), r.GetLogger())
-
-		rawPlan, err := executor.Show(ctx, r.GetPlanPath())
+		rawPlan, err := r.ShowPlan(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
-			}
-			return fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+			return err
 		}
 
 		err = json.Unmarshal(rawPlan, &changes)

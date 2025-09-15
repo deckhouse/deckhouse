@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package fs
 
 import (
 	"testing"
@@ -20,27 +20,32 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var terraformProviders = []string{
-	"OpenStack",
-	"AWS",
-	"GCP",
-	"vSphere",
-	"Azure",
-	"VCD",
-	"Huaweicloud",
+	"openstack",
+	"aws",
+	"gcp",
+	"vsphere",
+	"azure",
+	vcd.ProviderName,
+	"huaweicloud",
 }
 
 var tofuProviders = []string{
-	"Yandex",
-	"Dynamix",
-	"Zvirt",
-	"DVP",
+	yandex.ProviderName,
+	"dynamix",
+	"zvirt",
+	dvp.ProviderName,
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions())
+	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(), log.GetDefaultLogger())
 	require.NoError(t, err)
 
 	all := append(make([]string, 0), tofuProviders...)
@@ -50,32 +55,32 @@ func TestAllProviderPresentInStore(t *testing.T) {
 }
 
 func TestProvidersSettings(t *testing.T) {
-	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions())
+	s, err := loadTerraformVersionFileSettings(infrastructure.GetInfrastructureVersions(), log.GetDefaultLogger())
 	require.NoError(t, err)
 
-	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings Settings)) {
+	assertSettings := func(t *testing.T, s settingsStore, p string, assertProvider func(t *testing.T, settings settings.ProviderSettings)) {
 		require.Contains(t, s, p)
-		settings := s[p]
-		require.NotNil(t, settings)
+		set := s[p]
+		require.NotNil(t, set)
 
-		assertProvider(t, settings)
+		assertProvider(t, set)
 
-		require.NotEmpty(t, settings.CloudName())
-		require.NotEmpty(t, settings.Namespace())
-		require.NotEmpty(t, settings.DestinationBinary())
-		require.NotEmpty(t, settings.Versions())
-		require.NotEmpty(t, settings.VmResourceType())
+		require.NotEmpty(t, set.CloudName())
+		require.NotEmpty(t, set.Namespace())
+		require.NotEmpty(t, set.DestinationBinary())
+		require.NotEmpty(t, set.Versions())
+		require.NotEmpty(t, set.VmResourceType())
 	}
 
 	for _, p := range tofuProviders {
-		assertSettings(t, s, p, func(t *testing.T, settings Settings) {
+		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "1.9.4")
 		})
 	}
 
 	for _, p := range terraformProviders {
-		assertSettings(t, s, p, func(t *testing.T, settings Settings) {
+		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.False(t, settings.UseOpenTofu())
 			require.Equal(t, settings.InfrastructureVersion(), "0.14.8")
 		})

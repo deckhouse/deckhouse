@@ -12,34 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package settings
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"k8s.io/utils/pointer"
 )
 
-type SettingsProviderConfig struct {
-	// empty
-	// reserve for future usage
-}
-
-type GetSettingsFunc func(config *config.MetaConfig, additionalProviderConfig SettingsProviderConfig) Settings
-
-type Settings interface {
-	Namespace() string
-	CloudName() string
-	Versions() []string
-	DestinationBinary() string
-	VmResourceType() string
-	UseOpenTofu() bool
-	InfrastructureVersion() string
-}
-
-type settingsSimple struct {
+type Simple struct {
 	NamespaceVal             *string   `json:"namespace,omitempty"`
+	TypeVal                  *string   `json:"type,omitempty"`
 	CloudNameVal             *string   `json:"cloudName,omitempty"`
 	VersionVal               *string   `json:"version,omitempty"`
 	VersionsVal              *[]string `json:"versions,omitempty"`
@@ -49,34 +30,13 @@ type settingsSimple struct {
 	InfrastructureVersionVal *string   `json:"infrastructureVersion,omitempty"`
 }
 
-func settingsSimpleFromMap(s any, terraformVersion string, openTofuVersion string) (*settingsSimple, error) {
-	sJSON, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	settings := settingsSimple{}
-
-	if err := json.Unmarshal(sJSON, &settings); err != nil {
-		return nil, err
-	}
-
-	if err := settings.validate(false); err != nil {
-		return nil, err
-	}
-
-	if settings.UseOpenTofu() {
-		settings.InfrastructureVersionVal = pointer.StringPtr(openTofuVersion)
-	} else {
-		settings.InfrastructureVersionVal = pointer.StringPtr(terraformVersion)
-	}
-
-	return &settings, nil
-}
-
-func (s *settingsSimple) validate(strictInfraVersion bool) error {
+func (s *Simple) Validate(strictInfraVersion bool) error {
 	if s.NamespaceVal == nil {
 		return fmt.Errorf("namespace is required")
+	}
+
+	if s.TypeVal == nil {
+		return fmt.Errorf("type is required")
 	}
 
 	if s.CloudNameVal == nil {
@@ -106,7 +66,7 @@ func (s *settingsSimple) validate(strictInfraVersion bool) error {
 	return nil
 }
 
-func (s *settingsSimple) Namespace() string {
+func (s *Simple) Namespace() string {
 	if s.NamespaceVal == nil {
 		panic("namespace is required")
 	}
@@ -114,14 +74,14 @@ func (s *settingsSimple) Namespace() string {
 	return *s.NamespaceVal
 }
 
-func (s *settingsSimple) CloudName() string {
+func (s *Simple) CloudName() string {
 	if s.CloudNameVal == nil {
 		panic("cloudName is required")
 	}
 
 	return *s.CloudNameVal
 }
-func (s *settingsSimple) Versions() []string {
+func (s *Simple) Versions() []string {
 	var versions []string
 	if s.VersionVal != nil {
 		versions = []string{*s.VersionVal}
@@ -130,13 +90,13 @@ func (s *settingsSimple) Versions() []string {
 	}
 
 	if len(versions) == 0 {
-		panic("versions is required")
+		panic("version or versions is required")
 	}
 
 	return versions
 }
 
-func (s *settingsSimple) DestinationBinary() string {
+func (s *Simple) DestinationBinary() string {
 	if s.DestinationBinaryVal == nil {
 		panic("destinationBinary is required")
 	}
@@ -144,7 +104,7 @@ func (s *settingsSimple) DestinationBinary() string {
 	return *s.DestinationBinaryVal
 }
 
-func (s *settingsSimple) VmResourceType() string {
+func (s *Simple) VmResourceType() string {
 	if s.VmResourceTypeVal == nil {
 		panic("vmResourceType is required")
 	}
@@ -152,15 +112,23 @@ func (s *settingsSimple) VmResourceType() string {
 	return *s.VmResourceTypeVal
 }
 
-func (s *settingsSimple) UseOpenTofu() bool {
+func (s *Simple) UseOpenTofu() bool {
 	if s.UseOpenTofuVal == nil {
-		panic("useOpentoufly is required")
+		panic("useOpentoufu is required")
 	}
 
 	return *s.UseOpenTofuVal
 }
 
-func (s *settingsSimple) InfrastructureVersion() string {
+func (s *Simple) Type() string {
+	if s.TypeVal == nil {
+		panic("type is required")
+	}
+
+	return *s.TypeVal
+}
+
+func (s *Simple) InfrastructureVersion() string {
 	if s.InfrastructureVersionVal == nil {
 		panic("infrastructureVersion is required")
 	}

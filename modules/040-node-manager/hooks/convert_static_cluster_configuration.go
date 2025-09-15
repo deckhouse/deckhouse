@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -84,7 +85,7 @@ func internalNetworkFromStaticConfiguration(data []byte) (interface{}, error) {
 	var err error
 	var metaConfig *config.MetaConfig
 
-	metaConfig, err = config.ParseConfigFromData(string(data))
+	metaConfig, err = config.ParseConfigFromData(string(data), infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}

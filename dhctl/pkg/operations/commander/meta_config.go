@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -31,6 +32,7 @@ func ParseMetaConfig(stateCache state.Cache, params *CommanderModeParams) (*conf
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromData(
 		configData,
+		infrastructureprovider.MetaConfigPreparatorProvider(),
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),

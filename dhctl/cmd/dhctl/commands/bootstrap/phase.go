@@ -53,6 +53,7 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
 		return bootstraper.InstallDeckhouse(context.Background())
@@ -81,6 +82,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
 		return bootstraper.ExecuteBashible(context.Background())
@@ -111,6 +113,7 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
 		return bootstraper.CreateResources(context.Background())
@@ -139,6 +142,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
 		return bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
@@ -153,7 +157,9 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineDropCacheFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{})
+		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir: app.TmpDirName,
+		})
 		return bootstraper.BaseInfrastructure(context.Background())
 	})
 
@@ -178,6 +184,7 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
+			TmpDir:        app.TmpDirName,
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
 		return bootstraper.ExecPostBootstrap(context.Background())

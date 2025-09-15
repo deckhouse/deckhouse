@@ -12,25 +12,95 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package fs
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"os"
 	"slices"
+	"strings"
 	"sync"
 
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var infraVersionKeys = []string{"opentofu", "terraform"}
 
-type settingsStore map[string]Settings
+type settingsStore map[string]settings.ProviderSettings
 
-func loadTerraformVersionFileSettings(filename string) (settingsStore, error) {
+type SettingsProvider struct {
+	initError error
+
+	m     sync.Mutex
+	store settingsStore
+}
+
+func newSettingsProvider(logger log.Logger) *SettingsProvider {
+	file := global.GetInfrastructureVersions()
+
+	store, err := loadTerraformVersionFileSettings(file, logger)
+	if err != nil {
+		return &SettingsProvider{
+			initError: err,
+		}
+	}
+
+	return &SettingsProvider{
+		store:     store,
+		initError: nil,
+	}
+}
+
+func (p *SettingsProvider) GetSettings(_ context.Context, provider string, _ cloud.ProviderAdditionalParams) (settings.ProviderSettings, error) {
+	if p.initError != nil {
+		return nil, p.initError
+	}
+
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	set, ok := p.store[provider]
+	if !ok {
+		return nil, fmt.Errorf("CloudProviderSettings not found for provider %s", provider)
+	}
+
+	return set, nil
+}
+
+func simpleFromMap(s any, terraformVersion string, openTofuVersion string) (*settings.Simple, error) {
+	sJSON, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	set := settings.Simple{}
+
+	if err := json.Unmarshal(sJSON, &set); err != nil {
+		return nil, err
+	}
+
+	if err := set.Validate(false); err != nil {
+		return nil, err
+	}
+
+	if set.UseOpenTofu() {
+		set.InfrastructureVersionVal = pointer.String(openTofuVersion)
+	} else {
+		set.InfrastructureVersionVal = pointer.String(terraformVersion)
+	}
+
+	return &set, nil
+}
+
+func loadTerraformVersionFileSettings(filename string, logger log.Logger) (settingsStore, error) {
 	infrastructureProviders := make(map[string]interface{})
 
 	file, err := os.ReadFile(filename)
@@ -53,13 +123,13 @@ func loadTerraformVersionFileSettings(filename string) (settingsStore, error) {
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for OpenTofu version setting", name)
 			}
-			log.DebugF("Found opentofu version: %s", tofuVersion)
+			logger.LogDebugF("Found opentofu version: %s\n", tofuVersion)
 		case infraVersionKeys[1]:
 			terraformVersion, ok = rawSettings.(string)
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for Terraform version setting", name)
 			}
-			log.DebugF("Found terraform version: %s", terraformVersion)
+			logger.LogDebugF("Found terraform version: %s\n", terraformVersion)
 		}
 	}
 
@@ -75,37 +145,21 @@ func loadTerraformVersionFileSettings(filename string) (settingsStore, error) {
 
 	for name, rawSettings := range infrastructureProviders {
 		if slices.Contains(infraVersionKeys, name) {
-			log.DebugF("Found not provider name key %s\n", name)
+			logger.LogDebugF("Found not provider name key %s\n", name)
 			continue
 		}
 
-		settings, err := settingsSimpleFromMap(rawSettings, terraformVersion, tofuVersion)
+		set, err := simpleFromMap(rawSettings, terraformVersion, tofuVersion)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot unmarshal infrastructure settings for provider %s: %v", name, err)
 		}
 
-		res[settings.CloudName()] = settings
+		cloudName := strings.ToLower(set.CloudName())
+
+		logger.LogDebugF("Found provider settings for %s: %s\n", name, cloudName)
+
+		res[cloudName] = set
 	}
 
 	return res, nil
-}
-
-func candiTerraformVersionFileSettingsGetter(providerName string) Settings {
-	store := sync.OnceValue[settingsStore](func() settingsStore {
-		file := infrastructure.GetInfrastructureVersions()
-
-		res, err := loadTerraformVersionFileSettings(file)
-		if err != nil {
-			panic(fmt.Errorf("Cannot read infrastructure versions file %s: %v", file, err))
-		}
-
-		return res
-	})
-
-	settings, ok := store()[providerName]
-	if !ok {
-		panic(fmt.Errorf("Settings not found for provider %s", providerName))
-	}
-
-	return settings
 }

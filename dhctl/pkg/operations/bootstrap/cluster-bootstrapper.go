@@ -21,13 +21,13 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -100,6 +100,8 @@ type Params struct {
 	PostBootstrapScriptPath string
 	UseTfCache              *bool
 	AutoApprove             *bool
+
+	TmpDir string
 
 	*client.KubernetesInitParams
 }
@@ -193,12 +195,18 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           log.GetDefaultLogger(),
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")
@@ -313,7 +321,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return err
 		}
 		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := b.InfrastructureContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
+			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+			if err != nil {
+				return err
+			}
 
 			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 			if err != nil {
@@ -333,14 +344,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := b.Params.InfrastructureContext.GetBootstrapNodeRunner(metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
+			masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
 				NodeName:        masterNodeName,
-				NodeGroupStep:   "master-node",
+				NodeGroupStep:   infrastructure.MasterNodeStep,
 				NodeGroupName:   "master",
 				NodeIndex:       0,
 				NodeCloudConfig: "",
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
+			if err != nil {
+				return err
+			}
 
 			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, infrastructure.GetMasterNodeResult)
 			if err != nil {

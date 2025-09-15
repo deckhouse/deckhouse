@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/metaconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -47,7 +48,8 @@ func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.C
 }
 
 func getNgMetaConfig(clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare()
+	// we use dummy preparator because metaConfig was prepared early
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(metaconfig.DummyPreparatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}
@@ -69,26 +71,24 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 		return err
 	}
 
-	step := "static-node"
-	if r.nodeGroupName == "master" {
-		step = "master-node"
-	}
-
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
 		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, name)
 		return nil
 	}
 
-	nodeRunner := r.infrastructureContext.GetDestroyNodeRunner(r.metaConfig, r.stateCache, infrastructure.DestroyNodeRunnerOptions{
+	nodeRunner, err := r.infrastructureContext.GetDestroyNodeRunner(ctx, r.metaConfig, r.stateCache, infrastructure.DestroyNodeRunnerOptions{
 		AutoApproveSettings: infrastructure.AutoApproveSettings{
 			AutoApprove: autoApprove,
 		},
 		NodeName:      name,
 		NodeGroupName: r.nodeGroupName,
-		NodeGroupStep: step,
+		NodeGroupStep: infrastructure.GetStepByNodeGroupName(r.nodeGroupName),
 		NodeIndex:     nodeIndex,
 	})
+	if err != nil {
+		return err
+	}
 
 	if err := infrastructure.DestroyPipeline(ctx, nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)

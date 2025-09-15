@@ -12,26 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package settings
 
-import "fmt"
-
-func extractSetting[T any](key string, settings map[string]any, providerName string) (T, error) {
-	var zero T
-
-	vRaw, ok := settings[key]
-	if !ok {
-		return zero, fmt.Errorf("key %s not found in provider %s settings", key, providerName)
-	}
-
-	v, ok := vRaw.(T)
-	if !ok {
-		return zero, fmt.Errorf("key %s is not a string in provider %s settings", key, providerName)
-	}
-
-	return v, nil
-}
-
-func extractString(key string, settings map[string]any, providerName string) (string, error) {
-	return extractSetting[string](key, settings, providerName)
+type ProviderSettings interface {
+	Namespace() string
+	CloudName() string
+	Versions() []string
+	DestinationBinary() string
+	VmResourceType() string
+	UseOpenTofu() bool
+	InfrastructureVersion() string
+	Type() string
 }

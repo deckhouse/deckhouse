@@ -26,17 +26,16 @@ type RunnerInterface interface {
 	Apply(ctx context.Context) error
 	Plan(ctx context.Context, destroy bool) error
 	Destroy(ctx context.Context) error
+	ShowPlan(ctx context.Context) ([]byte, error)
+
 	Stop()
 
 	ResourcesQuantityInState() int
 	GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error)
 	GetState() ([]byte, error)
-	GetStep() string
+	GetStep() Step
 	GetChangesInPlan() int
 	GetPlanDestructiveChanges() *plan.DestructiveChanges
-	GetPlanPath() string
 	GetLogger() log.Logger
-	WorkerDir() string
-	GetExecutorProvider() ExecutorProvider
-	GetMasterDestruction() bool
+	HasVMDestruction() bool
 }

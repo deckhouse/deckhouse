@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package validation
 
-func extractVMChecker(name string, settings map[string]any, ns, typ string) (string, isVMChecker, error) {
-	vm, err := extractString("vmResourceType", settings, name)
-	if err != nil {
-		return "", nil, err
+import (
+	"fmt"
+	"regexp"
+)
+
+var defaultPrefixRegex = regexp.MustCompile(".+")
+
+func DefaultPrefixValidator(prefix string) error {
+	if !defaultPrefixRegex.MatchString(prefix) {
+		return fmt.Errorf("Invalid prefix '%v', prefix must match the pattern: %v", prefix, defaultPrefixRegex.String())
 	}
 
-	key := ns + "/" + typ
-
-	if name == "kubernetes" {
-		return key, dvpProviderVMChecker(), nil
-	}
-
-	return key, genericVMChecker(vm), nil
+	return nil
 }

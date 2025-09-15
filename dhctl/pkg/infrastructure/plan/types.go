@@ -27,12 +27,9 @@ const (
 	HasDestructiveChanges
 )
 
-type Plan map[string]any
+type VMChangeTester func(change ResourceChange) bool
 
-type DestructiveChangesReport struct {
-	Changes              *DestructiveChanges
-	HasMasterDestruction bool
-}
+type Plan map[string]any
 
 type DestructiveChanges struct {
 	ResourcesDeleted   []ValueChange `json:"resources_deleted,omitempty"`

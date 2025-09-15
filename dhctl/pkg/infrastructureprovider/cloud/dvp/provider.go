@@ -12,27 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package provider
+package dvp
 
-import (
-	"sync"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
-)
-
-type Provider interface {
-	NeedToUseTofu(metaConfig *config.MetaConfig) bool
-	IsVMChange(rc plan.ResourceChange) bool
-}
-
-var GetInfrastructureSettings = sync.OnceValue[Provider](func() Provider {
-	//s, err := loadSettings(infrastructure.GetInfrastructureVersions())
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//return s
-
-	return nil
-})
+const ProviderName = "dvp"

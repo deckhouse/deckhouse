@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -65,7 +66,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl)
+	metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}

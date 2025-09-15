@@ -12,8 +12,23 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
+
+func preparatorProvider(_ string) config.MetaConfigPreparator {
+	return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
+		// todo it was bad idea patch metaconfig during installation
+		// we need to prepare meta config in dhctl during installation
+		// for checking vcd version
+		// we do not want to prepare metaconfig here because we already got prepared
+		// after installation during first deckhouse converge and legacy mode will get
+		// in legacy_mode.go hook with order 10, this hook has 20 order index
+		// after first converge we deploy vcd data discoverer and hook legacy_mode.go
+		// directory form data discoverer
+		PrepareMetaConfig: false,
+	})
+}
 
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	if !secretFound {
@@ -22,4 +37,4 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderVcd.internal.providerClusterConfiguration", metaCfg.ProviderClusterConfig)
 	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", providerDiscoveryData.Object)
 	return nil
-})
+}, cluster_configuration.NewConfig(preparatorProvider))

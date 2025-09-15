@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"os"
 	"runtime"
 	"testing"
@@ -54,7 +55,7 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 		{
 			name:    "Empty Changes",
 			plan:    "./mocks/checkplan/empty.json",
-			changes:  &DestructiveChangesReport{Changes:(*PlanDestructiveChanges)(nil), hasMasterDestruction:false},
+			changes: &DestructiveChangesReport{Changes: (*PlanDestructiveChanges)(nil), hasMasterDestruction: false},
 			err:     nil,
 		},
 		{
@@ -200,7 +201,19 @@ type sleepExecutor struct {
 	cancelCh chan struct{}
 }
 
-func (e *sleepExecutor) Init(ctx context.Context, pluginsDir string) error {
+func (e *sleepExecutor) IsVMChange(rc plan.ResourceChange) bool {
+	return false
+}
+
+func (e *sleepExecutor) GetStatesDir() string {
+	return ""
+}
+
+func (e *sleepExecutor) Step() Step {
+	return ""
+}
+
+func (e *sleepExecutor) Init(ctx context.Context) error {
 	return nil
 }
 
@@ -323,7 +336,6 @@ var destructivelyChanged = &PlanDestructiveChanges{
 	},
 }
 
-
 var destructiveChangesReport = &DestructiveChangesReport{Changes: destructivelyChanged, hasMasterDestruction: true}
 
 var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
@@ -331,7 +343,7 @@ var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
 	ResourcesRecreated: []ValueChange{
 		{
 			CurrentValue: map[string]any{
-				"created_at": "2021-02-26T09:41:43Z",
+				"created_at":  "2021-02-26T09:41:43Z",
 				"description": "",
 				"external_ipv4_address": []any{
 					map[string]any{
