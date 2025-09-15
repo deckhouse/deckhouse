@@ -5,6 +5,10 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/gcp
   to: /deckhouse/candi/cloud-providers/gcp
 import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
 - image: terraform-provider-gcp
   add: /terraform-provider-gcp
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "gcp") }}/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ .TF.gcp.version }}/linux_amd64/terraform-provider-google

@@ -283,3 +283,37 @@ func ParseMultipleArrays(data []byte) ([][]string, error) {
 	}
 	return result, nil
 }
+
+func GetActions(ctx context.Context, cmd *exec.Cmd) (actions []string, err error) {
+	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions | if type==\"string\" then [.] else . end")
+
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return actions, fmt.Errorf("failed to pipe stdout: %w", err)
+	}
+	cmd2.Stdin = stdoutPipe
+
+	buf := bytes.NewBuffer(make([]byte, 0, 5000))
+	cmd2.Stdout = buf
+
+	if err := cmd.Start(); err != nil {
+		return actions, fmt.Errorf("failed to start terraform: %w", err)
+	}
+	if err := cmd2.Run(); err != nil {
+		return actions, fmt.Errorf("failed to run jq: %w", err)
+	}
+	if err := cmd.Wait(); err != nil {
+		return actions, fmt.Errorf("terraform failed: %w", err)
+	}
+
+	var allActions [][]string
+	allActions, err = ParseMultipleArrays(buf.Bytes())
+	if err != nil {
+		return actions, fmt.Errorf("failed to parse actions: %w", err)
+	}
+	for _, i := range allActions {
+		actions = append(actions, i...)
+	}
+
+	return actions, nil
+}

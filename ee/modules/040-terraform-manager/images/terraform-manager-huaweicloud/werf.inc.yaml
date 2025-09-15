@@ -4,6 +4,10 @@ git:
   - add: /{{ .ModulePath }}candi/cloud-providers/huaweicloud
     to: /deckhouse/candi/cloud-providers/huaweicloud
 import:
+  - image: tools/jq
+    add: /usr/bin/jq
+    to: /usr/bin/jq
+    before: setup
   - image: terraform-provider-huaweicloud
     add: /terraform-provider-huaweicloud
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
