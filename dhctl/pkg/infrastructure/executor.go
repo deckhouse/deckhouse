@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -264,4 +265,21 @@ func (e *DummyExecutor) SetExecutorLogger(logger log.Logger) {
 
 func (e *DummyExecutor) Stop() {
 	e.logger.LogWarnLn("Call Stop on dummy executor")
+}
+
+func ParseMultipleArrays(data []byte) ([][]string, error) {
+	var result [][]string
+	dec := json.NewDecoder(bytes.NewReader(data))
+
+	for {
+		var arr []string
+		if err := dec.Decode(&arr); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		result = append(result, arr)
+	}
+	return result, nil
 }

@@ -17,7 +17,6 @@ package tofu
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -197,7 +196,7 @@ func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []s
 	}
 
 	cmd1 := tofuCmd(ctx, e.workingDir, args...)
-	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions | if type=='string' then [.] else . end")
+	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions | if type==\"string\" then [.] else . end")
 
 	stdoutPipe, err := cmd1.StdoutPipe()
 	if err != nil {
@@ -219,7 +218,8 @@ func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []s
 	}
 
 	var allActions [][]string
-	if err := json.Unmarshal(buf.Bytes(), &allActions); err != nil {
+	allActions, err = infrastructure.ParseMultipleArrays(buf.Bytes())
+	if err != nil {
 		return actions, fmt.Errorf("failed to parse actions: %w", err)
 	}
 	for _, i := range allActions {
