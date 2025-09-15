@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -61,8 +62,8 @@ func filterIngressName(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return ingress.Name, nil
 }
 
-func deleteCrowdIngress(input *go_hook.HookInput) error {
-	for snap, err := range sdkobjectpatch.SnapshotIter[string](input.NewSnapshots.Get("crowd-proxy-ingress")) {
+func deleteCrowdIngress(_ context.Context, input *go_hook.HookInput) error {
+	for snap, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("crowd-proxy-ingress")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'crowd-proxy-ingress' snapshot: %w", err)
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -73,16 +74,17 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, err
 }
 
-func addMissingLabels(input *go_hook.HookInput) error {
-	snapshots := input.Snapshots["openvpn_pki_server"]
-	if len(snapshots) == 0 {
+func addMissingLabels(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("openvpn_pki_server")
+	if len(snaps) == 0 {
 		input.Logger.Warn("Secret openvpn-pki-server not found, skipping")
 		return nil
 	}
 
-	sc, ok := snapshots[0].(serverCert)
-	if !ok {
-		return fmt.Errorf("cannot convert snapshot to structured object")
+	var sc serverCert
+	err := snaps[0].UnmarshalTo(&sc)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal openvpn_pki_server: %w", err)
 	}
 
 	if sc.NameLabelExists && sc.IndexLabelExists {

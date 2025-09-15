@@ -91,7 +91,58 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
+    
+<div class="tabs">
+        <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');">
+        CAPS
+        </a>
+        <a id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');">
+        Bootstrap script
+        </a>
+</div>
+
+  <div id="block_bootstrap" class="tabs__bootstrap" style="display: none;">
+  <ul>
+  <li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
+<div markdown="1">
+```bash
+sudo -i d8 k create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+```
+</div>
+  </li>
+  <li><p>Get the script code for adding and configuring a node in Base64 encoding.</p>
+  <p>To do so, run the following command on the <strong>master node</strong>:</p>
+<div markdown="1">
+```shell
+export NODE_GROUP=worker
+sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+```
+</div>
+  </li>
+  <li><p>On the <strong>prepared virtual machine</strong>, run the following command, inserting the Base64-encoded script code obtained in the previous step:</p>
+<div markdown="1">
+```shell
+echo <Base64-CODE> | base64 -d | bash
+```
+  </div>
+  </li>
+  </ul>
+  </div>
+  <div id="block_caps" class="tabs__caps">
+  <ul>
+<li><p>Create a NodeGroup <code>worker</code>, by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - << EOF
@@ -109,7 +160,7 @@ spec:
 EOF
 ```
 </div>
-  </li>
+</li>
   <li>
     <p>Generate a new SSH key with an empty passphrase. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
@@ -198,6 +249,9 @@ spec:
 EOF
 ```
 </div>
+  </li>
+  </ul>
+  </div>
   </li>
   <li><p>If you have added additional nodes to the cluster, ensure they are <code>Ready</code>.</p>
 <p>On the <strong>master node</strong>, run the following command to get nodes list:</p>

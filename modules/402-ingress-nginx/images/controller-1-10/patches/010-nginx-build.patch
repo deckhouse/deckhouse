@@ -1,31 +1,25 @@
-Subject: [PATCH] close env build
----
-Index: images/nginx-1.25/rootfs/build.sh
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.sh
---- a/images/nginx-1.25/rootfs/build.sh	(revision f08a1c4fdac2e0ef6053333b24191c50cc51f30c)
-+++ b/images/nginx-1.25/rootfs/build.sh	(date 1728300078299)
+index f60a260f9..138ebbb84 100755
+--- a/images/nginx-1.25/rootfs/build.sh
++++ b/images/nginx-1.25/rootfs/build.sh
 @@ -14,6 +14,9 @@
  # See the License for the specific language governing permissions and
  # limitations under the License.
-
+ 
 +SOURCE_REPO="${SOURCE_REPO}"
 +CONTROLLER_BRANCH="${CONTROLLER_BRANCH}"
 +
  set -o errexit
  set -o nounset
  set -o pipefail
-@@ -110,79 +113,10 @@
+@@ -110,79 +113,10 @@ export OPENTELEMETRY_CPP_VERSION="v1.11.0"
  export OPENTELEMETRY_PROTO_VERSION="v1.1.0"
-
+ 
  export BUILD_PATH=/tmp/build
 +export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64/
-
+ 
  ARCH=$(uname -m)
-
+ 
 -get_src()
 -{
 -  hash="$1"
@@ -97,12 +91,12 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 -  protobuf-dev
 -
  # apk add -X http://dl-cdn.alpinelinux.org/alpine/edge/testing opentelemetry-cpp-dev
-
+ 
  # There is some bug with some platforms and git, so force HTTP/1.1
-@@ -194,93 +128,7 @@
+@@ -194,93 +128,7 @@ mkdir -p /etc/nginx
  mkdir --verbose -p "$BUILD_PATH"
  cd "$BUILD_PATH"
-
+ 
 -# download, verify and extract the source files
 -get_src 66dc7081488811e9f925719e34d1b4504c2801c81dee2920e5452a86b11405ae \
 -        "https://nginx.org/download/nginx-$NGINX_VERSION.tar.gz"
@@ -191,10 +185,10 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 -get_src d74f86ada2329016068bc5a243268f1f555edd620b6a7d6ce89295e7d6cf18da \
 -        "https://github.com/microsoft/mimalloc/archive/${MIMALOC_VERSION}.tar.gz" "mimalloc"
 +git clone -b "controller-v1.10.3" "${SOURCE_REPO}/kubernetes/ingress-nginx-deps.git" .
-
+ 
  # improve compilation times
  CORES=$(($(grep -c ^processor /proc/cpuinfo) - 1))
-@@ -304,7 +152,7 @@
+@@ -304,7 +152,7 @@ cd "$BUILD_PATH/opentelemetry-cpp"
  export CXXFLAGS="-DBENCHMARK_HAS_NO_INLINE_ASSEMBLY"
  cmake -B build -G Ninja -Wno-dev \
          -DOTELCPP_PROTO_PATH="${BUILD_PATH}/opentelemetry-proto/" \
@@ -203,8 +197,8 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
          -DBUILD_SHARED_LIBS=ON \
          -DBUILD_TESTING="OFF" \
          -DBUILD_W3CTRACECONTEXT_TEST="OFF" \
-@@ -327,15 +175,16 @@
-
+@@ -327,15 +175,16 @@ git config --global --add core.compression -1
+ 
  # Get Brotli source and deps
  cd "$BUILD_PATH"
 -git clone --depth=100 https://github.com/google/ngx_brotli.git
@@ -215,15 +209,15 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
  git submodule init
 +git submodule set-url deps/brotli "${SOURCE_REPO}/google/brotli.git"
  git submodule update
-
+ 
  cd "$BUILD_PATH"
 -git clone --depth=1 https://github.com/ssdeep-project/ssdeep
 +git clone --depth=1 "${SOURCE_REPO}/ssdeep-project/ssdeep"
  cd ssdeep/
-
+ 
  ./bootstrap
-@@ -346,10 +195,13 @@
-
+@@ -346,10 +195,13 @@ make install
+ 
  # build modsecurity library
  cd "$BUILD_PATH"
 -git clone -n https://github.com/SpiderLabs/ModSecurity
@@ -235,29 +229,40 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
 +git submodule set-url others/libinjection "${SOURCE_REPO}/libinjection/libinjection.git"
 +git submodule set-url bindings/python "${SOURCE_REPO}/SpiderLabs/ModSecurity-Python-bindings.git"
  git submodule update
-
+ 
  sh build.sh
-@@ -379,7 +231,7 @@
+@@ -379,7 +231,7 @@ echo "SecAuditLogStorageDir /var/log/audit/" >> /etc/nginx/modsecurity/modsecuri
  # Download owasp modsecurity crs
  cd /etc/nginx/
-
+ 
 -git clone -b $OWASP_MODSECURITY_CRS_VERSION https://github.com/coreruleset/coreruleset
 +git clone -b $OWASP_MODSECURITY_CRS_VERSION "${SOURCE_REPO}/coreruleset/coreruleset"
  mv coreruleset owasp-modsecurity-crs
  cd owasp-modsecurity-crs
-
-@@ -521,7 +373,7 @@
+ 
+@@ -510,8 +362,8 @@ WITH_MODULES=" \
+   --without-http_scgi_module \
+   --with-cc-opt="${CC_OPT}" \
+   --with-ld-opt="${LD_OPT}" \
+-  --user=www-data \
+-  --group=www-data \
++  --user=deckhouse \
++  --group=deckhouse \
+   ${WITH_MODULES}
+ 
+ make
+@@ -521,7 +373,7 @@ make install
  export OPENTELEMETRY_CONTRIB_COMMIT=aaa51e2297bcb34297f3c7aa44fa790497d2f7f3
  cd "$BUILD_PATH"
-
+ 
 -git clone https://github.com/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
 +git clone "${SOURCE_REPO}/open-telemetry/opentelemetry-cpp-contrib.git" opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
-
+ 
  cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}
  git reset --hard ${OPENTELEMETRY_CONTRIB_COMMIT}
-@@ -530,7 +382,15 @@
+@@ -530,7 +382,15 @@ export OTEL_TEMP_INSTALL=/tmp/otel
  mkdir -p ${OTEL_TEMP_INSTALL}
-
+ 
  cd ${BUILD_PATH}/opentelemetry-cpp-contrib-${OPENTELEMETRY_CONTRIB_COMMIT}/instrumentation/nginx
 +# remove downloading nginx from cmake and clone it manually
 +# by default cmake download nginx from internet
@@ -271,12 +276,17 @@ diff --git a/images/nginx-1.25/rootfs/build.sh b/images/nginx-1.25/rootfs/build.
  cd build
  cmake -DCMAKE_BUILD_TYPE=Release \
          -G Ninja \
-@@ -614,7 +474,7 @@
+@@ -614,11 +474,11 @@ writeDirs=( \
    /var/log/nginx \
  );
-
+ 
 -adduser -S -D -H -u 101 -h /usr/local/nginx -s /sbin/nologin -G www-data -g www-data www-data
-+adduser -r -U -u 101 -d /usr/local/nginx -s /sbin/nologin -c www-data www-data
-
++adduser -r -U -u 64535 -d /usr/local/nginx -s /sbin/nologin -c deckhouse deckhouse
+ 
  for dir in "${writeDirs[@]}"; do
    mkdir -p ${dir};
+-  chown -R www-data.www-data ${dir};
++  chown -R deckhouse.deckhouse ${dir};
+ done
+ 
+ rm -rf /etc/nginx/owasp-modsecurity-crs/.git

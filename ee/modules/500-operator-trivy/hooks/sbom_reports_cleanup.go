@@ -78,10 +78,10 @@ func applyConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return mc.Spec.Settings.DisableSBOMGeneration, nil
 }
 
-func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
+func cleanUpReports(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var disableSBOM bool
 
-	snaps := input.NewSnapshots.Get("module_config")
+	snaps := input.Snapshots.Get("module_config")
 	if len(snaps) > 0 {
 		err := snaps[0].UnmarshalTo(&disableSBOM)
 		if err != nil {
@@ -104,7 +104,7 @@ func cleanUpReports(input *go_hook.HookInput, dc dependency.Container) error {
 		}
 
 		// cleanup was already done
-		if len(input.NewSnapshots.Get("module_namespace")) > 0 {
+		if len(input.Snapshots.Get("module_namespace")) > 0 {
 			return nil
 		}
 

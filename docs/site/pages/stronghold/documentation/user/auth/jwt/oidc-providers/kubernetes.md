@@ -17,7 +17,7 @@ during authentication, and instead uses public key cryptography to verify the
 contents of JWTs. This means tokens that have been revoked by Kubernetes will
 still be considered valid by Stronghold until their expiry time. To mitigate this
 risk, use short TTLs for service account tokens or use
-[Kubernetes auth](/docs/auth/kubernetes) which _does_ use the `TokenReview` API.
+[Kubernetes auth](../../kubernetes.html) which _does_ use the `TokenReview` API.
 
 {% endalert %}
 
@@ -43,7 +43,7 @@ Configuration steps:
    [here][k8s-sa-issuer-discovery]:
 
    ```bash
-   kubectl create clusterrolebinding oidc-reviewer  \
+   d8 k create clusterrolebinding oidc-reviewer  \
       --clusterrole=system:service-account-issuer-discovery \
       --group=system:unauthenticated
    ```
@@ -51,7 +51,7 @@ Configuration steps:
 1. Find the issuer URL of the cluster.
 
    ```bash
-   ISSUER="$(kubectl get --raw /.well-known/openid-configuration | jq -r '.issuer')"
+   ISSUER="$(d8 k get --raw /.well-known/openid-configuration | jq -r '.issuer')"
    ```
 
 1. Enable and configure JWT auth in Stronghold.
@@ -101,7 +101,7 @@ Configuration steps:
 
    ```bash
    # Query the jwks_uri specified in /.well-known/openid-configuration
-   kubectl get --raw "$(kubectl get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
+   d8 k get --raw "$(d8 k get --raw /.well-known/openid-configuration | jq -r '.jwks_uri' | sed -r 's/.*\.[^/]+(.*)/\1/')"
    ```
 
 1. Convert the keys from JWK format to PEM. You can use a CLI tool or an online
@@ -137,14 +137,14 @@ below if you'd like to control the audience or TTL.
    `kubectl` v1.24.0+):
 
    ```shell-session
-   $ kubectl create token default | cut -f2 -d. | base64 --decode
+   $ d8 k create token default | cut -f2 -d. | base64 --decode
    {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
    ```
 
    Or read a token from a running pod's filesystem:
 
    ```shell-session
-   $ kubectl exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
+   $ d8 k exec my-pod -- cat /var/run/secrets/kubernetes.io/serviceaccount/token | cut -f2 -d. | base64 --decode
    {"aud":["https://kubernetes.default.svc.cluster.local"], ... "sub":"system:serviceaccount:default:default"}
    ```
 

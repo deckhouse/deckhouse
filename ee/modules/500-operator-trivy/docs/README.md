@@ -12,7 +12,7 @@ Once a namespace with the label `security-scanning.deckhouse.io/enabled=""` is d
 To re-enable scanning for the `default` namespace, use the following command to set the label to the namespace:
 
 ```shell
-kubectl label namespace default security-scanning.deckhouse.io/enabled=""
+d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 ```
 
 ## Where to view scan results

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
@@ -66,8 +67,8 @@ func applyNodesMinimalOSVersionFilter(obj *unstructured.Unstructured) (go_hook.F
 	return version, err
 }
 
-func discoverMinimalNodesOSVersion(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("nodes_os_version")
+func discoverMinimalNodesOSVersion(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("nodes_os_version")
 	if len(snaps) == 0 {
 		return nil
 	}
