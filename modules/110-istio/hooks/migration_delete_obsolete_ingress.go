@@ -39,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(deleteIngress))
 
-func deleteIngress(_ *go_hook.HookInput, dc dependency.Container) error {
+func deleteIngress(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient := dc.MustGetK8sClient()
 
 	if err := kubeClient.NetworkingV1().Ingresses(istioNs).Delete(context.Background(), obsoleteIngress, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {

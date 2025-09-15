@@ -127,7 +127,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 // Drain nodes: If node is marked for draining – drain it!
 // all nodes in one node group drain concurrently. If we need to limit this behavior - put here some queue implementation
-func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
+func handleDraining(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -136,7 +136,7 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
-	dNodes := input.NewSnapshots.Get("nodes_for_draining")
+	dNodes := input.Snapshots.Get("nodes_for_draining")
 	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes_for_draining' snapshots: %w", err)

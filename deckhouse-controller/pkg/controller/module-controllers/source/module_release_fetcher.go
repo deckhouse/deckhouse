@@ -23,6 +23,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/metric"
@@ -41,6 +42,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+const (
+	ltsReleaseChannel = "lts"
+)
+
 type ModuleReleaseFetcherConfig struct {
 	K8sClient                 client.Client
 	RegistryClientTagFetcher  cr.Client
@@ -53,6 +58,7 @@ type ModuleReleaseFetcherConfig struct {
 
 	Source           *v1alpha1.ModuleSource
 	UpdatePolicyName string
+	ReleaseChannel   string
 
 	MetricStorage     metric.Storage
 	MetricModuleGroup string
@@ -70,6 +76,7 @@ func NewModuleReleaseFetcher(cfg *ModuleReleaseFetcherConfig) *ModuleReleaseFetc
 		targetReleaseMeta:        cfg.TargetReleaseMeta,
 		source:                   cfg.Source,
 		updatePolicyName:         cfg.UpdatePolicyName,
+		releaseChannel:           cfg.ReleaseChannel,
 		metricStorage:            cfg.MetricStorage,
 		metricGroupName:          cfg.MetricModuleGroup,
 		logger:                   cfg.Logger,
@@ -87,6 +94,7 @@ type ModuleReleaseFetcher struct {
 
 	source           *v1alpha1.ModuleSource
 	updatePolicyName string
+	releaseChannel   string
 
 	metricStorage   metric.Storage
 	metricGroupName string
@@ -102,6 +110,7 @@ func (r *reconciler) fetchModuleReleases(
 	targetReleaseMeta *downloader.ModuleDownloadResult,
 	source *v1alpha1.ModuleSource,
 	updatePolicyName string,
+	releaseChannel string,
 	metricModuleGroup string,
 	opts []cr.Option,
 ) error {
@@ -124,6 +133,7 @@ func (r *reconciler) fetchModuleReleases(
 		TargetReleaseMeta:        targetReleaseMeta,
 		Source:                   source,
 		UpdatePolicyName:         updatePolicyName,
+		ReleaseChannel:           releaseChannel,
 		MetricStorage:            r.metricStorage,
 		MetricModuleGroup:        metricModuleGroup,
 		Logger:                   r.logger.Named("release-fetcher"),
@@ -238,6 +248,25 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "no releases in cluster")
 		if err != nil {
 			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
+		}
+
+		return nil
+	}
+
+	// For LTS channels, skip intermediate versions and create release directly
+	isLTSChannel := strings.EqualFold(f.releaseChannel, ltsReleaseChannel)
+
+	logger.Debug("Checking release channel",
+		slog.String("channel", f.releaseChannel),
+		slog.String("ltsChannel", ltsReleaseChannel),
+		slog.Bool("isLTS", isLTSChannel))
+
+	if isLTSChannel {
+		logger.Debug("LTS channel detected, creating release directly without intermediate versions")
+
+		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "LTS channel - direct release")
+		if err != nil {
+			return fmt.Errorf("create LTS release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
 		}
 
 		return nil

@@ -221,7 +221,7 @@ master-0       Ready    control-plane,master   5m      v1.29.10
 Список проверок, выполняемых инсталлятором перед началом установки платформы:
 
 1. Общие проверки:
-   - Значения параметров [PublicDomainTemplate](/products/virtualization-platform/reference/mc.html#global-parameters-modules-publicdomaintemplate) и [clusterDomain](/products/virtualization-platform/reference/cr/clusterdomain.html) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;

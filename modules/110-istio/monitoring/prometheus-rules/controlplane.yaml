@@ -41,7 +41,7 @@
           To check the status of the control plane pods, run the following command:
 
           ```bash
-          kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
           ```
 
     - alert: D8IstioAdditionalControlplaneDoesntWork
@@ -88,5 +88,5 @@
           To check the status of the control plane pods, run the following command:
 
           ```
-          kubectl get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
+          d8 k get pods -n d8-istio -l istio.io/rev={{$labels.label_istio_io_rev}}
           ```

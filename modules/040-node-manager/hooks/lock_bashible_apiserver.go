@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -57,8 +58,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, lockHandler)
 
-func lockHandler(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("bashible-apiserver-deployment")
+func lockHandler(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("bashible-apiserver-deployment")
 	if len(snaps) == 0 {
 		return nil
 	}

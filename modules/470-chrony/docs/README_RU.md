@@ -12,7 +12,7 @@ description: "Синхронизация времени в кластере Deck
 Для просмотра используемых NTP серверов можно воспользоваться командой:
 
 ```bash
-kubectl exec -it -n d8-chrony chrony-master-r7v6c -- chronyc -N sources
+d8 k exec -it -n d8-chrony chrony-master-r7v6c -- chronyc -N sources
 Defaulted container "chrony" out of: chrony, chrony-exporter, kube-rbac-proxy
 MS Name/IP address         Stratum Poll Reach LastRx Last sample
 ===============================================================================

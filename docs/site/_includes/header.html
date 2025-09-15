@@ -251,7 +251,7 @@
               {%- if page.mode == 'ssi' -%}
                 {{ site.urls['en'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
               {%- else -%}
-                {{ site.urls['en'] }}{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                {{ site.urls['en'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
               {%- endif %}
             {%- endif %}"
           >
@@ -265,7 +265,7 @@
               {%- if page.mode == 'ssi' -%}
                 {{ site.urls['ru'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
               {%- else -%}
-                {{ site.urls['ru'] }}{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
+                {{ site.urls['ru'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
               {%- endif %}
             {%- endif %}"
           >

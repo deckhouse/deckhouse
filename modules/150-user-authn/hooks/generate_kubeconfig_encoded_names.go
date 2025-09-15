@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,7 +30,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 }, kubeconfigNamesHandler)
 
-func kubeconfigNamesHandler(input *go_hook.HookInput) error {
+func kubeconfigNamesHandler(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		kubeconfigsPath  = "userAuthn.kubeconfigGenerator"
 		encodedNamesPath = "userAuthn.internal.kubeconfigEncodedNames"
