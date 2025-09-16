@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -57,13 +58,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, checkCloudConditions)
 
-func checkCloudConditions(input *go_hook.HookInput) error {
-	if len(input.NewSnapshots.Get("conditions")) == 0 {
+func checkCloudConditions(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("conditions")) == 0 {
 		requirements.SaveValue(unmetCloudConditionsKey, false)
 		return nil
 	}
 
-	conditionsSnaps, err := sdkobjectpatch.UnmarshalToStruct[[]CloudCondition](input.NewSnapshots, "conditions")
+	conditionsSnaps, err := sdkobjectpatch.UnmarshalToStruct[[]CloudCondition](input.Snapshots, "conditions")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'conditions' snapshot: %w", err)
 	}

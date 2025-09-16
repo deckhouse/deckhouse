@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -106,17 +107,17 @@ func filterConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 	}, nil
 }
 
-func handleAuditPolicy(input *go_hook.HookInput) error {
+func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 	var policy audit.Policy
 
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
-		extraData, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.NewSnapshots, "configmaps_with_extra_audit_policy")
+		extraData, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.Snapshots, "configmaps_with_extra_audit_policy")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal configmaps_with_extra_audit_policy snapshot: %w", err)
 		}
 		appendBasicPolicyRules(&policy, extraData)
 	}
-	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.NewSnapshots, "kube_audit_policy_secret")
+	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.Snapshots, "kube_audit_policy_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal kube_audit_policy_secret snapshot: %w", err)
 	}

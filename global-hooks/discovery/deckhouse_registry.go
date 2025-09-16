@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -82,8 +83,8 @@ func applyD8RegistrySecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func discoveryDeckhouseRegistry(input *go_hook.HookInput) error {
-	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.NewSnapshots, imageModulesD8RegistryConfSnap)
+func discoveryDeckhouseRegistry(_ context.Context, input *go_hook.HookInput) error {
+	registryConfSnap, err := sdkobjectpatch.UnmarshalToStruct[registrySecret](input.Snapshots, imageModulesD8RegistryConfSnap)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal %s snapshot: %w", imageModulesD8RegistryConfSnap, err)
 	}

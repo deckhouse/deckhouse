@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -57,11 +58,11 @@ const (
 	cpuPerNode    = int64(15)
 )
 
-func delectVPAMax(input *go_hook.HookInput) error {
-	nodeSnap := input.Snapshots["nodes"]
+func delectVPAMax(_ context.Context, input *go_hook.HookInput) error {
+	nodeSnap := input.Snapshots.Get("nodes")
 
 	// TODO use node CAPACITY in calculationsinput
-	nodeCount := int64(len(nodeSnap))
+	nodeCount := int64(len(nodeSnap)) //nolint:gosec
 	maxMemory := fmt.Sprintf("%dMi", 150+memoryPerNode*nodeCount)
 	maxCPU := fmt.Sprintf("%dm", 100+cpuPerNode*nodeCount)
 

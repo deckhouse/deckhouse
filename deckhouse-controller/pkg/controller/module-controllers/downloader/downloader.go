@@ -39,7 +39,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
@@ -181,6 +180,12 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 
 	res.ModuleDefinition = def
 
+	md.logger.Info("module definition extracted from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+		slog.Any("def", def),
+	)
+
 	return res, nil
 }
 
@@ -212,12 +217,6 @@ func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) 
 	ds, err := md.copyModuleToFS(moduleStorePath, img)
 	if err != nil {
 		return nil, fmt.Errorf("copy module error: %v", err)
-	}
-
-	// inject registry to values
-	err = reginjector.InjectRegistryToModuleValues(moduleStorePath, md.ms)
-	if err != nil {
-		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
 
 	return ds, nil

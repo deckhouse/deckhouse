@@ -68,7 +68,7 @@
 {%- if include.mode=='documentation' %}
   {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
-  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
 <!-- multilang -->
 {%- if page.multilang %}
@@ -77,6 +77,7 @@
 {%- endif %}
 
 <!-- Primary Meta Tags -->
+<link rel="canonical" href="{{ site.urls[page.lang] }}{{ page_meta_url }}" />
 <meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
 <meta name="description" content="{{ description }}">
 <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
