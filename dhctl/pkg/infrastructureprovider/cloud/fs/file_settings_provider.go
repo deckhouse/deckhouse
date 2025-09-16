@@ -26,7 +26,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
-	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -43,10 +42,8 @@ type SettingsProvider struct {
 	store settingsStore
 }
 
-func newSettingsProvider(logger log.Logger) *SettingsProvider {
-	file := global.GetInfrastructureVersions()
-
-	store, err := loadTerraformVersionFileSettings(file, logger)
+func newSettingsProvider(logger log.Logger, infraVersionsFile string) *SettingsProvider {
+	store, err := loadTerraformVersionFileSettings(infraVersionsFile, logger)
 	if err != nil {
 		return &SettingsProvider{
 			initError: err,

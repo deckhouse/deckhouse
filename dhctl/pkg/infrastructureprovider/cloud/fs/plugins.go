@@ -26,12 +26,14 @@ import (
 type pluginsProvider struct {
 	m sync.Mutex
 
-	logger log.Logger
+	logger     log.Logger
+	pluginsDir string
 }
 
-func newPluginsProvider(logger log.Logger) *pluginsProvider {
+func newPluginsProvider(logger log.Logger, pluginsDir string) *pluginsProvider {
 	return &pluginsProvider{
-		logger: logger,
+		logger:     logger,
+		pluginsDir: pluginsDir,
 	}
 }
 
@@ -39,6 +41,6 @@ func (p *pluginsProvider) DownloadPlugin(_ context.Context, params cloud.Infrast
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	source := fsstatic.GetPluginDir(getFullPath("plugins"), params.Settings, params.Version.Version, params.Version.Arch)
+	source := fsstatic.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
 	return fsstatic.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }

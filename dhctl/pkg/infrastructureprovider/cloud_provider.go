@@ -17,9 +17,11 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
@@ -31,6 +33,7 @@ type CloudProviderGetterParams struct {
 	TmpDir           string
 	AdditionalParams cloud.ProviderAdditionalParams
 	Logger           log.Logger
+	FSDIParams       *fs.DIParams
 }
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
@@ -43,6 +46,13 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 	if tmpDir == "" {
 		tmpDir = app.TmpDirName
 		params.Logger.LogWarnF("CloudProviderGetterParams tmp dir is empty. Using global default %s\n", tmpDir)
+	}
+
+	defaultFSDIParams := fs.DIParams{
+		InfraVersionsFile: global.GetInfrastructureVersions(),
+		BinariesDir:       filepath.Join(global.GetDhctlPath(), "bin"),
+		CloudProviderDir:  filepath.Join(global.GetDhctlPath(), "deckhouse", "candi", "cloud-providers"),
+		PluginsDir:        filepath.Join(global.GetDhctlPath(), "plugins"),
 	}
 
 	return func(ctx context.Context, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
@@ -68,7 +78,17 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
 		}
 
-		di := fs.GetDi(params.Logger)
+		var diParams fs.DIParams
+		if params.FSDIParams != nil {
+			diParams = *params.FSDIParams
+		} else {
+			diParams = defaultFSDIParams
+		}
+
+		di, err := fs.GetDi(params.Logger, diParams)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot get fs.DI: %w", err)
+		}
 
 		p := cloud.ProviderParams{
 			AdditionalParams: params.AdditionalParams,

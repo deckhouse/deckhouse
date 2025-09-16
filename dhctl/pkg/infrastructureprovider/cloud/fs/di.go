@@ -15,15 +15,62 @@
 package fs
 
 import (
+	"fmt"
+	"path"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-func GetDi(logger log.Logger) *cloud.ProviderDI {
-	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(logger),
-		InfraUtilProvider:   newInfrastructureUtilProvider(logger),
-		InfraPluginProvider: newPluginsProvider(logger),
-		ModulesProvider:     newModulesProvider(logger),
+type DIParams struct {
+	InfraVersionsFile string
+	BinariesDir       string
+	CloudProviderDir  string
+	PluginsDir        string
+}
+
+func checkDir(dir string, errPrefix string) error {
+	if !fs.IsDirExists(dir) {
+		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix+dir, dir)
 	}
+
+	return nil
+}
+
+func checkNoneRootDir(dir string, errPrefix string) error {
+	if path.Clean(dir) == "/" {
+		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
+	}
+
+	if !fs.IsDirExists(dir) {
+		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix+dir, dir)
+	}
+
+	return nil
+}
+
+func GetDi(logger log.Logger, params DIParams) (*cloud.ProviderDI, error) {
+	if err := checkDir(params.BinariesDir, "BinariesDir"); err != nil {
+		return nil, err
+	}
+
+	if err := checkDir(params.InfraVersionsFile, "InfraVersionsFile"); err != nil {
+		return nil, err
+	}
+
+	if err := checkNoneRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
+		return nil, err
+	}
+
+	if err := checkDir(params.PluginsDir, "PluginsDir"); err != nil {
+		return nil, err
+	}
+
+	return &cloud.ProviderDI{
+		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile),
+		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
+		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
+		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
+	}, nil
 }

@@ -17,9 +17,6 @@ package fs
 import (
 	"fmt"
 	"os/exec"
-	"path/filepath"
-
-	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 )
 
 func checkIsExecFile(path string) error {
@@ -29,8 +26,4 @@ func checkIsExecFile(path string) error {
 	}
 
 	return nil
-}
-
-func getFullPath(path string) string {
-	return filepath.Join(global.GetDhctlPath(), path)
 }

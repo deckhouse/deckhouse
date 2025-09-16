@@ -17,6 +17,10 @@ package fs
 import "os"
 
 func IsDirExists(dir string) bool {
+	if dir == "" {
+		return false
+	}
+
 	stat, err := os.Stat(dir)
 	if err != nil {
 		return false

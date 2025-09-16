@@ -16,6 +16,7 @@ package fs
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -26,12 +27,14 @@ import (
 type InfrastructureUtilProvider struct {
 	m sync.Mutex
 
-	logger log.Logger
+	logger      log.Logger
+	binariesDir string
 }
 
-func newInfrastructureUtilProvider(logger log.Logger) *InfrastructureUtilProvider {
+func newInfrastructureUtilProvider(logger log.Logger, binariesDir string) *InfrastructureUtilProvider {
 	return &InfrastructureUtilProvider{
-		logger: logger,
+		logger:      logger,
+		binariesDir: binariesDir,
 	}
 }
 
@@ -39,12 +42,12 @@ func (p *InfrastructureUtilProvider) DownloadTerraform(_ context.Context, _ clou
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsstatic.CreateLinkIfNotExists(getFullPath("bin/terraform"), checkIsExecFile, destination, p.logger)
+	return fsstatic.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination, p.logger)
 }
 
 func (p *InfrastructureUtilProvider) DownloadOpenTofu(_ context.Context, _ cloud.InfrastructureUtilProviderParams, destination string) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsstatic.CreateLinkIfNotExists(getFullPath("bin/opentofu"), checkIsExecFile, destination, p.logger)
+	return fsstatic.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination, p.logger)
 }

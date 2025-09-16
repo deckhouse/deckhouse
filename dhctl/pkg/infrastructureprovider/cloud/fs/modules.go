@@ -32,12 +32,14 @@ import (
 type modulesProvider struct {
 	m sync.Mutex
 
-	logger log.Logger
+	logger           log.Logger
+	cloudProviderDir string
 }
 
-func newModulesProvider(logger log.Logger) *modulesProvider {
+func newModulesProvider(logger log.Logger, cloudProviderDir string) *modulesProvider {
 	return &modulesProvider{
-		logger: logger,
+		logger:           logger,
+		cloudProviderDir: cloudProviderDir,
 	}
 }
 
@@ -71,7 +73,7 @@ func (p *modulesProvider) DownloadSpecs(ctx context.Context, _ cloud.DownloadSpe
 
 func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams, destination string) error {
 	sourceDir := path.Join(
-		getFullPath("deckhouse/candi/cloud-providers"),
+		p.cloudProviderDir,
 		strings.ToLower(params.Settings.CloudName()),
 		dir,
 	)
