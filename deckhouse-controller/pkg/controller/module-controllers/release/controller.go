@@ -102,6 +102,13 @@ func RegisterController(
 		dependencyContainer:  dc,
 		exts:                 exts,
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
+		shutdownFunc: func() error {
+			if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+				return err
+			}
+
+			return nil
+		},
 	}
 
 	r.init.Add(1)
@@ -149,10 +156,11 @@ type reconciler struct {
 	clusterUUID          string
 	delayTicker          *time.Ticker
 
-	activeApplyCount         atomic.Int32
-	releaseWasProcessed      atomic.Bool // at least one release was processed
-	readyForRestart          atomic.Bool
-	moduleReloadedForRestart atomic.Bool // indicates module was reloaded and restart needed
+	activeApplyCount    atomic.Int32
+	releaseWasProcessed atomic.Bool // at least one release was processed
+	readyForRestart     atomic.Bool
+
+	shutdownFunc func() error
 
 	metricsUpdater MetricsUpdater
 }
@@ -208,23 +216,17 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 			if r.activeApplyCount.Load() > 0 {
 				r.log.Info("waiting for modules to apply before Deckhouse restart",
 					slog.Int("active_apply_count", int(r.activeApplyCount.Load())))
-				r.readyForRestart.Store(false)
-			}
 
-			// Check for module reload restart condition
-			if r.moduleReloadedForRestart.Load() {
-				r.log.Info("restarting Deckhouse due to module reload...")
-				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
-				}
-				return
+				r.readyForRestart.Store(false)
 			}
 
 			if r.releaseWasProcessed.Load() && r.readyForRestart.Load() {
 				r.log.Info("restarting Deckhouse...")
-				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+
+				if err := r.shutdownFunc(); err != nil {
 					r.log.Fatal("send SIGUSR2 signal failed", log.Err(err))
 				}
+
 				return
 			}
 
@@ -233,6 +235,7 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 					"all modules processed, ready to restart",
 					slog.Int("active_apply_count", int(r.activeApplyCount.Load())),
 				)
+
 				r.readyForRestart.Store(true)
 			}
 
@@ -413,13 +416,15 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	if release.GetReinstall() {
-		err := r.runReleaseDeploy(ctx, release, nil)
+		err := r.applyRelease(ctx, release, nil)
 		if err != nil {
 			return res, fmt.Errorf("run release deploy: %w", err)
 		}
 
 		r.log.Info("module release reloaded, waiting for Deckhouse restart", slog.String("release", release.GetName()))
-		r.moduleReloadedForRestart.Store(true)
+
+		r.releaseWasProcessed.Store(true)
+
 		return res, nil
 	}
 
@@ -644,11 +649,13 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		// deploy forced release without any checks (windows, requirements, approvals and so on)
 		if err = r.applyRelease(ctx, release, task); err != nil {
 			logger.Error("apply forced release", log.Err(err))
+
 			return res, fmt.Errorf("apply forced release: %w", err)
 		}
 
 		r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
-		r.moduleReloadedForRestart.Store(true)
+
+		r.releaseWasProcessed.Store(true)
 
 		// stop requeue because we restart deckhouse (deployment)
 		return ctrl.Result{}, nil
@@ -786,7 +793,8 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	}
 
 	r.log.Info("a new module release deployed, waiting Deckhouse to restart", slog.String("module", release.GetModuleName()))
-	r.moduleReloadedForRestart.Store(true)
+
+	r.releaseWasProcessed.Store(true)
 
 	logger.Debug("module release deployed")
 
@@ -866,7 +874,6 @@ func (r *reconciler) applyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 	r.activeApplyCount.Add(1)
 	defer func() {
 		r.activeApplyCount.Add(-1)
-		r.releaseWasProcessed.Store(true)
 	}()
 
 	var dri *releaseUpdater.ReleaseInfo
@@ -1409,10 +1416,12 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		}
 
 		r.log.Info("module release deleted, waiting for Deckhouse restart", slog.String("release", release.GetName()))
-		r.releaseWasProcessed.Store(true)
-		r.moduleReloadedForRestart.Store(true)
+
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
+		// restart controller for completely remove module
+		// TODO: we need another solution for remove module from modulemanager
+		r.releaseWasProcessed.Store(true)
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
