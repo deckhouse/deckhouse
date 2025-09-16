@@ -127,9 +127,12 @@ spec:
             ephemeral-storage: 150Mi
             memory: 200Mi
         securityContext:
+          readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
@@ -143,8 +146,24 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp/nginx/
+        - mountPath: /tmp
           name: tmp-nginx
+        - mountPath: /chroot/tmp
+          name: tmp-nginx
+        - mountPath: /chroot/etc/resolv.conf
+          name: write-files
+          subPath: resolv.conf
+        - mountPath: /chroot/etc/nginx/nginx.conf
+          name: write-files
+          subPath: nginx.conf
+        - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+          name: write-files
+          subPath: opentelemetry.toml
+        - mountPath: /chroot/var/log/nginx/error.log
+          name: write-files
+          subPath: error.log
+        - mountPath: /chroot/etc/ingress-controller/ssl
+          name: tmp-ssl
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -152,6 +171,17 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /var/files
           name: telemetry-config-file
@@ -207,10 +237,55 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
       dnsPolicy: ClusterFirst
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - --
+        - /bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf
+          && chmod 0666 /tmp/*
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: touch-files
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: write-files
+      - command:
+        - sh
+        - -c
+        - --
+        - /bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: mkdir-nginx
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: tmp
+          name: tmp-nginx
       priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
@@ -225,6 +300,10 @@ spec:
       - key: drbd.linbit.com/force-io-error
       - key: drbd.linbit.com/ignore-fail-over
       volumes:
+      - emptyDir: {}
+        name: write-files
+      - emptyDir: {}
+        name: tmp-ssl
       - emptyDir: {}
         name: tmp-nginx
       - emptyDir: {}

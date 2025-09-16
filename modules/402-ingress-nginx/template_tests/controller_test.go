@@ -108,6 +108,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
 			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 			// Assert DaemonSet exists
 			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
