@@ -107,7 +107,7 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 type ModuleConfigSpec struct {
 	Version      int            `json:"version,omitempty"`
 	Settings     SettingsValues `json:"settings,omitempty"`
-	Enabled      *bool          `json:"enabled"`
+	Enabled      bool           `json:"enabled"`
 	UpdatePolicy string         `json:"updatePolicy,omitempty"`
 	Source       string         `json:"source,omitempty"`
 	Maintenance  string         `json:"maintenance,omitempty"`
@@ -119,8 +119,5 @@ type ModuleConfigStatus struct {
 }
 
 func (m *ModuleConfig) IsEnabled() bool {
-	if m.Spec.Enabled != nil {
-		return *m.Spec.Enabled
-	}
-	return false
+	return m.Spec.Enabled
 }

@@ -108,7 +108,7 @@ func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 			Name: name,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled: &[]bool{true}[0],
+			Enabled: true,
 		},
 	}
 }
@@ -119,7 +119,7 @@ func createDisabledModuleConfig(name string) *v1alpha1.ModuleConfig {
 			Name: name,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled: &[]bool{false}[0],
+			Enabled: false,
 		},
 	}
 }

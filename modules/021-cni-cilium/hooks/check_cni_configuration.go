@@ -28,7 +28,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -140,7 +139,7 @@ func applyCNIMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
 	}
-	if mc.Spec.Enabled == nil || !*mc.Spec.Enabled {
+	if !mc.Spec.Enabled {
 		return nil, nil
 	}
 
@@ -207,7 +206,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			Name: cniName,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:  ptr.To(true),
+			Enabled:  true,
 			Version:  1,
 			Settings: v1alpha1.SettingsValues{},
 		},

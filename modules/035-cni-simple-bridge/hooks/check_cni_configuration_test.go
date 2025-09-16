@@ -114,7 +114,7 @@ data:
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
+	cniMCYAML := func(cniName string, enabled bool, settings v1alpha1.SettingsValues) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -213,7 +213,7 @@ status:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}),
+				cniMCYAML(cniName, false, v1alpha1.SettingsValues{}),
 				foreignDesiredCM,
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
@@ -250,7 +250,7 @@ status:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}),
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{}),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

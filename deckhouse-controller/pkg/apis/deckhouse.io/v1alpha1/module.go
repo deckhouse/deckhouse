@@ -260,6 +260,7 @@ func (m *Module) IsCondition(condName string, status corev1.ConditionStatus) boo
 	return false
 }
 
+// +kubebuilder:object:generate=false
 type ConditionOption func(opts *ConditionSettings)
 
 func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
@@ -268,6 +269,7 @@ func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
 	}
 }
 
+// +kubebuilder:object:generate=false
 type ConditionSettings struct {
 	Timer func() time.Time
 }

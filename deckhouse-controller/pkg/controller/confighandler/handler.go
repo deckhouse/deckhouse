@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 )
 
 const (
@@ -73,7 +74,7 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 		}
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
-		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
+		addonOperatorModuleConfig.IsEnabled = ptr.To(moduleConfig.Spec.Enabled)
 		if len(moduleConfig.Spec.Maintenance) > 0 {
 			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
 		}
@@ -121,7 +122,7 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 		}
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
-		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
+		addonOperatorModuleConfig.IsEnabled = ptr.To(moduleConfig.Spec.Enabled)
 		if len(moduleConfig.Spec.Maintenance) > 0 {
 			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
 		}

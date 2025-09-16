@@ -114,7 +114,7 @@ data:
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues) string {
+	cniMCYAML := func(cniName string, enabled bool, settings v1alpha1.SettingsValues) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -216,7 +216,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, ``),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -241,7 +241,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -266,7 +266,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "host-gw"}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -307,7 +307,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "HostGW")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "HostGW",
 				}),
 				foreignDesiredCM,
@@ -349,7 +349,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "HostGW"}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}
@@ -375,7 +375,7 @@ status:
 			f.ConfigValuesSet("cniFlannel.podNetworkMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"podNetworkMode": "vxlan"}`),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, true, v1alpha1.SettingsValues{
 					"podNetworkMode": "VXLAN",
 				}),
 			}

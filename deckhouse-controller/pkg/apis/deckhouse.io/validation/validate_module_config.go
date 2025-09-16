@@ -47,9 +47,10 @@ type AnnotationsOnly struct {
 
 type EnabledOnly struct {
 	Spec struct {
-		Enabled *bool `json:"enabled"`
+		Enabled bool `json:"enabled"`
 	} `json:"spec,omitempty"`
 }
+
 type ObjectMeta struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
@@ -82,7 +83,7 @@ func moduleConfigValidationHandler(
 				}
 
 				if _, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; !ok {
-					if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+					if cfg.Spec.Enabled {
 						// we can delete unknown module without any further check
 						if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 							if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
@@ -119,7 +120,7 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
-			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+			if cfg.Spec.Enabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -151,8 +152,8 @@ func moduleConfigValidationHandler(
 				return nil, fmt.Errorf("expect ModuleConfig as unstructured, got %T", obj)
 			}
 
-			oldEnabled := oldFlag.Spec.Enabled != nil && *oldFlag.Spec.Enabled
-			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
+			oldEnabled := oldFlag.Spec.Enabled
+			newEnabled := cfg.Spec.Enabled
 
 			if !oldEnabled && newEnabled {
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
@@ -172,7 +173,7 @@ func moduleConfigValidationHandler(
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
-			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
+			if !ok && !oldOk && !cfg.Spec.Enabled {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {
@@ -189,7 +190,7 @@ func moduleConfigValidationHandler(
 
 		var allowedToDisableMetric float64
 		if _, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
-			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+			if cfg.Spec.Enabled {
 				allowedToDisableMetric = 1
 			}
 		}
@@ -214,7 +215,7 @@ func moduleConfigValidationHandler(
 				return rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
 			}
 
-			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
+			if cfg.Spec.Enabled && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
 				warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(module.Properties.AvailableSources, ", ")))
 			}
 		}
