@@ -221,7 +221,6 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 			switch value.String() {
 			case "VXLAN":
 				input.Values.Set("cniCilium.internal.mode", "VXLAN")
-				// ???
 				return nil
 			case "Disabled":
 				// to recover the default value if it was discovered before

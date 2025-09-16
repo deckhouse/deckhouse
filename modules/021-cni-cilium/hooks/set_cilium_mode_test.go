@@ -17,13 +17,17 @@ limitations under the License.
 package hooks
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
+	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -37,12 +41,60 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 
+	cniSecretYAML := func(cniName, data string, creationTime *time.Time, annotations map[string]string) string {
+		secretData := make(map[string][]byte)
+		secretData["cni"] = []byte(cniName)
+		if data != "" {
+			secretData[cniName] = []byte(data)
+		}
+		s := &v1core.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "d8-cni-configuration",
+				Namespace:   "kube-system",
+				Annotations: annotations,
+			},
+			Data: secretData,
+		}
+		if creationTime != nil {
+			s.ObjectMeta.CreationTimestamp = metav1.NewTime(*creationTime)
+		}
+		marshaled, _ := yaml.Marshal(s)
+		return string(marshaled)
+	}
+	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
+		mc := &v1alpha1.ModuleConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ModuleConfig",
+			},
+
+			ObjectMeta: metav1.ObjectMeta{
+				Name: cniName,
+			},
+
+			Spec: v1alpha1.ModuleConfigSpec{
+				Version:  1,
+				Settings: settings,
+				Enabled:  enabled,
+			},
+		}
+		if creationTime != nil {
+			mc.ObjectMeta.CreationTimestamp = metav1.NewTime(*creationTime)
+		}
+		marshaled, _ := yaml.Marshal(mc)
+		return string(marshaled)
+	}
+
 	Context("fresh cluster", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
@@ -53,12 +105,14 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	})
 
 	Context("kube-system/d8-cni-configuration is present, but cni != `cilium`", func() {
-		cniSecret := generateCniConfigurationSecret("flannel", "", "")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML("flannel", "", nil, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
@@ -69,12 +123,14 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni == `cilium`, but cilium field is not set", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "", "")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, "", nil, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
@@ -85,13 +141,15 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = VXLAN", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN"}`, nil, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be set to `VXLAN`", func() {
@@ -102,13 +160,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 	})
 
 	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = DirectWithNodeRoutes, masqueradeMode = Netfilter", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "DirectWithNodeRoutes", "Netfilter")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`, nil, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be set to `DirectWithNodeRoutes`", func() {
@@ -120,11 +181,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `VXLAN`", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode": "VXLAN",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, secret should be changed", func() {
@@ -136,12 +202,18 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, masqueradeMode set to `Netfilter`", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "Netfilter",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, secret should be changed", func() {
@@ -153,10 +225,15 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode": "Disabled",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, mode must be changed to Direct", func() {
@@ -167,11 +244,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes set to `true`", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
@@ -183,11 +265,16 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes set to `false`", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"createNodeRoutes": false,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
@@ -199,8 +286,6 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 
 	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider = Static", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
 clusterType: Static
@@ -211,6 +296,8 @@ serviceSubnetCIDR: 10.232.0.0/16
 `))
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
@@ -222,8 +309,6 @@ serviceSubnetCIDR: 10.232.0.0/16
 
 	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider != Static", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
 clusterType: Cloud
@@ -238,6 +323,8 @@ serviceSubnetCIDR: 10.232.0.0/16
 `))
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.KubeStateSet("")
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `Direct`", func() {
@@ -249,8 +336,6 @@ serviceSubnetCIDR: 10.232.0.0/16
 
 	Context("kube-system/d8-cni-configuration is absent, cloud provider = Static, tunnelMode = VXLAN and masqueradeMode = Netfilter are configured", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
 clusterType: Static
@@ -263,6 +348,14 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "Netfilter",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `VXLAN` and masqueradeMode is `Netfilter`", func() {
@@ -273,16 +366,22 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=ModuleConfig, cilium mode = VXLAN", func() {
-		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "VXLAN", "BPF", map[string]string{
-			"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
-		})
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "ModuleConfig",
+				}),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes` from MC, not secret", func() {
@@ -293,16 +392,22 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=Secret, cilium mode = VXLAN", func() {
-		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "VXLAN", "Netfilter", map[string]string{
-			"network.deckhouse.io/cni-configuration-source-priority": "Secret",
-		})
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
+				}),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be `VXLAN` from secret, not MC", func() {
@@ -313,34 +418,46 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 	Context("kube-system/d8-cni-configuration without annotation, cluster is not bootstrapped", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "Netfilter")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("global.clusterIsBootstrapped", false)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be from MC (DirectWithNodeRoutes), not secret", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
 
 	Context("kube-system/d8-cni-configuration without annotation, cluster is bootstrapped", func() {
-		cniSecret := generateCniConfigurationSecret("cilium", "VXLAN", "Netfilter")
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("hook should run successfully, cilium mode should be from secret (VXLAN), not MC", func() {
@@ -352,8 +469,6 @@ serviceSubnetCIDR: 10.232.0.0/16
 
 	Context("Static cluster with tunnelMode VXLAN configured (priority test)", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
 clusterType: Static
@@ -365,6 +480,13 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode": "VXLAN",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("tunnelMode VXLAN should take priority over Static cluster default", func() {
@@ -376,8 +498,6 @@ serviceSubnetCIDR: 10.232.0.0/16
 
 	Context("Static cluster with createNodeRoutes false (should not override default)", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
 clusterType: Static
@@ -389,6 +509,13 @@ serviceSubnetCIDR: 10.232.0.0/16
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"createNodeRoutes": false,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("Static cluster type takes priority over createNodeRoutes false", func() {
@@ -399,16 +526,22 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 	Context("Priority annotation with value Secret", func() {
-		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "Direct", "Netfilter", map[string]string{
-			"network.deckhouse.io/cni-configuration-source-priority": "Secret",
-		})
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "Secret",
+				}),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("should use secret values even when MC differs", func() {
@@ -419,16 +552,22 @@ serviceSubnetCIDR: 10.232.0.0/16
 	})
 
 	Context("Priority annotation with non-standard value", func() {
-		cniSecret := generateCniConfigurationSecretWithAnnotations("cilium", "Direct", "Netfilter", map[string]string{
-			"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
-		})
 		BeforeEach(func() {
-			f.KubeStateSet(cniSecret)
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, nil, map[string]string{
+					"network.deckhouse.io/cni-configuration-source-priority": "CustomValue",
+				}),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":     "VXLAN",
+					"masqueradeMode": "BPF",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 		It("should treat non-ModuleConfig value as Secret priority", func() {
@@ -438,47 +577,3 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 })
-
-func generateCniConfigurationSecret(cni string, mode string, masqueradeMode string) string {
-	return generateCniConfigurationSecretWithAnnotations(cni, mode, masqueradeMode, nil)
-}
-
-func generateCniConfigurationSecretWithAnnotations(cni string, mode string, masqueradeMode string, annotations map[string]string) string {
-	var (
-		secretTemplate = `
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cni-configuration
-  namespace: kube-system`
-	)
-
-	if len(annotations) > 0 {
-		secretTemplate += "\n  annotations:"
-		for key, value := range annotations {
-			secretTemplate += fmt.Sprintf("\n    %s: %s", key, value)
-		}
-	}
-
-	secretTemplate += "\ntype: Opaque"
-
-	jsonByte, _ := generateJSONCiliumConf(mode, masqueradeMode)
-	secretTemplate = fmt.Sprintf("%s\ndata:\n  cni: %s", secretTemplate, base64.StdEncoding.EncodeToString([]byte(cni)))
-	if mode != "" {
-		secretTemplate = fmt.Sprintf("%s\n  cilium: %s", secretTemplate, base64.StdEncoding.EncodeToString(jsonByte))
-	}
-	return secretTemplate
-}
-
-func generateJSONCiliumConf(mode string, masqueradeMode string) ([]byte, error) {
-	var confMAP CiliumConfigStruct
-	if mode != "" {
-		confMAP.Mode = mode
-	}
-	if masqueradeMode != "" {
-		confMAP.MasqueradeMode = masqueradeMode
-	}
-
-	return json.Marshal(confMAP)
-}
