@@ -104,7 +104,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is present, but cni != `cilium`", func() {
+	Context("Secret is present, but cni != `cilium`", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -122,7 +122,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is present, cni == `cilium`, but cilium field is not set", func() {
+	Context("Secret is present, cni == `cilium`, but cilium field is not set", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -140,7 +140,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = VXLAN", func() {
+	Context("Secret is present, cni == `cilium`, cilium mode == VXLAN", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
@@ -159,7 +159,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is present, cni = `cilium`, cilium mode = DirectWithNodeRoutes, masqueradeMode = Netfilter", func() {
+	Context("Secret is present, cni == `cilium`, cilium mode == DirectWithNodeRoutes, masqueradeMode == Netfilter", func() {
 		BeforeEach(func() {
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
@@ -179,7 +179,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `VXLAN`", func() {
+	Context("Secret is absent, MC is present: tunnelMode set to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
@@ -200,7 +200,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, masqueradeMode set to `Netfilter`", func() {
+	Context("Secret is absent, MC is present: masqueradeMode set to `Netfilter`, tunnelMode set to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "Netfilter")
@@ -223,7 +223,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
+	Context("Secret is absent, MC is present: tunnelMode set to `Disabled`, but previously the mode was discovered to `VXLAN`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
@@ -242,7 +242,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes set to `true`", func() {
+	Context("Secret is absent, MC is present: createNodeRoutes set to `true`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
@@ -263,7 +263,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, createNodeRoutes set to `false`", func() {
+	Context("Secret is absent, MC is present: createNodeRoutes set to `false`", func() {
 		BeforeEach(func() {
 			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
@@ -284,7 +284,7 @@ var _ = Describe("Modules :: cni-cilium :: hooks :: set_cilium_mode", func() {
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider = Static", func() {
+	Context("Static, Secret is absent, MC is absent", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
@@ -307,7 +307,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, config parameters is absent, but cloud provider != Static", func() {
+	Context("Not Static, Secret is absent, MC is absent", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
@@ -334,7 +334,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration is absent, cloud provider = Static, tunnelMode = VXLAN and masqueradeMode = Netfilter are configured", func() {
+	Context("Static, Secret is absent, MC is present: tunnelMode == VXLAN and masqueradeMode == Netfilter", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
 apiVersion: deckhouse.io/v1
@@ -365,7 +365,65 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=ModuleConfig, cilium mode = VXLAN", func() {
+	Context("Static, Secret is absent, MC is present: tunnelMode == VXLAN", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode": "VXLAN",
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `VXLAN`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("Static, Secret is absent, MC is present: createNodeRoutes == false", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+clusterType: Static
+kind: ClusterConfiguration
+kubernetesVersion: "Automatic"
+podSubnetCIDR: 10.231.0.0/16
+serviceSubnetCIDR: 10.232.0.0/16
+`))
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
+			resources := []string{
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"createNodeRoutes": false,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be `DirectWithNodeRoutes`", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
+		})
+	})
+
+	Context("Secret is present, MC is present and has priority", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -391,7 +449,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration with annotation network.deckhouse.io/cni-configuration-source-priority=Secret, cilium mode = VXLAN", func() {
+	Context("Secret is present and has priority, MC is present", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "Direct")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -417,115 +475,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("kube-system/d8-cni-configuration without annotation, cluster is not bootstrapped", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.clusterIsBootstrapped", false)
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
-			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
-			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
-			resources := []string{
-				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
-					"tunnelMode":       "Disabled",
-					"createNodeRoutes": true,
-				}, nil),
-			}
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("hook should run successfully, cilium mode should be from MC (DirectWithNodeRoutes), not secret", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
-		})
-	})
-
-	Context("kube-system/d8-cni-configuration without annotation, cluster is bootstrapped", func() {
-		BeforeEach(func() {
-			f.ValuesSet("global.clusterIsBootstrapped", true)
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
-			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
-			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
-			resources := []string{
-				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
-					"tunnelMode":       "Disabled",
-					"createNodeRoutes": true,
-				}, nil),
-			}
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("hook should run successfully, cilium mode should be from secret (VXLAN), not MC", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
-		})
-	})
-
-	Context("Static cluster with tunnelMode VXLAN configured (priority test)", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-clusterType: Static
-kind: ClusterConfiguration
-kubernetesVersion: "Automatic"
-podSubnetCIDR: 10.231.0.0/16
-serviceSubnetCIDR: 10.232.0.0/16
-`))
-			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
-			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
-					"tunnelMode": "VXLAN",
-				}, nil),
-			}
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("tunnelMode VXLAN should take priority over Static cluster default", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
-		})
-	})
-
-	Context("Static cluster with createNodeRoutes false (should not override default)", func() {
-		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
-apiVersion: deckhouse.io/v1
-clusterType: Static
-kind: ClusterConfiguration
-kubernetesVersion: "Automatic"
-podSubnetCIDR: 10.231.0.0/16
-serviceSubnetCIDR: 10.232.0.0/16
-`))
-			f.ConfigValuesSet("cniCilium.createNodeRoutes", false)
-			f.ValuesSet("cniCilium.internal.mode", "Direct")
-			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
-			resources := []string{
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
-					"createNodeRoutes": false,
-				}, nil),
-			}
-			f.KubeStateSet(strings.Join(resources, "\n---\n"))
-			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-			f.RunHook()
-		})
-		It("Static cluster type takes priority over createNodeRoutes false", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
-			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("BPF"))
-		})
-	})
-
-	Context("Priority annotation with value Secret", func() {
+	Context("Secret is present and has priority, MC is present 2", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -551,7 +501,7 @@ serviceSubnetCIDR: 10.232.0.0/16
 		})
 	})
 
-	Context("Priority annotation with non-standard value", func() {
+	Context("Secret is present and has priority, MC is present 3", func() {
 		BeforeEach(func() {
 			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
 			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
@@ -573,6 +523,56 @@ serviceSubnetCIDR: 10.232.0.0/16
 		It("should treat non-ModuleConfig value as Secret priority", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("Direct"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
+	Context("Secret and MC are present, priority annotation is absent, cluster is not bootstrapped", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be from MC (DirectWithNodeRoutes), masqueradeMode from secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("DirectWithNodeRoutes"))
+			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
+		})
+	})
+
+	Context("Secret and MC are present, priority annotation is absent, cluster is bootstrapped", func() {
+		BeforeEach(func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("cniCilium.internal.mode", "Direct")
+			f.ValuesSet("cniCilium.internal.masqueradeMode", "BPF")
+			f.ConfigValuesSet("cniCilium.tunnelMode", "Disabled")
+			f.ConfigValuesSet("cniCilium.createNodeRoutes", true)
+			resources := []string{
+				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "Netfilter"}`, nil, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+					"tunnelMode":       "Disabled",
+					"createNodeRoutes": true,
+				}, nil),
+			}
+			f.KubeStateSet(strings.Join(resources, "\n---\n"))
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("hook should run successfully, cilium mode should be from secret (VXLAN), not MC", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cniCilium.internal.mode").String()).To(Equal("VXLAN"))
 			Expect(f.ValuesGet("cniCilium.internal.masqueradeMode").String()).To(Equal("Netfilter"))
 		})
 	})
