@@ -16,10 +16,10 @@ title: "Модуль user-authz: примеры конфигурации"
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -48,16 +48,16 @@ roleRef:
 
 Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:manage:networking:manager` в `ClusterRoleBinding`.
 
-Пример назначения прав сетевому администратору (User `joe`):
+Пример назначения прав сетевому администратору (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -171,7 +171,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
