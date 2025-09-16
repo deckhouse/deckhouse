@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -67,8 +68,8 @@ type discoveryCM struct {
 	Data      map[string]string
 }
 
-func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
-	authCMs, err := sdkobjectpatch.UnmarshalToStruct[discoveryCM](input.NewSnapshots, "auth-cm")
+func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) error {
+	authCMs, err := sdkobjectpatch.UnmarshalToStruct[discoveryCM](input.Snapshots, "auth-cm")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal auth-cm: %w", err)
 	}

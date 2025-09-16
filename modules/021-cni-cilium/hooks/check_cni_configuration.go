@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -166,12 +167,12 @@ func setCNIMiscMetricAndReq(input *go_hook.HookInput, miss bool) {
 	}
 }
 
-func checkCni(input *go_hook.HookInput) error {
+func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	// Clear a metrics and reqKey
 	input.MetricsCollector.Expire(checkCNIConfigMetricGroup)
 	requirements.RemoveValue(cniConfigurationSettledKey)
 	needUpdateMC := false
-	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.NewSnapshots, "cni_configuration_secret")
+	cniSecrets, err := sdkobjectpatch.UnmarshalToStruct[cniSecretStruct](input.Snapshots, "cni_configuration_secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
@@ -211,7 +212,7 @@ func checkCni(input *go_hook.HookInput) error {
 			Settings: v1alpha1.SettingsValues{},
 		},
 	}
-	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.NewSnapshots, "deckhouse_cni_mc")
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.Snapshots, "deckhouse_cni_mc")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
 	}

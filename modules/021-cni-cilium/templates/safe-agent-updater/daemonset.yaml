@@ -81,7 +81,7 @@ spec:
         volumeMounts:
         - name: cni-path
           mountPath: /hostbin
-      {{- include "module_init_container_check_linux_kernel" (tuple . .Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . .Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: prepull-image-cilium
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}

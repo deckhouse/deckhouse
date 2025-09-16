@@ -19,6 +19,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -73,8 +74,8 @@ func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func discoverMinimalNginxVersion(input *go_hook.HookInput) error {
-	snap := input.NewSnapshots.Get("ingressControllers")
+func discoverMinimalNginxVersion(_ context.Context, input *go_hook.HookInput) error {
+	snap := input.Snapshots.Get("ingressControllers")
 	isIncompatible := false
 
 	var minVersion *semver.Version

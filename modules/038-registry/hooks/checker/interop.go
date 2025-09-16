@@ -17,6 +17,8 @@ limitations under the License.
 package checker
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
@@ -33,12 +35,12 @@ func SetParams(input *go_hook.HookInput, params Params) error {
 	return nil
 }
 
-func GetParams(input *go_hook.HookInput) Params {
+func GetParams(_ context.Context, input *go_hook.HookInput) Params {
 	accessor := helpers.NewValuesAccessor[Params](input, valuesParamsPath)
 	return accessor.Get()
 }
 
-func GetStatus(input *go_hook.HookInput) Status {
+func GetStatus(_ context.Context, input *go_hook.HookInput) Status {
 	accessor := helpers.NewValuesAccessor[Status](input, valuesStatePath)
 	status := accessor.Get()
 	return status

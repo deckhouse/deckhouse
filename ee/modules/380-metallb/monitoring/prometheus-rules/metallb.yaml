@@ -17,7 +17,7 @@
           To find the cause of the issue, review the controller logs:
 
           ```bash
-          kubectl -n d8-metallb logs deploy/controller -c controller
+          d8 k -n d8-metallb logs deploy/controller -c controller
           ```
         summary: The MetalLB configuration hasn't been loaded.
 
@@ -38,7 +38,7 @@
           To find the cause of the issue, review the controller logs:
 
           ```bash
-          kubectl -n d8-metallb logs deploy/controller -c controller
+          d8 k -n d8-metallb logs deploy/controller -c controller
           ```
         summary: MetalLB is running on a stale configuration.
 
@@ -59,6 +59,6 @@
           Check the logs for details:
 
           ```bash
-          kubectl -n d8-metallb logs daemonset/speaker -c speaker
+          d8 k -n d8-metallb logs daemonset/speaker -c speaker
           ```
         summary: MetalLB BGP session is down.

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"math"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -35,7 +36,7 @@ type arguments struct {
 	DefaultUnreachableTolerationSeconds int64   `json:"defaultUnreachableTolerationSeconds,omitempty"`
 }
 
-func handleArguments(input *go_hook.HookInput) error {
+func handleArguments(_ context.Context, input *go_hook.HookInput) error {
 	var arg arguments
 	nodeMonitorGrace, ok := input.Values.GetOk("controlPlaneManager.nodeMonitorGracePeriodSeconds")
 	if ok {
