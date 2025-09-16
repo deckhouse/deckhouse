@@ -205,7 +205,7 @@ spec:
                           description: |
                             Deny Pods that have tolerations from the ones in the specified list.
                             
-                            You can get more into [here](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
+                            See more in [the Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
                           properties:
                             enabled:
                               type: boolean

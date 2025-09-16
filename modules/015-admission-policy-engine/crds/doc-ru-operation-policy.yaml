@@ -26,7 +26,7 @@ spec:
                           description: |
                             Запрещает tolerations из указанного списка.
                             
-                            Больше информации [в документации](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
+                            Больше информации [в документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
                           properties:
                             enabled:
                               description: "Включает проверку."
