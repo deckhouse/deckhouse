@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
 	"github.com/deckhouse/deckhouse/ee/modules/500-operator-trivy/hooks/internal/apis/v1alpha1"
@@ -17,9 +19,9 @@ const (
 )
 
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	BeforeHookCheck: func(input *go_hook.HookInput) bool {
+	BeforeHookCheck: func(_ context.Context, input *go_hook.HookInput) bool {
 		var (
-			secretExists         = len(input.NewSnapshots.Get(tls_certificate.SnapshotKey)) > 0
+			secretExists         = len(input.Snapshots.Get(tls_certificate.SnapshotKey)) > 0
 			reportUpdaterEnabled = input.Values.Get("operatorTrivy.linkCVEtoBDU").Bool()
 		)
 

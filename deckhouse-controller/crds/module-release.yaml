@@ -64,6 +64,27 @@ spec:
                       description: A list of other modules required for the module release. Ensure the modules are enabled.
                       additionalProperties:
                         type: string
+                update:
+                  type: object
+                  description: Optional transition rules.
+                  properties:
+                    versions:
+                      description: |
+                        List of `from`→`to` transition rules that allow skipping step-by-step updates.
+                        If the current installed module version (status `Deployed`) is not lower than `from`, and the cluster has a release whose version matches `to`, the controller will skip intermediate releases and update the module to the version from `to`.
+                        The `to` value can specify a minor line (`X.Y` — the latest available `X.Y.Z` will be selected).
+                        The rule is specified in the constrained release — the one whose version matches `to`. 
+                      type: array
+                      items:
+                        type: object
+                        required: [from, to]
+                        properties:
+                          from:
+                            type: string
+                            description: The minimum version from which the transition is allowed (format `X.Y`).
+                          to:
+                            type: string
+                            description: The end version of the range — a minor line (`X.Y`).
                 changelog:
                   type: object
                   description: Release's changelog for the module.

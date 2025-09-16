@@ -35,7 +35,7 @@ fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
-fromImage: common/alt-p11-artifact
+fromImage: builder/alt
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

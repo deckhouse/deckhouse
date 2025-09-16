@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -32,8 +33,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleEgressNodeCleanup)
 
-func handleEgressNodeCleanup(input *go_hook.HookInput) error {
-	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.NewSnapshots, "egressgateways")
+func handleEgressNodeCleanup(_ context.Context, input *go_hook.HookInput) error {
+	egressGateways, err := sdkobjectpatch.UnmarshalToStruct[EgressGatewayInfo](input.Snapshots, "egressgateways")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal egressgateways snapshot: %w", err)
 	}
@@ -49,7 +50,7 @@ func handleEgressNodeCleanup(input *go_hook.HookInput) error {
 	// Map for remove labels
 	nodesToUnlabel := make(map[string][]string)
 
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.NewSnapshots, "nodes")
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[NodeInfo](input.Snapshots, "nodes")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
 	}

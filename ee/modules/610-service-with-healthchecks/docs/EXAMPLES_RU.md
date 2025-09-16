@@ -22,7 +22,7 @@ metadata:
   labels:
     vm: my-vm
 spec:
-  virtualMachineClassName: host
+  virtualMachineClassName: generic
   cpu:
     cores: 1
   memory:
@@ -147,7 +147,7 @@ spec:
 Создайте Secret для хранения учетных данных для доступа проб к базе данных:
 
 ```shell
-kubectl -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
 
 Пример манифеста балансировщика для чтения:

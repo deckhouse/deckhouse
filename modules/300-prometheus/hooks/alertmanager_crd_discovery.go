@@ -102,13 +102,13 @@ func applyAlertmanagerCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	return Alertmanager{Name: name, Spec: spec}, nil
 }
 
-func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.Container) error {
+func crdAndServicesAlertmanagerHandler(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("can't init Kubernetes client: %v", err)
 	}
 
-	snaps := input.NewSnapshots.Get("alertmanager_crds")
+	snaps := input.Snapshots.Get("alertmanager_crds")
 
 	addressDeclaredAlertmanagers := make([]alertmanagerAddress, 0, len(snaps))
 	serviceDeclaredAlertmanagers := make([]alertmanagerService, 0, len(snaps))
@@ -152,7 +152,7 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	}
 
 	// External Alertmanagers by deprecated labeled services
-	deprecatedServiceDeclaredAlertmanagers, err := handleDeprecatedAlertmanagerServices(input)
+	deprecatedServiceDeclaredAlertmanagers, err := handleDeprecatedAlertmanagerServices(ctx, input)
 	if err != nil {
 		return fmt.Errorf("cannot handle deprecated alertmanager services: %v", err)
 	}
@@ -165,8 +165,8 @@ func crdAndServicesAlertmanagerHandler(input *go_hook.HookInput, dc dependency.C
 	return nil
 }
 
-func handleDeprecatedAlertmanagerServices(input *go_hook.HookInput) ([]alertmanagerService, error) {
-	snaps := input.NewSnapshots.Get("alertmanager_deprecated_services")
+func handleDeprecatedAlertmanagerServices(_ context.Context, input *go_hook.HookInput) ([]alertmanagerService, error) {
+	snaps := input.Snapshots.Get("alertmanager_deprecated_services")
 	alertManagers := make([]alertmanagerService, 0, len(snaps))
 	for alertManagerService, err := range sdkobjectpatch.SnapshotIter[alertmanagerService](snaps) {
 		if err != nil {

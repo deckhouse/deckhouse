@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -55,8 +56,8 @@ func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) 
 	return IstioIngressGatewayController{Name: name, Spec: spec}, nil
 }
 
-func setInternalIngressControllers(input *go_hook.HookInput) error {
-	controllersFilterResult := input.NewSnapshots.Get("controller")
+func setInternalIngressControllers(_ context.Context, input *go_hook.HookInput) error {
+	controllersFilterResult := input.Snapshots.Get("controller")
 	controllers := make([]IstioIngressGatewayController, 0, len(controllersFilterResult))
 
 	for controller, err := range sdkobjectpatch.SnapshotIter[IstioIngressGatewayController](controllersFilterResult) {

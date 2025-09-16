@@ -17,11 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
@@ -160,18 +163,17 @@ func setDefaultEmptyObjectOnCondition(key string, obj map[string]interface{}, co
 	}
 }
 
-func setInternalValues(input *go_hook.HookInput) error {
-	controllersFilterResult := input.Snapshots["controller"]
+func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
+	controllersFilterResult := input.Snapshots.Get("controller")
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	input.MetricsCollector.Expire("")
 
 	controllers := make([]Controller, 0, len(controllersFilterResult))
 
-	for _, c := range controllersFilterResult {
-		if c == nil {
-			continue
+	for controller, err := range sdkobjectpatch.SnapshotIter[Controller](controllersFilterResult) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshots: %w", err)
 		}
-		controller := c.(Controller)
 
 		version, found, err := unstructured.NestedString(controller.Spec, "controllerVersion")
 		if err != nil {
@@ -189,6 +191,23 @@ func setInternalValues(input *go_hook.HookInput) error {
 			"controller_name":    controller.Name,
 			"controller_version": version,
 		})
+
+		nginxEnabledMemoryProfiling, npeFound, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
+
+		if err != nil {
+			input.Logger.Error(fmt.Sprintf("cannot get nginxProfilingEnabled from ingress controller spec: %v", err))
+			continue
+		}
+
+		if npeFound && nginxEnabledMemoryProfiling {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
+				"controller_name": controller.Name,
+			})
+		} else {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 0, map[string]string{
+				"controller_name": controller.Name,
+			})
+		}
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

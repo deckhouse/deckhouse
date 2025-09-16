@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -132,7 +133,10 @@ func RegisterController(
 					return true
 				}
 				// handle enable
-				if !oldMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && newMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+				// not found or !true -> true
+				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
+						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 					return true
 				}
 				return false
@@ -236,6 +240,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{}, err
 	}
 	if err == nil {
@@ -259,6 +264,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
 			return ctrl.Result{}, uerr
 		}
+
 		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
 	}
 
@@ -396,7 +402,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && module.Properties.Source == source.Name {
+			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				errorsExist = true
@@ -461,7 +467,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 				continue
 			}
 
-			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, metricModuleGroup, opts)
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, policy.Spec.ReleaseChannel, metricModuleGroup, opts)
 			if err != nil {
 				logger.Error("fetch module releases", log.Err(err))
 				availableModule.Error = err.Error()

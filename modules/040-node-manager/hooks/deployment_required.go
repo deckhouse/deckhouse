@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -99,7 +100,7 @@ func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}, nil
 }
 
-func handleDeploymentRequired(input *go_hook.HookInput) error {
+func handleDeploymentRequired(_ context.Context, input *go_hook.HookInput) error {
 	var totalCount int
 
 	// we have cloud providers which support only cluster api
@@ -107,7 +108,7 @@ func handleDeploymentRequired(input *go_hook.HookInput) error {
 	// for these provider don't have machineClassKind settings or this setting is empty
 	mcmInstanceClassRaw := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind")
 	if mcmInstanceClassRaw.Exists() && mcmInstanceClassRaw.String() != "" {
-		snaps := input.NewSnapshots.Get("node_group")
+		snaps := input.Snapshots.Get("node_group")
 		for nodeGroup, err := range sdkobjectpatch.SnapshotIter[depRequiredNG](snaps) {
 			if err != nil {
 				return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
@@ -120,11 +121,11 @@ func handleDeploymentRequired(input *go_hook.HookInput) error {
 		}
 	}
 
-	snapM := input.NewSnapshots.Get("machine")
+	snapM := input.Snapshots.Get("machine")
 	totalCount += len(snapM)
-	snapMD := input.NewSnapshots.Get("machine_deployment")
+	snapMD := input.Snapshots.Get("machine_deployment")
 	totalCount += len(snapMD)
-	snapMS := input.NewSnapshots.Get("machine_set")
+	snapMS := input.Snapshots.Get("machine_set")
 	totalCount += len(snapMS)
 
 	if totalCount > 0 {

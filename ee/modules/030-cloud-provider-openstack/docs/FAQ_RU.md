@@ -69,7 +69,7 @@ spec:
 
 Чтобы поднять гибридный кластер, выполните следующие шаги:
 
-1. Удалите flannel из kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Удалите flannel из kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Включите и [настройте](configuration.html#параметры) модуль.
 3. Создайте один или несколько custom resource [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 4. Создайте один или несколько custom resource [NodeManager](../../modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.

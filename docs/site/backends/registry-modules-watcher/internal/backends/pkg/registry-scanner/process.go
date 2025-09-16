@@ -36,12 +36,21 @@ import (
 	"registry-modules-watcher/internal/metrics"
 )
 
+const (
+	ImageAnnotationSignature = "io.deckhouse.delivery-kit.signature"
+)
+
 // Constants for directory structure
 var (
 	documentationDirs = []string{"docs", "openapi", "openapi/conversions", "crds"}
 )
 
 const versionFileName = "version.json"
+
+type ImageMetadata struct {
+	Version               string
+	ModuleDefinitionFound bool
+}
 
 func (s *registryscanner) processRegistries(ctx context.Context) []backends.DocumentationTask {
 	s.logger.Info("start scanning registries")
@@ -145,13 +154,35 @@ func (s *registryscanner) processReleaseChannel(ctx context.Context, registry, m
 		return versionData, nil
 	}
 
+	manifest, err := releaseImage.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf("get manifest: %w", err)
+	}
+
+	// manifest must exist
+	if manifest == nil {
+		return nil, fmt.Errorf("manifest is nil")
+	}
+
+	// check that the module sign annotation exists
+	if len(manifest.Annotations) == 0 || manifest.Annotations[ImageAnnotationSignature] == "" {
+		s.ms.GaugeSet(metrics.RegistryScannerNoModuleSign, 1.0, map[string]string{"module": module})
+	}
+
 	// Extract version from image
-	version, err = getVersionFromImage(versionData.Image)
+	imageMeta, err := getMetadataFromImage(versionData.Image)
 	if err != nil {
 		return nil, fmt.Errorf("extract version from image: %w", err)
 	}
+	s.logger.Debug("module.yaml state",
+		slog.String("module", module),
+		slog.String("channel", releaseChannel),
+		slog.Bool("found", imageMeta.ModuleDefinitionFound))
+	if !imageMeta.ModuleDefinitionFound {
+		s.ms.GaugeSet(metrics.RegistryScannerNoModuleYamlMetric, 1.0, map[string]string{"module": module})
+	}
 
-	versionData.Version = version
+	versionData.Version = imageMeta.Version
 
 	// Extract tar file
 	tarFile, err = s.extractTar(ctx, versionData)
@@ -267,25 +298,40 @@ func isDocumentationFile(filename string) bool {
 	return false
 }
 
-func getVersionFromImage(releaseImage crv1.Image) (string, error) {
+func getMetadataFromImage(releaseImage crv1.Image) (*ImageMetadata, error) {
 	readCloser, err := cr.Extract(releaseImage)
 	if err != nil {
-		return "", fmt.Errorf("extract image: %w", err)
+		return nil, fmt.Errorf("extract image: %w", err)
 	}
 	defer readCloser.Close()
+
+	metadata := &ImageMetadata{}
 
 	tarReader := tar.NewReader(readCloser)
 	for {
 		hdr, err := tarReader.Next()
+		if err == io.EOF {
+			// end of archive
+			return metadata, nil
+		}
 		if err != nil {
-			if err == io.EOF {
-				return "", fmt.Errorf("version.json not found in image")
-			}
-			return "", fmt.Errorf("tar reader next: %w", err)
+			return nil, fmt.Errorf("tar reader next: %w", err)
 		}
 
-		if hdr.Typeflag == tar.TypeReg && hdr.Name == versionFileName {
-			return parseVersionFromTarFile(tarReader)
+		switch hdr.Name {
+		case versionFileName:
+			metadata.Version, err = parseVersionFromTarFile(tarReader)
+			if err != nil {
+				return nil, err
+			}
+		case "module.yaml":
+			buf := bytes.NewBuffer(nil)
+			if _, err := io.Copy(buf, tarReader); err != nil {
+				continue // ignore error
+			}
+			if len(buf.Bytes()) > 0 {
+				metadata.ModuleDefinitionFound = true
+			}
 		}
 	}
 }

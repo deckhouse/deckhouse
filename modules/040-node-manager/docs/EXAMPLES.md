@@ -76,14 +76,14 @@ spec:
       - effect: NoExecute
         key: dedicated.deckhouse.io
         value: system
-  # Example for Static nodes
+  # Example for Static nodes.
   nodeType: Static
   staticInstances:
     count: 2
     labelSelector:
       matchLabels:
         role: system
-  # Example for CloudEphemeral nodes
+  # Example for CloudEphemeral nodes.
   # nodeType: CloudEphemeral
   # cloudInstances:
   #   classReference:
@@ -104,8 +104,8 @@ GPU-node management is available in the Enterprise edition only.
 GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. There are two ways to install the driver:
 
 1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
-1. **Automation via `NodeGroupConfiguration`** (see the
-   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster)).
+1. **Automation via `NodeGroupConfiguration`** (more details in the
+   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster) section).
 
 After the driver is detected and the NodeGroup includes the `spec.gpu` section,
 `node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
@@ -165,8 +165,8 @@ spec:
 A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
 
-For a complete list of supported GPUs and their profiles, see the
-[FAQ → How to view available MIG profiles in the cluster?](../node-manager/faq.html#how-to-list-available-mig-profiles).
+For a complete list of supported GPUs and their profiles you can see it by using
+[instructions](../node-manager/faq.html#how-to-view-available-mig-profiles-in-a-cluster).(../node-manager/faq.html#how-to-list-available-mig-profiles).
 
 ```yaml
 spec:
@@ -225,7 +225,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Pre-configure the new node according to the specifics of your environment. For example:
@@ -294,7 +294,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    Create a `SSHCredentials` resource in the cluster (note that from this point on, you have to use `kubectl` configured to manage the cluster):
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: SSHCredentials
    metadata:
@@ -308,7 +308,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
 1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster; specify the IP address of the static node server:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -329,7 +329,7 @@ A brief example of adding a static node to a cluster using [Cluster API Provider
    > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -357,7 +357,7 @@ This example shows how you can use filters in the StaticInstance [label selector
    > The `labelSelector` field in the `NodeGroup` resource is immutable. To update the `labelSelector`, you need to create a new `NodeGroup` and move the static nodes into it by changing their labels.
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
@@ -387,7 +387,7 @@ This example shows how you can use filters in the StaticInstance [label selector
 1. Create [StaticInstance](cr.html#staticinstance) resources in the cluster and specify the valid IP addresses of the servers:
 
    ```shell
-   kubectl create -f - <<EOF
+   d8 k create -f - <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: StaticInstance
    metadata:
@@ -477,7 +477,7 @@ spec:
 Create a new NodeGroup resource, for example, named `front`, which will manage a static instance with the label `role: front`.
 
 ```shell
-kubectl create -f - <<EOF
+d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -497,7 +497,7 @@ EOF
 Change the `role` label of the existing StaticInstance from `worker` to `front`. This will allow the new NodeGroup `front` to manage this instance.
 
 ```shell
-kubectl label staticinstance static-worker-1 role=front --overwrite
+d8 k label staticinstance static-worker-1 role=front --overwrite
 ```
 
 ##### 3. Decrease the Number of Static Instances in the Original `NodeGroup`
@@ -505,7 +505,7 @@ kubectl label staticinstance static-worker-1 role=front --overwrite
 Update the NodeGroup resource `worker` by reducing the `count` parameter from `1` to `0`.
 
 ```shell
-kubectl patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
+d8 k patch nodegroup worker -p '{"spec": {"staticInstances": {"count": 0}}}' --type=merge
 ```
 
 ## An example of the `NodeUser` configuration
@@ -641,4 +641,4 @@ spec:
 
 ### Adding the ability to download images from insecure container registry to containerd
 
-The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the section  ["How to add configuration for an additional registry"](faq.html#how-to-add-configuration-for-an-additional-registry).
+The ability to download images from an insecure container registry is enabled using the `insecure_skip_verify` parameter in the containerd configuration file. For more information, see the [How to add configuration for an additional registry](faq.html#how-to-add-configuration-for-an-additional-registry).

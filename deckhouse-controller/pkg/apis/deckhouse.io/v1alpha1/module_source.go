@@ -36,8 +36,6 @@ const (
 
 	ModuleSourceAnnotationForceDelete      = "modules.deckhouse.io/force-delete"
 	ModuleSourceAnnotationRegistryChecksum = "modules.deckhouse.io/registry-spec-checksum"
-
-	ModuleSourceAnnotationDefault = "modules.deckhouse.io/default-source"
 )
 
 var (
@@ -114,12 +112,4 @@ type AvailableModule struct {
 	// Deprecated: use Error instead
 	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
-}
-
-func (s *ModuleSource) IsDefault() bool {
-	if len(s.Annotations) == 0 {
-		return false
-	}
-
-	return s.Annotations[ModuleSourceAnnotationDefault] == "true"
 }

@@ -127,7 +127,7 @@ To properly recover a multi-master cluster, follow these steps:
 1. Wait for the tasks from the Deckhouse queue to complete:
 
     ```shell
-    d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 p queue main
     ```
 
 1. Switch the cluster back to multi-master mode in accordance with [instruction](#how-to-add-master-nodes-to-a-cloud-cluster) for cloud clusters or [instruction](/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html) for static or hybrid clusters.
@@ -185,14 +185,14 @@ In the example:
     - Set the current name of the etcd image:
 
       ```shell
-      IMG=`kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec. containers[*].image}"`
+      IMG=`d8 k -n kube-system get pod -l component=etcd -o jsonpath="{.items[0].spec. containers[*].image}"`
       sed -i -e "s#IMAGE#$IMG#" etcd.pod.yaml
       ```
 
     - Create a pod:
 
       ```shell
-      kubectl create -f etcd.pod.yaml
+      d8 k create -f etcd.pod.yaml
       ```
 
     - Copy `etcdhelper` and the etcd snapshot to the pod container.
@@ -202,8 +202,8 @@ In the example:
       Example:
 
       ```shell
-      kubectl cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
-      kubectl cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
+      d8 k cp etcd-snapshot.bin default/etcdrestore:/tmp/etcd-snapshot.bin
+      d8 k cp etcdhelper default/etcdrestore:/usr/bin/etcdhelper
       ```
 
     - In the container, set permissions to run `etcdhelper`, restore the data from the backup, and start etcd.
@@ -211,7 +211,7 @@ In the example:
       Example:
 
       ```console
-      ~ # kubectl -n default exec -it etcdrestore -- sh
+      ~ # d8 k -n default exec -it etcdrestore -- sh
       / # chmod +x /usr/bin/etcdhelper
       / # etcdctl snapshot restore /tmp/etcd-snapshot.bin
       / # etcd &
@@ -222,7 +222,7 @@ In the example:
       Example:
 
       ```console
-      ~ # kubectl -n default exec -it etcdrestore -- sh
+      ~ # d8 k -n default exec -it etcdrestore -- sh
       / # mkdir /tmp/restored_yaml
       / # cd /tmp/restored_yaml
       /tmp/restored_yaml # for o in `etcdhelper -endpoint 127.0.0.1:2379 ls /registry/ | grep infra-production` ; do etcdhelper -endpoint 127.0.0.1:2379 get $o > `echo $o | sed -e "s#/registry/##g;s#/#_#g"`.yaml ; done
@@ -302,13 +302,13 @@ The following describes the conversion of a single-master cluster into a multi-m
    To get a list of alerts in a cluster, run the command:
 
     ```shell
-    kubectl get clusteralerts
+    d8 k get clusteralerts
     ```
 
    To view a specific alert, run the command:
 
     ```shell
-    kubectl get clusteralerts <ALERT_NAME> -o yaml
+    d8 k get clusteralerts <ALERT_NAME> -o yaml
     ```
 
 1. Make sure that Deckhouse queue is empty.
@@ -316,7 +316,7 @@ The following describes the conversion of a single-master cluster into a multi-m
    To view the status of all Deckhouse job queues, run the command:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+    d8 p queue list
     ```
 
    Output example (queues are empty):
@@ -331,7 +331,7 @@ The following describes the conversion of a single-master cluster into a multi-m
    To view the status of the `main` Deckhouse task queue, run the command:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
 
    Output example (queue `main` is empty):
@@ -343,8 +343,8 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -364,7 +364,7 @@ The following describes the conversion of a single-master cluster into a multi-m
      --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [`masterNodeGroup.instanceClass.externalIPAddresses`](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still be equal the number of master nodes.
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 3`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
@@ -384,7 +384,7 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Wait until the required number of master nodes are `Ready` and all `control-plane-manager` instances are up and running:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
 ## How to reduce the number of master nodes in a cloud cluster
@@ -402,13 +402,13 @@ The steps described below must be performed from the first in order of the maste
     To get a list of alerts in a cluster, run the command:
 
     ```shell
-    kubectl get clusteralerts
+    d8 k get clusteralerts
     ```
 
     To view a specific alert, run the command:
 
     ```shell
-    kubectl get clusteralerts <ALERT_NAME> -o yaml
+    d8 k get clusteralerts <ALERT_NAME> -o yaml
     ```
 
 1. Make sure that Deckhouse queue is empty.
@@ -416,7 +416,7 @@ The steps described below must be performed from the first in order of the maste
     To view the status of all Deckhouse job queues, run the command:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+    d8 p queue list
     ```
 
     Output example (queues are empty):
@@ -431,7 +431,7 @@ The steps described below must be performed from the first in order of the maste
     To view the status of the `main` Deckhouse task queue, run the command:
 
     ```shell
-    kubectl -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+    d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
     ```
 
     Output example (queue `main` is empty):
@@ -443,8 +443,8 @@ The steps described below must be performed from the first in order of the maste
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -464,7 +464,7 @@ The steps described below must be performed from the first in order of the maste
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [masterNodeGroup.instanceClass.externalIPAddresses](../cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still equal the number of master nodes.
+   > For **Yandex Cloud**, when using external addresses on master nodes, the number of array elements in the [`masterNodeGroup.instanceClass.externalIPAddresses`](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) parameter must equal the number of master nodes. If `Auto` is used (public IP addresses are provisioned automatically), the number of array elements must still be equal the number of master nodes.
    >
    > To illustrate, with three master nodes (`masterNodeGroup.replicas: 1`) and automatic address reservation, the `masterNodeGroup.instanceClass.externalIPAddresses` parameter would look as follows:
    >
@@ -481,14 +481,14 @@ The steps described below must be performed from the first in order of the maste
       Use the following command to remove labels:
 
       ```bash
-      kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+      d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
       ```
 
 1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -497,7 +497,7 @@ The steps described below must be performed from the first in order of the maste
 1. `drain` the nodes being deleted:
 
    ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
    ```
 
 1. Shut down the virtual machines corresponding to the nodes to be deleted, remove the instances of those nodes from the cloud and the disks connected to them (`kubernetes-data-master-<N>`).
@@ -505,13 +505,13 @@ The steps described below must be performed from the first in order of the maste
 1. In the cluster, delete the Pods running on the nodes being deleted:
 
    ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
 1. In the cluster, delete the Node objects associated with the nodes being deleted:
 
    ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
+   d8 k delete node <MASTER-NODE-N-NAME>
    ```
 
 1. **In the installer container**, run the following command to start scaling:

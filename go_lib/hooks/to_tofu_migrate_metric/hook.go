@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -170,8 +171,8 @@ func nodeStateSecretFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 	}, nil
 }
 
-func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
-	clusterStates, err := sdkobjectpatch.UnmarshalToStruct[StateClusterResult](input.NewSnapshots, "cluster_state")
+func fireNeedMigrateToOpenTofuMetric(_ context.Context, input *go_hook.HookInput) error {
+	clusterStates, err := sdkobjectpatch.UnmarshalToStruct[StateClusterResult](input.Snapshots, "cluster_state")
 	if err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func fireNeedMigrateToOpenTofuMetric(input *go_hook.HookInput) error {
 		input.Logger.Info("Cluster state not found. Probably you have hybrid cluster")
 	}
 
-	nodeStates, err := sdkobjectpatch.UnmarshalToStruct[StateNodeResult](input.NewSnapshots, "nodes_state")
+	nodeStates, err := sdkobjectpatch.UnmarshalToStruct[StateNodeResult](input.Snapshots, "nodes_state")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal nodes_state snapshot: %w", err)
 	}

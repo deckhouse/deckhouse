@@ -1,0 +1,66 @@
+Subject: [PATCH] fix providerID format and exclude loopback subnet in node IP selection
+---
+Index: pkg/cloudprovider/huaweicloud/instances.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/huaweicloud/instances.go b/pkg/cloudprovider/huaweicloud/instances.go
+--- a/pkg/cloudprovider/huaweicloud/instances.go	(revision 037c9107fd4a33aa924b5c7c55e9578cfc61aa01)
++++ b/pkg/cloudprovider/huaweicloud/instances.go	(revision ddb4621b8829edd32df8a0d83cd387c9a7a698c5)
+@@ -208,7 +208,7 @@
+ 		if err != nil {
+ 			return nil, err
+ 		}
+-		providerID = id
++		providerID = fmt.Sprintf("%s://%s", ProviderName, id)
+ 	}
+ 	instanceID, err := parseInstanceID(providerID)
+ 	if err != nil {
+Index: pkg/cloudprovider/huaweicloud/wrapper/ecs.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/cloudprovider/huaweicloud/wrapper/ecs.go b/pkg/cloudprovider/huaweicloud/wrapper/ecs.go
+--- a/pkg/cloudprovider/huaweicloud/wrapper/ecs.go	(revision 037c9107fd4a33aa924b5c7c55e9578cfc61aa01)
++++ b/pkg/cloudprovider/huaweicloud/wrapper/ecs.go	(revision ddb4621b8829edd32df8a0d83cd387c9a7a698c5)
+@@ -52,19 +52,27 @@
+ 	return rst, err
+ }
+ 
+-func (e *EcsClient) GetByNodeName(name string) (*model.ServerDetail, error) {
+-	privateIP := ""
++func getPrivateIPbyName(name string) string {
+ 	if net.ParseIP(name).To4() != nil {
+-		privateIP = name
+-	} else if ips := utils.LookupHost(name); len(ips) > 0 {
+-		for _, ip := range ips {
+-			if ip != "127.0.0.1" {
+-				privateIP = ip
+-				break
+-			}
+-		}
+-	}
++		return name
++	}
++
++	_, loopbackNet, _ := net.ParseCIDR("127.0.0.0/8")
++	ips, err := net.LookupIP(name)
++	if err != nil {
++		return ""
++	}
++
++	for _, ip := range ips {
++		if !loopbackNet.Contains(ip) {
++			return ip.String()
++		}
++	}
++	return ""
++}
+ 
++func (e *EcsClient) GetByNodeName(name string) (*model.ServerDetail, error) {
++	privateIP := getPrivateIPbyName(name)
+ 	if privateIP == "" {
+ 		klog.V(6).Infof("query ECS detail by name: %s", name)
+ 		return e.GetByName(name)
