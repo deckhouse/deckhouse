@@ -182,7 +182,6 @@ properties:
     properties:
       edition:
         type: string
-        enum: ["CE", "BE", "EE", "SE", "SE-plus"]
         x-examples: ["CE"]
         description: |
           Редакция Deckhouse Kubernetes Platform.
