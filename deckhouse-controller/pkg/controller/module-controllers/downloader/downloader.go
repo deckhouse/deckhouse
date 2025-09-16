@@ -421,6 +421,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 
 	defPath := filepath.Join(path, moduletypes.DefinitionFile)
 
+	// do not add os.Stat check, because os.Open will return error if file does not exist
 	f, err := os.Open(defPath)
 	if err != nil {
 		return def

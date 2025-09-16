@@ -283,7 +283,9 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 			slog.Int("modules", len(l.modules)),
 		)
 	}()
+
 	l.logger.Info("LoadModulesFromFS started")
+
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
@@ -296,13 +298,17 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 	for _, dir := range l.modulesDirs {
 		l.logger.Debug("parse modules from the dir", slog.String("path", dir))
+
 		definitions, err := l.parseModulesDir(dir)
 		if err != nil {
 			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
+
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
+
 		for _, def := range definitions {
 			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
+
 			module, err := l.processModuleDefinition(ctx, def)
 			if err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
@@ -340,12 +346,15 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 
 	// clear deleted embedded modules
 	ctx, listSpan := otel.Tracer("module-loader").Start(ctx, "listModules")
+
 	modulesList := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
 		listSpan.RecordError(err)
 		listSpan.End()
+
 		return fmt.Errorf("list all modules: %w", err)
 	}
+
 	listSpan.SetAttributes(attribute.Int("modules.count", len(modulesList.Items)))
 	listSpan.End()
 
@@ -354,8 +363,10 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	if err := l.client.List(ctx, moduleConfigs); err != nil {
 		configListSpan.RecordError(err)
 		configListSpan.End()
+
 		return fmt.Errorf("list module configs: %w", err)
 	}
+
 	configListSpan.SetAttributes(attribute.Int("moduleConfigs.count", len(moduleConfigs.Items)))
 	configListSpan.End()
 
