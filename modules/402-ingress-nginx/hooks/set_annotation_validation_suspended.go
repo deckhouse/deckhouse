@@ -95,7 +95,7 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Con
 	}
 
 	// If at least one controller has annotation → set metric
-	if controllersHasAnnotationValidationSuspended(controllersSnapshot) {
+	if anyControllerHasAnnotationValidationSuspended(controllersSnapshot) {
 		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
 	}
 
@@ -120,7 +120,7 @@ func setValidationSuspendedAnnotationToAll(controllers []pkg.Snapshot, input *go
 	}
 }
 
-func controllersHasAnnotationValidationSuspended(controllers []pkg.Snapshot) bool {
+func anyControllerHasAnnotationValidationSuspended(controllers []pkg.Snapshot) bool {
 	for _, item := range controllers {
 		var ctrl internal.IngressNginxController
 		if err := item.UnmarshalTo(&ctrl); err == nil {
