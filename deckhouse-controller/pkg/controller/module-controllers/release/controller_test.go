@@ -908,7 +908,7 @@ type: Opaque
 		log:                  logger,
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		moduleManager:        stubModulesManager{},
-		delayTicker:          time.NewTicker(3 * time.Second),
+		restartCheckTicker:   time.NewTicker(3 * time.Second),
 		metricStorage:        metricstorage.NewMetricStorage(context.Background(), "", true, logger),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(embeddedMUP),
@@ -1275,9 +1275,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Initialize state
 		suite.ctr.readyForRestart.Store(true)
@@ -1306,9 +1306,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Set state for restart
 		suite.ctr.readyForRestart.Store(true)
@@ -1344,9 +1344,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Set state with active modules
 		suite.ctr.readyForRestart.Store(true)
@@ -1375,9 +1375,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Initial state with active modules
 		suite.ctr.readyForRestart.Store(false)
@@ -1424,9 +1424,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Set state that would normally trigger restart
 		suite.ctr.readyForRestart.Store(true)
@@ -1456,9 +1456,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Very fast ticker to test rapid state changes
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(10 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(10 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
@@ -1498,9 +1498,9 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 		}
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Initial state
 		suite.ctr.readyForRestart.Store(true)
@@ -1718,9 +1718,9 @@ func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
 		suite.setupReleaseController(concurrentDryRunTestData)
 
 		// Override ticker for faster testing
-		suite.ctr.delayTicker.Stop()
-		suite.ctr.delayTicker = time.NewTicker(100 * time.Millisecond)
-		defer suite.ctr.delayTicker.Stop()
+		suite.ctr.restartCheckTicker.Stop()
+		suite.ctr.restartCheckTicker = time.NewTicker(100 * time.Millisecond)
+		defer suite.ctr.restartCheckTicker.Stop()
 
 		// Initialize readyForRestart as done in controller
 		suite.ctr.readyForRestart.Store(true)

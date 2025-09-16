@@ -68,13 +68,14 @@ import (
 const (
 	controllerName = "d8-module-release-controller"
 
-	delayTimer = 15 * time.Second
-
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
 
 	defaultCheckInterval   = 15 * time.Second
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
+
+	// time to wait before next check that no modules are applying
+	restartCheckDuration = 15 * time.Second
 
 	outdatedReleasesKeepCount = 3
 )
@@ -98,7 +99,7 @@ func RegisterController(
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		embeddedPolicy:       embeddedPolicy,
-		delayTicker:          time.NewTicker(delayTimer),
+		restartCheckTicker:   time.NewTicker(restartCheckDuration),
 		dependencyContainer:  dc,
 		exts:                 exts,
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
@@ -154,7 +155,7 @@ type reconciler struct {
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
-	delayTicker          *time.Ticker
+	restartCheckTicker   *time.Ticker
 
 	activeApplyCount    atomic.Int32
 	releaseWasProcessed atomic.Bool // at least one release was processed
@@ -212,7 +213,8 @@ func (r *reconciler) preflight(ctx context.Context) error {
 func (r *reconciler) restartLoop(ctx context.Context) {
 	for {
 		select {
-		case <-r.delayTicker.C:
+		case <-r.restartCheckTicker.C:
+			// check if no modules are applying now
 			if r.activeApplyCount.Load() > 0 {
 				r.log.Info("waiting for modules to apply before Deckhouse restart",
 					slog.Int("active_apply_count", int(r.activeApplyCount.Load())))
@@ -230,6 +232,9 @@ func (r *reconciler) restartLoop(ctx context.Context) {
 				return
 			}
 
+			// if we pass this check here, we wait one more tick
+			// to be sure that no new releases are processing
+			// before we restart Deckhouse
 			if r.releaseWasProcessed.Load() && r.activeApplyCount.Load() == 0 {
 				r.log.Info(
 					"all modules processed, ready to restart",
@@ -1691,6 +1696,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 
 		// TODO(yalosev): we have to disable module here somehow.
 		// otherwise, hooks from file system will fail
+
 		// restart controller for completely remove module
 		// TODO: we need another solution for remove module from modulemanager
 		r.releaseWasProcessed.Store(true)
