@@ -85,7 +85,7 @@ spec:
 
 Для применения приведенной политики достаточно навесить лейбл `operation-policy.deckhouse.io/enabled: "true"` на желаемый namespace. Политика, приведенная в примере, рекомендована для использования командой Deckhouse. Аналогичным образом вы можете создать собственную политику с необходимыми настройками.
 
-Кратко: `OperationPolicy` — кастомный ресурс Deckhouse, описывающий операционные правила. Он содержит как общие настройки (`spec.policies.*`), так и операционные политики для Pod (`spec.policies.pods`). Полная схема и примеры доступны в описании [OperationPolicy (CRD)](cr.html#operationpolicy).
+Операционные политики описываются с помощью кастомного ресурса [`OperationPolicy`](cr.html#operationpolicy). Он содержи общие политики (`spec.policies.*`) и операционные политики для подов ([`spec.policies.pods`](cr.html#operationpolicy-v1alpha1-spec-policies-pods)).
 
 ### Политики безопасности
 

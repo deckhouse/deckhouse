@@ -20,23 +20,23 @@ spec:
                   properties:
                     pods:
                       description: |
-                        Настройки для Pod-политик.
+                        Настройки политик для подов.
                       properties:
                         denyTolerations:
                           description: |
-                            Запрещает использование толераций к указанным ключам таинтов. Проверяются только ключи (`spec.tolerations[*].key`).
+                            Запрещает применение tolerations к указанным ключам taint'ов. Проверяются только ключи (`spec.tolerations[*].key`).
                           properties:
                             enabled:
-                              description: "Включает проверку. По умолчанию: false."
+                              description: "Включает проверку."
                             enforcementAction:
                               description: |
-                                Действие при нарушении (по умолчанию `Warn`). Допустимые значения: `Warn`, `Deny`, `Dryrun`.
+                                Действие при нарушении.
                             forbiddenKeys:
                               description: |
-                                Список ключей таинтов, толерации к которым запрещены. По умолчанию: `node-role.kubernetes.io/master`, `node-role.kubernetes.io/control-plane`.
+                                Список ключей taint'ов, tolerations к которым запрещены.
                             exemptNamespaces:
                               description: |
-                                Список namespace, исключённых из проверки. По умолчанию: `kube-system`, `d8-system`, `d8-admission-policy-engine`, `gatekeeper-system`.
+                                Список пространств имён, исключённых из проверки.
                     allowedRepos:
                       description: |
                         Список префиксов, которые может иметь образ контейнера.

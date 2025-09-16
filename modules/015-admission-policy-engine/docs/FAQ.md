@@ -331,7 +331,7 @@ Example of an error output when creating a Pod with a container image that has n
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
 
-## Example: Block Node deletion without a label
+## How to block deleting a node without a label
 
 > Note. DELETE operations are handled by Gatekeeper by default.
 

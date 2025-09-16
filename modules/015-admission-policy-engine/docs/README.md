@@ -86,7 +86,7 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
-Briefly: `OperationPolicy` is a Deckhouse CustomResource that describes operational rules. It includes both general settings (`spec.policies.*`) and Pod‑level ones (`spec.policies.pods`). See the full schema and examples in the [OperationPolicy (CRD)](cr.html#operationpolicy) reference.
+Operational policies are described using a custom resource [`OperationPolicy`](cr.html#operationpolicy). It contains general policies (`spec.policies.*`) and operational policies for pods ([`spec.policies.pods`](cr.html#operationpolicy-v1alpha1-spec-policies-pods)).
 
 ### Security policies
 
