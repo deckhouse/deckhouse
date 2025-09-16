@@ -50,49 +50,43 @@ spec:
 
         is_pod { input.review.kind.kind == "Pod" }
 
+        # true if field exists on object
+        has_field(obj, field) { obj[field] }
+
+        # k8s default NoExecute tolerations that get injected for all pods
+        is_default_noexecute(t) {
+          t.effect == "NoExecute"
+          t.key == "node.kubernetes.io/not-ready"
+        }
+        is_default_noexecute(t) {
+          t.effect == "NoExecute"
+          t.key == "node.kubernetes.io/unreachable"
+        }
+
+        # Collect pod tolerations but skip the default NoExecute ones
         pod_tolerations[t] {
           t := input.review.object.spec.tolerations[_]
+          not is_default_noexecute(t)
         }
 
-        # Helpers to match fields: absent in pattern OR equal
-        key_match(rt, pt) {
-          not has_field(rt, "key")
-        }
-        key_match(rt, pt) {
-          rt.key == pt.key
-        }
+        # helpers: "absent in pattern OR equal" semantics
+        key_match(rt, pt) { not has_field(rt, "key") }
+        key_match(rt, pt) { rt.key == pt.key }
 
-        operator_match(rt, pt) {
-          not has_field(rt, "operator")
-        }
-        operator_match(rt, pt) {
-          rt.operator == pt.operator
-        }
+        op_match(rt, pt)  { not has_field(rt, "operator") }
+        op_match(rt, pt)  { rt.operator == pt.operator }
 
-        value_match(rt, pt) {
-          not has_field(rt, "value")
-        }
-        value_match(rt, pt) {
-          rt.value == pt.value
-        }
+        val_match(rt, pt) { not has_field(rt, "value") }
+        val_match(rt, pt) { rt.value == pt.value }
 
-        effect_match(rt, pt) {
-          not has_field(rt, "effect")
-        }
-        effect_match(rt, pt) {
-          rt.effect == pt.effect
-        }
+        eff_match(rt, pt) { not has_field(rt, "effect") }
+        eff_match(rt, pt) { rt.effect == pt.effect }
 
-        # Return true if Pod toleration `pt` matches parameter toleration `rt` by all specified fields
         tol_match(rt, pt) {
           key_match(rt, pt)
-          operator_match(rt, pt)
-          value_match(rt, pt)
-          effect_match(rt, pt)
-        }
-
-        has_field(obj, field) {
-          obj[field]
+          op_match(rt, pt)
+          val_match(rt, pt)
+          eff_match(rt, pt)
         }
 
         violation[{"msg": msg}] {
@@ -100,5 +94,5 @@ spec:
           rt := input.parameters.tolerations[_]
           pt := pod_tolerations[_]
           tol_match(rt, pt)
-          msg := sprintf("pod has a disallowed toleration matching %v", [rt])
+          msg := sprintf("Pod <%v> has a disallowed toleration matching %v", [input.review.object.metadata.name, rt])
         }
