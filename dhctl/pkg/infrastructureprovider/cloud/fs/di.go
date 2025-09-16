@@ -50,7 +50,11 @@ func checkNoneRootDir(dir string, errPrefix string) error {
 	return nil
 }
 
-func GetDi(logger log.Logger, params DIParams) (*cloud.ProviderDI, error) {
+func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
+	if params == nil {
+		return nil, fmt.Errorf("no fs.DI params provided")
+	}
+
 	if err := checkDir(params.BinariesDir, "BinariesDir"); err != nil {
 		return nil, err
 	}

@@ -48,7 +48,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 		params.Logger.LogWarnF("CloudProviderGetterParams tmp dir is empty. Using global default %s\n", tmpDir)
 	}
 
-	defaultFSDIParams := fs.DIParams{
+	defaultFSDIParams := &fs.DIParams{
 		InfraVersionsFile: global.GetInfrastructureVersions(),
 		BinariesDir:       filepath.Join(global.GetDhctlPath(), "bin"),
 		CloudProviderDir:  filepath.Join(global.GetDhctlPath(), "deckhouse", "candi", "cloud-providers"),
@@ -78,11 +78,9 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
 		}
 
-		var diParams fs.DIParams
+		diParams := defaultFSDIParams
 		if params.FSDIParams != nil {
-			diParams = *params.FSDIParams
-		} else {
-			diParams = defaultFSDIParams
+			diParams = params.FSDIParams
 		}
 
 		di, err := fs.GetDi(params.Logger, diParams)
