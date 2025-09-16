@@ -92,6 +92,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
@@ -120,6 +122,8 @@ spec:
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
@@ -146,6 +150,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
       - args:
         - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208
         - --v=2
@@ -180,6 +186,17 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
