@@ -331,7 +331,7 @@ func handleUpdateNGStatus(input *go_hook.HookInput) error {
 		input.MetricsCollector.Set("machine_deployment_node_group_info", 1, labels)
 	}
 
-	snaps = input.Snapshots.Get("capi_mds")
+	snaps = input.NewSnapshots.Get("capi_mds")
 	// capi machine deployments snapshot
 	mdCapiMap := make(map[string][]statusCapiMachineDeployment)
 	for md, err := range sdkobjectpatch.SnapshotIter[statusCapiMachineDeployment](snaps) {
