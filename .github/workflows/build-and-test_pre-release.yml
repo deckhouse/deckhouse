@@ -75,7 +75,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}

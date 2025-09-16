@@ -74,7 +74,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -151,7 +151,7 @@ jobs:
   # <template: check_label_job>
   check_label:
     name: Check label
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       should_run: ${{ steps.check_label.outputs.should_run }}
       labels: ${{ steps.check_label.outputs.labels }}
