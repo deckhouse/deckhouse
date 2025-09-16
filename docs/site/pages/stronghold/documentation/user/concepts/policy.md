@@ -456,7 +456,7 @@ path "secret/foo" {
 
 ## Required response wrapping TTLs
 
-These parameters can be used to set minimums/maximums on TTLs set by clients when requesting that a response be wrapped, with a granularity of a second. These use duration format strings.
+These parameters can be used to set minimums and maximums on TTLs set by clients when requesting [response wrapping](response-wrapping.html), with a granularity of a second. These use `duration`-format strings.
 
 In practice, setting a minimum TTL of one second effectively makes response wrapping mandatory for a particular path.
 
