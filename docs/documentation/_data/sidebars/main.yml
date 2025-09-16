@@ -706,6 +706,28 @@ entries:
                 ru: FAQ
               url: /modules/node-manager/faq.html
         - title:
+            en: Container Registry
+            ru: Container Registry
+          moduleName: registry
+          featureStatus: preview
+          folders:
+            - title:
+                en: Description
+                ru: Описание
+              url: /modules/registry/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/registry/examples.html
+            - title:
+                en: Configuration
+                ru: Настройки
+              url: /modules/registry/configuration.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/registry/faq.html
+        - title:
             en: Other modules
             ru: Другие модули
           folders:
@@ -950,7 +972,6 @@ entries:
                         en: Custom Resources
                         ru: Custom Resources
                       url: /modules/metallb/cr.html
-
         - title:
             en: Other modules
             ru: Другие модули
@@ -996,6 +1017,23 @@ entries:
                     ru: Настройки
                   url: /modules/network-gateway/configuration.html
             - title:
+                en: network-policy-engine
+                ru: network-policy-engine
+              moduleName: network-policy-engine
+              folders:
+                - title:
+                    en: Description
+                    ru: Описание
+                  url: /modules/network-policy-engine/
+                - title:
+                    en: Examples
+                    ru: Примеры
+                  url: /modules/network-policy-engine/examples.html
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/network-policy-engine/configuration.html
+            - title:
                 en: service-with-healthchecks
                 ru: service-with-healthchecks
               featureStatus: experimental
@@ -1021,30 +1059,6 @@ entries:
                     en: Examples
                     ru: Примеры
                   url: /modules/service-with-healthchecks/examples.html
-            - title:
-                en: static-routing-manager
-                ru: static-routing-manager
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/static-routing-manager/
-                - title:
-                    en: Reference
-                    ru: Справка
-                  folders:
-                    - title:
-                        en: Configuration
-                        ru: Настройки
-                      url: /modules/static-routing-manager/configuration.html
-                    - title:
-                        en: Custom Resources
-                        ru: Custom Resources
-                      url: /modules/static-routing-manager/cr.html
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/static-routing-manager/examples.html
     - title:
         en: Monitoring
         ru: Мониторинг
@@ -1190,7 +1204,6 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
-              featureStatus: experimental
               folders:
                 - title:
                     en: Description
@@ -1264,8 +1277,8 @@ entries:
                     ru: Настройки
                   url: /modules/prometheus-pushgateway/configuration.html
             - title:
-                en: upmeter
-                ru: upmeter
+                en: Cluster SLA Monitoring
+                ru: Мониторинг SLA кластера
               moduleName: upmeter
               folders:
                 - title:
@@ -1296,19 +1309,6 @@ entries:
         en: Autoscaling & Managing resources
         ru: Масштабирование и управление ресурсами
       folders:
-        - title:
-            en: Priority classes
-            ru: Priority classes
-          moduleName: priority-class
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/priority-class/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /modules/priority-class/configuration.html
         - title:
             en: Scaling by any metric
             ru: Масштабирование по метрикам
@@ -1410,23 +1410,6 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/flow-schema/faq.html
-            - title:
-                en: pod-reloader
-                ru: pod-reloader
-              moduleName: pod-reloader
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/pod-reloader/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/pod-reloader/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/pod-reloader/configuration.html
     - title:
         en: Security
         ru: Безопасность
@@ -1611,23 +1594,6 @@ entries:
                     ru: FAQ
                   url: /modules/cert-manager/faq.html
             - title:
-                en: network-policy-engine
-                ru: network-policy-engine
-              moduleName: network-policy-engine
-              folders:
-                - title:
-                    en: Description
-                    ru: Описание
-                  url: /modules/network-policy-engine/
-                - title:
-                    en: Examples
-                    ru: Примеры
-                  url: /modules/network-policy-engine/examples.html
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/network-policy-engine/configuration.html
-            - title:
                 en: operator-trivy
                 ru: operator-trivy
               moduleName: operator-trivy
@@ -1645,6 +1611,10 @@ entries:
                     en: FAQ
                     ru: FAQ
                   url: /modules/operator-trivy/faq.html
+                - title:
+                    en: "Custom Resources"
+                    ru: "Custom Resources"
+                  url: /modules/operator-trivy/cr.html
     - title:
         en: Storage
         ru: Хранилище
@@ -1662,6 +1632,34 @@ entries:
           ru: Программно-определяемые хранилища
         folders:
           - title:
+              en: Local path provisioner storage
+              ru: Локальное хранилище Local Path Provisioner
+            folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /modules/local-path-provisioner/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/local-path-provisioner/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/local-path-provisioner/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/local-path-provisioner/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/local-path-provisioner/faq.html
+          - title:
               en: Local storage based on LVM
               ru: Локальное хранилище на основе LVM
             url: /storage/admin/sds/lvm-local.html
@@ -1677,6 +1675,10 @@ entries:
               en: Distributed Ceph storage
               ru: Распределённое хранилище Ceph
             url: /storage/admin/external/ceph.html
+          - title:
+              en: vSphere data storage
+              ru: Хранилище данных vSphere
+            url: /storage/admin/external/vsphere.html
           - title:
               en: HPE data storage
               ru: Хранилище данных HPE
@@ -1713,6 +1715,10 @@ entries:
               en: csi-hpe
               ru: csi-hpe
             url: /reference/mc/csi-hpe/
+          - title:
+              en: csi-vsphere
+              ru: csi-vsphere
+            url: /reference/mc/csi-vsphere/
           - title:
               en: csi-huawei
               ru: csi-huawei
@@ -1892,9 +1898,17 @@ entries:
                 ru: Настройки
               url: /modules/deckhouse-tools/configuration.html
     - title:
-        en: Deckhouse CLI
-        ru: Deckhouse CLI
-      url: /deckhouse-cli/
+        en: Deckhouse CLI (d8)
+        ru: Deckhouse CLI (d8)
+      folders:
+      - title:
+          en: Overview and installation
+          ru: Описание и установка
+        url: /deckhouse-cli/
+      - title:
+          en: Reference
+          ru: Справка
+        url: /deckhouse-cli/reference/
     - title:
         en: Used software
         ru: Используемое ПО

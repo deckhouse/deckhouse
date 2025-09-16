@@ -30,6 +30,8 @@ spec:
                   description: Имя политики обновления модуля.
                 stage:
                   description: Текущая стадия жизненного цикла модуля.
+                critical:
+                  description: Является ли модуль критичным.
                 version:
                   description: Версия модуля.
                 exclusiveGroup:
@@ -47,3 +49,9 @@ spec:
                       description: Требование к статусу установки кластера (только для встроенных модулей DKP).
                     modules:
                       description: Список других включенных модулей, которые необходимы для работы модуля.
+              accessibility:
+                type: object
+                description: Настройки доступности модуля.
+                properties:
+                  editions:
+                    description: Настройки работы модуля в редакциях Deckhouse.

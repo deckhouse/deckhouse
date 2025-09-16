@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -57,15 +60,19 @@ func filterTokenSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return string(secret.Data["token"]), nil
 }
 
-func handleTokens(input *go_hook.HookInput) error {
+func handleTokens(_ context.Context, input *go_hook.HookInput) error {
 	var token string
-	snap := input.Snapshots["token"]
-	if len(snap) > 1 {
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "token")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'token' snapshot: %w", err)
+	}
+
+	if len(snaps) > 1 {
 		return fmt.Errorf("found more than one token")
 	}
 
-	if len(snap) == 1 {
-		token = snap[0].(string)
+	if len(snaps) == 1 {
+		token = snaps[0]
 	}
 
 	input.Values.Set("nodeManager.internal.packagesProxy.token", token)

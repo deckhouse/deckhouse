@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -57,15 +58,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
-func convertStaticClusterConfigurationHandler(input *go_hook.HookInput) error {
-	secret := input.Snapshots["static_cluster_configuration"]
+func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.HookInput) error {
+	secret := input.Snapshots.Get("static_cluster_configuration")
+
 	if len(secret) == 0 {
 		return nil
 	}
 
-	staticConfiguration, ok := secret[0].([]byte)
-	if !ok {
-		return fmt.Errorf("static_cluster_configuration filterFunc problem: expect []byte, got %T", staticConfiguration)
+	staticConfiguration := make([]byte, 0)
+	err := secret[0].UnmarshalTo(&staticConfiguration)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal first 'static_cluster_configuration' snapshot: %w", err)
 	}
 
 	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)

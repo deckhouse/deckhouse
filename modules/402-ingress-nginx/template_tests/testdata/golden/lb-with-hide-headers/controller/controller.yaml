@@ -1,0 +1,250 @@
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test
+  name: controller-test
+  namespace: d8-ingress-nginx
+spec:
+  targetRef:
+    apiVersion: apps.kruise.io/v1alpha1
+    kind: DaemonSet
+    name: controller-test
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test
+  name: controller-test
+  namespace: d8-ingress-nginx
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: controller
+      name: test
+---
+apiVersion: apps.kruise.io/v1alpha1
+kind: DaemonSet
+metadata:
+  annotations:
+    ingress-nginx-controller.deckhouse.io/checksum: 2e762afccf2bf7d43998cbcdb0302d579e6fe5d4bfa054597f006bf275adf12a
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
+    ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
+  labels:
+    app: controller
+    heritage: deckhouse
+    module: ingress-nginx
+    name: test
+  name: controller-test
+  namespace: d8-ingress-nginx
+spec:
+  minReadySeconds: 60
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: controller
+      name: test
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+      labels:
+        app: controller
+        name: test
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - /nginx-ingress-controller
+        - --configmap=$(POD_NAMESPACE)/test-config
+        - --v=2
+        - --ingress-class=nginx
+        - --healthz-port=10254
+        - --http-port=80
+        - --https-port=443
+        - --update-status=true
+        - --publish-service=d8-ingress-nginx/test-load-balancer
+        - --shutdown-grace-period=120
+        - --controller-class=ingress-nginx.deckhouse.io/nginx
+        - --watch-ingress-without-class=true
+        - --healthz-host=127.0.0.1
+        - --election-id=ingress-controller-leader-nginx
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          value: 127.0.0.1
+        image: registry.example.com@imageHash-ingressNginx-controller19
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /wait-shutdown
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /controller/healthz
+            port: 4207
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        name: controller
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+          protocol: TCP
+        - containerPort: 443
+          protocol: UDP
+        readinessProbe:
+          httpGet:
+            path: /controller/healthz
+            port: 4207
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 2
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            ephemeral-storage: 150Mi
+            memory: 200Mi
+        securityContext:
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+        volumeMounts:
+        - mountPath: /chroot/var/lib/nginx/body
+          name: client-body-temp-path
+        - mountPath: /chroot/var/lib/nginx/fastcgi
+          name: fastcgi-temp-path
+        - mountPath: /chroot/var/lib/nginx/proxy
+          name: proxy-temp-path
+        - mountPath: /chroot/var/lib/nginx/scgi
+          name: scgi-temp-path
+        - mountPath: /chroot/var/lib/nginx/uwsgi
+          name: uwsgi-temp-path
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+        - mountPath: /chroot/tmp/nginx/
+          name: tmp-nginx
+      - image: registry.example.com@imageHash-ingressNginx-protobufExporter
+        name: protobuf-exporter
+        resources:
+          requests:
+            cpu: 10m
+            ephemeral-storage: 50Mi
+            memory: 20Mi
+        volumeMounts:
+        - mountPath: /var/files
+          name: telemetry-config-file
+      - args:
+        - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207
+        - --v=2
+        - --logtostderr=true
+        - --stale-cache-interval=1h30m
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            excludePaths:
+            - /controller/healthz
+            upstreams:
+            - upstream: http://127.0.0.1:10254/
+              path: /controller/
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-controller-metrics
+                  name: ingress-nginx
+            - upstream: http://127.0.0.1:9091/metrics
+              path: /protobuf/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-ingress-nginx
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-protobuf-metrics
+                  name: ingress-nginx
+        image: registry.example.com@imageHash-ingressNginx-kubeRbacProxy
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /controller-probe
+              - -server
+              - 127.0.0.1:10254
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 4207
+          name: https-metrics
+        resources:
+          requests:
+            cpu: 10m
+            ephemeral-storage: 50Mi
+            memory: 20Mi
+      dnsPolicy: ClusterFirst
+      hostNetwork: false
+      imagePullSecrets:
+      - name: deckhouse-registry
+      priorityClassName: system-cluster-critical
+      serviceAccountName: ingress-nginx
+      terminationGracePeriodSeconds: 420
+      tolerations:
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: ingress-nginx
+      - key: dedicated.deckhouse.io
+        operator: Equal
+        value: frontend
+      - key: drbd.linbit.com/lost-quorum
+      - key: drbd.linbit.com/force-io-error
+      - key: drbd.linbit.com/ignore-fail-over
+      volumes:
+      - emptyDir: {}
+        name: tmp-nginx
+      - emptyDir: {}
+        name: client-body-temp-path
+      - emptyDir: {}
+        name: fastcgi-temp-path
+      - emptyDir: {}
+        name: proxy-temp-path
+      - emptyDir: {}
+        name: scgi-temp-path
+      - emptyDir: {}
+        name: uwsgi-temp-path
+      - name: secret-nginx-auth-tls
+        secret:
+          secretName: ingress-nginx-test-auth-tls
+      - configMap:
+          name: d8-ingress-telemetry-config
+        name: telemetry-config-file
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate

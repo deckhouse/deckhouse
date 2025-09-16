@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -54,7 +54,7 @@ apiVersions:
                   Размер диска у инстансов. Значение указывается в `ГиБ`.
               diskType:
                 description: |
-                  Тип диска у создаваемых инстансов.
+                  Тип диска у создаваемых инстансов. Размер дисков `network-ssd-nonreplicated` и `network-ssd-io-m3` должен быть кратен 93 GB.
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в `ГиБ`.
@@ -212,6 +212,8 @@ apiVersions:
           natInstanceResources:
             description: |
               Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию.
+
+              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
             type: object
             properties:
               cores:

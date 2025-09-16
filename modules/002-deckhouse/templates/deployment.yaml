@@ -1,11 +1,6 @@
 {{- define "deckhouse_resources" }}
-{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
-cpu: 100m
-memory: 300Mi
-{{- else }}
 cpu: 150m
-memory: 600Mi
-{{- end }}
+memory: 500Mi
 {{- end }}
 
 {{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
@@ -77,6 +72,7 @@ spec:
         app: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
         kubectl.kubernetes.io/default-container: deckhouse
 {{- if and (.Values.deckhouse.internal.chrootMode) (semverCompare "< 1.30" .Values.global.discovery.kubernetesVersion) }}
         container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
@@ -117,9 +113,9 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       initContainers:
         - name: init-downloaded-modules
-          image: {{ include "helm_lib_module_common_image" (list . "init") }}
+          image: {{ include "helm_lib_module_image" (list . "init") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
+          command: ['sh', '-c', 'mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -157,6 +153,7 @@ spec:
   # managed by Deckhouse: use API-proxy
             - name: KUBERNETES_SERVICE_HOST
               value: 127.0.0.1
+              valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
             - name: KUBERNETES_SERVICE_PORT
               value: "6445"
   {{- else }}
@@ -195,7 +192,7 @@ spec:
             - name: HELM_HOST
               value: "127.0.0.1:44434"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
-              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
@@ -335,9 +332,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-{{- end }}
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -351,7 +346,7 @@ spec:
           medium: Memory
         name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
-      - emptyDir:
+      - emptyDir: {}
         name: chroot
 {{- end }}
       - emptyDir:

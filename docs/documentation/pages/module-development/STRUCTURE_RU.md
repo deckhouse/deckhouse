@@ -138,6 +138,7 @@ lang: ru
   
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Веб-консоль администратора Deckhouse"
@@ -145,6 +146,7 @@ lang: ru
   description: "Модуль позволяет полностью управлять кластером Kubernetes через веб-интерфейс, имея только навыки работы мышью."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -157,12 +159,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Примеры"
   description: "Примеры хранения секретов в нейронной сети с автоматической подстановкой в мысли при общении."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -175,12 +179,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Часто задаваемые вопросы"
   description: "Часто задаваемые вопросы и ответы на них."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -193,12 +199,14 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Отладка модуля"
   description: "В разделе разбираются все шаги по отладке модуля."
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -206,11 +214,13 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Кастомные ресурсы"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
 
@@ -218,11 +228,13 @@ lang: ru
 
   <div markdown="0">
   <details><summary>Пример метаданных...</summary>
+  <div class="highlight">
   <pre class="highlight">
   <code>---
   title: "Настройки модуля"
   ---</code>
   </pre>
+  </div>
   </details>
   </div>
   
@@ -346,6 +358,98 @@ properties:
       Описание на русском языке. Разметка Markdown.</code>
 ```
 
+#### CEL-валидации (x-deckhouse-validations)
+
+При разработке модуля для Deckhouse Kubernetes Platform вы можете использовать расширение OpenAPI `x-deckhouse-validations` для описания сложных правил валидации параметров модуля на языке CEL (Common Expression Language).
+
+При использовании CEL-валидаций учитывайте следующие особенности:
+
+- Валидации можно размещать как на корневом уровне, так и внутри любого свойства (в том числе внутри объектов, массивов и additionalProperties).
+- В выражениях доступны все параметры текущего уровня через переменную `self`.
+- Валидация работает рекурсивно: все вложенные объекты, массивы и карты также могут содержать свои `x-deckhouse-validations`.
+- Поддерживаются скалярные типы, массивы, объекты и карты (`additionalProperties`).
+- В случае множественных ошибок валидации пользователю будут показаны все сообщения из соответствующих правил.
+
+##### Примеры правил
+
+Ниже представлены примеры описаний сложных правил валидации на языке CEL:
+
+- Проверка попадания значения параметра в диапазон:
+  
+  ```yaml
+  type: object
+  properties:
+    replicas:
+      type: integer
+    minReplicas:
+      type: integer
+    maxReplicas:
+      type: integer
+  x-deckhouse-validations:
+    - expression: "self.minReplicas <= self.replicas && self.replicas <= self.maxReplicas"
+      message: "replicas должно быть между minReplicas и maxReplicas"
+  ```
+
+- Проверка наличия ключа:
+  
+  ```yaml
+  - expression: "'Available' in self.stateCounts"
+    message: "Должен быть ключ Available"
+  ```
+
+- Проверка, что хотя бы один из двух списков не пуст:
+  
+  ```yaml
+  - expression: "(self.list1.size() == 0) != (self.list2.size() == 0)"
+    message: "Ровно один из списков должен быть непустым"
+  ```
+
+- Проверка значения по регулярному выражению:
+  
+  ```yaml
+  - expression: "self.details.all(key, self.details[key].matches('^[a-zA-Z]*$'))"
+    message: "Все значения должны содержать только буквы"
+  ```
+
+##### Валидация скалярных значений и массивов
+
+Валидации скалярных значений и массивов имеют следующие особенности:
+
+- Если свойство — скаляр (например, число или строка), то в CEL-выражении `self` будет этим значением.
+- Если свойство — массив, то `self` будет массивом, и можно использовать методы `.size()`, `.all()`, `.exists()` и т.д.
+
+Пример для массива:
+
+```yaml
+type: object
+properties:
+  items:
+    type: array
+    items:
+      type: string
+    x-deckhouse-validations:
+      - expression: "self.size() > 0"
+        message: "Список items не должен быть пустым"
+```
+
+##### Валидация additionalProperties (map)
+
+Для объектов с additionalProperties (map) можно валидировать ключи и значения через методы `.all(key, ...)`, `.exists(key, ...)` и т.д.
+
+Пример:
+
+```yaml
+type: object
+properties:
+  mymap:
+    type: object
+    additionalProperties:
+      type: integer
+    x-deckhouse-validations:
+      - expression: "self.all(key, self[key] > 0)"
+        message: "Все значения в mymap должны быть больше 0"
+```
+
 ### values.yaml
 
 Необходим для проверки исходных данных при рендере шаблонов без использования дополнительных функций Helm chart.
@@ -421,6 +525,10 @@ dependencies:
 
 - `namespace` — *Строка.* Пространство имён, где будут развернуты компоненты модуля.
 - `subsystems` — *Массив строк.* Список подсистем, к которым относится модуль.
+- `accessibility` — *Объект.* Настройки доступности модуля.
+  - `editions` — *Объект.* Настройки работы модуля в редакциях Deckhouse.
+    - `available` — *Булевый.* Определяет доступность модуля в редакции Deckhouse.
+    - `enabledInBundles` — *Массив строк.* Список наборов модулей (bundles), в которых модуль должен быть включен по умолчанию.
 - `descriptions` — *Объект.* Произвольное текстовое описание назначения модуля.
   - `en` — *Строка.* Текстовое описание на английском языке.
   - `ru` — *Строка.* Текстовое описание на русском языке.
@@ -432,11 +540,11 @@ dependencies:
 - `name` — *Строка, обязательный параметр.* Имя модуля в Kebab Case. Например, `echo-server`.
 - `exclusiveGroup` — *Строка.* Если несколько модулей принадлежат к одной и той же `exclusiveGroup`, то только один из них может быть активен в системе одновременно. Это предотвращает конфликты между модулями, выполняющими схожие или несовместимые задачи.
 - `requirements` — *Объект.* [Зависимости](../dependencies/) модуля — условия, при которых Deckhouse Kubernetes Platform (DKP) может запустить модуль.
-  - `bootstrapped` — *Булевый.* Зависимость от [статуса установки кластера](../dependencies/#зависимость-от-статуса-установки-кластера) (только для встроенных модулей DKP).
   - `deckhouse` — *Строка.* Зависимость от [версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform).
   - `kubernetes` — *Строка.* Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes).
   - `modules` — *Объект.* Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей).
 - `stage` — *Строка.* [Стадия жизненного цикла модуля](../versioning/#как-понять-насколько-модуль-стабилен). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`.
+Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули установите [параметр `allowExperimentalModules`](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true`.
 - `tags` — *Массив строк.* Дополнительные теги модуля. Теги преобразуются в лейблы объекта [Module](../../cr.html#module) по шаблону `module.deckhouse.io/<TAG>=""`.
 
   Например, если указать `tags: ["test", "myTag"]`, то объект Module получит лейблы `module.deckhouse.io/test=""` и `module.deckhouse.io/myTag=""`.
@@ -456,16 +564,113 @@ exclusiveGroup: "group"
 subsystems:
   - test
   - test1
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
 descriptions:
   en: "The module to say hello to the world."
   ru: "Модуль, который приветствует мир."
 requirements:
   deckhouse: ">= 1.61"
   kubernetes: ">= 1.27"
-  bootstrapped: true
 disable:
   confirmation: true
   message: "Отключение этого модуля приведёт к удалению всех созданных им ресурсов."
+```
+
+### Настройка доступности модуля в редакциях DKP
+
+Параметр `accessibility` позволяет задать редакции DKP и наборы модулей (bundles), в которых будет доступен модуль,
+а также определить, будет ли он включаться по умолчанию.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ce:
+      available: false
+    ee:
+      available: true
+      enabledInBundles:
+        - Managed   
+```
+
+Описание параметров:
+
+- `accessibility` — *Объект.* Корневой блок настройки доступности модуля.
+- `editions` — *Объект.* Набор ключей с названиями редакций.
+  Для каждой редакции можно задать собственные настройки доступности.
+- `_default` — *Объект.* Настройка по умолчанию, если отсутствует конфигурация для конкретной редакции.
+- `available` — *Булевый.* Определяет, доступен ли модуль в рамках указанной редакции.
+- `enabledInBundles` — *Массив строк.* Наборы модулей, в которых модуль будет включён по умолчанию.
+  Поддерживаемые наборы модулей (состав каждого из наборов доступен [на этой странице](../../../v1/#наборы-модулей)):
+  - `Default` — рекомендованный набор модулей для работы кластера.
+    Включает средства мониторинга, контроля авторизации, организации работы сети и другие необходимые компоненты.
+  - `Managed` — набор модулей для кластеров, управляемых облачными провайдерами (например, Google Kubernetes Engine).
+  - `Minimal` — минимальный набор, включающий только текущий модуль.
+    > Обратите внимание, что в этот набор не входят базовые модули (например, модуль работы с CNI).
+    > Без включения базовых модулей Deckhouse может работать только в уже развернутом кластере.
+- Блоки с названиями редакций. Позволяют задать поведение модуля в указанных редакциях.
+  Возможные значения: `be`, `ce`, `ee`, `se`, `se-plus`.
+
+#### Логика определения доступности модуля
+
+Схема ниже показывает логику определения доступности и включения модуля в зависимости от настроек:
+
+![Логика определения доступности модуля](../../images/module-development/module_accessibility_ru.png)
+
+#### Примеры конфигурации
+
+В следующем примере конфигурации модуль будет недоступен во всех редакциях, кроме DKP Enterprise Edition.
+В DKP Enterprise Edition модуль будет включён по умолчанию в наборе модулей `Managed`.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: false
+    ee:
+      available: true
+      enabledInBundles:
+        - Managed
+```
+
+В следующем примере конфигурации модуль будет доступен во всех редакциях DKP.
+В наборах модулей `Managed` и `Default` модуль будет включён по умолчанию.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Managed
+        - Default
+```
+
+В следующем примере модуль будет доступен во всех редакциях DKP.
+Модуль будет включён в наборах модулей `Default` и `Managed` во всех редакциях,
+кроме DKP Basic Edition и DKP Community Edition.
+
+```yaml
+accessibility:
+  editions:
+    _default:                   
+      available: true           
+      enabledInBundles:         
+        - Default
+        - Managed
+    be:
+      available: false
+    ce:                         
+      available: false
 ```
 
 {% endraw %}

@@ -23,13 +23,14 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v2"
 
 	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -107,6 +108,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -127,7 +129,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
-			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
+			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
 			meta.Changelog = make(map[string]any)
 
@@ -135,6 +137,21 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		}
 
 		meta.Changelog = changelog
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var ModuleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
+		if err != nil {
+			// if module.yaml decode failed - warn about it but don't fail the release
+			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
+
+			meta.ModuleDefinition = nil
+
+			return meta, nil
+		}
+
+		meta.ModuleDefinition = &ModuleDefinition
 	}
 
 	return meta, nil

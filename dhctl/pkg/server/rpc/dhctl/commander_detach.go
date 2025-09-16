@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -41,7 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -196,7 +197,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
@@ -214,6 +215,13 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
 		}
 		return nil
 	})

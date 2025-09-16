@@ -19,7 +19,7 @@
 # Based on https://github.com/istio/istio/blob/1.21.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.21.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -45,6 +45,18 @@ import:
   owner: 1337
   group: 1337
   after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  after: setup
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  after: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -64,16 +76,6 @@ import:
   add: /d8-curl
   to: /usr/bin/curl
   before: setup
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install -y ca-certificates
-  - update-ca-trust
-  - apt-get clean
-  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  install:
-  - useradd -m --uid 1337 istio-proxy
-  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
   config:
     user: "1337:1337"
@@ -124,6 +126,18 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-libcxx-artifact
   add: /opt/libcxx
   to: /opt/libcxx
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -233,7 +247,7 @@ fromImage: builder/golang-alpine
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-fromImage: common/alt-p11-artifact
+fromImage: builder/alt
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -251,9 +265,9 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
-  - apt-get update -y
   - |
     apt-get install -y \
     apt-https curl jq tzdata \

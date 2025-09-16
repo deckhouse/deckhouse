@@ -63,7 +63,7 @@ func main() {
 
 	kpApp := kingpin.New(FileName, fmt.Sprintf("%s %s: %s", AppName, DeckhouseVersion, AppDescription))
 
-	logger := log.NewLogger(log.Options{})
+	logger := log.NewLogger()
 	log.SetDefault(logger)
 
 	// override usage template to reveal additional commands with information about start command

@@ -10,7 +10,6 @@ documentationEnabled: true
 deckhouseToolsEnabled: true
 deschedulerEnabled: true
 extendedMonitoringEnabled: true
-flowSchemaEnabled: true
 ingressNginxEnabled: true
 kubeDnsEnabled: true
 kubeProxyEnabled: true
@@ -26,8 +25,6 @@ namespaceConfiguratorEnabled: true
 registryPackagesProxyEnabled: true
 nodeManagerEnabled: true
 operatorPrometheusEnabled: true
-podReloaderEnabled: true
-priorityClassEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
@@ -37,3 +34,4 @@ upmeterEnabled: true
 userAuthnEnabled: true
 userAuthzEnabled: true
 verticalPodAutoscalerEnabled: true
+registryEnabled: true

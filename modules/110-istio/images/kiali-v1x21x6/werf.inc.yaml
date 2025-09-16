@@ -5,7 +5,7 @@
 ---
 # Based on https://github.com/kiali/kiali/blob/v1.81.0/deploy/docker/Dockerfile-distroless
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
@@ -15,11 +15,8 @@ import:
   add: /src/kiali/frontend/build
   to: /opt/kiali/console
   before: install
-shell:
-  install:
-  - adduser --no-create-home --uid 1000 kiali
-  - chown -R kiali:kiali /opt/kiali/console
-  - chmod -R g=u /opt/kiali/console
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     user: "1000"
@@ -63,7 +60,13 @@ import:
   before: setup
 shell:
   setup:
-  {{- include "node packages proxy" . | nindent 2 }}
   - cd /src/kiali/frontend
-  - yarn install --frozen-lockfile
+  {{- if .DistroPackagesProxy }}
+  - yarn config set disable-self-update-check true
+  - sed -i 's|https://registry.npmjs.org|http://{{ .DistroPackagesProxy }}/repository/npmjs/|g' yarn.lock
+  - sed -i 's|https://registry.yarnpkg.com|http://{{ .DistroPackagesProxy }}/repository/yarnpkg|g' yarn.lock
+  - export CYPRESS_DOWNLOAD_MIRROR=http://{{ .DistroPackagesProxy }}/repository/npm-cypress/
+  {{- end }}
+  - yarn install --frozen-lockfile --network-timeout 300000
   - yarn run build
+  - rm -rf node_modules .npmrc /root/.cache /usr/local/share/.cache

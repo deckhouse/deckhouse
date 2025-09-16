@@ -1553,6 +1553,35 @@ spec:
 			})
 		})
 
+		Context("Fill default mainNetwork for vSphere", func() {
+			const icWithEmptySpec = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: proper1
+spec: {}
+`
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(stateNGSimple + icWithEmptySpec))
+				f.ValuesSetFromYaml("nodeManager.internal.cloudProvider", []byte(`
+---
+type: vsphere
+vsphere:
+  instances:
+    mainNetwork: mynet
+`))
+				f.RunHook()
+			})
+
+			It("should inject mainNetwork into instanceClass when missing in CRD", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				val := f.ValuesGet("nodeManager.internal.nodeGroups.0.instanceClass.mainNetwork")
+				Expect(val.Exists()).To(BeTrue())
+				Expect(val.String()).To(Equal("mynet"))
+			})
+		})
+
 		Context("NG with taints and labels", func() {
 			BeforeEach(func() {
 				ng := `

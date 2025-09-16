@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -79,7 +80,7 @@ func applyServiceAccountFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func migrateServiceAccounts(input *go_hook.HookInput) error {
+func migrateServiceAccounts(_ context.Context, input *go_hook.HookInput) error {
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -95,12 +96,17 @@ func migrateServiceAccounts(input *go_hook.HookInput) error {
 		},
 	}
 
-	snap := input.Snapshots
-	if len(snap["capi_sa"]) == 0 {
+	snaps := input.Snapshots.Get("capi_sa")
+	if len(snaps) == 0 {
 		return nil
 	}
 
-	serviceAccount := snap["capi_sa"][0].(ServiceAccountInfo)
+	var serviceAccount ServiceAccountInfo
+	err := snaps[0].UnmarshalTo(&serviceAccount)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal start 'capi_sa' snapshot: %w", err)
+	}
+
 	if !serviceAccount.IsLabeledAndAnnotated {
 		input.PatchCollector.PatchWithMerge(patch, "v1", "ServiceAccount", "d8-cloud-instance-manager", serviceAccount.Name, object_patch.WithIgnoreMissingObject())
 	}

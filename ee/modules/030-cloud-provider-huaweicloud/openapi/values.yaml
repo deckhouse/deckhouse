@@ -345,6 +345,10 @@ properties:
                 type: string
                 description: |
                   The project ID.
+              enterpriseProjectID:
+                type: string
+                description: |
+                  The enterprise project ID.
       providerDiscoveryData:
         type: object
         additionalProperties: false

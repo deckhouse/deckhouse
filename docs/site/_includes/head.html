@@ -33,8 +33,24 @@
 {%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
 {%- endif %}
 
-{%- assign generated_title = title_parts | reverse | join: " / " %}
-<title>{{ generated_title }} | {{ site.site_title }}</title>
+{%- if page.title_gen -%}
+  {%- assign generated_title = page.title_gen -%}
+{%- else -%}
+  {%- assign generated_title = title_parts | reverse | join: "" -%}
+{%- endif -%}
+
+{%- assign words = page.product_code | replace: '-', ' ' | split: ' ' -%}
+{%- assign additional_title = "" -%}
+{%- for word in words -%}
+  {%- assign capitalized_word = word | capitalize -%}
+  {%- if additional_title == "" -%}
+    {%- assign additional_title = capitalized_word -%}
+  {%- else -%}
+    {%- assign additional_title = additional_title | append: " " | append: capitalized_word -%}
+  {%- endif -%}
+{%- endfor -%}
+<title>{{ generated_title }} | {{ site.site_title }} {{ additional_title }}</title>
+
 {%- if page.description %}
     {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
 {%- else %}
@@ -52,7 +68,7 @@
 {%- if include.mode=='documentation' %}
   {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
-  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
 <!-- multilang -->
 {%- if page.multilang %}
@@ -61,6 +77,7 @@
 {%- endif %}
 
 <!-- Primary Meta Tags -->
+<link rel="canonical" href="{{ site.urls[page.lang] }}{{ page_meta_url }}" />
 <meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
 <meta name="description" content="{{ description }}">
 <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -50,8 +51,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleVolumeAttachments)
 
-func handleVolumeAttachments(input *go_hook.HookInput) error {
-	snap, err := sdkobjectpatch.UnmarshalToStruct[volumeAttachment](input.NewSnapshots, "finalizers")
+func handleVolumeAttachments(_ context.Context, input *go_hook.HookInput) error {
+	snap, err := sdkobjectpatch.UnmarshalToStruct[volumeAttachment](input.Snapshots, "finalizers")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal finalizers snapshot: %w", err)
 	}

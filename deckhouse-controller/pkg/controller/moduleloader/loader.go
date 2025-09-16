@@ -26,11 +26,14 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -67,7 +71,8 @@ var (
 	// validModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
 	validModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
 
-	ErrModuleIsNotFound = errors.New("module is not found")
+	ErrModuleIsNotFound              = errors.New("module is not found")
+	ErrConversionsDirectoryPathEmpty = errors.New("conversions directory path is empty")
 )
 
 var _ loader.ModuleLoader = &Loader{}
@@ -81,6 +86,8 @@ type Loader struct {
 	modulesDirs    []string
 	// global module dir
 	globalDir string
+
+	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
 	exts                *extenders.ExtendersStack
@@ -99,6 +106,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
+		registries:           make(map[string]*addonmodules.Registry),
 		embeddedPolicy:       embeddedPolicy,
 		version:              version,
 		dependencyContainer:  dc,
@@ -135,8 +143,8 @@ func (l *Loader) Sync(ctx context.Context) error {
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator
-func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
-	result := make([]*modules.BasicModule, 0, len(l.modules))
+func (l *Loader) LoadModules() ([]*addonmodules.BasicModule, error) {
+	result := make([]*addonmodules.BasicModule, 0, len(l.modules))
 
 	for _, module := range l.modules {
 		result = append(result, module.GetBasicModule())
@@ -147,7 +155,7 @@ func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) {
+func (l *Loader) LoadModule(_, modulePath string) (*addonmodules.BasicModule, error) {
 	if _, err := readDir(modulePath); err != nil {
 		return nil, err
 	}
@@ -196,10 +204,26 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
 
+	// inject registry value
+	if reg, ok := l.registries[def.Name]; ok {
+		module.GetBasicModule().InjectRegistryValue(reg)
+	}
+
 	// load conversions
-	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	var conversions []v1alpha1.ModuleSettingsConversion
+	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
+
+		// load conversions for settings
+		conversions, err = l.loadConversions(conversionsDir)
+		if err != nil {
+			if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
+				return nil, fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
+			}
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 	} else if !os.IsNotExist(err) {
@@ -207,12 +231,12 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// load constraints
-	if err = l.exts.AddConstraints(def.Name, def.Requirements); err != nil {
+	if err = l.exts.AddConstraints(def.Name, def.Critical, def.Accessibility, def.Requirements); err != nil {
 		return nil, fmt.Errorf("load constraints for the %q module: %w", def.Name, err)
 	}
 
 	// ensure settings
-	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
 	}
 
@@ -240,17 +264,28 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 }
 
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
-	modules := []string{}
+	modules := make([]string, 0, len(l.modules))
 	for _, module := range l.modules {
-		if module.GetModuleDefenition().ExclusiveGroup == exclusiveGroup {
+		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
 		}
 	}
+
 	return modules
 }
 
 // LoadModulesFromFS parses and ensures modules from FS
 func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		l.logger.Info("LoadModulesFromFS completed",
+			slog.Int64("took_ms", time.Since(start).Milliseconds()),
+			slog.Int("modules", len(l.modules)),
+		)
+	}()
+
+	l.logger.Info("LoadModulesFromFS started")
+
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
@@ -263,13 +298,17 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 
 	for _, dir := range l.modulesDirs {
 		l.logger.Debug("parse modules from the dir", slog.String("path", dir))
+
 		definitions, err := l.parseModulesDir(dir)
 		if err != nil {
 			return fmt.Errorf("parse modules from the %q dir: %w", dir, err)
 		}
+
 		l.logger.Debug("parsed modules from the dir", slog.Int("count", len(definitions)), slog.String("path", dir))
+
 		for _, def := range definitions {
 			l.logger.Debug("process module definition from the dir", slog.String("name", def.Name), slog.String("path", dir))
+
 			module, err := l.processModuleDefinition(ctx, def)
 			if err != nil {
 				return fmt.Errorf("process the '%s' module definition: %w", def.Name, err)
@@ -289,26 +328,109 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 		}
 	}
 
+	// OPTIMIZATION: Make cleanup async to not block module loading startup!
+	// Cleanup is non-critical housekeeping that can happen in background
+	go func() {
+		if err := l.cleanupDeletedModules(ctx); err != nil {
+			l.logger.Warn("async cleanup failed", slog.String("error", err.Error()))
+		}
+	}()
+
+	return nil
+}
+
+// cleanupDeletedModules removes modules that no longer exist and updates status for modules without configs
+func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
+	ctx, span := otel.Tracer("module-loader").Start(ctx, "cleanupDeletedModules")
+	defer span.End()
+
 	// clear deleted embedded modules
+	ctx, listSpan := otel.Tracer("module-loader").Start(ctx, "listModules")
+
 	modulesList := new(v1alpha1.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
+		listSpan.RecordError(err)
+		listSpan.End()
+
 		return fmt.Errorf("list all modules: %w", err)
 	}
+
+	listSpan.SetAttributes(attribute.Int("modules.count", len(modulesList.Items)))
+	listSpan.End()
+
+	ctx, configListSpan := otel.Tracer("module-loader").Start(ctx, "listModuleConfigs")
+	moduleConfigs := new(v1alpha1.ModuleConfigList)
+	if err := l.client.List(ctx, moduleConfigs); err != nil {
+		configListSpan.RecordError(err)
+		configListSpan.End()
+
+		return fmt.Errorf("list module configs: %w", err)
+	}
+
+	configListSpan.SetAttributes(attribute.Int("moduleConfigs.count", len(moduleConfigs.Items)))
+	configListSpan.End()
+
+	ctx, processSpan := otel.Tracer("module-loader").Start(ctx, "processModules")
+	defer processSpan.End()
+
+	deletedCount := 0
+	statusUpdatedCount := 0
+
 	for _, module := range modulesList.Items {
 		if module.IsEmbedded() && l.modules[module.Name] == nil {
-			l.logger.Debug("delete embedded module", slog.String("name", module.Name))
+			ctx, deleteSpan := otel.Tracer("module-loader").Start(ctx, "deleteEmbeddedModule")
+			deleteSpan.SetAttributes(attribute.String("module.name", module.Name))
+
 			if err := l.client.Delete(ctx, &module); err != nil {
-				return fmt.Errorf("delete the '%s' emebedded module: %w", module.Name, err)
+				deleteSpan.RecordError(err)
+				deleteSpan.End()
+				return fmt.Errorf("delete the '%s' embedded module: %w", module.Name, err)
 			}
+			deletedCount++
+			deleteSpan.End()
 		}
 
-		if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			if err := l.client.Status().Update(ctx, &module); err != nil {
-				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
+		var found bool
+		ctx, configSearchSpan := otel.Tracer("module-loader").Start(ctx, "searchModuleConfig")
+		configSearchSpan.SetAttributes(attribute.String("module.name", module.Name))
+
+		for _, config := range moduleConfigs.Items {
+			if config.GetName() == module.Name {
+				found = true
+				break
 			}
 		}
+		configSearchSpan.SetAttributes(attribute.Bool("config.found", found))
+		configSearchSpan.End()
+
+		if !found {
+			ctx, statusUpdateSpan := otel.Tracer("module-loader").Start(ctx, "updateModuleStatus")
+			statusUpdateSpan.SetAttributes(attribute.String("module.name", module.Name))
+
+			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+				return nil
+			})
+			if err != nil {
+				statusUpdateSpan.RecordError(err)
+				statusUpdateSpan.End()
+				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
+			}
+			statusUpdatedCount++
+			statusUpdateSpan.End()
+		}
 	}
+
+	processSpan.SetAttributes(
+		attribute.Int("total_modules", len(modulesList.Items)),
+		attribute.Int("deleted_modules", deletedCount),
+		attribute.Int("status_updated_modules", statusUpdatedCount),
+	)
+	span.SetAttributes(
+		attribute.Int("total_modules", len(modulesList.Items)),
+		attribute.Int("deleted_modules", deletedCount),
+		attribute.Int("status_updated_modules", statusUpdatedCount),
+	)
 
 	return nil
 }
@@ -336,10 +458,12 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 						Labels:      def.Labels(),
 					},
 					Properties: v1alpha1.ModuleProperties{
-						Weight:       def.Weight,
-						Stage:        def.Stage,
-						Source:       v1alpha1.ModuleSourceEmbedded,
-						Requirements: def.Requirements,
+						Weight:        def.Weight,
+						Stage:         def.Stage,
+						Source:        v1alpha1.ModuleSourceEmbedded,
+						Critical:      def.Critical,
+						Requirements:  def.Requirements,
+						Accessibility: def.Accessibility.ToV1Alpha1(),
 					},
 				}
 				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
@@ -357,6 +481,8 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			module.Properties.Stage = def.Stage
 			module.Properties.DisableOptions = def.DisableOptions
 			module.Properties.ExclusiveGroup = def.ExclusiveGroup
+			module.Properties.Critical = def.Critical
+			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
 
 			module.SetAnnotations(def.Annotations())
 			module.SetLabels(def.Labels())
@@ -380,13 +506,13 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
 	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-	if err := settings.SetVersion(rawConfig); err != nil {
+	if err := settings.SetVersion(rawConfig, conversions); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
 	}
 
@@ -516,15 +642,11 @@ func (l *Loader) moduleDefinitionByDir(moduleName, moduleDir string) (*moduletyp
 // moduleDefinitionByFile returns Definition instance parsed from the module.yaml file
 func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition, error) {
 	path := filepath.Join(absPath, moduletypes.DefinitionFile)
-	if _, err := os.Stat(path); err != nil {
+	f, err := os.Open(path)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, err
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
@@ -567,4 +689,70 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 		return defaultValue
 	}
 	return uint32(val)
+}
+
+// loadConversions loads all conversion rules from the module's conversions directory
+func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettingsConversion, error) {
+	if conversionsDir == "" {
+		return nil, ErrConversionsDirectoryPathEmpty
+	}
+
+	// Read all files from conversions directory
+	files, err := os.ReadDir(conversionsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read conversions directory: %w", err)
+	}
+
+	// Regex to match version files like v1.yaml, v2.yaml, etc.
+	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
+
+	var allConversions []v1alpha1.ModuleSettingsConversion
+
+	// Process each version file
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		matches := versionFileRe.FindStringSubmatch(file.Name())
+		if matches == nil {
+			continue // Skip non-version files
+		}
+
+		// Read and parse the conversion file
+		filePath := filepath.Join(conversionsDir, file.Name())
+		conversion, err := l.readConversionFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
+		}
+
+		if conversion != nil {
+			allConversions = append(allConversions, *conversion)
+		}
+	}
+
+	return allConversions, nil
+}
+
+// readConversionFile reads a single conversion file and extracts conversions and description
+func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse YAML directly into a temporary struct
+	var fileContent struct {
+		Conversions []string                                       `yaml:"conversions"`
+		Description *v1alpha1.ModuleSettingsConversionDescriptions `yaml:"description"`
+	}
+
+	if err := yaml.Unmarshal(data, &fileContent); err != nil { //nolint:musttag
+		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
+	}
+
+	return &v1alpha1.ModuleSettingsConversion{
+		Expr:         fileContent.Conversions,
+		Descriptions: fileContent.Description,
+	}, nil
 }

@@ -16,9 +16,9 @@ Deckhouse Kubernetes Platform имеет модульную структуру. 
 
 ```console
 $ kubectl get modules
-NAME                WEIGHT   SOURCE      PHASE        ENABLED   READY
-cni-cilium          21       Embedded    Ready        True      True
-commander           911      deckhouse   Available    False     False
+NAME                STAGE   SOURCE      PHASE        ENABLED   READY
+cni-cilium                  Embedded    Ready        True      True
+commander                   deckhouse   Available    False     False
 ```
 
 В данном разделе представлена информация по модулям Deckhouse, которые могут быть подключены из источника модулей. Модули прошли предварительное тестирование совместимости и допущенным к использованию совместно с Deckhouse.

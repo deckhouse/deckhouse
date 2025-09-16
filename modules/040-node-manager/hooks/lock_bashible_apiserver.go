@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -57,15 +58,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, lockHandler)
 
-func lockHandler(input *go_hook.HookInput) error {
-	snap := input.Snapshots["bashible-apiserver-deployment"]
-	if len(snap) == 0 {
+func lockHandler(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("bashible-apiserver-deployment")
+	if len(snaps) == 0 {
 		return nil
 	}
 
 	valuesDigest := input.Values.Get("global.modulesImages.digests.nodeManager.bashibleApiserver").String()
+	var deployment bashibleDeployment
+	err := snaps[0].UnmarshalTo(&deployment)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'bashible-apiserver-deployment' snapshots: %w", err)
+	}
 
-	deployment := snap[0].(bashibleDeployment)
 	if deployment.ImageDigestOrTag != valuesDigest {
 		annotationsPatch := map[string]interface{}{
 			"metadata": map[string]interface{}{

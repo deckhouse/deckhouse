@@ -1,6 +1,6 @@
 ---
 title: "The openvpn module"
-description: "Deckhouse Kubernetes Platform openvpn module: features, web interface, options for publishing the VPN service, available cluster resources after connection, and audit of user connections."
+description: "Access to Deckhouse Kubernetes Platform cluster resources via OpenVPN with certificate-based authentication."
 webIfaces:
 - name: openvpn-admin
 ---

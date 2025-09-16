@@ -147,11 +147,12 @@ extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- if $tpl_context.apiserver.secretEncryptionKey }}
 extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) | b64enc }}
   {{- end }}
-
+{{- if $tpl_context.apiserver.oidcIssuerURL }}
+extra-file-authentication-config.yaml: {{ include "authenticationConfiguration" $tpl_context | b64enc }}
+{{- end }}
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
 extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
-extra-file-webhook-admission-config.yaml: {{ include "webhookAdmissionConfig" $context | b64enc }}
 {{- end }}
 ---
 apiVersion: v1

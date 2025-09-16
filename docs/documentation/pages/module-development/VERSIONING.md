@@ -15,17 +15,19 @@ The git tag and registry container **always** have a "v" before the version numb
 
 ## Release channels
 
-Release channels allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum update channel to which it can be published.
+Release channels allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum release channel to which it can be published.
 
 Note that the choice of a specific release channel does not determine how stable the module is. Channels are a delivery tool and are intended to measure the stability level of a particular release.
 
-When publishing a new version of the module to the [update channel](../../deckhouse-release-channels.html), first use the `Alpha` update channel. Then, if module version has no issues, publish the module version sequentially to other update channels, taking their stability into account: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. If the module version requires fixing, the publication of that version should be halted. After releasing a version with fixes, the publication stage must be repeated starting from the `Alpha` update channel.
+When publishing a new version of the module to the [release channel](../../deckhouse-release-channels.html), first use the `Alpha` release channel. Then, if module version has no issues, publish the module version sequentially to other release channels, taking their stability into account: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. If the module version requires fixing, the publication of that version should be halted. After releasing a version with fixes, the publication stage must be repeated starting from the `Alpha` release channel.
 
 ## Module lifecycle
 
 During its life cycle, a module may be at any of the following stages:
 
 - **Experimental** refers t to an experimental version. The module functionality may undergo significant changes. Compatibility with future versions is not guaranteed.
+  > Modules in the `Experimental` stage cannot be enabled by default.
+  > To allow the use of such modules, set the [allowExperimentalModules parameter](../../modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) to true.
 - **Preview** refers to a preliminary version. The module functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
 - **General Availability (GA)** refers to a generally available version. The module is ready to be used in production environments.
 - **Deprecated** refers to a module version that has been deprecated.
@@ -35,53 +37,53 @@ During its life cycle, a module may be at any of the following stages:
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined according to the following table:
 
 <table class="versioning-table">
-    <thead>
-        <tr class="header-row">
-            <th rowspan="2">Lifecycle Stage</th>
-            <th colspan="5">Update Channels</th>
-        </tr>
-        <tr class="sub-header">
-            <th>Alpha</th>
-            <th>Beta</th>
-            <th class="middle">Early Access</th>
-            <th>Stable</th>
-            <th>Rock Solid</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><strong>Experimental</strong></td>
-            <td>Experiments</td>
-            <td>Experiments</td>
-            <td>Experiments</td>
-            <td>Beta testing</td>
-            <td>Beta testing</td>
-        </tr>
-        <tr>
-            <td><strong>Preview</strong></td>
-            <td>Experiments</td>
-            <td>Limited use</td>
-            <td>Limited use</td>
-            <td>Production use</td>
-            <td>Production use</td>
-        </tr>
-        <tr>
-            <td><strong>General Availability</strong></td>
-            <td>Experiments</td>
-            <td>Limited use</td>
-            <td>Limited use</td>
-            <td>Production use</td>
-            <td>Production use in critical systems</td>
-        </tr>
-        <tr>
-            <td><strong>Deprecated</strong></td>
-            <td>Deprecated</td>
-            <td>Deprecated</td>
-            <td>Deprecated</td>
-            <td>Deprecated</td>
-            <td>Deprecated</td>
-        </tr>
-    </tbody>
+<thead>
+    <tr class="header-row">
+      <th rowspan="2">Lifecycle Stage</th>
+      <th colspan="5">Release Channels</th>
+    </tr>
+    <tr class="sub-header">
+      <th>Alpha</th>
+      <th>Beta</th>
+      <th class="middle">Early Access</th>
+      <th>Stable</th>
+      <th>Rock Solid</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Experimental</strong></td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#FFE0B2">Beta testing</td>
+      <td style="background-color:#FFE0B2">Beta testing</td>
+    </tr>
+    <tr>
+      <td><strong>Preview</strong></td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
+    </tr>
+    <tr>
+      <td><strong>General Availability</strong></td>
+      <td style="background-color:#FFCDD2">Experiments</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#BBDEFB">Limited use</td>
+      <td style="background-color:#C8E6C9">Production use</td>
+      <td style="background-color:#A5D6A7">Production use in critical systems</td>
+    </tr>
+    <tr>
+      <td><strong>Deprecated</strong></td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td style="background-color:#F5F5F5">Deprecated</td>
+    </tr>
+  </tbody>
 </table>
 
 - **Experiments** — Functionality checks, experiments, and testing;

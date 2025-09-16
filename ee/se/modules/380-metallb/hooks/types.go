@@ -42,6 +42,13 @@ type ServiceInfo struct {
 	DesiredIPs                []string                        `json:"desiredIPs,omitempty"`
 	LBAllowSharedIP           string                          `json:"lbAllowSharedIP,omitempty"`
 	AnnotationMLBC            string                          `json:"annotationMLBC,omitempty"`
+	Conditions                []metav1.Condition              `json:"conditions,omitempty"`
+}
+
+type ServiceUpdaterInfo struct {
+	Name       string             `json:"name,omitempty"`
+	Namespace  string             `json:"namespace,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type L2LBServiceStatusInfo struct {

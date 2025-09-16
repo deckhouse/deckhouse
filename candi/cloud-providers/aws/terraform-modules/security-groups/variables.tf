@@ -31,3 +31,8 @@ variable "tags" {
 variable "ssh_allow_list" {
   type = any
 }
+
+variable "disable_default_security_group" {
+  type = bool
+  default = false
+}

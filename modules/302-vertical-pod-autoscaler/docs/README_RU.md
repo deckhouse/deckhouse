@@ -1,6 +1,7 @@
 ---
 title: "Модуль vertical-pod-autoscaler"
 search: autoscaler
+description: "Автоматическое вычисление и установка параметров запроса ресурсов подов в кластере Deckhouse Kubernetes Platform."
 ---
 
 Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)) — это инфраструктурный сервис, который позволяет не выставлять точные resource requests, если неизвестно, сколько ресурсов необходимо контейнеру для работы. При использовании VPA и включении соответствующего режима работы resource requests выставляются автоматически на основе потребления ресурсов (полученных данных из Prometheus).
@@ -11,7 +12,7 @@ Vertical Pod Autoscaler ([VPA](https://github.com/kubernetes/autoscaler/tree/mas
 - `"Auto"` (default) — в данный момент режимы работы `Auto` и `Recreate` делают одно и то же. Однако, когда в Kubernetes появится [Pod in-place resource update](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates), этот режим будет делать именно его.
 - `"Recreate"` — режим разрешает VPA изменять ресурсы у запущенных подов (перезапускать их при работе). В случае работы одного пода (`replicas: 1`) это приведет к недоступности сервиса на время рестарта. В данном режиме VPA не пересоздает поды, которые были созданы без контроллера.
 - `"Initial"` — VPA изменяет ресурсы подов только при создании подов, но не во время работы.
-- `"Off"` — VPA не изменяет автоматически никакие ресурсы. В данном случае, если есть VPA c таким режимом работы, мы можем посмотреть, какие ресурсы рекомендует поставить VPA (kubectl describe vpa <vpa-name>).
+- `"Off"` — VPA не изменяет автоматически никакие ресурсы. В данном случае, если есть VPA c таким режимом работы, мы можем посмотреть, какие ресурсы рекомендует поставить VPA (`d8 k describe vpa <vpa-name>`).
 
 Ограничения VPA:
 

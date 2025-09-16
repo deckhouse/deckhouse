@@ -17,11 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(
@@ -60,7 +65,7 @@ func filterControlPlane(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}, nil
 }
 
-func updateControlPlane(input *go_hook.HookInput) error {
+func updateControlPlane(_ context.Context, input *go_hook.HookInput) error {
 	statusPatch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"initialized":                 true,
@@ -68,9 +73,11 @@ func updateControlPlane(input *go_hook.HookInput) error {
 			"externalManagedControlPlane": true,
 		},
 	}
+	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.Snapshots.Get("control_plane")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'control_plane' classes: %w", err)
+		}
 
-	for _, snapshot := range input.Snapshots["control_plane"] {
-		controlPlane := snapshot.(controlPlane)
 		// patch status
 		input.PatchCollector.PatchWithMerge(statusPatch, controlPlane.APIVersion, controlPlane.Kind, controlPlane.Namespace, controlPlane.Name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}

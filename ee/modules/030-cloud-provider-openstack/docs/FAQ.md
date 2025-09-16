@@ -58,9 +58,14 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
+{% alert level="info" %}
+The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+To do this, use the [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
+{% endalert %}
+
 To set up a hybrid cluster, follow these steps:
 
-1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Delete flannel from kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.

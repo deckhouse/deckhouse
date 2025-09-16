@@ -22,10 +22,14 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 )
 
 type KubeProxyChecker struct {
@@ -82,14 +86,28 @@ func (c *KubeProxyChecker) WithSSHCredentials(input session.Input, privateKeys .
 }
 
 func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
-	var sshClient *ssh.Client
+	var sshClient node.SSHClient
 
 	if c.input != nil {
-		sshClient = ssh.NewClient(session.NewSession(*c.input), c.privateKeys)
-		// Avoid starting a new ssh agent
-		sshClient.InitializeNewAgent = false
+		if app.SSHLegacyMode {
+			sshClient = clissh.NewClient(session.NewSession(*c.input), c.privateKeys)
+			// Avoid starting a new ssh agent
+			sshClient.(*clissh.Client).InitializeNewAgent = false
+		} else {
+			sshClient = gossh.NewClient(session.NewSession(*c.input), c.privateKeys)
+		}
+
 	} else {
-		sshClient = ssh.NewClientFromFlags()
+		if app.SSHLegacyMode {
+			sshClient = clissh.NewClientFromFlags()
+		} else {
+			var err error
+			sshClient, err = gossh.NewClientFromFlags()
+			if err != nil {
+				return false, err
+			}
+		}
+
 	}
 
 	if len(c.nodesExternalIPs) > 0 {
@@ -98,11 +116,11 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 			return false, fmt.Errorf("Not found external ip for node %s", nodeName)
 		}
 
-		sshClient.Settings.SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
+		sshClient.Session().SetAvailableHosts([]session.Host{{Host: ip, Name: nodeName}})
 	}
 
 	var err error
-	sshClient, err = sshClient.Start()
+	err = sshClient.Start()
 	if err != nil {
 		return false, err
 	}

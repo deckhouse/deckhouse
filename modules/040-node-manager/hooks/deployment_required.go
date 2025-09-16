@@ -17,10 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -95,7 +100,7 @@ func depRequiredFilterNG(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 	}, nil
 }
 
-func handleDeploymentRequired(input *go_hook.HookInput) error {
+func handleDeploymentRequired(_ context.Context, input *go_hook.HookInput) error {
 	var totalCount int
 
 	// we have cloud providers which support only cluster api
@@ -103,21 +108,24 @@ func handleDeploymentRequired(input *go_hook.HookInput) error {
 	// for these provider don't have machineClassKind settings or this setting is empty
 	mcmInstanceClassRaw := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind")
 	if mcmInstanceClassRaw.Exists() && mcmInstanceClassRaw.String() != "" {
-		snap := input.Snapshots["node_group"]
-		for _, sn := range snap {
-			ng := sn.(depRequiredNG)
-			if ng.IsCloud {
+		snaps := input.Snapshots.Get("node_group")
+		for nodeGroup, err := range sdkobjectpatch.SnapshotIter[depRequiredNG](snaps) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'node_group' snapshots: %w", err)
+			}
+
+			if nodeGroup.IsCloud {
 				totalCount++
 				break // we need at least one NG
 			}
 		}
 	}
 
-	snapM := input.Snapshots["machine"]
+	snapM := input.Snapshots.Get("machine")
 	totalCount += len(snapM)
-	snapMD := input.Snapshots["machine_deployment"]
+	snapMD := input.Snapshots.Get("machine_deployment")
 	totalCount += len(snapMD)
-	snapMS := input.Snapshots["machine_set"]
+	snapMS := input.Snapshots.Get("machine_set")
 	totalCount += len(snapMS)
 
 	if totalCount > 0 {

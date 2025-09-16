@@ -12,7 +12,6 @@ Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 
 - [Deckhouse Kubernetes Platform version](#deckhouse-kubernetes-platform-version-dependency);
 - [Kubernetes version](#kubernetes-version-dependency);
-- [cluster installation status](#cluster-installation-status-dependency).
 - [version of other modules](#dependency-on-the-version-of-other-modules).
 
 ### Deckhouse Kubernetes Platform version dependency
@@ -112,7 +111,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
 
    ```console
-   root@dev-master-0:~# kubectl -n d8-system exec -it deployment/deckhouse -c deckhouse -- deckhouse-controller edit cluster-configuration
+   root@dev-master-0:~# d8 platform edit cluster-configuration
    ```
 
    Output information:
@@ -144,24 +143,6 @@ Deckhouse checks whether the dependency is met in the following cases:
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
 
-### Cluster installation status dependency
-
-This dependency indicates that the module requires a cluster whose installation and configuration is complete. The dependency can only be set for built-in DKP modules.
-
-Here is how you can enable this dependency on the cluster installation status in the `module.yaml` file:
-
-```yaml
-name: ingress-nginx
-weight: 402
-description: |
-    Ingress controller for nginx
-    https://kubernetes.github.io/ingress-nginx
-requirements:
-    bootstrapped: true
-```
-
-This check is carried out only once - during the initial module analysis. If the cluster installation and configuration is not complete, the module will not be enabled.
-
 ### Dependency on the version of other modules
 
 This dependency defines the list of **enabled** modules and their minimum versions that are required for the module to work. The built-in DKP module version is considered equal to the DKP version.
@@ -184,3 +165,33 @@ requirements:
     node-local-dns: '>= 0.0.0'
     operator-trivy: '> v1.64.0'
 ```
+
+#### Optional module requirements
+
+Use this when your module works alone, but integrates with another module **if it is present**.
+
+To mark a requirement as optional, add `!optional` to the version constraint string:
+
+```yaml
+requirements:
+  modules:
+    test1: ">v0.22.1 !optional"
+```
+
+Rules:
+
+- If `test1` is **enabled**, its version **must** meet the requirement.
+- If `test1` is **disabled**, the requirement is ignored, and the module can be installed or updated.
+- If `test1` is later enabled with an incompatible version, the enabling will be rejected, and the module will remain disabled.
+
+Quick examples:
+
+- `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → the installation fails due to an unmet dependency.
+- `test1` disabled + `>v0.22.1 !optional` → install succeeds; the optional requirement is skipped.
+- `test` disabled, `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → enabling `test` is denied.
+- `test` enabled with a requirement on `test1`; enabling `test1` at a non‑matching version is denied and `test1` remains disabled.
+
+{% alert level="warning" %}
+- Enabling or disabling modules may take longer because of extra extender checks.
+- Known limitation: during reconciliation the list of enabled modules may briefly be empty, which in rare cases lets an optional dependency check pass incorrectly. If this happens, retry the operation.
+{% endalert %}

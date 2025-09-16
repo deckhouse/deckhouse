@@ -5,17 +5,17 @@ entries:
         ru: Введение
       url: /stronghold/documentation/
     - title:
-        en: Platform overview
-        ru: О платформе
+        en: Product overview
+        ru: О продукте
       folders:
         - title:
-            en: Platform editions
-            ru: Редакции платформы
+            en: Editions
+            ru: Редакции
           url: /stronghold/documentation/about/editions.html
         - title:
-            en: Update channels
+            en: Release channels
             ru: Каналы обновлений
-          url: /stronghold/documentation/about/update-channels.html
+          url: /stronghold/documentation/about/release-channels.html
         - title:
             en: Requirements
             ru: Требования
@@ -218,21 +218,25 @@ entries:
             ru: Основные понятия
           folders:
             - title:
-                en: Аутентификация
-                ru: Аутентификация
-              url: /stronghold/documentation/user/concepts/auth.html
-            - title:
-                en: Identity
-                ru: Сущности
-              url: /stronghold/documentation/user/concepts/identity.html
-            - title:
                 en: Leases
                 ru: Аренда
               url: /stronghold/documentation/user/concepts/lease.html
             - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /stronghold/documentation/user/concepts/auth.html
+            - title:
+                en: Response wrapping
+                ru: Обёртывание ответа
+              url: /stronghold/documentation/user/concepts/response-wrapping.html
+            - title:
                 en: Policy
                 ru: Политики
               url: /stronghold/documentation/user/concepts/policy.html
+            - title:
+                en: Identity
+                ru: Сущности
+              url: /stronghold/documentation/user/concepts/identity.html
             - title:
                 en: Token
                 ru: Токен
@@ -294,8 +298,8 @@ entries:
                 ru: 2FA / MFA
               folders:
               - title:
-                  en: Multifactor.ru
-                  ru: Мультифактор.ру
+                  en: MULTIFACTOR Ldap Adapter
+                  ru: MULTIFACTOR Ldap Adapter
                 url: /stronghold/documentation/user/auth/mfa/multifactor.html
               - title:
                   en: TOTP
@@ -346,6 +350,10 @@ entries:
                 ru: Механизм секретов Kubernetes
               url: /stronghold/documentation/user/secrets-engines/kubernetes.html
             - title:
+                en: LDAP Secrets engine
+                ru: Механизм секретов LDAP
+              url: /stronghold/documentation/user/secrets-engines/ldap.html
+            - title:
                 en: Identity Secrets engine
                 ru: Механизм секретов Identity
               folders:
@@ -377,6 +385,10 @@ entries:
                     en: MySQL
                     ru: MySQL
                   url: /stronghold/documentation/user/secrets-engines/databases/mysql.html
+        - title:
+            en: Automatic backup API guide
+            ru: Руководство по API автоматического резервного копирования
+          url: /stronghold/documentation/user/auto-snapshot.html
     - title:
         en: Reference
         ru: Справка

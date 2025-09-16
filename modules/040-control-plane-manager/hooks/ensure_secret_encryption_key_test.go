@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -61,6 +64,36 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: ensure_secret_enc
 			secret := g.KubernetesResource("Secret", kubeSystemNS, secretEncryptionKeySecretName)
 			Expect(secret.Exists()).To(BeFalse())
 			Expect(f.ValuesGet(secretEncryptionKeyValuePath).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Secret already exists in snapshot", func() {
+		var encodedKey string
+		var rawKey []byte
+
+		BeforeEach(func() {
+			rawKey = []byte("12345678901234567890123456789012")
+			encodedKey = base64.StdEncoding.EncodeToString(rawKey)
+
+			secretYAML := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+data:
+  %s: %s
+`, secretEncryptionKeySecretName, kubeSystemNS, secretEncryptionKeySecretKey, encodedKey)
+
+			f.BindingContexts.Set(f.KubeStateSet(secretYAML))
+			f.RunHook()
+		})
+
+		It("Should load the existing secret key and set it into values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet(secretEncryptionKeyValuePath).Exists()).To(BeTrue())
+			Expect(f.ValuesGet(secretEncryptionKeyValuePath).String()).To(Equal(encodedKey))
 		})
 	})
 

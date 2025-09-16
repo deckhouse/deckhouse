@@ -1,5 +1,6 @@
 ---
 title: "The operator-prometheus module"
+description: "Installation and management of the monitoring system in the Deckhouse Kubernetes Platform cluster."
 ---
 
 This module installs the [prometheus operator](https://github.com/coreos/prometheus-operator) for creating [Prometheus](https://prometheus.io/) installations and managing them in an automated manner.
@@ -21,7 +22,7 @@ The prometheus operator:
 ### What does Prometheus do?
 
 Generally, the Prometheus server does two key things: it **collects metrics** and **evaluates rules**:
-* For each monitoring *target*, after each `scrape_interval`, it sends an HTTP request to this *target*. In response, it gets [custom-formatted](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details) metrics and saves them to a database.
+* For each monitoring *target*, after each `scrape_interval`, it sends an HTTP request to this *target*. In response, it gets [custom-formatted](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) metrics and saves them to a database.
 * At each `evaluation_interval`, it evaluates *rules* and either:
   * sends alerts, or
   * saves (to its own database) new metrics (the result of executing the *rule*).

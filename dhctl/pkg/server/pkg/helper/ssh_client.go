@@ -16,6 +16,7 @@ package helper
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -23,11 +24,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error, error) {
+func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -84,13 +87,17 @@ func CreateSSHClient(config *config.ConnectionConfig) (*ssh.Client, func() error
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
 
-	sshClient, err := ssh.NewClient(sess, keys).Start()
-	if err != nil {
-		return nil, cleanuper.AsFunc(), err
+	var sshClient node.SSHClient
+	if app.SSHLegacyMode {
+		sshClient = clissh.NewClient(sess, keys)
+	} else {
+		sshClient = gossh.NewClient(sess, keys)
 	}
 
 	cleanuper.Add(func() error {
-		sshClient.Stop()
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			sshClient.Stop()
+		}
 		return nil
 	})
 

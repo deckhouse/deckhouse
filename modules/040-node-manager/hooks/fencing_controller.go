@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -26,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -88,8 +91,8 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return res, nil
 }
 
-func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.Snapshots[nodesSnapshot]) == 0 {
+func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	if len(input.Snapshots.Get(nodesSnapshot)) == 0 {
 		// No nodes with enabled fencing -> nothing to do
 		return nil
 	}
@@ -103,12 +106,11 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 
 	// make map with nodes to kill
 	nodesToKill := set.New()
-	for _, nodeRaw := range input.Snapshots[nodesSnapshot] {
-		if nodeRaw == nil {
-			continue
+	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.Snapshots.Get(nodesSnapshot)) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
 		}
 
-		node := nodeRaw.(fencingControllerNodeResult)
 		nodeLease, err := kubeClient.CoordinationV1().Leases("kube-node-lease").Get(context.TODO(), node.Name, metav1.GetOptions{})
 		if err != nil {
 			input.Logger.Error("Can't get node lease", log.Err(err))

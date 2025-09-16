@@ -16,9 +16,9 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-{{ $kubernetes_api_proxy_image := printf "%s%s@%s" .registry.address .registry.path ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
+{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
 
-{{- if eq .cri "Containerd" }}
+{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
@@ -50,8 +50,11 @@ spec:
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
+      readOnly: true
     - mountPath: /tmp
       name: tmp
+    securityContext:
+      readOnlyRootFilesystem: true
   - name: kubernetes-api-proxy-reloader
     image: {{ $kubernetes_api_proxy_image }}
     imagePullPolicy: IfNotPresent
@@ -62,8 +65,11 @@ spec:
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: kubernetes-api-proxy-conf
+      readOnly: true
     - mountPath: /tmp
       name: tmp
+    securityContext:
+      readOnlyRootFilesystem: true
   priorityClassName: system-node-critical
   priority: 2000001000
   volumes:

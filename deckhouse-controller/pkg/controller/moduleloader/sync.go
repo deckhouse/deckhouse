@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -62,7 +63,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 	}
 
 	for _, module := range modules.Items {
-		// handle too long disabled embedded modules
+		// handle too long disabled modules
 		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
 			// delete module releases of a stale module
 			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
@@ -144,7 +145,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		}
 
 		// module must be enabled
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
@@ -172,15 +173,15 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if mpo.Status.Weight == 0 {
 			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, opts)
+			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
 
-			def, err := md.DownloadModuleDefinitionByVersion(mpo.Name, mpo.Spec.ImageTag)
+			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
 				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
 			}
 
 			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = def.Weight
+			mpo.Status.Weight = imageInfo.ModuleDefinition.Weight
 			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
 			_ = l.client.Status().Update(ctx, &mpo)
 		}
@@ -228,12 +229,9 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			}
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion, source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", mpo.Name, source.Name, err)
-		}
-		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", mpo.Name), slog.String("source_name", source.Name))
+		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 
@@ -345,12 +343,9 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			}
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, release.Spec.ModuleName, release.GetModuleVersion(), source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", release.Spec.ModuleName, source.Name, err)
-		}
-		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", release.Spec.ModuleName), slog.String("version", release.GetReleaseVersion()), slog.String("source_name", source.Name))
+		l.registries[release.GetModuleName()] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 
@@ -421,7 +416,7 @@ func (l *Loader) createModuleSymlink(ctx context.Context, moduleName, moduleVers
 	if err != nil || !info.IsDir() {
 		l.logger.Info("downloading the module from the registry", slog.String("name", moduleName), slog.String("version", moduleVersion))
 		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.logger)
-		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, options)
+		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, l.logger.Named("downloader"), options)
 
 		if mpo {
 			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")

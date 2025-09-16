@@ -27,6 +27,7 @@ module "security-groups" {
   vpc_id = module.vpc.id
   tags = local.tags
   ssh_allow_list = local.ssh_allow_list
+  disable_default_security_group = local.disable_default_sg
 }
 
 data "aws_availability_zones" "available" {}
@@ -47,6 +48,7 @@ resource "aws_subnet" "kube_public" {
     Name                                       = "${local.prefix}-public-${count.index}"
     "kubernetes.io/cluster/${var.clusterUUID}" = "shared"
     "kubernetes.io/cluster/${local.prefix}"    = "shared"
+    "kubernetes.io/role/elb"                   = "1"
   })
 }
 

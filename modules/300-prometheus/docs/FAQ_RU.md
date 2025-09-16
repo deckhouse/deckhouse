@@ -81,7 +81,7 @@ spec:
 {% endalert %}
 
 {% alert level="info" %}
-Если после применения дашборд не появляется в Grafana, возможно, в JSON файле дашборда присутствует ошибка. Чтобы определить источник проблемы, воспользуйтесь командой `kubectl logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` для просмотра логов компонента, который осуществляет применение дашбордов.
+Если после применения дашборд не появляется в Grafana, возможно, в JSON файле дашборда присутствует ошибка. Чтобы определить источник проблемы, воспользуйтесь командой `d8 k logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` для просмотра логов компонента, который осуществляет применение дашбордов.
 {% endalert %}
 
 {% raw %}
@@ -612,7 +612,7 @@ metadata:
 Выполните следующую команду для получения списка алертов в кластере:
 
 ```shell
-kubectl get clusteralerts
+d8 k get clusteralerts
 ```
 
 Пример вывода:
@@ -629,13 +629,13 @@ ab17837fffa5e440   DeadMansSwitch                             4          5d4h   
 Выполните следующую команду для просмотра конкретного алерта:
 
 ```shell
-kubectl get clusteralerts <ALERT_NAME> -o yaml
+d8 k get clusteralerts <ALERT_NAME> -o yaml
 ```
 
 Пример:
 
 ```shell
-# kubectl get clusteralerts 235d4efba7df6af4 -o yaml
+# d8 k get clusteralerts 235d4efba7df6af4 -o yaml
 alert:
   description: |
     The recommended course of action:
@@ -665,9 +665,13 @@ status:
   startsAt: "2023-05-10T13:43:09Z"
 ```
 
+{% endraw %}
+
 {% alert level="info" %}
-Присутствие специального алерта `DeadMansSwitch` в кластере говорит о работоспособности Prometheus.
+Присутствие специального алерта `MissingDeadMansSwitch` в кластере говорит о проблемах в работоспособности компонентов мониторинга.
 {% endalert %}
+
+{% raw %}
 
 ## Как добавить дополнительные эндпоинты в scrape config?
 

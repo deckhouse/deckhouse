@@ -4,20 +4,20 @@ description: Как в модуле operator-trivy Deckhouse посмотрет�
 ---
 {% raw %}
 
-## Как посмотреть все ресурсы, которые не прошли CIS compliance-проверки?
+## Просмотр ресурсов, которые не прошли CIS compliance-проверки
 
 ```bash
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq '.status.detailReport.results | map(select(.checks | map(.success) | all | not))'
 ```
 
-## Как посмотреть ресурсы, которые не прошли конкретную CIS compliance-проверку?
+## Просмотр ресурсов, которые не прошли конкретную CIS compliance-проверку
 
 По `id`:
 
 ```bash
 check_id="5.7.3"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_id "$check_id" '.status.detailReport.results | map(select(.id == $check_id))'
 ```
 
@@ -25,13 +25,13 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 
 ```bash
 check_desc="Apply Security Context to Your Pods and Containers"
-kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
+d8 k get clustercompliancereports.aquasecurity.github.io cis -ojson |
   jq --arg check_desc "$check_desc" '.status.detailReport.results | map(select(.description == $check_desc))'
 ```
 
 {% endraw %}
 
-## Как вручную перезапустить сканирование ресурса и когда происходит повторное сканирование?
+## Ручной перезапуск сканирования ресурса
 
 Модуль выполняет повторное сканирование ресурсов каждые 24 часа согласно следующему алгоритму:
 
@@ -47,5 +47,25 @@ kubectl get clustercompliancereports.aquasecurity.github.io cis -ojson |
 Пример команды для перезаписи аннотации `trivy-operator.aquasecurity.github.io/report-ttl`:
 
 ```bash
-kubectl annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
+d8 k annotate VulnerabilityReport -n <namespace> <reportName>  trivy-operator.aquasecurity.github.io/report-ttl=1s --overwrite
 ```
+
+## Кто имеет доступ к результатам сканирования
+
+Доступ к результатам сканирования (в том числе возможность просматривать [ресурсы с результатами](cr.html)) предоставляется пользователям, обладающим следующими [ролями доступа](../user-authz/#экспериментальная-ролевая-модель):
+
+- `d8:manage:networking:viewer` или выше;
+- `d8:manage:permission:module:operator-trivy:view`.
+  
+## Как ограничить список сканируемых ресурсов в пространстве имён
+
+В текущей версии функциональности ограничения перечня ресурсов для сканирования в пространстве имён не предусмотрено.  
+Оператор сканирует **все ресурсы**, находящиеся в пространстве имён, помеченном меткой `security-scanning.deckhouse.io/enabled=""`.
+
+## Как просмотреть отчёт по своему приложению
+
+Для просмотра результатов сканирования вашего приложения воспользуйтесь Grafana-дашбордом `Security / Trivy Image Vulnerability Overview`.  
+Вы можете отфильтровать результаты по нужному пространству имён и ресурсу.
+
+Также вы можете напрямую просматривать [ресурсы](trivy-cr.html) с результатами сканирования, которые создаются для каждого сканируемого объекта.  
+Подробности о структуре их имён и местоположении доступны в [документации](trivy-cr.html).

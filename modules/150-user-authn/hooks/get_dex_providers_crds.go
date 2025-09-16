@@ -17,11 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type DexProvider map[string]interface{}
@@ -51,9 +54,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexProviders)
 
-func getDexProviders(input *go_hook.HookInput) error {
-	providers, ok := input.Snapshots["providers"]
-	if !ok {
+func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
+	providers, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "providers")
+
+	if err != nil {
 		input.Values.Set("userAuthn.internal.providers", []interface{}{})
 		return nil
 	}

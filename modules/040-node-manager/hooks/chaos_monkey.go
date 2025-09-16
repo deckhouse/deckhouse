@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -30,6 +31,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -86,7 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleChaosMonkey)
 
-func handleChaosMonkey(input *go_hook.HookInput) error {
+func handleChaosMonkey(ctx context.Context, input *go_hook.HookInput) error {
 	random := time.Now().UnixNano()
 	testRandomSeed := os.Getenv("D8_TEST_RANDOM_SEED")
 	if testRandomSeed != "" {
@@ -95,7 +98,7 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 	}
 	randomizer := rand.New(rand.NewSource(random))
 
-	nodeGroups, machines, nodes, err := prepareChaosData(input)
+	nodeGroups, machines, nodes, err := prepareChaosData(ctx, input)
 	if err != nil {
 		input.Logger.Info(err.Error()) // just info message, already have a victim
 		return nil
@@ -139,11 +142,14 @@ func handleChaosMonkey(input *go_hook.HookInput) error {
 	return nil
 }
 
-func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]chaosMachine, map[string][]chaosNode, error) {
-	snap := input.Snapshots["machines"]
-	machines := make(map[string]chaosMachine, len(snap)) // map by node name
-	for _, sn := range snap {
-		machine := sn.(chaosMachine)
+func prepareChaosData(_ context.Context, input *go_hook.HookInput) ([]chaosNodeGroup, map[string]chaosMachine, map[string][]chaosNode, error) {
+	snaps := input.Snapshots.Get("machines")
+	machines := make(map[string]chaosMachine, len(snaps)) // map by node name
+	for machine, err := range sdkobjectpatch.SnapshotIter[chaosMachine](snaps) {
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to iterate over 'machines' snapshots: %v", err)
+		}
+
 		if machine.IsAlreadyMonkeyVictim {
 			return nil, nil, nil, fmt.Errorf("machine %s is already marked as chaos monkey victim. Exiting", machine.Name) // If there are nodes in deleting state then do nothing
 		}
@@ -151,22 +157,28 @@ func prepareChaosData(input *go_hook.HookInput) ([]chaosNodeGroup, map[string]ch
 	}
 
 	// collect NodeGroup with Enabled chaos monkey
-	snap = input.Snapshots["ngs"]
+	snaps = input.Snapshots.Get("ngs")
 	nodeGroups := make([]chaosNodeGroup, 0)
-	for _, sn := range snap {
-		ng := sn.(chaosNodeGroup)
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[chaosNodeGroup](snaps) {
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to iterate over 'ngs' snapshots: %v", err)
+		}
+
 		// if chaos mode is empty - it's disabled
-		if ng.ChaosMode == "" || !ng.IsReadyForChaos {
+		if nodeGroup.ChaosMode == "" || !nodeGroup.IsReadyForChaos {
 			continue
 		}
-		nodeGroups = append(nodeGroups, ng)
+		nodeGroups = append(nodeGroups, nodeGroup)
 	}
 
 	// map nodes by NodeGroup
 	nodes := make(map[string][]chaosNode)
-	snap = input.Snapshots["nodes"]
-	for _, sn := range snap {
-		node := sn.(chaosNode)
+	snaps = input.Snapshots.Get("nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[chaosNode](snaps) {
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+
 		if v, ok := nodes[node.NodeGroup]; ok {
 			v = append(v, node)
 			nodes[node.NodeGroup] = v

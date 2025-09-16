@@ -371,7 +371,7 @@ index 15489c3f..4e1c5c09 100644
  		return ForAddresses(svc.Spec.ClusterIPs)
  	}
 diff --git a/internal/k8s/controllers/service_controller.go b/internal/k8s/controllers/service_controller.go
-index a804ee76..1060e172 100644
+index a804ee76..51879cbc 100644
 --- a/internal/k8s/controllers/service_controller.go
 +++ b/internal/k8s/controllers/service_controller.go
 @@ -19,6 +19,8 @@ package controllers
@@ -410,28 +410,18 @@ index a804ee76..1060e172 100644
  
  	if !r.initialLoadPerformed {
  		level.Debug(r.Logger).Log("controller", "ServiceReconciler", "message", "filtered service, still waiting for the initial load to be performed")
-@@ -83,9 +83,19 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
- 		return ctrl.Result{}, nil
+@@ -84,8 +84,8 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
  	}
  
-+	if service == nil {
-+		level.Info(r.Logger).Log("controller", "ServiceReconciler", "message", "service doesn't exist", "service", req.NamespacedName)
-+		return ctrl.Result{}, nil
-+	}
-+
-+	if service.Spec.ServiceRef.Name == "" || service.Spec.ServiceRef.Namespace == "" {
-+		level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "serviceRef.Name or serviceRef.Namespace is empty", "service", req.NamespacedName)
-+		return ctrl.Result{}, nil
-+	}
-+
  	epSlices := []discovery.EndpointSlice{}
- 	if r.Endpoints {
+-	if r.Endpoints {
 -		epSlices, err = epSlicesForService(ctx, r, req.NamespacedName)
++	if service != nil && r.Endpoints {
 +		epSlices, err = epSlicesForService(ctx, r, types.NamespacedName{Namespace: service.Spec.ServiceRef.Namespace, Name: service.Spec.ServiceRef.Name})
  		if err != nil {
  			level.Error(r.Logger).Log("controller", "ServiceReconciler", "message", "failed to get endpoints", "service", req.NamespacedName, "error", err)
  			return ctrl.Result{}, err
-@@ -118,7 +128,7 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
+@@ -118,7 +118,7 @@ func (r *ServiceReconciler) reconcileService(ctx context.Context, req ctrl.Reque
  func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
  	if r.Endpoints {
  		return ctrl.NewControllerManagedBy(mgr).
@@ -440,7 +430,7 @@ index a804ee76..1060e172 100644
  			Watches(&discovery.EndpointSlice{},
  				handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
  					epSlice, ok := obj.(*discovery.EndpointSlice)
-@@ -132,20 +142,39 @@ func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+@@ -132,20 +132,39 @@ func (r *ServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
  						return []reconcile.Request{}
  					}
  					level.Debug(r.Logger).Log("controller", "ServiceReconciler", "enqueueing", serviceName, "epslice", dumpResource(epSlice))
@@ -484,7 +474,7 @@ index a804ee76..1060e172 100644
  	err := r.Get(ctx, name, &res)
  	if apierrors.IsNotFound(err) { // in case of delete, get fails and we need to pass nil to the handler
  		return nil, nil
-@@ -156,7 +185,7 @@ func (r *ServiceReconciler) serviceFor(ctx context.Context, name types.Namespace
+@@ -156,7 +175,7 @@ func (r *ServiceReconciler) serviceFor(ctx context.Context, name types.Namespace
  	return &res, nil
  }
  

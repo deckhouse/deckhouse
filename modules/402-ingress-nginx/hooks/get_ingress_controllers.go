@@ -17,11 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
 )
 
 type Controller struct {
@@ -45,6 +50,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	name := obj.GetName()
 	spec, ok, err := unstructured.NestedMap(obj.Object, "spec")
+
+	// If deletion timestamp exists — skip controller to force helm deleting the resources by excluding the controller from "ingressNginx.internal.ingressControllers".
+	// need for handle_finalizers hook proper work
+	if obj.GetDeletionTimestamp() != nil {
+		return nil, nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spec from ingress controller %s: %v", name, err)
 	}
@@ -119,6 +131,21 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 		}
 	}
 
+	// Set validationEnabled to false if suspended annotation is present
+	metadata, _, err := unstructured.NestedMap(obj.Object, "metadata")
+	if err != nil {
+		return nil, fmt.Errorf("cannot get metadata from ingress controller: %v", err)
+	}
+	annotationsRaw, ok := metadata["annotations"]
+	if ok && annotationsRaw != nil {
+		annotations, ok := annotationsRaw.(map[string]interface{})
+		if ok {
+			if _, hasAnnotation := annotations[internal.IngressNginxControllerSuspendAnnotation]; hasAnnotation {
+				spec["validationEnabled"] = false
+			}
+		}
+	}
+
 	return Controller{Name: name, Spec: spec}, nil
 }
 
@@ -136,15 +163,17 @@ func setDefaultEmptyObjectOnCondition(key string, obj map[string]interface{}, co
 	}
 }
 
-func setInternalValues(input *go_hook.HookInput) error {
-	controllersFilterResult := input.Snapshots["controller"]
+func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
+	controllersFilterResult := input.Snapshots.Get("controller")
 	defaultControllerVersion := input.Values.Get("ingressNginx.defaultControllerVersion").String()
 	input.MetricsCollector.Expire("")
 
 	controllers := make([]Controller, 0, len(controllersFilterResult))
 
-	for _, c := range controllersFilterResult {
-		controller := c.(Controller)
+	for controller, err := range sdkobjectpatch.SnapshotIter[Controller](controllersFilterResult) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshots: %w", err)
+		}
 
 		version, found, err := unstructured.NestedString(controller.Spec, "controllerVersion")
 		if err != nil {
@@ -162,6 +191,23 @@ func setInternalValues(input *go_hook.HookInput) error {
 			"controller_name":    controller.Name,
 			"controller_version": version,
 		})
+
+		nginxEnabledMemoryProfiling, npeFound, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
+
+		if err != nil {
+			input.Logger.Error(fmt.Sprintf("cannot get nginxProfilingEnabled from ingress controller spec: %v", err))
+			continue
+		}
+
+		if npeFound && nginxEnabledMemoryProfiling {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
+				"controller_name": controller.Name,
+			})
+		} else {
+			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 0, map[string]string{
+				"controller_name": controller.Name,
+			})
+		}
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

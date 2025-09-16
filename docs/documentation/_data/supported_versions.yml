@@ -7,6 +7,13 @@ osDistributions:
     cse_support:
       versions:
         - '8 СП (релиз 10)'
+    ce_support:
+      versions:
+        - '10.0'
+        - '10.1'
+        - '10.2'
+        - '11'
+        - 'p10'
   astra:
     name: Astra Linux Special Edition
     url: https://astralinux.ru/products/astra-linux-special-edition/
@@ -15,6 +22,10 @@ osDistributions:
     cse_support:
       versions:
         - '1.7'
+    ce_support:
+      versions:
+        - '1.7'
+        - '1.8'
       note_content:
         ru: |
           В версии <b>1.7.6</b> модуль <b>runtime-audit-engine будет работать с ядром <a href='./modules/runtime-audit-engine/#%D1%82%D1%80%D0%B5%D0%B1%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F'>5.15-generic</a></b>.
@@ -64,14 +75,24 @@ osDistributions:
     cse_support:
       versions:
         - '7.3'
+    ce_support:
+      versions:
+        - '7.3'
+        - '8.0'
   'rosa':
     name: 'РОСА Сервер'
     url: https://rosa.ru
     ru_support: 'true'
     en_support: 'false'
-    note_content:
-      ru: |
-        Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+    ce_support:
+      versions:
+        - '7.9'
+        - '12.4'
+        - '12.5'
+        - '12.6'
+      note_content:
+        ru: |
+          Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
   '_mosos-arbat':
     name: 'МОС ОС'
     url: https://os.mos.ru/

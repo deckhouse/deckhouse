@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -22,6 +24,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -66,10 +70,13 @@ func applySecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	}, nil
 }
 
-func removeSecretGrfana(input *go_hook.HookInput) error {
-	if secretSnapshot := input.Snapshots["secret"]; len(secretSnapshot) > 0 {
-		for _, snap := range secretSnapshot {
-			secret := snap.(*Secret)
+func removeSecretGrfana(_ context.Context, input *go_hook.HookInput) error {
+	if secretSnapshot := input.Snapshots.Get("secret"); len(secretSnapshot) > 0 {
+		for secret, err := range sdkobjectpatch.SnapshotIter[Secret](secretSnapshot) {
+			if err != nil {
+				return fmt.Errorf("cannot iterate over secret snapshot: %v", err)
+			}
+
 			log.Debug("Deleting secret", slog.String("namespace", secret.Namespace), slog.String("name", secret.Name))
 			input.PatchCollector.Delete(secret.APIVersion, secret.Kind, secret.Namespace, secret.Name)
 		}

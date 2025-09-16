@@ -76,6 +76,11 @@ func validateXRulesExtensions(data json.RawMessage, schema spec.Schema) error {
 					continue
 				}
 
+				// avoid validation exception by validation empty data
+				if len(data) == 0 {
+					return nil
+				}
+
 				var items []json.RawMessage
 				err := json.Unmarshal(data, &items)
 				if err != nil {

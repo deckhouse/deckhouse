@@ -20,25 +20,13 @@ There are different types of images:
 
 Examples of resources for obtaining virtual machine images:
 
-- Ubuntu
-  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
-  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
-  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
-  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
-- Debian
-  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
-  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
-- AlmaLinux
-  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
-  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
-- RockyLinux
-  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
-  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
-- CentOS
-  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
-  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
-  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
-  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+| Distribution                                                                       | Default user |
+|-----------------------------------------------------------------------------------|---------------------------|
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
 
 The following preinstalled image formats are supported:
 
@@ -60,7 +48,7 @@ For project-specific images, two storage options are supported:
 - Container registry: The default type where the image is stored in the DVCR.
 - Persistent Volume Claim: This type uses PVC as the storage for the image. This option is preferable when using storage that supports fast PVC cloning, as disk creation from images will be faster in this case.
 
-### Creating an image from an HTTP server
+## Creating an image from an HTTP server
 
 Here is an example of creating an image with storage in DVCR. Execute the following command to create a [VirtualImage](../../../reference/cr/virtualimage.html):
 
@@ -135,6 +123,18 @@ You can obtain additional information about the downloaded image in the [Virtual
 d8 k describe vi ubuntu-22-04
 ```
 
+How to create an image from an HTTP server in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Image".
+- Select "Load data from link (HTTP)" from the list.
+- In the form that opens, enter the image name in the "Image name" field.
+- Select `ContainerRegistry` in the "Storage" field.
+- Specify the link to the image in the "URL" field.
+- Click the "Create" button.
+- The image status is displayed at the top left, under the image name.
+
 Now, let's look at an example of creating an image stored in a PVC:
 
 ```yaml
@@ -171,7 +171,20 @@ ubuntu-22-04-pvc  Ready   false   100%       23h
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [module settings](../../admin/install/steps/virtualization.html#parameter-description).
 
-### Creating an image from a container registry
+How to create an image and store it in PVC in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Image".
+- Select "Load data from link (HTTP)" from the list.
+- In the form that opens, enter the image name in the "Image name" field.
+- In the "Storage" field, select `PersistentVolumeClaim`.
+- In the "Storage class" field, you can select StorageClass or leave the default selection.
+- In the URL field, specify the link to the image.
+- Click the Create button.
+- The image status is displayed at the top left, under the image name.
+
+## Creating an image from a container registry
 
 An image stored in a container registry follows a specific format. Here's an example:
 
@@ -219,7 +232,19 @@ spec:
 EOF
 ```
 
-### Uploading an image from the command line
+How to create an image from Container Registry in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Image".
+- Select "Upload data from container image" from the list.
+- In the form that opens, enter the image name in the "Image Name" field.
+- In the "Storage" field, select `ContainerRegistry`.
+- In the "Image in Container Registry" field, specify `docker.io/<username>/ubuntu2204:latest`.
+- Click the "Create" button.
+- The image status is displayed at the top left, under the image name.
+
+## Uploading an image from the command line
 
 To upload an image from the command line, first create the following resource, as shown in the example for [VirtualImage](../../../reference/cr/virtualimage.html):
 
@@ -280,7 +305,18 @@ NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
 
-### Creating an image from a disk
+How to upload an image from the command line in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Image" then select "Upload from computer" from the drop-down menu.
+- Enter the image name in the "Image Name" field.
+- In the "Upload File" field, click the "Choose a file from your computer" link.
+- Select the file in the file manager that opens.
+- Click the "Create" button.
+- Wait until the image changes to `Ready` status.
+
+## Creating an image from a disk
 
 It is possible to create an image from a [disk](./disks.html). To do this, one of the following conditions must be met:
 
@@ -305,7 +341,19 @@ spec:
 EOF
 ```
 
-### Storage class settings for images
+How to create an image from a disk in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Disk Images" section.
+- Click "Create Image".
+- Select "Write data from disk" from the list.
+- In the form that opens, enter `linux-vm-root` in the "Image Name" field.
+- In the "Storage" field, select `ContainerRegistry`.
+- In the "Disk" field, select the desired disk from the drop-down list.
+- Click the "Create" button.
+- The image status is displayed at the top left, under its name.
+
+## Storage class settings for images
 
 Storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
 Example:

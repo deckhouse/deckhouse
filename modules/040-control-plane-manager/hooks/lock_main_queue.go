@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -28,6 +29,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 /*
@@ -81,7 +84,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 type controlPlaneManagerPod struct {
 	NodeName   string
-	Generation string
+	Generation int64
 	IsReady    bool
 }
 
@@ -93,7 +96,11 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 		return nil, err
 	}
 
-	podGeneration := pod.Labels["pod-template-generation"]
+	podGenerationStr := pod.Labels["pod-template-generation"]
+	podGeneration, err := strconv.ParseInt(podGenerationStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	var isReady bool
 	for _, cond := range pod.Status.Conditions {
@@ -122,34 +129,43 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 	return ds.GetGeneration(), nil
 }
 
-func handleLockMainQueue(input *go_hook.HookInput) error {
+func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
 		input.Logger.Info("Cluster is not yet bootstrapped, not locking main queue after control-plane-manager update")
 		return nil
 	}
 
 	// Lock deckhouse main queue while the control-plane is updating.
-	snap := input.Snapshots["cpm_ds"]
-	if len(snap) == 0 || snap[0] == nil {
+	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[int64](input.Snapshots, "cpm_ds")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
+	}
+	if len(dsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: no control-plane-manager DaemonSet found")
 	}
 
-	dsGeneration := snap[0].(int64)
-	dsGenerationStr := strconv.FormatInt(dsGeneration, 10)
+	dsGeneration := dsSnaps[0]
 
-	snap = input.Snapshots["cpm_pods"]
-
-	if len(snap) == 0 {
+	podsSnaps := input.Snapshots.Get("cpm_pods")
+	if len(podsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}
 
 	expectedReadyPodsCount := 0
 	readyCount := 0
-	for _, spod := range snap {
-		pod := spod.(controlPlaneManagerPod)
-		if pod.NodeName == "" || pod.Generation != dsGenerationStr {
+	for pod, err := range sdkobjectpatch.SnapshotIter[controlPlaneManagerPod](podsSnaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'cpm_pods' snapshots: %v", err)
+		}
+
+		if pod.NodeName == "" {
 			continue
 		}
+
+		if pod.Generation < dsGeneration {
+			return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
+		}
+
 		expectedReadyPodsCount++
 
 		if pod.IsReady {

@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -85,7 +86,7 @@ func filterCM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return settings, nil
 }
 
-func updateConfig(input *go_hook.HookInput) error {
+func updateConfig(_ context.Context, input *go_hook.HookInput) error {
 	if set.NewFromValues(input.Values, "global.enabledModules").Has("operator-trivy") && input.ConfigValues.Get("admissionPolicyEngine.denyVulnerableImages.enabled").Bool() {
 		var (
 			// default settings
@@ -94,7 +95,7 @@ func updateConfig(input *go_hook.HookInput) error {
 			}
 		)
 
-		snaps, err := sdkobjectpatch.UnmarshalToStruct[trivySettings](input.NewSnapshots, "trivy_config")
+		snaps, err := sdkobjectpatch.UnmarshalToStruct[trivySettings](input.Snapshots, "trivy_config")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal trivy_config snapshot: %w", err)
 		}

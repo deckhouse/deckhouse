@@ -8,6 +8,7 @@ resource "huaweicloud_evs_volume" "kubernetes_data" {
   volume_type       = var.volume_type
   availability_zone = var.volume_zone
   tags              = var.tags
+  enterprise_project_id = var.enterprise_project_id
   lifecycle {
     ignore_changes = [
       tags,

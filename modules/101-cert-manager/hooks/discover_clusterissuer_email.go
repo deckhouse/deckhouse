@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -74,19 +75,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverClusterIssuerEmail)
 
-func discoverClusterIssuerEmail(input *go_hook.HookInput) error {
+func discoverClusterIssuerEmail(_ context.Context, input *go_hook.HookInput) error {
 	configEmail := input.ConfigValues.Get("certManager.email").String()
 	if configEmail != "" {
 		input.Values.Set("certManager.internal.email", configEmail)
 		return nil
 	}
 
-	snapshots := input.Snapshots["ClusterIssuers"]
+	snapshots := input.Snapshots.Get("ClusterIssuers")
 	if len(snapshots) == 0 {
 		return nil
 	}
 
-	if issuerEmail := snapshots[0].(*clusterIssuer).Email; len(issuerEmail) > 0 {
+	var clustIssuer clusterIssuer
+	err := snapshots[0].UnmarshalTo(&clustIssuer)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal ClusterIssuer snapshot: %w", err)
+	}
+
+	if issuerEmail := clustIssuer.Email; len(issuerEmail) > 0 {
 		input.Values.Set("certManager.internal.email", issuerEmail)
 	}
 	return nil

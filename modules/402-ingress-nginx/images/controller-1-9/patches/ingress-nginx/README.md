@@ -61,8 +61,24 @@ Fix cve vulnerabilities.
 
 Build nginx for controller on ALT Linux.
 
-### 012-protect-validation-port.patch
+### 012-validation-mode.patch
 
-Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
-which the validator server trusts (CA and Common Name verification).  
-Without a valid client certificate, access to the validation service will be denied.
+Slightly tunes some logic related to validating ingress objects.
+
+### 013-verbose-maxmind-logs.patch
+
+Added additional logging when downloading GeoIP databases from the MaxMind service.
+
+### 014-fix-success-reload-metric.patch
+
+This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
+
+https://github.com/kubernetes/ingress-nginx/pull/13830
+
+### 015-disable-error-logs.patch
+
+Disabling log messages such as "Error obtaining Endpoints for Service...".
+
+### 016-maxmind-alerts.patch
+
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).

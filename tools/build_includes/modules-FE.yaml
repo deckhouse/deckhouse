@@ -104,6 +104,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/se-plus/modules/030-csi-vsphere
+  to: /deckhouse/modules/030-csi-vsphere
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/cloud-providers/vsphere
   to: /deckhouse/modules/040-node-manager/cloud-providers/vsphere
   stageDependencies:
@@ -171,6 +176,26 @@
         - '**/*'
 - add: /ee/modules/040-node-manager/capi/vcd
   to: /deckhouse/modules/040-node-manager/capi/vcd
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/monitoring.yaml
+  to: /deckhouse/modules/040-node-manager/templates/monitoring.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/nvidia-gpu
+  to: /deckhouse/modules/040-node-manager/templates/nvidia-gpu
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/templates/podmonitor.yaml
+  to: /deckhouse/modules/040-node-manager/templates/podmonitor.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-node-manager/monitoring/grafana-dashboards
+  to: /deckhouse/modules/040-node-manager/monitoring/grafana-dashboards
   stageDependencies:
     install:
         - '**/*'
@@ -326,16 +351,6 @@
         - '**/*'
 - add: /ee/fe/modules/040-node-manager/templates/ngc-ca-certificate.yaml
   to: /deckhouse/modules/040-node-manager/templates/ngc-ca-certificate.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/prometheus.yaml
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/fe/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
-  to: /deckhouse/modules/300-prometheus/templates/prometheus/longterm/prometheus.yaml
   stageDependencies:
     install:
         - '**/*'

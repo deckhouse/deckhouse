@@ -8,6 +8,18 @@
 
 {%- unless page.platform_type == 'baremetal' or page.platform_type == 'existing' or page.platform_code == 'zvirt' or page.platform_code == 'dynamix' %}
 
+{% if page.ee_only == true and page.se_support == nil %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% endif %}
+
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Standard Edition+ и Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% endif %}
+
 Для развертывания будет использован минимальный набор узлов:
 {%- assign preset=site.data.getting_started.dkp_data.presets.minimal %}
 <div id="preset_minimal" markdown="1">
@@ -28,6 +40,13 @@
 {%- endunless %}
 
 {% if include.presentation -%}
+
+{% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} в редакции Community Edition недоступна. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% endif %}
+
 Презентация содержит основные этапы установки, которые предстоит пройти.
 
 <div data-presentation="{{ include.presentation }}"></div>
@@ -64,6 +83,7 @@
    {% offtopic title="Требования..." %}
    - ОС: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
    - установленный docker для запуска инсталлятора Deckhouse (инструкции для [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
+     - на компьютерах с процессорами семейства Apple Silicon включите опцию «Use Rosetta for x86_64/amd64 emulation on Apple Silicon» в настройках Docker Desktop, чтобы избежать возможных проблем с запуском `ssh-agent` во время установки;
 {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry ([читайте подробнее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#особенности-настройки-сторонних-registry) про их настройку) или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
 {%- else %}
@@ -104,7 +124,7 @@
    - 16 ГБ RAM;
    - 100 ГБ дискового пространства
    {%- if page.platform_code == 'aws' %};
-   - ядро Linux версии `5.7` или новее.
+   - ядро Linux версии `5.8` или новее.
    {%- else %}.{%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_code == 'zvirt' %}
@@ -114,7 +134,7 @@
    - 16 ГБ RAM;
    - 100 ГБ дискового пространства
    {%- if page.platform_code == 'aws' %};
-   - ядро Linux версии `5.7` или новее.
+   - ядро Linux версии `5.8` или новее.
    {%- else %}.{%- endif %}
    {% endofftopic %}
 {%- elsif page.platform_type == 'baremetal' %}
@@ -124,11 +144,11 @@
    - не менее 8 ГБ RAM;
    - не менее 60 ГБ дискового пространства на быстром диске (400+ IOPS);
    - [поддерживаемая ОС](/products/kubernetes-platform/documentation/v1/supported_versions.html);
-   - ядро Linux версии `5.7` или новее;
+   - ядро Linux версии `5.8` или новее;
    - **уникальный hostname** в пределах серверов (виртуальных машин) кластера;
    - наличие одного из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`).
 
-     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому при необходимости их следует установить;
+     **Важно.** — в РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их следует заранее установить;
    - установленный Python;
    {% if page.platform_code == "bm-private" %}
    - доступ до проксирующего registry или до частного хранилища образов контейнеров с образами контейнеров Deckhouse;
@@ -140,7 +160,7 @@
    - доступ к стандартным для используемой ОС репозиториям пакетов;
    {%- endif %}
    - SSH-доступ от **персонального компьютера** (см. п.1) по ключу;
-   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22322/TCP</code>;
+   - сетевой доступ от **персонального компьютера** (см. п.1) по порту <code>22/TCP</code>;
    - на узле не должно быть установлено пакетов container runtime, например containerd или Docker.
    {% endofftopic %}
 {%- endif %}

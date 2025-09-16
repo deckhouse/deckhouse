@@ -37,6 +37,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -49,7 +51,7 @@ var testDeckhouseVersion = "v1.15.0"
 func setupFakeController(
 	t *testing.T,
 	filename, values string,
-	mup *v1alpha1.ModuleUpdatePolicySpec,
+	mup *v1alpha2.ModuleUpdatePolicySpec,
 	options ...reconcilerOption,
 ) (*deckhouseReleaseReconciler, client.Client) {
 	ds := &helpers.DeckhouseSettings{
@@ -95,17 +97,17 @@ func setupControllerSettings(
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
-
+	metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
 	rec := &deckhouseReleaseReconciler{
 		client:           cl,
 		deckhouseVersion: testDeckhouseVersion,
 		dc:               dc,
 		logger:           log.NewNop(),
 		moduleManager:    stubModulesManager{},
-		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds),
-		metricStorage:    metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
+		metricStorage:    metricStorage,
 		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()), releaseUpdater.D8ReleaseBlockedMetricName),
-		exts:             extenders.NewExtendersStack("", log.NewNop()),
+		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())
 
@@ -138,6 +140,12 @@ func assembleInitObject(t *testing.T, obj string) client.Object {
 		res = unmarshalRelease[v1alpha1.DeckhouseRelease](obj, t)
 	case "ConfigMap":
 		res = unmarshalRelease[corev1.ConfigMap](obj, t)
+	case "ModuleSource":
+		res = unmarshalRelease[v1alpha1.ModuleSource](obj, t)
+	case "Module":
+		res = unmarshalRelease[v1alpha1.Module](obj, t)
+	case "ModuleConfig":
+		res = unmarshalRelease[v1alpha1.ModuleConfig](obj, t)
 
 	default:
 		require.Fail(t, "unknown Kind:"+typ.Kind)

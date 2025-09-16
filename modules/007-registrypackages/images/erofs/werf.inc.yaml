@@ -1,0 +1,42 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: builder/scratch
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - dump.erofs
+  - fsck.erofs
+  - mkfs.erofs
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "erofs": "1.8.10" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+fromImage: builder/alpine
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: tools/erofs-utils
+  add: /usr/bin
+  to: /
+  includePaths:
+  - '*.erofs'
+  before: setup
+shell:
+  setup:
+  - chmod +x /dump.erofs /fsck.erofs /mkfs.erofs /install /uninstall

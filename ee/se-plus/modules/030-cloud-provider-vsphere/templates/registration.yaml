@@ -15,8 +15,17 @@ data:
   zones: {{ $providerClusterConfiguration.zones | toJson | b64enc | quote }}
   instanceClassKind: {{ b64enc "VsphereInstanceClass" | quote }}
   machineClassKind: {{ b64enc "VsphereMachineClass" | quote }}
-
   {{- $vsphereValues := dict }}
+  {{- $mainNetwork := "" }}
+  {{- if and $providerDiscoveryData $providerDiscoveryData.instances }}
+    {{- $mainNetwork = $providerDiscoveryData.instances.mainNetwork | default "" }}
+  {{- end }}
+  {{- if and (not $mainNetwork) $masterNodeGroup.instanceClass }}
+    {{- $mainNetwork = $masterNodeGroup.instanceClass.mainNetwork | default "" }}
+  {{- end }}
+  {{- if $mainNetwork }}
+    {{- $_ := set $vsphereValues "instances" (dict "mainNetwork" $mainNetwork) -}}
+  {{- end }}
   {{- $_ := set $vsphereValues "server" $providerClusterConfiguration.provider.server }}
   {{- $_ := set $vsphereValues "username" $providerClusterConfiguration.provider.username }}
   {{- $_ := set $vsphereValues "password" $providerClusterConfiguration.provider.password  }}
@@ -26,7 +35,6 @@ data:
   {{- $_ := set $vsphereValues "region" $providerClusterConfiguration.region }}
   {{- $_ := set $vsphereValues "sshKey" $providerClusterConfiguration.sshPublicKey }}
   {{- $_ := set $vsphereValues "vmFolderPath" $providerClusterConfiguration.vmFolderPath }}
-
   {{- $_ := set $vsphereValues "instanceClassDefaults" dict }}
   {{- if hasKey $providerDiscoveryData "resourcePoolPath" }}
     {{- $_ := set $vsphereValues.instanceClassDefaults "resourcePoolPath" $providerDiscoveryData.resourcePoolPath }}

@@ -1,8 +1,8 @@
 name: dashboard
-weight: 500
 stage: Deprecated
 subsystems:
   - observability
 namespace: d8-dashboard
 requirements:
-  bootstrapped: true
+  user-authz: ">= 0.0.0"
+  deckhouse: ">= 1.68"

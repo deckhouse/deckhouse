@@ -1,0 +1,43 @@
+@use "sass:math";
+
+@use "sass:meta";
+@use '_breakpoints.scss';
+
+// Colors from theme.json
+$white: #fff;
+$black: #000;
+$dark-blue: #00003C;
+
+$primary-100: #E1F0FF;
+$primary-300: #B0D8FF;
+$primary-500: #408BFF;
+$primary-700: #0064FF;
+$primary-900: #002CCA;
+$primary-dark: #000F98;
+
+$ntrl-50: #F5F5FB;
+$ntrl-100: #E7E9F5;
+$ntrl-200: #CDD1E6;
+$ntrl-300: #AFB4D1;
+$ntrl-400: #969DC4;
+$ntrl-500: #787FA7;
+$ntrl-600: #5E6697;
+$ntrl-700: #3B426D;
+$ntrl-800: #222A5E;
+$ntrl-900: #02003E;
+
+@mixin color($color) {
+  color: $color;
+}
+
+@mixin bg-color($color) {
+  background-color: $color;
+}
+
+@mixin box-shadow {
+  box-shadow: 0 4px 9px 0 rgba(34, 42, 94, .11);
+}
+
+@function rem($px) {
+  @return math.div($px, 14px)+0rem;
+}

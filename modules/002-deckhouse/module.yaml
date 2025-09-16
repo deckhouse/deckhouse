@@ -1,4 +1,5 @@
 name: deckhouse
+critical: true
 weight: 2
 stage: "General Availability"
 subsystems:
@@ -7,3 +8,5 @@ namespace: d8-system
 disable:
   confirmation: true
   message: "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+requirements:
+  deckhouse: ">= 1.68"

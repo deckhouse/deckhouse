@@ -18,16 +18,29 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
+
+const kubeconfigPath = "/etc/kubernetes/admin.conf"
+
+var defaultBackoff = wait.Backoff{
+	Duration: 1 * time.Second,
+	Factor:   1.05,
+	Jitter:   0.2,
+	Steps:    50,
+}
 
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
@@ -72,7 +85,7 @@ func backupFile(src string) error {
 
 	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%02d-%02d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
 
-	if err := os.MkdirAll(backupDir, 0700); err != nil {
+	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		return err
 	}
 	return copy.Copy(src, backupDir+src)
@@ -186,4 +199,30 @@ func cleanup() {
 	if err := removeOldBackups(); err != nil {
 		log.Warn(err.Error())
 	}
+}
+
+var ErrNonRetryable = errors.New("non-retryable error")
+
+func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Context) error, opName string) error {
+	attempts := 0
+
+	condition := func(ctx context.Context) (bool, error) {
+		attempts++
+		log.Info(fmt.Sprintf("%s: attempt %d", opName, attempts))
+		err := op(ctx)
+		if err == nil {
+			return true, nil
+		}
+		log.Err(err)
+		if errors.Is(err, ErrNonRetryable) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	err := wait.ExponentialBackoffWithContext(ctx, backoff, condition)
+	if errors.Is(err, wait.ErrWaitTimeout) {
+		return fmt.Errorf("retries exhausted for %s after %d attempts: %w", opName, attempts, err)
+	}
+	return err
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type CustomRule struct {
@@ -85,24 +88,30 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, customRulesHandler)
 
-func customRulesHandler(input *go_hook.HookInput) error {
+func customRulesHandler(_ context.Context, input *go_hook.HookInput) error {
 	tmpMap := make(map[string]bool)
 
-	rulesSnap := input.Snapshots["rules"]
+	rulesSnap := input.Snapshots.Get("rules")
 
-	for _, ruleF := range rulesSnap {
-		rule := ruleF.(*CustomRule)
+	for rule, err := range sdkobjectpatch.SnapshotIter[CustomRule](rulesSnap) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'rules' snapshot: %v", err)
+		}
+
 		internalRule := createPrometheusRule(rule.Name, rule.Groups)
 		input.PatchCollector.CreateOrUpdate(&internalRule)
 
 		tmpMap[internalRule.GetName()] = true
 	}
 
-	internalRulesSnap := input.Snapshots["internal_rules"]
+	internalRulesSnap := input.Snapshots.Get("internal_rules")
 
 	// delete absent prometheus rules
-	for _, sn := range internalRulesSnap {
-		internalRuleName := sn.(string)
+	for internalRuleName, err := range sdkobjectpatch.SnapshotIter[string](internalRulesSnap) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'internal_rules' snapshot: %v", err)
+		}
+
 		if _, ok := tmpMap[internalRuleName]; !ok {
 			input.PatchCollector.Delete("monitoring.coreos.com/v1", "PrometheusRule", "d8-monitoring", internalRuleName)
 		}

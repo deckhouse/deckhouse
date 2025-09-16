@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -29,6 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -204,25 +207,29 @@ type StandbyNodeGroupForValues struct {
 	Taints        []v1.Taint `json:"taints"`
 }
 
-func discoverStandbyNGHandler(input *go_hook.HookInput) error {
+func discoverStandbyNGHandler(_ context.Context, input *go_hook.HookInput) error {
 	standbyNodeGroups := make([]StandbyNodeGroupForValues, 0)
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[StandbyNodeGroupInfo](input.Snapshots.Get("node_groups")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'node_groups' snapshot: %w", err)
+		}
 
-	for _, node := range input.Snapshots["node_groups"] {
-		ng := node.(StandbyNodeGroupInfo)
-
-		if !ng.NeedStandby {
-			setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, nil)
+		if !nodeGroup.NeedStandby {
+			setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, nil)
 			continue
 		}
 
 		actualStandby := 0
-		for _, pod := range input.Snapshots["standby_pods"] {
-			standbyPod := pod.(StandbyPodInfo)
-			if standbyPod.Group == ng.Name && standbyPod.IsReady {
+		for standbyPod, err := range sdkobjectpatch.SnapshotIter[StandbyPodInfo](input.Snapshots.Get("standby_pods")) {
+			if err != nil {
+				return fmt.Errorf("cannot iterate over 'standby_pods' snapshot: %w", err)
+			}
+
+			if standbyPod.Group == nodeGroup.Name && standbyPod.IsReady {
 				actualStandby++
 			}
 		}
-		setNodeGroupStatus(input.PatchCollector, ng.Name, standbyStatusField, &actualStandby)
+		setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, standbyStatusField, &actualStandby)
 
 		readyNodesCount := 0
 		var (
@@ -230,10 +237,12 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			nodeAllocatableCPU    = resource.MustParse("4000m")
 			nodeAllocatableMemory = resource.MustParse("8Gi")
 		)
+		for standbyNode, err := range sdkobjectpatch.SnapshotIter[StandbyNodeInfo](input.Snapshots.Get("nodes")) {
+			if err != nil {
+				return fmt.Errorf("cannot iterate over 'nodes' snapshot: %w", err)
+			}
 
-		for _, node := range input.Snapshots["nodes"] {
-			standbyNode := node.(StandbyNodeInfo)
-			if standbyNode.Group != ng.Name {
+			if standbyNode.Group != nodeGroup.Name {
 				continue
 			}
 			if standbyNode.IsReady && !standbyNode.IsUnschedulable {
@@ -253,16 +262,16 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 			}
 		}
 
-		if ng.ZonesCount == 0 {
+		if nodeGroup.ZonesCount == 0 {
 			if zones, ok := input.Values.GetOk("nodeManager.internal.cloudProvider.zones"); ok {
-				ng.ZonesCount = len(zones.Array())
+				nodeGroup.ZonesCount = len(zones.Array())
 			} else {
-				ng.ZonesCount = 1
+				nodeGroup.ZonesCount = 1
 			}
 		}
-		maxInstances := ng.MaxPerZone * ng.ZonesCount
+		maxInstances := nodeGroup.MaxPerZone * nodeGroup.ZonesCount
 
-		desiredStandby := intOrPercent(ng.Standby, maxInstances)
+		desiredStandby := intOrPercent(nodeGroup.Standby, maxInstances)
 		totalNodesCount := readyNodesCount + desiredStandby - actualStandby
 		if totalNodesCount > maxInstances {
 			excessNodesCount := totalNodesCount - maxInstances
@@ -275,15 +284,18 @@ func discoverStandbyNGHandler(input *go_hook.HookInput) error {
 		}
 
 		// calculate standby request as percent of the node
-		standbyRequestCPU := resource.NewScaledQuantity(nodeAllocatableCPU.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
-		standbyRequestMemory := resource.NewScaledQuantity(nodeAllocatableMemory.ScaledValue(resource.Milli)/100*ng.OverprovisioningRate, resource.Milli)
+		standbyRequestCPU := resource.NewScaledQuantity(nodeAllocatableCPU.ScaledValue(resource.Milli)/100*nodeGroup.OverprovisioningRate, resource.Milli)
+		standbyRequestMemory := resource.NewScaledQuantity(nodeAllocatableMemory.ScaledValue(resource.Milli)/100*nodeGroup.OverprovisioningRate, resource.Milli)
+		// Convert memory to Mi and format as a string. 1 Mi = 1024 * 1024 bytes.
+		reserveMemoryInMi := standbyRequestMemory.Value() / (1024 * 1024)
+		reserveMemoryMi := fmt.Sprintf("%dMi", reserveMemoryInMi)
 
 		standbyNodeGroups = append(standbyNodeGroups, StandbyNodeGroupForValues{
-			Name:          ng.Name,
+			Name:          nodeGroup.Name,
 			Standby:       desiredStandby,
 			ReserveCPU:    standbyRequestCPU.String(),
-			ReserveMemory: fmt.Sprintf("%dMi", standbyRequestMemory.ScaledValue(resource.Mega)),
-			Taints:        ng.Taints,
+			ReserveMemory: reserveMemoryMi,
+			Taints:        nodeGroup.Taints,
 		})
 	}
 

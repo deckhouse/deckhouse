@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +26,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	golibset "github.com/deckhouse/deckhouse/go_lib/set"
 	nodeuserv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -102,16 +106,18 @@ func applyNodeUsersForClearFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func discoverNodeUsersForClear(input *go_hook.HookInput) error {
-	nodeUserSnap := input.Snapshots[nodeUserForClearSnapName]
+func discoverNodeUsersForClear(_ context.Context, input *go_hook.HookInput) error {
+	nodeUserSnap := input.Snapshots.Get(nodeUserForClearSnapName)
 	if len(nodeUserSnap) == 0 {
 		return nil
 	}
 
-	nodes := golibset.NewFromSnapshot(input.NewSnapshots.Get(nodeForClearSnapName))
+	nodes := golibset.NewFromSnapshot(input.Snapshots.Get(nodeForClearSnapName))
+	for nuForClear, err := range sdkobjectpatch.SnapshotIter[nodeUsersForClear](nodeUserSnap) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over node_users_for_clear snapshot: %w", err)
+		}
 
-	for _, item := range nodeUserSnap {
-		nuForClear := item.(nodeUsersForClear)
 		input.Logger.Debug("clearErrors", slog.Any("NodeUsers", nuForClear), slog.Any("Nodes", nodes))
 		if incorrectNodes := hasIncorrectNodeUserErrors(nuForClear.StatusErrors, nodes); len(
 			incorrectNodes,
@@ -140,6 +146,9 @@ func hasIncorrectNodeUserErrors(
 	return result
 }
 
+// TODO (core): fix this linter
+//
+//nolint:unparam
 func clearNodeUserIncorrectErrors(
 	nodeUserName string,
 	incorrectNodes []string,

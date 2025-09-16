@@ -100,7 +100,7 @@ type provider struct {
 	} `json:"oidc"`
 }
 
-func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) error {
+func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// check proxy rollout conditions
 	if !input.Values.Get("userAuthn.publishAPI.enabled").Bool() {
 		return nil
@@ -141,9 +141,12 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	// check certificate renewal necessity
-	snap := input.Snapshots["secret"]
+	snap := input.Snapshots.Get("secret")
 	if len(snap) > 0 {
-		secret := snap[0].(secret)
+		var secret secret
+		if err := snap[0].UnmarshalTo(&secret); err != nil {
+			return fmt.Errorf("failed to unmarshal 'secret' snapshot: %w", err)
+		}
 
 		// if cert is valid more than two days - skip renewal
 		expiring, err := certificate.IsCertificateExpiringSoon(secret.Crt, 2*24*time.Hour)

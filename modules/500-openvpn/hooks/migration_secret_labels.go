@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,12 +30,14 @@ import (
 const (
 	serverCertSecretName = "openvpn-pki-server"
 	serverCertNameLabel  = "name"
+	serverCertIndexLabel = "index.txt"
 	serverCertLabelValue = "server"
 	namespace            = "d8-openvpn"
 )
 
 type serverCert struct {
-	NameLabelExists bool
+	NameLabelExists  bool
+	IndexLabelExists bool
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -64,32 +67,41 @@ func applyServerCertSecretFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		return nil, fmt.Errorf("cannot convert secret to structured object: %v", err)
 	}
 	_, labelExist := secret.Labels[serverCertNameLabel]
+	_, indexExist := secret.Labels[serverCertIndexLabel]
 	return serverCert{
-		NameLabelExists: labelExist,
+		NameLabelExists:  labelExist,
+		IndexLabelExists: indexExist,
 	}, err
 }
 
-func addMissingLabels(input *go_hook.HookInput) error {
-	snapshots := input.Snapshots["openvpn_pki_server"]
-	if len(snapshots) == 0 {
+func addMissingLabels(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("openvpn_pki_server")
+	if len(snaps) == 0 {
 		input.Logger.Warn("Secret openvpn-pki-server not found, skipping")
 		return nil
 	}
 
-	sc, ok := snapshots[0].(serverCert)
-	if !ok {
-		return fmt.Errorf("cannot convert snapshot to structured object")
+	var sc serverCert
+	err := snaps[0].UnmarshalTo(&sc)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal openvpn_pki_server: %w", err)
 	}
 
-	if sc.NameLabelExists {
+	if sc.NameLabelExists && sc.IndexLabelExists {
 		return nil
+	}
+
+	labels := map[string]interface{}{}
+	if !sc.NameLabelExists {
+		labels[serverCertNameLabel] = serverCertLabelValue
+	}
+	if !sc.IndexLabelExists {
+		labels[serverCertIndexLabel] = ""
 	}
 
 	patch := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"labels": map[string]interface{}{
-				serverCertNameLabel: serverCertLabelValue,
-			},
+			"labels": labels,
 		},
 	}
 

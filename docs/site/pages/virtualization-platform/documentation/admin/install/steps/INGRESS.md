@@ -159,7 +159,7 @@ To access the cluster's web interfaces, you can create a static user:
 1. Generate a password:
 
    ```shell
-   echo "<USER-PASSWORD>" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+   echo -n '<USER-PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
    ```
 
    `<USER-PASSWORD>` — the password to be set for the user.

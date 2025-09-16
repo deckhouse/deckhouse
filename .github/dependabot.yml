@@ -250,6 +250,24 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/dependency/vsphere"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/go_lib/registry"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/registry-packages-proxy"
   labels:
   - "type/dependencies"
@@ -296,6 +314,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/015-admission-policy-engine/images/constraint-exporter/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/021-cni-cilium/images/check-wg-kernel-compat/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -728,6 +755,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/pkg/log"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/pkg/metrics-storage"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

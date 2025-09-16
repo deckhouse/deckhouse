@@ -17,11 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -53,12 +56,15 @@ func applyDiscoveryIstioIngressControllerFilter(obj *unstructured.Unstructured) 
 	return IstioIngressGatewayController{Name: name, Spec: spec}, nil
 }
 
-func setInternalIngressControllers(input *go_hook.HookInput) error {
-	controllersFilterResult := input.Snapshots["controller"]
+func setInternalIngressControllers(_ context.Context, input *go_hook.HookInput) error {
+	controllersFilterResult := input.Snapshots.Get("controller")
 	controllers := make([]IstioIngressGatewayController, 0, len(controllersFilterResult))
 
-	for _, c := range controllersFilterResult {
-		controller := c.(IstioIngressGatewayController)
+	for controller, err := range sdkobjectpatch.SnapshotIter[IstioIngressGatewayController](controllersFilterResult) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'controller' snapshot: %w", err)
+		}
+
 		controllers = append(controllers, controller)
 	}
 

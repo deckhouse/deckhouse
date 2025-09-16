@@ -18,37 +18,51 @@ package client
 
 import (
 	"sync"
+
+	"github.com/go-logr/logr"
 )
 
 type taskManager struct {
 	tasksMutex sync.Mutex
 	tasks      map[taskID]*bool
+	logger     logr.Logger
 }
 
 type taskID string
 
-func newTaskManager() *taskManager {
+func newTaskManager(logger logr.Logger) *taskManager {
 	return &taskManager{
-		tasks: make(map[taskID]*bool),
+		tasks:  make(map[taskID]*bool),
+		logger: logger,
 	}
 }
 
 // spawn spawns a new task if it doesn't exist yet.
 func (m *taskManager) spawn(taskID taskID, task func() bool) *bool {
+	m.logger.Info("Starting spawn task", "id", taskID)
+	defer m.logger.Info("Finished spawn task", "id", taskID)
+
 	m.tasksMutex.Lock()
 	defer m.tasksMutex.Unlock()
 
 	// Avoid spawning multiple tasks for the same taskID.
 	done, ok := m.tasks[taskID]
+	m.logger.Info("Has task with id", "id", taskID, "ok", ok)
 	if ok {
+		m.logger.Info("Task with id present", "id", taskID, "done", done)
+
 		if done == nil {
 			return nil
 		}
 
 		delete(m.tasks, taskID)
 
+		m.logger.Info("Task with id deleted from manager and return result", "id", taskID, "done", done)
+
 		return done
 	}
+
+	m.logger.Info("Starting gorutine with task", "id", taskID)
 
 	m.tasks[taskID] = nil
 
@@ -60,9 +74,17 @@ func (m *taskManager) spawn(taskID taskID, task func() bool) *bool {
 			defer m.tasksMutex.Unlock()
 
 			m.tasks[taskID] = &done
+
+			m.logger.Info("Task written to state", "id", taskID, "done", done, "map_variable", m.tasks[taskID])
 		}()
 
-		done = task()
+		res := task()
+
+		m.logger.Info("Task with finished with id and result", "id", taskID, "result", res)
+
+		done = res
+
+		m.logger.Info("Task result write to variable", "id", taskID, "done", done)
 	}()
 
 	return nil

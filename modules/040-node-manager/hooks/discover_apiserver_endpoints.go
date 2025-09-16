@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -28,6 +29,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -119,11 +122,14 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return addresses, nil
 }
 
-func handleAPIEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.NewSnapshots.Get("kube_apiserver"))
+func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("kube_apiserver"))
 
-	for _, ep := range input.Snapshots["apiserver_endpoints"] {
-		endpointsSet.Add(ep.([]string)...)
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpoints")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'apiserver_endpoints' snapshot: %w", err)
+		}
+		endpointsSet.Add(ep...)
 	}
 	endpointsSet.Delete("") // clean faulty pods
 

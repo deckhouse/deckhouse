@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -33,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -124,7 +127,7 @@ func drainFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 // Drain nodes: If node is marked for draining – drain it!
 // all nodes in one node group drain concurrently. If we need to limit this behavior - put here some queue implementation
-func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
+func handleDraining(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -133,12 +136,11 @@ func handleDraining(input *go_hook.HookInput, dc dependency.Container) error {
 	wg := &sync.WaitGroup{}
 	drainingNodesC := make(chan drainedNodeRes, 1)
 
-	snap := input.Snapshots["nodes_for_draining"]
-	for _, s := range snap {
-		if s == nil {
-			continue
+	dNodes := input.Snapshots.Get("nodes_for_draining")
+	for dNode, err := range sdkobjectpatch.SnapshotIter[drainingNode](dNodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes_for_draining' snapshots: %w", err)
 		}
-		dNode := s.(drainingNode)
 
 		drainTimeout, exists := drainTimeoutCache[dNode.NodeGroupName]
 		if !exists {

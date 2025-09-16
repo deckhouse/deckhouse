@@ -77,6 +77,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ctx (dict "app" "validator" "name" $name )) | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
@@ -131,11 +132,6 @@ spec:
             - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
             - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
             - --watch-namespace=d8-ingress-nginx
-            {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
-            - --validating-verify-admission-requests=true
-            - --validating-webhook-allow-cn=kube-api-admission
-            - --validating-webhook-allow-ca-file=/chroot/etc/nginx/admission-ssl/ca.crt
-            {{- end }}
           lifecycle:
             preStop:
               exec:
@@ -161,11 +157,6 @@ spec:
             - name: webhook-cert
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
-            {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
-            - name: webhook-client-ca
-              mountPath: /chroot/etc/nginx/admission-ssl/
-              readOnly: true
-            {{- end}}
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -173,11 +164,6 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
-        {{- if $ctx.Values.global.enabledModules | has "control-plane-manager" }}
-        - name: webhook-client-ca
-          configMap:
-            name: admission-client-ca.crt
-        {{- end}}
 {{- end }}
 
 {{- $ctx := . }}

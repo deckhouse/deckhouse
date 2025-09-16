@@ -1,5 +1,6 @@
 ---
 title: "The cni-simple-bridge module"
+description: "Ensuring network operation in the Deckhouse Kubernetes Platform cluster with limited functionality."
 ---
 
 The module does not have any settings.

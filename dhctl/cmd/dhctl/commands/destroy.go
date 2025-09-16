@@ -25,6 +25,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -58,11 +61,26 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
+		var sshClient node.SSHClient
+
+		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
-		if err := terminal.AskBecomePassword(); err != nil {
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		if app.SSHLegacyMode {
+			sshClient = clissh.NewClientFromFlags()
+		} else {
+			var err error
+			sshClient, err = gossh.NewClientFromFlags()
+			if err != nil {
+				return err
+			}
+		}
+		err := sshClient.Start()
+		if err != nil {
 			return err
 		}
 

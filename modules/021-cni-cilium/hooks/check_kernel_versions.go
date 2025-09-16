@@ -27,6 +27,7 @@ in case of hook failure
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -39,6 +40,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -50,8 +54,9 @@ type nodeConstraint struct {
 }
 
 const (
-	nodeKernelCheckMetricsGroup = "node_kernel_check"
-	nodeKernelCheckMetricName   = "d8_node_kernel_does_not_satisfy_requirements"
+	nodeKernelCheckMetricsGroup          = "node_kernel_check"
+	nodeKernelCheckMetricName            = "d8_node_kernel_does_not_satisfy_requirements"
+	minKernelVersionForExtraLBAlgorithms = "5.15"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -89,17 +94,33 @@ func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}, nil
 }
 
-func handleNodes(input *go_hook.HookInput) error {
+func handleNodes(_ context.Context, input *go_hook.HookInput) error {
 	constraints := []nodeConstraint{
 		{
 			kernelVersionConstraint: input.Values.Get("cniCilium.internal.minimalRequiredKernelVersionConstraint").String(),
 			modulesListInUse:        []string{"cni-cilium"},
 		},
 	}
+	extraLoadBalancerAlgorithmsEnabled := input.Values.Get("cniCilium.extraLoadBalancerAlgorithmsEnabled").Bool()
+	if extraLoadBalancerAlgorithmsEnabled {
+		currentConstraint := constraints[0].kernelVersionConstraint
+		currentVersionStr := strings.TrimSpace(strings.TrimPrefix(currentConstraint, ">="))
+		currentVersion, err := semver.NewVersion(currentVersionStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse current version from constraint %q: %v", currentConstraint, err)
+		}
+		extraLBMinVersion, err := semver.NewVersion(minKernelVersionForExtraLBAlgorithms)
+		if err != nil {
+			return fmt.Errorf("invalid minKernelVersionForExtraLBAlgorithms %q: %v", minKernelVersionForExtraLBAlgorithms, err)
+		}
+		if extraLBMinVersion.GreaterThan(currentVersion) {
+			constraints[0].kernelVersionConstraint = fmt.Sprintf(">= %s", extraLBMinVersion.String())
+		}
+	}
 
 	input.MetricsCollector.Expire(nodeKernelCheckMetricsGroup)
 
-	nodes := input.Snapshots["nodes"]
+	nodes := input.Snapshots.Get("nodes")
 	if len(nodes) == 0 {
 		input.Logger.Error("no nodes found")
 		return nil
@@ -128,9 +149,10 @@ func handleNodes(input *go_hook.HookInput) error {
 		// Values is re-set to update the minimum required Linux kernel version depending on the included modules
 		// The minimum version will later be passed to the cilium agent's cilium initContainer
 		input.Values.Set("cniCilium.internal.minimalRequiredKernelVersionConstraint", constraint.kernelVersionConstraint)
-
-		for _, n := range nodes {
-			node := n.(nodeKernelVersion)
+		for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+			}
 
 			kernelVerStr := strings.Split(node.KernelVersion, "-")[0]
 			nodeSemverVersion, err := semver.NewVersion(kernelVerStr)
@@ -169,14 +191,12 @@ func handleNodes(input *go_hook.HookInput) error {
 }
 
 // Identify the cluster node (as nodeKernelVersion) with the lowest version of the kernel.
-func defineMinimalLinuxKernelVersionNode(nodes []go_hook.FilterResult) (*nodeKernelVersion, error) {
+func defineMinimalLinuxKernelVersionNode(nodes []pkg.Snapshot) (*nodeKernelVersion, error) {
 	var minimalNode *nodeKernelVersion
 	var minimalVersion *semver.Version
-
-	for _, n := range nodes {
-		node, ok := n.(nodeKernelVersion)
-		if !ok {
-			return nil, fmt.Errorf("unexpected type: %T", n)
+	for node, err := range sdkobjectpatch.SnapshotIter[nodeKernelVersion](nodes) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over storage classes: %v", err)
 		}
 
 		kernelVerStr := strings.Split(node.KernelVersion, "-")[0]

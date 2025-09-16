@@ -184,7 +184,6 @@ function add_sudoer_group() {
     fi
 
     local sudoers_file="${sudoersd_path}/${sudoers_filename}"
-    
     if ! getent group $groupname >/dev/null
       then
         groupadd $groupname
@@ -282,7 +281,11 @@ function main() {
       continue
     else
       # Adding user
-      error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
+      useradd_cmd=(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name")
+      if [[ -n "$password_hash" ]]; then
+        useradd_cmd+=(-p "$password_hash")
+      fi
+      error_message=$("${useradd_cmd[@]}" 2>&1)
       if bb-error?
       then
         bb-log-error "Error adding user '$user_name': ${error_message}"
@@ -316,7 +319,7 @@ function main() {
         while true
         do
           # Emulate pkill -U $local_user_id
-          ps aux | grep "^$(id -nu $local_user_id)" | awk '{print $2}' | xargs kill -9
+          ps -u "$(id -nu $local_user_id)" --no-headers | awk '{print $1}' | xargs kill -9
 
           if userdel -r "$(id -nu $local_user_id)"; then
             break

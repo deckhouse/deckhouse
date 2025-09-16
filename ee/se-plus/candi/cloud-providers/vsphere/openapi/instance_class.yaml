@@ -27,7 +27,6 @@ spec:
               required:
                 - numCPUs
                 - memory
-                - mainNetwork
               properties:
                 numCPUs:
                   description: |
@@ -57,6 +56,8 @@ spec:
                 mainNetwork:
                   description: |
                     Path to the network that VirtualMachines' primary NICs will connect to (default gateway). Relative to the datacenter.
+
+                    If no value is specified, the value specified in `VsphereClusterConfiguration` will be used.
                   x-doc-examples: ['k8s-msk-178']
                   type: string
                 additionalNetworks:
@@ -96,7 +97,7 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                        Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
                       type: boolean
                     cpuShares:
                       description: |

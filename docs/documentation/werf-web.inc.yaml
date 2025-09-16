@@ -1,6 +1,6 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 {{ if eq .ModuleName "docs" }}
-from: {{ .Images.BASE_ALPINE }}
+fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
   - apk add --no-cache nginx
@@ -19,6 +19,8 @@ imageSpec:
     entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 {{ else }}
 fromImage: common/nginx-static
+git:
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
@@ -118,7 +120,7 @@ shell:
 
 {{ if ne .ModuleName "docs" }}
         # Syncing file from the documentation to the main site...
-        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,custom_sidebar.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,custom_sidebar.rb,breadcrumbs_generator.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/{lunr*.js,search.js} /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
@@ -133,9 +135,6 @@ shell:
         EOD
         cat <<"EOD" > /srv/jekyll-data/site/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
-        EOD
-        cat <<"EOD" > /srv/jekyll-data/site/_includes/footer.html
-        {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_includes/footer.html" .ModulePath) | nindent 8 }}
         EOD
 {{ end }}
         # Creating additional config...
@@ -203,6 +202,11 @@ git:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if ne .ModuleName "docs" }}
+- add: /{{ $.ModulePath }}modules/810-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
+  to: /srv/jekyll-data/site/_includes/footer.html
+  stageDependencies:
+    setup:
+    - '**/*'
 - add: /{{ .ModulePath }}
   to: /comparison
   owner: jekyll

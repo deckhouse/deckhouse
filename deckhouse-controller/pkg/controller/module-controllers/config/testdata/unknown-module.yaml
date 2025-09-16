@@ -1,0 +1,7 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: unknown-module
+spec:
+  enabled: true 

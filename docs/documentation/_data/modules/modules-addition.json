@@ -108,6 +108,21 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
   },
+  "csi-netapp": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
+  },
+  "csi-vsphere": {
+    "editions": [
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/documentation/v1/storage/admin/external/vsphere.html"
+  },
   "csi-hpe": {
     "editions": [
       "ee"
@@ -159,7 +174,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
@@ -180,13 +197,6 @@
       }
     }
   },
-  "managed-postgres": {
-    "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
-  },
   "metallb": {
     "editionMinimumAvailable": "se",
     "editionsWithRestrictions": [
@@ -201,6 +211,13 @@
       }
     },
     "path": "modules/metallb/"
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
   },
   "observability": {
     "editions": [
@@ -234,9 +251,16 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
-  "registrypackages": {
-    "editionMinimumAvailable": "ce",
-    "path": ""
+  "pod-reloader": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
   },
   "sds-local-volume": {
     "editions": [
@@ -313,12 +337,44 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
   },
-  "stronghold": {
+  "static-routing-manager": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/static-routing-manager/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/storage-volume-data-manager/stable/"
+  },
+  "stronghold (CE)": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/stronghold/documentation/about/editions.html"
+  },
+  "stronghold (EE)": {
     "editions": [
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "be",
@@ -332,10 +388,18 @@
       "all": {
         "en": "A&nbsp;separate license is&nbsp;required",
         "ru": "Требуется отдельная лицензия"
+      },
+      "cse-lite": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
+      },
+      "cse-pro": {
+        "en": "A&nbsp;separate&nbsp;license is&nbsp;required&nbsp;for&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. There&nbsp;are&nbsp;functionality&nbsp;limitations",
+        "ru": "Требуется&nbsp;отдельная&nbsp;лицензия на&nbsp;Deckhouse&nbsp;Stronghold&nbsp;CSE. Есть&nbsp;ограничения&nbsp;функциональности"
       }
     },
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/stronghold/stable/"
+    "path": "/products/stronghold/documentation/about/editions.html"
   },
   "user-authz": {
     "editionFullyAvailable": [

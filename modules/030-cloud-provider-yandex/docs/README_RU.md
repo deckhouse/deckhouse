@@ -1,5 +1,6 @@
 ---
 title: "Cloud provider — Yandex Cloud"
+description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Yandex Cloud."
 ---
 
 Взаимодействие с облачными ресурсами провайдера [Yandex Cloud](https://cloud.yandex.ru/) осуществляется с помощью модуля `cloud-provider-yandex`. Он предоставляет возможность модулю [управления узлами](../../modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](../../modules/node-manager/cr.html#nodegroup).
@@ -30,7 +31,7 @@ title: "Cloud provider — Yandex Cloud"
    Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
 
    ```bash
-   kubectl get secrets -n kube-system d8-cluster-configuration -ojson | \
+   d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
@@ -106,7 +107,7 @@ title: "Cloud provider — Yandex Cloud"
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -130,13 +131,13 @@ title: "Cloud provider — Yandex Cloud"
 1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
 
    ```shell
-   $ kubectl -n external-secrets get po
+   $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
 
-   $ kubectl -n external-secrets get secretstores.external-secrets.io 
+   $ d8 k -n external-secrets get secretstores.external-secrets.io 
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -150,7 +151,7 @@ title: "Cloud provider — Yandex Cloud"
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
    ```shell
-   kubectl -n external-secrets apply -f - <<< '
+   d8 k -n external-secrets apply -f - <<< '
    apiVersion: external-secrets.io/v1alpha1
    kind: ExternalSecret
    metadata:
@@ -179,7 +180,7 @@ title: "Cloud provider — Yandex Cloud"
 1. Убедитесь, что новый ключ `k8s-secret` содержит значение секрета `lockbox-secret`:
 
    ```shell
-   kubectl -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
+   d8 k -n external-secrets get secret k8s-secret -ojson | jq -r '.data.password' | base64 -d
    ```
 
    В выводе команды будет содержаться **значение** ключа `password` секрета `lockbox-secret`, созданного ранее:
@@ -199,7 +200,7 @@ title: "Cloud provider — Yandex Cloud"
 1. Создайте ресурс `PrometheusRemoteWrite`:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
    metadata:
@@ -226,7 +227,7 @@ title: "Cloud provider — Yandex Cloud"
 1. Создайте ресурс `GrafanaAdditionalDatasource`:
 
    ```shell
-   kubectl apply -f - <<< '
+   d8 k apply -f - <<< '
    apiVersion: deckhouse.io/v1
    kind: GrafanaAdditionalDatasource
    metadata:

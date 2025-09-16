@@ -29,8 +29,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
+
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
 func TestUpdateDeployContainersImagesToNewRepo(t *testing.T) {
@@ -424,6 +432,75 @@ func Test_getCAContent(t *testing.T) {
 				t.Errorf("getCAContent() = %v, want %v", got, tt.want)
 				return
 			}
+		})
+	}
+}
+
+func Test_moduleEnabled(t *testing.T) {
+	t.Helper()
+
+	toUnstructured := func(resourceYAML string) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{}
+		err := yaml.Unmarshal([]byte(resourceYAML), obj)
+		require.NoError(t, err)
+		return obj
+	}
+
+	tests := []struct {
+		name           string
+		module         *unstructured.Unstructured
+		expectedEnable bool
+	}{
+		{
+			name:           "Module does not exist",
+			module:         nil,
+			expectedEnable: false,
+		},
+		{
+			name: "Module exists and enabled",
+			module: toUnstructured(fmt.Sprintf(`
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: registry
+status:
+  conditions:
+  - type: %q
+    status: "True"
+`, deckhousev1alpha1.ModuleConditionEnabledByModuleManager)),
+			expectedEnable: true,
+		},
+		{
+			name: "Module exists and disabled",
+			module: toUnstructured(`
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: registry
+status:
+  conditions: []
+`),
+			expectedEnable: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			kubeCl := kclient.NewFakeKubernetesClient()
+
+			if tt.module != nil {
+				_, err := kubeCl.
+					Dynamic().
+					Resource(deckhousev1alpha1.ModuleGVR).
+					Namespace("").
+					Create(ctx, tt.module, metav1.CreateOptions{})
+				require.NoError(t, err, "failed to create test module")
+			}
+
+			enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedEnable, enabled)
 		})
 	}
 }

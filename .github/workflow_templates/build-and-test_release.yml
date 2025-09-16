@@ -48,6 +48,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
   detect_editions:
@@ -108,26 +112,13 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - check_branch_name
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - check_branch_name
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "check_changelog_template" $ctx | strings.Indent 2 }!}
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
+      - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -141,8 +132,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -155,8 +144,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -168,8 +155,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -181,8 +166,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -194,8 +177,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -209,9 +190,9 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.ref_name }}
           ci_commit_hash: ${{ github.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"

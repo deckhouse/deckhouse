@@ -1,7 +1,7 @@
 ---
 title: "Installation"
 permalink: en/installing/
-description: | 
+description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
 ---
 
@@ -58,7 +58,7 @@ The installation configuration YAML file contains parameters for several resourc
     > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
 1. [StaticClusterConfiguration](configuration.html#staticclusterconfiguration) — parameters for Kubernetes clusters deployed on bare-metal servers or virtual machines in unsupported clouds.
-   > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.  
+   > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
 
 1. `<CLOUD_PROVIDER>ClusterConfiguration` — a set of resources containing configuration parameters for supported cloud providers. These include:
    * Cloud infrastructure access settings (authentication parameters);
@@ -231,7 +231,7 @@ kind: ModuleConfig
 metadata:
   name: deckhouse-admin
 spec:
-  enabled: true  
+  enabled: true
 ```
 
 {% endofftopic %}
@@ -320,12 +320,12 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
-   - `alpha` — for the Alpha update channel;
-   - `beta` — for the Beta update channel;
-   - `early-access` — for the Early Access update channel;
-   - `stable` — for the Stable update channel;
-   - `rock-solid` — for the Rock Solid update channel.
+1. `<RELEASE_CHANNEL>` — the [release channel](../modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
+   - `alpha` — for the Alpha release channel;
+   - `beta` — for the Beta release channel;
+   - `early-access` — for the Early Access release channel;
+   - `stable` — for the Stable release channel;
+   - `rock-solid` — for the Rock Solid release channel.
 
 Here is an example of a command to run the installer container for Deckhouse CE:
 
@@ -374,8 +374,9 @@ List of checks performed by the installer before starting Deckhouse installation
      - The length does not exceed 63 characters;
      - It consists only of lowercase letters;
      - It does not contain special characters (hyphens `-` and periods `.` are allowed, but they cannot be at the beginning or end of the name).
-   - The server (VM) does not have a CRI (containerd) installed.
-   - The host name must be unique within the cluster.
+   - The server (VM) has a supported container runtime (`containerd`) installed.
+   - The host name is unique within the cluster.
+   - The server's system time is correct.
    - The address spaces for Pods (`podSubnetCIDR`) and services (`serviceSubnetCIDR`) do not intersect.
 
 
@@ -383,12 +384,21 @@ List of checks performed by the installer before starting Deckhouse installation
    - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
-   - The server (VM) meets the minimum requirements for setting up the master node.
+   - The server (VM) selected for the master node installation must meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html):
+     - at least 4 CPU cores;
+     - at least 8 GB of RAM;
+     - at least 60 GB of disk space with 400+ IOPS performance;
+     - Linux kernel version 5.8 or newer;
+     - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
+     - access to standard OS package repositories.
    - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.
    - DNS must resolve `localhost` to IP address 127.0.0.1.
    - The user has `sudo` privileges on the server (VM).
+   - Required ports for the installation must be open:
+     - port 22/TCP between the host running the installer and the server;
+     - no port conflicts with those used by the installation process.
    - The server (VM) has the correct time.
    - The user `deckhouse` must not exist on the server (VM).
    - The address spaces for Pods (`podSubnetCIDR`) services (`serviceSubnetCIDR`) and internal network (`internalNetworkCIDRs`) do not intersect.
@@ -426,7 +436,7 @@ Example of using the preflight skip flag:
       dhctl bootstrap \
       --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
       --config=/config.yml \
-      --preflight-skip-all-checks 
+      --preflight-skip-all-checks
   ```
 
 {% endofftopic %}

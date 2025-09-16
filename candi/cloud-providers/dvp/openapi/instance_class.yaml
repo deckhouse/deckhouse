@@ -44,7 +44,7 @@ spec:
                         coreFraction:
                           type: string
                           default: "100%"
-                          enum: ["5%", "10%", "25%", "50%", "100%"]
+                          pattern: ^100%$|^[1-9][0-9]?%$
                           description: |
                             Guaranteed share of CPU fraction that will be allocated to the virtual machine.
                           x-doc-example: "100%"
@@ -98,6 +98,8 @@ spec:
                       type: string
                       description: |
                         The name of the existing StorageClass will be used to create the virtual machine's root disk.
+
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
                       description: |

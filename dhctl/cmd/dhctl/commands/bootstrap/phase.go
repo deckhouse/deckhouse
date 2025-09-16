@@ -23,6 +23,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
@@ -36,9 +39,17 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		var sshClient node.SSHClient
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			if app.SSHLegacyMode {
+				sshClient = clissh.NewClientFromFlags()
+			} else {
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
@@ -57,7 +68,14 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		var sshClient node.SSHClient
+		var err error
+		if app.SSHLegacyMode {
+			sshClient, err = clissh.NewClientFromFlagsWithHosts()
+		} else {
+			sshClient, err = gossh.NewClientFromFlagsWithHosts()
+		}
+
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
@@ -79,9 +97,17 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		var sshClient node.SSHClient
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			if app.SSHLegacyMode {
+				sshClient = clissh.NewClientFromFlags()
+			} else {
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
@@ -102,7 +128,16 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient := ssh.NewClientFromFlags()
+		var sshClient node.SSHClient
+		if app.SSHLegacyMode {
+			sshClient = clissh.NewClientFromFlags()
+		} else {
+			var err error
+			sshClient, err = gossh.NewClientFromFlags()
+			if err != nil {
+				return err
+			}
+		}
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 		})
@@ -131,7 +166,13 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		var sshClient node.SSHClient
+		var err error
+		if app.SSHLegacyMode {
+			sshClient, err = clissh.NewClientFromFlagsWithHosts()
+		} else {
+			sshClient, err = gossh.NewClientFromFlagsWithHosts()
+		}
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}

@@ -8,6 +8,7 @@ metadata:
     "werf.io/replicas-on-creation": "1"
   labels:
     service: frontend
+    app.kubernetes.io/part-of: deckhouse-docs
 spec:
   minReadySeconds: 5
   revisionHistoryLimit: 2
@@ -36,14 +37,21 @@ spec:
             preStop:
               exec:
                 command: ["/usr/sbin/nginx", "-s", "quit"]
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8080
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8080
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - mountPath: /app/en/modules
               name: modules-docs-en
@@ -80,14 +88,24 @@ spec:
           - containerPort: 8081
             name: http
             protocol: TCP
+          - containerPort: 9090
+            name: http-metrics
+            protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8081
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /readyz
               port: 8081
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - mountPath: "/mount/public/en/modules"
               name: modules-docs-en
@@ -105,14 +123,21 @@ spec:
             - name: VROUTER_DOMAIN_MAP
               value: {{ .Values.global.domain_map | quote }}
             {{- include "vrouter_envs" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8082
+            {{- include "startup_probe" . | indent 12 }}
           livenessProbe:
             httpGet:
               path: /health
               port: 8082
+            {{- include "liveness_probe" . | indent 12 }}
           readinessProbe:
             httpGet:
               path: /health
               port: 8082
+            {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
             - name: release-channels
               mountPath: /app/release-channels
@@ -131,6 +156,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
+  labels:
+    prometheus.deckhouse.io/custom-target: registry-modules-watcher-frontend
 spec:
   clusterIP: None
   selector:
@@ -140,6 +167,10 @@ spec:
     port: 80
     protocol: TCP
     targetPort: 8080
+  - name: http-metrics
+    port: 9090
+    protocol: TCP
+    targetPort: 9090
 ---
 apiVersion: v1
 kind: Service

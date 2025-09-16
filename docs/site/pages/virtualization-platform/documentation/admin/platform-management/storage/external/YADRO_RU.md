@@ -33,8 +33,8 @@ d8 k get module csi-yadro -w
 В результате будет выведена информация о модуле:
 
 ```console
-NAME        WEIGHT   STATE     SOURCE     STAGE   STATUS
-csi-yadro   910      Enabled   Embedded           Ready
+NAME        STAGE   SOURCE   PHASE       ENABLED   READY
+csi-yadro                    Available   True      True
 ```
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
@@ -84,10 +84,10 @@ EOF
 
 ## Проверка работоспособности модуля
 
-Для того, чтобы проверить работоспособность модуля `csi-yadro`, необходимо проверить состояние подов в пространстве имен `d8-csi-yadro`.
+Для того чтобы проверить работоспособность модуля `csi-yadro`, необходимо проверить состояние подов в пространстве имен `d8-csi-yadro`.
 Все поды должны быть в состоянии `Running` или `Completed`, поды `csi-yadro` должны быть запущены на всех узлах.
 Проверить работоспособность модуля можно с помощью команды:
 
 ```shell
-kubectl -n d8-csi-yadro get pod -owide -w
+d8 k -n d8-csi-yadro get pod -owide -w
 ```

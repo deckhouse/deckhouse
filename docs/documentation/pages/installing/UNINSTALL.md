@@ -8,7 +8,7 @@ lang: en
 
 Perform the following steps to delete a cluster deployed with a cloud provider
 
-1. Find out the update channel set in the cluster. To do this, run the command:
+1. Find out the release channel set in the cluster. To do this, run the command:
 
    ```shell
    kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
@@ -60,7 +60,7 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
 
 1. First, [delete](../modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](../modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) (CloudStatic and Static) that were manually plugged in.
 
-2. Find out the update channel set in the cluster. To do this, run the command:
+2. Find out the release channel set in the cluster. To do this, run the command:
 
    ```shell
    kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
@@ -112,7 +112,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
 
 1. [Delete](../modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the extra nodes from the cluster.
 
-2. Find out the update channel set in the cluster. To do this, run the command:
+2. Find out the release channel set in the cluster. To do this, run the command:
 
    ```shell
    kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'

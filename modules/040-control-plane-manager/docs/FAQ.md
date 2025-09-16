@@ -27,8 +27,8 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -68,7 +68,7 @@ The following describes the conversion of a single-master cluster into a multi-m
 1. Wait until the required number of master nodes are `Ready` and all `control-plane-manager` instances are up and running:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady -l app=d8-control-plane-manager
    ```
 
 <div id='how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master'></div>
@@ -88,8 +88,8 @@ The steps described below must be performed from the first in order of the maste
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -126,14 +126,14 @@ The steps described below must be performed from the first in order of the maste
    Use the following command to remove labels:
 
    ```bash
-   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
 1. Make sure that the master nodes to be deleted are no longer listed as etcd cluster members:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -142,7 +142,7 @@ The steps described below must be performed from the first in order of the maste
 1. `drain` the nodes being deleted:
 
    ```bash
-   kubectl drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
+   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
    ```
 
 1. Shut down the virtual machines corresponding to the nodes to be deleted, remove the instances of those nodes from the cloud and the disks connected to them (`kubernetes-data-master-<N>`).
@@ -150,13 +150,13 @@ The steps described below must be performed from the first in order of the maste
 1. In the cluster, delete the Pods running on the nodes being deleted:
 
    ```bash
-   kubectl delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
    ```
 
 1. In the cluster, delete the Node objects associated with the nodes being deleted:
 
    ```bash
-   kubectl delete node <MASTER-NODE-N-NAME>
+   d8 k delete node <MASTER-NODE-N-NAME>
    ```
 
 1. **In the installer container**, run the following command to start scaling:
@@ -179,13 +179,13 @@ The steps described below must be performed from the first in order of the maste
    Use the following command to remove labels:
 
    ```bash
-   kubectl label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
 1. Make sure that the master node to be deleted is no longer listed as a member of the etcd cluster:
 
    ```bash
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -212,8 +212,8 @@ The steps described below must be performed from the first in order of the maste
 1. Run the appropriate edition and version of the Deckhouse installer container **on the local machine** (change the container registry address if necessary):
 
    ```bash
-   DH_VERSION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') \
-   DH_EDITION=$(kubectl -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) \
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
      registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
@@ -243,15 +243,15 @@ The steps described below must be performed from the first in order of the maste
 1. Run the following command to remove the `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, and `node.deckhouse.io/group` labels from the node:
 
    ```bash
-   kubectl label node ${NODE} \
+   d8 k label node ${NODE} \
      node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
    ```
 
 1. Make sure that the node is no longer listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -279,8 +279,8 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 1. Make sure the node is listed as an etcd cluster member:
 
    ```bash
-   kubectl -n kube-system exec -ti \
-   $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+   d8 k -n kube-system exec -ti \
+   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ member list -w table
@@ -289,7 +289,7 @@ Repeat the steps below (Sec. 9-12) for **each master node one by one**, starting
 1. Make sure `control-plane-manager` is running on the node:
 
    ```bash
-   kubectl -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
+   d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=${NODE}
    ```
 
@@ -310,8 +310,8 @@ Use the `etcdctl member list` command.
 Example:
 
 ```shell
-kubectl -n kube-system exec -ti \
-$(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
+d8 k -n kube-system exec -ti \
+$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
 --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
 --endpoints https://127.0.0.1:2379/ member list -w table
@@ -327,7 +327,7 @@ The fifth parameter in the output table will be `true` for the leader.
 Example of a script that automatically passes all control-plane nodes to the command:
 
 ```shell
-MASTER_NODE_IPS=($(kubectl get nodes -l \
+MASTER_NODE_IPS=($(d8 k get nodes -l \
 node-role.kubernetes.io/control-plane="" \
 -o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
 --no-headers))
@@ -335,7 +335,7 @@ unset ENDPOINTS_STRING
 for master_node_ip in ${MASTER_NODE_IPS[@]}
 do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
 done
-kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod \
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
 -l component=etcd,tier=control-plane -o name | head -n1) \
 -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
 --key /etc/kubernetes/pki/etcd/ca.key \
@@ -401,7 +401,7 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 When the database volume of etcd reaches the limit set by the `quota-backend-bytes` parameter, it switches to "read-only" mode. This means that the etcd database stops accepting new entries but remains available for reading data. You can tell that you are facing a similar situation by executing the command:
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -414,7 +414,7 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 1. Disarm the active alarm that occurred due to reaching the limit. To do this, execute the command:
 
    ```shell
-   kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -536,7 +536,7 @@ crictl stopp $(crictl pods --name=kube-apiserver -q)
 After the restart, you will be able to fix the Secret or delete it:
 
 ```bash
-kubectl -n kube-system delete secret audit-policy
+d8 k -n kube-system delete secret audit-policy
 ```
 
 ## How do I speed up the restart of Pods if the connection to the node has been lost?
@@ -581,7 +581,7 @@ CronJob `kube-system/d8-etcd-backup-*` is automatically started at 00:00 UTC+0. 
 Starting with Deckhouse Kubernetes Platform v1.65, a new `d8 backup etcd` tool is available for taking snapshots of etcd state.
 
 ```bash
-d8 backup etcd --kubeconfig $KUBECONFIG ./etcd-backup.snapshot
+d8 backup etcd ./etcd-backup.snapshot
 ```
 
 #### Using bash (Deckhouse Kubernetes Platform v1.64 and older)
@@ -593,7 +593,7 @@ Login into any control-plane node with `root` user and use next script:
 set -e
 
 pod=etcd-`hostname`
-kubectl -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
+d8 k -n kube-system exec "$pod" -- /usr/bin/etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ snapshot save /var/lib/etcd/${pod##*/}.snapshot && \
 mv /var/lib/etcd/"${pod##*/}.snapshot" etcd-backup.snapshot && \
 cp -r /etc/kubernetes/ ./ && \
 tar -cvzf kube-backup.tar.gz ./etcd-backup.snapshot ./kubernetes/
@@ -624,27 +624,27 @@ The following steps will be described to restore to the previous state of the cl
 
 Follow these steps to restore a single-master cluster on master node:
 
-1. Find `etcdctl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdctl -print | tail -n 1) /usr/local/bin/etcdctl
-   etcdctl version
+   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   etcdutl version
    ```
 
-   The result must be a correct output of `etcdctl version` command without errors.
+   The result must be a correct output of `etcdutl version` command without errors.
 
-   Alternatively, you can download [etcdctl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
+   Alternatively, you can download [etcdutl](https://github.com/etcd-io/etcd/releases) executable to the node (preferably its version is the same as the etcd version in the cluster):
 
    ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.16/etcd-v3.5.16-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.16-linux-amd64.tar.gz && mv etcd-v3.5.16-linux-amd64/etcdctl /usr/local/bin/etcdctl
+   wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
+   tar -xzvf etcd-v3.6.1-linux-amd64.tar.gz && mv etcd-v3.6.1-linux-amd64/etcdutl /usr/local/bin/etcdutl
    ```
 
    You can check current `etcd` version using following command (might not work, if etcd and Kubernetes API are already unavailable):
 
    ```shell
-   kubectl -n kube-system exec -ti etcd-$(hostname) -- etcdctl version
+   d8 k -n kube-system exec -ti etcd-$(hostname) -- etcdutl version
    ```
 
 1. Stop the etcd.
@@ -662,7 +662,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Clean the etcd directory.
 
    ```shell
-   rm -rf /var/lib/etcd/member/
+   rm -rf /var/lib/etcd
    ```
 
 1. Put the etcd backup to `~/etcd-backup.snapshot` file.
@@ -670,8 +670,7 @@ Follow these steps to restore a single-master cluster on master node:
 1. Restore the etcd database.
 
    ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etcd-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ --data-dir=/var/lib/etcd
+   ETCDCTL_API=3 etcdutl snapshot restore ~/etcd-backup.snapshot  --data-dir=/var/lib/etcd
    ```
 
 1. Run etcd. The process may take some time.
@@ -680,6 +679,21 @@ Follow these steps to restore a single-master cluster on master node:
    mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
    crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
    ```
+
+   To verify that etcd is running, use the command:
+
+   ```shell
+   crictl ps --label io.kubernetes.pod.name=etcd-$HOSTNAME
+   ```
+
+   Output example:
+
+   ```console
+   CONTAINER        IMAGE            CREATED              STATE     NAME      ATTEMPT     POD ID          POD
+   4b11d6ea0338f    16d0a07aa1e26    About a minute ago   Running   etcd      0           ee3c8c7d7bba6   etcd-gs-test
+   ```
+
+1. Restart the master node.
 
 #### Restoring a multi-master cluster
 
@@ -694,7 +708,7 @@ Follow these steps to restore a multi-master cluster:
 1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
 
    ```shell
-   kubectl delete node MASTER_NODE_I
+   d8 k delete node MASTER_NODE_I
    ```
 
 1. Restart all nodes of the cluster.
@@ -702,7 +716,7 @@ Follow these steps to restore a multi-master cluster:
 1. Wait for the deckhouse queue to complete:
 
    ```shell
-   kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+   d8 p queue main
    ```
 
 1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
@@ -732,6 +746,12 @@ In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#how-to-manual
 
 Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
 
+1. Set the correct access permissions for the backup file:
+
+   ```shell
+   chmod 644 etcd-backup.snapshot
+   ```
+
 1. Set full path for snapshot file and for the tool into environmental variables:
 
    ```shell
@@ -756,13 +776,20 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        - operator: Exists
        initContainers:
        - command:
-         - etcdctl
+         - etcdutl
          - snapshot
          - restore
          - "/tmp/etcd-snapshot"
+         - --data-dir=/default.etcd
          image: $(kubectl -n kube-system get pod -l component=etcd -o jsonpath="{.items[*].spec.containers[*].image}" | cut -f 1 -d ' ')
          imagePullPolicy: IfNotPresent
          name: etcd-snapshot-restore
+         # Uncomment the fragment below to set limits for the container if the node does not have enough resources to run it.
+         # resources:
+         #   requests:
+         #     ephemeral-storage: "200Mi"
+         #   limits:
+         #     ephemeral-storage: "500Mi"
          volumeMounts:
          - name: etcddir
            mountPath: /default.etcd
@@ -781,6 +808,9 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
        volumes:
        - name: etcddir
          emptyDir: {}
+         # Use the snippet below instead of emptyDir: {} to set limits for the container if the node's resources are insufficient to run it.
+         # emptyDir:
+         #  sizeLimit: 500Mi
        - name: etcd-snapshot
          hostPath:
            path: $SNAPSHOT
@@ -791,7 +821,7 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
    * Create Pod from the resulting manifest:
 
      ```shell
-     kubectl create -f etcd.pod.yaml
+     d8 k create -f etcd.pod.yaml
      ```
 
 1. Set environment variables. In this example:
@@ -811,10 +841,10 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
 1. Commands below will filter needed resources by `$FILTER` and output them into `$BACKUP_OUTPUT_DIR` directory:
 
    ```shell
-   files=($(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
+   files=($(d8 k -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get / --prefix --keys-only | grep "$FILTER"))
    for file in "${files[@]}"
    do
-     OBJECT=$(kubectl -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
+     OBJECT=$(d8 k -n default exec etcdrestore -c etcd-temp -- etcdctl  --endpoints=localhost:2379 get "$file" --print-value-only | $AUGER_BIN decode)
      FILENAME=$(echo $file | sed -e "s#/registry/##g;s#/#_#g")
      echo "$OBJECT" > "$BACKUP_OUTPUT_DIR/$FILENAME.yaml"
      echo $BACKUP_OUTPUT_DIR/$FILENAME.yaml
@@ -824,13 +854,13 @@ Following actions are performed on a master node, to which `etcd snapshot` file 
 1. From resulting `yaml` files, delete `creationTimestamp`, `UID`, `status` and other operational fields, and then restore the objects:
 
    ```bash
-   kubectl create -f deployments_infra-production_supercronic.yaml
+   d8 k create -f deployments_infra-production_supercronic.yaml
    ```
 
 1. Delete the Pod with a temporary instance of etcd:
 
    ```bash
-   kubectl -n default delete pod etcdrestore
+   d8 k -n default delete pod etcdrestore
    ```
 
 ## How the node to run the Pod on is selected
@@ -933,26 +963,34 @@ When using the `failurePolicy: Fail` option, in case of an error in the webhook'
 
 ## How does kubelet certificate rotation work?
 
-You can read about configuring and enabling kubelet certificate rotation in the official Kubernetes [documentation](https://kubernetes.io/docs/tasks/tls/certificate-rotation/).
-
-The `/var/lib/kubelet/config.yaml` file contains the kubelet configuration and specifies the path to the certificate (`tlsCertFile`) and private key (`tlsPrivateKeyFile`).
-
-Kubelet handles server certificates using the following logic:
-- If `tlsCertFile` and `tlsPrivateKeyFile` are not empty, kubelet will use them as the default certificate and key.
-  - When a client requests the kubelet API by specifying an IP address (e.g. [https://10.1.1.2:10250/](https://10.1.1.2:10250/)), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
-  - When a client requests the kubelet API by specifying a host name (e.g. [https://k8s-node:10250/](https://k8s-node:10250/)), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
-
-- If `tlsCertFile` and `tlsPrivateKeyFile` are empty, a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish the TLS connection. In this case, certificate rotation will work.
-
-Since Deckhouse Kubernetes Platform uses IP addresses to make requests to the kubelet API, the kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the `operator-trivy` module.
+In Deckhouse Kubernetes Platform, kubelet certificate rotation is automatic.
 
 The kubelet uses a client TLS certificate (`/var/lib/kubelet/pki/kubelet-client-current.pem`) with which it can request a new client certificate or a new server certificate (`/var/lib/kubelet/pki/kubelet-server-current.pem`) from kube-apiserver.
 
 When there is 5-10% (random value from the range) of time left before the certificate expires, kubelet requests a new certificate from kube-apiserver. For a description of the algorithm, see the official [Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/kubelet-tls-bootstrapping/#bootstrap-initialization) documentation.
 
-To ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour. The time is set using the `--cluster-signing-duration` argument in the `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. By default, this value is 1 year (8760 hours).
+### Certificates lifetime
 
+By default, lifetime of certificates is 1 year (8760 hours). If necessary, this value can be changed using `--cluster-signing-duration` argument in `/etc/kubernetes/manifests/kube-controller-manager.yaml` manifest. But to ensure that kubelet has time to install the certificate before it expires, we recommend setting the certificate lifetime to more than 1 hour.
+
+{% alert level="warning" %}
 If the client certificate lifetime has expired, kubelet will not be able to make requests to kube-apiserver and will not be able to renew certificates. In this case, the node will be marked as `NotReady` and recreated.
+{% endalert %}
+
+### Specifics of working with kubelet server certificates in Deckhouse Kubernetes Platform
+
+Deckhouse Kubernetes Platform uses IP addresses for kubelet API requests. The kubelet configuration does not use the `tlsCertFile` and `tlsPrivateKeyFile` fields, but uses a dynamic certificate that kubelet generates itself. Also, the CIS benchmark `AVD-KCV-0088` and `AVD-KCV-0089` checks, which track whether the `--tls-cert-file` and `--tls-private-key-file` arguments were passed to kubelet, are disabled in the Deckhouse Kubernetes Platform (in the `operator-trivy` module).
+
+{% offtopic title="Information about the logic of working with server certificates in Kubernetes" %}
+
+Kubelet handles server certificates using the following logic:
+
+* If `tlsCertFile` and `tlsPrivateKeyFile` are not empty, kubelet will use them as the default certificate and key.
+  * When a client requests the kubelet API by specifying an IP address (e.g., `https://10.1.1.2:10250/`), the default private key (`tlsPrivateKeyFile`) will be used to establish a TLS connection. In this case, certificate rotation will not work.
+  * When a client requests the kubelet API by specifying a host name (e.g., `https://k8s-node:10250/`), a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish a TLS connection. In this case, certificate rotation will work.
+
+* If `tlsCertFile` and `tlsPrivateKeyFile` are empty, a dynamically generated private key from the `/var/lib/kubelet/pki/` directory will be used to establish the TLS connection. In this case, certificate rotation will work.
+{% endofftopic %}
 
 ## How to manually update control plane component certificates?
 

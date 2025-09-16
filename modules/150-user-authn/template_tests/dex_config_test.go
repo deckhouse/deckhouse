@@ -21,6 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -57,6 +59,29 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 
 			Expect(usersExist).To(BeEmpty())
 			Expect(config).To(ContainSubstring("enablePasswordDB: true"))
+
+			Expect(gjson.GetBytes(configBytes, "twoFactorAuthn").String()).To(Equal(""))
+		})
+	})
+
+	Context("With 2FA", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.staticUsers2FA.enabled", true)
+			hec.ValuesSet("userAuthn.staticUsers2FA.issuerName", "Deckhouse (Alpha)")
+			hec.HelmRender()
+		})
+
+		It("Should add 2FA settings", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			dexConfig := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
+			b64Config := dexConfig.Field("data.config\\.yaml").String()
+			configBytes, _ := base64.StdEncoding.DecodeString(b64Config)
+
+			jsonConfig, err := yaml.YAMLToJSON(configBytes)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn.issuer").String()).To(Equal("Deckhouse (Alpha)"))
+			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn.connectors").String()).To(Equal(`["local"]`))
 		})
 	})
 

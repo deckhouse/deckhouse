@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"time"
@@ -147,23 +148,30 @@ func applyCAPSServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func injectCAtoCRD(input *go_hook.HookInput) error {
-	if len(input.Snapshots["sshcredentials"]) == 0 {
+func injectCAtoCRD(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("sshcredentials")) == 0 {
 		return nil
 	}
 
-	if len(input.Snapshots["webhook-service"]) == 0 {
+	if len(input.Snapshots.Get("webhook-service")) == 0 {
 		return nil
 	}
 
-	if len(input.Snapshots["cabundle"]) > 0 {
-		bundle := input.Snapshots["cabundle"][0]
-		crd := input.Snapshots["sshcredentials"][0]
-		if crd == nil {
-			return nil
+	if len(input.Snapshots.Get("cabundle")) > 0 {
+		var crd CRD
+		var bundle certificate.Certificate
+
+		err := input.Snapshots.Get("cabundle")[0].UnmarshalTo(&bundle)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal first 'cabundle' snapshot: %w", err)
 		}
 
-		if crd.(CRD).CABundle == bundle.(certificate.Certificate).CA {
+		err = input.Snapshots.Get("sshcredentials")[0].UnmarshalTo(&crd)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal first 'sshcredentials' snapshot: %w", err)
+		}
+
+		if crd.CABundle == bundle.CA {
 			return nil
 		}
 
@@ -175,7 +183,7 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 					"strategy": "Webhook",
 					"webhook": map[string]interface{}{
 						"clientConfig": map[string]interface{}{
-							"caBundle": base64.StdEncoding.EncodeToString([]byte(bundle.(certificate.Certificate).CA)),
+							"caBundle": base64.StdEncoding.EncodeToString([]byte(bundle.CA)),
 							"service": map[string]interface{}{
 								"namespace": "d8-cloud-instance-manager",
 								"name":      "caps-controller-manager-webhook-service",
@@ -187,7 +195,7 @@ func injectCAtoCRD(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.(CRD).Name)
+		input.PatchCollector.PatchWithMerge(patch, "apiextensions.k8s.io/v1", "CustomResourceDefinition", "", crd.Name)
 	}
 
 	return nil

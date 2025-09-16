@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -34,12 +33,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient  *ssh.Client
+	SSHClient  node.SSHClient
 	KubeClient *client.KubernetesClient // optional
 
 	OnPhaseFunc     phases.DefaultOnPhaseFunc
@@ -112,6 +115,10 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		c.lastState = state
 	}
 
+	if c.Params.SSHClient != nil {
+		defer c.Params.SSHClient.Stop()
+	}
+
 	if err := c.applyParams(); err != nil {
 		return err
 	}
@@ -122,8 +129,21 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		var sshClient *ssh.Client
-		sshClient, err = ssh.NewInitClientFromFlags(false)
+		var sshClient node.SSHClient
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		if app.SSHLegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(false)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(false)
+		}
+
 		if err != nil {
 			return err
 		}
@@ -314,7 +334,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	needAutomaticTofuMigrationForCommander := false
 
-	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	if infrastructure.NeedToUseOpentofu(metaConfig) {
 		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
 		if !c.CommanderMode {
 			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
@@ -380,8 +400,21 @@ func (c *Converger) AutoConverge() error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		var sshClient *ssh.Client
-		sshClient, err = ssh.NewInitClientFromFlags(false)
+		var sshClient node.SSHClient
+
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		if app.SSHLegacyMode {
+			sshClient, err = clissh.NewInitClientFromFlags(false)
+		} else {
+			sshClient, err = gossh.NewInitClientFromFlags(false)
+		}
+
 		if err != nil {
 			return err
 		}
@@ -400,7 +433,7 @@ func (c *Converger) AutoConverge() error {
 		return err
 	}
 
-	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	if infrastructure.NeedToUseOpentofu(metaConfig) {
 		convergeCtx.WithStateChecker(infrastructurestate.CheckCanIConvergeTerraformStateWhenWeUseTofu)
 	}
 

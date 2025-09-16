@@ -76,11 +76,13 @@ spec:
 
 У каждого `ingress-nginx-controller` есть сертификаты, при указании которых в качестве клиентских будет разрешено подключение к Prometheus. Все, что нужно, — создать дополнительный `Ingress`-ресурс.
 
+{% endraw -%}
 {% alert level="info" %}
 В приведенном ниже примере предполагается, что Secret `example-com-tls` уже существует в namespace d8-monitoring.
 
 Имена для Ingress `my-prometheus-api` и Secret `my-basic-auth-secret` указаны для примера. Замените их на более подходящие для вас.
 {% endalert %}
+{% raw -%}
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -129,9 +131,11 @@ data:
 
 Добавьте data source в Grafana:
 
+{% endraw -%}
 {% alert level="info" %}
 В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**
 {% endalert %}
+{% raw -%}
 
 <img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
 
@@ -314,6 +318,66 @@ spec:
             responders:
               - id: team_id
                 type: team
+```
+
+## Пример отправки алертов по электронной почте
+
+Создайте Secret с паролем от аккаунта электронной почты. Пароль, закодированный в формате base64, укажите в поле `password`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: am-mail-server-pass
+  namespace: d8-monitoring
+data:
+  password: BASE64_ENCODED_PASSWORD_HERE
+```
+
+Измените значения в примере `CustomAlertManager` на необходимые вам и примените ресурс:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: CustomAlertmanager
+metadata:
+  name: mail
+spec:
+  type: Internal
+  internal:
+    receivers:
+      - name: devnull
+      - name: mail
+        emailConfigs:
+          - to: oncall@example.com
+            from: prom@example.com
+            smarthost: mx.example.com:587
+            authIdentity: prom@example.com
+            authUsername: prom@example.com
+            authPassword:
+              key: password
+              name: am-mail-server-pass
+            # Если вы используете custom CA на сервере, можете поместить публичную часть CA в ConfigMap в пространстве имен d8-monitoring
+            # tlsConfig:
+            #   insecureSkipVerify: true
+            #   ca:
+            #     configMap:
+            #       key: ca.pem
+            #       name: alertmanager-mail-server-ca
+            sendResolved: true
+            requireTLS: true
+    route:
+      groupBy:
+        - job
+      groupInterval: 5m
+      groupWait: 30s
+      receiver: devnull
+      repeatInterval: 24h
+      routes:
+        - matchers:
+          - matchType: =~
+            name: severity_level
+            value: "^[1-4]$"
+          receiver: mail
 ```
 
 {% endraw %}

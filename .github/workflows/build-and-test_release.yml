@@ -44,7 +44,7 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.36.1"
+  WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -53,7 +53,11 @@ env:
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
+  WERF_DOCKER_REGISTRY_DEBUG: "1"
+  WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
+  WERF_LOG_TIME: true
+  WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
   # </template: werf_envs>
 
   # <template: git_source_envs>
@@ -71,6 +75,10 @@ env:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
 
@@ -214,135 +222,42 @@ jobs:
         # grep returns exit code 1 if branch not found
         git branch -r --contains ${GITHUB_SHA} | grep ${RELEASE_BRANCH_NAME}
 
-  go_generate:
-    name: Go Generate
-    needs:
-      - git_info
-      - check_branch_name
 
-    # <template: go_generate_template>
-    runs-on: [self-hosted, regular]
+  # <template: check_changelog_template>
+  check_changelog:
+    name: Check changelog
+    runs-on: ubuntu-latest
     steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
 
       # <template: checkout_step>
       - name: Checkout sources
         uses: actions/checkout@v3.5.2
 
       # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+      - name: Check for tag
         run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "Not a tag push, skipping changelog check."
+            exit 0
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          FILE="./CHANGELOG/CHANGELOG-${TAG_VERSION}.yml"
 
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: |
-          git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-    # </template: go_generate_template>
-
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - check_branch_name
-
-    # <template: workflow_render_template>
-    runs-on: [self-hosted, regular]
-    steps:
-
-      # <template: started_at_output>
-      - name: Job started timestamp
-        id: started_at
-        run: |
-          unixTimestamp=$(date +%s)
-          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
-      # </template: started_at_output>
-
-      # <template: checkout_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-
-      # </template: checkout_step>
-
-      # <template: login_readonly_registry_step>
-      - name: Check readonly registry credentials
-        id: check_readonly_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          if [ ! -f "$FILE" ]; then
+            echo "❌ Expected changelog file $FILE not found. Please create it before pushing the release tag."
+            exit 1
+          else
+            echo "✅ Changelog file $FILE found."
           fi
-      - name: Login to readonly registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
-          logout: false
-      # </template: login_readonly_registry_step>
-
-      - name: Render GitHub workflow
-        run: |
-          cd .github
-          ./render-workflows.sh
-
-      - name: Check rendered files
-        run: |
-          git diff --exit-code
-    # </template: workflow_render_template>
+  # </template: check_changelog_template>
 
 
   build_fe:
     name: Build FE
     needs:
       - git_info
-      - go_generate
-      - workflow_render
+      - check_changelog
     env:
       WERF_ENV: "FE"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -363,6 +278,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -489,6 +423,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -559,8 +507,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -572,8 +523,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -583,10 +537,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -600,6 +560,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -665,8 +633,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -686,6 +652,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -812,6 +797,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -882,8 +881,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -895,8 +897,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -906,10 +911,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -923,6 +934,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -988,8 +1007,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1009,6 +1026,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1135,6 +1171,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1205,8 +1255,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1218,8 +1271,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1229,10 +1285,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1246,6 +1308,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1299,8 +1369,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1320,6 +1388,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1446,6 +1533,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1516,8 +1617,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1529,8 +1633,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1540,10 +1647,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1557,6 +1670,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1610,8 +1731,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1631,6 +1750,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -1757,6 +1895,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -1827,8 +1979,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -1840,8 +1995,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -1851,10 +2009,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -1868,6 +2032,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -1921,8 +2093,6 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     needs:
       - git_info
-      - go_generate
-      - workflow_render
       - build_fe
       - detect_editions
     env:
@@ -1942,6 +2112,25 @@ jobs:
           echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
       # </template: started_at_output>
 
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | access_token
+      # </template: import_secrets>
 
       # <template: checkout_full_step>
       - name: Checkout sources
@@ -2068,6 +2257,20 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
       - name: Build and push deckhouse images
         id: build
         env:
@@ -2138,8 +2341,11 @@ jobs:
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
+            AUTH_ROLE="dh-signer_dh-signer"
 
             # The Git tag may contain a '+' sign, so use slugify for this situation.
             # Slugify doesn't change a tag with safe-only characters.
@@ -2151,8 +2357,11 @@ jobs:
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export COSIGN_LOGIN="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export COSIGN_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
             # Determine image tag
             if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
@@ -2162,10 +2371,16 @@ jobs:
             # Use it as image tag. Add suffix to not overlap with PRs in main repo.
             IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           fi
-          type werf && source $(werf ci-env github --verbose --as-file)
+          # Set cosign auth values
+          export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
+          ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+          export COSIGN_VAULT_TOKEN="$(curl -X POST "${COSIGN_VAULT_ADRESS}/v1/auth/github/login" -d '{"role":"'${AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+          ACTIONS_ID_TOKEN="null" #clear value
+          AUTH_ROLE="null" #clear value
 
+          type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
-            --parallel=true --parallel-tasks-limit=5 \
+            --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
@@ -2179,6 +2394,14 @@ jobs:
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
             publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${DEV_REGISTRY_PATH}:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${DEV_REGISTRY_PATH}/release-channel:v${BASH_REMATCH[1]}.0"
+            fi
           else
             echo "Branch unset, skipping branch publish."
           fi
@@ -2234,9 +2457,9 @@ jobs:
       - build_fe
     runs-on: [self-hosted, regular]
     steps:
-      - uses: deckhouse/modules-actions/svace_analyze@svace-analyze
+      - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.ref_name }}
           ci_commit_hash: ${{ github.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -2498,7 +2721,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:737a858312525d525f3d04e6c4282d1eedc0b9767cbc5a7918d8b53c3ddad22d"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:6a0a9bd1c0dd1e6f103d7c7f5db83641ab90b1dd27b46ddb609e10cae02a07af"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

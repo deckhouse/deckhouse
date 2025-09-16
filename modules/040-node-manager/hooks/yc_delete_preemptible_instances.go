@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"sort"
@@ -27,6 +28,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -218,7 +221,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, deleteMachines)
 
-func deleteMachines(input *go_hook.HookInput) error {
+func deleteMachines(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		timeNow                        = time.Now().UTC()
 		machines                       = make([]*Machine, 0)
@@ -227,53 +230,37 @@ func deleteMachines(input *go_hook.HookInput) error {
 		nodeGroupNameToNodeGroupStatus = make(map[string]*NodeGroupStatus)
 	)
 
-	for _, mcRaw := range input.Snapshots["mcs"] {
-		if mcRaw == nil {
-			continue
+	for mc, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("mcs")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to string: failed to iterate over 'mcs' snapshot: %w", err)
 		}
 
-		ic, ok := mcRaw.(string)
-		if !ok {
-			return fmt.Errorf("failed to assert to string")
-		}
-
-		preemptibleMachineClassesSet.Add(ic)
+		preemptibleMachineClassesSet.Add(mc)
 	}
 
 	if preemptibleMachineClassesSet.Size() == 0 {
 		return nil
 	}
 
-	for _, nodeRaw := range input.Snapshots["nodes"] {
-		if nodeRaw == nil {
-			continue
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.Snapshots.Get("nodes")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to Node: failed to iterate over 'nodes' snapshot: %w", err)
 		}
 
-		node, ok := nodeRaw.(*Node)
-		if !ok {
-			return fmt.Errorf("failed to assert to *Node")
-		}
-
-		nodeNameToNodeMap[node.Name] = node
+		nodeNameToNodeMap[node.Name] = &node
 	}
 
-	for _, ngStatusRaw := range input.Snapshots["nodegroupstatuses"] {
-		if ngStatusRaw == nil {
-			continue
+	for ngStatus, err := range sdkobjectpatch.SnapshotIter[NodeGroupStatus](input.Snapshots.Get("nodegroupstatuses")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to NodeGroupStatus: failed to iterate over 'nodegroupstatuses' snapshot: %w", err)
 		}
 
-		ngStatus, ok := ngStatusRaw.(*NodeGroupStatus)
-		if !ok {
-			return fmt.Errorf("failed to assert to *NodeGroupStatus")
-		}
-
-		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = ngStatus
+		nodeGroupNameToNodeGroupStatus[ngStatus.Name] = &ngStatus
 	}
 
-	for _, machineRaw := range input.Snapshots["machines"] {
-		machine, ok := machineRaw.(*Machine)
-		if !ok {
-			return fmt.Errorf("failed to assert to *Machine")
+	for machine, err := range sdkobjectpatch.SnapshotIter[Machine](input.Snapshots.Get("machines")) {
+		if err != nil {
+			return fmt.Errorf("failed to assert to Machine: failed to iterate over 'machines' snapshot: %w", err)
 		}
 
 		if machine.Terminating {
@@ -309,7 +296,7 @@ func deleteMachines(input *go_hook.HookInput) error {
 			continue
 		}
 
-		machines = append(machines, machine)
+		machines = append(machines, &machine)
 	}
 
 	if len(machines) == 0 {

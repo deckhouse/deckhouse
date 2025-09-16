@@ -6,9 +6,6 @@
   </div>
   <div class="breadcrumbs__right">
     <ol class="breadcrumbs">
-      {% if site.data.i18n.common.platform[page.lang] %}
-        <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
-      {% endif %}
       <!--#include virtual="/includes/group-menu.html" -->
       {% include nav-breadcrumbs-pagepath.html %}
     </ol>

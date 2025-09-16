@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -63,20 +65,25 @@ func bashibleAPIServerTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}, nil
 }
 
-func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
+func genBashibleAPIServerCertsHandler(ctx context.Context, input *go_hook.HookInput) error {
 	var cert certificate.Certificate
 	var err error
 
-	if len(input.Snapshots["secret"]) == 0 {
+	if len(input.Snapshots.Get("secret")) == 0 {
 		// No certificate in snapshot => generate a new one.
 		// Secret/bashible-api-server-tls will be updated by Helm.
-		cert, err = generateNewBashibleCert(input)
+		cert, err = generateNewBashibleCert(ctx, input)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Certificate is in the snapshot => load it.
-		cert = input.Snapshots["secret"][0].(certificate.Certificate)
+		secrets := input.Snapshots.Get("secret")
+
+		err = secrets[0].UnmarshalTo(&cert)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal first 'secret' snapshot")
+		}
 	}
 
 	// Note that []byte values will be encoded in base64. Use strings here!
@@ -86,7 +93,7 @@ func genBashibleAPIServerCertsHandler(input *go_hook.HookInput) error {
 	return nil
 }
 
-func generateNewBashibleCert(input *go_hook.HookInput) (certificate.Certificate, error) {
+func generateNewBashibleCert(_ context.Context, input *go_hook.HookInput) (certificate.Certificate, error) {
 	ca, err := certificate.GenerateCA(input.Logger,
 		"node-manager",
 		certificate.WithKeyAlgo("ecdsa"),

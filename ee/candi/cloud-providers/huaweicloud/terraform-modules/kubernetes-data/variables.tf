@@ -28,3 +28,7 @@ variable "volume_zone" {
 variable "tags" {
   type = map(string)
 }
+
+variable "enterprise_project_id" {
+  type = string
+}

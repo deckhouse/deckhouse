@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manager"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -198,7 +197,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 	for _, nodeGroupName := range utils.SortNodeGroupsStateKeys(nodesState, nodeGroupsWithStateInCluster) {
 		ngState := nodesState[nodeGroupName]
 
-		log.DebugF("NodeGroup for converge %v", nodeGroupName)
+		log.DebugF("NodeGroup for converge %v\n", nodeGroupName)
 
 		rr := controller.NewNodeGroupControllerRunner(nodeGroupName, ngState, r.excludedNodes, true)
 		err := rr.Run(ctx)
@@ -322,7 +321,7 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return err
 	}
 
-	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	if !infrastructure.NeedToUseOpentofu(metaConfig) {
 		log.InfoF("Skipping migration. Provider %s does not support opentofu now\n", metaConfig.ProviderName)
 		return nil
 	}

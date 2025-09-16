@@ -34,13 +34,14 @@ import:
   - sbin
   before: install
 git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
   stageDependencies:
     install:
     - '**/*'
 shell:
   beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache patchelf file findutils
   install:
   - mkdir -p /opt/deckhouse/bin

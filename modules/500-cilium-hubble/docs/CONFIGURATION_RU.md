@@ -20,13 +20,13 @@ title: "Модуль cilium-hubble: настройки"
 Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, удалите Secret:
 
 ```shell
-kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
+d8 k -n d8-cni-cilium delete secret/hubble-basic-auth
 ```
 
 {% alert level="info" %}

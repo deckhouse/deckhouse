@@ -87,13 +87,13 @@ search: добавить ноду в кластер, добавить узел �
 1. Получите один из адресов Kubernetes API-сервера. Обратите внимание, что IP-адрес должен быть доступен с узлов, которые добавляются в кластер:
 
    ```shell
-   kubectl -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
+   d8 k -n default get ep kubernetes -o json | jq '.subsets[0].addresses[0].ip + ":" + (.subsets[0].ports[0].port | tostring)' -r
    ```
 
    Проверьте версию K8s. Если версия >= 1.25, создайте токен `node-group`:
 
    ```shell
-   kubectl create token node-group --namespace d8-cloud-instance-manager --duration 1h
+   d8 k create token node-group --namespace d8-cloud-instance-manager --duration 1h
    ```
 
    Сохраните полученный токен, и добавьте в поле `token:` playbook'а Ansible на дальнейших шагах.
@@ -101,7 +101,7 @@ search: добавить ноду в кластер, добавить узел �
 1. Если версия Kubernetes меньше 1.25, получите Kubernetes API-токен для специального ServiceAccount'а, которым управляет Deckhouse:
 
    ```shell
-   kubectl -n d8-cloud-instance-manager get $(kubectl -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
+   d8 k -n d8-cloud-instance-manager get $(d8 k -n d8-cloud-instance-manager get secret -o name | grep node-group-token) \
      -o json | jq '.data.token' -r | base64 -d && echo ""
    ```
 
@@ -183,13 +183,34 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 
 ### Можно ли удалить StaticInstance?
 
-`StaticInstance`, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
+StaticInstance, находящийся в состоянии `Pending` можно удалять без каких-либо проблем.
 
-Чтобы удалить `StaticInstance` находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
+Чтобы удалить StaticInstance находящийся в любом состоянии, отличном от `Pending` (`Running`, `Cleaning`, `Bootstrapping`), выполните следующие шаги:
 
-1. Добавьте метку `"node.deckhouse.io/allow-bootstrap": "false"` в `StaticInstance`.
-1. Дождитесь, пока `StaticInstance` перейдет в статус `Pending`.
+1. Добавьте лейбл `"node.deckhouse.io/allow-bootstrap": "false"` в StaticInstance.
+
+   Пример команды для добавления лейбла:
+
+   ```shell
+   d8 k label staticinstance d8cluster-worker node.deckhouse.io/allow-bootstrap=false
+   ```
+
+1. Дождитесь, пока StaticInstance перейдет в статус `Pending`.
+
+   Для проверки статуса StaticInstance используйте команду:
+
+   ```shell
+   d8 k get staticinstances
+   ```
+
 1. Удалите `StaticInstance`.
+
+   Пример команды для удаления StaticInstance:
+
+   ```shell
+   d8 k delete staticinstance d8cluster-worker
+   ```
+
 1. Уменьшите значение параметра `NodeGroup.spec.staticInstances.count` на 1.
 
 ### Как изменить IP-адрес StaticInstance?
@@ -209,8 +230,8 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 Чтобы перенести существующий статический узел созданный [вручную](./#работа-со-статическими-узлами) из одной `NodeGroup` в другую, необходимо изменить у узла лейбл группы:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Применение изменений потребует некоторого времени.
@@ -226,8 +247,8 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Запустите на узле скрипт очистки:
@@ -240,7 +261,7 @@ kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 ## Как понять, что что-то пошло не так?
 
-Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `kubectl get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
+Если узел в NodeGroup не обновляется (значение `UPTODATE` при выполнении команды `d8 k get nodegroup` меньше значения `NODES`) или вы предполагаете какие-то другие проблемы, которые могут быть связаны с модулем `node-manager`, нужно проверить логи сервиса `bashible`. Сервис `bashible` запускается на каждом узле, управляемом модулем `node-manager`.
 
 Чтобы проверить логи сервиса `bashible`, выполните на узле следующую команду:
 
@@ -263,26 +284,26 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
 1. Найдите узел, который находится в стадии бутстрапа:
 
    ```shell
-   kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    dev-worker-2a6158ff-6764d-nrtbj   Pending   46s
    ```
 
 1. Получите информацию о параметрах подключения для просмотра логов:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    ```
 
    Пример:
 
    ```shell
-   $ kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
      description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
      logsEndpoint: 192.168.199.178:8000
@@ -417,7 +438,7 @@ spec:
 
 При изменении конфигурации Deckhouse (как в модуле `node-manager`, так и в любом из облачных провайдеров) виртуальные машины не будут перезаказаны. Пересоздание происходит только после изменения ресурсов `InstanceClass` или `NodeGroup`.
 
-Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `kubectl annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
+Чтобы принудительно пересоздать все узлы, связанные с ресурсом `Machines`, следует добавить/изменить аннотацию `manual-rollout-id` в `NodeGroup`: `d8 k annotate NodeGroup имя_ng "manual-rollout-id=$(uuidgen)" --overwrite`.
 
 ## Как выделить узлы под специфические нагрузки?
 
@@ -519,7 +540,7 @@ capiEmergencyBrake: true
 Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением Deckhouse выполнить команду:
 
 ```shell
-kubectl -n d8-system get secrets deckhouse-registry -o json |
+d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
 jq -r '.auths."registry.deckhouse.io".auth'
 ```
@@ -562,13 +583,13 @@ spec:
 * Для `Containerd`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"Containerd"}}}'
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  kubectl patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
+  d8 k patch nodegroup <имя NodeGroup> --type merge -p '{"spec":{"cri":{"type":"NotManaged"}}}'
   ```
 
 {% alert level="warning" %}
@@ -585,20 +606,20 @@ spec:
 
 Для изменения CRI для всего кластера, необходимо с помощью утилиты `dhctl` отредактировать параметр `defaultCRI` в конфигурационном файле `cluster-configuration`.
 
-Также возможно выполнить эту операцию с помощью `kubectl patch`.
+Также возможно выполнить эту операцию с помощью `d8 k patch`.
 
 * Для `Containerd`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/NotManaged/Containerd/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 * Для `NotManaged`:
 
   ```shell
-  data="$(kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
-  kubectl -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
+  data="$(d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' | base64 -d | sed "s/Containerd/NotManaged/" | base64 -w0)"
+  d8 k -n kube-system patch secret d8-cluster-configuration -p "{\"data\":{\"cluster-configuration.yaml\":\"$data\"}}"
   ```
 
 Если необходимо, чтобы отдельные NodeGroup использовали другой CRI, перед изменением `defaultCRI` необходимо установить CRI для этой NodeGroup,
@@ -615,13 +636,13 @@ spec:
 1. Чтобы определить, какой узел в текущий момент обновляется в master NodeGroup, используйте следующую команду:
 
    ```shell
-   kubectl get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+   d8 k get nodes -l node-role.kubernetes.io/control-plane="" -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
    ```
 
 1. Подтвердите остановку (disruption) для master-узла, полученного на предыдущем шаге:
 
    ```shell
-   kubectl annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
+   d8 k annotate node <имя master-узла> update.node.deckhouse.io/disruption-approved=
    ```
 
 1. Дождитесь перехода обновленного master-узла в `Ready`. Выполните итерацию для следующего master-узла.
@@ -650,231 +671,6 @@ spec:
 Обратите внимание, что добавить таким образом лейблы, использующиеся в DKP, невозможно. Работать такой метод будет только с кастомными лейблами, не пересекающимися с зарезервированными для Deckhouse.
 {% endalert %}
 
-## Как использовать containerd с поддержкой Nvidia GPU?
-
-Необходимо создать отдельную NodeGroup для GPU-узлов:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: gpu
-spec:
-  chaos:
-    mode: Disabled
-  disruptions:
-    approvalMode: Automatic
-  nodeType: CloudStatic
-```
-
-Далее создайте NodeGroupConfiguration для NodeGroup `gpu` для конфигурации containerd:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: containerd-additional-config.sh
-spec:
-  bundles:
-  - '*'
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    mkdir -p /etc/containerd/conf.d
-    bb-sync-file /etc/containerd/conf.d/nvidia_gpu.toml - << "EOF"
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri"]
-        [plugins."io.containerd.grpc.v1.cri".containerd]
-          default_runtime_name = "nvidia"
-          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
-            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
-              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
-                privileged_without_host_devices = false
-                runtime_engine = ""
-                runtime_root = ""
-                runtime_type = "io.containerd.runc.v2"
-                [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
-                  BinaryName = "/usr/bin/nvidia-container-runtime"
-                  SystemdCgroup = false
-    EOF
-  nodeGroups:
-  - gpu
-  weight: 31
-```
-
-Добавьте NodeGroupConfiguration для установки драйверов Nvidia для NodeGroup `gpu`.
-
-### Ubuntu
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - ubuntu-lts
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-      curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    fi
-    bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-### Centos
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: install-cuda.sh
-spec:
-  bundles:
-  - centos
-  content: |
-    # Copyright 2023 Flant JSC
-    #
-    # Licensed under the Apache License, Version 2.0 (the "License");
-    # you may not use this file except in compliance with the License.
-    # You may obtain a copy of the License at
-    #
-    #     http://www.apache.org/licenses/LICENSE-2.0
-    #
-    # Unless required by applicable law or agreed to in writing, software
-    # distributed under the License is distributed on an "AS IS" BASIS,
-    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    # See the License for the specific language governing permissions and
-    # limitations under the License.
-
-    if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-      distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-      curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-    fi
-    bb-dnf-install nvidia-container-toolkit nvidia-driver
-    nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
-  nodeGroups:
-  - gpu
-  weight: 30
-```
-
-После того как конфигурации будут применены, необходимо провести бутстрап и перезагрузить узлы, чтобы применить настройки и установить драйвера.
-
-### Как проверить, что все прошло успешно?
-
-Создайте в кластере Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: nvidia-cuda-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: nvidia-cuda-test
-          image: nvidia/cuda:11.6.2-base-ubuntu20.04
-          imagePullPolicy: "IfNotPresent"
-          command:
-            - nvidia-smi
-```
-
-Проверьте логи командой:
-
-```shell
-$ kubectl logs job/nvidia-cuda-test
-Tue Jan 24 11:36:18 2023
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.60.13    Driver Version: 525.60.13    CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:8B:00.0 Off |                    0 |
-| N/A   45C    P0    25W /  70W |      0MiB / 15360MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-```
-
-Создайте в кластере Job:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: gpu-operator-test
-  namespace: default
-spec:
-  completions: 1
-  template:
-    spec:
-      restartPolicy: Never
-      nodeSelector:
-        node.deckhouse.io/group: gpu
-      containers:
-        - name: gpu-operator-test
-          image: nvidia/samples:vectoradd-cuda10.2
-          imagePullPolicy: "IfNotPresent"
-```
-
-Проверьте логи командой:
-
-```shell
-$ kubectl logs job/gpu-operator-test
-[Vector addition of 50000 elements]
-Copy input data from the host memory to the CUDA device
-CUDA kernel launch with 196 blocks of 256 threads
-Copy output data from the CUDA device to the host memory
-Test PASSED
-Done
-```
-
 ## Как развернуть кастомный конфигурационный файл containerd?
 
 {% alert level="info" %}
@@ -882,7 +678,7 @@ Done
 {% endalert %}
 
 {% alert level="danger" %}
-Добавление кастомных настроек вызывает перезапуск сервиса `containerd`.
+Добавление кастомных настроек вызывает перезапуск сервиса containerd.
 {% endalert %}
 
 Bashible на узлах объединяет конфигурацию containerd для Deckhouse с конфигурацией из файла `/etc/containerd/conf.d/*.toml`.
@@ -926,18 +722,85 @@ spec:
   weight: 31
 ```
 
-### Как добавить авторизацию в дополнительный registry?
+### Как добавить конфигурацию для дополнительного registry?
 
-Разверните скрипт `NodeGroupConfiguration`:
+В containerd существует два способа описания конфигурации registry: **устаревший** и **актуальный**.
+
+Для проверки наличия **устаревшего** способа конфигурации выполните на узлах кластера следующие команды:
+
+```bash
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.mirrors'
+cat /etc/containerd/config.toml | grep 'plugins."io.containerd.grpc.v1.cri".registry.configs'
+
+# Пример вывода:
+# [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+#   [plugins."io.containerd.grpc.v1.cri".registry.mirrors."<REGISTRY_URL>"]
+# [plugins."io.containerd.grpc.v1.cri".registry.configs]
+#   [plugins."io.containerd.grpc.v1.cri".registry.configs."<REGISTRY_URL>".auth]
+```
+
+Для проверки наличия **актуального** способа конфигурации выполните на узлах кластера следующую команду:
+
+```bash
+cat /etc/containerd/config.toml | grep '/etc/containerd/registry.d'
+
+# Пример вывода:
+# config_path = "/etc/containerd/registry.d"
+```
+
+#### Устаревший способ
+
+{% alert level="warning" %}
+Этот формат конфигурации containerd устарел (deprecated).
+{% endalert %}
+
+{% alert level="info" %}
+Используется в containerd v1, если Deckhouse не управляется с помощью модуля [registry](../registry).
+{% endalert %}
+
+Конфигурация описывается в основном конфигурационном файле containerd `/etc/containerd/config.toml`.
+
+Пользовательская конфигурация добавляется через механизм `toml merge`. Конфигурационные файлы из директории `/etc/containerd/conf.d` объединяются с основным файлом `/etc/containerd/config.toml`. Применение merge происходит на этапе выполнения скрипта `032_configure_containerd.sh`, поэтому соответствующие файлы должны быть добавлены заранее.
+
+Пример конфигурационного файла для директории `/etc/containerd/conf.d/`:
+
+```toml
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
+          endpoint = ["https://${REGISTRY_URL}"]
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
+          auth = "${BASE_64_AUTH}"
+          username = "${USERNAME}"
+          password = "${PASSWORD}"
+        [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+          ca_file = "${CERT_DIR}/${CERT_NAME}.crt"
+          insecure_skip_verify = true
+```
+
+{% alert level="danger" %}
+Добавление кастомных настроек через механизм `toml merge` вызывает перезапуск сервиса containerd.
+{% endalert %}
+
+##### Как добавить авторизацию в дополнительный registry (устаревший способ)?
+
+Пример добавления авторизации в дополнительный registry при использовании **устаревшего** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: containerd-additional-config.sh
+  name: containerd-additional-config-auth.sh
 spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  weight: 31
   bundles:
     - '*'
+  nodeGroups:
+    - "*"
   content: |
     # Copyright 2023 Flant JSC
     #
@@ -961,37 +824,35 @@ spec:
       [plugins."io.containerd.grpc.v1.cri"]
         [plugins."io.containerd.grpc.v1.cri".registry]
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
-            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-              endpoint = ["https://registry-1.docker.io"]
             [plugins."io.containerd.grpc.v1.cri".registry.mirrors."${REGISTRY_URL}"]
               endpoint = ["https://${REGISTRY_URL}"]
           [plugins."io.containerd.grpc.v1.cri".registry.configs]
             [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-              auth = "AAAABBBCCCDDD=="
+              username = "username"
+              password = "password"
+              # OR
+              auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
     EOF
-  nodeGroups:
-    - "*"
-  weight: 31
 ```
 
-### Как настроить сертификат для дополнительного registry?
+##### Как настроить сертификат для дополнительного registry (устаревший способ)?
 
-{% alert level="info" %}
-Помимо containerd, сертификат можно [одновременно добавить](examples.html#добавление-сертификата-в-ос-и-containerd) и в операционной системе.
-{% endalert %}
-
-Пример `NodeGroupConfiguration` для настройки сертификата для дополнительного registry:
+Пример настройки сертификата для дополнительного registry при использовании **устаревшего** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: configure-cert-containerd.sh
+  name: containerd-additional-config-tls.sh
 spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  weight: 31
   bundles:
-  - '*'
-  content: |-
-    # Copyright 2024 Flant JSC
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
     #
     # Licensed under the Apache License, Version 2.0 (the "License");
     # you may not use this file except in compliance with the License.
@@ -1004,66 +865,278 @@ spec:
     # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     # See the License for the specific language governing permissions and
     # limitations under the License.
-
+    
     REGISTRY_URL=private.registry.example
     CERT_FILE_NAME=${REGISTRY_URL}
     CERTS_FOLDER="/var/lib/containerd/certs/"
-    CERT_CONTENT=$(cat <<"EOF"
-    -----BEGIN CERTIFICATE-----
-    MIIDSjCCAjKgAwIBAgIRAJ4RR/WDuAym7M11JA8W7D0wDQYJKoZIhvcNAQELBQAw
-    JTEjMCEGA1UEAxMabmV4dXMuNTEuMjUwLjQxLjIuc3NsaXAuaW8wHhcNMjQwODAx
-    MTAzMjA4WhcNMjQxMDMwMTAzMjA4WjAlMSMwIQYDVQQDExpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pbzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL1p
-    WLPr2c4SZX/i4IS59Ly1USPjRE21G4pMYewUjkSXnYv7hUkHvbNL/P9dmGBm2Jsl
-    WFlRZbzCv7+5/J+9mPVL2TdTbWuAcTUyaG5GZ/1w64AmAWxqGMFx4eyD1zo9eSmN
-    G2jis8VofL9dWDfUYhRzJ90qKxgK6k7tfhL0pv7IHDbqf28fCEnkvxsA98lGkq3H
-    fUfvHV6Oi8pcyPZ/c8ayIf4+JOnf7oW/TgWqI7x6R1CkdzwepJ8oU7PGc0ySUWaP
-    G5bH3ofBavL0bNEsyScz4TFCJ9b4aO5GFAOmgjFMMUi9qXDH72sBSrgi08Dxmimg
-    Hfs198SZr3br5GTJoAkCAwEAAaN1MHMwDgYDVR0PAQH/BAQDAgWgMAwGA1UdEwEB
-    /wQCMAAwUwYDVR0RBEwwSoIPbmV4dXMuc3ZjLmxvY2FsghpuZXh1cy41MS4yNTAu
-    NDEuMi5zc2xpcC5pb4IbZG9ja2VyLjUxLjI1MC40MS4yLnNzbGlwLmlvMA0GCSqG
-    SIb3DQEBCwUAA4IBAQBvTjTTXWeWtfaUDrcp1YW1pKgZ7lTb27f3QCxukXpbC+wL
-    dcb4EP/vDf+UqCogKl6rCEA0i23Dtn85KAE9PQZFfI5hLulptdOgUhO3Udluoy36
-    D4WvUoCfgPgx12FrdanQBBja+oDsT1QeOpKwQJuwjpZcGfB2YZqhO0UcJpC8kxtU
-    by3uoxJoveHPRlbM2+ACPBPlHu/yH7st24sr1CodJHNt6P8ugIBAZxi3/Hq0wj4K
-    aaQzdGXeFckWaxIny7F1M3cIWEXWzhAFnoTgrwlklf7N7VWHPIvlIh1EYASsVYKn
-    iATq8C7qhUOGsknDh3QSpOJeJmpcBwln11/9BGRP
-    -----END CERTIFICATE-----
-    EOF
-    )
 
-    CONFIG_CONTENT=$(cat <<EOF
-    [plugins]
-      [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
-        ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
-    EOF
-    )
 
     mkdir -p ${CERTS_FOLDER}
+    bb-sync-file "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
     mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              ca_file = "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"
+    EOF
+```
 
-    # bb-tmp-file - Create temp file function. More information: http://www.bashbooster.net/#tmp
+{% alert level="info" %}
+Помимо containerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
+{% endalert %}
 
-    CERT_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CERT_CONTENT}" > "${CERT_TMP_FILE}"  
-    
-    CONFIG_TMP_FILE="$( bb-tmp-file )"
-    echo -e "${CONFIG_CONTENT}" > "${CONFIG_TMP_FILE}"  
+##### Как добавить TLS skip verify (устаревший способ)?
 
-    # bb-sync-file                                - File synchronization function. More information: http://www.bashbooster.net/#sync
-    ## "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt"    - Destination file
-    ##  ${CERT_TMP_FILE}                          - Source file
+Пример добавления TLS skip verify при использовании **устаревшего** способа конфигурации:
 
-    bb-sync-file \
-      "${CERTS_FOLDER}/${CERT_FILE_NAME}.crt" \
-      ${CERT_TMP_FILE} 
-
-    bb-sync-file \
-      "/etc/containerd/conf.d/${REGISTRY_URL}.toml" \
-      ${CONFIG_TMP_FILE} 
-  nodeGroups:
-  - '*'  
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # Для добавления файла перед шагом '032_configure_containerd.sh'
   weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/additional_registry.toml - << EOF
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs]
+            [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".tls]
+              insecure_skip_verify = true
+    EOF
+```
+
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
+
+```bash
+# Через cri-интерфейс
+crictl pull private.registry.example/image/repo:tag
+```
+
+#### Новый способ
+
+{% alert level="info" %}
+Используется в containerd v2.  
+
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](../registry) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+{% endalert %}
+
+Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
+
+```bash
+/etc/containerd/registry.d
+├── private.registry.example:5001
+│   ├── ca.crt
+│   └── hosts.toml
+└── registry.deckhouse.ru
+    ├── ca.crt
+    └── hosts.toml
+```
+
+Пример содержимого файла `hosts.toml`:
+
+```toml
+[host]
+  # Mirror 1.
+  [host."https://${REGISTRY_URL_1}"]
+    capabilities = ["pull", "resolve"]
+    ca = ["${CERT_DIR}/${CERT_NAME}.crt"]
+
+    [host."https://${REGISTRY_URL_1}".auth]
+      username = "${USERNAME}"
+      password = "${PASSWORD}"
+
+  # Mirror 2.
+  [host."http://${REGISTRY_URL_2}"]
+    capabilities = ["pull", "resolve"]
+    skip_verify = true
+```
+
+{% alert level="info" %}
+Изменения конфигураций не приводят к перезапуску сервиса containerd.
+{% endalert %}
+
+##### Как добавить авторизацию в дополнительный registry (актуальный способ)?
+
+Пример добавления авторизации в дополнительный registry при использовании **актуального** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-auth.sh
+spec:
+  # Шаг может быть любой, т.к. не требуется перезапуск сервиса containerd.
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        [host."https://${REGISTRY_URL}".auth]
+          username = "username"
+          password = "password"
+    EOF
+```
+
+##### Как настроить сертификат для дополнительного registry (актуальный способ)?
+
+Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-tls.sh
+spec:
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt" - << EOF
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+    EOF
+
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        ca = ["/etc/containerd/registry.d/${REGISTRY_URL}/ca.crt"]
+    EOF
+```
+
+{% alert level="info" %}
+Помимо containerd, сертификат можно [добавить в операционную систему](examples.html#добавление-корневого-сертификата-в-хост).
+{% endalert %}
+
+##### Как добавить TLS skip verify (актуальный способ)?
+
+Пример добавления TLS skip verify при использовании **актуального** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: containerd-additional-config-skip-tls.sh
+spec:
+  # Шаг может быть любой, тк не требуется перезапуск сервиса containerd.
+  weight: 0
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+    
+    REGISTRY_URL=private.registry.example
+
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY_URL}/hosts.toml" - << EOF
+    [host]
+      [host."https://${REGISTRY_URL}"]
+        capabilities = ["pull", "resolve"]
+        skip_verify = true
+    EOF
+```
+
+После применения конфигурационного файла проверьте доступ к registry с узлов, используя команды:
+
+```bash
+# Через cri интерфейс.
+crictl pull private.registry.example/image/repo:tag
+
+# Через ctr с указанием директории с конфигурациями.
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.registry.example/image/repo:tag
+
+# Через ctr для http репозитория.
+ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
 ```
 
 ## Как использовать NodeGroup с приоритетом?
@@ -1237,3 +1310,373 @@ metadata:
 Некоторые операции по изменению конфигурации узлов могут потребовать перезагрузки.
 
 Перезагрузка узла может потребоваться при изменении некоторых настроек sysctl, например, при изменении параметра `kernel.yama.ptrace_scope` (изменяется при использовании команды `astra-ptrace-lock enable/disable` в Astra Linux).
+
+## Как работать с GPU-узлами?
+
+{% alert level="info" %}
+Управление GPU-узлами доступно только в Enterprise Edition.
+{% endalert %}
+
+### Порядок действий по добавлению GPU-узла в кластер
+
+Начиная с Deckhouse 1.71, если в `NodeGroup` есть секция `spec.gpu`, модуль `node-manager` **автоматически**:
+
+- настраивает containerd с `default_runtime = "nvidia"`;
+- применяет необходимые системные параметры (включая фиксы для NVIDIA Container Toolkit);
+- разворачивает системные компоненты: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
+
+{% alert level="info" %}
+Для корректной работы необходимо явно указать режим в `spec.gpu.sharing` (`Exclusive`, `TimeSlicing` или `MIG`).
+
+Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
+{% endalert %}
+
+Чтобы добавить GPU-узел в кластер, выполните следующие действия:
+
+1. Создайте NodeGroup для GPU-узлов.
+
+   Пример с включённым **TimeSlicing** (`partitionCount: 4`) и типичным taint/label:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: gpu
+   spec:
+     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре.
+     gpu:
+       sharing: TimeSlicing
+       timeSlicing:
+         partitionCount: 4
+     nodeTemplate:
+       labels:
+         node-role/gpu: ""
+       taints:
+       - key: node-role
+         value: gpu
+         effect: NoSchedule
+   ```
+
+   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в `global.modules.placement.   customTolerationKeys`, чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+
+   Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+
+1. Установите драйвер NVIDIA и nvidia-container-toolkit.
+
+   Установку **драйвера NVIDIA** и **NVIDIA Container Toolkit** выполняйте на самих узлах — вручную или с помощью `NodeGroupConfiguration`.
+   Ниже приведены примеры `NodeGroupConfiguration` для группы узлов `gpu`.
+
+   **Ubuntu**
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - ubuntu-lts
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+   
+       if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+         curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+       fi
+       bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
+
+   **CentOS**
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - centos
+     content: |
+       # Copyright 2023 Flant JSC
+       #
+       # Licensed under the Apache License, Version 2.0 (the "License");
+       # you may not use this file except in compliance with the License.
+       # You may obtain a copy of the License at
+       #
+       #     http://www.apache.org/licenses/LICENSE-2.0
+       #
+       # Unless required by applicable law or agreed to in writing, software
+       # distributed under the License is distributed on an "AS IS" BASIS,
+       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+       # See the License for the specific language governing permissions and
+       # limitations under the License.
+
+       if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
+         distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+       fi
+       bb-dnf-install nvidia-container-toolkit nvidia-driver
+       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+     nodeGroups:
+     - gpu
+     weight: 30
+   ```
+
+   После того как конфигурации будут применены, необходимо провести бутстрап и перезагрузить узлы, чтобы применить настройки и установить драйвера.
+
+1. Проверьте установку на узле, используя команду:
+
+   ```bash
+   nvidia-smi
+   ```
+
+   **Ожидаемый корректный вывод (пример):**
+
+   ```console
+   root@k8s-dvp-w1-gpu:~# nvidia-smi
+   Tue Aug  5 07:08:48 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   32C    P0              35W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
+
+1. Проверьте инфраструктурные компоненты в кластере.
+
+   Поды NVIDIA в `d8-nvidia-gpu`:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu get pod
+   ```
+
+   **Ожидаемый корректный вывод (пример):**
+
+   ```console
+   NAME                                  READY   STATUS    RESTARTS   AGE
+   gpu-feature-discovery-80ceb7d-r842q   2/2     Running   0          2m53s
+   nvidia-dcgm-exporter-w9v9h            1/1     Running   0          2m53s
+   nvidia-dcgm-njqqb                     1/1     Running   0          2m53s
+   nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
+   ```
+
+   Поды NFD в `d8-cloud-instance-manager`:
+
+   ```bash
+   d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
+   ```
+
+   **Ожидаемый корректный вывод (пример):**
+
+   ```console
+   NAME                                             READY   STATUS      RESTARTS       AGE
+   node-feature-discovery-gc-6d845765df-45vpj       1/1     Running     0              3m6s
+   node-feature-discovery-master-74696fd9d5-wkjk4   1/1     Running     0              3m6s
+   node-feature-discovery-worker-5f4kv              1/1     Running     0              3m8s
+   ```
+
+   Публикация ресурсов на узле:
+
+   ```bash
+   d8 k describe node <имя-узла>
+   ```
+
+   **Фрагмент вывода (пример):**
+
+   ```bash
+   Capacity:
+     cpu:                40
+     memory:             263566308Ki
+     nvidia.com/gpu:     4
+   Allocatable:
+     cpu:                39930m
+     memory:             262648294441
+     nvidia.com/gpu:     4
+   ```
+
+1. Запустите функциональные тесты.
+
+   **Вариант A. Вызов `nvidia-smi` из контейнера.**
+
+   Создайте в кластере задачу (Job):
+
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: nvidia-cuda-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: nvidia-cuda-test
+             image: nvidia/cuda:11.6.2-base-ubuntu20.04
+             imagePullPolicy: "IfNotPresent"
+             command:
+               - nvidia-smi
+   ```
+
+   Проверьте логи командой:
+
+   ```bash
+   d8 k logs job/nvidia-cuda-test
+   ```
+
+   Пример вывода:
+
+   ```console
+   Tue Aug  5 07:48:02 2025
+   +---------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+   |-----------------------------------------+----------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                      |               MIG M. |
+   |=========================================+======================+======================|
+   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+   | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
+   |                                         |                      |                  N/A |
+   +-----------------------------------------+----------------------+----------------------+
+   
+   +---------------------------------------------------------------------------------------+
+   | Processes:                                                                            |
+   |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+   |        ID   ID                                                             Usage      |
+   |=======================================================================================|
+   |  No running processes found                                                           |
+   +---------------------------------------------------------------------------------------+
+   ```
+
+   **Вариант B. CUDA sample (vectoradd).**
+
+   Создайте в кластере Job:
+
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata:
+     name: gpu-operator-test
+     namespace: default
+   spec:
+     completions: 1
+     template:
+       spec:
+         restartPolicy: Never
+         nodeSelector:
+           node.deckhouse.io/group: gpu
+         containers:
+           - name: gpu-operator-test
+             image: nvidia/samples:vectoradd-cuda10.2
+             imagePullPolicy: "IfNotPresent"
+   ```
+
+   Проверьте логи командой:
+
+   ```shell
+   d8 k logs job/gpu-operator-test
+   ```
+
+   Пример вывода:
+
+   ```console
+   [Vector addition of 50000 elements]
+   Copy input data from the host memory to the CUDA device
+   CUDA kernel launch with 196 blocks of 256 threads
+   Copy output data from the CUDA device to the host memory
+   Test PASSED
+   Done
+   ```
+
+## Как мониторить GPU?
+
+Deckhouse Kubernetes Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
+
+## Какие режимы работы GPU поддерживаются?
+
+Поддерживаются следующие режимы работы GPU:
+
+- **Exclusive** — узел публикует ресурс `nvidia.com/gpu`; каждому поду выделяется целый GPU.
+- **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
+- **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`.
+
+Примеры приведены в разделе [Управление узлами: примеры](../node-manager/examples.html#пример-gpu-nodegroup).
+
+## Как посмотреть доступные MIG-профили в кластере?
+
+<span id="как-посмотреть-доступные-mig-профили-в-кластере"></span>
+
+Предустановленные профили находятся в ConfigMap `mig-parted-config` в пространстве имен `d8-nvidia-gpu`. Для их просмотра используйте команду:
+
+```bash
+d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.yaml"]'
+```
+
+В разделе mig-configs вы увидите конкретные модели ускорителей (по PCI-ID) и список совместимых MIG-профилей для каждой из них.
+Найдите свою видеокарту и выберите подходящий профиль — его имя указывается в `spec.gpu.mig.partedConfig` вашего NodeGroup.
+Это позволит применить правильный профиль именно к вашей карте.
+
+## Для GPU не активируется MIG-профиль — что проверить?
+
+1. Модель GPU: MIG поддерживают H100/A100/A30, **не** поддерживает V100/T4. См. таблицы профилей в руководстве [NVIDIA MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
+1. Конфигурация NodeGroup:
+
+   ```yaml
+   gpu:
+     sharing: MIG
+     mig:
+       partedConfig: all-1g.5gb
+   ```
+
+1. Дождитесь, пока `nvidia-mig-manager` выполнит drain узла и переконфигурирует GPU.
+
+    **Этот процесс может занять несколько минут**.
+
+    Пока операция идёт, на узле стоит taint `mig-reconfigure`. После успешного окончания taint удаляется.
+
+1. Ход процесса можно отслеживать по label `nvidia.com/mig.config.state` на узле:
+
+    `pending`, `rebooting`, `success` (или `error`, если что-то пошло не так).
+
+1. Если ресурсы `nvidia.com/mig-*` не появились — проверьте:
+
+   ```bash
+   d8 k -n d8-nvidia-gpu logs daemonset/nvidia-mig-manager
+   nvidia-smi -L
+   ```
+
+## Поддерживаются ли AMD или Intel GPU?
+
+Сейчас Deckhouse Kubernetes Platform автоматически настраивает **только NVIDIA GPU**. Поддержка **AMD (ROCm)** и **Intel GPU** находится в проработке и планируется к добавлению в будущих релизах.

@@ -62,7 +62,6 @@ metadata:
   name: openvpn-pki-server
   namespace: d8-openvpn
   labels:
-    index.txt: ""
     type: serverAuth
 
 type: Opaque
@@ -107,6 +106,7 @@ data: {}
 			Expect(f).To(ExecuteSuccessfully())
 			labels := f.KubernetesResource("Secret", "d8-openvpn", "openvpn-pki-server").Field("metadata.labels")
 			Expect(labels.Get("name").String()).To(Equal("server"))
+			Expect(labels.Get("index.txt").Exists())
 		})
 	})
 })

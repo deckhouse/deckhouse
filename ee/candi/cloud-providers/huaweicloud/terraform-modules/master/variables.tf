@@ -68,3 +68,7 @@ variable "server_group" {
 variable "subnet" {
   type = string
 }
+
+variable "enterprise_project_id" {
+  type = string
+}

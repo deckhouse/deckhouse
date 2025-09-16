@@ -32,7 +32,7 @@ Before creating a user, generate a password hash using the following command:
 ```shell
 # To avoid saving the password in the command history, begin the command line with a space character
 # Replace example_password with your password
- echo example_password | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+ echo -n 'example_password' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
 
 Alternatively, you can use [Bcrypt](https://bcrypt-generator.com/).
@@ -46,7 +46,7 @@ metadata:
   name: joe
 spec:
   email: joe@example.com # Used in RoleBinding and ClusterRoleBinding to assign user permissions
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  password: 'JDJ5JDEwJG5qNFZUWW9vVHBQZUsxV1ZaNWtOcnVzTXhDb3ZHcWNFLnhxSHhoMUM0aG9zVVJubUJkZjJ5'
   ttl: 24h # (Optional) Sets the lifetime of the user account
 ```
 
@@ -216,7 +216,7 @@ Example of a manifest for configuring a provider to integrate with Bitbucket:
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-  name: gitlab
+  name: bitbucket
 spec:
   type: BitbucketCloud
   displayName: Bitbucket

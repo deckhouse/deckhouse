@@ -1,8 +1,7 @@
 name: runtime-audit-engine
-weight: 650
 stage: "General Availability"
 subsystems:
   - security
 namespace: d8-runtime-audit-engine
 requirements:
-  bootstrapped: true
+  deckhouse: ">= 1.68"

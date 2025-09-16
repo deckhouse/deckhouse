@@ -67,7 +67,7 @@ Build nginx for controller on ALT Linux.
 
 Add HTTP/3 support.
 
-We have made two PRs in upstream to bump ingress-nginx image and to enable http3 module. 
+We have made two PRs in upstream to bump ingress-nginx image and to enable http3 module.
 But we did not add full support for http3 in upstream, because at that time OpenSSL did not fully support quic.
 
 Bump the image and enable http3 module: https://github.com/kubernetes/ingress-nginx/pull/11470
@@ -75,7 +75,7 @@ README about next steps for upstream: https://github.com/kubernetes/ingress-ngin
 
 README: https://github.com/kubernetes/ingress-nginx/blob/main/images/nginx/README.md
 
-When OpenSSL fully supports quic, the work can be continued. 
+When OpenSSL fully supports quic, the work can be continued.
 To add fully support - steps from the readme should be accomplished and after this the patch can be deleted.
 
 ### 012-new-metrics.patch
@@ -93,8 +93,24 @@ https://github.com/deckhouse/deckhouse/issues/9933
 
 TODO: update readme with patch description
 
-### 015-protect-validation-port.patch
+### 015-validation-mode.patch
 
-Now when accessing the validation port of the validator, the client **must present a TLS certificate**,  
-which the validator server trusts (CA and Common Name verification).  
-Without a valid client certificate, access to the validation service will be denied.
+Slightly tunes some logic related to validating ingress objects.
+
+### 016-verbose-maxmind-logs.patch
+
+Added additional logging when downloading GeoIP databases from the MaxMind service.
+
+### 017-fix-success-reload-metric.patch
+
+This patch ensures that when an invalid Ingress configuration is deleted, metric `nginx_ingress_controller_config_last_reload_successful` is set to 1.
+
+https://github.com/kubernetes/ingress-nginx/pull/13830
+
+### 018-disable-error-logs.patch
+
+Disabling log messages such as "Error obtaining Endpoints for Service...".
+
+### 019-maxmind-alerts.patch
+
+The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).

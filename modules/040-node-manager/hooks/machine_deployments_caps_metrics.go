@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
@@ -26,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 )
@@ -114,17 +118,18 @@ func filterMachineDeploymentStatus(obj *unstructured.Unstructured) (go_hook.Filt
 	}, nil
 }
 
-func handleMachineDeploymentStatus(input *go_hook.HookInput) error {
-	mdStatusSnapshots := input.Snapshots["machinedeployment_status"]
+func handleMachineDeploymentStatus(_ context.Context, input *go_hook.HookInput) error {
+	mdStatusSnapshots := input.Snapshots.Get("machinedeployment_status")
 
 	input.MetricsCollector.Expire(capsMachineDeploymentMetricsGroup)
 
 	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(capsMachineDeploymentMetricsGroup),
 	}
-
-	for _, mdStatusSnapshot := range mdStatusSnapshots {
-		mdStatus := mdStatusSnapshot.(machineDeploymentStatus)
+	for mdStatus, err := range sdkobjectpatch.SnapshotIter[machineDeploymentStatus](mdStatusSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machinedeployment_status' snapshots: %w", err)
+		}
 
 		labels := map[string]string{"machine_deployment_name": mdStatus.Name}
 

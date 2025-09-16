@@ -3,9 +3,14 @@ title: "Module development and debugging"
 permalink: en/module-development/development/
 ---
 
-{% raw %}
-
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](../../cr.html#modulepulloverride) resource is used for this purpose.
+
+{% alert level="warning" %}
+The ModulePullOverride resource is intended **for development and debugging environments only**.
+Using it in production clusters is **not recommended*. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
+{% endalert %}
+
+{% raw %}
 
 An example of ModulePullOverride:
 
@@ -112,34 +117,39 @@ To update the module without waiting for the next update cycle to begin, you can
 kubectl annotate mpo <name> renew=""
 ```
 
-## Module auto-update logic
+## Module availability and enabling by default
 
-![Module auto-update logic](../../images/module-development/module_update_flow.svg)
+To assign Deckhouse editions the module should be available in,
+as well as module bundles where it should be enabled by default,
+use the `accessibility` field in `module.yaml`:
 
-> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+```yaml
+name: test
+accessibility:
+  editions:
+    ee:
+      available: true
+      enabledInBundles:
+        - Default
+```
 
-1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
+In this configuration, the module will be available in `ee` (DKP Enterprise Edition)  
+and can be enabled using the ModuleConfig object, and will be enabled by default in the `Default` bundle.
 
-1. **Module disabling**. When a module is disabled (`disable module <module name>`):
-   - The module stops receiving new releases.
-   - The currently deployed version remains in the cluster with the `Deployed` status.
+{% endraw %}
 
-1. **Behavior on re-enabling**.
+{% alert level="warning" %}
 
-   If the module is re-enabled within 72 hours:
-   - The previously deployed version (ModuleRelease v1.0.0) is used.
-   - New releases are checked.
-   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
-   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+* To use this mechanism, the `module.yaml` file must be included in the release image.
+* A module can still be disabled using ModuleConfig.
+* A module will remain on the last available release if the next release disables it
+  (for example, by setting `available: false` in the corresponding edition).
 
-   If the module is re-enabled after 72 hours:
-   - The old version is deleted (`delete ModuleRelease v1.0.0`).
-   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
-   - The cycle starts again as if the module was enabled for the first time (see step 1).
+{% endalert %}
 
-1. **Behavior of a disabled module**. If a module is disabled, no new releases are downloaded. The previously deployed version (the last one that was enabled) is removed after 72 hours if the module is not re-enabled within that time.
+{% raw %}
 
-## How it works
+## How ModulePullOverride works
 
 After creating ModulePullOverride, the corresponding module will not consider ModuleUpdatePolicy, and will also not load and create ModuleRelease objects. The module will be loaded upon every change of the `imageDigest` parameter, after which it will be applied in the cluster. The ModuleSource status will have `overridden: true`, which indicates that ModulePullOverride is being used instead of ModuleUpdatePolicy. Also, the corresponding Module object will have an `IsOverridden` field in its status, and the module version from `imageTag`.
 
@@ -267,6 +277,184 @@ The module will keep running after ModulePullOverride is removed. But if there i
        policy: test-alpha
      modulesCount: 2
    ```
+
+{% endraw %}
+
+{% raw %}
+
+## Module auto-update logic
+
+![Module auto-update logic](../../images/module-development/module_update_flow.svg)
+
+> ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
+
+1. **Module installation**. When a module is enabled (`enable module <module name>`), the latest available version from the selected stability channel is automatically downloaded and deployed to the cluster. For example, this could be ModuleRelease v1.0.0. The most recent version is used; older versions are not installed.
+
+1. **Module disabling**. When a module is disabled (`disable module <module name>`):
+   - The module stops receiving new releases.
+   - The currently deployed version remains in the cluster with the `Deployed` status.
+
+1. **Behavior on re-enabling**.
+
+   If the module is re-enabled within 72 hours:
+   - The previously deployed version (ModuleRelease v1.0.0) is used.
+   - New releases are checked.
+   - If available, they are downloaded (e.g., v1.1.0, v1.1.1).
+   - The module is then updated according to [the standard update rules](../../deckhouse-release-channels.html) (Update). [More information](../../modules/deckhouse/configuration.html#parameters-update)
+
+   If the module is re-enabled after 72 hours:
+   - The old version is deleted (`delete ModuleRelease v1.0.0`).
+   - Upon re-enabling, the latest available version is downloaded (e.g., v1.1.1).
+   - The cycle starts again as if the module was enabled for the first time (see step 1).
+
+1. **Behavior of a disabled module**. If a module is disabled, no new releases are downloaded. The previously deployed version (the last one that was enabled) is removed after 72 hours if the module is not re-enabled within that time.
+
+## Skipping intermediate releases (from-to)
+
+The `from-to` mechanism allows you to skip [step-by-step module updates](../development/#module-auto-update-logic). If the current installed module version (status `Deployed`) falls within the `from-to` range, DKP skips intermediate releases and installs the latest available version within `to`.
+
+To enable the mechanism, set transition rules in the module configuration (`module.yaml`). Example:
+
+```yaml
+update:
+  versions:
+    - from: "1.67"
+      to:   "1.75"
+    - from: "1.99"
+      to:   "2.0" # Transitions between major versions are specified in the X.Y format.
+```
+
+> A constrained release is a module release whose `module.yaml` contains the [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update) section. The `from-to` mechanism works only with such releases.
+
+Conditions for applying `from-to`:
+
+- Target release version. The rule is read from the release you want to move to — the `to` value must match the version of that very release (constrained release).
+- Current version threshold. The current installed module version (`Deployed`) is not lower than `from`. If the current version is lower than `from`, the rule does not apply — the update proceeds sequentially.
+- If multiple releases match at the same time, the option with the largest `to` is chosen (the rules may reside in different ModuleRelease objects of the same module).
+- If no release meets these conditions, the update proceeds as usual — without skipping intermediate versions.
+
+If a release with [update.versions](../../cr.html#modulerelease-v1alpha1-spec-update) appears in the cluster, DKP does not require updating in order — such a release appears “as is” in the list, DKP automatically selects a suitable option and, if necessary, waits for approval. You can immediately approve installation of the latest available version within `to`. After approval, intermediate releases between `from` and `to` get the `Skipped` status after reconciliation (not immediately); for some time between `Superseded` and `Deployed` there may be releases in the `Pending` status.
+
+![From-to mechanism logic](../../images/module-development/from_to.svg)
+
+Check available releases (ModuleRelease) with:
+
+```shell
+d8 k get mr
+```
+
+Example output if the current module version is `0.3.33`, and `module.yaml` contains the rule `from: "0.3" → to: "0.7"`:
+
+```console
+p-o-test-v0.1.0    Superseded
+p-o-test-v0.2.22   Superseded
+p-o-test-v0.3.33   Deployed
+p-o-test-v0.4.1    Pending      Release is waiting for the 'modules.deckhouse.io/approved: "true"' annotation
+p-o-test-v0.5.27   Pending      awaiting for v0.4.1 release to be deployed
+p-o-test-v0.6.11   Pending      awaiting for v0.4.1 release to be deployed
+p-o-test-v0.7.25   Pending      Release is waiting for the 'modules.deckhouse.io/approved: "true"' annotation
+```
+
+In this example output, the current installed version is `0.3.33` (status `Deployed`). According to the rule `from: 0.3 → to: 0.7`, the latest available version within `0.7` is selected for installation — `p-o-test-v0.7.25` (status `Pending`). After approval, versions `0.4.1`, `0.5.27`, and `0.6.11` change to `Skipped`, and `p-o-test-v0.7.25` becomes `Deployed`.
+
+To approve the module release, apply the annotation:
+
+```shell
+d8 k annotate mr p-o-test-v0.7.25 modules.deckhouse.io/approved="true"
+```
+
+Example output after approval:
+
+```console
+p-o-test-v0.4.1    Skipped
+p-o-test-v0.5.27   Skipped
+p-o-test-v0.6.11   Skipped
+p-o-test-v0.7.25   Deployed
+```
+
+Whether an annotation is required depends on the module’s update policy. More details — [Module update policy](../run#module-update-policy).
+
+### Examples
+
+**Example 1.** The target release contains the rule, and its version equals `to` — the transition is performed.
+
+In this example, the `from-to` rule is defined in the **target** release, and the `to` value equals the version of that release. The current installed version (`Deployed`) is not lower than `from`, so the transition is possible. As soon as the release appears in the cluster, DKP prepares the update. If the update policy requires approval, mark the release with the annotation. After approval, intermediate releases will be skipped and the target release becomes `Deployed`:
+
+```yaml
+# Module version (Deployed): v1.67.23 (≥ 1.67) → the 'from' condition is satisfied.
+metadata:
+  name: module-test-v1.67.23
+status:
+  phase: Deployed
+
+# Target release: the release version equals update.versions.to (1.75).
+metadata:
+  name: module-test-v1.75.25
+update:
+  versions:
+  - from: "1.67"
+    to:   "1.75"   # The update will be performed to this version after approval (if required).
+```
+
+Likewise, if the current version is even higher than `from`, the transition is also performed:
+
+```yaml
+# Module version (Deployed): v1.69.0  (≥ 1.67) → the 'from' condition is satisfied.
+metadata:
+  name: module-test-v1.69.0
+status:
+  phase: Deployed
+
+# Target release: the release version equals update.versions.to (1.75).
+metadata:
+  name: module-test-v1.75.25
+update:
+  versions:
+  - from: "1.67"
+    to:   "1.75"  # The update will be performed to this version after approval (if required).
+```
+
+**Example 2.** The current version is lower than `from` — the transition is not performed.
+
+If the current installed version is lower than `from`, the rule does not apply. The update proceeds sequentially (without skipping):
+
+```yaml
+# Module version (Deployed): v1.61.0  (< 1.67) → the 'from' condition is NOT satisfied.
+metadata:
+  name: module-test-v1.61.0
+status:
+  phase: Deployed
+
+metadata:
+  name: module-test-v1.75.25
+update:
+  versions:
+  - from: "1.67"
+    to:   "1.75"   # The from-to transition is not performed → sequential update.
+```
+
+**Example 3.** `to` does not match the version of the release that contains the rule — the transition is not performed.
+
+A transition is possible only to a release where `to` equals the version of that release. If the rule is described in another release (for example, `to: "1.74"` is placed in release `v1.75.25`), it will not work — the update goes sequentially.
+
+```yaml
+# Module version (Deployed): v1.67.0.
+metadata:
+  name: module-test-v1.67.0
+status:
+  phase: Deployed
+
+metadata:
+  name: module-test-v1.74.0   # This release has no update.versions.
+
+# The rule is written in another release (v1.75.25), and 'to' does not equal its version.
+metadata:
+  name: module-test-v1.75.25
+update:
+  versions:
+  - from: "1.67"
+    to:   "1.74"   # 'to' does not equal this release version (1.75.25) → the rule is ignored.
+```
 
 {% endraw %}
 

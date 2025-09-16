@@ -36,9 +36,13 @@ import (
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/yaml"
 
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -50,13 +54,30 @@ import (
 // (waiting for new "go-containerregistry" version)
 
 const (
-	d8SystemNS = "d8-system"
-	caKey      = "ca"
+	d8SystemNS         = "d8-system"
+	caKey              = "ca"
+	registryModuleName = "registry"
 )
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
 	logEntry := logger.With("operator.component", "ChangeRegistry")
+
+	kubeCl, err := newKubeClient()
+	if err != nil {
+		return err
+	}
+
+	logEntry.Info("Checking registry module")
+
+	enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
+	if err != nil {
+		return fmt.Errorf("failed to check if %q module is enabled: %w", registryModuleName, err)
+	}
+
+	if enabled {
+		return fmt.Errorf("the %q module is enabled; please configure the registry using 'moduleConfig/deckhouse'", registryModuleName)
+	}
 
 	authConfig := newAuthConfig(username, password)
 
@@ -65,6 +86,8 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		return err
 	}
 
+	// !! Convert scheme to lowercase to avoid case-sensitive issues
+	scheme = strings.ToLower(scheme)
 	nameOpts := newNameOptions(scheme)
 	newRepo, err := name.NewRepository(strings.TrimRight(newRegistry, "/"), nameOpts...)
 	if err != nil {
@@ -74,11 +97,6 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 	caTransport := cr.GetHTTPTransport(caContent)
 
 	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
-		return err
-	}
-
-	kubeCl, err := newKubeClient()
-	if err != nil {
 		return err
 	}
 
@@ -434,4 +452,34 @@ func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *docker
 		Password: authConfig.Password,
 		Auth:     base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password)),
 	}
+}
+
+func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, moduleName string) (bool, error) {
+	moduleUnstructured, err := kubeCl.
+		Dynamic().
+		Resource(deckhousev1alpha1.ModuleGVR).
+		Namespace("").
+		Get(ctx, moduleName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get module: %w", err)
+	}
+
+	moduleJSON, err := moduleUnstructured.MarshalJSON()
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal unstructured module: %w", err)
+	}
+
+	var module deckhousev1alpha1.Module
+	decoder := serializer.
+		NewCodecFactory(runtime.NewScheme()).
+		UniversalDeserializer()
+	if _, _, err := decoder.Decode(moduleJSON, nil, &module); err != nil {
+		return false, fmt.Errorf("failed to decode module JSON: %w", err)
+	}
+
+	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, v1.ConditionTrue)
+	return enabled, nil
 }
