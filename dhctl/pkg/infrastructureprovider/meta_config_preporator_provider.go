@@ -36,14 +36,14 @@ func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 				PrepareMetaConfig: true,
 			})
 		default:
-			return &defaultPreparator{}
+			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
 	}
 }
 
-type defaultPreparator struct{}
+type defaultCloudOnlyPrefixValidatorPreparator struct{}
 
-func (p *defaultPreparator) Validate(metaConfig *config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(metaConfig *config.MetaConfig) error {
 	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
 	if err != nil {
 		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
@@ -52,6 +52,6 @@ func (p *defaultPreparator) Validate(metaConfig *config.MetaConfig) error {
 	return nil
 }
 
-func (p *defaultPreparator) Prepare(*config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(*config.MetaConfig) error {
 	return nil
 }
