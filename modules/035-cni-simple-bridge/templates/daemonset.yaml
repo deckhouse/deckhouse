@@ -85,8 +85,15 @@ spec:
         {{- /*
           UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
         */}}
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        securityContext:
           allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_RAW
+            - NET_ADMIN
+            drop:
+            - ALL
         command:
         - /bin/simple-bridge
         env:
