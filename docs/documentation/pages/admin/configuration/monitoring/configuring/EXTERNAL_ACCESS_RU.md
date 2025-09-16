@@ -1,97 +1,8 @@
 ---
-title: "Настройка мониторинга в Deckhouse Kubernetes Platform"
-permalink: ru/admin/configuration/monitoring/configuring.html
+title: "Настройка внешнего доступа"
+permalink: ru/admin/configuration/monitoring/configuring/external-access.html
 lang: ru
 ---
-
-{% raw %}
-
-## Мониторинг сетевого взаимодействия
-
-DKP может выполнять мониторинг сетевого взаимодействия между всеми узлами кластера, а также между узлами кластера и внешними хостами. При настроенном мониторинге, каждый узел два раза в секунду отправляет ICMP-пакеты на все другие узлы кластера (и на опциональные внешние узлы) и экспортирует данные в систему мониторинга.
-
-Анализ результатов мониторинга можно выполнять с помощью дашбордов мониторинга, подробнее о них читайте в разделе [Дашборды].
-
-Модуль отслеживает любые изменения поля `.status.addresses` узла. Если они обнаружены, срабатывает хук, который собирает полный список имен узлов и их адресов, и передает в DaemonSet, который заново создает поды. Таким образом, `ping` проверяет всегда актуальный список узлов.
-
-**Важно: monitoring-ping должен быть включен.**
-
-### Добавление дополнительных IP-адресов для мониторинга
-
-Для добавления дополнительных IP-адресов мониторинга используйте параметр [externalTargets](configuration.html#parameters-externaltargets) модуля.
-
-Пример конфигурации модуля:
-
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: monitoring-ping
-spec:
-  version: 1
-  enabled: true
-  settings:
-    externalTargets:
-    - name: google-primary
-      host: 8.8.8.8
-    - name: yaru
-      host: ya.ru
-    - host: youtube.com
-```
-
-> Поле `name` используется в Grafana для отображения связанных данных. Если поле `name` не указано, используется обязательное поле `host`.
-
-## Включение мониторинга узлов кластера
-
-Чтобы включить мониторинг узлов кластера, необходимо включить модуль `monitoring-kubernetes`, если он не включен. Включить мониторинг кластера можно в веб-интерфейсе (Deckhouse Console), или с помощью следующей команды:
-
-```shell
-d8 platform module enable monitoring-kubernetes
-```
-
-Аналогично можно включить модули `monitoring-kubernetes-control-plane` и `extended-monitoring`.
-
-## Запись данных Prometheus в longterm storage
-
-У Prometheus есть поддержка remote_write данных из локального Prometheus в отдельный longterm storage (например, [VictoriaMetrics](https://github.com/VictoriaMetrics/VictoriaMetrics)). В Deckhouse поддержка этого механизма реализована с помощью кастомного ресурса `PrometheusRemoteWrite`.
-
-{% endraw -%}
-{% alert level="info" %}
-Для VictoriaMetrics подробную информацию о способах передачи данные в vmagent можно получить в [документации](https://docs.victoriametrics.com/vmagent/index.html#how-to-push-data-to-vmagent) VictoriaMetrics.
-{% endalert %}
-{% raw %}
-
-### Пример минимального PrometheusRemoteWrite
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: PrometheusRemoteWrite
-metadata:
-  name: test-remote-write
-spec:
-  url: https://victoriametrics-test.domain.com/api/v1/write
-```
-
-### Пример расширенного PrometheusRemoteWrite
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: PrometheusRemoteWrite
-metadata:
-  name: test-remote-write
-spec:
-  url: https://victoriametrics-test.domain.com/api/v1/write
-  basicAuth:
-    username: username
-    password: password
-  writeRelabelConfigs:
-  - sourceLabels: [__name__]
-    action: keep
-    regex: prometheus_build_.*|my_cool_app_metrics_.*
-  - sourceLabels: [__name__]
-    action: drop
-    regex: my_cool_app_metrics_with_sensitive_data
-```
 
 ## Подключение Prometheus к сторонней Grafana
 
@@ -263,7 +174,7 @@ Prometheus, находящийся в основе системы монитор
       - second
       - another
   ```
-  
+
   Адрес экземпляра PushGateway с именем `first` из контейнера пода будет: `http://first.kube-prometheus-pushgateway:9091`.
 
 - Проверьте отправку метрик.
@@ -292,4 +203,3 @@ curl -X DELETE http://first.kube-prometheus-pushgateway:9091/metrics/job/myapp/i
 ```
 
 Обратите внимание, что PushGateway хранит полученные метрики в памяти. При рестарте пода PushGateway все метрики будут утеряны.
-{% endraw %}

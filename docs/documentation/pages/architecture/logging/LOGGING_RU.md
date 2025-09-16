@@ -1,6 +1,6 @@
 ---
-title: Логирование
-permalink: ru/architecture/logging.html
+title: Сбор и доставка логов
+permalink: ru/architecture/logging/delivery.html
 lang: ru
 ---
 
@@ -13,7 +13,7 @@ lang: ru
 Модуль `log-shipper` использует [Vector](https://vector.dev/) в качестве агента логирования.
 Комбинация настроек для сбора и доставки логов образует *pipeline*.
 
-![Архитектура log-shipper](../images/log-shipper/log_shipper_architecture.svg)
+![Архитектура log-shipper](../../images/log-shipper/log_shipper_architecture.svg)
 
 <!-- Исходник схемы: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
@@ -38,7 +38,7 @@ lang: ru
 
 Агенты `log-shipper` отправляют логи напрямую в хранилище, например, Loki или Elasticsearch.
 
-![log-shipper distributed](../images/log-shipper/log_shipper_distributed.svg)
+![log-shipper distributed](../../images/log-shipper/log_shipper_distributed.svg)
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1FFuPgpDHUGRdkMgpVWXxUXvfZTsasUhEh8XNz7JuCTQ/edit -->
 
@@ -57,7 +57,7 @@ lang: ru
 Агенты на узлах отправляют логи как можно быстрее, потребляя минимальное количество ресурсов.
 Сложные трансформации выполняются на стороне агрегатора.
 
-![log-shipper centralized](../images/log-shipper/log_shipper_centralized.svg)
+![log-shipper centralized](../../images/log-shipper/log_shipper_centralized.svg)
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1TL-YUBk0CKSJuKtRVV44M9bnYMq6G8FpNRjxGxfeAhQ/edit -->
 
@@ -75,7 +75,7 @@ lang: ru
 Главная задача данной архитектуры — как можно быстрее отправить логи в очередь сообщений (например, Kafka),
 из которой они в служебном порядке передаются в долгосрочное хранилище для дальнейшего анализа.
 
-![log-shipper stream](../images/log-shipper/log_shipper_stream.svg)
+![log-shipper stream](../../images/log-shipper/log_shipper_stream.svg)
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
 
@@ -98,7 +98,7 @@ lang: ru
 чтобы снизить количество сообщений, отправляемых в хранилище.
 Для этого задействуются фильтры `labelFilter` и `logFilter` модуля `log-shipper`.
 
-![log-shipper pipeline](../images/log-shipper/log_shipper_pipeline.svg)
+![log-shipper pipeline](../../images/log-shipper/log_shipper_pipeline.svg)
 
 <!-- Исходник картинок: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 

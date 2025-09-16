@@ -813,27 +813,39 @@ entries:
                 - title:
                     en: Monitoring configuration
                     ru: Настройка мониторинга
-                  url: /admin/configuration/monitoring/configuring.html
+                  folders:
+                    - title:
+                        en: Configuring monitoring of network interaction and cluster nodes
+                        ru: Настройка мониторинга сетевого взаимодействия и узлов кластера
+                      url: /admin/configuration/monitoring/configuring/network-and-pods.html
+                    - title:
+                        en: Writing Prometheus data to longterm storage
+                        ru: Запись данных Prometheus в долговременное хранилище
+                      url: /admin/configuration/monitoring/configuring/longterm-storage.html
+                    - title:
+                        en: Configuring external access
+                        ru: Настройка внешнего доступа
+                      url: /admin/configuration/monitoring/configuring/external-access.html
                 - title:
-                    en: Prometheus settings
-                    ru: Настройки Prometheus
+                    en: Configuring a system for collecting and storing metrics
+                    ru: Настройка системы сбора и хранения метрик
                   url: /admin/configuration/monitoring/prometheus.html
                 - title:
-                    en: Status page
-                    ru: Страница состояния
-                  url: /admin/configuration/monitoring/status.html
+                    en: Cluster SLA Monitoring
+                    ru: Мониторинг SLA кластера
+                  url: /admin/configuration/monitoring/sla.html
                 - title:
-                    en: Alerts
-                    ru: Алерты
-                  url: /admin/configuration/monitoring/alerts.html
-                - title:
-                    en: Alert settings
-                    ru: Настройки алертов
-                  url: /admin/configuration/monitoring/alert-settings.html
-                - title:
-                    en: Alert settings
-                    ru: Вопросы и ответы
-                  url: /admin/configuration/monitoring/faq.html
+                    en: Setting up alerts
+                    ru: Настройка алертов
+                  folders:
+                    - title:
+                        en: Configuring integrations
+                        ru: Настройка интеграций
+                      url: /admin/configuration/monitoring/alerts-integrations.html
+                    - title:
+                        en: List of preset alerts
+                        ru: Список предустановленных алертов
+                      url: /admin/configuration/monitoring/alerts-list.html
             - title:
                 en: Logging
                 ru: Логирование
@@ -1160,7 +1172,15 @@ entries:
         - title:
             en: Logging
             ru: Логирование
-          url: /architecture/logging.html
+          folders:
+            - title:
+                en: Log collection and delivery
+                ru: Сбор и доставка логов
+              url: /architecture/logging/delivery.html
+            - title:
+                en: Short-term storage
+                ru: Кратковременное хранение
+              url: /architecture/logging/storage.html
         - title:
             en: VPA
             ru: VPA

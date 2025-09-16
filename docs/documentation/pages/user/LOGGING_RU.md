@@ -16,17 +16,9 @@ DKP позволяет:
 - использовать буферизацию логов для повышения производительности;
 - хранить логи во внутреннем кратковременном хранилище на базе Grafana Loki.
 
-Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../architecture/logging.html).
+Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../architecture/logging/delivery.html).
 
-Для настройки сбора и доставки логов в кластере Deckhouse используются три кастомных ресурса:
-
-- [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
-  включая правила сбора, фильтрации и парсинга;
-- [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) — описывает источник логов
-  в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
-- [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
-
-Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса PodLoggingConfig.
+Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
 
 ## Настройка сбора логов из приложения
 
@@ -96,3 +88,56 @@ DKP позволяет:
    ```shell
    d8 k apply -f pod-logging-config.yaml
    ```
+   
+## Примеры
+
+### Создание source в пространстве имён и чтение логов всех подов в нём с направлением их в Loki
+
+Следующий pipeline создает source в пространстве имён `test-whispers`, читает логи всех подов в нём и отправляет их в Loki:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PodLoggingConfig
+metadata:
+  name: whispers-logs
+  namespace: tests-whispers
+spec:
+  clusterDestinationRefs:
+    - loki-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```
+
+### Чтение подов в указанном пространстве имён с определенным лейблом
+
+Пример настройки чтения подов с лейблом `app=booking` в пространстве имён `test-whispers`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: PodLoggingConfig
+metadata:
+  name: whispers-logs
+  namespace: tests-whispers
+spec:
+  labelSelector:
+    matchLabels:
+      app: booking
+  clusterDestinationRefs:
+    - loki-storage
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: loki-storage
+spec:
+  type: Loki
+  loki:
+    endpoint: http://loki.loki:3100
+```

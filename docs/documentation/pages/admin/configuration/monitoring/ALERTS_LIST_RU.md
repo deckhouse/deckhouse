@@ -1,6 +1,6 @@
 ---
-title: "Список алертов"
-permalink: ru/admin/configuration/monitoring/alert-settings.html
+title: "Список предустановленных алертов"
+permalink: ru/admin/configuration/monitoring/alerts-list.html
 lang: ru
 ---
 
