@@ -98,6 +98,25 @@ var _ = Describe("ingress-nginx :: hooks :: setAnnotationValidationSuspendedHand
 			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
 		})
 	})
+
+	Context("Metric expires when annotations are removed", func() {
+		BeforeEach(func() {
+			// Start with 5 controllers, some annotated
+			f.KubeStateSet(fiveControllersWithAnnotation)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+
+			// Remove annotations from all controllers and add ConfigMap
+			f.KubeStateSet(fiveControllers + "\n---\n" + configMapSuspended)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("expires the validation suspended metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(hasMetric(f.MetricsCollector.CollectedMetrics())).To(BeFalse())
+		})
+	})
 })
 
 func hasMetric(metrics []operation.MetricOperation) bool {
@@ -179,3 +198,36 @@ spec:
   validationEnabled: true
 `
 )
+
+const fiveControllersWithAnnotation = `
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-1
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-2
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-3
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-4
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: ctrl-5
+`
