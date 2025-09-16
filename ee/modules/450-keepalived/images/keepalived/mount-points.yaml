@@ -2,3 +2,4 @@ dirs:
 - /etc/keepalived
 - /etc/keepalived-instance-config
 - /etc/keepalived-instance-secret
+- /run

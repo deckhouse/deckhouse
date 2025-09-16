@@ -96,6 +96,8 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /etc/keepalived
+        - name: run
+          mountPath: /run
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -112,4 +114,8 @@ spec:
       - name: auth-pass
         secret:
           secretName: keepalived-instance-secret-{{ $instance_name }}
+      - name: run
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
 {{- end }}
