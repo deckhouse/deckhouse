@@ -221,10 +221,27 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
 	}
 
-	// Decode base64-encoded kubeconfig data
-	kubeconfigBytes, err := base64.StdEncoding.DecodeString(string(secData))
-	if err != nil {
-		return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v", secretName, err)
+	var kubeconfigBytes []byte
+
+	// parse the data directly as YAML
+	var testKubeconfig Kubeconfig
+	if yaml.Unmarshal(secData, &testKubeconfig) == nil {
+		kubeconfigBytes = secData
+	} else {
+		// If direct YAML parsing failed, try base64 decoding
+		// Remove all whitespace characters first
+		cleanBase64 := strings.Map(func(r rune) rune {
+			if strings.ContainsRune(" \t\n\r\v\f", r) {
+				return -1
+			}
+			return r
+		}, string(secData))
+
+		var decodeErr error
+		kubeconfigBytes, decodeErr = base64.StdEncoding.DecodeString(cleanBase64)
+		if decodeErr != nil {
+			return nil, fmt.Errorf("cannot decode base64 kubeconfig from secret %s: %v (also tried direct YAML parsing)", secretName, decodeErr)
+		}
 	}
 
 	// Extract token from kubeconfig directly
