@@ -75,6 +75,8 @@ type ReleaseUpdateInfo struct {
 	TaskCalculation struct {
 		TaskType string `json:"taskType,omitempty"`
 		IsPatch  bool   `json:"isPatch"`
+		IsMajor  bool   `json:"isMajor"`
+		IsFromTo bool   `json:"isFromTo"`
 		IsSingle bool   `json:"isSingle"`
 		IsLatest bool   `json:"isLatest"`
 	} `json:"taskCalculation"`
@@ -88,16 +90,8 @@ type ReleaseUpdateInfo struct {
 	} `json:"podReadiness"`
 
 	RequirementsCheck struct {
-		RequirementsMet bool     `json:"requirementsMet"`
-		FailedReasons   []string `json:"failedReasons,omitempty"`
+		RequirementsMet bool `json:"requirementsMet"`
 	} `json:"requirementsCheck"`
-
-	// HasDelay is not tracked due to architectural reasons
-	PreApplyCheck struct {
-		HasDelay              bool   `json:"hasDelay"`
-		NotificationSent      bool   `json:"notificationSent"`
-		ReleaseApplyAfterTime string `json:"releaseApplyAfterTime,omitempty"`
-	} `json:"preApplyCheck"`
 }
 
 type MetricsUpdater interface {
@@ -404,6 +398,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	updateInfo.TaskCalculation.IsPatch = task.IsPatch
 	updateInfo.TaskCalculation.IsSingle = task.IsSingle
 	updateInfo.TaskCalculation.IsLatest = task.IsLatest
+	updateInfo.TaskCalculation.IsFromTo = task.IsFromTo
+	updateInfo.TaskCalculation.IsMajor = task.IsMajor
 
 	if dr.GetForce() {
 		// Collect force release information
@@ -496,11 +492,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	reasons := checker.MetRequirements(ctx, dr)
 	if len(reasons) > 0 {
-		// Collect requirements check information - requirements NOT met
-		for _, reason := range reasons {
-			updateInfo.RequirementsCheck.FailedReasons = append(updateInfo.RequirementsCheck.FailedReasons, reason.Message)
-		}
-
 		metricLabels.SetTrue(releaseUpdater.RequirementsNotMet)
 		msgs := make([]string, 0, len(reasons))
 		for _, reason := range reasons {
@@ -522,7 +513,8 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	updateInfo.RequirementsCheck.RequirementsMet = true
 
 	// handling error inside function
-	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels, updateInfo)
+	// we do not pass update info, because if we have an error - we can't apply release and set update info
+	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels)
 	if err != nil {
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
@@ -541,7 +533,7 @@ var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
 // PreApplyReleaseCheck checks final conditions before apply
 //
 // - Calculating deploy time (if zero - deploy)
-func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels, updateInfo *ReleaseUpdateInfo) error {
+func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, dr *v1alpha1.DeckhouseRelease, task *releaseUpdater.Task, metricLabels releaseUpdater.MetricLabels) error {
 	ctx, span := otel.Tracer(controllerName).Start(ctx, "preApplyReleaseCheck")
 	defer span.End()
 
@@ -550,12 +542,6 @@ func (r *deckhouseReleaseReconciler) PreApplyReleaseCheck(ctx context.Context, d
 	if timeResult == nil {
 		// No delay, ready to deploy immediately
 		return nil
-	}
-
-	// Collect pre-apply check information from timeResult
-	updateInfo.PreApplyCheck.NotificationSent = timeResult.Notified
-	if !timeResult.ReleaseApplyAfterTime.IsZero() {
-		updateInfo.PreApplyCheck.ReleaseApplyAfterTime = timeResult.ReleaseApplyAfterTime.UTC().Format(time.RFC3339)
 	}
 
 	err := r.updateReleaseStatus(ctx, dr, &v1alpha1.DeckhouseReleaseStatus{
