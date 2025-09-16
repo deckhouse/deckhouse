@@ -52,6 +52,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       {{- include "helm_lib_priority_class" (tuple $ "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" $ | nindent 6 }}
+        readOnlyRootFilesystem: true
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -89,12 +90,14 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
       containers:
       - name: keepalived
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list $ (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list $ (list "NET_ADMIN" "NET_RAW" "DAC_OVERRIDE")) | nindent 8 }}
         command: ['/usr/sbin/keepalived', '-n', '-l']
         image: {{ include "helm_lib_module_image" (list $ "keepalived") }}
         volumeMounts:
         - name: config
           mountPath: /etc/keepalived
+        - name: run
+          mountPath: /run
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -111,4 +114,8 @@ spec:
       - name: auth-pass
         secret:
           secretName: keepalived-instance-secret-{{ $instance_name }}
+      - name: run
+        emptyDir:
+          medium: Memory
+          sizeLimit: 1Mi
 {{- end }}
