@@ -3537,7 +3537,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 
       # <template: checkout_step>

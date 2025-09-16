@@ -42,7 +42,7 @@ on:
 jobs:
   start_release_build_workflow:
     name: Start build for release
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 
       # <template: checkout_step>

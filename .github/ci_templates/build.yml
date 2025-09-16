@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag

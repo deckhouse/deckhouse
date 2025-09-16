@@ -31,7 +31,7 @@ env:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing

@@ -162,7 +162,7 @@ jobs:
   # </template: git_info_job>
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
@@ -195,7 +195,7 @@ jobs:
   # <template: check_changelog_template>
   check_changelog:
     name: Check changelog
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 
       # <template: checkout_step>

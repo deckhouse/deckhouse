@@ -51,7 +51,7 @@ concurrency:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -3441,7 +3441,7 @@ jobs:
 
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic"]
     if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:

@@ -65,7 +65,7 @@ jobs:
     name: Save start timestamp
     outputs:
       started_at: ${{ steps.started_at.outputs.started_at }}
-    runs-on: "ubuntu-latest"
+    runs-on: "regular"
     steps:
 
       # <template: started_at_output>
@@ -3352,7 +3352,7 @@ jobs:
     name: Update comment on finish
     needs: ["started_at","run_containerd_1_29","run_containerd_1_30","run_containerd_1_31","run_containerd_1_32","run_containerd_1_33","run_containerd_automatic","run_containerdv2_1_29","run_containerdv2_1_30","run_containerdv2_1_31","run_containerdv2_1_32","run_containerdv2_1_33","run_containerdv2_automatic"]
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     env:
       JOB_NAMES: |
         {"run_containerd_1_29":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.29","run_containerd_1_30":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.30","run_containerd_1_31":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.31","run_containerd_1_32":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.32","run_containerd_1_33":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes 1.33","run_containerd_automatic":"destroy cluster: Yandex.Cloud, Containerd, Kubernetes Automatic","run_containerdv2_1_29":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes 1.29","run_containerdv2_1_30":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes 1.30","run_containerdv2_1_31":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes 1.31","run_containerdv2_1_32":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes 1.33","run_containerdv2_automatic":"destroy cluster: Yandex.Cloud, ContainerdV2, Kubernetes Automatic"}

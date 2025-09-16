@@ -30,7 +30,7 @@ env:
 jobs:
   create-release:
     permissions: write-all
-    runs-on: ubuntu-latest
+    runs-on: "regular"
 
     steps:
 

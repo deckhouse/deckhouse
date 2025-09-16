@@ -139,7 +139,7 @@ jobs:
 
   # </template: git_info_job>
   check_branch:
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - name: Check if triggered by a tag
         run: |
@@ -150,7 +150,7 @@ jobs:
           fi
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: check_branch
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
@@ -191,7 +191,7 @@ jobs:
     name: Enable CE
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable CE"
 
@@ -200,7 +200,7 @@ jobs:
     name: Enable EE
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable EE"
 
@@ -209,7 +209,7 @@ jobs:
     name: Enable FE
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable FE"
 
@@ -218,7 +218,7 @@ jobs:
     name: Enable BE
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable BE"
 
@@ -227,7 +227,7 @@ jobs:
     name: Enable SE
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable SE"
 
@@ -236,7 +236,7 @@ jobs:
     name: Enable SE-plus
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable SE-plus"
 

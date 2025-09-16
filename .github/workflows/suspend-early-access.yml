@@ -140,7 +140,7 @@ jobs:
 
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}

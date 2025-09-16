@@ -56,7 +56,7 @@ jobs:
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}

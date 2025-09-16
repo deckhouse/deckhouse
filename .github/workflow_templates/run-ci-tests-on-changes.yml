@@ -20,7 +20,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
