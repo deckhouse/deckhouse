@@ -1,7 +1,7 @@
 {{- $containerd_versions := list "1.7.28" "2.1.4" }}
 {{- $runc_versions := list "1.3.0" }}
 {{- $containerd2runc := dict "1.7.28" "1.3.0" "2.1.4" "1.3.0" }}
-{{- $containerd_integrity_patches_version := "1" }}
+{{- $containerd_integrity_patches_version := "2" }}
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -155,7 +155,7 @@ shell:
   - rm -rf install_v1 install_v2
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-bookworm
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -178,7 +178,12 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
   {{- $additionalBuildOptions := include "render_containerd_build_options" (dict "rootContext" $ "isV2" $is_v2 ) }}
   - echo "Using next additional build options:'{{ $additionalBuildOptions }}'"
-  - make STATIC=1 VERSION="$(cat VERSION)" REVISION="$(cat REVISION)" {{ $additionalBuildOptions }} all
+  - |
+  {{- $buildContext := deepCopy $ -}}
+  {{- $parted_version := split "." $containerd_version -}}
+  {{- $_ := set $buildContext "BuildCommand" (printf "make STATIC=1 VERSION=\"$(cat VERSION)\" REVISION=\"$(cat REVISION)\" %s all" $additionalBuildOptions) -}}
+  {{- $_ := set $buildContext "ProjectName" (printf "%s/containerd-%s.%s" $.ModuleName $parted_version._0 $parted_version._1) -}}
+  {{- include "image-build.build" $buildContext | indent 6 }}
   - mv bin/* /out
   - mv /src/scripts/* /out
   - chown -R 64535:64535 /out

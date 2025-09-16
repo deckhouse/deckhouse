@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -51,8 +52,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleValidationKinds))
 
-func handleValidationKinds(input *go_hook.HookInput, _ dependency.Container) error {
-	resourcesRaw, err := sdkobjectpatch.UnmarshalToStruct[matchData](input.NewSnapshots, "constraint-exporter-cm")
+func handleValidationKinds(_ context.Context, input *go_hook.HookInput, _ dependency.Container) error {
+	resourcesRaw, err := sdkobjectpatch.UnmarshalToStruct[matchData](input.Snapshots, "constraint-exporter-cm")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal constraint-exporter-cm snapshot: %w", err)
 	}

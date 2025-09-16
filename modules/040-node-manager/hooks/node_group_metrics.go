@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -99,8 +100,8 @@ func filterNodeGroupStatus(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func handleNodeGroupStatus(input *go_hook.HookInput) error {
-	nodeGroupStatusSnapshots := input.NewSnapshots.Get("node_group_status")
+func handleNodeGroupStatus(_ context.Context, input *go_hook.HookInput) error {
+	nodeGroupStatusSnapshots := input.Snapshots.Get("node_group_status")
 
 	input.MetricsCollector.Expire(nodeGroupMetricsGroup)
 

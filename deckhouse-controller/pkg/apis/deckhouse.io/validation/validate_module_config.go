@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 )
 
 type AnnotationsOnly struct {
@@ -63,6 +64,7 @@ func moduleConfigValidationHandler(
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
+	exts *extenders.ExtendersStack,
 ) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		var (
@@ -125,6 +127,10 @@ func moduleConfigValidationHandler(
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
 				}
+
+				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+					return rejectResult(err.Error())
+				}
 			}
 		case kwhmodel.OperationUpdate:
 			oldModuleMeta := new(AnnotationsOnly)
@@ -155,6 +161,10 @@ func moduleConfigValidationHandler(
 					if definition.IsExperimental() && !allowExperimentalModules {
 						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
+				}
+
+				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
+					return rejectResult(err.Error())
 				}
 			}
 

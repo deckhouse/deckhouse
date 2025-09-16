@@ -1,0 +1,85 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/module-exists
+  name: test-source-1
+  resourceVersion: "1001"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+  - checksum: 'sha256:'
+    name: testmodule
+    policy: test-lts
+    version: v1.0.0
+  modulesCount: 1
+  phase: Active
+  syncTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: test-source-1
+  name: testmodule-v0.8.0
+  resourceVersion: "999"
+spec:
+  changelog:
+    features:
+    - Initial version
+  moduleName: testmodule
+  version: 0.8.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2024-05-03T20:55:49Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/change-cause: check release (LTS channel - direct release)
+  creationTimestamp: null
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    release-checksum: 1beb143dffb1b662137094e7faea1e17
+    source: test-source-1
+  name: testmodule-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: test-source-1
+    uid: ""
+  resourceVersion: "1"
+spec:
+  moduleName: testmodule
+  requirements:
+    kubernetes: '>= 1.27'
+  version: 1.0.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  pullDuration: 0s
+  size: 0
+  transitionTime: null

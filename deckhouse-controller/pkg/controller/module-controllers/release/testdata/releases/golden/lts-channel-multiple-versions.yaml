@@ -1,0 +1,120 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: test-source
+  resourceVersion: "1000"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io
+    scheme: HTTPS
+status:
+  message: ""
+  modules:
+  - name: testmodule
+  modulesCount: 1
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    source: test-source
+    status: superseded
+  name: testmodule-0.3.0
+  resourceVersion: "1002"
+spec:
+  moduleName: testmodule
+  version: 0.3.0
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Superseded
+  pullDuration: 0s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    source: test-source
+    status: superseded
+  name: testmodule-0.5.0
+  resourceVersion: "1003"
+spec:
+  moduleName: testmodule
+  version: 0.5.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Superseded
+  pullDuration: 9m15s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: testmodule
+    modules.deckhouse.io/update-policy: test-lts
+    source: test-source
+    status: deployed
+  name: testmodule-0.7.0
+  resourceVersion: "1002"
+spec:
+  moduleName: testmodule
+  version: 0.7.0
+  weight: 900
+status:
+  approved: false
+  message: ""
+  phase: Deployed
+  pullDuration: 9m15s
+  size: 0
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  labels:
+    modules.deckhouse.io/update-policy: test-lts
+  name: testmodule
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
+  phase: Ready

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -127,9 +128,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexAuthenticator)
 
-func getDexAuthenticator(input *go_hook.HookInput) error {
-	authenticators := input.NewSnapshots.Get("authenticators")
-	credentials := input.NewSnapshots.Get("credentials")
+func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
+	authenticators := input.Snapshots.Get("authenticators")
+	credentials := input.Snapshots.Get("credentials")
 
 	credentialsByID := make(map[string]Credentials, len(credentials))
 

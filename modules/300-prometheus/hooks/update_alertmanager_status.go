@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/clarketm/json"
@@ -32,7 +33,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, updateAmStatus)
 
-func updateAmStatus(input *go_hook.HookInput) error {
+func updateAmStatus(_ context.Context, input *go_hook.HookInput) error {
 	addressDeclaredAlertmanagers := make([]alertmanagerAddress, 0)
 	serviceDeclaredAlertmanagers := make([]alertmanagerService, 0)
 	internalDeclaredAlertmanagers := make([]alertmanagerInternal, 0)

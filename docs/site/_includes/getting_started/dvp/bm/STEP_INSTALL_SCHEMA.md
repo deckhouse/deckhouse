@@ -1,3 +1,15 @@
+{% alert level="warning" %}
+Here are examples of steps for installing Deckhouse Virtualization Platform with the following parameters:
+
+- one <strong>master node</strong>,
+- one <strong>worker node</strong>,
+- software-defined replicated storage based on DRBD,
+- one virtual machine.
+
+If you need a different configuration, please refer to the documentation on [installing the platform](../../documentation/admin/install/steps/prepare.html).
+{% endalert %}
+
+
 ## Installation requirements
 
 1. **Personal computer.** The computer from which the installation will be performed.  It is only needed to run the installer and will not be part of the cluster.
@@ -17,7 +29,7 @@
    - at least 4 CPU cores
    - at least 8 GB of RAM
    - at least 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS)
-   - [supported OS](/products/virtualization-platform/documentation/admin/install/requirements.html#supported-os-for-platform-nodes)
+   - [supported OS](/products/virtualization-platform/documentation/about/requirements.html#supported-os-for-platform-nodes)
    - Linux kernel version >= `5.8`
    - CPU with x86_64 architecture supporting Intel-VT (VMX) or AMD-V (SVM) instructions
    - **Unique hostname** within servers (virtual machines) of the cluster

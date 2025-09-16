@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -125,13 +126,13 @@ func filterManageRole(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}, nil
 }
 
-func syncBindings(input *go_hook.HookInput) error {
+func syncBindings(_ context.Context, input *go_hook.HookInput) error {
 	expected := make(map[string]bool)
-	for binding, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.NewSnapshots.Get("manageBindings")) {
+	for binding, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.Snapshots.Get("manageBindings")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'manageBindings' snapshot: %w", err)
 		}
-		role, namespaces, err := roleAndNamespacesByBinding(input.NewSnapshots.Get("manageRoles"), binding.RoleName)
+		role, namespaces, err := roleAndNamespacesByBinding(input.Snapshots.Get("manageRoles"), binding.RoleName)
 		if err != nil {
 			return fmt.Errorf("failed to get role and namespaces for binding '%s': %w", binding.Name, err)
 		}
@@ -144,7 +145,7 @@ func syncBindings(input *go_hook.HookInput) error {
 	}
 
 	// delete excess use bindings
-	for existing, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.NewSnapshots.Get("useBindings")) {
+	for existing, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.Snapshots.Get("useBindings")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
 		}

@@ -36,6 +36,7 @@ import (
 const (
 	taskCalculatorServiceName = "task-calculator"
 	maxMinorVersionDiffForLTS = 10
+	deckhouseModuleName       = "" // Empty string indicates Deckhouse release (not a module)
 )
 
 type TaskCalculator struct {
@@ -56,13 +57,12 @@ func NewDeckhouseReleaseTaskCalculator(k8sclient client.Client, logger *log.Logg
 		releaseChannel: releaseChannel,
 	}
 }
-
-func NewModuleReleaseTaskCalculator(k8sclient client.Client, logger *log.Logger) *TaskCalculator {
+func NewModuleReleaseTaskCalculator(k8sclient client.Client, releaseChannel string, logger *log.Logger) *TaskCalculator {
 	return &TaskCalculator{
 		k8sclient:      k8sclient,
 		listFunc:       listModuleReleases,
 		log:            logger,
-		releaseChannel: "",
+		releaseChannel: releaseChannel,
 	}
 }
 
@@ -78,6 +78,8 @@ type Task struct {
 	TaskType TaskType
 	Message  string
 
+	IsMajor  bool
+	IsFromTo bool
 	IsPatch  bool
 	IsSingle bool
 	IsLatest bool
@@ -111,7 +113,7 @@ func (ri *releaseInfo) RemapToReleaseInfo() *ReleaseInfo {
 
 // ReleaseQueueDepthDelta represents the difference between deployed and latest releases
 type ReleaseQueueDepthDelta struct {
-	Major int // Major versions delta, not used right now, for future usage
+	Major int // Major versions delta
 	Minor int // Minor versions delta
 	Patch int // Patch versions delta
 }
@@ -153,6 +155,25 @@ func (d *ReleaseQueueDepthDelta) GetReleaseQueueDepth() int {
 	}
 
 	return 0
+}
+
+// GetMajorReleaseDepth returns the major version difference for monitoring and alerting purposes.
+// This method provides a dedicated metric for tracking major version updates separately from
+// minor and patch updates due to their potentially breaking nature.
+//
+// Major release depth calculation logic:
+//   - If major version differences exist: return the major delta count
+//   - If no major differences exist: return 0 (up to date on major version)
+//
+// Examples:
+//   - Delta{Major: 2, Minor: 3, Patch: 1} → Returns: 2 (2 major versions behind)
+//   - Delta{Major: 1, Minor: 0, Patch: 0} → Returns: 1 (1 major version behind)
+//   - Delta{Major: 0, Minor: 5, Patch: 2} → Returns: 0 (up to date on major version)
+func (d *ReleaseQueueDepthDelta) GetMajorReleaseDepth() int {
+	if d == nil || d.Major <= 0 {
+		return 0
+	}
+	return d.Major
 }
 
 // calculateReleaseQueueDepthDelta computes the version gap between the currently deployed release
@@ -238,7 +259,9 @@ func calculateReleaseQueueDepthDelta(releases []v1alpha1.Release, deployedReleas
 	return delta
 }
 
-const ltsReleaseChannel = "lts"
+const (
+	ltsReleaseChannel = "lts"
+)
 
 var ErrReleasePhaseIsNotPending = errors.New("release phase is not pending")
 var ErrReleaseIsAlreadyDeployed = errors.New("release is already deployed")
@@ -399,9 +422,11 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 	queueDepthDelta := calculateReleaseQueueDepthDelta(releases, deployedReleaseInfo)
 	isLatestRelease := queueDepthDelta.GetReleaseQueueDepth() == 0
 	isPatch := true
+	isMajor := false
 
 	// If update constraints allow jumping to a final endpoint, skip intermediate pendings and process endpoint as minor.
 	if deployedReleaseInfo != nil {
+		isMajor := release.GetVersion().Major() > deployedReleaseInfo.Version.Major()
 		endpointIdx := p.findConstraintEndpointIndex(releases, deployedReleaseInfo, logger)
 
 		if endpointIdx >= 0 {
@@ -416,6 +441,8 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 			return &Task{
 				TaskType:            Process,
 				IsPatch:             false,
+				IsMajor:             isMajor,
+				IsFromTo:            true,
 				IsLatest:            endpointIdx == len(releases)-1,
 				DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 				QueueDepth:          queueDepthDelta,
@@ -474,8 +501,10 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 					}, nil
 				}
 
+				isDeckhouseRelease := release.GetModuleName() == deckhouseModuleName
 				// it must await if deployed release has minor version more than acceptable LTS channel limitation
-				if ltsRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
+				// For modules, skip this check (allow any minor version jump)
+				if ltsRelease && isDeckhouseRelease && release.GetVersion().Minor() > prevRelease.GetVersion().Minor()+maxMinorVersionDiffForLTS {
 					msg := fmt.Sprintf(
 						"minor version is greater than deployed %s by %d, it's more than acceptable channel limitation",
 						prevRelease.GetVersion().Original(),
@@ -506,6 +535,7 @@ func (p *TaskCalculator) CalculatePendingReleaseTask(ctx context.Context, releas
 
 					return &Task{
 						TaskType:            Await,
+						IsMajor:             isMajor,
 						Message:             msg,
 						DeployedReleaseInfo: deployedReleaseInfo.RemapToReleaseInfo(),
 						QueueDepth:          queueDepthDelta,

@@ -443,6 +443,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	metricLabels := releaseUpdater.NewReleaseMetricLabels(dr)
 	defer func() {
+		metricLabels[releaseUpdater.MajorReleaseDepth] = strconv.Itoa(task.QueueDepth.GetMajorReleaseDepth())
 		if metricLabels[releaseUpdater.ManualApprovalRequired] == "true" {
 			metricLabels[releaseUpdater.ReleaseQueueDepth] = strconv.Itoa(task.QueueDepth.GetReleaseQueueDepth())
 		}
@@ -576,9 +577,11 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		if notifyErr != nil {
 			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
 
+			message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
+
 			return &TimeResult{
 				ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
-					Message:               msgReleaseIsBlockedByNotification,
+					Message:               message,
 					ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 				},
 			}
@@ -619,9 +622,11 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if notifyErr != nil {
 		r.logger.Warn("send minor release notification", log.Err(notifyErr))
 
+		message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
+
 		return &TimeResult{
 			ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
-				Message:               msgReleaseIsBlockedByNotification,
+				Message:               message,
 				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 			},
 		}

@@ -15,6 +15,8 @@
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +43,8 @@ func applyMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	return obj.GetName(), nil
 }
 
-func isHighAvailabilityCluster(input *go_hook.HookInput) error {
-	masterNodesSnap := input.NewSnapshots.Get("master_node_names")
+func isHighAvailabilityCluster(_ context.Context, input *go_hook.HookInput) error {
+	masterNodesSnap := input.Snapshots.Get("master_node_names")
 
 	mastersCount := len(masterNodesSnap)
 
