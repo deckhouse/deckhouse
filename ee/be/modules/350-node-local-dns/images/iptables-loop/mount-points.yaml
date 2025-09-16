@@ -1,5 +1,4 @@
 dirs:
-- /etc/coredns
 - /sbin
 - /tmp
 files:
