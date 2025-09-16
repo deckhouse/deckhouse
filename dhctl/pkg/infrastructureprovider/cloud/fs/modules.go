@@ -25,10 +25,9 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
-
-const infraModules = "terraform-modules"
 
 type modulesProvider struct {
 	m sync.Mutex
@@ -54,11 +53,11 @@ func (p *modulesProvider) DownloadModules(_ context.Context, params cloud.Downlo
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	if err := p.copyDir("layouts", params, destination); err != nil {
+	if err := p.copyDir(fsstatic.LayoutsDir, params, destination); err != nil {
 		return err
 	}
 
-	return p.copyDir(infraModules, params, destination)
+	return p.copyDir(fsstatic.InfraModulesDir, params, destination)
 }
 
 // DownloadSpecs
@@ -81,7 +80,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
-		if os.IsNotExist(err) && dir == infraModules {
+		if os.IsNotExist(err) && dir == fsstatic.LayoutsDir {
 			p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
 			return nil
 		}

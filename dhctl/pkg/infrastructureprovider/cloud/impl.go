@@ -17,10 +17,10 @@ package cloud
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -30,35 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	dhctlfs "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
-
-var versionContentProviders = map[string]versionContentProvider{
-	vcd.ProviderName: vcd.VersionContentProvider,
-}
-
-var contentProviderMutex sync.Mutex
-
-func getVersionContentProvider(s settings.ProviderSettings, provider string) versionContentProvider {
-	contentProviderMutex.Lock()
-	defer contentProviderMutex.Unlock()
-
-	choicer, ok := versionContentProviders[provider]
-	if ok {
-		return choicer
-	}
-
-	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) (string, error) {
-		if len(settings.Versions()) != 1 {
-			return "", fmt.Errorf("no one version found for provider %s", provider)
-		}
-
-		return version.GetVersionContent(s, settings.Versions()[0]), nil
-	}
-}
 
 type ProviderDI struct {
 	SettingsProvider    SettingsProvider
@@ -173,7 +148,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	}
 
 	stepStr := string(step)
-	stepDir := filepath.Join(modulesDir, "layouts", p.layout, stepStr)
+	stepDir := filepath.Join(modulesDir, fsstatic.LayoutsDir, p.layout, stepStr)
 
 	p.logger.LogDebugF("Got step dir %s provider %s. Getting version content\n", stepDir, p.name)
 
@@ -183,13 +158,9 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		return nil, fmt.Errorf("Cannot get version content for provider %s: %w", p.name, err)
 	}
 
-	versionsFile := filepath.Join(stepDir, "versions.tf")
-
-	p.logger.LogDebugF("Got version content for provider %s:\n%s\nWrite to destination %s\n", p.name, versionContent, versionsFile)
-
-	err = os.WriteFile(versionsFile, []byte(versionContent), 0644)
+	err = p.fillVersionsToModulesAndLayoutStep(versionContent, stepDir, modulesDir)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot write versions %s file for layout %s with step %s: %v", versionsFile, p.layout, stepStr, err)
+		return nil, err
 	}
 
 	if !p.params.Settings.UseOpenTofu() {
@@ -218,6 +189,104 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		Step:           step,
 		VMChangeTester: p.IsVMChange,
 	}, logger), nil
+}
+
+func doNotCheckSourceLink(string) error {
+	return nil
+}
+
+func (p *Provider) createLinkToRootVersionsFileInModule(dir, rootVersionFile string) error {
+	p.logger.LogDebugF("Create link to root versions file %s for module %s\n", rootVersionFile, dir)
+
+	versionsFile := fsstatic.GetVersionsFile(dir)
+
+	return fsstatic.CreateLinkIfNotExists(rootVersionFile, doNotCheckSourceLink, versionsFile, p.logger)
+}
+
+func (p *Provider) needNewRootVersionsContentWrite(versionsRootFile, versionsSum string) (bool, error) {
+	rootVersionsContent, err := os.ReadFile(versionsRootFile)
+	if err == nil {
+		rootVersionsContentSum := stringsutil.Sha256EncodeBytes(rootVersionsContent)
+		p.logger.LogDebugF(`Got root version content for provider %s:
+%s
+SHA sum is %s
+Root versions file %s
+Versions content SHA sum is %s
+`,
+			p.name,
+			rootVersionsContent,
+			rootVersionsContentSum,
+			versionsRootFile,
+			versionsSum,
+		)
+
+		return rootVersionsContentSum != versionsSum, nil
+	}
+
+	if os.IsNotExist(err) {
+		p.logger.LogDebugF("Root versions file %s for provider %s not found. Should write\n", versionsRootFile, p.name)
+		return true, nil
+	}
+
+	return false, fmt.Errorf("Cannot get root versions file %s: %w", versionsRootFile, err)
+}
+
+func (p *Provider) fillVersionsToModulesAndLayoutStep(versionContent []byte, stepDir, modulesDir string) error {
+	versionsSum := stringsutil.Sha256EncodeBytes(versionContent)
+
+	versionsRootFile := fsstatic.GetVersionsFile(p.rootDir)
+
+	p.logger.LogDebugF(`Got version content for provider %s:
+%s
+SHA sum is %s
+Root versions file %s
+`,
+		p.name,
+		versionContent,
+		versionsSum,
+		versionsRootFile,
+	)
+
+	rewriteRootVersionsFile, err := p.needNewRootVersionsContentWrite(versionsRootFile, versionsSum)
+	if err != nil {
+		return err
+	}
+
+	if rewriteRootVersionsFile {
+		p.logger.LogDebugF("Root versions file %s for provider %s needs to rewrite\n", versionsRootFile, p.name)
+
+		err = os.WriteFile(versionsRootFile, versionContent, 0644)
+		if err != nil {
+			return fmt.Errorf("Cannot write root versions %s file for provider %s: %w", versionsRootFile, p.name, err)
+		}
+	} else {
+		p.logger.LogDebugF("Root versions file %s for provider %s does not need to rewrite\n", versionsRootFile, p.name)
+	}
+
+	if err := p.createLinkToRootVersionsFileInModule(stepDir, versionsRootFile); err != nil {
+		return err
+	}
+
+	if !dhctlfs.IsDirExists(modulesDir) {
+		p.logger.LogDebugF("Modules dir %s for provider %s does not exist. Skip create links to root version file\n", modulesDir, p.name)
+		return nil
+	}
+
+	return filepath.WalkDir(modulesDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if path == modulesDir {
+			return nil
+		}
+
+		if !d.IsDir() {
+			return nil
+		}
+
+		return p.createLinkToRootVersionsFileInModule(path, versionsRootFile)
+	})
 }
 
 func (p *Provider) makeRootDirAndDownloadInfraUtil(ctx context.Context, errorPref string) (string, error) {

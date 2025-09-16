@@ -12,27 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package version
+package fs
 
-import (
-	"fmt"
+import "os"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
-)
+func IsDirExists(dir string) bool {
+	stat, err := os.Stat(dir)
+	if err != nil {
+		return false
+	}
 
-const template = `
-terraform {
-  required_version = ">= 0.14.8"
-  required_providers {
-    kubernetes = {
-      source  = "%s"
-      version = ">= %s"
-    }
-  }
-}
-`
-
-func GetVersionContent(settings settings.ProviderSettings, version string) []byte {
-	source := settings.Namespace() + "/" + settings.Type()
-	return []byte(fmt.Sprintf(template, source, version))
+	return stat.IsDir()
 }

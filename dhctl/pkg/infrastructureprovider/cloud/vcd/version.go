@@ -92,13 +92,13 @@ func versionConstraintAction(apiVersion string, action func(legacy bool) error) 
 	return action(false)
 }
 
-func VersionContentProvider(settings settings.ProviderSettings, metaConfig *config.MetaConfig) (string, error) {
+func VersionContentProvider(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error) {
 	apiVersion, err := getAPIVersion(metaConfig)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var content string
+	var content []byte
 
 	err = versionConstraintAction(apiVersion, func(legacy bool) error {
 		const legacyVersion = "3.10.0"
@@ -123,7 +123,7 @@ func VersionContentProvider(settings settings.ProviderSettings, metaConfig *conf
 	})
 
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return content, nil

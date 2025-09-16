@@ -40,5 +40,5 @@ func (p *pluginsProvider) DownloadPlugin(_ context.Context, params cloud.Infrast
 	defer p.m.Unlock()
 
 	source := fsstatic.GetPluginDir(getFullPath("plugins"), params.Settings, params.Version.Version, params.Version.Arch)
-	return createLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+	return fsstatic.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }

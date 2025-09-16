@@ -16,8 +16,15 @@ package fsstatic
 
 import (
 	"path"
+	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+)
+
+const (
+	LayoutsDir      = "layouts"
+	InfraModulesDir = "terraform-modules"
+	VersionsFile    = "versions.tf"
 )
 
 func GetPluginDir(root string, settings settings.ProviderSettings, version string, arch string) string {
@@ -37,4 +44,8 @@ func GetInfraUtilPath(root string, settings settings.ProviderSettings) string {
 	}
 
 	return path.Join(root, bin)
+}
+
+func GetVersionsFile(root string) string {
+	return filepath.Join(root, VersionsFile)
 }

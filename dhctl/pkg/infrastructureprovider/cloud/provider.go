@@ -85,4 +85,4 @@ type ProviderModulesProvider interface {
 	DownloadSpecs(ctx context.Context, params DownloadSpecsParams, destination string) error
 }
 
-type versionContentProvider func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) (string, error)
+type versionContentProvider func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error)

@@ -19,6 +19,7 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -38,12 +39,12 @@ func (p *InfrastructureUtilProvider) DownloadTerraform(_ context.Context, _ clou
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return createLinkIfNotExists(getFullPath("bin/terraform"), checkIsExecFile, destination, p.logger)
+	return fsstatic.CreateLinkIfNotExists(getFullPath("bin/terraform"), checkIsExecFile, destination, p.logger)
 }
 
 func (p *InfrastructureUtilProvider) DownloadOpenTofu(_ context.Context, _ cloud.InfrastructureUtilProviderParams, destination string) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return createLinkIfNotExists(getFullPath("bin/opentofu"), checkIsExecFile, destination, p.logger)
+	return fsstatic.CreateLinkIfNotExists(getFullPath("bin/opentofu"), checkIsExecFile, destination, p.logger)
 }
