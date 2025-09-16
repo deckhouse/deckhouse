@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 type FlannelConfigStruct struct {
@@ -73,6 +75,16 @@ func applyCNIConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.
 	}, nil
 }
 
+func applyCNIFromMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &v1alpha1.ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert object to moduleconfig: %v", err)
+	}
+
+	return mc, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/cni-flannel",
@@ -91,6 +103,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyCNIConfigurationSecretFilter,
 		},
+		{
+			Name:       "deckhouse_cni_mc",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{cniName},
+			},
+			FilterFunc: applyCNIFromMCFilter,
+		},
 	},
 }, setPodNetworkMode)
 
@@ -102,28 +123,55 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal cni_configuration_secret snapshot: %w", err)
 	}
 
-	cniConfigSourcePriority := "ModuleConfig"
+	cniModuleConfigs, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ModuleConfig](input.Snapshots, "deckhouse_cni_mc")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse_cni_mc snapshot: %w", err)
+	}
+
+	typeOfMergingCNIParameters := "SecretNotExists"
+
 	if len(cniConfigurationSecrets) > 0 {
-		if cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists {
-			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority != "ModuleConfig" {
-				cniConfigSourcePriority = "Secret"
+		switch {
+		case len(cniModuleConfigs) == 0:
+			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
+		case cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists:
+			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority == "ModuleConfig" {
+				typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
+			} else {
+				typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
 			}
-		} else if clusterIsBootstrapped {
-			cniConfigSourcePriority = "Secret"
+		case clusterIsBootstrapped:
+			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
+		default:
+			typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
 		}
 	}
-	input.Logger.Info("The priority parameter source for the CNI configuration has been identified", "priority source", cniConfigSourcePriority)
+	input.Logger.Debug("The type of CNI parameter merging has been identified.", "merging type is ", typeOfMergingCNIParameters)
 
-	switch cniConfigSourcePriority {
-	case "Secret":
-		flannelConfig := cniConfigurationSecrets[0].CniConfigFromSecret
-		if flannelConfig.PodNetworkMode != "" {
-			input.Values.Set("cniFlannel.internal.podNetworkMode", flannelConfig.PodNetworkMode)
+	switch typeOfMergingCNIParameters {
+	case "SecretExistsAndHasPriority":
+		// Secret exists and has priority (old logic); merging priority: Secret > MC(if exists) > Defaults
+
+		// podNetworkMode
+		if value := cniConfigurationSecrets[0].CniConfigFromSecret.PodNetworkMode; value != "" {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", value)
 		}
+
 		return nil
-	case "ModuleConfig":
-		value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode")
-		if ok {
+	case "SecretExistsAndMCHasPriority":
+		// Secret and MC exist, and MC has priority (new logic); merging priority: MC > Secret > Default
+
+		// podNetworkMode
+		if value, ok := cniModuleConfigs[0].Spec.Settings["podNetworkMode"]; ok && value != nil {
+			switch value.(string) {
+			case "HostGW":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
+			case "VXLAN":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
+			}
+		} else if value := cniConfigurationSecrets[0].CniConfigFromSecret.PodNetworkMode; value != "" {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", value)
+		} else if value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode"); ok {
 			switch value.String() {
 			case "HostGW":
 				input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
@@ -131,8 +179,24 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
 			}
 		}
+
+		return nil
+	default:
+		// No secret exists (default logic); merging priority: MC(if exists) > Defaults
+
+		// podNetworkMode
+		if value, ok := input.ConfigValues.GetOk("cniFlannel.podNetworkMode"); ok {
+			switch value.String() {
+			case "HostGW":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
+			case "VXLAN":
+				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
+			}
+		}
+
+		return nil
 	}
 
 	// default_podNetworkMode = HostGW
-	return nil
+	// return nil
 }

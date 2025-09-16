@@ -27,8 +27,9 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 type CiliumConfigStruct struct {
@@ -131,17 +132,18 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 	typeOfMergingCNIParameters := "SecretNotExists"
 
 	if len(cniConfigurationSecrets) > 0 {
-		if len(cniModuleConfigs) == 0 {
+		switch {
+		case len(cniModuleConfigs) == 0:
 			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
-		} else if cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists {
+		case cniConfigurationSecrets[0].DesiredCniConfigSourcePriorityFlagExists:
 			if cniConfigurationSecrets[0].DesiredCniConfigSourcePriority == "ModuleConfig" {
 				typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
 			} else {
 				typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
 			}
-		} else if clusterIsBootstrapped {
+		case clusterIsBootstrapped:
 			typeOfMergingCNIParameters = "SecretExistsAndHasPriority"
-		} else {
+		default:
 			typeOfMergingCNIParameters = "SecretExistsAndMCHasPriority"
 		}
 	}
