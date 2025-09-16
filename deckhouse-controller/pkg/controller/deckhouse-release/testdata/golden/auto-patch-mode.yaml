@@ -24,6 +24,7 @@ metadata:
   annotations:
     release.deckhouse.io/isUpdating: "true"
     release.deckhouse.io/notified: "false"
+    release.deckhouse.io/update-info: '{"taskCalculation":{"taskType":2,"isPatch":true,"isSingle":false,"isLatest":false},"forceRelease":{"isForced":false},"podReadiness":{"isReady":true},"requirementsCheck":{"requirementsMet":true},"preApplyCheck":{"hasDelay":false,"notificationSent":false}}'
   creationTimestamp: null
   name: v1.26.3
   resourceVersion: "1001"
