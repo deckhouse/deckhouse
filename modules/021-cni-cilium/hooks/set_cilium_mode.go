@@ -162,7 +162,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 
 		return nil
 	case "SecretExistsAndMCHasPriority":
-		// Secret and MC exists, and MC has priority (new logic); merging priority: MC > Secret > Default
+		// Secret and MC exist, and MC has priority (new logic); merging priority: MC > Secret > Default
 
 		// masqueradeMode
 		if value, ok := cniModuleConfigs[0].Spec.Settings["masqueradeMode"]; ok && value != nil {
@@ -192,7 +192,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 				input.Values.Set("cniCilium.internal.mode", "Direct")
 			}
 		}
-		//createNodeRoutes
+		// createNodeRoutes
 		if value, ok := cniModuleConfigs[0].Spec.Settings["createNodeRoutes"]; ok && value != nil {
 			if value.(bool) {
 				input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
@@ -227,7 +227,7 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 				input.Values.Set("cniCilium.internal.mode", "Direct")
 			}
 		}
-		//createNodeRoutes
+		// createNodeRoutes
 		if value, ok := input.ConfigValues.GetOk("cniCilium.createNodeRoutes"); ok && value.Bool() {
 			input.Values.Set("cniCilium.internal.mode", "DirectWithNodeRoutes")
 		}
@@ -242,5 +242,5 @@ func setCiliumMode(_ context.Context, input *go_hook.HookInput) error {
 
 	// default_mode = Direct
 	// default_masqueradeMode = BPF
-	return nil
+	// return nil
 }
