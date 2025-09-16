@@ -45,8 +45,7 @@ var (
 
 var _ runtime.Object = (*ModuleConfig)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleSettingsDefinitionList is a list of ModuleSettings resources
 type ModuleSettingsDefinitionList struct {
@@ -56,10 +55,8 @@ type ModuleSettingsDefinitionList struct {
 	Items []ModuleSettingsDefinition `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleSettingsDefinition is a configuration for module or for global config values.
 type ModuleSettingsDefinition struct {

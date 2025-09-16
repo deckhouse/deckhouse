@@ -111,8 +111,7 @@ var (
 
 var _ runtime.Object = (*Module)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleList is a list of Module resources
 type ModuleList struct {
@@ -122,10 +121,9 @@ type ModuleList struct {
 	Items []Module `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // Module is a deckhouse module representation.
 type Module struct {
