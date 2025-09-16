@@ -155,12 +155,10 @@ type OperationPolicySpec struct {
 			MaxReplicas int `json:"maxReplicas,omitempty"`
 		} `json:"replicaLimits,omitempty"`
 		Pods struct {
-			DenyTolerations struct {
-				Enabled           bool     `json:"enabled,omitempty"`
-				EnforcementAction string   `json:"enforcementAction,omitempty"`
-				ForbiddenKeys     []string `json:"forbiddenKeys,omitempty"`
-				ExemptNamespaces  []string `json:"exemptNamespaces,omitempty"`
-			} `json:"denyTolerations,omitempty"`
+			DisallowedTolerations struct {
+				Enabled     bool         `json:"enabled,omitempty"`
+				Tolerations []Toleration `json:"tolerations,omitempty"`
+			} `json:"disallowedTolerations,omitempty"`
 		} `json:"pods,omitempty"`
 	} `json:"policies"`
 	Match struct {
@@ -177,4 +175,14 @@ type NamespaceSelector struct {
 	ExcludeNames []string `json:"excludeNames,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// Toleration represents a Kubernetes toleration pattern for disallowed tolerations.
+// Only key/operator/value/effect are used for matching. TolerationSeconds is kept for parity with K8s but ignored in matching.
+type Toleration struct {
+	Key               string `json:"key,omitempty"`
+	Operator          string `json:"operator,omitempty"`
+	Value             string `json:"value,omitempty"`
+	Effect            string `json:"effect,omitempty"`
+	TolerationSeconds *int64 `json:"tolerationSeconds,omitempty"`
 }

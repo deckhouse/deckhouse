@@ -1,0 +1,104 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8disallowedtolerations
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Disallow tolerations"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Deny Pods that have tolerations from the ones in the specified list.
+
+      https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DisallowedTolerations
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            tolerations:
+              type: array
+              description: Disallowed toleration patterns (partial match by specified fields).
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                    enum:
+                      - Exists
+                      - Equal
+                  value:
+                    type: string
+                  effect:
+                    type: string
+                    enum:
+                      - NoSchedule
+                      - PreferNoSchedule
+                      - NoExecute
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        is_pod { input.review.kind.kind == "Pod" }
+
+        pod_tolerations[t] {
+          t := input.review.object.spec.tolerations[_]
+        }
+
+        # Helpers to match fields: absent in pattern OR equal
+        key_match(rt, pt) {
+          not has_field(rt, "key")
+        }
+        key_match(rt, pt) {
+          rt.key == pt.key
+        }
+
+        operator_match(rt, pt) {
+          not has_field(rt, "operator")
+        }
+        operator_match(rt, pt) {
+          rt.operator == pt.operator
+        }
+
+        value_match(rt, pt) {
+          not has_field(rt, "value")
+        }
+        value_match(rt, pt) {
+          rt.value == pt.value
+        }
+
+        effect_match(rt, pt) {
+          not has_field(rt, "effect")
+        }
+        effect_match(rt, pt) {
+          rt.effect == pt.effect
+        }
+
+        # Return true if Pod toleration `pt` matches parameter toleration `rt` by all specified fields
+        tol_match(rt, pt) {
+          key_match(rt, pt)
+          operator_match(rt, pt)
+          value_match(rt, pt)
+          effect_match(rt, pt)
+        }
+
+        has_field(obj, field) {
+          obj[field]
+        }
+
+        violation[{"msg": msg}] {
+          is_pod
+          rt := input.parameters.tolerations[_]
+          pt := pod_tolerations[_]
+          tol_match(rt, pt)
+          msg := sprintf("pod has a disallowed toleration matching %v", [rt])
+        }

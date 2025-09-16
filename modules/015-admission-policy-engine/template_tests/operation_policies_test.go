@@ -63,11 +63,12 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 					"maxReplicas":10
 			},
 			"pods": {
-				"denyTolerations": {
+				"disallowedTolerations": {
 					"enabled": true,
-					"enforcementAction": "Warn",
-					"forbiddenKeys": ["node-role.kubernetes.io/master", "node-role.kubernetes.io/control-plane"],
-					"exemptNamespaces": ["kube-system", "d8-system", "d8-admission-policy-engine", "gatekeeper-system"]
+					"tolerations": [
+						{"key": "node-role.kubernetes.io/master", "operator": "Exists"},
+						{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}
+					]
 				}
 			}
 		},
@@ -100,7 +101,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8RequiredAnnotations", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
-			Expect(f.KubernetesGlobalResource("D8PodsDenyTolerations", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
 		})
 	})
 })

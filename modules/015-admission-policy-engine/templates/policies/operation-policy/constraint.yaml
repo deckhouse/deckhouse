@@ -46,8 +46,8 @@
     {{- include "replica_limits_policy" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "pods" }}
-    {{- if hasKey $cr.spec.policies.pods "denyTolerations" }}
-      {{- include "pods_deny_tolerations_policy" (list $context $cr) }}
+    {{- if hasKey $cr.spec.policies.pods "disallowedTolerations" }}
+      {{- include "disallowed_tolerations_policy" (list $context $cr) }}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -358,28 +358,26 @@ spec:
       - {{- $cr.spec.policies.replicaLimits | toYaml | nindent 8 }}
 {{- end }}
 
-{{- define "pods_deny_tolerations_policy" }}
+{{- define "disallowed_tolerations_policy" }}
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
-  {{- $policy := $cr.spec.policies.pods.denyTolerations }}
-  {{- if and $policy.enabled (gt (len $policy.forbiddenKeys) 0) }}
+  {{- $policy := $cr.spec.policies.pods.disallowedTolerations }}
+  {{- if and $policy.enabled (gt (len $policy.tolerations) 0) }}
 ---
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: D8PodsDenyTolerations
+kind: D8DisallowedTolerations
 metadata:
   name: {{$cr.metadata.name}}
   {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/operation-policy" "")) | nindent 2 }}
 spec:
-  enforcementAction: {{ $policy.enforcementAction | default "warn" | lower }}
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    forbiddenKeys:
-      {{- $policy.forbiddenKeys | default (list "node-role.kubernetes.io/master" "node-role.kubernetes.io/control-plane") | toYaml | nindent 6 }}
-    exemptNamespaces:
-      {{- $policy.exemptNamespaces | default (list "kube-system" "d8-system" "d8-admission-policy-engine" "gatekeeper-system") | toYaml | nindent 6 }}
+    tolerations:
+      {{- $policy.tolerations | toYaml | nindent 6 }}
   {{- end }}
 {{- end }}

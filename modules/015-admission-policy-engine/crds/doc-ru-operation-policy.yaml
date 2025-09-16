@@ -22,21 +22,17 @@ spec:
                       description: |
                         Настройки политик для подов.
                       properties:
-                        denyTolerations:
+                        disallowedTolerations:
                           description: |
-                            Запрещает применение tolerations к указанным ключам taint'ов. Проверяются только ключи (`spec.tolerations[*].key`).
+                            Запрещает tolerations из указанного списка.
+                            
+                            Больше информации [в документации](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
                           properties:
                             enabled:
                               description: "Включает проверку."
-                            enforcementAction:
+                            tolerations:
                               description: |
-                                Действие при нарушении.
-                            forbiddenKeys:
-                              description: |
-                                Список ключей taint'ов, tolerations к которым запрещены.
-                            exemptNamespaces:
-                              description: |
-                                Список пространств имён, исключённых из проверки.
+                                Список шаблонов toleration (partial match по указанным полям: key/operator/value/effect).
                     allowedRepos:
                       description: |
                         Список префиксов, которые может иметь образ контейнера.
