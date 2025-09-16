@@ -94,8 +94,6 @@ type ReleaseControllerTestSuite struct {
 
 	testDataFileName string
 	testMRName       string
-
-	mu sync.Mutex
 }
 
 func (suite *ReleaseControllerTestSuite) SetupSubTest() {
@@ -867,9 +865,6 @@ func withBasicModulePhase(phase addonmodules.ModuleRunPhase) reconcilerOption {
 }
 
 func (suite *ReleaseControllerTestSuite) setupReleaseController(yamlDoc string, options ...reconcilerOption) {
-	suite.mu.Lock()
-	defer suite.mu.Unlock()
-
 	manifests := releaseutil.SplitManifests(yamlDoc)
 
 	manifests["deckhouse-discovery"] = `
