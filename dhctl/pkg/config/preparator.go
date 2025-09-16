@@ -12,23 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package metaconfig
+package config
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+type MetaConfigPreparator interface {
+	Validate(metaConfig *MetaConfig) error
+	Prepare(metaConfig *MetaConfig) error
+}
 
-// we do not use infrastructureprovider.DummyProvider because we will cycle import
+type MetaConfigPreparatorProvider func(provider string) MetaConfigPreparator
+
 type dummyPreparator struct{}
 
-func DummyPreparatorProvider() config.MetaConfigPreparatorProvider {
-	return func(provider string) config.MetaConfigPreparator {
+func DummyPreparatorProvider() MetaConfigPreparatorProvider {
+	return func(provider string) MetaConfigPreparator {
 		return &dummyPreparator{}
 	}
 }
 
-func (p *dummyPreparator) Validate(*config.MetaConfig) error {
+func (p *dummyPreparator) Validate(*MetaConfig) error {
 	return nil
 }
 
-func (p *dummyPreparator) Prepare(*config.MetaConfig) error {
+func (p *dummyPreparator) Prepare(*MetaConfig) error {
 	return nil
 }

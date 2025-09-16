@@ -32,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/metaconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -195,7 +194,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 				return err
 			}
 			// we use dummy preparator because metaConfig was prepared early
-			cfg, err = mc.DeepCopy().Prepare(metaconfig.DummyPreparatorProvider())
+			cfg, err = mc.DeepCopy().Prepare(config.DummyPreparatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}

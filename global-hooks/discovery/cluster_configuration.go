@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
@@ -89,7 +88,7 @@ func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
 		var metaConfig *config.MetaConfig
 		// we use dummy preparator because we do not need any preparation and validation from cloud providers
 		// we use only ClusterConfiguration here
-		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content), infrastructureprovider.DummyPreparatorProvider())
+		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content), config.DummyPreparatorProvider())
 		if err != nil {
 			return err
 		}

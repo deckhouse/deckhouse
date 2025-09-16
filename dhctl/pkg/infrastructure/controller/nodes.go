@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/metaconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -49,7 +48,7 @@ func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.C
 
 func getNgMetaConfig(clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
 	// we use dummy preparator because metaConfig was prepared early
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare(metaconfig.DummyPreparatorProvider())
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}

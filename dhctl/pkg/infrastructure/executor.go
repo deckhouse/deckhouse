@@ -90,10 +90,15 @@ type fakeExecutor struct {
 	showResp    fakeResponse
 	planResp    fakeResponse
 	destroyResp fakeResponse
+	VMResource  string
 }
 
 func (e *fakeExecutor) IsVMChange(rc plan.ResourceChange) bool {
-	return false
+	if e.VMResource == "" {
+		return false
+	}
+
+	return e.VMResource == rc.Type
 }
 
 func (e *fakeExecutor) GetStatesDir() string {

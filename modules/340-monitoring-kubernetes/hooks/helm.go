@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -158,7 +157,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 	var metaConfig *config.MetaConfig
 	// only cluster configuration, provider preparation and validation do not need here
-	metaConfig, err = config.ParseConfigFromData(string(ccYaml), infrastructureprovider.DummyPreparatorProvider())
+	metaConfig, err = config.ParseConfigFromData(string(ccYaml), config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}

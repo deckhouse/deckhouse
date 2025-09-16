@@ -34,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/metaconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -190,7 +189,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 			log.ErrorLn(err)
 		} else {
 			// we use dummy preparator because metaConfig was prepared early
-			cfg, err = metaConfig.DeepCopy().Prepare(metaconfig.DummyPreparatorProvider())
+			cfg, err = metaConfig.DeepCopy().Prepare(config.DummyPreparatorProvider())
 			if err != nil {
 				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
 			}

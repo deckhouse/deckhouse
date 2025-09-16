@@ -28,7 +28,7 @@ func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 		switch provider {
 		// static cluster
 		case "":
-			return newDummyPreparator()
+			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
 			return yandex.NewMetaConfigPreparator()
 		case vcd.ProviderName:
@@ -38,12 +38,6 @@ func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 		default:
 			return &defaultPreparator{}
 		}
-	}
-}
-
-func DummyPreparatorProvider() config.MetaConfigPreparatorProvider {
-	return func(provider string) config.MetaConfigPreparator {
-		return newDummyPreparator()
 	}
 }
 
@@ -59,19 +53,5 @@ func (p *defaultPreparator) Validate(metaConfig *config.MetaConfig) error {
 }
 
 func (p *defaultPreparator) Prepare(*config.MetaConfig) error {
-	return nil
-}
-
-type dummyPreparator struct{}
-
-func newDummyPreparator() *dummyPreparator {
-	return &dummyPreparator{}
-}
-
-func (p *dummyPreparator) Validate(*config.MetaConfig) error {
-	return nil
-}
-
-func (p *dummyPreparator) Prepare(*config.MetaConfig) error {
 	return nil
 }
