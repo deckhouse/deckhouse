@@ -37,4 +37,5 @@ type RunnerInterface interface {
 	GetLogger() log.Logger
 	WorkerDir() string
 	GetExecutorProvider() ExecutorProvider
+	GetMasterDestruction() bool
 }

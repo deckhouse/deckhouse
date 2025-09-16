@@ -201,7 +201,7 @@ apiVersions:
                   nestedHardwareVirtualization:
                     type: boolean
                     description: |
-                      Whether to enable or disable nested [hardware virtualization](https://docs.vmware.com/en/VMware-vSphere/6.5/com.vmware.vsphere.vm_admin.doc/GUID-2A98801C-68E8-47AF-99ED-00C63E4857F6.html).
+                      Whether to enable or disable nested [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html).
                   cpuShares:
                     type: integer
                     description: |

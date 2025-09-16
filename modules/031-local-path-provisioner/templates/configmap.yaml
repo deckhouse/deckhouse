@@ -35,6 +35,8 @@ data:
       - name: helper-pod
         image: {{ include "helm_lib_module_image" (list $context "helper") }}
         imagePullPolicy: IfNotPresent
+        securityContext:
+          readOnlyRootFilesystem: true
       imagePullSecrets:
       - name: deckhouse-registry
 {{- end }}

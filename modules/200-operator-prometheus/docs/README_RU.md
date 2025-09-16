@@ -24,7 +24,7 @@ description: "Установка и управление системой мон
 
 В целом, сервер Prometheus делает две ключевых вещи — **собирает метрики** и **выполняет правила**:
 
-* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
+* Для каждого *target'а* (цель для мониторинга), каждый `scrape_interval`, делает HTTP запрос на этот *target*, получает в ответ метрики в [своем формате](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details), которые сохраняет к себе в базу
 * Каждый `evaluation_interval` обрабатывает *rules*, на основании чего:
   * или шлет алерты
   * или записывает (себе же в базу) новые метрики (результат выполнения *rule'а*)

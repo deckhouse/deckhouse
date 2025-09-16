@@ -254,12 +254,12 @@ where:
   - SSH access keys;
   - configuration file;
   - resources file, etc.
-- `<RELEASE_CHANNEL>` — [update channel](../../../about/update-channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
-  - `alpha` — for the *Alpha* update channel;
-  - `beta` — for the *Beta* update channel;
-  - `early-access` — for the *Early Access* update channel;
-  - `stable` — for the *Stable* update channel;
-  - `rock-solid` — for the *Rock Solid* update channel.
+- `<RELEASE_CHANNEL>` — [release channel](../../../about/release-channels.html) of the platform in kebab-case. It should match the one set in `config.yaml`:
+  - `alpha` — for the *Alpha* release channel;
+  - `beta` — for the *Beta* release channel;
+  - `early-access` — for the *Early Access* release channel;
+  - `stable` — for the *Stable* release channel;
+  - `rock-solid` — for the *Rock Solid* release channel.
 
 Example of running the installer container for the CE edition:
 

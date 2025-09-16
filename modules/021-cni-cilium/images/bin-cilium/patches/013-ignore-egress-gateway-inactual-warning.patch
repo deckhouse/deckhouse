@@ -1,0 +1,29 @@
+From 7a6ea2cb050e8f7c610f5290722be8a55bcae739 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 4 Sep 2025 13:18:30 +0300
+Subject: [PATCH] ignore egress gateway inactual warning
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ pkg/egressgateway/policy.go | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/pkg/egressgateway/policy.go b/pkg/egressgateway/policy.go
+index 36e8e871ad..dedd25f78b 100644
+--- a/pkg/egressgateway/policy.go
++++ b/pkg/egressgateway/policy.go
+@@ -171,7 +171,10 @@ func (gwc *gatewayConfig) deriveFromPolicyGatewayConfig(gc *policyGatewayConfig)
+ 		gwc.egressIP = gc.egressIP
+ 		gwc.ifaceName, err = netdevice.GetIfaceWithIPv4Address(gc.egressIP)
+ 		if err != nil {
+-			return fmt.Errorf("failed to retrieve interface with egress IP: %w", err)
++			expectedErr := fmt.Sprintf("no interface with %s IPv4 assigned to", gc.egressIP)
++			if err.Error() != expectedErr {
++				return fmt.Errorf("failed to retrieve interface with egress IP: %w", err)
++			}
+ 		}
+ 	default:
+ 		// If the gateway config doesn't specify any egress IP or interface, use the
+-- 
+2.34.1
+

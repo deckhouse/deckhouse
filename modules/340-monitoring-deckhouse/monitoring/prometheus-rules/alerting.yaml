@@ -387,3 +387,41 @@
         and send these files (/tmp/heap.pprof, /tmp/cpu.pprof and /tmp/goroutine.pprof) to the support team.
       summary: |
         Deckhouse memory usage is too high.
+
+  - alert: D8ModuleOutdatedByMajorVersion
+    expr: sum by (name, moduleName, majorReleaseName, fromToName) (d8_module_release_info{majorReleaseDepth!~"(nil|0)", majorReleaseName!="nil"} * on(moduleName) group_left deckhouse_mm_module_info{enabled="true"})
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: module-releases
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_ignore_labels: "name,majorReleaseName,fromToName"
+      summary: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind.
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To check the module releases status, run the following command:
+
+        ```bash
+        kubectl get mr -l module={{ $labels.moduleName }}
+        ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
+
+        To approve the module major release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```{{ end }}

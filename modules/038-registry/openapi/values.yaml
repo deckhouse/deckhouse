@@ -202,6 +202,10 @@ properties:
                       type: string
               version:
                 type: string
+              checkMode:
+                type: string
+                enum: [Default, Relax]
+                default: Default
           state:
             type: object
             default: {}

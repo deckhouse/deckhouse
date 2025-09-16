@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -214,6 +215,13 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
 		}
 		return nil
 	})

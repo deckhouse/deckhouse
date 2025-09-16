@@ -67,8 +67,6 @@ debug: true
   securityContext:
     allowPrivilegeEscalation: false
     capabilities:
-      add:
-      - NET_RAW
       drop:
       - ALL
     readOnlyRootFilesystem: true

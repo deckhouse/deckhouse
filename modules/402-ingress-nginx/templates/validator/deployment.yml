@@ -77,6 +77,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $ctx "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ctx "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list $ctx (dict "app" "validator" "name" $name )) | nindent 6 }}
+      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ctx | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420

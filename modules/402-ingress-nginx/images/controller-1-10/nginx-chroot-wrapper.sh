@@ -18,8 +18,9 @@ cat /etc/resolv.conf > /chroot/etc/resolv.conf
 
 if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
   echo "Profiling enabled"
+  logDirInChroot="/var/log/valgrind"
   timestamp=$(date +%Y%m%d_%H%M%S)
-  logfile="/var/log/valgrind/memcheck.${timestamp}.log"
+  logfile="${logDirInChroot}/memcheck.${timestamp}.log"
 
   echo "Drop NGINX file capabilities as it prevent valgrind from running"
   nginxchroot="/chroot/usr/local/nginx/sbin/nginx"
@@ -33,6 +34,9 @@ if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
   echo "Mounting proc fs"
   # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
   mount -t proc /proc /chroot/proc
+  echo "Set hack for www-data user"
+  echo 'www-data:x:64535:64535:www-data:/nonexistent:/usr/sbin/nologin' >> /chroot/etc/passwd
+  echo 'www-data:x:64535:' >> /chroot/etc/group
 
   echo "Run profiling with Valgrind"
   echo "The log will be written to a file $logfile"
@@ -46,5 +50,5 @@ if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
 
 else
   echo "Regular mode"
-  unshare  -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+  unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
 fi

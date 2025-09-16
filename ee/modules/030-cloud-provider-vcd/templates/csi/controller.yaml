@@ -2,6 +2,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
+- "--metadata-path=/etc/cloud/metadata/metadata.yaml"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -19,6 +20,9 @@
 - name: vcd-credentials-volume
   secret:
     secretName: vcd-credentials
+- name: vcd-metadata-volume
+  secret:
+    secretName: vcd-metadata
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
@@ -28,6 +32,13 @@
 - name: vcd-credentials-volume
   mountPath: /etc/kubernetes/vcloud/basic-auth
   readOnly: true
+- name: vcd-metadata-volume
+  mountPath: /etc/cloud/metadata
+  readOnly: true
+{{- end }}
+
+{{- define "csi_controller_pod_annotations" }}
+checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list) | toString | sha256sum | quote }}
 {{- end }}
 
 {{- define "csi_node_args" }}
@@ -81,6 +92,7 @@
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_controller_pod_annotations" . | fromYaml) }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 

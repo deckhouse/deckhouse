@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -335,7 +334,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	needAutomaticTofuMigrationForCommander := false
 
-	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	if infrastructure.NeedToUseOpentofu(metaConfig) {
 		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
 		if !c.CommanderMode {
 			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
@@ -434,7 +433,7 @@ func (c *Converger) AutoConverge() error {
 		return err
 	}
 
-	if infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	if infrastructure.NeedToUseOpentofu(metaConfig) {
 		convergeCtx.WithStateChecker(infrastructurestate.CheckCanIConvergeTerraformStateWhenWeUseTofu)
 	}
 

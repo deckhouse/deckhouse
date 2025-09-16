@@ -33,7 +33,7 @@ lang: ru
   - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/);
   - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/);
 - RockyLinux:
-  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/);
+  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/);
   - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/);
 - CentOS:
   - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/);

@@ -16,6 +16,7 @@ var _ = Describe("cni-cilium :: hooks :: egress_discovery ::", func() {
 	f := HookExecutionConfigInit(`{"cniCilium":{"internal": {"egressGatewaysMap": {}}}}`, "")
 	f.RegisterCRD("network.deckhouse.io", "v1alpha1", "EgressGateway", false)
 	f.RegisterCRD("internal.network.deckhouse.io", "v1alpha1", "SDNInternalEgressGatewayInstance", false)
+	f.RegisterCRD("cilium.io", "v2", "CiliumNode", false)
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -245,6 +246,31 @@ spec:
   podCIDRs:
   - 10.111.3.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -355,6 +381,10 @@ status:
 {"node-role": "egress"}
 `))
 
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-1").Field("metadata.labels").String()).To(MatchJSON(`
+{"node-role": "egress"}
+`))
+
 			Expect(f.KubernetesGlobalResource("Node", "frontend-3").Field("metadata.labels").String()).To(MatchJSON(`
 {
 "egress-gateway.network.deckhouse.io/active-for-egg-dev": "",
@@ -417,6 +447,31 @@ spec:
   podCIDR: 10.111.3.0/24
   podCIDRs:
   - 10.111.3.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
 ---
 apiVersion: v1
 kind: Pod
@@ -513,6 +568,11 @@ status:
 "egress-gateway.network.deckhouse.io/member": "",
 "node-role": "egress"}
 `))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-1").Field("metadata.labels").String()).To(MatchJSON(`
+{
+"egress-gateway.network.deckhouse.io/member": "",
+"node-role": "egress"}
+`))
 
 			Expect(f.KubernetesGlobalResource("Node", "frontend-3").Field("metadata.labels").String()).To(MatchJSON(`
 {
@@ -583,6 +643,31 @@ spec:
   podCIDRs:
   - 10.111.3.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -645,12 +730,21 @@ status:
 {
 "node-role": "egress"}
 `))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-1").Field("metadata.labels").String()).To(MatchJSON(`
+{
+"node-role": "egress"}
+`))
+
 			Expect(f.KubernetesGlobalResource("Node", "frontend-2").Field("metadata.labels").String()).To(MatchJSON(`
 {
 "egress-gateway.network.deckhouse.io/member": "",
 "node-role": "egress"}
 `))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-3").Field("metadata.labels").String()).To(MatchJSON(`
+{
+"node-role": "egress"}
+`))
+			Expect(f.KubernetesGlobalResource("CiliumNode", "frontend-3").Field("metadata.labels").String()).To(MatchJSON(`
 {
 "node-role": "egress"}
 `))
@@ -710,6 +804,31 @@ spec:
   podCIDR: 10.111.3.0/24
   podCIDRs:
   - 10.111.3.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
 ---
 apiVersion: v1
 kind: Pod
@@ -876,6 +995,31 @@ spec:
   podCIDRs:
   - 10.111.3.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-3
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1030,6 +1174,23 @@ spec:
   podCIDRs:
   - 10.111.2.0/24
 ---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -1160,6 +1321,23 @@ spec:
   podCIDR: 10.111.2.0/24
   podCIDRs:
   - 10.111.2.0/24
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-1
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    egress-gateway.network.deckhouse.io/active-for-egg-dev: ""
+    node-role: egress
+---
+apiVersion: cilium.io/v2
+kind: CiliumNode
+metadata:
+  name: frontend-2
+  labels:
+    egress-gateway.network.deckhouse.io/member: ""
+    node-role: egress
 ---
 apiVersion: v1
 kind: Pod
