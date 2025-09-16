@@ -330,7 +330,10 @@ shell:
     provider_installation {
       filesystem_mirror {
         path    = "/plugins"
-        include = ["registry.opentofu.org/*/*"]
+        include = [
+          "registry.opentofu.org/*/*",
+          "registry.terraform.io/*/*"
+        ]
       }
     }
     EOD
