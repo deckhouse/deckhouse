@@ -80,21 +80,22 @@ func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Con
 	configMapSnapshot := input.Snapshots.Get("ingressNginxControllersConfigMap")
 	configMapExists := len(configMapSnapshot) > 0
 
-	// Less than 5 controllers → expire the metric
+	// Reset metric before calculations
+	input.MetricsCollector.Expire(validationSuspendMetricName)
+
+	// Less than 5 controllers → nothing to do
 	if len(controllersSnapshot) < 5 {
-		input.MetricsCollector.Expire(validationSuspendMetricName)
 		return nil
 	}
 
-	// If none of the controllers have the annotation → expire the metric
-	if !controllersHasAnnotationValidationSuspended(controllersSnapshot) && configMapExists {
-		input.MetricsCollector.Expire(validationSuspendMetricName)
-		return nil
-	}
-
-	// If the ConfigMap does not exist → apply annotations to all controllers and set the metric to 1
+	// First run → set blocking annotations on all controllers
 	if !configMapExists {
 		setValidationSuspendedAnnotationToAll(controllersSnapshot, input)
+		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
+	}
+
+	// If at least one controller has annotation → set metric
+	if controllersHasAnnotationValidationSuspended(controllersSnapshot) {
 		input.MetricsCollector.Set(validationSuspendMetricName, 1.0, nil)
 	}
 
