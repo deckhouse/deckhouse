@@ -1,4 +1,7 @@
 deckhouse:
+  features:
+    - summary: Remove editions enum from config-values
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15449
   fixes:
     - summary: add check for user-authn in enabled script
       pull_request: https://github.com/deckhouse/deckhouse/pull/15428
@@ -8,8 +11,16 @@ dhctl:
   fixes:
     - summary: Fix ssh client initialising in Commander Attach and Commander Detach operations
       pull_request: https://github.com/deckhouse/deckhouse/pull/15380
+ingress-nginx:
+  fixes:
+    - summary: fix set_annotation_validation_suspended.go hook to set correct metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15462
 node-manager:
   fixes:
     - summary: Some minor fixes for nvidia gpu templates to improve security.
       pull_request: https://github.com/deckhouse/deckhouse/pull/15327
+user-authn:
+  fixes:
+    - summary: This feature is not needed in the release.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15433
 
