@@ -425,3 +425,18 @@
         ```bash
         d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
         ```{{ end }}
+
+  - alert: ModuleIsDeprecated
+    expr: d8_is_deprecated_module_enabled >= 1
+    labels:
+      severity_level: "9"
+      d8_module: deckhouse
+      d8_component: deckhouse
+      tier: cluster
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Module `{{ $labels.module }}` is deprecated.
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.

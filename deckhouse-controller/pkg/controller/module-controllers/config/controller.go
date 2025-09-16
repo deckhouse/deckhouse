@@ -316,6 +316,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
 	}
 
+	if module.IsDeprecated() {
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 1.0, map[string]string{"module": moduleConfig.GetName()})
+	}
+
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
@@ -404,6 +408,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
