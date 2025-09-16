@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -913,12 +914,8 @@ func TestValidateModule(t *testing.T) {
 	check("validation/virtualization", true, nil)
 }
 
-func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
-	ctx := suite.Context()
-
-	suite.testDataFileName = ""
-
-	basicReleaseTestData := `---
+var (
+	basicReleaseTestData = `---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -940,11 +937,76 @@ metadata:
 spec:
   moduleName: basic-module
   version: 1.0.0
-  weight: 100
   applyAfter: "2000-01-01T00:00:00Z"
 status:
   phase: Pending
 `
+	concurrentDryRunTestData = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/modules
+    ca: ""
+    dockerCfg: ""
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-a-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-a
+spec:
+  moduleName: module-a
+  version: 1.0.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-b-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-b
+spec:
+  moduleName: module-b
+  version: 1.0.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: module-c-v1.0.0
+  annotations:
+    dryrun: "true"
+  labels:
+    source: deckhouse
+    module: module-c
+spec:
+  moduleName: module-c
+  version: 1.0.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+`
+)
+
+func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
+	ctx := suite.Context()
+
+	suite.testDataFileName = ""
 
 	suite.Run("no restart when no releases processed", func() {
 		suite.setupReleaseController(basicReleaseTestData)
@@ -1128,75 +1190,6 @@ status:
 		require.False(suite.T(), restartCalled.Load(), "restart should not be called after context cancellation")
 	})
 
-	// suite.Run("concurrent module apply tracking", func() {
-	// 	suite.setupReleaseController(suite.fetchTestFileData("concurrent-dry-run.yaml"))
-
-	// 	restartCalled := &atomic.Bool{}
-	// 	suite.ctr.shutdownFunc = func() error {
-	// 		restartCalled.Store(true)
-	// 		return nil
-	// 	}
-
-	// 	// Override ticker for faster testing
-	// 	suite.ctr.delayTicker.Stop()
-	// 	suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
-	// 	defer suite.ctr.delayTicker.Stop()
-
-	// 	// Initial state
-	// 	suite.ctr.readyForRestart.Store(true)
-	// 	suite.ctr.releaseWasProcessed.Store(false)
-	// 	suite.ctr.activeApplyCount.Store(0)
-
-	// 	ctx, cancel := context.WithCancel(ctx)
-	// 	defer cancel()
-	// 	go suite.ctr.restartLoop(ctx)
-
-	// 	// Simulate concurrent module applies
-	// 	const numModules = 3
-	// 	var wg sync.WaitGroup
-
-	// 	for i := 0; i < numModules; i++ {
-	// 		wg.Add(1)
-	// 		go func(moduleId int) {
-	// 			defer wg.Done()
-
-	// 			// Simulate module apply start
-	// 			suite.ctr.activeApplyCount.Add(1)
-	// 			suite.ctr.releaseWasProcessed.Store(true)
-
-	// 			// Hold for a while to simulate processing
-	// 			time.Sleep(200 * time.Millisecond)
-
-	// 			// Simulate module apply finish
-	// 			suite.ctr.activeApplyCount.Add(-1)
-	// 		}(i)
-
-	// 		// Stagger starts slightly
-	// 		time.Sleep(20 * time.Millisecond)
-	// 	}
-
-	// 	// Wait for all modules to start
-	// 	time.Sleep(100 * time.Millisecond)
-
-	// 	// Verify restart is not called while modules are active
-	// 	require.False(suite.T(), restartCalled.Load(), "restart should not be called while modules are active")
-	// 	require.True(suite.T(), suite.ctr.activeApplyCount.Load() > 0, "should have active modules")
-
-	// 	// Wait for all modules to complete
-	// 	wg.Wait()
-
-	// 	// Wait for restart to be triggered
-	// 	for i := 0; i < 50; i++ {
-	// 		if restartCalled.Load() {
-	// 			break
-	// 		}
-	// 		time.Sleep(50 * time.Millisecond)
-	// 	}
-
-	// 	require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "all modules should be finished")
-	// 	require.True(suite.T(), restartCalled.Load(), "restart should be called after all modules finish")
-	// })
-
 	suite.Run("edge case - rapid state changes", func() {
 		suite.setupReleaseController(basicReleaseTestData)
 
@@ -1238,160 +1231,370 @@ status:
 
 		require.True(suite.T(), restartCalled.Load(), "restart should eventually be called despite rapid state changes")
 	})
+
+	suite.Run("concurrent module apply tracking", func() {
+		suite.setupReleaseController(concurrentDryRunTestData)
+
+		restartCalled := &atomic.Bool{}
+		suite.ctr.shutdownFunc = func() error {
+			restartCalled.Store(true)
+			return nil
+		}
+
+		// Override ticker for faster testing
+		suite.ctr.delayTicker.Stop()
+		suite.ctr.delayTicker = time.NewTicker(50 * time.Millisecond)
+		defer suite.ctr.delayTicker.Stop()
+
+		// Initial state
+		suite.ctr.readyForRestart.Store(true)
+		suite.ctr.releaseWasProcessed.Store(false)
+		suite.ctr.activeApplyCount.Store(0)
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		go suite.ctr.restartLoop(ctx)
+
+		// Simulate concurrent module applies
+		const numModules = 3
+		var wg sync.WaitGroup
+
+		for i := 0; i < numModules; i++ {
+			wg.Add(1)
+			go func(moduleId int) {
+				defer wg.Done()
+
+				// Simulate module apply start
+				suite.ctr.activeApplyCount.Add(1)
+				suite.ctr.releaseWasProcessed.Store(true)
+
+				// Hold for a while to simulate processing
+				time.Sleep(200 * time.Millisecond)
+
+				// Simulate module apply finish
+				suite.ctr.activeApplyCount.Add(-1)
+			}(i)
+
+			// Stagger starts slightly
+			time.Sleep(20 * time.Millisecond)
+		}
+
+		// Wait for all modules to start
+		time.Sleep(100 * time.Millisecond)
+
+		// Verify restart is not called while modules are active
+		require.False(suite.T(), restartCalled.Load(), "restart should not be called while modules are active")
+		require.True(suite.T(), suite.ctr.activeApplyCount.Load() > 0, "should have active modules")
+
+		// Wait for all modules to complete
+		wg.Wait()
+
+		// Wait for restart to be triggered
+		for i := 0; i < 50; i++ {
+			if restartCalled.Load() {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "all modules should be finished")
+		require.True(suite.T(), restartCalled.Load(), "restart should be called after all modules finish")
+	})
 }
 
-// func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
-// 	ctx := suite.Context()
+var (
+	sequentialProcessingTestData = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/modules
+    ca: ""
+    dockerCfg: ""
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: upmeter-v1.70.0
+  labels:
+    source: deckhouse
+    module: upmeter
+spec:
+  moduleName: upmeter
+  version: 1.70.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: upmeter-v1.71.0
+  labels:
+    source: deckhouse
+    module: upmeter
+spec:
+  moduleName: upmeter
+  version: 1.71.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: upmeter-v1.72.0
+  labels:
+    source: deckhouse
+    module: upmeter
+spec:
+  moduleName: upmeter
+  version: 1.72.0
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: upmeter
+status:
+  phase: Ready
+`
+	mixedProcessingTestData = `---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.deckhouse.io/deckhouse/modules
+    ca: ""
+    dockerCfg: ""
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: parca-1.26.2
+  labels:
+    source: deckhouse
+    module: parca
+spec:
+  moduleName: parca
+  version: 1.26.2
+  weight: 200
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: commander-1.0.3
+  labels:
+    source: deckhouse
+    module: commander
+spec:
+  moduleName: commander
+  version: 1.0.3
+  weight: 300
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: upmeter-v1.70.0
+  labels:
+    source: deckhouse
+    module: upmeter
+spec:
+  moduleName: upmeter
+  version: 1.70.0
+  weight: 100
+  applyAfter: "2000-01-01T00:00:00Z"
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: upmeter
+status:
+  phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca
+status:
+  phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: commander
+status:
+  phase: Ready
+`
+)
 
-// 	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
-// 		ManifestStub: func() (*crv1.Manifest, error) {
-// 			return &crv1.Manifest{
-// 				Layers: []crv1.Descriptor{},
-// 			}, nil
-// 		},
-// 		LayersStub: func() ([]crv1.Layer, error) {
-// 			return []crv1.Layer{&utils.FakeLayer{}}, nil
-// 		},
-// 	}, nil)
+func (suite *ReleaseControllerTestSuite) TestConcurrentModuleRestartFlow() {
+	ctx := suite.Context()
 
-// 	suite.Run("concurrent dry run releases", func() {
-// 		suite.setupReleaseController(suite.fetchTestFileData("concurrent-dry-run.yaml"))
+	dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
+		ManifestStub: func() (*crv1.Manifest, error) {
+			return &crv1.Manifest{
+				Layers: []crv1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]crv1.Layer, error) {
+			return []crv1.Layer{&utils.FakeLayer{}}, nil
+		},
+	}, nil)
 
-// 		// Override ticker for faster testing
-// 		suite.ctr.delayTicker.Stop()
-// 		suite.ctr.delayTicker = time.NewTicker(100 * time.Millisecond)
-// 		defer suite.ctr.delayTicker.Stop()
+	suite.Run("concurrent dry run releases", func() {
+		suite.setupReleaseController(concurrentDryRunTestData)
 
-// 		// Initialize readyForRestart as done in controller
-// 		suite.ctr.readyForRestart.Store(true)
+		// Override ticker for faster testing
+		suite.ctr.delayTicker.Stop()
+		suite.ctr.delayTicker = time.NewTicker(100 * time.Millisecond)
+		defer suite.ctr.delayTicker.Stop()
 
-// 		// Track restart calls
-// 		restartCalled := &atomic.Bool{}
-// 		suite.ctr.shutdownFunc = func() error {
-// 			restartCalled.Store(true)
-// 			return nil
-// 		}
+		// Initialize readyForRestart as done in controller
+		suite.ctr.readyForRestart.Store(true)
 
-// 		ctx, cancel := context.WithCancel(ctx)
-// 		defer cancel()
+		// Track restart calls
+		restartCalled := &atomic.Bool{}
+		suite.ctr.shutdownFunc = func() error {
+			restartCalled.Store(true)
+			return nil
+		}
 
-// 		// Start the restart monitoring goroutine
-// 		go suite.ctr.restartLoop(ctx)
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-// 		const numModules = 3
-// 		var wg sync.WaitGroup
-// 		moduleStarted := make(chan struct{}, numModules)
-// 		allowCompletion := make(chan struct{})
+		// Start the restart monitoring goroutine
+		go suite.ctr.restartLoop(ctx)
 
-// 		// Function to simulate concurrent module processing
-// 		applyReleaseWithControl := func(releaseName string) {
-// 			defer wg.Done()
+		const numModules = 3
+		var wg sync.WaitGroup
+		moduleStarted := make(chan struct{}, numModules)
+		allowCompletion := make(chan struct{})
 
-// 			mr := suite.getModuleRelease(releaseName)
+		// Function to simulate concurrent module processing
+		applyReleaseWithControl := func(releaseName string) {
+			defer wg.Done()
 
-// 			// Simulate applyRelease behavior
-// 			suite.ctr.activeApplyCount.Add(1)
-// 			defer func() {
-// 				suite.ctr.activeApplyCount.Add(-1)
-// 				suite.ctr.releaseWasProcessed.Store(true)
-// 			}()
+			mr := suite.getModuleRelease(releaseName)
 
-// 			moduleStarted <- struct{}{}
-// 			<-allowCompletion
+			// Simulate applyRelease behavior
+			suite.ctr.activeApplyCount.Add(1)
+			defer func() {
+				suite.ctr.activeApplyCount.Add(-1)
+				suite.ctr.releaseWasProcessed.Store(true)
+			}()
 
-// 			// Simulate processing time
-// 			time.Sleep(50 * time.Millisecond)
+			moduleStarted <- struct{}{}
+			<-allowCompletion
 
-// 			_, err := suite.ctr.handleRelease(ctx, mr)
-// 			require.NoError(suite.T(), err)
-// 		}
+			// Simulate processing time
+			time.Sleep(50 * time.Millisecond)
 
-// 		// Start concurrent processing with staggered timing
-// 		releases := []string{"module-a-v1.0.0", "module-b-v1.0.0", "module-c-v1.0.0"}
-// 		for i, releaseName := range releases {
-// 			wg.Add(1)
-// 			go func(name string, delay time.Duration) {
-// 				time.Sleep(delay)
-// 				applyReleaseWithControl(name)
-// 			}(releaseName, time.Duration(i)*500*time.Millisecond)
-// 		}
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
+		}
 
-// 		// Wait for all modules to start
-// 		for i := 0; i < numModules; i++ {
-// 			<-moduleStarted
-// 		}
+		// Start concurrent processing with staggered timing
+		releases := []string{"module-a-v1.0.0", "module-b-v1.0.0", "module-c-v1.0.0"}
+		for i, releaseName := range releases {
+			wg.Add(1)
+			go func(name string, delay time.Duration) {
+				time.Sleep(delay)
+				applyReleaseWithControl(name)
+			}(releaseName, time.Duration(i)*500*time.Millisecond)
+		}
 
-// 		// Verify concurrent state
-// 		require.Equal(suite.T(), int32(numModules), suite.ctr.activeApplyCount.Load())
-// 		require.False(suite.T(), restartCalled.Load(), "restart should not be called while modules are active")
+		// Wait for all modules to start
+		for range numModules {
+			<-moduleStarted
+		}
 
-// 		// Allow completion
-// 		close(allowCompletion)
-// 		wg.Wait()
+		// Verify concurrent state
+		require.Equal(suite.T(), int32(numModules), suite.ctr.activeApplyCount.Load())
+		require.False(suite.T(), restartCalled.Load(), "restart should not be called while modules are active")
 
-// 		// Wait for restart trigger with timeout
-// 		for i := 0; i < 50; i++ {
-// 			if restartCalled.Load() {
-// 				break
-// 			}
-// 			time.Sleep(50 * time.Millisecond)
-// 		}
+		// Allow completion
+		close(allowCompletion)
+		wg.Wait()
 
-// 		// Verify final state
-// 		require.True(suite.T(), restartCalled.Load(), "restart should be triggered after graceful delay")
-// 		require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "no modules should be active")
-// 		require.False(suite.T(), suite.ctr.readyForRestart.Load(), "readyForRestart should be false after restart")
-// 	})
+		// Wait for restart trigger with timeout
+		for range 50 {
+			if restartCalled.Load() {
+				break
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
 
-// 	suite.Run("sequential module processing", func() {
-// 		suite.setupReleaseController(suite.fetchTestFileData("sequential-processing.yaml"))
+		// Verify final state
+		require.True(suite.T(), restartCalled.Load(), "restart should be triggered after graceful delay")
+		require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(), "no modules should be active")
+	})
 
-// 		// Test sequential processing doesn't trigger restart prematurely
-// 		releases := []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"}
+	suite.Run("sequential module processing", func() {
+		suite.setupReleaseController(sequentialProcessingTestData)
 
-// 		for _, releaseName := range releases {
-// 			mr := suite.getModuleRelease(releaseName)
-// 			_, err := suite.ctr.handleRelease(ctx, mr)
-// 			require.NoError(suite.T(), err)
+		// Test sequential processing doesn't trigger restart prematurely
+		releases := []string{"upmeter-v1.70.0", "upmeter-v1.71.0", "upmeter-v1.72.0"}
 
-// 			// Verify sequential processing
-// 			require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(),
-// 				"active count should be 0 between sequential releases")
-// 		}
-// 	})
+		for _, releaseName := range releases {
+			mr := suite.getModuleRelease(releaseName)
+			_, err := suite.ctr.handleRelease(ctx, mr)
+			require.NoError(suite.T(), err)
 
-// 	suite.Run("mixed concurrent and sequential", func() {
-// 		suite.setupReleaseController(suite.fetchTestFileData("mixed-processing.yaml"))
+			// Verify sequential processing
+			require.Equal(suite.T(), int32(0), suite.ctr.activeApplyCount.Load(),
+				"active count should be 0 between sequential releases")
+		}
+	})
 
-// 		// First process some releases sequentially
-// 		mr1 := suite.getModuleRelease("parca-1.26.2")
-// 		_, err := suite.ctr.handleRelease(ctx, mr1)
-// 		require.NoError(suite.T(), err)
+	suite.Run("mixed concurrent and sequential", func() {
+		suite.setupReleaseController(mixedProcessingTestData)
 
-// 		// Then simulate concurrent processing
-// 		var wg sync.WaitGroup
-// 		concurrentReleases := []string{"commander-1.0.3", "upmeter-v1.70.0"}
+		// First process some releases sequentially
+		mr1 := suite.getModuleRelease("parca-1.26.2")
+		_, err := suite.ctr.handleRelease(ctx, mr1)
+		require.NoError(suite.T(), err)
 
-// 		for _, releaseName := range concurrentReleases {
-// 			wg.Add(1)
-// 			go func(name string) {
-// 				defer wg.Done()
-// 				mr := suite.getModuleRelease(name)
-// 				_, err := suite.ctr.handleRelease(ctx, mr)
-// 				require.NoError(suite.T(), err)
-// 			}(releaseName)
-// 		}
+		// Then simulate concurrent processing
+		var wg sync.WaitGroup
+		concurrentReleases := []string{"commander-1.0.3", "upmeter-v1.70.0"}
 
-// 		wg.Wait()
+		for _, releaseName := range concurrentReleases {
+			wg.Add(1)
+			go func(name string) {
+				defer wg.Done()
+				mr := suite.getModuleRelease(name)
+				_, err := suite.ctr.handleRelease(ctx, mr)
+				require.NoError(suite.T(), err)
+			}(releaseName)
+		}
 
-// 		// Verify all releases processed successfully
-// 		for _, releaseName := range append([]string{"parca-1.26.2"}, concurrentReleases...) {
-// 			mr := suite.getModuleRelease(releaseName)
-// 			require.NotEqual(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase,
-// 				"release %s should not be in pending state", releaseName)
-// 		}
-// 	})
-// }
+		wg.Wait()
+
+		// Verify all releases processed successfully
+		for _, releaseName := range append([]string{"parca-1.26.2"}, concurrentReleases...) {
+			mr := suite.getModuleRelease(releaseName)
+			require.NotEqual(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase,
+				"release %s should not be in pending state", releaseName)
+		}
+	})
+}
 
 const repeatCount = 3
 
