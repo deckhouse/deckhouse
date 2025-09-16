@@ -1517,7 +1517,7 @@ func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 
 		for i := 0; i < numModules; i++ {
 			wg.Add(1)
-			go func(moduleId int) {
+			go func(_ int) {
 				defer wg.Done()
 
 				// Simulate module apply start
