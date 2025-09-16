@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
+    ingress-nginx-controller.deckhouse.io/checksum: 2ce05910aa99582281943ce7993acc0c81436c5995310c05337f237dd9811791
   labels:
     app: proxy-failover
     heritage: deckhouse
@@ -53,10 +53,13 @@ spec:
       name: solid
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: proxy-failover
         name: solid
     spec:
+      automountServiceAccountToken: true
       containers:
       - env:
         - name: CONTROLLER_NAME
@@ -93,7 +96,16 @@ spec:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
-      - image: registry.example.com@imageHash-ingressNginx-proxyFailoverIptables
+      - env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: registry.example.com@imageHash-ingressNginx-proxyFailoverIptables
         name: iptables-loop
         resources:
           requests:
@@ -105,7 +117,9 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+          runAsGroup: 0
           runAsNonRoot: false
+          runAsUser: 0
         volumeMounts:
         - mountPath: /run/xtables.lock
           name: xtables-lock
@@ -159,6 +173,7 @@ spec:
         name: kube-rbac-proxy
         ports:
         - containerPort: 4208
+          hostPort: 4208
           name: https-metrics
         resources:
           requests:
@@ -169,6 +184,7 @@ spec:
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
+      priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       tolerations:

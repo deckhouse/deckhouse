@@ -16,7 +16,7 @@ configured roles. It works with a number of different databases through a plugin
 interface. There are a number of built-in database types, and an exposed framework
 for running custom database types for extendability. This means that services
 that need to access a database no longer need to hardcode credentials: they can
-request them from Stronghold, and use Stronghold's [leasing mechanism](/docs/concepts/lease)
+request them from Stronghold, and use Stronghold's [leasing mechanism](../../concepts/lease.html)
 to more easily roll keys. These are referred to as "dynamic roles" or "dynamic
 secrets".
 
@@ -52,11 +52,10 @@ access the associated user account in the database.
    valid.
 
    If you need to rotate root credentials, use the
-   [Rotate root credentials](/api-docs/secret/databases/#rotate-root-credentials)
-   API endpoint.
+   `rotate-root-credentials` API endpoint.
 
 {% endalert %}
-Consult the [database capabilities table](#db-capabilities-table) to determine
+Refer to the [database capabilities table](#database-capabilities) to determine
 if your chosen database backend supports static roles.
 
 ## Setup
@@ -158,34 +157,24 @@ the proper permission, it can generate credentials.
 All databases support dynamic roles and static roles. All plugins support rotating
 the root user's credentials.
 
-<a id="db-capabilities-table" />
-
 | Database                                                   | Root Credential Rotation | Dynamic Roles | Static Roles | Username Customization | Credential Types |
 |------------------------------------------------------------|--------------------------|---------------|--------------|------------------------|------------------|
-| [Cassandra](/docs/secrets/databases/cassandra)       | Yes                      | Yes           | Yes          | Yes                    | password         |
-| [InfluxDB](/docs/secrets/databases/influxdb)         | Yes                      | Yes           | Yes          | Yes                    | password         |
-| [MySQL/MariaDB](/docs/secrets/databases/mysql-maria) | Yes                      | Yes           | Yes          | Yes                    | password         |
-| [PostgreSQL](/docs/secrets/databases/postgresql)     | Yes                      | Yes           | Yes          | Yes                    | password         |
-
-## Custom plugins
-
-This secrets engine allows custom database types to be run through the exposed
-plugin interface. Please see the [custom database plugin](/docs/secrets/databases/custom)
-for more information.
+| [MySQL/MariaDB](mysql.html) | Yes                      | Yes           | Yes          | Yes                    | password         |
+| [PostgreSQL](postgresql.html)     | Yes                      | Yes           | Yes          | Yes                    | password         |
 
 ## Credential types
 
 Database systems support a variety of authentication methods and credential types.
 The database secrets engine supports management of credentials alternative to usernames
-and passwords. The [credential_type](/api-docs/secret/databases#credential_type)
-and [credential_config](/api-docs/secret/databases#credential_config) parameters
+and passwords. The `credential_type`
+and `credential_config` parameters
 of dynamic and static roles configure the credential that Stronghold will generate and
 make available to database plugins. See the documentation of individual database
 plugins for the credential types they support and usage examples.
 
 ## Password generation
 
-Passwords are generated via [Password Policies](/docs/concepts/password-policies).
+Passwords are generated via password policies.
 Databases can optionally set a password policy for use across all roles or at the
 individual role level for that database. For example, each time you call
 `d8 stronghold write database/config/my-database` you can specify a password policy for all
@@ -221,9 +210,7 @@ rule "charset" {
 You can specify the option `disable_escaping` with a value of `true` in some
 secrets engines to prevent Stronghold from escaping special characters in the
 username and password fields. This is necessary for some alternate connection
-string formats. See the [databases secrets engine API
-docs](/api-docs/secret/databases#common-fields) and reference individual
-plugin documentation to determine support for this parameter.
+string formats.
 
 For example, when the password contains URL-escaped characters like `#` or `%` they will
 remain as so instead of becoming `%23` and `%25` respectively.
@@ -236,8 +223,3 @@ username="root" \
 password='your#StrongPassword%' \
 disable_escaping="true"
 ```
-
-## API
-
-The database secrets engine has a full HTTP API. Please see the [Database secret
-secrets engine API](/api-docs/secret/databases) for more details.

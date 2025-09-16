@@ -17,6 +17,7 @@ limitations under the License.
 package external_auth
 
 import (
+	"context"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -40,7 +41,7 @@ type ExternalAuth struct {
 	UseBearerTokens *bool  `json:"useBearerTokens,omitempty"`
 }
 
-func (e *ExternalAuth) AuthURLWithClusterDomain(input *go_hook.HookInput) string {
+func (e *ExternalAuth) AuthURLWithClusterDomain(_ context.Context, input *go_hook.HookInput) string {
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 	return strings.ReplaceAll(e.AuthURL, "%CLUSTER_DOMAIN%", clusterDomain)
 }
@@ -51,7 +52,7 @@ func RegisterHook(settings Settings) bool {
 	}, wrapSetExternalAuthValues(settings))
 }
 
-func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
+func setExternalAuthValues(ctx context.Context, input *go_hook.HookInput, settings Settings) error {
 	configAuth, isExternalAuthInConfig := input.ConfigValues.GetOk(settings.ExternalAuthPath)
 
 	if !set.NewFromValues(input.Values, "global.enabledModules").Has("user-authn") {
@@ -67,7 +68,7 @@ func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
 
 	if !isExternalAuthInConfig {
 		input.Values.Set(settings.ExternalAuthPath, ExternalAuth{
-			AuthURL:         settings.DexExternalAuth.AuthURLWithClusterDomain(input),
+			AuthURL:         settings.DexExternalAuth.AuthURLWithClusterDomain(ctx, input),
 			AuthSignInURL:   settings.DexExternalAuth.AuthSignInURL,
 			UseBearerTokens: settings.DexExternalAuth.UseBearerTokens,
 		})
@@ -80,8 +81,8 @@ func setExternalAuthValues(input *go_hook.HookInput, settings Settings) error {
 	return nil
 }
 
-func wrapSetExternalAuthValues(settings Settings) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		return setExternalAuthValues(input, settings)
+func wrapSetExternalAuthValues(settings Settings) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(ctx context.Context, input *go_hook.HookInput) error {
+		return setExternalAuthValues(ctx, input, settings)
 	}
 }

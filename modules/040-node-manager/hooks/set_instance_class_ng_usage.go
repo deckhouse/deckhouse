@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -101,7 +102,7 @@ func filterCloudEphemeralNG(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func setInstanceClassUsage(input *go_hook.HookInput) error {
+func setInstanceClassUsage(_ context.Context, input *go_hook.HookInput) error {
 	// dynamic InstanceClass binding
 	{
 		kindInUse, kindFromSecret := detectInstanceClassKind(input, setInstanceClassNGUsageConfig)
@@ -134,7 +135,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 
 	icNodeConsumers := make(map[usedInstanceClass][]string)
 
-	snaps := input.NewSnapshots.Get("ngs")
+	snaps := input.Snapshots.Get("ngs")
 	for usedIC, err := range sdkobjectpatch.SnapshotIter[ngUsedInstanceClass](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
@@ -144,7 +145,7 @@ func setInstanceClassUsage(input *go_hook.HookInput) error {
 	}
 
 	// find instanceClasses which were unbound from NG (or ng deleted)
-	snaps = input.NewSnapshots.Get("ics")
+	snaps = input.Snapshots.Get("ics")
 	for icm, err := range sdkobjectpatch.SnapshotIter[usedInstanceClassWithConsumers](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)

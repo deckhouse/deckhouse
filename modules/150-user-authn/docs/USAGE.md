@@ -367,7 +367,12 @@ data:
 
 {% endraw %}
 
-## An example of creating a static user
+## Local Authentication
+
+Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
+The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+
+### Creating a user
 
 Create a password and enter its hash encoded in base64 in the `password` field.
 
@@ -405,7 +410,9 @@ spec:
 
 {% endraw %}
 
-## Example of adding a static user to a group
+### Adding a user to a group
+
+Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -422,6 +429,76 @@ spec:
 ```
 
 {% endraw %}
+
+Where `members` is a list of users belonging to the group.
+
+### Password policy
+
+Password policy settings allow controlling password complexity, rotation, and user lockout:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Fair
+      passwordHistoryLimit: 10
+      lockout:
+        lockDuration: 15m
+        maxAttempts: 3
+      rotation:
+        interval: "30d"
+```
+
+{% endraw %}
+
+Field description:
+
+* `complexityLevel`: Password complexity level.
+* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
+* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
+  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
+  * `lockout.lockDuration`: User lockout duration.
+* `rotation`: Password rotation settings:
+  * `rotation.interval`: Period for mandatory password change.
+
+### Two-factor authentication (2FA)
+
+2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    staticUsers2FA:
+      enabled: true
+      issuerName: "awesome-app"
+```
+
+{% endraw %}
+
+Field description:
+
+* `enabled`: Enables or disables 2FA for all static users.
+* `issuerName`: Name displayed in the authenticator application when adding an account.
+
+{% alert level="info" %}
+After enabling 2FA, each user must register in the authenticator application during their first login.
+{% endalert %}
 
 ## How to set permissions for a user or group
 

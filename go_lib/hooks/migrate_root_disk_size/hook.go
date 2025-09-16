@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -45,7 +46,7 @@ type HookParams struct {
 }
 
 func RegisterHook(params *HookParams) bool {
-	hookHandler := func(input *go_hook.HookInput) error {
+	hookHandler := func(_ context.Context, input *go_hook.HookInput) error {
 		return migrateDiskGBHandler(input, params)
 	}
 
@@ -113,7 +114,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) error {
-	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.NewSnapshots, "provider_configuration")
+	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.Snapshots, "provider_configuration")
 	if err != nil {
 		return fmt.Errorf("unable to parse provider_configuration snapshot: %w", err)
 	}
@@ -122,7 +123,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 		return nil
 	}
 
-	needMigration, err := needMigrateForDeckhouseInstallVersion(input.NewSnapshots)
+	needMigration, err := needMigrateForDeckhouseInstallVersion(input.Snapshots)
 	if err != nil {
 		return err
 	}

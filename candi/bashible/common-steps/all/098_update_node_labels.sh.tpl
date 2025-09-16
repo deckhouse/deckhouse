@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 check_python
 function fetch-local-labels() {
   cat - <<EOF | $python_binary
@@ -111,7 +107,7 @@ EOF
 LABEL_DIRECTORY_PATH=/var/lib/node_labels
 mkdir -p $LABEL_DIRECTORY_PATH
 
-LABELS_FROM_ANNOTATION="$( kubectl_exec get no $(bb-d8-node-name) -o json |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
+LABELS_FROM_ANNOTATION="$( bb-kubectl-exec get no $(bb-d8-node-name) -o json |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
 
 if [[ $LABELS_FROM_ANNOTATION == "null" ]]
   then
@@ -125,7 +121,7 @@ LABELS_ANNOTATION="$( fetch-local-labels "$LABEL_DIRECTORY_PATH" add "$LABELS_FR
 if [[ $LABLES_TO_REMOVE ]]
   then
     for label in $LABLES_TO_REMOVE; do
-        kubectl_exec label node $(bb-d8-node-name) "$label"
+        bb-kubectl-exec label node $(bb-d8-node-name) "$label"
     done
 fi
 
@@ -139,6 +135,6 @@ if [[ -z $LABELS ]]
     exit 0
   else
     # Apply labels to node
-    kubectl_exec label node $(bb-d8-node-name) "${LABELS}" --overwrite
+    bb-kubectl-exec label node $(bb-d8-node-name) "${LABELS}" --overwrite
     kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) --overwrite node.deckhouse.io/last-applied-local-labels="${LABELS_ANNOTATION}"
 fi

@@ -19,12 +19,12 @@ data:
         serve_stale 1h immediate
         servfail 0 # disable caching servfail
       }
-      dynamicforward {
+      kubeforward {
         namespace kube-system
         service_name d8-kube-dns
         port_name dns
         expire 10s
-        health_check 300ms
+        health_check 330ms
         prefer_udp
       }
       reload 2s

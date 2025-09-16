@@ -163,7 +163,7 @@ The service decides to re-run the scripts by comparing the single checksum of al
 You can see the checksum using the following command:
 
 ```bash
-kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
+d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o yaml
 ```
 
 The service compares checksums every minute.

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -51,9 +53,9 @@ func applyConfigMapFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return obj.GetName(), nil
 }
 
-func detectChrootMode(input *go_hook.HookInput) error {
+func detectChrootMode(_ context.Context, input *go_hook.HookInput) error {
 	var enabled bool
-	if len(input.NewSnapshots.Get("chroot-configmap")) != 0 {
+	if len(input.Snapshots.Get("chroot-configmap")) != 0 {
 		enabled = true
 	}
 

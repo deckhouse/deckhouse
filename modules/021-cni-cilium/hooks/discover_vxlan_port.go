@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -160,7 +161,7 @@ func filterConfigMap(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	return 0, nil
 }
 
-func discoverVXLANPort(input *go_hook.HookInput) error {
+func discoverVXLANPort(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(metricGroupVXLANPort)
 
 	var (
@@ -179,7 +180,7 @@ func discoverVXLANPort(input *go_hook.HookInput) error {
 		input.Logger.Warn("Virtualization nesting level is not set globally - assuming level 0")
 	}
 
-	ports, err := sdkobjectpatch.UnmarshalToStruct[int](input.NewSnapshots, "cilium-configmap")
+	ports, err := sdkobjectpatch.UnmarshalToStruct[int](input.Snapshots, "cilium-configmap")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cilium-configmap' snapshot: %w", err)
 	}

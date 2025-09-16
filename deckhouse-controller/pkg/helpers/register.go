@@ -45,7 +45,7 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 		password := changeRegistryCommand.Flag("password", "Password/token for registry user.").String()
 		caFile := changeRegistryCommand.Flag("ca-file", "Path to registry CA.").ExistingFile()
 
-		scheme := changeRegistryCommand.Flag("scheme", "Used scheme while connecting to registry, http or https.").String()
+		scheme := changeRegistryCommand.Flag("scheme", `Used scheme while connecting to registry, "http" or "https".`).String()
 		dryRun := changeRegistryCommand.Flag("dry-run", "Don't change deckhouse resources, only print them.").Default("false").Bool()
 
 		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()

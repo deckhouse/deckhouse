@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	storage "k8s.io/api/storage/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -73,13 +76,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, delectStorageClassCloudManual)
 
-func delectStorageClassCloudManual(input *go_hook.HookInput) error {
+func delectStorageClassCloudManual(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
-	storageclasses := input.Snapshots["storageclasses"]
+	storageclasses := input.Snapshots.Get("storageclasses")
 
-	for _, o := range storageclasses {
-		sc := o.(CloudStorageClass)
+	for sc, err := range sdkobjectpatch.SnapshotIter[CloudStorageClass](storageclasses) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'storageclasses' snapshots: %w", err)
+		}
+
 		if sc.IsCloud && (sc.Name != "vsphere-main" || sc.Provisioner != "vsphere.csi.vmware.com") {
 			input.MetricsCollector.Set(
 				"storage_class_cloud_manual",

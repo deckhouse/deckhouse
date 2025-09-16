@@ -18,7 +18,7 @@
 
           - Run the following Prometheus query:
           
-            ```promql
+            ```prometheus
             count by (violating_namespace, violating_name, violation_msg) (
               d8_gatekeeper_exporter_constraint_violations{
                 violation_enforcement="deny",
@@ -48,7 +48,7 @@
 
           - Run the following Prometheus query:
 
-            ```promql
+            ```prometheus
             count by (violating_namespace, violating_kind, violating_name, violation_msg) (
               d8_gatekeeper_exporter_constraint_violations{
                 violation_enforcement="deny",
@@ -76,7 +76,7 @@
 
           - Run the following Prometheus query:
 
-            ```promql
+            ```prometheus
             count by (violating_namespace, violating_kind, violating_name, violation_msg) (
               d8_gatekeeper_exporter_constraint_violations{
                 violation_enforcement="deny",

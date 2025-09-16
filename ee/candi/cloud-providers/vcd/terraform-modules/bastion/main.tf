@@ -78,4 +78,16 @@ resource "vcd_vapp_vm" "bastion" {
     "public-keys"     = var.ssh_public_key
     "disk.EnableUUID" = "1"
   }
+
+  dynamic "metadata_entry" {
+    for_each = var.metadata
+
+    content {
+      type        = "MetadataStringValue"
+      is_system   = false
+      user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
+    }
+  }
 }

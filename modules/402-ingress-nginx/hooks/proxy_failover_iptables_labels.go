@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -98,20 +101,25 @@ func applyNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}, nil
 }
 
-func setProxyFailoverLabel(input *go_hook.HookInput) error {
+func setProxyFailoverLabel(_ context.Context, input *go_hook.HookInput) error {
 	// Collect nodes that have a Ready proxy-failover Pod running
-	nodesWithRunningFailover := make(map[string]struct{}, len(input.Snapshots["proxyFailoverPods"])) // All active nodes
+	nodesWithRunningFailover := make(map[string]struct{}, len(input.Snapshots.Get("proxyFailoverPods"))) // All active nodes
 
-	for _, snap := range input.Snapshots["proxyFailoverPods"] {
-		pod := snap.(Pod)
+	for pod, err := range sdkobjectpatch.SnapshotIter[Pod](input.Snapshots.Get("proxyFailoverPods")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'proxyFailoverPods' snapshots: %w", err)
+		}
+
 		if pod.NodeName != "" {
 			nodesWithRunningFailover[pod.NodeName] = struct{}{}
 		}
 	}
 
 	// Add the label to nodes that have a proxy-failover Pod and don't have the label yet
-	for _, snap := range input.Snapshots["nodes"] {
-		node := snap.(Node)
+	for node, err := range sdkobjectpatch.SnapshotIter[Node](input.Snapshots.Get("nodes")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
+		}
 
 		_, podExists := nodesWithRunningFailover[node.Name]
 

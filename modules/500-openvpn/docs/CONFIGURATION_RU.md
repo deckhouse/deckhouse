@@ -11,13 +11,13 @@ title: "Модуль openvpn: настройки"
 Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values openvpn -o json | jq '.openvpn.internal.auth.password'
 ```
 
 Чтобы сгенерировать новый пароль, удалите ресурс Secret:
 
 ```shell
-kubectl -n d8-openvpn delete secret/basic-auth
+d8 k -n d8-openvpn delete secret/basic-auth
 ```
 
 {% alert level="info" %}

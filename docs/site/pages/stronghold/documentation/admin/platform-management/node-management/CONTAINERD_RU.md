@@ -8,7 +8,7 @@ lang: ru
 
 Дополнительная настройка containerd возможна через создание конфигурационных файлов с помощью ресурса NodeGroupConfiguration.
 
-За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/node-group/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
+За настройки containerd отвечает встроенный скрипт [`032_configure_containerd.sh`](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/common-steps/all/032_configure_containerd.sh.tpl) — он производит объединение всех конфигурационных файлов сервиса `containerd` расположенных по пути `/etc/containerd/conf.d/*.toml`, а также перезапуск сервиса.
 
 При разработке `NodeGroupConfiguration` следует учитывать следующее:
 
@@ -102,7 +102,7 @@ spec:
 
 Приватный registry может требовать корневого сертификата, его нужно добавить в директорию `/var/lib/containerd/certs` и указать в параметре tls в настройках containerd.
 
-За основу такого скрипта можно взять [инструкцию](os.hmtl#добавление-ca-сертификата) по добавлению корневого сертификата в ОС. Обратите внимание на отличия:
+За основу такого скрипта можно взять [инструкцию](os.html#добавление-корневого-сертификата) по добавлению корневого сертификата в ОС. Обратите внимание на отличия:
 
 1. Значение приоритета 31;
 2. Корневой сертификат добавляется в директорию `/var/lib/containerd/certs`;

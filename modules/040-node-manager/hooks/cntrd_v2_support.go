@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -87,8 +88,8 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 	}, nil
 }
 
-func handlecntrdV2SupportMetrics(input *go_hook.HookInput) error {
-	snaps := input.NewSnapshots.Get("nodes_cntrdv2_unsupported")
+func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("nodes_cntrdv2_unsupported")
 	input.MetricsCollector.Expire(cntrdV2GroupName)
 	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(cntrdV2GroupName),

@@ -576,9 +576,11 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 		if notifyErr != nil {
 			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
 
+			message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
+
 			return &TimeResult{
 				ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
-					Message:               msgReleaseIsBlockedByNotification,
+					Message:               message,
 					ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 				},
 			}
@@ -619,9 +621,11 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if notifyErr != nil {
 		r.logger.Warn("send minor release notification", log.Err(notifyErr))
 
+		message := fmt.Sprintf("%s: %s", msgReleaseIsBlockedByNotification, notifyErr.Error())
+
 		return &TimeResult{
 			ProcessedDeployTimeResult: &releaseUpdater.ProcessedDeployTimeResult{
-				Message:               msgReleaseIsBlockedByNotification,
+				Message:               message,
 				ReleaseApplyAfterTime: deployTimeResult.ReleaseApplyAfterTime,
 			},
 		}

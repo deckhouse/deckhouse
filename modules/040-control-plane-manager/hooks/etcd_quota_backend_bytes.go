@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math"
@@ -155,10 +156,10 @@ func maintenanceEtcdFilter(unstructured *unstructured.Unstructured) (go_hook.Fil
 	}, nil
 }
 
-func getCurrentEtcdQuotaBytes(input *go_hook.HookInput) (int64, string, error) {
+func getCurrentEtcdQuotaBytes(_ context.Context, input *go_hook.HookInput) (int64, string, error) {
 	var currentQuotaBytes int64
 	var nodeWithMaxQuota string
-	etcdEndpointsSnapshots := input.NewSnapshots.Get("etcd_endpoints")
+	etcdEndpointsSnapshots := input.Snapshots.Get("etcd_endpoints")
 	for endpoint, err := range sdkobjectpatch.SnapshotIter[etcdInstance](etcdEndpointsSnapshots) {
 		if err != nil {
 			return currentQuotaBytes, nodeWithMaxQuota, fmt.Errorf("cannot iterate over 'etcd_endpoints' snapshot: %w", err)
@@ -232,15 +233,15 @@ func calcNewQuotaForMemory(minimalMemoryNodeBytes int64) int64 {
 	return newQuota
 }
 
-func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
-	currentQuotaBytes, nodeWithMaxQuota, err := getCurrentEtcdQuotaBytes(input)
+func calcEtcdQuotaBackendBytes(ctx context.Context, input *go_hook.HookInput) int64 {
+	currentQuotaBytes, nodeWithMaxQuota, err := getCurrentEtcdQuotaBytes(ctx, input)
 	if err != nil {
 		input.Logger.Warn("Cannot get current etcd quota bytes", log.Err(err))
 		return currentQuotaBytes
 	}
 	input.Logger.Debug("Current etcd quota. Getting from node with max quota", slog.Int64("quota", currentQuotaBytes), slog.String("from", nodeWithMaxQuota))
 
-	masterNodeSnapshots := input.NewSnapshots.Get("master_nodes")
+	masterNodeSnapshots := input.Snapshots.Get("master_nodes")
 	node, err := getNodeWithMinimalMemory(masterNodeSnapshots)
 
 	if err != nil {
@@ -272,7 +273,7 @@ func calcEtcdQuotaBackendBytes(input *go_hook.HookInput) int64 {
 	return newQuotaBytes
 }
 
-func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
+func etcdQuotaBackendBytesHandler(ctx context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(etcdBackendBytesGroup)
 
 	var newQuotaBytes int64
@@ -281,7 +282,7 @@ func etcdQuotaBackendBytesHandler(input *go_hook.HookInput) error {
 	if userQuotaBytes.Exists() {
 		newQuotaBytes = userQuotaBytes.Int()
 	} else {
-		newQuotaBytes = calcEtcdQuotaBackendBytes(input)
+		newQuotaBytes = calcEtcdQuotaBackendBytes(ctx, input)
 	}
 
 	// use string because helm render big number in scientific format

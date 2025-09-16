@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -48,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateSelfSignedCA)
 
-func generateSelfSignedCA(input *go_hook.HookInput) error {
+func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 	selfSignedCA, err := certificate.GetOrCreateCa(input, caSnapshot, selfSignedSecretName)
 	if err != nil {
 		return err

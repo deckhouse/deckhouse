@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -57,8 +59,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
-func convertStaticClusterConfigurationHandler(input *go_hook.HookInput) error {
-	secret := input.NewSnapshots.Get("static_cluster_configuration")
+func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.HookInput) error {
+	secret := input.Snapshots.Get("static_cluster_configuration")
 
 	if len(secret) == 0 {
 		return nil
@@ -83,7 +85,7 @@ func internalNetworkFromStaticConfiguration(data []byte) (interface{}, error) {
 	var err error
 	var metaConfig *config.MetaConfig
 
-	metaConfig, err = config.ParseConfigFromData(string(data))
+	metaConfig, err = config.ParseConfigFromData(string(data), infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return nil, err
 	}

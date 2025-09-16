@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -40,8 +42,8 @@ func ObjFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetNamespace(), nil
 }
 
-func foundStsInNamespaces(input *go_hook.HookInput) error {
-	namespaces := set.NewFromSnapshot(input.NewSnapshots.Get("statefulsets")).Slice()
+func foundStsInNamespaces(_ context.Context, input *go_hook.HookInput) error {
+	namespaces := set.NewFromSnapshot(input.Snapshots.Get("statefulsets")).Slice()
 	input.Values.Set("kubeDns.internal.stsNamespaces", namespaces)
 	return nil
 }

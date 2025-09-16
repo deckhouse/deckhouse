@@ -28,13 +28,13 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```
 
   - alert: D8PrometheusOperatorTargetAbsent
@@ -59,7 +59,7 @@
         To resolve the issue, analyze the Deployment details:
 
         ```shell
-        kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+        d8 k -n d8-operator-prometheus describe deployment prometheus-operator
         ```
 
   - alert: D8PrometheusOperatorPodIsNotReady
@@ -87,13 +87,13 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```
 
   - alert: D8PrometheusOperatorPodIsNotRunning
@@ -120,11 +120,11 @@
         1. Analyze the Deployment details:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe deployment prometheus-operator
+           d8 k -n d8-operator-prometheus describe deployment prometheus-operator
            ```
 
         2. Examine the Pod's to determine why it is not running:
         
            ```shell
-           kubectl -n d8-operator-prometheus describe pod -l app=prometheus-operator
+           d8 k -n d8-operator-prometheus describe pod -l app=prometheus-operator
            ```

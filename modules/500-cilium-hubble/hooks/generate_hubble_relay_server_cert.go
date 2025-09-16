@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -52,11 +54,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateHubbleRelayServerCert)
 
-func generateHubbleRelayServerCert(input *go_hook.HookInput) error {
-	snap := input.Snapshots["hubble-relay-server-certs"]
+func generateHubbleRelayServerCert(ctx context.Context, input *go_hook.HookInput) error {
+	snaps := input.Snapshots.Get("hubble-relay-server-certs")
 
-	if len(snap) > 0 {
-		adm := snap[0].(certificate.Certificate)
+	if len(snaps) > 0 {
+		var adm certificate.Certificate
+		err := snaps[0].UnmarshalTo(&adm)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal hubble-relay-server-certs: %w", err)
+		}
 		input.Values.Set("ciliumHubble.internal.relay.serverCerts.cert", adm.Cert)
 		input.Values.Set("ciliumHubble.internal.relay.serverCerts.key", adm.Key)
 		input.Values.Set("ciliumHubble.internal.relay.serverCerts.ca", adm.CA)
@@ -64,7 +70,7 @@ func generateHubbleRelayServerCert(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ca := genCAAuthority(input)
+	ca := genCAAuthority(ctx, input)
 
 	const cn = "*.hubble-relay.cilium.io"
 	tls, err := certificate.GenerateSelfSignedCert(input.Logger,

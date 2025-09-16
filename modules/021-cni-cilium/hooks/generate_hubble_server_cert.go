@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -72,8 +73,8 @@ func filterAdmissionSecret(obj *unstructured.Unstructured) (go_hook.FilterResult
 	}, nil
 }
 
-func generateHubbleServerCert(input *go_hook.HookInput) error {
-	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "hubble-server-cert-secret")
+func generateHubbleServerCert(_ context.Context, input *go_hook.HookInput) error {
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, "hubble-server-cert-secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal hubble-server-cert-secret snapshot: %w", err)
 	}

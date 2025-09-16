@@ -17,11 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -63,15 +68,17 @@ func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func patchServiceWithManyPorts(input *go_hook.HookInput) error {
-	serviceSnapshots := input.Snapshots["service_helm_fix"]
-	for _, serviceSnapshot := range serviceSnapshots {
-		serviceInfoObj := serviceSnapshot.(serviceInfo)
+func patchServiceWithManyPorts(_ context.Context, input *go_hook.HookInput) error {
+	for serviceSnapshot, err := range sdkobjectpatch.SnapshotIter[serviceInfo](input.Snapshots.Get("service_helm_fix")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'service_helm_fix' snapshots: %w", err)
+		}
+
 		input.PatchCollector.Delete(
 			"v1",
 			"Service",
-			serviceInfoObj.Name,
-			serviceInfoObj.Namespace,
+			serviceSnapshot.Name,
+			serviceSnapshot.Namespace,
 		)
 	}
 	return nil

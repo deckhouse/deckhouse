@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,10 +81,10 @@ type upmeterDiscovery struct {
 }
 
 // collectDynamicProbeConfig sets names of objects to internal values
-func collectDynamicProbeConfig(input *go_hook.HookInput) error {
+func collectDynamicProbeConfig(_ context.Context, input *go_hook.HookInput) error {
 	// Input
 	key := "nodeManager.internal.upmeterDiscovery"
-	parseNodeGroupNames, err := parseNames(input.NewSnapshots.Get("nodegroups"))
+	parseNodeGroupNames, err := parseNames(input.Snapshots.Get("nodegroups"))
 	if err != nil {
 		return fmt.Errorf("failed to parse nodegroup names: %w", err)
 	}

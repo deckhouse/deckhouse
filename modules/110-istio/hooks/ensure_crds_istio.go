@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -34,7 +35,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
 }, dependency.WithExternalDependencies(ensureCRDs))
 
-func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
+func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// collect all istio versions (global + additional | uniq)
 	istioVersions := make([]string, 0)
 
@@ -65,5 +66,5 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
 
 	prefix := "/deckhouse/"
-	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/_crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
+	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/_crds/istio/"+CRDversionToInstall+"/*.yaml")(ctx, input, dc)
 }

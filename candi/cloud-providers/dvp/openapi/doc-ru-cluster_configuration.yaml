@@ -9,7 +9,7 @@ apiVersions:
         Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
         ```shell
-        kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+        d8 p edit provider-cluster-configuration
         ```
 
         > Чтобы изменения вступили в силу, после изменения параметров узлов выполните команду [`dhctl converge`](../../deckhouse-faq.html#изменение-конфигурации).

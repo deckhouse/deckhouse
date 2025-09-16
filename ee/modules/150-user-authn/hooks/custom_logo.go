@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"crypto/md5"
 	"fmt"
 
@@ -45,13 +46,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, customLogoHandler)
 
-func customLogoHandler(input *go_hook.HookInput) error {
+func customLogoHandler(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
 		input.Logger.Info("Cluster is not yet bootstrapped, skipping custom logo")
 		return nil
 	}
 
-	snaps := input.NewSnapshots.Get("logo-cm")
+	snaps := input.Snapshots.Get("logo-cm")
 	if len(snaps) == 0 {
 		input.Values.Set("userAuthn.internal.customLogo.enabled", false)
 		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)

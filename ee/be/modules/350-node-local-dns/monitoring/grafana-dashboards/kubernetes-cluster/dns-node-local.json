@@ -673,7 +673,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "instant": false,
           "intervalFactor": 1,
@@ -685,7 +685,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -785,7 +785,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) / sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_sum{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node) / sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{node}}",
@@ -884,7 +884,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
+          "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
           "format": "heatmap",
           "intervalFactor": 1,
           "legendFormat": "{{le}}",
@@ -1032,7 +1032,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (node)",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (node)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{pod}}",
@@ -1043,7 +1043,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
+          "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "Total",
@@ -1842,7 +1842,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (to)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (to)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -1854,7 +1854,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -1988,7 +1988,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (rcode)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -2000,7 +2000,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2135,7 +2135,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (upstream)",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval])) by (upstream)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -2146,7 +2146,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -2851,7 +2851,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{proxy_name=\"forward\", node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{node=~\"$node\", job=\"node-local-dns\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3025,7 +3025,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3036,7 +3036,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{node}}",
@@ -3169,7 +3169,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (rcode)",
               "format": "time_series",
               "instant": false,
               "intervalFactor": 1,
@@ -3181,7 +3181,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{proxy_name=\"forward\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_count{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3279,7 +3279,7 @@
                 "type": "prometheus",
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{proxy_name=\"forward\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
+              "expr": "sum(rate(coredns_proxy_request_duration_seconds_bucket{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (le)",
               "format": "heatmap",
               "intervalFactor": 1,
               "legendFormat": "{{le}}",
@@ -3427,7 +3427,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval])) by (node)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "{{pod}}",
@@ -3438,7 +3438,7 @@
               "datasource": {
                 "uid": "$ds_prometheus"
               },
-              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{proxy_name=\"forward\", proxy_name=\"forward\", job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
+              "expr": "sum(rate(coredns_proxy_healthcheck_failures_total{job=\"node-local-dns\", node=~\"$node\", to=~\"$upstream\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Total",
@@ -3561,7 +3561,7 @@
           "type": "prometheus",
           "uid": "$ds_prometheus"
         },
-        "definition": "label_values(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\"},to)",
+        "definition": "label_values(coredns_proxy_request_duration_seconds_sum{job=\"node-local-dns\"},to)",
         "hide": 2,
         "includeAll": true,
         "multi": true,
@@ -3569,7 +3569,7 @@
         "options": [],
         "query": {
           "qryType": 1,
-          "query": "label_values(coredns_proxy_request_duration_seconds_sum{proxy_name=\"forward\"},to)",
+          "query": "label_values(coredns_proxy_request_duration_seconds_sum{job=\"node-local-dns\"},to)",
           "refId": "PrometheusVariableQueryEditor-VariableQuery"
         },
         "refresh": 2,

@@ -22,7 +22,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manager"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -322,7 +321,17 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return err
 	}
 
-	if !infrastructureprovider.NeedToUseOpentofu(metaConfig) {
+	providersGetter := ctx.ProviderGetter()
+	if providersGetter == nil {
+		return fmt.Errorf("Provider getter not set for converge migration")
+	}
+
+	provider, err := providersGetter(ctx.Ctx(), metaConfig)
+	if err != nil {
+		return err
+	}
+
+	if !provider.NeedToUseTofu() {
 		log.InfoF("Skipping migration. Provider %s does not support opentofu now\n", metaConfig.ProviderName)
 		return nil
 	}
@@ -490,11 +499,15 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			}
 		}
 
-		baseRunner := ctx.InfrastructureContext(metaConfig).GetConvergeBaseInfraRunner(metaConfig, infrastructure.BaseInfraRunnerOptions{
+		baseRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeBaseInfraRunner(ctx.Ctx(), metaConfig, infrastructure.BaseInfraRunnerOptions{
 			StateCache:                       ctx.StateCache(),
 			ClusterState:                     clusterState,
 			AdditionalStateSaverDestinations: []infrastructure.SaverDestination{infrastructurestate.NewClusterStateSaver(ctx)},
 		}, ctx.ChangesSettings().AutomaticSettings)
+
+		if err != nil {
+			return err
+		}
 
 		outputs, err := infrastructure.ApplyPipeline(ctx.Ctx(), baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 		if err != nil {

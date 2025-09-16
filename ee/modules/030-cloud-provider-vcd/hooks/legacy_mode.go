@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -105,8 +106,8 @@ func applyCloudProviderDiscoveryDataSecretVCDAPIVersionFilter(obj *unstructured.
 	return discoveryData.VCDAPIVersion, nil
 }
 
-func handleLegacyMode(input *go_hook.HookInput) error {
-	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "legacy_mode")
+func handleLegacyMode(_ context.Context, input *go_hook.HookInput) error {
+	legacyModeBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, "legacy_mode")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal legacy_mode snapshot: %w", err)
 	}
@@ -124,7 +125,7 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	vcdAPIVers, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "vcd_api_version")
+	vcdAPIVers, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "vcd_api_version")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal vcd_api_version snapshot: %w", err)
 	}
@@ -132,7 +133,7 @@ func handleLegacyMode(input *go_hook.HookInput) error {
 	if len(vcdAPIVers) == 0 {
 		input.Logger.Warn("VCD API version not defined")
 
-		snaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.NewSnapshots, "legacy_mode")
+		snaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, "legacy_mode")
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal 'legacy_mode' snapshot: %w", err)
 		}

@@ -73,6 +73,8 @@ metadata:
     # need to prometheus scrape "podMonitor/d8-monitoring/custom-pod"
     prometheus.deckhouse.io/custom-target: registry-modules-watcher
     app.kubernetes.io/part-of: deckhouse-docs
+  annotations:
+    prometheus.deckhouse.io/sample-limit: "10000"
 spec:
   clusterIP: None
   selector:

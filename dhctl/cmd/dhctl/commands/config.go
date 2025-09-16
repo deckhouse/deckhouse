@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -38,7 +39,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
 		if err != nil {
 			return err
 		}
@@ -71,7 +72,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
 		if err != nil {
 			return err
 		}
@@ -119,6 +120,8 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 		var err error
 		var metaConfig *config.MetaConfig
 
+		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider()
+
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1
 		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
@@ -127,12 +130,12 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
 			}
-			metaConfig, err = config.ParseConfigFromData(string(data))
+			metaConfig, err = config.ParseConfigFromData(string(data), preparatorProvider)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig([]string{app.ParseInputFile})
+			metaConfig, err = config.ParseConfig([]string{app.ParseInputFile}, preparatorProvider)
 			if err != nil {
 				return err
 			}

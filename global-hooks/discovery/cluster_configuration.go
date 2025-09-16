@@ -15,18 +15,18 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
@@ -68,8 +68,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, clusterConfiguration)
 
-func clusterConfiguration(input *go_hook.HookInput) error {
-	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.NewSnapshots, "clusterConfiguration")
+func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
+	currentConfig, err := sdkobjectpatch.UnmarshalToStruct[ClusterConfigurationYaml](input.Snapshots, "clusterConfiguration")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterConfiguration snapshot: %w", err)
 	}
@@ -86,7 +86,9 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		configYamlBytes := currentConfig[0]
 
 		var metaConfig *config.MetaConfig
-		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content))
+		// we use dummy preparator because we do not need any preparation and validation from cloud providers
+		// we use only ClusterConfiguration here
+		metaConfig, err = config.ParseConfigFromData(string(configYamlBytes.Content), config.DummyPreparatorProvider())
 		if err != nil {
 			return err
 		}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -92,8 +93,8 @@ func applySAFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	}, nil
 }
 
-func disableDefaultSATokenAutomount(input *go_hook.HookInput) error {
-	sas, err := sdkobjectpatch.UnmarshalToStruct[SA](input.NewSnapshots, "default-sa")
+func disableDefaultSATokenAutomount(_ context.Context, input *go_hook.HookInput) error {
+	sas, err := sdkobjectpatch.UnmarshalToStruct[SA](input.Snapshots, "default-sa")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal default-sa snapshot: %w", err)
 	}

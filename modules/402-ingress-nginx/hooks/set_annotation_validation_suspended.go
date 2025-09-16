@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -69,9 +71,9 @@ func setAnnotationValidationSuspendedFilterIngressNginxController(obj *unstructu
 	return ctrl, nil
 }
 
-func setAnnotationValidationSuspendedHandleIngressNginxControllers(input *go_hook.HookInput) error {
-	controllersSnapshot := input.NewSnapshots.Get("ingressNginxControllers")
-	configMapSnapshot := input.NewSnapshots.Get("ingressNginxControllersConfigMap")
+func setAnnotationValidationSuspendedHandleIngressNginxControllers(_ context.Context, input *go_hook.HookInput) error {
+	controllersSnapshot := input.Snapshots.Get("ingressNginxControllers")
+	configMapSnapshot := input.Snapshots.Get("ingressNginxControllersConfigMap")
 
 	// Exit early if the ConfigMap already exists (annotations were already applied once)
 	// or if there are fewer than 5 controllers (do not proceed with annotation patching)

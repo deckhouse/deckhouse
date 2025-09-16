@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -60,8 +61,8 @@ func applyNodeUsersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
-func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
-	nodeUserSnaps := input.NewSnapshots.Get("node_user")
+func addStatusSubresourceForNodeUser(_ context.Context, input *go_hook.HookInput) error {
+	nodeUserSnaps := input.Snapshots.Get("node_user")
 	if len(nodeUserSnaps) == 0 {
 		return nil
 	}

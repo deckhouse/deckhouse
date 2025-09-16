@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -176,17 +177,17 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
+	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName) }()
+	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var sshClient node.SSHClient
 	err = log.Process("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
-			s.schemaStore,
+			s.params.SchemaStore,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -200,6 +201,13 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
 		}
 		return nil
 	})
@@ -227,6 +235,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 			Values:   p.request.ResourcesValues.AsMap(),
 		},
 		ScanOnly: p.request.ScanOnly,
+		TmpDir:   s.params.TmpDir,
 	})
 
 	result, attachErr := attacher.Attach(ctx)

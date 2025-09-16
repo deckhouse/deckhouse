@@ -100,7 +100,7 @@ type provider struct {
 	} `json:"oidc"`
 }
 
-func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) error {
+func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// check proxy rollout conditions
 	if !input.Values.Get("userAuthn.publishAPI.enabled").Bool() {
 		return nil
@@ -141,7 +141,7 @@ func generateProxyAuthCert(input *go_hook.HookInput, dc dependency.Container) er
 	}
 
 	// check certificate renewal necessity
-	snap := input.NewSnapshots.Get("secret")
+	snap := input.Snapshots.Get("secret")
 	if len(snap) > 0 {
 		var secret secret
 		if err := snap[0].UnmarshalTo(&secret); err != nil {

@@ -51,7 +51,11 @@ The `(default)` marker next to the class name indicates that this `StorageClass`
 If the `StorageClass` is missing by default in the cluster, the user must explicitly specify the required `StorageClass` in the resource specification.
 Deckhouse Virtualization Platform also allows you to set individual settings for storing disks and images.
 
-### Storage class settings for disks
+How to find out the available storage options on the platform in the web interface:
+
+- Go to the "System" tab, then to the "Storage" section → "Storage Classes".
+
+## Storage class settings for disks
 
 The storage class settings for disks are defined in the `.spec.settings.virtualDisks` parameter of the module settings.
 Example:
@@ -70,7 +74,7 @@ defaultStorageClassName: sc-1
 - `allowedStorageClassNames` — (optional) is a list of valid `StorageClass` for creating a `VirtualDisk`, which can be explicitly specified in the resource specification.
 - `defaultStorageClassName` — (optional) is the `StorageClass` used by default when creating a `VirtualDisk` if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
 
-### Fine-tuning storage classes for disks
+## Fine-tuning storage classes for disks
 
 When creating a disk, the controller will automatically select the most optimal parameters supported by the storage based on the data it knows.
 Priorities for configuring `PersistentVolumeClaim` parameters when creating a disk by automatically detecting storage characteristics:
@@ -82,7 +86,7 @@ Priorities for configuring `PersistentVolumeClaim` parameters when creating a di
   
 If the storage is unknown and it is impossible to determine its parameters automatically, the mode is used: RWO + FileSystem
 
-### Creating an empty disk
+## Creating an empty disk
 
 Empty disks are typically used for installing operating systems or storing data.
 
@@ -134,7 +138,18 @@ NAME         PHASE     CAPACITY   AGE
 blank-disk   Ready     100Mi      1m2s
 ```
 
-### Creating a disk from an image
+How to create an empty disk in the web interface (this step can be skipped and performed when creating a VM):
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "VM Disks" section.
+- Click "Create Disk".
+- In the form that opens, enter `blank-disk` in the "Disk Name" field.
+- In the "Size" field, set the size with the measurement units `100Mi`.
+- In the "StorageClass Name" field, you can select a StorageClass or leave the default selection.
+- Click the "Create" button.
+- The disk status is displayed at the top left, under the disk name.
+
+## Creating a disk from an image
 
 Disks can be created and populated with data from previously created images such as [ClusterVirtualImage](../../../reference/cr/clustervirtualimage.html) and [VirtualImage](../../../reference/cr/virtualimage.html).
 
@@ -215,7 +230,20 @@ linux-vm-root    Ready   10Gi       7m52s
 linux-vm-root-2  Ready   2590Mi     7m15s
 ```
 
-### Resizing a disk
+How to create a disk from an image in the web interface (this step can be skipped and performed when creating a VM):
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "VM Disks" section.
+- Click "Create Disk".
+- In the form that opens, enter `linux-vm-root` in the "Disk Name" field.
+- In the "Source" field, make sure that the "Project" checkbox is selected.
+- Select the image you want from the drop-down list.
+- In the "Size" field, you can change the size to a larger one or leave the default selection.
+- In the "StorageClass Name" field, you can select a StorageClass or leave the default selection.
+- Click the "Create" button.
+- The disk status is displayed at the top left, under the disk name.
+
+## Resizing a disk
 
 The size of disks can be increased even if they are already attached to a running virtual machine. Changes are made to the `spec.persistentVolumeClaim`.size field:
 
@@ -235,7 +263,7 @@ linux-vm-root   Ready   10Gi       10m
 Apply the changes:
 
 ```bash
-kubectl patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
+d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
 ```
 
 Check the size after the change:
@@ -250,3 +278,23 @@ Example output:
 NAME          PHASE   CAPACITY   AGE
 linux-vm-root   Ready   11Gi       12m
 ```
+
+How to change the disk size in the web interface:
+
+Method #1:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "VM Disks" section.
+- Select the desired disk and click on the pencil icon in the "Size" column.
+- In the pop-up window, you can change the size to a larger one.
+- Click on the "Apply" button.
+- The disk status is displayed in the "Status" column.
+
+Method #2:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "VM Disks" section.
+- Select the desired disk and click on its name.
+- In the form that opens, on the "Configuration" tab, in the "Size" field, you can change the size to a larger one.
+- Click on the "Save" button that appears.
+- The disk status is displayed at the top left, under its name.

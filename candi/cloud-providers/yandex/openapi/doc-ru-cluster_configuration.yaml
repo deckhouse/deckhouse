@@ -9,7 +9,7 @@ apiVersions:
       Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+      d8 p edit provider-cluster-configuration
       ```
 
       > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
@@ -213,7 +213,7 @@ apiVersions:
             description: |
               Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию.
 
-              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
+              > **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере.
             type: object
             properties:
               cores:

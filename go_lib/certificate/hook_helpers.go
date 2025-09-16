@@ -41,7 +41,7 @@ func ApplyCaSelfSignedCertFilter(obj *unstructured.Unstructured) (go_hook.Filter
 }
 
 func GetOrCreateCa(input *go_hook.HookInput, snapshot, cn string) (*Authority, error) {
-	caList, err := sdkobjectpatch.UnmarshalToStruct[Authority](input.NewSnapshots, snapshot)
+	caList, err := sdkobjectpatch.UnmarshalToStruct[Authority](input.Snapshots, snapshot)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal %q snapshot: %w", snapshot, err)
 	}

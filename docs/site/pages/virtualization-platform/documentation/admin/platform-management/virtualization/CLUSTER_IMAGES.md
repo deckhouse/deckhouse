@@ -32,7 +32,7 @@ Examples of resources for obtaining pre-installed virtual machine disk images:
   - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
   - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
 - RockyLinux
-  - [9.5](https://download.rockylinux.org/pub/rocky/9.5/images/x86_64/)
+  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/)
   - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
 - CentOS
   - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
@@ -191,6 +191,15 @@ Additional information about the downloaded image can be retrieved by describing
 d8 k describe cvi ubuntu-22-04
 ```
 
+How to create an image from an HTTP server in the web interface:
+
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
+- Click "Create Image", then select "Load data from link (HTTP)" from the drop-down menu.
+- Enter the image name in the "Image Name" field.
+- Specify the link to the image in the "URL" field.
+- Click "Create".
+- Wait until the image status changes to `Ready`.
+
 ### Creating an image from a container registry
 
 An image stored in a container registry has a specific format. Let’s consider an example of this format:
@@ -237,6 +246,15 @@ An image stored in a container registry has a specific format. Let’s consider 
           image: docker.io/<username>/ubuntu2204:latest
     EOF
     ```
+
+How to create an image from the container registry in the web interface:
+
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
+- Click "Create Image", then select "Load data from container image" from the drop-down list.
+- Enter the image name in the "Image Name" field.
+- Specify the link to the image in the "Image in Container Registry" field.
+- Click "Create".
+- Wait until the image changes to the `Ready` status.
 
 ### Uploading an image from the command line
 
@@ -300,3 +318,13 @@ In the output, you should see information about the image's phase:
 NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
+
+How to perform the operation in the web interface:
+
+- Go to the "System" tab, then to the "Virtualization" → "Cluster Images" section.
+- Click "Create Image", then select "Upload from Computer" from the drop-down menu.
+- Enter the image name in the "Image Name" field.
+- In the "Upload File" field, click the "Select a file on your computer" link.
+- Select the file in the file manager that opens.
+- Click the "Create" button.
+- Wait until the image changes to `Ready` status.

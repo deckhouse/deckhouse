@@ -22,7 +22,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -45,25 +44,35 @@ type Context struct {
 	changeParams          infrastructure.ChangeActionSettings
 	stateStore            stateStore
 	stateChecker          infrastructure.StateChecker
+
+	providerGetter infrastructure.CloudProviderGetter
 }
 
-func newContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
+type Params struct {
+	KubeClient     *client.KubernetesClient
+	Cache          dstate.Cache
+	ChangeParams   infrastructure.ChangeActionSettings
+	ProviderGetter infrastructure.CloudProviderGetter
+}
+
+func newContext(ctx context.Context, params Params) *Context {
 	return &Context{
-		kubeClient:   kubeClient,
-		stateCache:   cache,
-		changeParams: changeParams,
-		ctx:          ctx,
+		providerGetter: params.ProviderGetter,
+		kubeClient:     params.KubeClient,
+		stateCache:     params.Cache,
+		changeParams:   params.ChangeParams,
+		ctx:            ctx,
 
 		stateStore: newInSecretStateStore(),
 	}
 }
 
-func NewContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, changeParams infrastructure.ChangeActionSettings) *Context {
-	return newContext(ctx, kubeClient, cache, changeParams)
+func NewContext(ctx context.Context, params Params) *Context {
+	return newContext(ctx, params)
 }
 
-func NewCommanderContext(ctx context.Context, kubeClient *client.KubernetesClient, cache dstate.Cache, params *commander.CommanderModeParams, changeParams infrastructure.ChangeActionSettings) *Context {
-	c := newContext(ctx, kubeClient, cache, changeParams)
+func NewCommanderContext(ctx context.Context, contextParams Params, params *commander.CommanderModeParams) *Context {
+	c := newContext(ctx, contextParams)
 	c.commanderParams = params
 	return c
 }
@@ -83,6 +92,11 @@ func (c *Context) WithInfrastructureContext(ctx *infrastructure.Context) *Contex
 	return c
 }
 
+func (c *Context) WithProviderGetter(getter infrastructure.CloudProviderGetter) *Context {
+	c.providerGetter = getter
+	return c
+}
+
 func (c *Context) KubeProvider() kubernetes.KubeClientProvider {
 	return c
 }
@@ -99,7 +113,7 @@ func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastr
 	if c.infrastructureContext != nil {
 		ctx = c.infrastructureContext
 	} else {
-		ctx = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+		ctx = infrastructure.NewContextWithProvider(c.providerGetter)
 	}
 
 	ctx.WithStateChecker(c.stateChecker)
@@ -121,6 +135,10 @@ func (c *Context) StateCache() dstate.Cache {
 
 func (c *Context) CommanderMode() bool {
 	return c.commanderParams != nil
+}
+
+func (c *Context) ProviderGetter() infrastructure.CloudProviderGetter {
+	return c.providerGetter
 }
 
 func (c *Context) StarExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {

@@ -34,7 +34,7 @@ To add a bare-metal server to a cluster as a static node, follow these steps:
 
    ```shell
    NODE_GROUP=worker
-   kubectl -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
    ```
 
 1. Pre-configure the new node according to your environment specifics:
@@ -279,7 +279,7 @@ one into the `worker` group, and two others into the `front` group.
 ## How do I know if something went wrong?
 
 If a node in a NodeGroup isn't updated
-(the`UPTODATE` value is less than the `NODES` value when executing the `kubectl get nodegroup` command)
+(the`UPTODATE` value is less than the `NODES` value when executing the `d8 k get nodegroup` command)
 or you assume there are other problems that may be related to the `node-manager` module,
 check the logs of the `bashible` service. The `bashible` service runs on each node managed by the `node-manager` module.
 
@@ -328,8 +328,8 @@ To clean up a node for adding to another cluster, follow these steps:
 1. Remove the node from the Kubernetes cluster:
 
    ```shell
-   kubectl drain <node> --ignore-daemonsets --delete-local-data
-   kubectl delete node <node>
+   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k delete node <node>
    ```
 
 1. Run the clean-up script on the node:
@@ -396,8 +396,8 @@ To switch an existing manually added static node to another NodeGroup,
 change its group label and delete its role label using the following commands:
 
 ```shell
-kubectl label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
-kubectl label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
+d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>
+d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 ```
 
 Applying the changes will take some time.
@@ -411,7 +411,7 @@ To do that, follow these steps:
 1. Find the node that is currently bootstrapping:
 
    ```shell
-   kubectl get instances | grep Pending
+   d8 k get instances | grep Pending
    ```
 
    An output example:
@@ -423,7 +423,7 @@ To do that, follow these steps:
 1. Get information about connection parameters for viewing logs:
 
    ```shell
-   kubectl get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
+   d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    ```
 
    An output example:

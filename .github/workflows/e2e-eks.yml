@@ -327,7 +327,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -347,6 +346,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -642,7 +642,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -891,7 +892,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -911,6 +911,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -1206,7 +1207,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -1455,7 +1457,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -1475,6 +1476,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -1770,7 +1772,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2019,7 +2022,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2039,6 +2041,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2334,7 +2337,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -2583,7 +2587,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -2603,6 +2606,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2898,7 +2902,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -3147,7 +3152,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3167,6 +3171,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -3462,7 +3467,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -3711,7 +3717,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -3731,6 +3736,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4026,7 +4032,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -4275,7 +4282,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -4295,6 +4301,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -4590,7 +4597,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -4839,7 +4847,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -4859,6 +4866,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5154,7 +5162,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -5403,7 +5412,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -5423,6 +5431,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -5718,7 +5727,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -5967,7 +5977,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -5987,6 +5996,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -6282,7 +6292,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>
@@ -6531,7 +6542,6 @@ jobs:
 
       # </template: update_comment_on_start>
 
-
       # <template: login_dev_registry_step>
       - name: Check dev registry credentials
         id: check_dev_registry
@@ -6551,6 +6561,7 @@ jobs:
           password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           logout: false
       # </template: login_dev_registry_step>
+
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -6846,7 +6857,8 @@ jobs:
           -v ${TMP_DIR_PATH}:/tmp \
           ${TERRAFORM_IMAGE_NAME} \
           bash -c "/deckhouse/testing/cloud_layouts/script_eks.sh wait_deckhouse_ready && \
-          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready"
+          /deckhouse/testing/cloud_layouts/script_eks.sh wait_cluster_ready &&\
+          /deckhouse/testing/cloud_layouts/script_eks.sh trigger_deckhouse_update"
 
         # </template: e2e_run_template>
   # </template: e2e_tests_create_debug_logs>

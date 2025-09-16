@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -104,8 +105,8 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 	return "", nil
 }
 
-func migrateDiskGBHandler(input *go_hook.HookInput) error {
-	providerSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.NewSnapshots, "provider_configuration")
+func migrateDiskGBHandler(ctx context.Context, input *go_hook.HookInput) error {
+	providerSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.Snapshots, "provider_configuration")
 	if err != nil {
 		return fmt.Errorf("unmarshal provider_configuration: %w", err)
 	}
@@ -114,7 +115,7 @@ func migrateDiskGBHandler(input *go_hook.HookInput) error {
 	}
 	providerConfigSecret := providerSecrets[0]
 
-	needMigration, err := needMigrateForDeckhouseInstallVersion(input)
+	needMigration, err := needMigrateForDeckhouseInstallVersion(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -247,8 +248,8 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, err
 }
 
 // check install version. if version > 1.62 we do not need migration because right default was set
-func needMigrateForDeckhouseInstallVersion(input *go_hook.HookInput) (bool, error) {
-	versions, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "install_version")
+func needMigrateForDeckhouseInstallVersion(_ context.Context, input *go_hook.HookInput) (bool, error) {
+	versions, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "install_version")
 	if err != nil {
 		return false, fmt.Errorf("unmarshal install_version: %w", err)
 	}

@@ -67,6 +67,8 @@ type Params struct {
 	*commander.CommanderModeParams
 
 	InfrastructureContext *infrastructure.Context
+
+	TmpDir string
 }
 
 type ClusterDestroyer struct {
@@ -85,6 +87,8 @@ type ClusterDestroyer struct {
 
 	CommanderMode bool
 	CommanderUUID uuid.UUID
+
+	tmpDir string
 }
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
@@ -127,7 +131,15 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache))
 	}
 
-	clusterInfra := controller.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.InfrastructureContext, controller.ClusterInfraOptions{PhasedExecutionContext: pec})
+	clusterInfra := controller.NewClusterInfraWithOptions(
+		terraStateLoader,
+		state.cache,
+		params.InfrastructureContext,
+		controller.ClusterInfraOptions{
+			PhasedExecutionContext: pec,
+			TmpDir:                 params.TmpDir,
+		},
+	)
 
 	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{}, d8Destroyer)
 
@@ -145,6 +157,8 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		PhasedExecutionContext: pec,
 		CommanderMode:          params.CommanderMode,
 		CommanderUUID:          params.CommanderUUID,
+
+		tmpDir: params.TmpDir,
 	}, nil
 }
 

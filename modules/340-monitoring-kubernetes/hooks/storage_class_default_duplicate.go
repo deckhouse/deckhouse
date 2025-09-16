@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	storage "k8s.io/api/storage/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type StorageClassDup struct {
@@ -73,22 +76,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, delectStorageClassDuplicate)
 
-func delectStorageClassDuplicate(input *go_hook.HookInput) error {
+func delectStorageClassDuplicate(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
-	storageclasses := input.Snapshots["storageclasses"]
+	storageclasses := input.Snapshots.Get("storageclasses")
 
 	var defaultStorageclasses int64
-	for _, o := range storageclasses {
-		sc := o.(StorageClassDup)
+	for sc, err := range sdkobjectpatch.SnapshotIter[StorageClassDup](storageclasses) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'storageclasses' snapshots: %w", err)
+		}
+
 		if sc.IsDefault {
 			defaultStorageclasses++
 		}
 	}
 
 	if defaultStorageclasses > 1 {
-		for _, o := range storageclasses {
-			sc := o.(StorageClassDup)
+		for sc, err := range sdkobjectpatch.SnapshotIter[StorageClassDup](storageclasses) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over 'storageclasses' snapshots: %w", err)
+			}
+
 			if sc.IsDefault {
 				input.MetricsCollector.Set(
 					"storage_class_default_duplicate",

@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -90,12 +91,18 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	metaConfig, err := config.ParseConfig(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           log.GetDefaultLogger(),
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
@@ -145,6 +152,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					terraStateLoader, stateCache, b.InfrastructureContext,
 					controller.ClusterInfraOptions{
 						PhasedExecutionContext: b.PhasedExecutionContext,
+						TmpDir:                 b.TmpDir,
 					},
 				)
 			} else {

@@ -19,6 +19,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -68,9 +69,9 @@ func applyClusterAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hoo
 	return car, nil
 }
 
-func handleClusterAuthorizationRulesWithDeprecatedSpec(input *go_hook.HookInput) error {
+func handleClusterAuthorizationRulesWithDeprecatedSpec(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_deprecated_car_spec")
-	for car, err := range sdkobjectpatch.SnapshotIter[ObjectCAR](input.NewSnapshots.Get("cluster_authorization_rules")) {
+	for car, err := range sdkobjectpatch.SnapshotIter[ObjectCAR](input.Snapshots.Get("cluster_authorization_rules")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'cluster_authorization_rules' snapshot: %w", err)
 		}

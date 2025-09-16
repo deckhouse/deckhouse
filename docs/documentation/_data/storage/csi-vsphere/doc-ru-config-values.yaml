@@ -1,0 +1,43 @@
+type: object
+properties:
+  host:
+    description: |
+      Доменное имя сервера vCenter.
+  username:
+    description: |
+      Login ID.
+  password:
+    description: |
+      Пароль.
+  insecure:
+    description: |
+      Установите `true`, если vCenter использует самоподписанный сертификат.
+  vmFolderPath:
+    description: |
+      Путь до VirtualMachine Folder, в котором будут создаваться склонированные виртуальные машины.
+  regionTagCategory:
+    description: |
+      Имя категории тегов, использующихся для идентификации региона (vSphere Datacenter).
+  zoneTagCategory:
+    description: |
+      Имя категории тегов, использующихся для идентификации зоны (vSphere Cluster).
+  disableTimesync:
+    description: |
+      Отключение синхронизации времени со стороны vSphere.
+      > **Внимание.** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
+  region:
+    description: |
+      Тег, прикрепленный к vSphere Datacenter, в котором будут происходить все операции: заказ виртуальных машин, размещение их дисков на datastore, подключение к сети.
+  zones:
+    description: |
+      Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер.
+  storageClass:
+    properties:
+      exclude:
+        description: |
+          Полные имена (или regex выражения имен) StorageClass'ов, которые не будут созданы в кластере.
+      compatibilityFlag:
+        description: |
+          Флаг, разрешающий использование старой версии CSI:
+            * `Legacy` — используется старая версия драйвера — только диски FCD, без онлайн-изменения размера;
+            * `Migration` — в этом случае оба драйвера будут доступны в кластере одновременно. Этот режим используется для миграции со старого драйвера.

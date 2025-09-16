@@ -159,6 +159,45 @@ If a VM is configured with 2 cores, it falls into the 1–4 cores range. In that
 
 In addition to VM sizing, the policy also helps enforce the desired maximum CPU oversubscription. For example, specifying `coreFraction: 20%` in the policy ensures that each VM gets at least 20% of CPU time per core, effectively allowing up to 5:1 oversubscription.
 
+How to create a virtual machine in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Click "Create".
+- In the form that opens, enter `linux-vm` in the "Name" field.
+- In the "Machine Parameters" section, set `1` in the "Cores" field.
+- In the "Machine Parameters" section, set `10%` in the "CPU Share" field.
+- In the "Machine Parameters" section, set `1Gi` in the "Size" field.
+- In the "Disks and Images" section, in the "Boot Disks" subsection, click "Add".
+- In the form that opens, click "Choose from existing".
+- Select the `linux-vm-root` disk from the list.
+- Scroll down to the "Additional Parameters" section.
+- Enable the "Cloud-init" switch.
+- Enter your data in the field that appears:
+  
+  ```yaml
+  #cloud-config
+  package_update: true
+  packages:
+    - nginx
+    - qemu-guest-agent
+  run_cmd:
+    - systemctl daemon-reload
+    - systemctl enable --now nginx.service
+    - systemctl enable --now qemu-guest-agent.service
+  ssh_pwauth: True
+  users:
+  - name: cloud
+    passwd: '$6$rounds=4096$saltsalt$fPmUsbjAuA7mnQNTajQM6ClhesyG0.yyQhvahas02ejfMAq1ykBo1RquzS0R6GgdIDlvS.kbUwDablGZKZcTP/'
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: False
+  final_message: "The system is finally up, after $UPTIME seconds"
+  ```
+
+- Click the "Create" button.
+- The VM status is displayed at the top left, under its name.
+
 ## Virtual Machine Life Cycle
 
 A virtual machine (VM) goes through several phases in its existence, from creation to deletion. These stages are called phases and reflect the current state of the VM. To understand what is happening with the VM, you should check its status (`.status.phase` field), and for more detailed information — `.status.conditions` block. All the main phases of the VM life cycle, their meaning and peculiarities are described below.
@@ -394,6 +433,15 @@ Example command to connect via SSH:
 d8 v ssh cloud@linux-vm --local-ssh
 ```
 
+How to connect to a virtual machine in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- In the form that opens, go to the "TTY" tab to work with the serial console.
+- In the form that opens, go to the "VNC" tab to connect via VNC.
+- Go to the window that opens. Here you can connect to the VM.
+
 ## Startup policy and virtual machine state management
 
 The startup policy of a virtual machine is designed for automated management of the virtual machine's state. It is defined as the `.spec.runPolicy` parameter in the virtual machine's specification. The following policies are supported:
@@ -402,6 +450,14 @@ The startup policy of a virtual machine is designed for automated management of 
 - `AlwaysOn` — the VM remains running after creation, even if it is shut down by the OS. If a failure occurs, the VM is automatically restarted.
 - `Manual` — after creation, the VM state is managed manually by the user using commands or operations.
 - `AlwaysOff` — the VM remains off after creation. Turning it on via commands or operations is not possible.
+
+How to select a VM startup policy in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the desired VM from the list and click on its name.
+- On the "Configuration" tab, scroll down to the "Additional Settings" section.
+- Select the desired policy from the Startup Policy combo box.
 
 The state of the virtual machine can be managed using the following methods:
 
@@ -448,6 +504,13 @@ The possible operations:
 | `d8 v restart` | `Restart` | Restart the VM                             |
 | `d8 v evict`   | `Evict`   | Migrate the VM to another, arbitrary node  |
 
+How to perform the operation in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the desired virtual machine from the list and click the ellipsis button.
+- In the pop-up menu, you can select possible operations for the VM.
+
 ## Changing the configuration of a virtual machine
 
 The configuration of a virtual machine can be modified at any time after the `VirtualMachine` resource is created. However, how these changes are applied depends on the current phase of the virtual machine and the nature of the changes.
@@ -471,6 +534,14 @@ If the virtual machine is running (`.status.phase: Running`), the method of appl
 | `.spec.affinity`                        | EE, SE+: Applies immediately, CE: Only after VM restart |
 | `.spec.nodeSelector`                    | EE, SE+: Applies immediately, CE: Only after VM restart |
 | `.spec.*`                               | Only after VM restart                                   |
+
+How to change the VM configuration in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- You are now on the "Configuration" tab, where you can make changes.
+- The list of changed parameters and a warning if the VM needs to be restarted are displayed at the top of the page.
 
 Let's consider an example of changing the virtual machine's configuration:
 
@@ -571,6 +642,15 @@ spec:
   disruptions:
     restartApprovalMode: Automatic
 ```
+
+How to perform the operation in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- On the "Configuration" tab, scroll down to the "Additional Settings" section.
+- Enable the "Auto-apply changes" switch.
+- Click on the "Save" button that appears.
 
 ## Initial configuration scripts
 
@@ -676,6 +756,13 @@ When changing placement parameters:
 - In the CE edition: The VM will require a reboot to apply.
 {% endalert %}
 
+How to manage VM placement parameters by nodes in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- On the "Configuration" tab, scroll down to the "Placement" section.
+
 ### Simple label binding — `nodeSelector`
 
 `nodeSelector` is the simplest way to control the placement of virtual machines using a set of labels. It allows you to specify which nodes can run virtual machines by selecting nodes with the required labels.
@@ -689,6 +776,13 @@ spec:
 ![nodeSelector](/../../../../images/virtualization-platform/placement-nodeselector.png)
 
 In this example, there are three nodes in the cluster: two with fast disks (`disktype=ssd`) and one with slow disks (`disktype=hdd`). The virtual machine will only be placed on nodes that have the `disktype` label with the value `ssd`.
+
+How to perform the operation in the web interface in the [Placement section](#placement-of-vms-by-nodes):
+
+- Click "Add" in the "Run on nodes" → "Select nodes by labels" block.
+- In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.nodeSelector` settings.
+- To confirm the key parameters, click the "Enter" button.
+- Click the "Save" button that appears.
 
 ### Preferred affinity
 
@@ -741,6 +835,14 @@ spec:
 
 In this example, the virtual machine will be placed on nodes that do **not** have any virtual machine labeled with `server: database` on the same node, as the goal is to avoid co-location of certain virtual machines.
 
+How to set "preferences" and "mandatories" for placing virtual machines in the web interface in the [Placement section](#placement-of-vms-by-nodes):
+
+- Click "Add" in the "Run VM near other VMs" block.
+- In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.affinity.virtualMachineAndPodAffinity` settings.
+- To confirm the key parameters, click the "Enter" button.
+- Select one of the options "On one server" or "In one zone" that corresponds to the `topologyKey` parameter.
+- Click the "Save" button that appears.
+
 ### Avoiding Co-Location — AntiAffinity
 
 `AntiAffinity` is the opposite of `Affinity`, and it allows setting requirements to avoid placing virtual machines on the same nodes. This is useful for load distribution or ensuring fault tolerance.
@@ -772,6 +874,15 @@ spec:
 
 In this example, the created virtual machine will not be placed on the same node as the virtual machine with the label `server: database`.
 
+How to configure VM AntiAffinity on nodes in the web interface in the [Placement section](#placement-of-vms-by-nodes):
+
+- Click "Add" in the "Identify similar VMs by labels" → "Select labels" block.
+- In the pop-up window, you can set the "Key" and "Value" of the key that corresponds to the `spec.affinity.virtualMachineAndPodAntiAffinity` settings.
+- To confirm the key parameters, click the "Enter" button.
+- Check the boxes next to the labels you want to use in the placement settings.
+- Select one of the options in the "Select options" section.
+- Click the "Save" button that appears.
+
 ## Static and dynamic Block Devices
 
 Block devices can be divided into two types based on how they are connected: static and dynamic (hotplug).
@@ -800,6 +911,14 @@ name: <virtual-disk-name>
 - kind: VirtualImage
 name: <virtual-image-name>
 ```
+
+How to work with static block devices in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- On the "Configuration" tab, scroll down to the "Disks and Images" section.
+- You can add, extract, delete, resize, and reorder static block devices in the "Boot Disks" section.
 
 ### Dynamic Block Devices
 
@@ -884,6 +1003,14 @@ spec:
 EOF
 ```
 
+How to work with dynamic block devices in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- On the "Configuration" tab, scroll down to the "Disks and Images" section.
+- You can add, extract, delete, and resize dynamic block devices in the "Additional Disks" section.
+
 ### Organizing interaction with virtual machines
 
 Virtual machines can be accessed directly via their fixed IP addresses. However, this approach has limitations — direct use of IP addresses requires manual management, complicates scaling, and makes the infrastructure less flexible. An alternative is services—a mechanism that abstracts access to VMs by providing logical entry points instead of binding to physical addresses.
@@ -917,6 +1044,19 @@ Example output:
 ```text
 virtualmachine.virtualization.deckhouse.io/linux-vm labeled
 ```
+
+How to add labels and annotations to VMs in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the desired VM from the list and click on its name.
+- Go to the "Meta" tab.
+- You can add labels in the "Labels" section.
+- You can add annotations in the "Annotations" section.
+- Click "Add" in the desired section.
+- In the pop-up window, you can set the "Key" and "Value" of the key.
+- To confirm the key parameters, click the "Enter" button.
+- Click the "Save" button that appears.
 
 #### Headless service
 
@@ -961,6 +1101,13 @@ spec:
     app: nginx
 EOF
 ```
+
+How to perform the operation in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Network" → "Services" section.
+- In the window that opens, configure the service settings.
+- Click on the "Create" button.
 
 #### Publish virtual machine services using a service with the NodePort type
 
@@ -1068,6 +1215,14 @@ EOF
 ```
 
 ![Ingress](/../../../../images/virtualization-platform/lb-ingress.png)
+
+How to publish a VM service using Ingress in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Network" → "Ingresses" section.
+- Click the "Create Ingress" button.
+- In the window that opens, configure the service settings.
+- Click the "Create" button.
 
 ## Live migration of virtual machines
 
@@ -1181,6 +1336,13 @@ firmware-update-fnbk2   Completed   Evict   static-vm-node-00   148m
 
 You can interrupt any live migration while it is in the `Pending`, `InProgress` phase by deleting the corresponding `VirtualMachineOperations` resource.
 
+How to view active operations in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the required VM from the list and click on its name.
+- Go to the "Events" tab.
+
 ### How to perform a live migration of a virtual machine using `VirtualMachineOperations`
 
 Let's look at an example. Before starting the migration, view the current status of the virtual machine:
@@ -1242,6 +1404,14 @@ You can also perform the migration using the following command:
 ```shell
 d8 v evict <vm-name>
 ```
+
+How to perform a live VM migration in the web interface:
+
+- Go to the "Projects" tab and select the desired project.
+- Go to the "Virtualization" → "Virtual Machines" section.
+- Select the desired virtual machine from the list and click the ellipsis button.
+- Select "Migrate" from the pop-up menu.
+- Confirm or cancel the migration in the pop-up window.
 
 #### Live migration of virtual machine when changing placement parameters (not available in CE edition)
 

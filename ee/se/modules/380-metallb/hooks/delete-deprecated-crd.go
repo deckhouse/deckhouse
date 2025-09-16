@@ -22,7 +22,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(removeDeprecatedCRD))
 
-func removeDeprecatedCRD(_ *go_hook.HookInput, dc dependency.Container) error {
+func removeDeprecatedCRD(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)

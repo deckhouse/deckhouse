@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -80,8 +81,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, ensureEncryptionSecretKey)
 
-func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
-	keys := input.NewSnapshots.Get("secret_encryption_key")
+func ensureEncryptionSecretKey(_ context.Context, input *go_hook.HookInput) error {
+	keys := input.Snapshots.Get("secret_encryption_key")
 
 	secretKey := make([]byte, 0)
 	if len(keys) > 0 {

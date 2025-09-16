@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -51,8 +52,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // discoveryPromscaleScrapeInterval
 // There is CM d8-monitoring/prometheus-scrape-interval with prometheus scrape interval.
 // Hook must store it to `global.discovery.prometheusScrapeInterval`.
-func discoveryPrometheusScrapeInterval(input *go_hook.HookInput) error {
-	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, "prometheus_scrape_interval")
+func discoveryPrometheusScrapeInterval(_ context.Context, input *go_hook.HookInput) error {
+	intervalScrapSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "prometheus_scrape_interval")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal prometheus_scrape_interval snapshot: %w", err)
 	}

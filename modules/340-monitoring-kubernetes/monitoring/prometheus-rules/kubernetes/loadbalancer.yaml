@@ -17,7 +17,7 @@
           To list affected services, run the following command:
 
           ```bash
-          kubectl get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
+          d8 k get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
           ```
           
           Steps to troubleshoot:

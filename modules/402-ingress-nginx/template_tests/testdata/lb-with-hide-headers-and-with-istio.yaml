@@ -1,0 +1,32 @@
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test
+spec:
+  config:
+    hide-headers: foo, bar
+    use-proxy-protocol: true
+    load-balance: ewma
+  ingressClass: nginx
+  additionalLogFields:
+    my-cookie: "$cookie_MY_COOKIE"
+  validationEnabled: true
+  controllerVersion: "1.9"
+  inlet: LoadBalancer
+  hsts: true
+  hstsOptions:
+    maxAge: "123456789123456789"
+  resourcesRequests:
+    mode: Static
+    static:
+      cpu: 100m
+      memory: 200Mi
+  loadBalancer:
+    annotations:
+      my: annotation
+      second: true
+    sourceRanges:
+      - 1.1.1.1
+      - 2.2.2.2
+  maxReplicas: 6
+  minReplicas: 2

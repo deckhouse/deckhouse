@@ -17,6 +17,7 @@ limitations under the License.
 package get_cni_secret
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -69,9 +70,9 @@ func RegisterHook(moduleName string) bool {
 	}, setCNISecretData(moduleName))
 }
 
-func setCNISecretData(moduleName string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		cniSecretSnap := input.NewSnapshots.Get("cni_secret")
+func setCNISecretData(moduleName string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
+		cniSecretSnap := input.Snapshots.Get("cni_secret")
 		if len(cniSecretSnap) == 0 {
 			input.Logger.Info("No cni secret received, skipping setting values")
 			return nil

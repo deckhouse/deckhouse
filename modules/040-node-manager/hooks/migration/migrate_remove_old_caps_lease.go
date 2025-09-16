@@ -57,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(removeOldCapsLease))
 
-func removeOldCapsLease(input *go_hook.HookInput, dc dependency.Container) error {
+func removeOldCapsLease(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient := dc.MustGetK8sClient()
 
 	err := kubeClient.CoordinationV1().Leases(d8CapsNs).Delete(context.Background(), d8CapsLeaseNameOld, metav1.DeleteOptions{})

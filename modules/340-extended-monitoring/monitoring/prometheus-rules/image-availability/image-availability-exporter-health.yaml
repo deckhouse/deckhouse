@@ -24,13 +24,13 @@
         1. Check the pod status:
         
            ```bash
-           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring get pod -l app=image-availability-exporter
            ```
 
         1. Check the pod logs:
         
            ```bash
-           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
            ```
 
   - alert: D8ImageAvailabilityExporterTargetAbsent
@@ -56,13 +56,13 @@
         1. Check the pod status:
         
            ```bash
-           kubectl -n d8-monitoring get pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring get pod -l app=image-availability-exporter
            ```
 
         1. Check the pod logs:
         
            ```bash
-           kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+           d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
            ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotReady
@@ -88,13 +88,13 @@
         1. Retrieve the deployment details:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           d8 k -n d8-monitoring describe deploy image-availability-exporter
            ```
 
         2. Check the pod status and investigate why it isn't `Ready`:
         
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring describe pod -l app=image-availability-exporter
            ```
 
   - alert: D8ImageAvailabilityExporterPodIsNotRunning
@@ -119,13 +119,13 @@
         1. Retrieve the deployment details:
 
            ```bash
-           kubectl -n d8-monitoring describe deploy image-availability-exporter
+           d8 k -n d8-monitoring describe deploy image-availability-exporter
            ```
 
         2. Check the pod status and investigate why it isn't running:
         
            ```bash
-           kubectl -n d8-monitoring describe pod -l app=image-availability-exporter
+           d8 k -n d8-monitoring describe pod -l app=image-availability-exporter
            ```
 
 - name: d8.extended-monitoring.image-availability-exporter.malfunctioning
@@ -152,5 +152,5 @@
         To investigate the issue, review the exporter's logs:
         
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```

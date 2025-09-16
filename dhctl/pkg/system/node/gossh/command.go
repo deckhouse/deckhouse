@@ -46,9 +46,8 @@ type SSHCommand struct {
 
 	SSHArgs []string
 
-	pipesMutex     sync.Mutex
-	stdoutPipeFile *os.File
-	stderrPipeFile *os.File
+	stdoutPipeFile io.Reader
+	stderrPipeFile io.Reader
 	StdoutSplitter bufio.SplitFunc
 
 	StdinPipe bool
@@ -63,8 +62,9 @@ type SSHCommand struct {
 
 	WaitHandler func(err error)
 
-	out *bytes.Buffer
-	err *bytes.Buffer
+	out      *bytes.Buffer
+	err      *bytes.Buffer
+	combined *singleWriter
 
 	OutBytes bytes.Buffer
 	ErrBytes bytes.Buffer
@@ -83,6 +83,7 @@ type SSHCommand struct {
 	ctx       context.Context
 	Cancel    func() error
 	ctxResult <-chan error
+	wg        sync.WaitGroup
 }
 
 func NewSSHCommand(client *Client, name string, arg ...string) *SSHCommand {
@@ -134,11 +135,13 @@ func (c *SSHCommand) Start() error {
 
 	err := c.SetupStreamHandlers()
 	if err != nil {
+		log.DebugF("could not set up stream handlers: %s\n", err)
 		return err
 	}
 
 	err = c.start()
 	if err != nil {
+		log.DebugF("could not start\n")
 		return err
 	}
 
@@ -293,9 +296,6 @@ func (c *SSHCommand) Run(ctx context.Context) error {
 		return err
 	}
 
-	// <-c.waitCh
-
-	c.closePipes()
 	c.Stop()
 
 	return c.WaitError()
@@ -363,7 +363,11 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 			} else {
 				becomePass = app.BecomePass
 			}
-			_, _ = c.Stdin.Write([]byte(becomePass + "\n"))
+			var err error
+			_, err = c.Stdin.Write([]byte(becomePass + "\n"))
+			if err != nil {
+				log.ErrorLn("got error from sending pass to stdin")
+			}
 			if !passSent {
 				passSent = true
 			} else {
@@ -407,18 +411,32 @@ func (c *SSHCommand) Output(ctx context.Context) ([]byte, []byte, error) {
 	}
 	defer c.session.Close()
 
-	var o bytes.Buffer
-	var e bytes.Buffer
-	c.session.Stdout = &o
-	c.session.Stderr = &e
-	err := c.start()
-	if err != nil {
-		return o.Bytes(), e.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
+	if c.out == nil {
+		c.out = new(bytes.Buffer)
+	} else {
+		c.out.Reset()
 	}
 
-	err = c.wait()
+	if c.err == nil {
+		c.err = new(bytes.Buffer)
+	} else {
+		c.err.Reset()
+	}
 
-	return o.Bytes(), e.Bytes(), err
+	var err error
+	c.stdoutPipeFile, err = c.session.StdoutPipe()
+	if err != nil {
+		return nil, nil, fmt.Errorf("open stdout pipe '%s': %w", c.Name, err)
+	}
+
+	c.stderrPipeFile, err = c.session.StderrPipe()
+	if err != nil {
+		return nil, nil, fmt.Errorf("open stderr pipe '%s': %w", c.Name, err)
+	}
+
+	err = c.Start()
+	c.wg.Wait()
+	return c.out.Bytes(), c.err.Bytes(), err
 }
 
 type singleWriter struct {
@@ -440,18 +458,34 @@ func (c *SSHCommand) CombinedOutput(ctx context.Context) ([]byte, error) {
 
 	defer c.session.Close()
 
-	var o singleWriter
-	c.session.Stdout = &o
-	c.session.Stderr = &o
-
-	err := c.start()
-	if err != nil {
-		return o.b.Bytes(), fmt.Errorf("execute command '%s': %w", c.Name, err)
+	if c.out == nil {
+		c.out = new(bytes.Buffer)
+	} else {
+		c.out.Reset()
 	}
 
-	err = c.wait()
+	if c.err == nil {
+		c.err = new(bytes.Buffer)
+	} else {
+		c.err.Reset()
+	}
 
-	return o.b.Bytes(), err
+	var err error
+	c.stdoutPipeFile, err = c.session.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("open stdout pipe '%s': %w", c.Name, err)
+	}
+
+	c.stderrPipeFile, err = c.session.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("open stderr pipe '%s': %w", c.Name, err)
+	}
+	var co singleWriter
+	c.combined = &co
+
+	err = c.Start()
+	c.wg.Wait()
+	return c.combined.b.Bytes(), err
 }
 
 func (c *SSHCommand) WithTimeout(timeout time.Duration) {
@@ -496,22 +530,21 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		return
 	}
 
-	var stdoutReadPipe io.Reader
 	var stdoutHandlerWritePipe *os.File
 	var stdoutHandlerReadPipe *os.File
 	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
-		// create pipe for stdout
-		var stdoutWritePipe *os.File
-		stdoutReadPipe, err = c.session.StdoutPipe()
-		if err != nil {
-			return fmt.Errorf("unable to create os pipe for stdout: %s", err)
+
+		if c.out == nil {
+			c.out = new(bytes.Buffer)
 		}
 
-		c.session.Stdout = stdoutWritePipe
-
-		c.pipesMutex.Lock()
-		c.stdoutPipeFile = stdoutWritePipe
-		c.pipesMutex.Unlock()
+		if c.stdoutPipeFile == nil {
+			var err error
+			c.stdoutPipeFile, err = c.session.StdoutPipe()
+			if err != nil {
+				return fmt.Errorf("open stdout pipe '%s': %w", c.Name, err)
+			}
+		}
 
 		// create pipe for StdoutHandler
 		if c.stdoutHandler != nil {
@@ -526,19 +559,18 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	var stderrHandlerWritePipe *os.File
 	var stderrHandlerReadPipe *os.File
 	if c.err != nil || c.stderrHandler != nil || len(c.Matchers) > 0 {
-		// create pipe for stderr
-		var stderrWritePipe *os.File
-		// stderrReadPipe, stderrWritePipe, err = os.Pipe()
-		log.DebugF("creating err pipe\n")
-		stderrReadPipe, err = c.session.StderrPipe()
-		if err != nil {
-			return fmt.Errorf("unable to create os pipe for stderr: %s", err)
-		}
-		c.session.Stderr = stderrWritePipe
 
-		c.pipesMutex.Lock()
-		c.stderrPipeFile = stderrWritePipe
-		c.pipesMutex.Unlock()
+		if c.err == nil {
+			c.err = new(bytes.Buffer)
+		}
+
+		if c.stderrPipeFile == nil {
+			var err error
+			c.stderrPipeFile, err = c.session.StderrPipe()
+			if err != nil {
+				return fmt.Errorf("open stdout pipe '%s': %w", c.Name, err)
+			}
+		}
 
 		// create pipe for StderrHandler
 		if c.stderrHandler != nil {
@@ -561,13 +593,14 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// - Copy to os.Stdout if live output is enabled
 	// - Copy to buffer if capture is enabled
 	// - Copy to pipe if StdoutHandler is set
+	c.wg.Add(2)
 	go func() {
-		c.readFromStreams(stdoutReadPipe, stdoutHandlerWritePipe)
+		c.readFromStreams(c.stdoutPipeFile, stdoutHandlerWritePipe, false)
 	}()
 
-	// sudo hack, becouse of password promt is sent to STDERR, not STDOUT
+	// sudo hack, becouse of password prompt is sent to STDERR, not STDOUT
 	go func() {
-		c.readFromStreams(stderrReadPipe, stdoutHandlerWritePipe)
+		c.readFromStreams(c.stderrPipeFile, stdoutHandlerWritePipe, true)
 	}()
 
 	go func() {
@@ -622,8 +655,9 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	return nil
 }
 
-func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer) {
+func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer, isError bool) {
 	defer log.DebugLn("stop readFromStreams")
+	defer c.wg.Done()
 
 	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
 		log.DebugLn("pipe is nil")
@@ -673,10 +707,18 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 		}
 		// TODO logboek
 		if app.IsDebug {
-			os.Stdout.Write(buf[:n])
+			os.Stdout.Write(buf[m:n])
 		}
-		if c.out != nil {
-			c.out.Write(buf[m:n])
+		if c.out != nil && !isError {
+			c.out.Write(buf[:n])
+		}
+
+		if c.err != nil && isError {
+			c.err.Write(buf[:n])
+		}
+
+		if c.combined != nil {
+			c.combined.Write(buf[:n])
 		}
 		if c.stdoutHandler != nil {
 			_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
@@ -707,30 +749,6 @@ func (c *SSHCommand) ConsumeLines(r io.Reader, fn func(l string)) {
 	}
 }
 
-func (c *SSHCommand) closePipes() {
-	log.DebugLn("Starting close piped")
-	defer log.DebugLn("Stop close piped")
-
-	c.pipesMutex.Lock()
-	defer c.pipesMutex.Unlock()
-
-	if c.stdoutPipeFile != nil {
-		err := c.stdoutPipeFile.Close()
-		if err != nil {
-			log.DebugF("Cannot close stdout pipe: %v\n", err)
-		}
-		c.stdoutPipeFile = nil
-	}
-
-	if c.stderrPipeFile != nil {
-		err := c.stderrPipeFile.Close()
-		if err != nil {
-			log.DebugF("Cannot close stderr pipe: %v\n", err)
-		}
-		c.stderrPipeFile = nil
-	}
-}
-
 func (c *SSHCommand) Stop() {
 	if c.stop {
 		log.DebugF("Stop '%s': already stopped\n", c.cmd)
@@ -751,7 +769,6 @@ func (c *SSHCommand) Stop() {
 		close(c.stopCh)
 	}
 	log.DebugF("Stopped '%s' \n", c.cmd)
-	c.closePipes()
 	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
 	c.session.Signal(ssh.SIGINT)
 	log.DebugF("Signal sent\n")

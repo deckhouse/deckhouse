@@ -359,7 +359,7 @@ Certificate invalid: name is not a listed principal
 
 The certificate does not permit the username as a listed principal for
 authenticating to the system. This is most likely due to an OpenSSH bug (see
-[known issues](#known-issues) for more information). This bug does not respect
+[Known issues](#known-issues) for more information). This bug does not respect
 the `allowed_users` option value of "\*". Here are ways to work around this
 issue:
 
@@ -426,7 +426,7 @@ this extension to the signed certificate.
 If port forwarding from the guest to the host is not working, the signed
 certificate may not have the `permit-port-forwarding` extension. Add the
 extension as part of the role creation or signing process to enable port
-forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+forwarding. See [No prompt after login](#no-prompt-after-login) for examples.
 
 ```json
 {
@@ -441,7 +441,7 @@ forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
 If X11 forwarding from the guest to the host is not working, the signed
 certificate may not have the `permit-X11-forwarding` extension. Add the
 extension as part of the role creation or signing process to enable X11
-forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+forwarding. See [No prompt after login](#no-prompt-after-login) for examples.
 
 ```json
 {
@@ -456,7 +456,7 @@ forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
 If agent forwarding from the guest to the host is not working, the signed
 certificate may not have the `permit-agent-forwarding` extension. Add the
 extension as part of the role creation or signing process to enable agent
-forwarding. See [no prompt after login](#no-prompt-after-login) for examples.
+forwarding. See [No prompt after login](#no-prompt-after-login) for examples.
 
 ```json
 {
@@ -544,9 +544,3 @@ Destroy the keypair and `payload.json` from your hosts immediately after they ha
   ```
 
   The ssh-rsa algorithm is no longer supported in [OpenSSH 8.2](https://www.openssh.com/txt/release-8.2)
-
-## API
-
-The SSH secrets engine has a full HTTP API. Please see the
-[SSH secrets engine API](/api-docs/secret/ssh) for more
-details.

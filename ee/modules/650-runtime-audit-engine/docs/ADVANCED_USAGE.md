@@ -33,7 +33,7 @@ spec:
 You can use the PromQL query `falcosecurity_falcosidekick_falco_events_total{}` to get metrics:
 
 ```shell
-kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
   curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" | jq
 ```
 
@@ -48,7 +48,7 @@ You can use the [event-generator](https://github.com/falcosecurity/event-generat
 Use the following command to run all events with the Pod in Kubernetes cluster:
 
 ```shell
-kubectl run falco-event-generator --image=falcosecurity/event-generator run
+d8 k run falco-event-generator --image=falcosecurity/event-generator run
 ```
 
 If you need to implement an action, use this [guide](https://github.com/falcosecurity/event-generator/blob/main/events/README.md).
@@ -66,7 +66,7 @@ You can use the [Falcosidekick](https://github.com/falcosecurity/falcosidekick) 
 - Check a debug event metric:
 
   ```shell
-  kubectl -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
+  d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
     curl -s "http://127.0.0.1:9090/api/v1/query?query=falcosecurity_falcosidekick_falco_events_total" \
     | jq '.data.result.[] | select (.metric.priority_raw == "debug")'
   ```

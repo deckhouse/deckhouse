@@ -29,7 +29,7 @@ d8 stronghold auth enable -path=my-login approle
 ![Выбор метода аутентификации](/images/stronghold/admin-guide-image2.png)
 
 Настройте и подтвердите включение метода аутентификации:
-![Настройка и подтверждение метода аутентификации](../images/stronghold/admin-guide-image3.png)
+![Настройка и подтверждение метода аутентификации](/images/stronghold/admin-guide-image3.png)
 
 Для отключения метода аутентификации выберите метод:
 ![Выбор метода аутентификации](/images/stronghold/admin-guide-image4.png)
@@ -115,9 +115,6 @@ d8 stronghold write auth/approle/role/my-role \
 ```
 
 **Примечание:** Если токен, выданный вашим approle, требует возможности создания дочерних токенов, вам необходимо установить значение token_num_uses равным 0.
-
-Для полного списка параметров конфигурации, пожалуйста, ознакомьтесь с [API](../../api/)
-документацией.
 
 Получите RoleID для AppRole:
 

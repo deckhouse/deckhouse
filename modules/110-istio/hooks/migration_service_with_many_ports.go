@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -67,8 +68,8 @@ func applyServiceFilterHelmFix(obj *unstructured.Unstructured) (go_hook.FilterRe
 	}, nil
 }
 
-func patchServiceWithManyPorts(input *go_hook.HookInput) error {
-	serviceSnapshots := input.NewSnapshots.Get("service_helm_fix")
+func patchServiceWithManyPorts(_ context.Context, input *go_hook.HookInput) error {
+	serviceSnapshots := input.Snapshots.Get("service_helm_fix")
 	for serviceInfoObj, err := range sdkobjectpatch.SnapshotIter[serviceInfo](serviceSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'service_helm_fix' snapshot: %w", err)
