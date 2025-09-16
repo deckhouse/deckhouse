@@ -73,10 +73,10 @@ const defaultCheckInterval = 15 * time.Second
 
 type ReleaseUpdateInfo struct {
 	TaskCalculation struct {
-		TaskType int  `json:"taskType,omitempty"`
-		IsPatch  bool `json:"isPatch"`
-		IsSingle bool `json:"isSingle"`
-		IsLatest bool `json:"isLatest"`
+		TaskType string `json:"taskType,omitempty"`
+		IsPatch  bool   `json:"isPatch"`
+		IsSingle bool   `json:"isSingle"`
+		IsLatest bool   `json:"isLatest"`
 	} `json:"taskCalculation"`
 
 	ForceRelease struct {
@@ -92,6 +92,7 @@ type ReleaseUpdateInfo struct {
 		FailedReasons   []string `json:"failedReasons,omitempty"`
 	} `json:"requirementsCheck"`
 
+	// HasDelay is not tracked due to architectural reasons
 	PreApplyCheck struct {
 		HasDelay              bool   `json:"hasDelay"`
 		NotificationSent      bool   `json:"notificationSent"`
@@ -399,7 +400,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	updateInfo := &ReleaseUpdateInfo{}
 
 	// Collect task calculation information
-	updateInfo.TaskCalculation.TaskType = int(task.TaskType)
+	updateInfo.TaskCalculation.TaskType = task.TaskType.String()
 	updateInfo.TaskCalculation.IsPatch = task.IsPatch
 	updateInfo.TaskCalculation.IsSingle = task.IsSingle
 	updateInfo.TaskCalculation.IsLatest = task.IsLatest
@@ -523,9 +524,6 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 	// handling error inside function
 	err = r.PreApplyReleaseCheck(ctx, dr, task, metricLabels, updateInfo)
 	if err != nil {
-		// Collect pre-apply check information - has delay
-		updateInfo.PreApplyCheck.HasDelay = true
-
 		// ignore this err, just requeue because of check failed
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
