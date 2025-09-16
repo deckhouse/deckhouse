@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -144,7 +145,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		}
 
 		// module must be enabled
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
@@ -228,12 +229,9 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			}
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion, source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", mpo.Name, source.Name, err)
-		}
-		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", mpo.Name), slog.String("source_name", source.Name))
+		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 
@@ -345,12 +343,9 @@ func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 			}
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, release.Spec.ModuleName, release.GetModuleVersion(), source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", release.Spec.ModuleName, source.Name, err)
-		}
-		l.logger.Info("resynced module's registry settings with the module source", slog.String("name", release.Spec.ModuleName), slog.String("version", release.GetReleaseVersion()), slog.String("source_name", source.Name))
+		l.registries[release.GetModuleName()] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 

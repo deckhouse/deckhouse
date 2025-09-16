@@ -47,7 +47,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
+    ingress-nginx-controller.deckhouse.io/checksum: 2ce05910aa99582281943ce7993acc0c81436c5995310c05337f237dd9811791
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
@@ -70,11 +70,14 @@ spec:
       name: solid
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
         ingress.deckhouse.io/block-deleting: "true"
         name: solid
     spec:
+      automountServiceAccountToken: true
       containers:
       - args:
         - /nginx-ingress-controller
@@ -101,7 +104,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller16
+        image: registry.example.com@imageHash-ingressNginx-controller19
         lifecycle:
           preStop:
             exec:
@@ -119,9 +122,12 @@ spec:
         name: controller
         ports:
         - containerPort: 80
+          hostPort: 80
         - containerPort: 443
+          hostPort: 443
           protocol: TCP
         - containerPort: 443
+          hostPort: 443
           protocol: UDP
         readinessProbe:
           httpGet:
@@ -134,24 +140,25 @@ spec:
         resources:
           requests:
             ephemeral-storage: 150Mi
+        securityContext:
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
         volumeMounts:
-        - mountPath: /var/lib/nginx/body
+        - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
+        - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
+        - mountPath: /chroot/var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
+        - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
-          name: webhook-cert
-          readOnly: true
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -208,6 +215,7 @@ spec:
         name: kube-rbac-proxy
         ports:
         - containerPort: 4207
+          hostPort: 4207
           name: https-metrics
         resources:
           requests:
@@ -218,6 +226,7 @@ spec:
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
+      priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
       tolerations:
@@ -246,9 +255,6 @@ spec:
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-solid-auth-tls
-      - name: webhook-cert
-        secret:
-          secretName: ingress-admission-certificate
       - configMap:
           name: d8-ingress-telemetry-config
         name: telemetry-config-file
@@ -306,7 +312,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 93820e98a168de07c96e120909bc812ebf9655a8f81be88ef5b8799a9ee02445
+    ingress-nginx-controller.deckhouse.io/checksum: 2ce05910aa99582281943ce7993acc0c81436c5995310c05337f237dd9811791
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
@@ -326,10 +332,13 @@ spec:
       name: solid-failover
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
         name: solid-failover
     spec:
+      automountServiceAccountToken: true
       containers:
       - args:
         - /nginx-ingress-controller
@@ -341,9 +350,6 @@ spec:
         - --https-port=443
         - --update-status=true
         - --shutdown-grace-period=0
-        - --validating-webhook=:8443
-        - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
-        - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
         - --default-ssl-certificate=default/custom-secret
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
@@ -359,7 +365,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller16
+        image: registry.example.com@imageHash-ingressNginx-controller19
         lifecycle:
           preStop:
             exec:
@@ -381,9 +387,6 @@ spec:
           protocol: TCP
         - containerPort: 443
           protocol: UDP
-        - containerPort: 8443
-          name: webhook
-          protocol: TCP
         readinessProbe:
           httpGet:
             path: /controller/healthz
@@ -395,24 +398,25 @@ spec:
         resources:
           requests:
             ephemeral-storage: 150Mi
+        securityContext:
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
         volumeMounts:
-        - mountPath: /var/lib/nginx/body
+        - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
+        - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
+        - mountPath: /chroot/var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
+        - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
-          name: webhook-cert
-          readOnly: true
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -479,6 +483,7 @@ spec:
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
+      priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
       tolerations:
@@ -507,9 +512,6 @@ spec:
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-solid-auth-tls
-      - name: webhook-cert
-        secret:
-          secretName: ingress-admission-certificate
       - configMap:
           name: d8-ingress-telemetry-config
         name: telemetry-config-file

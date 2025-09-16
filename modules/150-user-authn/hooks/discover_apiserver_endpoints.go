@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -98,7 +99,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverApiserverEndpoints)
 
-func discoverApiserverEndpoints(input *go_hook.HookInput) error {
+func discoverApiserverEndpoints(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		addressesPath  = "userAuthn.internal.kubernetesApiserverAddresses"
 		targetPortPath = "userAuthn.internal.kubernetesApiserverTargetPort"
@@ -111,12 +112,12 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ports := input.NewSnapshots.Get("port")
+	ports := input.Snapshots.Get("port")
 	if len(ports) == 0 {
 		return fmt.Errorf("kubernetes service pod was not discovered")
 	}
 
-	endpoints := input.NewSnapshots.Get("endpoints")
+	endpoints := input.Snapshots.Get("endpoints")
 	if len(endpoints) == 0 {
 		return fmt.Errorf("kubernetes service endpoints was not discovered")
 	}

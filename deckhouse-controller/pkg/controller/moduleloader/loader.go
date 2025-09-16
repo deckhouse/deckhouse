@@ -29,7 +29,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/module_manager/loader"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -68,7 +68,8 @@ var (
 	// validModuleNameRe defines a valid module name. It may have a number prefix: it is an order of the module.
 	validModuleNameRe = regexp.MustCompile(`^(([0-9]+)-)?(.+)$`)
 
-	ErrModuleIsNotFound = errors.New("module is not found")
+	ErrModuleIsNotFound              = errors.New("module is not found")
+	ErrConversionsDirectoryPathEmpty = errors.New("conversions directory path is empty")
 )
 
 var _ loader.ModuleLoader = &Loader{}
@@ -82,6 +83,8 @@ type Loader struct {
 	modulesDirs    []string
 	// global module dir
 	globalDir string
+
+	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
 	exts                *extenders.ExtendersStack
@@ -100,6 +103,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
+		registries:           make(map[string]*addonmodules.Registry),
 		embeddedPolicy:       embeddedPolicy,
 		version:              version,
 		dependencyContainer:  dc,
@@ -136,8 +140,8 @@ func (l *Loader) Sync(ctx context.Context) error {
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator
-func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
-	result := make([]*modules.BasicModule, 0, len(l.modules))
+func (l *Loader) LoadModules() ([]*addonmodules.BasicModule, error) {
+	result := make([]*addonmodules.BasicModule, 0, len(l.modules))
 
 	for _, module := range l.modules {
 		result = append(result, module.GetBasicModule())
@@ -148,7 +152,7 @@ func (l *Loader) LoadModules() ([]*modules.BasicModule, error) {
 
 // LoadModule implements the module loader interface from addon-operator, it reads single directory and returns BasicModule
 // modulePath is in the following format: /deckhouse-controller/downloaded/<module_name>/<module_version>
-func (l *Loader) LoadModule(_, modulePath string) (*modules.BasicModule, error) {
+func (l *Loader) LoadModule(_, modulePath string) (*addonmodules.BasicModule, error) {
 	if _, err := readDir(modulePath); err != nil {
 		return nil, err
 	}
@@ -197,10 +201,26 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 		return nil, fmt.Errorf("build %q module: %w", def.Name, err)
 	}
 
+	// inject registry value
+	if reg, ok := l.registries[def.Name]; ok {
+		module.GetBasicModule().InjectRegistryValue(reg)
+	}
+
 	// load conversions
-	if _, err = os.Stat(filepath.Join(def.Path, "openapi", "conversions")); err == nil {
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	var conversions []v1alpha1.ModuleSettingsConversion
+	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
 		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+		}
+
+		// load conversions for settings
+		conversions, err = l.loadConversions(conversionsDir)
+		if err != nil {
+			if errors.Is(err, ErrConversionsDirectoryPathEmpty) {
+				return nil, fmt.Errorf("conversions directory path is empty for the %q module", def.Name)
+			}
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 	} else if !os.IsNotExist(err) {
@@ -213,7 +233,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	}
 
 	// ensure settings
-	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig); err != nil {
+	if err = l.ensureModuleSettings(ctx, def.Name, rawConfig, conversions); err != nil {
 		return nil, fmt.Errorf("ensure the %q module settings: %w", def.Name, err)
 	}
 
@@ -241,12 +261,13 @@ func (l *Loader) GetModuleByName(name string) (*moduletypes.Module, error) {
 }
 
 func (l *Loader) GetModulesByExclusiveGroup(exclusiveGroup string) []string {
-	modules := []string{}
+	var modules []string
 	for _, module := range l.modules {
 		if module.GetModuleDefinition().ExclusiveGroup == exclusiveGroup {
 			modules = append(modules, module.GetBasicModule().Name)
 		}
 	}
+
 	return modules
 }
 
@@ -403,13 +424,13 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 	})
 }
 
-func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte) error {
+func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
 	settings := new(v1alpha1.ModuleSettingsDefinition)
 	if err := l.client.Get(ctx, client.ObjectKey{Name: module}, settings); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf("get the '%s' module settings: %w", module, err)
 	}
 
-	if err := settings.SetVersion(rawConfig); err != nil {
+	if err := settings.SetVersion(rawConfig, conversions); err != nil {
 		return fmt.Errorf("set the module settings: %w", err)
 	}
 
@@ -590,4 +611,70 @@ func parseUintOrDefault(num string, defaultValue uint32) uint32 {
 		return defaultValue
 	}
 	return uint32(val)
+}
+
+// loadConversions loads all conversion rules from the module's conversions directory
+func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettingsConversion, error) {
+	if conversionsDir == "" {
+		return nil, ErrConversionsDirectoryPathEmpty
+	}
+
+	// Read all files from conversions directory
+	files, err := os.ReadDir(conversionsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read conversions directory: %w", err)
+	}
+
+	// Regex to match version files like v1.yaml, v2.yaml, etc.
+	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
+
+	var allConversions []v1alpha1.ModuleSettingsConversion
+
+	// Process each version file
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		matches := versionFileRe.FindStringSubmatch(file.Name())
+		if matches == nil {
+			continue // Skip non-version files
+		}
+
+		// Read and parse the conversion file
+		filePath := filepath.Join(conversionsDir, file.Name())
+		conversion, err := l.readConversionFile(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read conversion file %s: %w", file.Name(), err)
+		}
+
+		if conversion != nil {
+			allConversions = append(allConversions, *conversion)
+		}
+	}
+
+	return allConversions, nil
+}
+
+// readConversionFile reads a single conversion file and extracts conversions and description
+func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse YAML directly into a temporary struct
+	var fileContent struct {
+		Conversions []string                                       `yaml:"conversions"`
+		Description *v1alpha1.ModuleSettingsConversionDescriptions `yaml:"description"`
+	}
+
+	if err := yaml.Unmarshal(data, &fileContent); err != nil { //nolint:musttag
+		return nil, fmt.Errorf("unmarshal conversion file: %w", err)
+	}
+
+	return &v1alpha1.ModuleSettingsConversion{
+		Expr:         fileContent.Conversions,
+		Descriptions: fileContent.Description,
+	}, nil
 }

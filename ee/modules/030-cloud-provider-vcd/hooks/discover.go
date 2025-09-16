@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sort"
@@ -79,17 +80,17 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return storageClass, nil
 }
 
-func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	if len(input.NewSnapshots.Get("cloud_provider_discovery_data")) == 0 {
+func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.NewSnapshots.Get("storage_classes")) == 0 {
+		if len(input.Snapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for 'named-disk.csi.cloud-director.vmware.com' provisioner")
 
 			return nil
 		}
 
-		storageClassesSnapshots := input.NewSnapshots.Get("storage_classes")
+		storageClassesSnapshots := input.Snapshots.Get("storage_classes")
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
@@ -111,7 +112,7 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 
 	secret := new(v1.Secret)
 
-	snaps := input.NewSnapshots.Get("cloud_provider_discovery_data")
+	snaps := input.Snapshots.Get("cloud_provider_discovery_data")
 	if len(snaps) == 0 {
 		return fmt.Errorf("cloud_provider_discovery_data snapshot is empty")
 	}

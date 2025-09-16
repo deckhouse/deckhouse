@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -78,10 +79,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, expireDexUsers)
 
-func expireDexUsers(input *go_hook.HookInput) error {
+func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
 
-	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.NewSnapshots.Get("users")) {
+	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.Snapshots.Get("users")) {
 		if err != nil {
 			return fmt.Errorf("cannot convert user to dex expire: cannot iterate over 'users' snapshot: %v", err)
 		}

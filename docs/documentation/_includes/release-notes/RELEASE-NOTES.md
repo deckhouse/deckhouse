@@ -3,8 +3,8 @@
 ### Important
 
 - All DKP components will be restarted during the update.
-
 - To use [experimental modules](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/module-development/versioning/#module-lifecycle) in the cluster, you now need to explicitly enable the [allowExperimentalModules](https://deckhouse.io/products/kubernetes-platform/documentation/v1.72/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) parameter. By default, experimental modules are disabled. Modules that were enabled before the update will not be automatically disabled. However, if an experimental module enabled prior to the update is manually disabled during the update process, you will need to grant permission to use experimental modules again in order to re-enable it.
+- If there are WireGuard interfaces on the cluster nodes, you must update the Linux kernel to version 6.8 or higher.
 
 ### Major changes
 

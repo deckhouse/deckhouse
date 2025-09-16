@@ -27,13 +27,13 @@ title: "Модуль cni-cilium: примеры"
 1. Снимите метку (label) с узла, чтобы исключить его из списка кандидатов для роли egress-шлюза. Egress-label — это метка, указанная в `spec.nodeSelector` вашего EgressGateway.
 
     ```bash
-    kubectl label node <node-name> <egress-label>-
+    d8 k label node <node-name> <egress-label>-
     ```
 
 1. Переведите узел в режим обслуживания (cordon), чтобы предотвратить запуск новых подов:
 
     ```bash
-    kubectl cordon <node-name>
+    d8 k cordon <node-name>
     ```
 
     После этого Cilium автоматически выберет новый активный узел из оставшихся кандидатов.
@@ -42,8 +42,8 @@ title: "Модуль cni-cilium: примеры"
 1. Для возврата узла в работу выполните:
 
     ```bash
-    kubectl uncordon <node-name>
-    kubectl label node <node-name> <egress-label>=<value>
+    d8 k uncordon <node-name>
+    d8 k label node <node-name> <egress-label>=<value>
     ```
 
 > Важно: повторное добавление метки может привести к тому, что узел снова будет выбран активным egress-шлюзом (если он первый в алфавитном порядке среди доступных кандидатов).

@@ -27,13 +27,13 @@
         - Check the expected configuration checksum for the NodeGroup:
         
           ```shell
-          kubectl -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
+          d8 k -n d8-cloud-instance-manager get secret configuration-checksums -o jsonpath={.data.{{ $labels.node_group }}} | base64 -d
           ```
 
         - Check the current configuration checksum on the Node:
 
           ```shell
-          kubectl get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
+          d8 k get node {{ $labels.node }} -o jsonpath='{.metadata.annotations.node\.deckhouse\.io/configuration-checksum}'
           ```
 
         - View Bashible logs on the Node:
@@ -197,15 +197,15 @@
         1. To drain the Node and grant the update approval, run the following command:
 
            ```shell
-           kubectl drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&
-             kubectl annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
+           d8 k drain {{ $labels.node }} --delete-local-data=true --ignore-daemonsets=true --force=true &&
+             d8 k annotate node {{ $labels.node }} update.node.deckhouse.io/disruption-approved=
            ```
         
         2. Uncordon the Node once the update is complete and the annotation `update.node.deckhouse.io/approved` is removed:
 
            ```shell
-           while kubectl get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
-           kubectl uncordon {{ $labels.node }}
+           while d8 k get node {{ $labels.node }} -o json | jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' > /dev/null; do sleep 1; done
+           d8 k uncordon {{ $labels.node }}
            ```
 
         If the NodeGroup has multiple Nodes, repeat this process for each one, since only one Node is updated at a time.
@@ -234,7 +234,7 @@
         To get more details, run the following:
 
         ```shell
-        kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'
+        d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=ScaleDown --sort-by='.metadata.creationTimestamp'
         ```
 
   - alert: NodeStuckInDraining
@@ -261,7 +261,7 @@
         To get more details, run the following:
         
         ```shell
-        kubectl -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
+        d8 k -n default get event --field-selector involvedObject.name={{ $labels.node }},reason=DrainFailed --sort-by='.metadata.creationTimestamp'
         ```
 
         Error message: {{ $labels.message }}
@@ -282,5 +282,5 @@
         To resolve the issue, check if the `bashible-apiserver` Pods are up-to-date and running:
         
         ```shell
-        kubectl -n d8-cloud-instance-manager get pods -l app=bashible-apiserver
+        d8 k -n d8-cloud-instance-manager get pods -l app=bashible-apiserver
         ```
