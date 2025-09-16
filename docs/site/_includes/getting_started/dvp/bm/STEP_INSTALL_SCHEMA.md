@@ -1,3 +1,15 @@
+{% alert level="warning" %}
+Here are examples of steps for installing Deckhouse Virtualization Platform with the following parameters:
+
+- one <strong>master node</strong>,
+- one <strong>worker node</strong>,
+- software-defined replicated storage based on DRBD,
+- one virtual machine.
+
+If you need a different configuration, please refer to the documentation on [installing the platform](../../documentation/admin/install/steps/prepare.html).
+{% endalert %}
+
+
 ## Installation requirements
 
 1. **Personal computer.** The computer from which the installation will be performed.  It is only needed to run the installer and will not be part of the cluster.
