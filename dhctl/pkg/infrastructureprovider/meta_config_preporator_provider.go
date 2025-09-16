@@ -21,9 +21,34 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
-func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
+type PreparatorProviderParams struct {
+	logger log.Logger
+}
+
+func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
+	return PreparatorProviderParams{
+		logger: logger,
+	}
+}
+
+func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
+	return PreparatorProviderParams{
+		logger: log.NewSilentLogger(),
+	}
+}
+
+// looger can be nil if nil will use silent logger
+func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
+	logger := params.logger
+
+	if interfaces.IsNil(logger) {
+		logger = log.NewSilentLogger()
+	}
+
 	return func(provider string) config.MetaConfigPreparator {
 		switch provider {
 		// static cluster
@@ -34,7 +59,7 @@ func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig: true,
-			})
+			}, logger)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}

@@ -20,6 +20,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type MetaConfigPreparatorParams struct {
@@ -28,11 +29,20 @@ type MetaConfigPreparatorParams struct {
 
 type MetaConfigPreparator struct {
 	params MetaConfigPreparatorParams
+	logger log.Logger
 }
 
-func NewMetaConfigPreparator(params MetaConfigPreparatorParams) *MetaConfigPreparator {
+func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
 		params: params,
+		logger: log.GetSilentLogger(),
+	}
+}
+
+func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
+	return &MetaConfigPreparator{
+		params: params,
+		logger: logger,
 	}
 }
 
@@ -50,12 +60,12 @@ func (p MetaConfigPreparator) Prepare(metaConfig *config.MetaConfig) error {
 		return nil
 	}
 
-	apiVersion, err := getAPIVersion(metaConfig)
+	apiVersion, err := getAPIVersion(metaConfig, p.logger)
 	if err != nil {
 		return err
 	}
 
-	return versionConstraintAction(apiVersion, func(legacy bool) error {
+	return versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
 		if !legacy {
 			return nil
 		}

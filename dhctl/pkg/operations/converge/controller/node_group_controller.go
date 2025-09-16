@@ -125,6 +125,7 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 				Cache:          ctx.StateCache(),
 				ChangeParams:   ctx.ChangesSettings(),
 				ProviderGetter: ctx.ProviderGetter(),
+				Logger:         ctx.Logger(),
 			})
 			ctx = newCtx
 		}

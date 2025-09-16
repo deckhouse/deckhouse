@@ -91,7 +91,12 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
+	metaConfig, err := config.ParseConfig(
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
@@ -208,6 +213,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			destroyParams.CommanderMode = true
 			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
+
+		destroyParams.Logger = b.logger
 
 		destroyer, err = destroy.NewClusterDestroyer(destroyParams)
 		if err != nil {

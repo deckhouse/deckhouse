@@ -62,6 +62,7 @@ type Params struct {
 	ProviderGetter        infrastructure.CloudProviderGetter
 
 	TmpDir string
+	Logger log.Logger
 
 	CheckHasTerraformStateBeforeMigration bool
 }
@@ -203,6 +204,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			Cache:          stateCache,
 			ChangeParams:   c.Params.ChangesSettings,
 			ProviderGetter: c.Params.ProviderGetter,
+			Logger:         c.Logger,
 		})
 	}
 
@@ -340,6 +342,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			Cache:          stateCache,
 			ChangeParams:   c.Params.ChangesSettings,
 			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
@@ -347,6 +350,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			Cache:          stateCache,
 			ChangeParams:   c.Params.ChangesSettings,
 			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
 		})
 	}
 
@@ -462,6 +466,7 @@ func (c *Converger) AutoConverge() error {
 		KubeClient:   kubeCl,
 		Cache:        cache.Global(),
 		ChangeParams: c.Params.ChangesSettings,
+		Logger:       c.Logger,
 	})
 
 	metaConfig, err := convergeCtx.MetaConfig()

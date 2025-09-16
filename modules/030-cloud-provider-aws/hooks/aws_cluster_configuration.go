@@ -114,7 +114,8 @@ func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
-	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider())
+	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
+		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()))
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}

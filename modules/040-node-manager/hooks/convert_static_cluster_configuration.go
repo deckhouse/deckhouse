@@ -85,7 +85,12 @@ func internalNetworkFromStaticConfiguration(data []byte) (interface{}, error) {
 	var err error
 	var metaConfig *config.MetaConfig
 
-	metaConfig, err = config.ParseConfigFromData(string(data), infrastructureprovider.MetaConfigPreparatorProvider())
+	metaConfig, err = config.ParseConfigFromData(
+		string(data),
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParamsWithoutLogger(),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}

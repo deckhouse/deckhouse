@@ -35,4 +35,4 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderGcp.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider()))
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))

@@ -48,7 +48,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, _ *con
 	input.Values.Set("csiVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
-}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider()))
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
 
 func overrideValues(p *v1.VsphereProviderClusterConfiguration, m *v1.VsphereModuleConfiguration) error {
 	if m.Host != nil {

@@ -28,7 +28,11 @@ import (
 	"github.com/vmware/go-vcloud-director/v3/govcd"
 )
 
-func getAPIVersion(m *config.MetaConfig) (string, error) {
+func VersionContentProvider(settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, error) {
+	return versionContentProviderWithAPI(getAPIVersion, settings, metaConfig, logger)
+}
+
+func getAPIVersion(m *config.MetaConfig, _ log.Logger) (string, error) {
 	if m.ClusterType != config.CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return "", fmt.Errorf("current cluster type is not a cloud type")
 	}
@@ -68,13 +72,13 @@ func getAPIVersion(m *config.MetaConfig) (string, error) {
 	return apiVersion, nil
 }
 
-func versionConstraintAction(apiVersion string, action func(legacy bool) error) error {
+func versionConstraintAction(apiVersion string, logger log.Logger, action func(legacy bool) error) error {
 	ver, err := semver.NewVersion(apiVersion)
 	if err != nil {
 		return fmt.Errorf("failed to parse VCD API version '%s': %v", apiVersion, err)
 	}
 
-	log.DebugF("VCD API version '%s'\n", apiVersion)
+	logger.LogDebugF("VCD API version '%s'\n", apiVersion)
 
 	const versionConstraintStr = "<37.2"
 
@@ -84,23 +88,25 @@ func versionConstraintAction(apiVersion string, action func(legacy bool) error) 
 	}
 
 	if versionConstraint.Check(ver) {
-		log.DebugF("Use legacy VCD version %s (%s). Use legacy mode as true\n", ver, versionConstraintStr)
+		logger.LogDebugF("Use legacy VCD version %s (%s). Use legacy mode as true\n", ver, versionConstraintStr)
 		return action(true)
 	}
 
-	log.DebugF("Use latest VCD version %s (%s)e\n", ver, versionConstraintStr)
+	logger.LogDebugF("Use latest VCD version %s (%s)e\n", ver, versionConstraintStr)
 	return action(false)
 }
 
-func VersionContentProvider(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error) {
-	apiVersion, err := getAPIVersion(metaConfig)
+type apiVersionGetter func(metaConfig *config.MetaConfig, logger log.Logger) (string, error)
+
+func versionContentProviderWithAPI(getVersion apiVersionGetter, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, error) {
+	apiVersion, err := getVersion(metaConfig, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	var content []byte
 
-	err = versionConstraintAction(apiVersion, func(legacy bool) error {
+	err = versionConstraintAction(apiVersion, logger, func(legacy bool) error {
 		const legacyVersion = "3.10.0"
 
 		versions := settings.Versions()

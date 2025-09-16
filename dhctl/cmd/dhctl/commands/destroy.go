@@ -92,6 +92,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:    cache.Global(),
 			SkipResources: app.SkipResources,
+			Logger:        log.GetDefaultLogger(),
 		})
 		if err != nil {
 			return err

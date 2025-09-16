@@ -39,7 +39,12 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
+		metaConfig, err := config.LoadConfigFromFile(
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
+		)
 		if err != nil {
 			return err
 		}
@@ -72,7 +77,11 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
-		metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
+		metaConfig, err := config.LoadConfigFromFile(
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			))
 		if err != nil {
 			return err
 		}
@@ -120,7 +129,9 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 		var err error
 		var metaConfig *config.MetaConfig
 
-		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider()
+		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+		)
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
 		// https://github.com/flant/kingpin/pull/1

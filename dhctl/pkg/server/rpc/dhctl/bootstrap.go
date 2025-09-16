@@ -303,6 +303,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
 		TmpDir:                     app.TmpDirName,
+		Logger:                     log.GetDefaultLogger(),
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

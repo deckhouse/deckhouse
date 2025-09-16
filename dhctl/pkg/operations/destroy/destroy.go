@@ -46,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -69,6 +70,7 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 
 	TmpDir string
+	Logger log.Logger
 }
 
 type ClusterDestroyer struct {
@@ -89,10 +91,16 @@ type ClusterDestroyer struct {
 	CommanderUUID uuid.UUID
 
 	tmpDir string
+	logger log.Logger
 }
 
 func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
+
+	logger := params.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
 
 	if app.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
@@ -122,13 +130,15 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
+		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams, logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
 		terraStateLoader = infrastructurestate.NewFileTerraStateLoader(state.cache, metaConfig)
 	} else {
-		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+		terraStateLoader = infrastructurestate.NewLazyTerraStateLoader(
+			infrastructurestate.NewCachedTerraStateLoader(d8Destroyer, state.cache, logger),
+		)
 	}
 
 	clusterInfra := controller.NewClusterInfraWithOptions(
@@ -159,6 +169,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		CommanderUUID:          params.CommanderUUID,
 
 		tmpDir: params.TmpDir,
+		logger: logger,
 	}, nil
 }
 

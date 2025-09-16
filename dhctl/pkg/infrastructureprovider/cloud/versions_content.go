@@ -8,6 +8,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var versionContentProviders = map[string]versionContentProvider{
@@ -25,7 +26,7 @@ func getVersionContentProvider(s settings.ProviderSettings, provider string) ver
 		return choicer
 	}
 
-	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error) {
+	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, error) {
 		if len(settings.Versions()) != 1 {
 			return nil, fmt.Errorf("no one version found for provider %s", provider)
 		}

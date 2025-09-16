@@ -261,7 +261,13 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 }
 
 func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics, bool) {
-	metaConfig, err := config.ParseConfigInCluster(ctx, c.kubeCl, infrastructureprovider.MetaConfigPreparatorProvider())
+	metaConfig, err := config.ParseConfigInCluster(
+		ctx,
+		c.kubeCl,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+		),
+	)
 	if err != nil {
 		log.ErrorLn(err)
 		c.CounterMetrics["errors"].WithLabelValues().Inc()

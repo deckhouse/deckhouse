@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -102,6 +103,7 @@ type Params struct {
 	AutoApprove             *bool
 
 	TmpDir string
+	Logger log.Logger
 
 	*client.KubernetesInitParams
 }
@@ -112,11 +114,17 @@ type ClusterBootstrapper struct {
 	initializeNewAgent     bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
+	logger    log.Logger
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	if app.ProgressFilePath != "" {
 		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
+	logger := params.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
 	}
 
 	return &ClusterBootstrapper{
@@ -125,6 +133,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
 		lastState: params.InitialState,
+		logger:    logger,
 	}
 }
 
@@ -195,7 +204,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
+	metaConfig, err := config.LoadConfigFromFile(
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
