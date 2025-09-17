@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -48,10 +49,10 @@ type upmeterDiscovery struct {
 }
 
 // collectDynamicProbeConfig sets names of objects to internal values
-func collectDynamicProbeConfig(input *go_hook.HookInput) error {
+func collectDynamicProbeConfig(_ context.Context, input *go_hook.HookInput) error {
 	// Input
 	key := "ingressNginx.internal.upmeterDiscovery"
-	names, err := parseNames(input.NewSnapshots.Get("ingress_nginx_controllers"))
+	names, err := parseNames(input.Snapshots.Get("ingress_nginx_controllers"))
 	if err != nil {
 		return fmt.Errorf("failed to parse names: %w", err)
 	}

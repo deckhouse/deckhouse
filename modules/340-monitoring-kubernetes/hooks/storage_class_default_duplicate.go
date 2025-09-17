@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -75,10 +76,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, delectStorageClassDuplicate)
 
-func delectStorageClassDuplicate(input *go_hook.HookInput) error {
+func delectStorageClassDuplicate(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("")
 
-	storageclasses := input.NewSnapshots.Get("storageclasses")
+	storageclasses := input.Snapshots.Get("storageclasses")
 
 	var defaultStorageclasses int64
 	for sc, err := range sdkobjectpatch.SnapshotIter[StorageClassDup](storageclasses) {

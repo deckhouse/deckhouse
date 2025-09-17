@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -81,7 +82,7 @@ var (
 	}, calculateResourcesRequests)
 )
 
-func calculateResourcesRequests(input *go_hook.HookInput) error {
+func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		calculatedMasterNodeMilliCPU int64
 		calculatedMasterNodeMemory   int64
@@ -93,7 +94,7 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		discoveryMasterNodeMemory   int64
 	)
 
-	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.NewSnapshots, "NodesResources")
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
 	if err != nil {
 		return fmt.Errorf("unmarshal NodesResources snapshots: %v", err)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package generate_password
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -115,7 +116,7 @@ func (h *Hook) Filter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 // puts it to internal values.
 // It generates new password if there is no password in the configuration
 // and no Secret found.
-func (h *Hook) Handle(input *go_hook.HookInput) error {
+func (h *Hook) Handle(_ context.Context, input *go_hook.HookInput) error {
 	externalAuthKey := h.ExternalAuthKey()
 	passwordInternalKey := h.PasswordInternalKey()
 
@@ -126,7 +127,7 @@ func (h *Hook) Handle(input *go_hook.HookInput) error {
 	}
 
 	// Try to restore generated password from the Secret, or generate a new one.
-	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.NewSnapshots.Get(secretBindingName))
+	pass, err := h.restoreGeneratedPasswordFromSnapshot(input.Snapshots.Get(secretBindingName))
 	if err != nil {
 		input.Logger.Info("No password in Secret, generate new one", log.Err(err))
 		pass = GeneratePassword()

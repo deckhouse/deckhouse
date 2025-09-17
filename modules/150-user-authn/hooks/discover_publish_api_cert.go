@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -71,7 +72,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverPublishAPICA)
 
-func discoverPublishAPICA(input *go_hook.HookInput) error {
+func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		secretPath     = "userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA"
 		modePath       = "userAuthn.publishAPI.https.mode"
@@ -80,7 +81,7 @@ func discoverPublishAPICA(input *go_hook.HookInput) error {
 	)
 
 	caCertificates := make(map[string][]byte)
-	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.NewSnapshots.Get("secret")) {
+	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.Snapshots.Get("secret")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
 		}
@@ -130,7 +131,7 @@ func getCert(input *go_hook.HookInput, secretKey string) (string, error) {
 	caCertificates := make(map[string][]byte)
 
 	var cert string
-	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.NewSnapshots.Get("secret")) {
+	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.Snapshots.Get("secret")) {
 		if err != nil {
 			return "", fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
 		}

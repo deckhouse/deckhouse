@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -103,7 +104,7 @@ func filterAuthSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 
 // restoreOrGeneratePassword restores passwords from config values or secrets.
 // If there are no passwords, it generates new.
-func restoreOrGeneratePassword(input *go_hook.HookInput) error {
+func restoreOrGeneratePassword(_ context.Context, input *go_hook.HookInput) error {
 	for secretName, appName := range upmeterApps {
 		externalAuthValuesPath := fmt.Sprintf(externalAuthValuesTmpl, appName)
 		passwordInternalValuesPath := fmt.Sprintf(passwordInternalValuesTmpl, appName)
@@ -115,7 +116,7 @@ func restoreOrGeneratePassword(input *go_hook.HookInput) error {
 		}
 
 		// Try to restore generated password from the Secret, or generate a new one.
-		pass, err := restoreGeneratedPasswordFromSnapshot(input.NewSnapshots.Get(authSecretBinding), secretName)
+		pass, err := restoreGeneratedPasswordFromSnapshot(input.Snapshots.Get(authSecretBinding), secretName)
 		if err != nil {
 			input.Logger.Info("No password in config values, generate new one", slog.String("name", appName), log.Err(err))
 			pass = GeneratePassword()

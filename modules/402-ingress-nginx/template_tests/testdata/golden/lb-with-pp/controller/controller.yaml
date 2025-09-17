@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 2ee4c4a224ba2bec316992e0fbff4d51691df4aa6d2cf815f28d20db793a4f1f
+    ingress-nginx-controller.deckhouse.io/checksum: b4004269eecc01dbcf5b68aa944d8083fab21bafd890588e279f4494b923569a
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancerWithProxyProtocol
   labels:
@@ -57,10 +57,13 @@ spec:
       name: test-lbwpp
   template:
     metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
         name: test-lbwpp
     spec:
+      automountServiceAccountToken: true
       containers:
       - args:
         - /nginx-ingress-controller
@@ -73,9 +76,6 @@ spec:
         - --update-status=true
         - --publish-service=d8-ingress-nginx/test-lbwpp-load-balancer
         - --shutdown-grace-period=120
-        - --validating-webhook=:8443
-        - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
-        - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
         - --controller-class=ingress-nginx.deckhouse.io/nginx
         - --watch-ingress-without-class=true
         - --healthz-host=127.0.0.1
@@ -91,7 +91,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller16
+        image: registry.example.com@imageHash-ingressNginx-controller19
         lifecycle:
           preStop:
             exec:
@@ -113,9 +113,6 @@ spec:
           protocol: TCP
         - containerPort: 443
           protocol: UDP
-        - containerPort: 8443
-          name: webhook
-          protocol: TCP
         readinessProbe:
           httpGet:
             path: /controller/healthz
@@ -129,24 +126,44 @@ spec:
             cpu: 350m
             ephemeral-storage: 150Mi
             memory: 500Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
-        - mountPath: /var/lib/nginx/body
+        - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path
-        - mountPath: /var/lib/nginx/fastcgi
+        - mountPath: /chroot/var/lib/nginx/fastcgi
           name: fastcgi-temp-path
-        - mountPath: /var/lib/nginx/proxy
+        - mountPath: /chroot/var/lib/nginx/proxy
           name: proxy-temp-path
-        - mountPath: /var/lib/nginx/scgi
+        - mountPath: /chroot/var/lib/nginx/scgi
           name: scgi-temp-path
-        - mountPath: /var/lib/nginx/uwsgi
+        - mountPath: /chroot/var/lib/nginx/uwsgi
           name: uwsgi-temp-path
-        - mountPath: /etc/nginx/ssl/
+        - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp/nginx/
+        - mountPath: /tmp
           name: tmp-nginx
-        - mountPath: /etc/nginx/webhook-ssl/
-          name: webhook-cert
-          readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp-nginx
+        - mountPath: /chroot/etc/resolv.conf
+          name: write-files
+          subPath: resolv.conf
+        - mountPath: /chroot/etc/nginx/nginx.conf
+          name: write-files
+          subPath: nginx.conf
+        - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+          name: write-files
+          subPath: opentelemetry.toml
+        - mountPath: /chroot/var/log/nginx/error.log
+          name: write-files
+          subPath: error.log
+        - mountPath: /chroot/etc/ingress-controller/ssl
+          name: tmp-ssl
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -154,6 +171,17 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
         volumeMounts:
         - mountPath: /var/files
           name: telemetry-config-file
@@ -209,10 +237,56 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+          seccompProfile:
+            type: RuntimeDefault
       dnsPolicy: ClusterFirst
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - --
+        - /bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf
+          && chmod 0666 /tmp/*
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: touch-files
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /tmp
+          name: write-files
+      - command:
+        - sh
+        - -c
+        - --
+        - /bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: mkdir-nginx
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: tmp
+          name: tmp-nginx
+      priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
       tolerations:
@@ -226,6 +300,10 @@ spec:
       - key: drbd.linbit.com/force-io-error
       - key: drbd.linbit.com/ignore-fail-over
       volumes:
+      - emptyDir: {}
+        name: write-files
+      - emptyDir: {}
+        name: tmp-ssl
       - emptyDir: {}
         name: tmp-nginx
       - emptyDir: {}
@@ -241,9 +319,6 @@ spec:
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-test-lbwpp-auth-tls
-      - name: webhook-cert
-        secret:
-          secretName: ingress-admission-certificate
       - configMap:
           name: d8-ingress-telemetry-config
         name: telemetry-config-file

@@ -16,6 +16,7 @@ package helper
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -94,6 +95,9 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	}
 
 	cleanuper.Add(func() error {
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			sshClient.Stop()
+		}
 		return nil
 	})
 

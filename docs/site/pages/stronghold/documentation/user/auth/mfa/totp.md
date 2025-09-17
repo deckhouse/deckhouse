@@ -1,7 +1,8 @@
 ---
 title: "TOTP"
 permalink: en/stronghold/documentation/user/auth/mfa/totp.html
-lang: en
+searchable: false
+sitemap_include: false
 ---
 
 ## Configure TOTP

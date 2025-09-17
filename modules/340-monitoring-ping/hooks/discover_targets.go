@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -72,11 +73,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, updateNodeList)
 
-func updateNodeList(input *go_hook.HookInput) error {
-	lenSnapshot := len(input.NewSnapshots.Get("addresses"))
+func updateNodeList(_ context.Context, input *go_hook.HookInput) error {
+	lenSnapshot := len(input.Snapshots.Get("addresses"))
 	nodes := make([]nodeTarget, 0, lenSnapshot)
 
-	for nt, err := range sdkobjectpatch.SnapshotIter[nodeTarget](input.NewSnapshots.Get("addresses")) {
+	for nt, err := range sdkobjectpatch.SnapshotIter[nodeTarget](input.Snapshots.Get("addresses")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'addresses' snapshots: %w", err)
 		}

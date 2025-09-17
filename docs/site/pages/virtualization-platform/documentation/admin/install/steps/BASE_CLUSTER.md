@@ -26,7 +26,7 @@ For example, when planning the cluster parameters, the following values were cho
 - Pod and service subnets: `10.88.0.0/16` and `10.99.0.0/16`;
 - Nodes are connected via the `192.168.1.0/24` subnet;
 - Public wildcard domain for the cluster: `my-dvp-cluster.example.com`;
-- Update channel: `early-access`.
+- Release channel: `early-access`.
 
 {% offtopic title="Example config.yaml for installing the basic platform..." %}
 
@@ -111,7 +111,7 @@ Depending on the chosen edition, authentication in the container registry `regis
 
 ### Choosing the installer image
 
-The installer runs as a Docker container. The container image is selected based on the edition and update channel:
+The installer runs as a Docker container. The container image is selected based on the edition and release channel:
 
 ```shell
 registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
@@ -121,18 +121,18 @@ Where:
 
 - `<REVISION>` — the [edition](../../../about/editions.html) of the platform (e.g., `ee` for Enterprise Edition, `ce` for Community Edition, etc.)
 
-- `<RELEASE_CHANNEL>` — the [update channel](../../../about/release-channels.html) of the platform in kebab-case:
-  - `alpha` — for the *Alpha* update channel;
-  - `beta` — for the *Beta* update channel;
-  - `early-access` — for the *EarlyAccess* update channel;
-  - `stable` — for the *Stable* update channel;
-  - `rock-solid` — for the *RockSolid* update channel.
+- `<RELEASE_CHANNEL>` — the [release channel](../../../about/release-channels.html) of the platform in kebab-case:
+  - `alpha` — for the *Alpha* release channel;
+  - `beta` — for the *Beta* release channel;
+  - `early-access` — for the *EarlyAccess* release channel;
+  - `stable` — for the *Stable* release channel;
+  - `rock-solid` — for the *RockSolid* release channel.
 
 ### Installation with cluster creation
 
 1. Run the container, in which the configuration file and SSH keys for node access will be mounted.
 
-   For example, to install the `CE` edition from the `Stable` update channel, use the image `registry.deckhouse.io/deckhouse/ce/install:stable`. In this case, the container can be started with the following command:
+   For example, to install the `CE` edition from the `Stable` release channel, use the image `registry.deckhouse.io/deckhouse/ce/install:stable`. In this case, the container can be started with the following command:
 
    ```shell
    docker run -it --pull=always \
@@ -160,7 +160,7 @@ Mounting the `$HOME/.ssh` directory gives the installer access to the SSH config
 
 1. Run the container, where the configuration file, keys for node access, and the file for connecting to the Kubernetes API will be mounted.
 
-   For example, to install the `CE` edition from the `Stable` update channel, the image `registry.deckhouse.io/deckhouse/ce/install:stable` will be used, and the connection to the Kubernetes API will use the configuration file in `$HOME/.kube/config`.
+   For example, to install the `CE` edition from the `Stable` release channel, the image `registry.deckhouse.io/deckhouse/ce/install:stable` will be used, and the connection to the Kubernetes API will use the configuration file in `$HOME/.kube/config`.
 
    In this case, the container can be started with the following command:
 
@@ -218,7 +218,7 @@ master-0       Ready    control-plane,master   5m      v1.29.10
 List of checks performed by the installer before starting platform installation:
 
 1. General checks:
-   - The values of the parameters [PublicDomainTemplate](/products/virtualization-platform/reference/mc.html#global-parameters-modules-publicdomaintemplate) and [clusterDomain](/products/virtualization-platform/reference/cr/clusterdomain.html) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/virtualization-platform/reference/mc.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/virtualization-platform/reference/cr/clusterconfiguration.html#clusterconfiguration-clusterdomain) do not match.
    - The authentication data for the container image registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
      - The length does not exceed 63 characters;
