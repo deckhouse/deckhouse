@@ -149,7 +149,6 @@ type Kubeconfig struct {
 
 // TokenValidationResult represents the result of token validation
 type TokenValidationResult struct {
-	IsValid   bool      `json:"isValid"`
 	IsExpired bool      `json:"isExpired"`
 	ExpiresAt time.Time `json:"expiresAt"`
 	Error     string    `json:"error,omitempty"`
@@ -159,8 +158,8 @@ type TokenValidationResult struct {
 func validateJWTToken(tokenString string) TokenValidationResult {
 	if tokenString == "" {
 		return TokenValidationResult{
-			IsValid: false,
-			Error:   "token is empty",
+			IsExpired: true,
+			Error:     "token is empty",
 		}
 	}
 
@@ -168,8 +167,8 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 	token, err := jose.ParseSigned(tokenString)
 	if err != nil {
 		return TokenValidationResult{
-			IsValid: false,
-			Error:   fmt.Sprintf("failed to parse token: %v", err),
+			IsExpired: true,
+			Error:     fmt.Sprintf("failed to parse token: %v", err),
 		}
 	}
 
@@ -180,8 +179,8 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 	var claims map[string]interface{}
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return TokenValidationResult{
-			IsValid: false,
-			Error:   fmt.Sprintf("failed to unmarshal claims: %v", err),
+			IsExpired: true,
+			Error:     fmt.Sprintf("failed to unmarshal claims: %v", err),
 		}
 	}
 
@@ -189,14 +188,12 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 
 	if expTime < time.Now().UTC().Unix() {
 		return TokenValidationResult{
-			IsValid:   false,
 			IsExpired: true,
 			Error:     "JWT token expired",
 		}
 	}
 
 	return TokenValidationResult{
-		IsValid:   true,
 		IsExpired: false,
 		ExpiresAt: time.Unix(expTime, 0),
 	}
@@ -398,8 +395,7 @@ multiclustersLoop:
 			existingToken = token
 			input.Logger.Info("found matching secret for multicluster",
 				slog.String("multiclusterName", multiclusterInfo.Name),
-				slog.String("secretName", "istio-remote-secret-"+multiclusterInfo.Name),
-				slog.Bool("hasToken", existingToken != ""))
+				slog.String("secretName", "istio-remote-secret-"+multiclusterInfo.Name))
 
 			input.Logger.Info("validating existing token",
 				slog.String("name", multiclusterInfo.Name))
@@ -407,12 +403,11 @@ multiclustersLoop:
 			validationResult := validateJWTToken(existingToken)
 			input.Logger.Info("token validation result",
 				slog.String("name", multiclusterInfo.Name),
-				slog.Bool("isValid", validationResult.IsValid),
 				slog.Bool("isExpired", validationResult.IsExpired),
 				slog.String("error", validationResult.Error),
 				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 
-			if validationResult.IsValid && !validationResult.IsExpired {
+			if !validationResult.IsExpired {
 				// Token is still valid, reuse it
 				shouldGenerateNewToken = false
 				multiclusterInfo.APIJWT = existingToken
