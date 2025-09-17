@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -169,11 +171,18 @@ func (s *Client) Start() error {
 		return nil
 	}
 
+	noAuthMethodsRemain := func(err error) bool {
+		if s.Settings.User == global.ConvergeNodeUserName {
+			return false
+		}
+		return strings.Contains(err.Error(), "unable to authenticate")
+	}
+
 	if bastionClient == nil {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).Run(func() error {
+		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
 			s.Settings.ChoiceNewHost()
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			client, err = ssh.Dial("tcp", addr, config)
@@ -211,7 +220,7 @@ func (s *Client) Start() error {
 	var targetClientConn ssh.Conn
 	var targetNewChan <-chan ssh.NewChannel
 	var targetReqChan <-chan *ssh.Request
-	err = retry.NewSilentLoop("Connect to target SSH host", 50, 2*time.Second).Run(func() error {
+	err = retry.NewLoop("Connect to target SSH host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
 		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
 		return err
 	})
