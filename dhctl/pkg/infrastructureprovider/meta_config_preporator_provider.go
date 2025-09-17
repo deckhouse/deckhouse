@@ -56,10 +56,11 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator()
+			return yandex.NewMetaConfigPreparator(true)
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
-				PrepareMetaConfig: true,
+				PrepareMetaConfig:     true,
+				ValidateClusterPrefix: true,
 			}, logger)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}

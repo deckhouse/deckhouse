@@ -25,7 +25,8 @@ import (
 )
 
 type MetaConfigPreparatorParams struct {
-	PrepareMetaConfig bool
+	PrepareMetaConfig     bool
+	ValidateClusterPrefix bool
 }
 
 type MetaConfigPreparator struct {
@@ -47,9 +48,11 @@ func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logge
 }
 
 func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-	if err != nil {
-		return fmt.Errorf("%v for provider %s", err, ProviderName)
+	if p.params.ValidateClusterPrefix {
+		err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
+		if err != nil {
+			return fmt.Errorf("%v for provider %s", err, ProviderName)
+		}
 	}
 
 	return nil

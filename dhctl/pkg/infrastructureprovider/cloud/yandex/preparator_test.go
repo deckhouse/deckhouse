@@ -56,7 +56,7 @@ func getTestNodeGroupsSpec(t *testing.T, replicas int, externalIPs []string) jso
 	return b
 }
 
-func fillProviderClusterConfig(cfg *config.MetaConfig, master json.RawMessage, nodeGroups json.RawMessage) {
+func fillTestProviderClusterConfig(cfg *config.MetaConfig, master json.RawMessage, nodeGroups json.RawMessage) {
 	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
 
 	cfg.ProviderClusterConfig["masterNodeGroup"] = master
@@ -66,8 +66,8 @@ func fillProviderClusterConfig(cfg *config.MetaConfig, master json.RawMessage, n
 	}
 }
 
-func assertValidation(t *testing.T, cfg *config.MetaConfig, hasError bool) {
-	preparator := NewMetaConfigPreparator()
+func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig, hasError bool) {
+	preparator := NewMetaConfigPreparator(validatePrefix)
 
 	err := preparator.Validate(context.TODO(), cfg)
 	if hasError {
@@ -79,20 +79,25 @@ func assertValidation(t *testing.T, cfg *config.MetaConfig, hasError bool) {
 }
 
 func TestValidateClusterPrefix(t *testing.T) {
-	assertClusterPrefix := func(t *testing.T, clusterPrefix string, hasError bool) {
+	getMetaConfig := func(clusterPrefix string) *config.MetaConfig {
 		cfg := &config.MetaConfig{}
 
 		cfg.ClusterPrefix = clusterPrefix
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
-		fillProviderClusterConfig(cfg, master, nil)
+		fillTestProviderClusterConfig(cfg, master, nil)
 
-		assertValidation(t, cfg, hasError)
+		return cfg
+	}
+	assertClusterPrefix := func(t *testing.T, clusterPrefix string, hasError bool) {
+		assertValidation(t, true, getMetaConfig(clusterPrefix), hasError)
 	}
 
 	assertClusterPrefix(t, "", true)
 	assertClusterPrefix(t, "1abbbs", true)
 	assertClusterPrefix(t, strings.Repeat("a", 100), true)
 	assertClusterPrefix(t, "abc-abc", false)
+
+	assertValidation(t, false, getMetaConfig(""), false)
 }
 
 func TestValidateMasterNodeGroupSpec(t *testing.T) {
@@ -101,9 +106,9 @@ func TestValidateMasterNodeGroupSpec(t *testing.T) {
 
 		cfg.ClusterPrefix = "valid-prefix"
 		master := getTestMasterNodeGroupSpec(t, replicas, externalIPS)
-		fillProviderClusterConfig(cfg, master, nil)
+		fillTestProviderClusterConfig(cfg, master, nil)
 
-		assertValidation(t, cfg, hasError)
+		assertValidation(t, true, cfg, hasError)
 	}
 
 	assertMasterNodeGroup(t, 2, []string{"1.1.1.1"}, true)
@@ -119,9 +124,9 @@ func TestValidateNodeGroupsSpec(t *testing.T) {
 		cfg.ClusterPrefix = "valid-prefix"
 		master := getTestMasterNodeGroupSpec(t, 1, []string{"1.1.1.1"})
 		nodeGroups := getTestNodeGroupsSpec(t, replicas, externalIPS)
-		fillProviderClusterConfig(cfg, master, nodeGroups)
+		fillTestProviderClusterConfig(cfg, master, nodeGroups)
 
-		assertValidation(t, cfg, hasError)
+		assertValidation(t, true, cfg, hasError)
 	}
 
 	assertNodeGroups(t, 2, []string{"1.1.1.1"}, true)

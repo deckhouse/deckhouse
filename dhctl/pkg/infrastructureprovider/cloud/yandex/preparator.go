@@ -25,16 +25,22 @@ import (
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
-type MetaConfigPreparator struct{}
+type MetaConfigPreparator struct {
+	validatePrefix bool
+}
 
-func NewMetaConfigPreparator() *MetaConfigPreparator {
-	return &MetaConfigPreparator{}
+func NewMetaConfigPreparator(validatePrefix bool) *MetaConfigPreparator {
+	return &MetaConfigPreparator{
+		validatePrefix: validatePrefix,
+	}
 }
 
 func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
-	prefix := metaConfig.ClusterPrefix
-	if !prefixRegex.MatchString(prefix) {
-		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, ProviderName, prefixRegex.String())
+	if p.validatePrefix {
+		prefix := metaConfig.ClusterPrefix
+		if !prefixRegex.MatchString(prefix) {
+			return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, ProviderName, prefixRegex.String())
+		}
 	}
 
 	var masterNodeGroup masterNodeGroupSpec

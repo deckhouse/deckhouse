@@ -27,6 +27,8 @@ func preparatorProvider(_ string) config.MetaConfigPreparator {
 		// after first converge we deploy vcd data discoverer and hook legacy_mode.go
 		// directory form data discoverer
 		PrepareMetaConfig: false,
+		// cluster prefix does not provide here
+		ValidateClusterPrefix: false,
 	})
 }
 

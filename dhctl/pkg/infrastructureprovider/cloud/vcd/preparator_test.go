@@ -27,7 +27,8 @@ import (
 
 func newTestPreparator(prepareConfig bool, getter apiVersionGetter) *MetaConfigPreparator {
 	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
-		PrepareMetaConfig: prepareConfig,
+		PrepareMetaConfig:     prepareConfig,
+		ValidateClusterPrefix: true,
 	}, log.GetDefaultLogger())
 
 	p.getAPI = getter
@@ -106,4 +107,12 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "", true)
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
+
+	preparator := newTestPreparator(false, testGetLegacyAPI)
+	preparator.params.ValidateClusterPrefix = false
+	cfg := &config.MetaConfig{}
+
+	cfg.ClusterPrefix = ""
+	err := preparator.Validate(context.TODO(), cfg)
+	require.NoError(t, err)
 }
