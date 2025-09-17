@@ -14,12 +14,19 @@
 
 package interfaces
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func IsNil(value any) bool {
-	if value != nil && !reflect.ValueOf(value).IsNil() {
+	iv := reflect.ValueOf(value)
+	if !iv.IsValid() {
+		return true
+	}
+	switch iv.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
+		return iv.IsNil()
+	default:
 		return false
 	}
-
-	return true
 }

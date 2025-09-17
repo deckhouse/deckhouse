@@ -88,8 +88,17 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get fs.DI: %w", err)
 		}
 
+		providerName := metaConfig.ProviderName
+
+		set, err := di.SettingsProvider.GetSettings(ctx, providerName, params.AdditionalParams)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot get settings for provider %s: %w", providerName, err)
+		}
+
 		p := cloud.ProviderParams{
 			AdditionalParams: params.AdditionalParams,
+			Name:             providerName,
+			Settings:         set,
 		}
 
 		provider := cloud.NewProvider(metaConfig, clusterUUID, di, p, tmpDir, params.Logger)

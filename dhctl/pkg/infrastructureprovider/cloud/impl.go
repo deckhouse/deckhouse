@@ -43,6 +43,7 @@ type ProviderDI struct {
 }
 
 type ProviderParams struct {
+	Name             string
 	AdditionalParams ProviderAdditionalParams
 	Settings         settings.ProviderSettings
 }
@@ -66,7 +67,7 @@ func NewProvider(metaConfig *config.MetaConfig, uuid string, di *ProviderDI, par
 	p := &Provider{
 		prefix:     metaConfig.ClusterPrefix,
 		layout:     metaConfig.Layout,
-		name:       metaConfig.ProviderName,
+		name:       params.Name,
 		uuid:       uuid,
 		di:         di,
 		params:     params,
