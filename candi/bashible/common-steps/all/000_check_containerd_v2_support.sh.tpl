@@ -94,6 +94,23 @@ function main() {
   errs=$(check_containerd_v2_support)
 
   if [[ -n "$errs" ]]; then
+    for err in "${errs[@]}"; do
+      if [[ "$err" == "systemd" ]]; then
+        bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+      fi
+
+      if [[ "$err" == "kernel" ]]; then
+        bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+      fi
+
+      if [[ "$err" == "cgroupv2" ]]; then
+        bb-log-error "required cgroupv2 support"
+      fi
+
+      if [[ "$err" == "erofs" ]]; then
+        bb-log-error "required erofs kernel module"
+      fi
+    done
     unsupported=1
   else
     unsupported=0
