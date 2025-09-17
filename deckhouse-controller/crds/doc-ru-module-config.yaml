@@ -8,8 +8,6 @@ spec:
           properties:
             spec:
               type: object
-              required:
-                - enabled
               properties:
                 enabled:
                   description: |
