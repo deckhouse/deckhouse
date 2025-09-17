@@ -382,53 +382,31 @@ multiclustersLoop:
 			continue multiclustersLoop
 		}
 
-		// Check if we already have a valid token from remote secrets before generating a new one
-		existingToken := ""
-		shouldGenerateNewToken := true
+		// Check existing token from remote secrets and validate it
+		existingToken := secretTokens[multiclusterInfo.Name]
 
-		input.Logger.Info("starting token reuse logic for multicluster",
+		input.Logger.Info("validating existing token",
 			slog.String("name", multiclusterInfo.Name))
 
-		// Look for existing token in remote secrets
-		input.Logger.Info("checking remote secrets for existing token",
-			slog.String("multiclusterName", multiclusterInfo.Name),
-			slog.Int("remoteSecretsCount", len(secretTokens)))
+		validationResult := validateJWTToken(existingToken)
+		input.Logger.Info("token validation result",
+			slog.String("name", multiclusterInfo.Name),
+			slog.Bool("isExpired", validationResult.IsExpired),
+			slog.String("error", validationResult.Error),
+			slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 
-		if token, exists := secretTokens[multiclusterInfo.Name]; exists {
-			existingToken = token
-			input.Logger.Info("found matching secret for multicluster",
-				slog.String("multiclusterName", multiclusterInfo.Name),
-				slog.String("secretName", "istio-remote-secret-"+multiclusterInfo.Name))
-
-			input.Logger.Info("validating existing token",
-				slog.String("name", multiclusterInfo.Name))
-
-			validationResult := validateJWTToken(existingToken)
-			input.Logger.Info("token validation result",
+		if !validationResult.IsExpired {
+			// Token is still valid, reuse it
+			multiclusterInfo.APIJWT = existingToken
+			input.Logger.Info("reusing existing valid token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
-				slog.Bool("isExpired", validationResult.IsExpired),
-				slog.String("error", validationResult.Error),
 				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
-
-			if !validationResult.IsExpired {
-				// Token is still valid, reuse it
-				shouldGenerateNewToken = false
-				multiclusterInfo.APIJWT = existingToken
-				input.Logger.Info("reusing existing valid token for multicluster",
-					slog.String("name", multiclusterInfo.Name),
-					slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
-			} else {
-				input.Logger.Info("existing token is invalid or expired, generating new token",
-					slog.String("name", multiclusterInfo.Name),
-					slog.String("error", validationResult.Error),
-					slog.Bool("isExpired", validationResult.IsExpired))
-			}
 		} else {
-			input.Logger.Info("no existing token found, will generate new token",
-				slog.String("name", multiclusterInfo.Name))
-		}
+			input.Logger.Info("existing token is invalid or expired, generating new token",
+				slog.String("name", multiclusterInfo.Name),
+				slog.String("error", validationResult.Error),
+				slog.Bool("isExpired", validationResult.IsExpired))
 
-		if shouldGenerateNewToken {
 			privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
 			claims := map[string]string{
 				"iss":   "d8-istio",
@@ -443,9 +421,6 @@ multiclustersLoop:
 				input.Logger.Warn("can't generate auth token for remote api of IstioMulticluster", slog.String("name", multiclusterInfo.Name), log.Err(err))
 				continue multiclustersLoop
 			}
-
-			input.Logger.Info("generated new token for multicluster",
-				slog.String("name", multiclusterInfo.Name))
 		}
 
 		multiclusterInfo.Public = nil
