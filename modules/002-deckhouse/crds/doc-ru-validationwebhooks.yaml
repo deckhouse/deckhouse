@@ -8,92 +8,90 @@ spec:
 
             Один custom resource `ValidationWebhook` описывает обработчик валидации для определенных типов ресурсов и операций.
           properties:
-            spec:
-              properties:
-                context:
-                  description: |
-                    Запускает хук при изменениях объектов Kubernetes.
-                  items:
+            context:
+              description: |
+                Запускает хук при изменениях объектов Kubernetes.
+              items:
+                properties:
+                  kubernetes:
                     properties:
-                      kubernetes:
+                      allowFailure:
+                        description: |
+                          Если `true`, Shell-operator игнорирует ошибки выполнения хука.
+                          Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
+                      apiVersion:
+                        description: |
+                          Необязательная группа и версия API объекта.
+                          Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
+                      executeHookOnEvent:
+                        description: |
+                          Список событий, которые приводят к выполнению хука.
+                          По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
+                      executeHookOnSynchronization:
+                        description: |
+                          Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
+                      kind:
+                        description: |
+                          Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
+                      labelSelector:
+                        description: |
+                          Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
+                      namespace:
+                        description: |
+                          Фильтры для выбора пространств имен.
                         properties:
-                          allowFailure:
-                            description: |
-                              Если `true`, Shell-operator игнорирует ошибки выполнения хука.
-                              Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
-                          apiVersion:
-                            description: |
-                              Необязательная группа и версия API объекта.
-                              Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
-                          executeHookOnEvent:
-                            description: |
-                              Список событий, которые приводят к выполнению хука.
-                              По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
-                          executeHookOnSynchronization:
-                            description: |
-                              Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
-                          kind:
-                            description: |
-                              Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
                           labelSelector:
                             description: |
-                              Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
-                          namespace:
+                              Селектор меток для фильтрации пространств имен.
+                          nameSelector:
                             description: |
-                              Фильтры для выбора пространств имен.
-                            properties:
-                              labelSelector:
-                                description: |
-                                  Селектор меток для фильтрации пространств имен.
-                              nameSelector:
-                                description: |
-                                  Селектор имен для фильтрации пространств имен.
-                          queue:
-                            description: |
-                              Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
-                      name:
+                              Селектор имен для фильтрации пространств имен.
+                      queue:
                         description: |
-                          Используется для различения разных привязок во время выполнения.
-                handler:
+                          Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
+                  name:
+                    description: |
+                      Используется для различения разных привязок во время выполнения.
+            handler:
+              description: |
+                Код обработчика ValidatingWebhook.
+              properties:
+                cel:
                   description: |
-                    Код обработчика ValidatingWebhook.
-                  properties:
-                    cel:
-                      description: |
-                        CEL-обработчик правил для объекта.
-                    python:
-                      description: |
-                        Python-скрипт обработчика для объекта.
-                validationObject:
+                    CEL-обработчик правил для объекта.
+                python:
                   description: |
-                    ValidatingWebhook описывает webhook и ресурсы и операции, к которым он применяется.
-                  properties:
-                    failurePolicy:
-                      description: |
-                        Определяет, как обрабатываются ошибки от хука.
-                    name:
-                      description: |
-                        Должно быть доменом с как минимум тремя сегментами, разделенными точками.
-                    rules:
-                      description: |
-                        Обязательный список правил, используемых для определения, следует ли отправить запрос к Kubernetes API server в хук.
-                      items:
-                        properties:
-                          apiGroups:
-                            description: |
-                              API-группы, к которым принадлежат ресурсы. '*' означает все группы.
-                          apiVersions:
-                            description: |
-                              API-версии, к которым принадлежат ресурсы. '*' означает все версии.
-                          operations:
-                            description: |
-                              Операции, которые интересуют admission hook: CREATE, UPDATE, DELETE, CONNECT или * для всех операций.
-                          resources:
-                            description: |
-                              Список ресурсов, к которым применяется это правило.
-                    sideEffects:
-                      description: |
-                        Определяет, знает ли хук о dryRun.
-                    timeoutSeconds:
-                      description: |
-                        Количество секунд, которое API сервер должен ждать ответа от хука, прежде чем считать вызов неудачным. По умолчанию 10 (секунд).
+                    Python-скрипт обработчика для объекта.
+            validationObject:
+              description: |
+                ValidatingWebhook описывает webhook и ресурсы и операции, к которым он применяется.
+              properties:
+                failurePolicy:
+                  description: |
+                    Определяет, как обрабатываются ошибки от хука.
+                name:
+                  description: |
+                    Должно быть доменом с как минимум тремя сегментами, разделенными точками.
+                rules:
+                  description: |
+                    Обязательный список правил, используемых для определения, следует ли отправить запрос к Kubernetes API server в хук.
+                  items:
+                    properties:
+                      apiGroups:
+                        description: |
+                          API-группы, к которым принадлежат ресурсы. '*' означает все группы.
+                      apiVersions:
+                        description: |
+                          API-версии, к которым принадлежат ресурсы. '*' означает все версии.
+                      operations:
+                        description: |
+                          Операции, которые интересуют admission hook: CREATE, UPDATE, DELETE, CONNECT или * для всех операций.
+                      resources:
+                        description: |
+                          Список ресурсов, к которым применяется это правило.
+                sideEffects:
+                  description: |
+                    Определяет, знает ли хук о dryRun.
+                timeoutSeconds:
+                  description: |
+                    Количество секунд, которое API сервер должен ждать ответа от хука, прежде чем считать вызов неудачным. По умолчанию 10 (секунд).

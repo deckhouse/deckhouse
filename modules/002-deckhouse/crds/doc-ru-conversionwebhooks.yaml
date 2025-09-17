@@ -8,118 +8,116 @@ spec:
 
             Один custom resource `ConversionWebhook` описывает обработчики конвертации между версиями пользовательских ресурсов.
           properties:
-            spec:
-              properties:
-                context:
-                  description: |
-                    Запускает хук при изменениях объектов Kubernetes.
-                  items:
+            context:
+              description: |
+                Запускает хук при изменениях объектов Kubernetes.
+              items:
+                properties:
+                  kubernetes:
                     properties:
-                      kubernetes:
+                      allowFailure:
+                        description: |
+                          Если `true`, Shell-operator игнорирует ошибки выполнения хука.
+                          Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
+                      apiVersion:
+                        description: |
+                          Необязательная группа и версия API объекта.
+                          Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
+                      executeHookOnEvent:
+                        description: |
+                          Список событий, которые приводят к выполнению хука.
+                          По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
+                      executeHookOnSynchronization:
+                        description: |
+                          Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
+                      fieldSelector:
                         properties:
-                          allowFailure:
-                            description: |
-                              Если `true`, Shell-operator игнорирует ошибки выполнения хука.
-                              Если `false` или параметр не установлен, хук перезапускается через 5 секунд после ошибки.
-                          apiVersion:
-                            description: |
-                              Необязательная группа и версия API объекта.
-                              Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
-                          executeHookOnEvent:
-                            description: |
-                              Список событий, которые приводят к выполнению хука.
-                              По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
-                          executeHookOnSynchronization:
-                            description: |
-                              Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
-                          fieldSelector:
-                            properties:
-                              matchExpressions:
-                                items:
-                                  properties:
-                                    field:
-                                      description: |
-                                        Имя поля для фильтрации.
-                                    operator:
-                                      description: |
-                                        Оператор для сравнения поля со значением.
-                                    value:
-                                      description: |
-                                        Значение для сравнения с полем.
-                          group:
-                            description: |
-                              Ключ для включения снимков из группы привязок schedule и kubernetes.
-                          includeSnapshotsFrom:
-                            description: |
-                              Массив имен привязок kubernetes в хуке.
-                              При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots. Возможно само-включение.
-                          jqFilter:
-                            description: |
-                              Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
-                              Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
-                          keepFullObjectsInMemory:
-                            description: |
-                              Если не установлено или `true`, дампы ресурсов Kubernetes кешируются для этой привязки, и снимок включает их как поля объекта.
-                              Установите в `false`, если хук не полагается на полные объекты для уменьшения потребления памяти.
-                          kind:
-                            description: |
-                              Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
-                          labelSelector:
-                            description: |
-                              Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
-                          mode:
-                            description: |
-                              Режим работы привязки kubernetes.
-                          nameSelector:
-                            properties:
-                              matchNames:
-                                description: |
-                                  Список имен ресурсов для отслеживания.
-                          namespace:
-                            description: |
-                              Фильтры для выбора пространств имен.
-                            properties:
-                              labelSelector:
-                                description: |
-                                  Селектор меток для фильтрации пространств имен.
-                              nameSelector:
-                                description: |
-                                  Селектор имен для фильтрации пространств имен.
-                          queue:
-                            description: |
-                              Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
-                          resynchronizationPeriod:
-                            description: |
-                              Период ресинхронизации для привязки.
-                          waitForSynchronization:
-                            description: |
-                              Время ожидания синхронизации.
-                          watchEvent:
-                            description: |
-                              Список событий для отслеживания.
-                      name:
+                          matchExpressions:
+                            items:
+                              properties:
+                                field:
+                                  description: |
+                                    Имя поля для фильтрации.
+                                operator:
+                                  description: |
+                                    Оператор для сравнения поля со значением.
+                                value:
+                                  description: |
+                                    Значение для сравнения с полем.
+                      group:
                         description: |
-                          Используется для различения разных привязок во время выполнения.
-                conversions:
-                  description: |
-                    Эта привязка превращает хук в обработчик для конвертации, определенной в CustomResourceDefinition.
-                    Shell-operator обновляет CRD с помощью .spec.conversion, запускает HTTPS сервер и выполняет хуки для обработки запросов ConversionReview.
-                  items:
-                    properties:
-                      from:
-                        description: |
-                          Версия пользовательского ресурса, которую хук может конвертировать.
-                      handler:
-                        description: |
-                          Код обработчика конвертации.
-                        properties:
-                          python:
-                            description: |
-                              Python скрипт обработчика для объекта.
+                          Ключ для включения снимков из группы привязок schedule и kubernetes.
                       includeSnapshotsFrom:
                         description: |
                           Массив имен привязок kubernetes в хуке.
-                          При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots.
-                      to:
+                          При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots. Возможно само-включение.
+                      jqFilter:
                         description: |
-                          Версия пользовательского ресурса, которую хук может производить.
+                          Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
+                          Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
+                      keepFullObjectsInMemory:
+                        description: |
+                          Если не установлено или `true`, дампы ресурсов Kubernetes кешируются для этой привязки, и снимок включает их как поля объекта.
+                          Установите в `false`, если хук не полагается на полные объекты для уменьшения потребления памяти.
+                      kind:
+                        description: |
+                          Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
+                      labelSelector:
+                        description: |
+                          Селектор меток для фильтрации ресурсов. Результат matchLabels и matchExpressions объединяется через AND. Пустой селектор меток соответствует всем объектам. Нулевой селектор меток не соответствует ни одному объекту.
+                      mode:
+                        description: |
+                          Режим работы привязки kubernetes.
+                      nameSelector:
+                        properties:
+                          matchNames:
+                            description: |
+                              Список имен ресурсов для отслеживания.
+                      namespace:
+                        description: |
+                          Фильтры для выбора пространств имен.
+                        properties:
+                          labelSelector:
+                            description: |
+                              Селектор меток для фильтрации пространств имен.
+                          nameSelector:
+                            description: |
+                              Селектор имен для фильтрации пространств имен.
+                      queue:
+                        description: |
+                          Имя отдельной очереди. Может использоваться для выполнения долго работающих хуков параллельно с хуками в "основной" очереди.
+                      resynchronizationPeriod:
+                        description: |
+                          Период ресинхронизации для привязки.
+                      waitForSynchronization:
+                        description: |
+                          Время ожидания синхронизации.
+                      watchEvent:
+                        description: |
+                          Список событий для отслеживания.
+                  name:
+                    description: |
+                      Используется для различения разных привязок во время выполнения.
+            conversions:
+              description: |
+                Эта привязка превращает хук в обработчик для конвертации, определенной в CustomResourceDefinition.
+                Shell-operator обновляет CRD с помощью .spec.conversion, запускает HTTPS сервер и выполняет хуки для обработки запросов ConversionReview.
+              items:
+                properties:
+                  from:
+                    description: |
+                      Версия пользовательского ресурса, которую хук может конвертировать.
+                  handler:
+                    description: |
+                      Код обработчика конвертации.
+                    properties:
+                      python:
+                        description: |
+                          Python скрипт обработчика для объекта.
+                  includeSnapshotsFrom:
+                    description: |
+                      Массив имен привязок kubernetes в хуке.
+                      При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots.
+                  to:
+                    description: |
+                      Версия пользовательского ресурса, которую хук может производить.
