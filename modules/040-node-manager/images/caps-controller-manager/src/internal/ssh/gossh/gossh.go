@@ -32,15 +32,27 @@ type SSH struct {
 }
 
 func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
-	var signer ssh.Signer
-	var err error
-	var pass string
+	var (
+		signer    ssh.Signer
+		err       error
+		pass      string
+		loginPass string
+	)
+
 	if len(instanceScope.Credentials.Spec.SudoPasswordEncoded) > 0 {
 		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, err
 		}
 		pass = string(passBytes)
+	}
+
+	if len(instanceScope.Credentials.Spec.PasswordEncoded) > 0 {
+		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PasswordEncoded)
+		if err != nil {
+			return nil, err
+		}
+		loginPass = string(passBytes)
 	}
 	AuthMethods := make([]ssh.AuthMethod, 0, 2)
 	if len(instanceScope.Credentials.Spec.PrivateSSHKey) > 0 {
@@ -58,6 +70,10 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 
 	if len(pass) > 0 {
 		AuthMethods = append(AuthMethods, ssh.Password(pass))
+	}
+
+	if len(loginPass) > 0 {
+		AuthMethods = append(AuthMethods, ssh.Password(loginPass))
 	}
 
 	config := &ssh.ClientConfig{

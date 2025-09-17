@@ -77,6 +77,14 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 
 	}
 
+	if r.Spec.PasswordEncoded != "" {
+		_, err := base64.StdEncoding.DecodeString(r.Spec.PasswordEncoded)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "PasswordEncoded"), "******", "PasswordEncoded must be a valid base64 encoded string")
+		}
+
+	}
+
 	return nil, nil
 }
 
@@ -100,6 +108,14 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 		_, err := base64.StdEncoding.DecodeString(r.Spec.SudoPasswordEncoded)
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
+		}
+
+	}
+
+	if r.Spec.PasswordEncoded != "" {
+		_, err := base64.StdEncoding.DecodeString(r.Spec.PasswordEncoded)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "PasswordEncoded"), "******", "PasswordEncoded must be a valid base64 encoded string")
 		}
 
 	}
