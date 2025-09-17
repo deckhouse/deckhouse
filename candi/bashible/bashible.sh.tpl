@@ -17,14 +17,31 @@ export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
 {{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl (printf `
-%s
+{{- tpl $bbnn . }}
 
-{{ template "bb-d8-node-name" . }}
+bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
 
-{{ template "bb-discover-node-name"   . }}
-`
-(index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
+bb-discover-node-name() {
+  local discovered_name_file="/var/lib/bashible/discovered-node-name"
+  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
+
+  if [ ! -s "$discovered_name_file" ]; then
+    if [[ -s "$kubelet_crt" ]]; then
+      openssl x509 -in "$kubelet_crt" \
+        -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
+    else
+    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
+      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+        hostnamectl set-hostname "$(hostname -s)"
+      fi
+    {{- end }}
+      hostname > "$discovered_name_file"
+    fi
+  fi
+}
 
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
