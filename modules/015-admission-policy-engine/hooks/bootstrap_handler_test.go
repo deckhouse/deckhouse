@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 

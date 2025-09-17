@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -51,6 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var (

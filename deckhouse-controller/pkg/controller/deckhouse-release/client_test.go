@@ -26,7 +26,6 @@ import (
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -44,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 var testDeckhouseVersion = "v1.15.0"

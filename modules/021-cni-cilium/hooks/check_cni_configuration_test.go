@@ -19,7 +19,6 @@ package hooks
 import (
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 

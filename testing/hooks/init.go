@@ -30,7 +30,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
@@ -65,6 +64,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"

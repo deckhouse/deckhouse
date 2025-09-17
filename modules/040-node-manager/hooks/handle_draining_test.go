@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	. "github.com/onsi/ginkgo"
@@ -34,6 +33,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 

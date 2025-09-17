@@ -24,7 +24,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -39,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // moduleManager implements deckhouseReleaseModuleManager interface for testing

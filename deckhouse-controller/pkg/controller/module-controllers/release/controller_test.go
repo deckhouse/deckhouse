@@ -30,7 +30,6 @@ import (
 	"testing"
 	"time"
 
-	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -62,6 +61,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/testing/controller/controllersuite"
 )
 
