@@ -70,6 +70,8 @@ debug: true
       drop:
       - ALL
     readOnlyRootFilesystem: true
+    seccompProfile:
+      type: RuntimeDefault
 - args:
   - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8383
   - --v=2
