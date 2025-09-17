@@ -94,21 +94,25 @@ defaults:
       product_code: kubernetes-platform
       search_bage_enabled: true
       lang: en
+      showPrevNextButton: true
   - scope:
       path: "pages/admin"
     values:
       sidebar: main
       sitemap_include: false
+      showPrevNextButton: true
   - scope:
       path: "pages/architecture"
-      sitemap_include: false
     values:
       sidebar: main
+      sitemap_include: false
+      showPrevNextButton: true
   - scope:
       path: "pages/user"
     values:
       sidebar: main
       sitemap_include: false
+      showPrevNextButton: true
   - scope:
       path: "pages/reference"
       sitemap_include: false
@@ -173,6 +177,7 @@ defaults:
       type: "pages"
     values:
       lang: ru
+      showPrevNextButton: true
   - scope:
       path: "*/030-cloud-provider-dynamix"
       type: "pages"

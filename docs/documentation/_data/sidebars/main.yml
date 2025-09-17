@@ -3,7 +3,7 @@ entries:
     - title:
         en: Overview
         ru: Введение в документацию
-      url: /deckhouse-overview.html
+      url: /
 # ------------- Administration -------------
     - title:
         en: Administration
@@ -12,15 +12,7 @@ entries:
         - title:
             en: Platform installation
             ru: Установка платформы
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /installing/
-            - title:
-                en: Configuration
-                ru: Настройки
-              url: /installing/configuration.html
+          url: /installing/
         - title:
             en: Platform configuration
             ru: Настройка платформы
@@ -28,7 +20,7 @@ entries:
             - title:
                 en: Description
                 ru: Описание
-              url: /
+              url: /admin/configuration/
             - title:
                 en: Registries and editions
                 ru: Registries и редакции

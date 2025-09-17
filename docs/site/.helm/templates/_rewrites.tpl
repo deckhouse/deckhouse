@@ -1,4 +1,5 @@
 {{- define "rewrites" }}
+rewrite ^(.*)/deckhouse-overview.html$ $1/ redirect;
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
 rewrite ^/gs/(.*)$ /products/kubernetes-platform/gs/$1 permanent;
 rewrite ^/guides/(.*)$ /products/kubernetes-platform/guides/$1 permanent;

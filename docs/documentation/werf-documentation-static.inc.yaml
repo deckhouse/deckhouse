@@ -104,7 +104,7 @@ shell:
 
 {{ if ne .ModuleName "website-docs" }}
         # Syncing file from the documentation to the main site...
-        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb,navigation_helper.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
@@ -193,6 +193,7 @@ git:
     - '**/*'
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules-bundles.inc.yaml" .ModulePath)) . }}
 {{ if .BuildModules }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}
 {{ end }}

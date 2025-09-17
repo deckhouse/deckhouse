@@ -26,3 +26,7 @@ Deckhouse replaces `kubeadm`'s `kube-proxy` resources (DaemonSets, ConfigMaps, R
 A high level of integration between Deckhouse modules ensures effective monitoring and provides an acceptable level of security. For example, you can safely access the cluster's API server from a public IP address and use an external authentication provider.
 
 Images of all Deckhouse components (including `control plane`) are stored in a highly available and geo-distributed container registry. The latter is accessible from a limited set of IP addresses (to ease access from isolated environments).
+
+From an architectural perspective, Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
+
+Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). We would appreciate it if you *star* the project.

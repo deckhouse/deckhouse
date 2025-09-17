@@ -1,18 +1,14 @@
 ---
 title: "Как настроить?"
-permalink: ru/
+permalink: ru/admin/configuration/
 lang: ru
 ---
 
 ## Основы конфигурации Deckhouse
 
-Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков [Addon-operator'а](https://github.com/flant/addon-operator/), правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
-
-<div markdown="0" style="height: 0;" id="конфигурация-deckhouse"></div>
-
 Deckhouse конфигурируется с помощью:
 
-- **[Глобальных настроек](deckhouse-configure-global.html).** Глобальные настройки хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
+- **[Глобальных настроек](../../reference/api/global.html).** Глобальные настройки хранятся в ресурсе `ModuleConfig/global`. Эти настройки можно рассматривать как специальный модуль `global`, который нельзя отключить.
 - **[Настроек модулей](#настройка-модуля).** Настройки каждого модуля хранятся в ресурсе `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case).
 - **Кастомных ресурсов.** Некоторые модули настраиваются с помощью дополнительных кастомных ресурсов.
 
@@ -50,9 +46,15 @@ spec:
   enabled: false
 ```
 
-Посмотреть список кастомных ресурсов `ModuleConfig`, состояние модулей (включен/выключен) и их статус можно с помощью команды `d8 k get moduleconfigs`:
+Посмотреть список кастомных ресурсов `ModuleConfig`, состояние модулей (включен/выключен) и их статус можно с помощью следующей команды:
 
 ```shell
+d8 k get moduleconfigs
+```
+
+{% offtopic title="Пример вывода..." %}
+
+```console
 $ d8 k get moduleconfigs
 NAME            ENABLED   VERSION   AGE     MESSAGE
 deckhouse       true      1         12h
@@ -61,6 +63,8 @@ global                    1         12h
 prometheus      true      2         12h
 upmeter         false     2         12h
 ```
+
+{% endofftopic %}
 
 Чтобы изменить глобальную конфигурацию Deckhouse или конфигурацию модуля, нужно создать или отредактировать соответствующий ресурс `ModuleConfig`.
 
@@ -111,8 +115,6 @@ DKP управляется с помощью глобальных настрое
    ```
 
 ## Настройка модуля
-
-> При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
 
 Модуль настраивается с помощью ресурса `ModuleConfig`, имя которого совпадает с именем модуля (в kebab-case). `ModuleConfig` имеет следующие поля:
 

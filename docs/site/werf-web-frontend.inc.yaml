@@ -75,6 +75,7 @@ git:
   - _plugins/sidebar_custom.rb
   - _plugins/utils.rb
   - _plugins/offtopic.rb
+  - _plugins/navigation_helper.rb
   stageDependencies:
     setup: '**/*'
 - add: /docs/site
