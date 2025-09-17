@@ -430,14 +430,16 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 
 	err := retryFunc(15, 3*time.Second, 30*time.Second, c.logger, func() error {
 		secret, err := c.k8sClient.CoreV1().Secrets("kube-system").Get(cctx, "d8-provider-cluster-configuration", metav1.GetOptions{})
-		// d8-provider-cluster-configuration can not be exist in hybrid clusters
 		if err != nil {
-			if !errors.IsNotFound(err) {
-				return fmt.Errorf("failed to get 'd8-provider-cluster-configuration' secret: %v", err)
+			if errors.IsNotFound(err) {
+				// d8-provider-cluster-configuration can not be exist in hybrid clusters
+				c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
+				return nil
 			}
-		} else {
-			cloudDiscoveryData = secret.Data["cloud-provider-discovery-data.json"]
+			return fmt.Errorf("failed to get 'd8-provider-cluster-configuration' secret: %v", err)
 		}
+
+		cloudDiscoveryData = secret.Data["cloud-provider-discovery-data.json"]
 		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 		return nil
 	})
