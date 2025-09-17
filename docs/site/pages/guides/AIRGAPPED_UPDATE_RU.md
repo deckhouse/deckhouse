@@ -245,9 +245,9 @@ d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LIC
     d8 mirror pull --source='registry.deckhouse.ru/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' --since-version='v1.68.13' --include-module='commander-agent@1.2.4' --include-module='console@1.35.1' $(pwd)/d8-bundle
     ```
 
-    {% alert level="info" %}
-    Если вы настроили периодическое скачивание и закачивание в Ваш registry баз данных уязвимостей, то Вы можете добавить флаг --no-security-db для исключения их из процесса перекачивания образов.
-    {% endalert %}
+{% alert level="info" %}
+Если вы настроили периодическое скачивание и закачивание в Ваш registry баз данных уязвимостей, то Вы можете добавить флаг --no-security-db для исключения их из процесса перекачивания образов.
+{% endalert %}
 
     Будут скачаны последние патч релизы всех минорных версий платформы и указанных модулей начиная с последних патч версий указанных минорных версий релиза до актуальных версий, находящихся на релизных каналах (с версиями можно ознакомиться по ссылке [https://releases.deckhouse.ru/ee](https://releases.deckhouse.ru/ee))
 
