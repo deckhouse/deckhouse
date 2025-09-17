@@ -28,8 +28,9 @@ type SSHCredentialsSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	User          string `json:"user"`
-	PrivateSSHKey string `json:"privateSSHKey,omitempty"`
+	User                    string `json:"user"`
+	PrivateSSHKey           string `json:"privateSSHKey,omitempty"`
+	PrivateSSHKeyPassphrase string `json:"privateSSHKeyPassphrase,omitempty"`
 	// base64 encoded password for user
 	PasswordEncoded string `json:"passwordEncoded,omitempty"`
 	// base64 encoded password for sudo

@@ -33,10 +33,11 @@ type SSH struct {
 
 func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 	var (
-		signer    ssh.Signer
-		err       error
-		pass      string
-		loginPass string
+		signer     ssh.Signer
+		err        error
+		pass       string
+		loginPass  string
+		passphrase []byte
 	)
 
 	if len(instanceScope.Credentials.Spec.SudoPasswordEncoded) > 0 {
@@ -54,14 +55,35 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 		}
 		loginPass = string(passBytes)
 	}
+
+	if len(instanceScope.Credentials.Spec.PrivateSSHKeyPassphrase) > 0 {
+		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PasswordEncoded)
+		if err != nil {
+			return nil, err
+		}
+		passphrase = passBytes
+	}
+
 	AuthMethods := make([]ssh.AuthMethod, 0, 2)
 	if len(instanceScope.Credentials.Spec.PrivateSSHKey) > 0 {
 		privateSSHKey, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKey)
 		if err != nil {
-			return nil, fmt.Errorf("privateSSHKey must be a valid base64 encoded string")
+			return nil, fmt.Errorf("could not decode private SSH key: %s", err.Error())
+		}
+		var keyData interface{}
+		if len(passphrase) == 0 {
+			keyData, err = ssh.ParseRawPrivateKey(privateSSHKey)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse private SSH key w/o passphrase: %s", err.Error())
+			}
+		} else {
+			keyData, err = ssh.ParseRawPrivateKeyWithPassphrase(privateSSHKey, passphrase)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse private SSH key with passphrase: %s", err.Error())
+			}
 		}
 
-		signer, err = ssh.ParsePrivateKey(privateSSHKey)
+		signer, err = ssh.NewSignerFromKey(keyData)
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse keys")
 		}
