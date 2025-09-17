@@ -153,11 +153,6 @@ func TestCloudProviderGet(t *testing.T) {
 	providerYandex, err := getter(context.TODO(), getMetaConfig(t, yandex.ProviderName))
 	require.NoError(t, err)
 
-	providerVCD, err := getter(context.TODO(), getMetaConfig(t, vcd.ProviderName))
-	require.NoError(t, err)
-
-	require.NotEqual(t, providerVCD.RootDir(), providerYandex.RootDir())
-
 	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
 	require.True(t, providerYandex.NeedToUseTofu())
 	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
@@ -176,6 +171,10 @@ func TestCloudProviderGet(t *testing.T) {
 	require.NotEqual(t, providerYandexWithAnotherUUID.RootDir(), providerYandex.RootDir())
 
 	// terraform provider
+	providerVCD, err := getter(context.TODO(), getMetaConfig(t, vcd.ProviderName))
+	require.NoError(t, err)
+
+	require.NotEqual(t, providerVCD.RootDir(), providerYandex.RootDir())
 	require.IsType(t, &cloud.Provider{}, providerVCD, "provider should be a cloud.Provider for VCD cluster")
 	require.False(t, providerVCD.NeedToUseTofu())
 	require.Equal(t, providerVCD.Name(), vcd.ProviderName)
