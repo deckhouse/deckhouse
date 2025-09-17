@@ -121,7 +121,7 @@ function main() {
     set_labels "$unsupported" "$errs"
   fi
   {{- if eq .cri "ContainerdV2" }}
-  fail_fast "$unsupported" errs
+  fail_fast "$unsupported" "$errs"
   {{ end }}
 }
 
