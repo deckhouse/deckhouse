@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	promdto "github.com/prometheus/client_model/go"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/storage"
-	promdto "github.com/prometheus/client_model/go"
 )
 
 var _ Storage = (*MetricStorage)(nil)
