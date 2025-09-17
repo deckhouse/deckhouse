@@ -433,14 +433,11 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// d8-provider-cluster-configuration can not be exist in hybrid clusters
-				c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 				return nil
 			}
 			return fmt.Errorf("failed to get 'd8-provider-cluster-configuration' secret: %v", err)
 		}
-
 		cloudDiscoveryData = secret.Data["cloud-provider-discovery-data.json"]
-		c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 		return nil
 	})
 	if err != nil {
@@ -449,6 +446,7 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		c.setProbe(false)
 		return
 	}
+	c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 
 	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
 	if err != nil {
