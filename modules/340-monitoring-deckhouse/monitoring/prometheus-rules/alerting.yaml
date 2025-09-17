@@ -427,7 +427,7 @@
         ```{{ end }}
 
   - alert: ModuleIsDeprecated
-    expr: d8_is_deprecated_module_enabled >= 1
+    expr: d8_telemetry_is_deprecated_module_enabled >= 1
     labels:
       severity_level: "9"
       d8_module: deckhouse
