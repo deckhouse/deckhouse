@@ -58,7 +58,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 

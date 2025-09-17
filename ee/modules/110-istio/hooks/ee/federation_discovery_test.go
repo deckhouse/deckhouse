@@ -52,7 +52,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 
@@ -69,7 +69,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 
