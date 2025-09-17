@@ -54,6 +54,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/skip-logs: "true"
     werf.io/track-termination-mode: NonBlocking
     core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
