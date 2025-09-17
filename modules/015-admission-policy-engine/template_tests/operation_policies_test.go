@@ -62,15 +62,10 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 					"minReplicas":1,
 					"maxReplicas":10
 			},
-			"pods": {
-				"disallowedTolerations": {
-					"enabled": true,
-					"tolerations": [
-						{"key": "node-role.kubernetes.io/master", "operator": "Exists"},
-						{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}
-					]
-				}
-			}
+			"disallowedTolerations": [
+				{"key": "node-role.kubernetes.io/master", "operator": "Exists"},
+				{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}
+			]
 		},
 		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
 		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods","nodes","namespaces"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],

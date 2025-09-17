@@ -45,7 +45,7 @@ d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 ### Операционные политики
 
 Модуль предоставляет набор операционных политик и лучших практик для безопасной работы ваших приложений.
-Операционные политики описываются с помощью кастомного ресурса [`OperationPolicy`](admission-policy-engine/cr.html#operationpolicy). Он содержит общие политики (`spec.policies.*`) и операционные политики для подов ([`spec.policies.pods`](admission-policy-engine/cr.html#operationpolicy-v1alpha1-spec-policies-pods)).
+Операционные политики описываются с помощью кастомного ресурса [`OperationPolicy`](admission-policy-engine/cr.html#operationpolicy).
 
 Мы рекомендуем устанавливать следующий минимальный набор операционных политик:
 

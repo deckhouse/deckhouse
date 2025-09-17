@@ -18,21 +18,6 @@ spec:
                     - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
                 policies:
                   properties:
-                    pods:
-                      description: |
-                        Настройки политик для подов.
-                      properties:
-                        disallowedTolerations:
-                          description: |
-                            Запрещает tolerations из указанного списка.
-                            
-                            Больше информации [в документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
-                          properties:
-                            enabled:
-                              description: "Включает проверку."
-                            tolerations:
-                              description: |
-                                Список шаблонов toleration (partial match по указанным полям: key/operator/value/effect).
                     allowedRepos:
                       description: |
                         Список префиксов, которые может иметь образ контейнера.
@@ -46,6 +31,13 @@ spec:
                           description: "Список запросов на выделение ресурсов, которые должны быть выполнены (процессор, память или оба запроса)."
                     disallowedImageTags:
                       description: "Требует, чтобы образы контейнера имели тег, отличный от указанных в списке."
+                    disallowedTolerations:
+                      description: |
+                        Запрещает tolerations из указанного списка.
+
+                        Больше информации [в документации Kubernetes](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/).
+
+                        Список шаблонов toleration (partial match по указанным полям: key/operator/value/effect).
                     requiredLabels:
                       description: |
                         Список лейблов, которые должен указать объект.

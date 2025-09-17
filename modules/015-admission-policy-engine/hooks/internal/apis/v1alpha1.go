@@ -127,9 +127,10 @@ type OperationPolicySpec struct {
 			Limits   []string `json:"limits,omitempty"`
 			Requests []string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
-		DisallowedImageTags []string `json:"disallowedImageTags,omitempty"`
-		RequiredProbes      []string `json:"requiredProbes,omitempty"`
-		RequiredLabels      struct {
+		DisallowedImageTags   []string     `json:"disallowedImageTags,omitempty"`
+		DisallowedTolerations []Toleration `json:"disallowedTolerations,omitempty"`
+		RequiredProbes        []string     `json:"requiredProbes,omitempty"`
+		RequiredLabels        struct {
 			Labels []struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
@@ -154,12 +155,6 @@ type OperationPolicySpec struct {
 			MinReplicas int `json:"minReplicas,omitempty"`
 			MaxReplicas int `json:"maxReplicas,omitempty"`
 		} `json:"replicaLimits,omitempty"`
-		Pods struct {
-			DisallowedTolerations struct {
-				Enabled     bool         `json:"enabled,omitempty"`
-				Tolerations []Toleration `json:"tolerations,omitempty"`
-			} `json:"disallowedTolerations,omitempty"`
-		} `json:"pods,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
