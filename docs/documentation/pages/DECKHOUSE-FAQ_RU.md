@@ -1957,7 +1957,7 @@ Deckhouse Kubernetes Platform в автоматическом режиме пр�
 
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
-kubectl get node -l node.deckhouse.io/containerd-config
+kubectl get node -l node.deckhouse.io/containerd-config=custom
 ```
 
 Также администратор может проверить конкретный узел на соответствие требованиям с помощью команд:
@@ -1985,8 +1985,8 @@ ls -l /etc/containerd/conf.d
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).
+Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval). При определенных условиях процесс может не произойти, как описано в документации настройки.
 
 {% alert level="info" %}
-При определенных условиях процесс может не произойти, как описано в документации настройки. Папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
+В процессе миграции папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
 {% endalert %}

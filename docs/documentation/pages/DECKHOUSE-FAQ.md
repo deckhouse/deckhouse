@@ -1951,7 +1951,7 @@ If one of these labels is present, changing the [`spec.cri.type`](./modules/node
 
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
-kubectl get node -l node.deckhouse.io/containerd-config
+kubectl get node -l node.deckhouse.io/containerd-config=custom
 ```
 
 Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
@@ -1979,8 +1979,8 @@ Example:
 kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings. Under certain conditions, this process may not occur, as detailed in the settings documentation.
 
 {% alert level="info" %}
-Under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
