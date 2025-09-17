@@ -1971,15 +1971,7 @@ You can migrate to containerd v2 in one of the following ways:
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
-After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
-
-Example:
-
-```shell
-kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
-```
-
-During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings. Under certain conditions, this process may not occur, as detailed in the settings documentation.
+After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. Updating a node results in the disruption of the workload hosted on it (disruptive update). The node update process is managed by the parameters for applying disruptive updates to the node group ([spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
 
 {% alert level="info" %}
 At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.

@@ -1977,15 +1977,7 @@ ls -l /etc/containerd/conf.d
 * Указав значение `ContainerdV2` для параметра [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) в общих параметрах кластера. В этом случае container runtime будет изменен во всех группах узлов, для которых он явно не определен с помощью параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 * Указав значение `ContainerdV2` для параметра [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для конкретной группы узлов.
 
-После изменения значений параметров на `ContainerdV2` Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов. Если в группе узлов, установлен параметр [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`, то для обновления **каждого** узла в такой группе на узел нужно будет установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
-
-Пример:
-
-```shell
-kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
-```
-
-Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval). При определенных условиях процесс может не произойти, как описано в документации настройки.
+После изменения значений параметров на `ContainerdV2` Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов. Обновление узла приводит к прерыванию работы размещенной на нем нагрузки (disruptive-обновление). На процесс обновления узла влияют параметры применения disruptive-обновлений группы узлов ([spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
 
 {% alert level="info" %}
 В процессе миграции папка `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
