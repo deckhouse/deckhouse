@@ -134,8 +134,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 // Simplified struct for storing only essential token data
 type IstioRemoteSecretToken struct {
-	Name  string `json:"name"`
-	Token string `json:"token"`
+	MultiClusterName string `json:"multiClusterName"`
+	Token            string `json:"token"`
 }
 
 // Kubeconfig represents the structure of a kubeconfig file
@@ -210,7 +210,13 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	if !strings.HasPrefix(secretName, "istio-remote-secret-") {
 		return nil, fmt.Errorf("secret %s is not an istio remote secret", secretName)
 	}
-	clusterName := strings.TrimPrefix(secretName, "istio-remote-secret-")
+
+	// Extract cluster name from annotation instead of parsing from secret name
+	annotations := secret.GetAnnotations()
+	clusterName, exists := annotations["networking.istio.io/cluster"]
+	if !exists {
+		return nil, fmt.Errorf("secret %s does not have required annotation 'networking.istio.io/cluster'", secretName)
+	}
 
 	// Get the base64-encoded kubeconfig from the field named after the cluster
 	secData, exists := secret.Data[clusterName]
@@ -262,8 +268,8 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return IstioRemoteSecretToken{
-		Name:  secretName,
-		Token: token,
+		MultiClusterName: clusterName,
+		Token:            token,
 	}, nil
 }
 
@@ -315,10 +321,7 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 	// Create a map of cluster names to tokens from remote secrets for quick lookup
 	secretTokens := make(map[string]string)
 	for secretInfo := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
-		if strings.HasPrefix(secretInfo.Name, "istio-remote-secret-") {
-			clusterName := strings.TrimPrefix(secretInfo.Name, "istio-remote-secret-")
-			secretTokens[clusterName] = secretInfo.Token
-		}
+		secretTokens[secretInfo.MultiClusterName] = secretInfo.Token
 	}
 
 federationsLoop:
