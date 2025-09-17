@@ -23,20 +23,18 @@ if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
   logfile="${logDirInChroot}/memcheck.${timestamp}.log"
 
   echo "Drop NGINX file capabilities as it prevent valgrind from running"
-  nginxchroot="/chroot/usr/local/nginx/sbin/nginx"
+  nginxWithCaps="/chroot/usr/local/nginx/sbin/nginx"
+  nginxWOCaps="/chroot/etc/ingress-controller/nginx/"
 
-  if [ -z "$(getcap $nginxchroot)" ]; then
-    echo "No capabilities set, skipping removal"
-  else
-    setcap -r $nginxchroot
-  fi
+  # copy the nginx binary to drop capabilities (valgrind doesn't want to profile a privileged file)
+  cp -f $nginxWithCaps $nginxWOCaps
 
   echo "Mounting proc fs"
   # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
   mount -t proc /proc /chroot/proc
   echo "Set hack for www-data user"
-  echo 'www-data:x:64535:64535:www-data:/nonexistent:/usr/sbin/nologin' >> /chroot/etc/passwd
-  echo 'www-data:x:64535:' >> /chroot/etc/group
+  #echo 'www-data:x:64535:64535:www-data:/nonexistent:/usr/sbin/nologin' >> /chroot/etc/passwd
+  #echo 'www-data:x:64535:' >> /chroot/etc/group
 
   echo "Run profiling with Valgrind"
   echo "The log will be written to a file $logfile"
@@ -46,7 +44,7 @@ if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
     --tool=memcheck \
     --leak-check=full \
     --show-leak-kinds=all \
-    /usr/local/nginx/sbin/nginx "$@"
+    /etc/ingress-controller/nginx/nginx "$@"
 
 else
   echo "Regular mode"
