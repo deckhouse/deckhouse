@@ -168,23 +168,6 @@ spec:
   {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
-      initContainers:
-        - name: mkdir-nginx
-          image: {{ include "helm_lib_module_common_image" (list $context "init") }}
-          securityContext:
-            readOnlyRootFilesystem: true
-          imagePullPolicy: IfNotPresent
-          command:
-            - sh
-            - -c
-            - --
-            - "/bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*"
-          volumeMounts:
-            - mountPath: tmp
-              name: tmp-nginx
-          resources:
-            requests:
-              {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
@@ -360,9 +343,7 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp
-          name: tmp-nginx
-        - mountPath: /chroot/tmp
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
 {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: valgrind
@@ -371,7 +352,6 @@ spec:
 {{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         resources:
           requests:
             memory: 20Mi
@@ -381,7 +361,6 @@ spec:
           - mountPath: /var/files
             name: telemetry-config-file
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"

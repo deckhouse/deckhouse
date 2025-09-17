@@ -150,9 +150,7 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp
-          name: tmp-nginx
-        - mountPath: /chroot/tmp
+        - mountPath: /chroot/tmp/nginx/
           name: tmp-nginx
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
@@ -161,17 +159,6 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
         volumeMounts:
         - mountPath: /var/files
           name: telemetry-config-file
@@ -227,38 +214,10 @@ spec:
             cpu: 10m
             ephemeral-storage: 50Mi
             memory: 20Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
       dnsPolicy: ClusterFirst
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - --
-        - /bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*
-        image: registry.example.com@imageHash-common-init
-        imagePullPolicy: IfNotPresent
-        name: mkdir-nginx
-        resources:
-          requests:
-            ephemeral-storage: 50Mi
-        securityContext:
-          readOnlyRootFilesystem: true
-        volumeMounts:
-        - mountPath: tmp
-          name: tmp-nginx
       priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
