@@ -195,7 +195,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 				return err
 			}
 			// we use dummy preparator because metaConfig was prepared early
-			cfg, err = mc.DeepCopy().Prepare(config.DummyPreparatorProvider())
+			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyPreparatorProvider())
 			if err != nil {
 				return fmt.Errorf("unable to prepare copied config: %v", err)
 			}

@@ -61,8 +61,8 @@ func RegisterHook(handler Handler, c Config) bool {
 				FilterFunc: applyProviderClusterConfigurationSecretFilter,
 			},
 		},
-	}, func(_ context.Context, input *go_hook.HookInput) error {
-		return clusterConfiguration(input, handler, c)
+	}, func(ctx context.Context, input *go_hook.HookInput) error {
+		return clusterConfiguration(ctx, input, handler, c)
 	})
 }
 
@@ -76,7 +76,7 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput, handler Handler, hookConfig Config) error {
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler Handler, hookConfig Config) error {
 	var (
 		metaCfg               *config.MetaConfig
 		providerDiscoveryData *unstructured.Unstructured
@@ -93,7 +93,7 @@ func clusterConfiguration(input *go_hook.HookInput, handler Handler, hookConfig 
 		}
 
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
-			m, err := config.ParseConfigFromData(string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
+			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 			}

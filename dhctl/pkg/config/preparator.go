@@ -14,9 +14,11 @@
 
 package config
 
+import "context"
+
 type MetaConfigPreparator interface {
-	Validate(metaConfig *MetaConfig) error
-	Prepare(metaConfig *MetaConfig) error
+	Validate(ctx context.Context, metaConfig *MetaConfig) error
+	Prepare(ctx context.Context, metaConfig *MetaConfig) error
 }
 
 type MetaConfigPreparatorProvider func(provider string) MetaConfigPreparator
@@ -29,10 +31,10 @@ func DummyPreparatorProvider() MetaConfigPreparatorProvider {
 	}
 }
 
-func (p *dummyPreparator) Validate(*MetaConfig) error {
+func (p *dummyPreparator) Validate(_ context.Context, _ *MetaConfig) error {
 	return nil
 }
 
-func (p *dummyPreparator) Prepare(*MetaConfig) error {
+func (p *dummyPreparator) Prepare(_ context.Context, _ *MetaConfig) error {
 	return nil
 }

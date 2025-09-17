@@ -191,6 +191,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
@@ -268,7 +269,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 	}
 
-	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,

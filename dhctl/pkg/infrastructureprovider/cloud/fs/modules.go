@@ -82,7 +82,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
-		if os.IsNotExist(err) && dir == fsstatic.LayoutsDir {
+		if os.IsNotExist(err) && dir == fsstatic.InfraModulesDir {
 			p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
 			return nil
 		}

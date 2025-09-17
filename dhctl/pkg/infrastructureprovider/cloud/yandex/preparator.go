@@ -15,6 +15,7 @@
 package yandex
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -24,28 +25,13 @@ import (
 
 var prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
 
-type masterNodeGroupSpec struct {
-	Replicas      int `json:"replicas"`
-	InstanceClass struct {
-		ExternalIPAddresses []string `json:"externalIPAddresses"`
-	} `json:"instanceClass"`
-}
-
-type nodeGroupSpec struct {
-	Name          string `json:"name"`
-	Replicas      int    `json:"replicas"`
-	InstanceClass struct {
-		ExternalIPAddresses []string `json:"externalIPAddresses"`
-	} `json:"instanceClass"`
-}
-
 type MetaConfigPreparator struct{}
 
 func NewMetaConfigPreparator() *MetaConfigPreparator {
 	return &MetaConfigPreparator{}
 }
 
-func (p MetaConfigPreparator) Validate(metaConfig *config.MetaConfig) error {
+func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
 	prefix := metaConfig.ClusterPrefix
 	if !prefixRegex.MatchString(prefix) {
 		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, ProviderName, prefixRegex.String())
@@ -81,6 +67,6 @@ func (p MetaConfigPreparator) Validate(metaConfig *config.MetaConfig) error {
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(_ *config.MetaConfig) error {
+func (p MetaConfigPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
 	return nil
 }

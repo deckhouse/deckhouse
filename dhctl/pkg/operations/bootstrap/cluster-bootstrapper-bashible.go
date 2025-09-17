@@ -33,6 +33,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	}
 
 	metaConfig, err := config.ParseConfig(
+		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),

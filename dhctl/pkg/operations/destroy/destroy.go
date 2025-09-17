@@ -94,7 +94,7 @@ type ClusterDestroyer struct {
 	logger log.Logger
 }
 
-func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
+func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
 	logger := params.Logger
@@ -130,7 +130,7 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams, logger)
+		metaConfig, err := commander.ParseMetaConfig(ctx, state.cache, params.CommanderModeParams, logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}

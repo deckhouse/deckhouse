@@ -15,6 +15,7 @@
 package infrastructureprovider
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -68,7 +69,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 
 type defaultCloudOnlyPrefixValidatorPreparator struct{}
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(metaConfig *config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
 	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
 	if err != nil {
 		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
@@ -77,6 +78,6 @@ func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(metaConfig *config.
 	return nil
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(*config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
 	return nil
 }

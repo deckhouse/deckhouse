@@ -107,8 +107,6 @@ func versionContentProviderWithAPI(getVersion apiVersionGetter, settings setting
 	var content []byte
 
 	err = versionConstraintAction(apiVersion, logger, func(legacy bool) error {
-		const legacyVersion = "3.10.0"
-
 		versions := settings.Versions()
 		if len(versions) != 2 {
 			return fmt.Errorf("expected 2 versions, got %d", len(versions))

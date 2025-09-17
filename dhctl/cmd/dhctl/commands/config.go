@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -40,6 +41,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	runFunc := func() error {
 		metaConfig, err := config.LoadConfigFromFile(
+			context.TODO(),
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
@@ -78,6 +80,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	runFunc := func() error {
 		metaConfig, err := config.LoadConfigFromFile(
+			context.TODO(),
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
@@ -141,12 +144,12 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 			if err != nil {
 				return fmt.Errorf("read configs from stdin: %v", err)
 			}
-			metaConfig, err = config.ParseConfigFromData(string(data), preparatorProvider)
+			metaConfig, err = config.ParseConfigFromData(context.TODO(), string(data), preparatorProvider)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig([]string{app.ParseInputFile}, preparatorProvider)
+			metaConfig, err = config.ParseConfig(context.TODO(), []string{app.ParseInputFile}, preparatorProvider)
 			if err != nil {
 				return err
 			}

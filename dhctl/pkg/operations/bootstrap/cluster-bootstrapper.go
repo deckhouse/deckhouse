@@ -205,6 +205,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	// first, parse and check cluster config
 	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),

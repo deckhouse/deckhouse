@@ -15,6 +15,7 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -59,14 +60,14 @@ type MetaConfig struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-func validateAndPrepareMetaConfig(preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
+func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
 	preparator := preparatorProvider(m.ProviderName)
 
-	if err := preparator.Validate(m); err != nil {
+	if err := preparator.Validate(ctx, m); err != nil {
 		return nil, err
 	}
 
-	if err := preparator.Prepare(m); err != nil {
+	if err := preparator.Prepare(ctx, m); err != nil {
 		return nil, err
 	}
 
@@ -74,7 +75,7 @@ func validateAndPrepareMetaConfig(preparatorProvider MetaConfigPreparatorProvide
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare(preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
+func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
@@ -101,7 +102,7 @@ func (m *MetaConfig) Prepare(preparatorProvider MetaConfigPreparatorProvider) (*
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return validateAndPrepareMetaConfig(preparatorProvider, m)
+		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 	}
 
 	if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
@@ -130,7 +131,7 @@ func (m *MetaConfig) Prepare(preparatorProvider MetaConfigPreparatorProvider) (*
 		}
 	}
 
-	return validateAndPrepareMetaConfig(preparatorProvider, m)
+	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
