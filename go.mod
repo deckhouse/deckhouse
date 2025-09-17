@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.15.0 // indirect
-	github.com/flant/addon-operator v1.13.1-0.20250917125904-ecc2f2a2c55f
+	github.com/flant/addon-operator v1.13.1-0.20250917134015-6ef8ce19ec58
 	github.com/flant/kube-client v1.3.1
-	github.com/flant/shell-operator v1.10.5-0.20250917123528-2f23799ab64c
+	github.com/flant/shell-operator v1.10.5-0.20250917133913-48a7783db6ab
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
 	github.com/google/go-cmp v0.7.0
@@ -57,7 +57,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/vsphere v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0
+	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/deckhouse/module-sdk v0.3.7
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
@@ -90,7 +90,7 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.14.3-0.20230601165947-6ce0bf390ce3
 )
 
-require github.com/deckhouse/deckhouse/pkg/metrics-storage v0.0.0-20250917093148-02923ff3534e
+require github.com/deckhouse/deckhouse/pkg/metrics-storage v0.1.0
 
 require (
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
