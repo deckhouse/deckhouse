@@ -83,6 +83,23 @@ spec:
       terminationGracePeriodSeconds: 420
       imagePullSecrets:
         - name: deckhouse-registry
+      initContainers:
+        - name: mkdir-nginx
+          image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
+          securityContext:
+            readOnlyRootFilesystem: true
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - --
+            - "/bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*"
+          volumeMounts:
+            - mountPath: tmp
+              name: tmp-nginx
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_only_logs" $ctx | nindent 14 }}
       containers:
         - name: validator
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
@@ -157,6 +174,10 @@ spec:
             - name: webhook-cert
               mountPath: /chroot/etc/nginx/webhook-ssl/
               readOnly: true
+            - mountPath: /tmp
+              name: tmp-nginx
+            - mountPath: /chroot/tmp
+              name: tmp-nginx
       volumes:
         - name: secret-nginx-auth-tls
           secret:
@@ -164,6 +185,8 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
+        - name: tmp-nginx
+          emptyDir: {}
 {{- end }}
 
 {{- $ctx := . }}
