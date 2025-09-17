@@ -137,23 +137,23 @@ crane ls registry.deckhouse.io/deckhouse/ee/modules
 Рассмотрим образ:
 
 ```bash
-crane export registry.deckhouse.ru/deckhouse/ce/modules/console/release:alpha | tar -tf -
+crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -tf -
 ```
 
 Пример:
 
 ```bash
-~$ crane export registry.deckhouse.ru/deckhouse/ce/modules/console/release:alpha | tar -tf -
+~$ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -tf -
 changelog.yaml
 version.json
 ```
 
 Образ модуля, аналогично образу самой платформы DKP, содержит файлы `changelog.yaml`, который содержит собственно описание изменений и `version.json`. Просмотрим содержимое `version.json`:
 
-Пример `crane export registry.deckhouse.ru/deckhouse/ce/modules/console/release:alpha | tar -xOf - version.json | jq`:
+Пример `crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -xOf - version.json | jq`:
 
 ```bash
-~$ crane export registry.deckhouse.ru/deckhouse/ce/modules/console/release:alpha | tar -xOf - version.json | jq
+~$ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | tar -xOf - version.json | jq
 {
   "version": "v1.39.4"
 }
