@@ -83,7 +83,9 @@ func (p *Provider) generateRootDir(tmpDir string) {
 	id := fmt.Sprintf("%s/%s/%s", p.name, p.prefix, p.uuid)
 	hash := stringsutil.Sha256Encode(id)
 
-	p.rootDir = filepath.Join(tmpDir, "infra", hash)
+	first16Runes := fmt.Sprintf("%.16s", hash)
+
+	p.rootDir = filepath.Join(tmpDir, "infra", first16Runes)
 }
 
 func (p *Provider) Name() string {

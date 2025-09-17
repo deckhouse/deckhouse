@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -32,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
 func getTestFSDIParams() *fs.DIParams {
@@ -47,7 +49,10 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
 
-	tmpDir := filepath.Join(os.TempDir(), "dhctl-tests", id.String(), testName)
+	hash := stringsutil.Sha256Encode(id.String() + testName)
+	first8Runes := fmt.Sprintf("%.8s", hash)
+
+	tmpDir := filepath.Join(os.TempDir(), "dhctl-tests", first8Runes)
 	err = os.MkdirAll(tmpDir, 0o777)
 	require.NoError(t, err)
 
@@ -101,12 +106,35 @@ func TestFailCloudProviderGet(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestCloudProviderGetForStatic(t *testing.T) {
+	testName := "TestCloudProviderGetForStatic"
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	getter := CloudProviderGetter(params)
+
+	cfg := &config.MetaConfig{}
+	cfg.ProviderName = ""
+
+	provider, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
+}
+
 func TestCloudProviderGet(t *testing.T) {
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip("Skipping TestCloudProviderGet")
+	}
+
 	testName := "TestCloudProviderGet"
 
 	getMetaConfig := func(t *testing.T, providerName string) *config.MetaConfig {
 		cfg := &config.MetaConfig{}
 		cfg.ProviderName = providerName
+		cfg.ClusterPrefix = "test"
 		if providerName != "" {
 			cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d098"
 		}
@@ -121,20 +149,63 @@ func TestCloudProviderGet(t *testing.T) {
 
 	getter := CloudProviderGetter(params)
 
-	provider, err := getter(context.TODO(), getMetaConfig(t, ""))
-	require.NoError(t, err)
-	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
-
 	// tofu provider
 	providerYandex, err := getter(context.TODO(), getMetaConfig(t, yandex.ProviderName))
 	require.NoError(t, err)
-	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
-	require.True(t, providerYandex.NeedToUseTofu())
-	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
 
 	providerVCD, err := getter(context.TODO(), getMetaConfig(t, vcd.ProviderName))
 	require.NoError(t, err)
+
+	require.NotEqual(t, providerVCD.RootDir(), providerYandex.RootDir())
+
+	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
+	require.True(t, providerYandex.NeedToUseTofu())
+	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+	require.True(t, strings.HasSuffix(providerYandex.RootDir(), "infra/f42e7bf6209cc1d3"))
+
+	cfgForYandexWithDifferentPrefix := getMetaConfig(t, yandex.ProviderName)
+	cfgForYandexWithDifferentPrefix.ClusterPrefix = "another"
+	providerYandexWithAnotherPrefix, err := getter(context.TODO(), cfgForYandexWithDifferentPrefix)
+	require.NoError(t, err)
+	require.NotEqual(t, providerYandexWithAnotherPrefix.RootDir(), providerYandex.RootDir())
+
+	cfgForYandexWithDifferentUUID := getMetaConfig(t, yandex.ProviderName)
+	cfgForYandexWithDifferentUUID.UUID = "01204020-9407-11f0-a6e3-6747832ba8ef"
+	providerYandexWithAnotherUUID, err := getter(context.TODO(), cfgForYandexWithDifferentUUID)
+	require.NoError(t, err)
+	require.NotEqual(t, providerYandexWithAnotherUUID.RootDir(), providerYandex.RootDir())
+
+	// terraform provider
 	require.IsType(t, &cloud.Provider{}, providerVCD, "provider should be a cloud.Provider for VCD cluster")
 	require.False(t, providerVCD.NeedToUseTofu())
 	require.Equal(t, providerVCD.Name(), vcd.ProviderName)
+	require.True(t, strings.HasSuffix(providerVCD.RootDir(), "infra/2473fb24926eef7b"))
 }
+
+//func TestCloudProviderWithTofuExecutorsGetting(t *testing.T) {
+//	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+//		t.Skip("Skipping TestCloudProviderGet")
+//	}
+//
+//	testName := "TestCloudProviderWithTofuExecutorsGetting"
+//
+//	params := getTestCloudProviderGetterParams(t, testName)
+//	defer func() {
+//		testCleanup(t, testName, &params)
+//	}()
+//
+//	getter := CloudProviderGetter(params)
+//
+//	cfg := &config.MetaConfig{}
+//	cfg.ProviderName = yandex.ProviderName
+//	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d097"
+//
+//	providerYandex, err := getter(context.TODO(), cfg)
+//	require.NoError(t, err)
+//	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
+//	require.True(t, providerYandex.NeedToUseTofu())
+//	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+//
+//	_, err = providerYandex.Executor(context.TODO(), infrastructure.BaseInfraStep, params.Logger)
+//	require.NoError(t, err)
+//}
