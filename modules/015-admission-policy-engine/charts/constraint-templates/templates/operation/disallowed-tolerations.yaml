@@ -1,0 +1,98 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8disallowedtolerations
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Disallow tolerations"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Deny Pods that have tolerations from the ones in the specified list.
+
+      https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-tolerations/
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DisallowedTolerations
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            tolerations:
+              type: array
+              description: Disallowed toleration patterns (partial match by specified fields).
+              items:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  operator:
+                    type: string
+                    enum:
+                      - Exists
+                      - Equal
+                  value:
+                    type: string
+                  effect:
+                    type: string
+                    enum:
+                      - NoSchedule
+                      - PreferNoSchedule
+                      - NoExecute
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.operation_policies
+
+        is_pod { input.review.kind.kind == "Pod" }
+
+        # true if field exists on object
+        has_field(obj, field) { obj[field] }
+
+        # k8s default NoExecute tolerations that get injected for all pods
+        is_default_noexecute(t) {
+          t.effect == "NoExecute"
+          t.key == "node.kubernetes.io/not-ready"
+        }
+        is_default_noexecute(t) {
+          t.effect == "NoExecute"
+          t.key == "node.kubernetes.io/unreachable"
+        }
+
+        # Collect pod tolerations but skip the default NoExecute ones
+        pod_tolerations[t] {
+          t := input.review.object.spec.tolerations[_]
+          not is_default_noexecute(t)
+        }
+
+        # helpers: "absent in pattern OR equal" semantics
+        key_match(rt, pt) { not has_field(rt, "key") }
+        key_match(rt, pt) { rt.key == pt.key }
+
+        op_match(rt, pt)  { not has_field(rt, "operator") }
+        op_match(rt, pt)  { rt.operator == pt.operator }
+
+        val_match(rt, pt) { not has_field(rt, "value") }
+        val_match(rt, pt) { rt.value == pt.value }
+
+        eff_match(rt, pt) { not has_field(rt, "effect") }
+        eff_match(rt, pt) { rt.effect == pt.effect }
+
+        tol_match(rt, pt) {
+          key_match(rt, pt)
+          op_match(rt, pt)
+          val_match(rt, pt)
+          eff_match(rt, pt)
+        }
+
+        violation[{"msg": msg}] {
+          is_pod
+          rt := input.parameters.tolerations[_]
+          pt := pod_tolerations[_]
+          tol_match(rt, pt)
+          msg := sprintf("Pod <%v> has a disallowed toleration matching %v", [input.review.object.metadata.name, rt])
+        }

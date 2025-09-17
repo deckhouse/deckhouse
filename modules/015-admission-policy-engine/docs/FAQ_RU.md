@@ -335,3 +335,64 @@ spec:
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+
+## Как запретить удаление узла без метки
+
+> Примечание. Операции DELETE обрабатываются Gatekeeper по умолчанию.
+
+Можно создать собственную политику Gatekeeper, запрещающую удаление узла без специальной метки. Пример ниже использует `oldObject` для проверки меток удаляемого узла:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customnodedeleteguard
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomNodeDeleteGuard
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredLabelKey:
+              type: string
+            requiredLabelValue:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_delete { input.review.operation == "DELETE" }
+        is_node { input.review.kind.kind == "Node" }
+
+        has_required_label {
+          key := input.parameters.requiredLabelKey
+          val := input.parameters.requiredLabelValue
+          obj := input.review.oldObject
+          obj.metadata.labels[key] == val
+        }
+
+        violation[{"msg": msg}] {
+          is_delete
+          is_node
+          not has_required_label
+          msg := sprintf("Удаление Node запрещено. Добавьте метку %q=%q.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomNodeDeleteGuard
+metadata:
+  name: require-node-delete-label
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Node"]
+  parameters:
+    requiredLabelKey: "admission.deckhouse.io/allow-delete"
+    requiredLabelValue: "true"
+```
