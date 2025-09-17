@@ -53,6 +53,8 @@ metadata:
   namespace: d8-system
   annotations:
     helm.sh/resource-policy: keep
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
     core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
@@ -197,6 +199,8 @@ spec:
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
               value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
