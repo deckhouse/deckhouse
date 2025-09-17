@@ -11,6 +11,7 @@ site/werf.+.inc.yaml$
 docs/site/werf-.*.yaml$
 /images/.+\.ya?ml$
 /templates/.+\.ya?ml$
+/templates_test/.+\.ya?ml$
 openapi/values\.ya?ml$
 ^.werf/.+$
 werf.yaml
