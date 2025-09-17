@@ -99,8 +99,6 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   site.data['bundles']['bundleNames'] = bundleNames.sort
   site.data['bundles']['bundleModules'] = bundlesModules
 
-  #parse_module_data(site.data["sidebars"]["main"]["entries"], site)
-
   site.data['modules'] = Hash.new() if ! site.data.has_key?('modules')
   site.data['modules']['all'] = Hash.new() if ! site.data['modules'].has_key?('all')
 

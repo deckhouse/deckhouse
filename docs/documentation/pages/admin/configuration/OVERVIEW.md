@@ -1,17 +1,13 @@
 ---
 title: "How to configure?"
-permalink: en/
+permalink: en/admin/configuration/
 ---
 
 ## Deckhouse configuration
 
-Deckhouse consists of the Deckhouse operator and modules. A module is a bundle of Helm chart, [Addon-operator](https://github.com/flant/addon-operator/) hooks, commands for building module components (Deckhouse components) and other files.
-
-<div markdown="0" style="height: 0;" id="deckhouse-configuration"></div>
-
 You can configure Deckhouse using:
 
-- **[Global settings](deckhouse-configure-global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
+- **[Global settings](../../reference/api/global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
 - **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
 - **Custom resources.** Some modules are configured using the additional custom resources.
 
@@ -49,9 +45,15 @@ spec:
   enabled: false
 ```
 
-You can view the list of `ModuleConfig` custom resources and the states of the corresponding modules (enabled/disabled) as well as their statuses using the `d8 k get moduleconfigs` command:
+You can view the list of `ModuleConfig` custom resources and the states of the corresponding modules (enabled/disabled) as well as their statuses using the following command:
 
 ```shell
+d8 k get moduleconfigs
+```
+
+{% offtopic title="Example output..." %}
+
+```console
 $ d8 k get moduleconfigs
 NAME            ENABLED   VERSION   AGE     MESSAGE
 deckhouse       true      1         12h
@@ -60,6 +62,8 @@ global                    1         12h
 prometheus      true      2         12h
 upmeter         false     2         12h
 ```
+
+{% endofftopic %}
 
 To change the global Deckhouse configuration or module configuration, create or edit the corresponding `ModuleConfig` custom resource.
 
@@ -112,8 +116,6 @@ DKP is managed through global settings, module configurations, and various custo
    ```
 
 ## Configuring the module
-
-> Deckhouse uses [addon-operator](https://github.com/flant/addon-operator/) when working with modules. Please refer to its documentation to learn how Deckhouse works with [modules](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [module hooks](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) and [module parameters](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). We would appreciate it if you *star* the project.
 
 The module is configured using the `ModuleConfig` custom resource , whose name is the same as the module name (in kebab-case). The `ModuleConfig` custom resource has the following fields:
 

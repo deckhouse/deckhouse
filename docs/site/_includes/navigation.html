@@ -1,0 +1,32 @@
+{%- assign nav_pages = page | get_navigation_pages: page.sidebar -%}
+{%- if nav_pages.prev or nav_pages.next -%}
+<div class="page-navigation">
+  <div class="page-navigation__container">
+    {%- if nav_pages.prev -%}
+    <div class="page-navigation__prev">
+      <a href="{{ nav_pages.prev.full_url }}" class="page-navigation__link page-navigation__link--prev">
+        <div class="page-navigation__arrow">←</div>
+        <div class="page-navigation__content">
+          <div class="page-navigation__title">{{ nav_pages.prev.display_title | default: nav_pages.prev.title }}</div>
+        </div>
+      </a>
+    </div>
+    {%- else -%}
+    <div class="page-navigation__prev page-navigation__empty"></div>
+    {%- endif -%}
+
+    {%- if nav_pages.next -%}
+    <div class="page-navigation__next">
+      <a href="{{ nav_pages.next.full_url }}" class="page-navigation__link page-navigation__link--next">
+        <div class="page-navigation__content">
+          <div class="page-navigation__title">{{ nav_pages.next.display_title | default: nav_pages.next.title }}</div>
+        </div>
+        <div class="page-navigation__arrow">→</div>
+      </a>
+    </div>
+    {%- else -%}
+    <div class="page-navigation__next page-navigation__empty"></div>
+    {%- endif -%}
+  </div>
+</div>
+{%- endif -%}
