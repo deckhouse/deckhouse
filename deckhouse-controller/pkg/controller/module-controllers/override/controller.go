@@ -171,6 +171,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -198,6 +199,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -211,6 +213,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -245,6 +248,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			r.log.Error("failed to get the module source for the module pull override", slog.String("source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageSourceNotFound {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageSourceNotFound
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
@@ -252,6 +256,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
