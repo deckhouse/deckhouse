@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.16.0",
+  "version": "v0.18.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -248,6 +248,11 @@
               "description": "Provide access outside of cluster",
               "shorthand": "",
               "global": false
+            },
+            "ttl": {
+              "description": "Time to live for auto-created DataExport",
+              "shorthand": "",
+              "global": false
             }
           },
           "subcommands": null
@@ -266,6 +271,11 @@
             },
             "publish": {
               "description": "Provide access outside of cluster",
+              "shorthand": "",
+              "global": false
+            },
+            "ttl": {
+              "description": "Time to live for auto-created DataExport",
               "shorthand": "",
               "global": false
             }
@@ -37995,6 +38005,13 @@
           "subcommands": null
         },
         {
+          "name": "namespace",
+          "description": "Interact with namespaces",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "operator",
           "description": "Perform operator-specific tasks",
           "aliases": null,
@@ -38418,6 +38435,11 @@
                 "show-empty": {
                   "description": "Show empty queues.",
                   "shorthand": "e",
+                  "global": false
+                },
+                "watch": {
+                  "description": "Watch for changes to the queue list.",
+                  "shorthand": "w",
                   "global": false
                 }
               },

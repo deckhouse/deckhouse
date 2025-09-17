@@ -91,7 +91,58 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code>. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+    <p>Создайте <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> и добавьте узел с помощью с помощью Cluster API Provider Static (CAPS) или вручную — с помощью bootstrap-скрипта.</p>
+    
+<div class="tabs">
+        <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');">
+        CAPS
+        </a>
+        <a id='tab_block_bootstrap' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap"
+        onclick="openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__bootstrap', 'block_caps');
+                 openTabAndSaveStatus(event, 'tabs__btn_caps_bootstrap', 'tabs__caps', 'block_bootstrap');">
+        Bootstrap-скрипт
+        </a>
+</div>
+
+  <div id="block_bootstrap" class="tabs__bootstrap" style="display: none;">
+  <ul>
+  <li><p>Создайте NodeGroup с именем <code>worker</code>, выполнив на <strong>master-узле</strong> следующую команду:</p>
+<div markdown="1">
+```bash
+sudo -i d8 k create -f - << EOF
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+EOF
+```
+</div>
+  </li>
+  <li><p>Получите код скрипта для добавления и настройки узла в кодировке Base64.</p>
+  <p>Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
+<div markdown="1">
+```shell
+NODE_GROUP=worker
+sudo -i d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} -o json | jq '.data."bootstrap.sh"' -r
+```
+</div>
+  </li>
+  <li><p><strong>На подготовленной виртуальной машине</strong> выполните следующую команду, вставив полученный на предыдущем шаге код скрипта в кодировке Base64:</p>
+<div markdown="1">
+```shell
+echo <Base64-КОД-СКРИПТА> | base64 -d | bash
+```
+  </div>
+  </li>
+  </ul>
+  </div>
+  <div id="block_caps" class="tabs__caps">
+  <ul>
+<li><p>Создайте NodeGroup с именем <code>worker</code>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - << EOF
@@ -109,7 +160,7 @@ spec:
 EOF
 ```
 </div>
-  </li>
+</li>
   <li>
     <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
@@ -144,6 +195,24 @@ cat /dev/shm/caps-id.pub
   </li>
   <li>
     <p><strong>На подготовленной виртуальной машине</strong> создайте пользователя <code>caps</code>. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:</p>
+{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
+В операционных системах на базе RHEL (Red Hat Enterprise Linux) пользователя caps нужно добавлять в группу wheel. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
+<div markdown="1">
+```bash
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+</div>
+Далее перейдите к следующему шагу, **выполнять команду ниже не нужно**.
+{% endofftopic %}
 <div markdown="1">
 ```bash
 # Укажите публичную часть SSH-ключа пользователя.
@@ -188,6 +257,9 @@ spec:
 EOF
 ```
 </div>
+  </li>
+  </ul>
+  </div>
   </li>
   <li><p>Убедитесь, что все узлы кластера находятся в статусе <code>Ready</code>.</p>
 <p>Выполните на <strong>master-узле</strong> следующую команду, чтобы получить список узлов кластера:</p>

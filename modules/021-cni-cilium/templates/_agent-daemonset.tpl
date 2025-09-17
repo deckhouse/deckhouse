@@ -235,7 +235,35 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      {{- include "module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
+      - name: check-wg-kernel-compat
+        image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: WG_KERNEL_CONSTRAINT
+          value: ">= 6.8"
+        command:
+          - "/check-wg-kernel-compat"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+        securityContext:
+          readOnlyRootFilesystem: true
+          seLinuxOptions:
+            level: 's0'
+            type: 'spc_t'
+          capabilities:
+            add:
+              - NET_ADMIN
+              - NET_RAW
+              - SYS_MODULE
+            drop:
+              - ALL
+          privileged: false
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: cni-path
+          mountPath: /hostbin
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple $context $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
       - name: clearing-unnecessary-iptables
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         imagePullPolicy: IfNotPresent

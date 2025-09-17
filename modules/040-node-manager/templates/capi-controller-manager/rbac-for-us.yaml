@@ -306,6 +306,12 @@ rules:
       - pods/eviction
     verbs:
       - create
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+    verbs:
+      - get
   - nonResourceURLs:
     - /
     verbs:

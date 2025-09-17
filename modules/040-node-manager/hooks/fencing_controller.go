@@ -91,8 +91,8 @@ func fencingControllerNodeFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	return res, nil
 }
 
-func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	if len(input.NewSnapshots.Get(nodesSnapshot)) == 0 {
+func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	if len(input.Snapshots.Get(nodesSnapshot)) == 0 {
 		// No nodes with enabled fencing -> nothing to do
 		return nil
 	}
@@ -106,7 +106,7 @@ func fencingControllerHandler(input *go_hook.HookInput, dc dependency.Container)
 
 	// make map with nodes to kill
 	nodesToKill := set.New()
-	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.NewSnapshots.Get(nodesSnapshot)) {
+	for node, err := range sdkobjectpatch.SnapshotIter[fencingControllerNodeResult](input.Snapshots.Get(nodesSnapshot)) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %w", err)
 		}

@@ -3,7 +3,7 @@
 
 terraform: 0.14.8
 
-opentofu: 1.9.0
+opentofu: 1.9.4
 
 aws:
   namespace: hashicorp
@@ -16,6 +16,7 @@ aws:
   artifactBinary: terraform-provider-aws
   # provider binary name with destination image
   destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -36,6 +37,7 @@ azure:
   artifact: terraform-provider-azure
   artifactBinary: terraform-provider-azurerm
   destinationBinary: terraform-provider-azurerm
+  vmResourceType: azurerm_linux_virtual_machine
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -56,6 +58,7 @@ gcp:
   artifact: terraform-provider-gcp
   artifactBinary: terraform-provider-gcp
   destinationBinary: terraform-provider-google
+  vmResourceType: google_compute_instance
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -76,6 +79,7 @@ openstack:
   artifact: terraform-provider-openstack
   artifactBinary: terraform-provider-openstack
   destinationBinary: terraform-provider-openstack
+  vmResourceType: openstack_blockstorage_volume_v3
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -96,6 +100,7 @@ ovirt:
   artifact: terraform-provider-ovirt
   artifactBinary: terraform-provider-ovirt
   destinationBinary: terraform-provider-ovirt
+  vmResourceType: ovirt_vm
   useOpentofu: true
 
 vsphere:
@@ -106,6 +111,7 @@ vsphere:
   artifact: terraform-provider-vsphere
   artifactBinary: terraform-provider-vsphere
   destinationBinary: terraform-provider-vsphere
+  vmResourceType: vsphere_virtual_machine
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -126,6 +132,7 @@ vcd:
   artifact: terraform-provider-vcd-artifact
   artifactBinary: terraform-provider-vcd
   destinationBinary: terraform-provider-vcd
+  vmResourceType: vcd_vapp_vm
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -146,6 +153,7 @@ yandex:
   artifact: terraform-provider-yandex
   artifactBinary: terraform-provider-yandex
   destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
   useOpentofu: true
 
 decort:
@@ -156,6 +164,7 @@ decort:
   artifact: terraform-provider-decort
   artifactBinary: terraform-provider-decort
   destinationBinary: terraform-provider-decort
+  vmResourceType: decort_kvmvm
   useOpentofu: true
 
 huaweicloud:
@@ -166,6 +175,7 @@ huaweicloud:
   artifact: terraform-provider-huaweicloud
   artifactBinary: terraform-provider-huaweicloud
   destinationBinary: terraform-provider-huaweicloud
+  vmResourceType: huaweicloud_compute_instance
   # Attention! For migrate to opentofu we need some manual actions.
   # Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
   # But we need enable automigrator and terraform state metrics hook. We can add global hook
@@ -185,4 +195,5 @@ kubernetes:
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
   useOpentofu: true

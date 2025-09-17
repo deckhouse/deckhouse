@@ -210,7 +210,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if app.SSHLegacyMode {
 				sshClient = clissh.NewClientFromFlags()
 			} else {
-				sshClient = gossh.NewClientFromFlags()
+				var err error
+				sshClient, err = gossh.NewClientFromFlags()
+				if err != nil {
+					return err
+				}
 			}
 
 			if metaConfig.IsStatic() {
@@ -673,7 +677,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 

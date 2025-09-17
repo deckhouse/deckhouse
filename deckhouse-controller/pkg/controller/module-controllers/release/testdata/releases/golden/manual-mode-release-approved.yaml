@@ -1,0 +1,66 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: test
+  resourceVersion: "999"
+spec:
+  registry:
+    ca: ""
+    dockerCfg: ""
+    repo: ""
+status:
+  message: ""
+  modules: null
+  modulesCount: 0
+  phase: ""
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/approved: "true"
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "false"
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  labels:
+    module: echo
+    modules.deckhouse.io/update-policy: echo
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+    status: deployed
+  name: echo-v0.4.69
+  resourceVersion: "1004"
+spec:
+  moduleName: echo
+  version: 0.4.69
+  weight: 900
+status:
+  approved: true
+  message: ""
+  phase: Deployed
+  pullDuration: 9m15s
+  size: 0
+  transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: echo
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed

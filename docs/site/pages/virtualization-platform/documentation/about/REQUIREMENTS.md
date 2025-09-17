@@ -52,7 +52,7 @@ The platform has no other restrictions and is compatible with any hardware that 
      - HTTPS access to the container image registry at `registry.deckhouse.io`;
      - Access to the package repositories of the chosen OS;
      - SSH key-based access from the **installation machine** (see item 1);
-     - Network access from the **installation machine** (see item 1) on port `22322/TCP`.
+     - Network access from the **installation machine** (see item 1) on port `22/TCP`.
    - Required software:
      - The `cloud-utils` and `cloud-init` packages must be installed (package names may vary depending on the chosen OS).
    > **Warning.** The container runtime will be installed automatically, so there's no need to install any `containerd` or `docker` packages.

@@ -6,6 +6,8 @@ import:
   add: /src/kubernetes-api-proxy-reloader
   to: /kubernetes-api-proxy-reloader
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]

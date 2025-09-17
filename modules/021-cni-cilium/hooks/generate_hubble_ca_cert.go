@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cloudflare/cfssl/csr"
@@ -73,8 +74,8 @@ func filterCASecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func generateHubbleCACert(input *go_hook.HookInput) error {
-	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.NewSnapshots, "ca-cert-secret")
+func generateHubbleCACert(_ context.Context, input *go_hook.HookInput) error {
+	certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, "ca-cert-secret")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal ca-cert-secret snapshot: %w", err)
 	}

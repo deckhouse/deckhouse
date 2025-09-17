@@ -116,9 +116,3 @@ management tool.
    ---      -----
    valid    true
    ```
-
-## API
-
-The TOTP secrets engine has a full HTTP API. Please see the
-[TOTP secrets engine API](/api-docs/secret/totp) for more
-details.
