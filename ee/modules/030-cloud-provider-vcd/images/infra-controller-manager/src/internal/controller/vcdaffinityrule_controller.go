@@ -207,8 +207,6 @@ func (r *VCDAffinityRuleReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to delete vm affinity rule: %w", err)
 			}
-
-			vcdAffinityRule.Status.RuleID = ""
 		}
 
 		if err := r.Status().Update(ctx, vcdAffinityRule); err != nil {

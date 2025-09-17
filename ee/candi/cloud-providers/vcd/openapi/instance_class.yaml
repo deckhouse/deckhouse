@@ -83,6 +83,7 @@ spec:
                     Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
                     which can help improve fault tolerance, and control the distribution of workloads.
                     If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
                   properties:
                     polarity:
                       type: string
