@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -297,12 +297,12 @@ metadata:
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_node_draining",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_node_draining",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"node":    "foo-2",

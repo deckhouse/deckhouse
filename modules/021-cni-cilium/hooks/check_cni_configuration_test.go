@@ -19,7 +19,7 @@ package hooks
 import (
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1core "k8s.io/api/core/v1"
@@ -36,7 +36,7 @@ func checkMetric(metrics []operation.MetricOperation, value float64) {
 	Expect(metrics).To(HaveLen(2))
 	Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 		Group:  checkCNIConfigMetricGroup,
-		Action: "expire",
+		Action: operation.ActionExpireMetrics,
 	}))
 	Expect(metrics[1].Name).To(BeEquivalentTo(checkCNIConfigMetricName))
 	Expect(metrics[1].Group).To(BeEquivalentTo(checkCNIConfigMetricGroup))

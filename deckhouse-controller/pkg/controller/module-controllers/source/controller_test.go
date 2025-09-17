@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/gojuno/minimock/v3"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -119,7 +119,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 			Name:   "fe",
 			Bundle: "Default",
 		},
-		metricStorage: metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		metricStorage: metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{

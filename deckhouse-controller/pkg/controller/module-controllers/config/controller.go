@@ -24,7 +24,6 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/shell-operator/pkg/metric"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -49,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -70,7 +70,7 @@ func RegisterController(
 	mm moduleManager,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	exts *extenders.ExtendersStack,
 	logger *log.Logger,
 ) error {
@@ -128,7 +128,7 @@ type reconciler struct {
 	edition         *d8edition.Edition
 	handler         *confighandler.Handler
 	moduleManager   moduleManager
-	metricStorage   metric.Storage
+	metricStorage   metricsstorage.Storage
 	configValidator *configtools.Validator
 	exts            *extenders.ExtendersStack
 	logger          *log.Logger

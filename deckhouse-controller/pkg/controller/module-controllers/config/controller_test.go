@@ -24,11 +24,11 @@ import (
 	"sync"
 	"testing"
 
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -96,7 +96,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		handler:         newMockHandler(),
 		moduleManager:   newMockModuleManager(),
 		edition:         &d8edition.Edition{Name: "fe", Bundle: "Default"},
-		metricStorage:   metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop()),
+		metricStorage:   metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 		configValidator: nil, // Disable validation in tests to avoid schema issues
 		exts:            nil, // Extenders not needed for these tests
 	}
