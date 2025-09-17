@@ -280,9 +280,6 @@ steps:
       name: pr_diff
 
    # <template: spellcheck_template>
-  - name: Install werf
-    uses: werf/actions/install@v1.2
-
   - name: Spell check
     run: |
       make lint-doc-spellcheck-pr
