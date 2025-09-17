@@ -31,6 +31,8 @@ type SSHCredentialsSpec struct {
 	User          string `json:"user"`
 	PrivateSSHKey string `json:"privateSSHKey,omitempty"`
 	// base64 encoded password for user
+	PasswordEncoded string `json:"passwordEncoded,omitempty"`
+	// base64 encoded password for sudo
 	SudoPasswordEncoded string `json:"sudoPasswordEncoded,omitempty"`
 
 	//+kubebuilder:default:=22
