@@ -173,11 +173,10 @@ type NamespaceSelector struct {
 }
 
 // Toleration represents a Kubernetes toleration pattern for disallowed tolerations.
-// Only key/operator/value/effect are used for matching. TolerationSeconds is kept for parity with K8s but ignored in matching.
+// Only key/operator/value/effect are used for matching.
 type Toleration struct {
-	Key               string `json:"key,omitempty"`
-	Operator          string `json:"operator,omitempty"`
-	Value             string `json:"value,omitempty"`
-	Effect            string `json:"effect,omitempty"`
-	TolerationSeconds *int64 `json:"tolerationSeconds,omitempty"`
+	Key      string `json:"key,omitempty"`
+	Operator string `json:"operator,omitempty"`
+	Value    string `json:"value,omitempty"`
+	Effect   string `json:"effect,omitempty"`
 }
