@@ -190,6 +190,7 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 		return TokenValidationResult{
 			IsExpired: true,
 			Error:     "JWT token expired",
+			ExpiresAt: time.Unix(expTime, 0),
 		}
 	}
 
