@@ -446,7 +446,6 @@ func (c *Reconciler) discoveryDataReconcile(ctx context.Context) {
 		c.setProbe(false)
 		return
 	}
-	c.cloudRequestErrorMetric.WithLabelValues("discovery_data").Set(0.0)
 
 	discoveryData, err := c.discoverer.DiscoveryData(ctx, cloudDiscoveryData)
 	if err != nil {
