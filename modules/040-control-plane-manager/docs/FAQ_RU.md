@@ -15,11 +15,11 @@ title: "Управление control plane: FAQ"
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
-  name: worker
+  name: master
 spec:
   nodeType: Static
   staticInstances:
-    count: 3
+    count: 2
     labelSelector:
       matchLabels:
         role: master
