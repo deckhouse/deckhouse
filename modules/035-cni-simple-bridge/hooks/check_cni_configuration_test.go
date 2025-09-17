@@ -40,7 +40,7 @@ func checkMetric(metrics []operation.MetricOperation, value float64) {
 	}))
 	Expect(metrics[1].Name).To(BeEquivalentTo(checkCNIConfigMetricName))
 	Expect(metrics[1].Group).To(BeEquivalentTo(checkCNIConfigMetricGroup))
-	Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+	Expect(metrics[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 	Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(value)))
 	Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{"cni": cniName}))
 }
