@@ -628,7 +628,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
+  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -637,7 +637,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
+  directory: "/modules/340-monitoring-kubernetes/images/oom-kills-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

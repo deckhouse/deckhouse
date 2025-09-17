@@ -1,16 +1,16 @@
-{{- if .Values.monitoringKubernetes.ebpfExporterEnabled }}
+{{- if .Values.monitoringKubernetes.oomKillsExporterEnabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
-  name: ebpf-exporter
+  name: oom-kills-exporter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ebpf-exporter" "prometheus" "main")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "oom-kills-exporter" "prometheus" "main")) | nindent 2 }}
 spec:
   jobLabel: app
   selector:
     matchLabels:
-      app: ebpf-exporter
+      app: oom-kills-exporter
   namespaceSelector:
     matchNames:
     - d8-monitoring
