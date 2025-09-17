@@ -25,7 +25,7 @@ spec:
         role: master
 ```
 
-Далее при добавлении в кластер master-узлов с помощью CAPS указывайте в соответствущих им `StaticInstance` лейбл, заданный в `spec.staticInstances.labelSelector` NodeGroup `master`. Пример:
+Далее при добавлении в кластер master-узлов с помощью CAPS указывайте в соответствующих им `StaticInstance` лейбл, заданный в `spec.staticInstances.labelSelector` NodeGroup `master`. Пример:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
