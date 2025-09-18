@@ -197,9 +197,9 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-    {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+        {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "init_resources" $context | nindent 12 }}
-    {{- end }}
+        {{- end }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
@@ -211,8 +211,18 @@ spec:
           capabilities:
             add:
             - SYS_ADMIN
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
         {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
         {{- end }}
           readOnlyRootFilesystem: true
         env:

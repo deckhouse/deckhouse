@@ -1,8 +1,6 @@
-module proxy-failover-iptables
+module failover-cleaner
 
-go 1.23.0
-
-toolchain go1.23.5
+go 1.23.12
 
 require (
 	github.com/coreos/go-iptables v0.6.0

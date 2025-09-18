@@ -97,6 +97,8 @@ spec:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
+        - mountPath: /opt/nginx-static/writable
+          name: writable
       - env:
         - name: NODE_NAME
           valueFrom:
@@ -258,6 +260,9 @@ spec:
           medium: Memory
           sizeLimit: 4Mi
         name: sbin
+      - emptyDir:
+          medium: Memory
+        name: writable
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

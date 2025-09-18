@@ -132,6 +132,12 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         securityContext:
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true

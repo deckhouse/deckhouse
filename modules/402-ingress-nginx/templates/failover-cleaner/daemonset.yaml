@@ -29,7 +29,8 @@ spec:
         ingress-nginx-controller.deckhouse.io/need-hostwithfailover-cleanup: "true"
       {{- include "helm_lib_priority_class" (tuple $context "cluster-medium") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}
+      # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" $context | nindent 6 }}
       serviceAccountName: failover-cleaner
       hostNetwork: true
       volumes:
@@ -63,7 +64,6 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "failoverCleaner") }}
         name: failover-cleaner
-        # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         volumeMounts:
           - mountPath: /run/xtables.lock

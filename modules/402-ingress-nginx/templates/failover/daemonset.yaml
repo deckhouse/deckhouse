@@ -89,6 +89,9 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 4Mi
+        - name: writable
+          emptyDir:
+            medium: Memory
       initContainers:
       - name: iptables-wrapper-init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
@@ -139,6 +142,8 @@ spec:
           - name: additional-config
             mountPath: "/opt/nginx-static/additional-conf"
             readOnly: true
+          - name: writable
+            mountPath: "/opt/nginx-static/writable"
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailoverIptables") }}
         name: iptables-loop
         env:
