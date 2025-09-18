@@ -1,13 +1,15 @@
 ---
-title: "The list of preset alerts"
+title: "List of preset alerts"
 permalink: en/admin/configuration/monitoring/alerts-list.html
 ---
 
-The page displays a list of all alerts of monitoring in the Deckhouse Kubernetes Platform.
+This page displays a list of all monitoring alerts in Deckhouse Kubernetes Platform.
 
-Alerts are grouped by modules. To the right of the alert name, there are icons indicating the minimum DKP edition in which the alert is available, and the alert severity.
+Alerts are grouped by modules. To the right of the alert name, there are icons indicating the minimum DKP edition in which the alert is available and the alert severity level.
 
-For each alert, a summary is provided, and if available, the detailed alert description can be viewed by expanding it.
+For each alert, a brief description (summary) is provided, and if available, the detailed alert description can be viewed by expanding it.
+
+Alert configuration settings are described in the corresponding [article](docs/documentation/pages/admin/configuration/monitoring/alerts.html).
 
 ## Alert severity
 

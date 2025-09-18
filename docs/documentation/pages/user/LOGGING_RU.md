@@ -1,6 +1,6 @@
 ---
 title: "Настройки логирования"
-permalink: ru/user/logging.html
+permalink: ru/user/logging/
 lang: ru
 ---
 
@@ -88,7 +88,7 @@ DKP позволяет:
    ```shell
    d8 k apply -f pod-logging-config.yaml
    ```
-   
+
 ## Примеры
 
 ### Создание source в пространстве имён и чтение логов всех подов в нём с направлением их в Loki
