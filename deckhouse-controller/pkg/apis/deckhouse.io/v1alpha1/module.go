@@ -92,6 +92,7 @@ const (
 	ModuleDependencyRequirementFieldName string = "modules"
 
 	ExperimentalModuleStage = "Experimental"
+	DeprecatedModuleStage   = "Deprecated"
 )
 
 var (
@@ -390,6 +391,10 @@ func (m *Module) GetVersion() string {
 
 func (m *Module) IsExperimental() bool {
 	return m.Properties.Stage == ExperimentalModuleStage
+}
+
+func (m *Module) IsDeprecated() bool {
+	return m.Properties.Stage == DeprecatedModuleStage
 }
 
 // +kubebuilder:object:root=true
