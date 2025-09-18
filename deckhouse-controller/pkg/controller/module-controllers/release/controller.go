@@ -1639,6 +1639,21 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 
 // deleteRelease deletes the module from filesystem
 func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.ModuleRelease) (ctrl.Result, error) {
+	r.activeApplyCount.Add(1)
+	defer func() {
+		r.activeApplyCount.Add(-1)
+	}()
+
+	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
+		r.exts.DeleteConstraints(release.GetModuleName())
+		// TODO(yalosev): we have to disable module here somehow.
+		// otherwise, hooks from file system will fail
+
+		// restart controller for completely remove module
+		// TODO: we need another solution for remove module from modulemanager
+		r.releaseWasProcessed.Store(true)
+	}
+
 	if release.GetPhase() != v1alpha1.ModuleReleasePhaseTerminating {
 		release.Status.Phase = v1alpha1.ModuleReleasePhaseTerminating
 		if err := r.client.Status().Update(ctx, release); err != nil {
@@ -1654,16 +1669,6 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		r.log.Error("failed to uninstall release", slog.String("release", release.GetName()), log.Err(err))
 
 		return ctrl.Result{}, fmt.Errorf("uninstall module: %w", err)
-	}
-
-	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
-		r.exts.DeleteConstraints(release.GetModuleName())
-		// TODO(yalosev): we have to disable module here somehow.
-		// otherwise, hooks from file system will fail
-
-		// restart controller for completely remove module
-		// TODO: we need another solution for remove module from modulemanager
-		r.releaseWasProcessed.Store(true)
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {

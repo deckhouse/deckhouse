@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -133,6 +131,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
 				return err
 			}
+
 			l.logger.Info("the module does not exist, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
@@ -145,7 +144,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 
 		// module must be enabled
 		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
-			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("the module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
@@ -160,27 +159,24 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return true
 		})
 		if err != nil {
-			return fmt.Errorf("set the '%s' module version: %w", module.Name, err)
+			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
 		}
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", module.Properties.Source, mpo.Name, err)
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
 		}
 
 		// mpo's status.weight field isn't set - get it from the module's definition
 		if mpo.Status.Weight == 0 {
-			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.logger)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, l.logger.Named("downloader"), opts)
-
-			imageInfo, err := md.DownloadReleaseImageInfoByVersion(ctx, mpo.Name, mpo.Spec.ImageTag)
+			meta, err := l.installer.RegistryService().GetModuleMeta(ctx, source, mpo.Name, mpo.Spec.ImageTag)
 			if err != nil {
-				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
+				return err
 			}
 
 			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = imageInfo.ModuleDefinition.Weight
+			mpo.Status.Weight = meta.Definition.Weight
 			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
 			_ = l.client.Status().Update(ctx, &mpo)
 		}
@@ -188,10 +184,6 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		// if deployedOn annotation isn't set or its value doesn't equal to current node name - overwrite the module from the repository
 		if deployedOn, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || deployedOn != currentNodeName {
 			l.logger.Info("reinitialize module pull override due to stale/absent deployedOn annotation", slog.String("name", mpo.Name))
-			if err = os.RemoveAll(filepath.Join(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)); err != nil {
-				return fmt.Errorf("delete the stale directory of the '%s' module: %w", mpo.Name, err)
-			}
-
 			if len(mpo.ObjectMeta.Annotations) == 0 {
 				mpo.ObjectMeta.Annotations = make(map[string]string)
 			}
@@ -204,7 +196,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		}
 
 		if err = l.installer.Restore(ctx, source, module.Name, mpo.Spec.ImageTag); err != nil {
-			return fmt.Errorf("restore the '%s' module: %w", module.Name, err)
+			return fmt.Errorf("restore the module '%s': %w", module.Name, err)
 		}
 
 		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)

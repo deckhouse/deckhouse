@@ -64,6 +64,10 @@ func New(clusterUUID string, dc dependency.Container, logger *log.Logger) *Insta
 	}
 }
 
+func (i *Installer) RegistryService() *registry.Service {
+	return i.registry
+}
+
 // GetDownloaded gets all downloaded modules from downloaded dir
 func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	entries, err := os.ReadDir(i.downloaded)
@@ -88,16 +92,6 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 	return downloaded, nil
 }
 
-// Download downloads module to tmp and returns path to it
-func (i *Installer) Download(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) (string, error) {
-	return i.registry.Download(ctx, ms, module, version)
-}
-
-// GetImageDigest downloads image and returns digest
-func (i *Installer) GetImageDigest(ctx context.Context, ms *v1alpha1.ModuleSource, module, tag string) (string, error) {
-	return i.registry.GetImageDigest(ctx, ms, module, tag)
-}
-
 // Install creates an erofs module image and enables the module(mount the image)
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
@@ -116,17 +110,20 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("unmount old erofs image", slog.String("mount", mountPoint))
 	if err := erofs.Unmount(ctx, mountPoint); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err := erofs.CloseMapper(ctx, module); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("close module mapper: %w", err)
 	}
 
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
 	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
 
@@ -137,13 +134,15 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("create erofs image", slog.String("path", imagePath))
 	if err := erofs.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
 	}
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	hash, err := erofs.CreateImageHash(ctx, imagePath)
 	if err != nil {
-		return fmt.Errorf("create image hash from the '%s' path: %w", imagePath, err)
+		span.RecordError(err)
+		return fmt.Errorf("create image hash from the path '%s': %w", imagePath, err)
 	}
 
 	// mounts should not be executed simultaneously
@@ -152,11 +151,13 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("create device mapper")
 	if err = erofs.CreateMapper(ctx, imagePath, hash); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
 	if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
 
@@ -196,6 +197,7 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 			return nil
 		}
 
+		span.RecordError(err)
 		return fmt.Errorf("check mount path '%s': %w", mountPath, err)
 	}
 
@@ -205,11 +207,13 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger.Debug("unmount erofs image", slog.String("path", mountPath))
 	if err := erofs.Unmount(ctx, mountPath); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPath, err)
 	}
 
 	logger.Debug("close device mapper")
 	if err := erofs.CloseMapper(ctx, module); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("close device mapper: %w", err)
 	}
 
@@ -232,6 +236,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// TODO(ipaqsa): delete after 1.74
 	symlink, err := i.getModuleSymlink(module)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("get module symlink: %w", err)
 	}
 	if len(symlink) > 0 {
@@ -244,7 +249,8 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
 	if err = erofs.Unmount(ctx, mountPoint); err != nil {
-		return fmt.Errorf("unmount the '%s' mount path: %w", mountPoint, err)
+		span.RecordError(err)
+		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
@@ -255,6 +261,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
 	if err = os.MkdirAll(modulePath, 0755); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
 
@@ -265,6 +272,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, ms, module, version)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("get image root hash: %w", err)
 	}
 
@@ -274,11 +282,13 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 		logger.Debug("create device mapper", slog.String("path", imagePath))
 		if err = erofs.CreateMapper(ctx, imagePath, rootHash); err != nil {
+			span.RecordError(err)
 			return fmt.Errorf("create device mapper: %w", err)
 		}
 
 		logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
 		if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+			span.RecordError(err)
 			return fmt.Errorf("mount erofs image: %w", err)
 		}
 
@@ -289,28 +299,33 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	img, err := i.registry.GetImageReader(ctx, ms, module, version)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("download module image: %w", err)
 	}
 	defer img.Close()
 
 	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
 	if err = erofs.CreateImageByTar(ctx, img, imagePath); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("extract module image to erofs: %w", err)
 	}
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	hash, err := erofs.CreateImageHash(ctx, imagePath)
 	if err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create image hash: %w", err)
 	}
 
 	logger.Debug("create device mapper")
 	if err = erofs.CreateMapper(ctx, imagePath, hash); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
 	if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
 
