@@ -30,7 +30,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	"go.opentelemetry.io/otel"
@@ -56,6 +55,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -85,7 +85,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  metric.Storage
+	metricStorage  metricsstorage.Storage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -98,7 +98,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
 	parsedVersion, err := semver.NewVersion(deckhouseVersion)
