@@ -380,7 +380,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 
 			// Create dependencies
 			modManager := &moduleManager{enabledModules: tt.enabledModules}
-			metricStorage := metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+			metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 
 			// Create extenders stack
 			logger := log.NewNop()
@@ -502,7 +502,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 
 			// Create dependencies
 			modManager := &moduleManager{enabledModules: tt.enabledModules}
-			metricStorage := metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+			metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 
 			// Create extenders stack
 			logger := log.NewNop()

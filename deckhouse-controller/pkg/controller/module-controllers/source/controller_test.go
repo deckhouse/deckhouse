@@ -119,7 +119,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string, options ...rec
 			Name:   "fe",
 			Bundle: "Default",
 		},
-		metricStorage: metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
+		metricStorage: metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 
 		embeddedPolicy: helpers.NewModuleUpdatePolicySpecContainer(&v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{

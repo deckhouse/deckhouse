@@ -97,7 +97,7 @@ func setupControllerSettings(
 		WithStatusSubresource(&v1alpha1.DeckhouseRelease{}).
 		Build()
 	dc := dependency.NewDependencyContainer()
-	metricStorage := metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
+	metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 	rec := &deckhouseReleaseReconciler{
 		client:           cl,
 		deckhouseVersion: testDeckhouseVersion,
@@ -106,7 +106,7 @@ func setupControllerSettings(
 		moduleManager:    stubModulesManager{},
 		updateSettings:   helpers.NewDeckhouseSettingsContainer(ds, metricStorage),
 		metricStorage:    metricStorage,
-		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())), releaseUpdater.D8ReleaseBlockedMetricName),
+		metricsUpdater:   releaseUpdater.NewMetricsUpdater(metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())), releaseUpdater.D8ReleaseBlockedMetricName),
 		exts:             extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 	rec.clusterUUID = rec.getClusterUUID(context.Background())

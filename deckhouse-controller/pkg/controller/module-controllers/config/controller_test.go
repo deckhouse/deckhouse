@@ -96,7 +96,7 @@ func (suite *ControllerTestSuite) setupTestController(raw string) {
 		handler:         newMockHandler(),
 		moduleManager:   newMockModuleManager(),
 		edition:         &d8edition.Edition{Name: "fe", Bundle: "Default"},
-		metricStorage:   metricstorage.NewMetricStorage("", metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
+		metricStorage:   metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 		configValidator: nil, // Disable validation in tests to avoid schema issues
 		exts:            nil, // Extenders not needed for these tests
 	}
