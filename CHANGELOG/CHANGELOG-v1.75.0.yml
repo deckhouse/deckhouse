@@ -1,0 +1,23 @@
+ci:
+  features:
+    - summary: Add k8s 1.34 to CI.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15453
+    - summary: Make e2e removal automation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13173
+  fixes:
+    - summary: Fix the mechanism for sending reports.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13440
+    - summary: Fix k8s autoupdate report, lock the creation of multiple pr.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13381
+deckhouse-controller:
+  features:
+    - summary: Adds isolated shell executions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11192
+  fixes:
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+go_lib:
+  fixes:
+    - summary: less dependencies from addon-operator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11561
+
