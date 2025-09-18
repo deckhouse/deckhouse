@@ -1044,7 +1044,7 @@ entries:
         - title:
             en: Logging settings
             ru: Настройки логирования
-          url: /user/logging.html
+          url: /user/logging/
         - title:
             en: Containerized applications
             ru: TODO Контейнеризированные приложения
