@@ -45,21 +45,8 @@ var (
 
 var _ runtime.Object = (*ModuleConfig)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleSettingsDefinitionList is a list of ModuleSettings resources
-type ModuleSettingsDefinitionList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleSettingsDefinition `json:"items"`
-}
-
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleSettingsDefinition is a configuration for module or for global config values.
 type ModuleSettingsDefinition struct {
@@ -125,4 +112,14 @@ func (s *ModuleSettingsDefinition) SetVersion(rawSchema []byte, conversions []Mo
 
 	s.Spec.Versions = append(s.Spec.Versions, version)
 	return nil
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleSettingsDefinitionList is a list of ModuleSettings resources
+type ModuleSettingsDefinitionList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSettingsDefinition `json:"items"`
 }
