@@ -43,6 +43,7 @@ env:
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  STAGE_REGISTRY_PATH: "${{ secrets.DECKHOUSE_STAGE_REGISTRY_HOST }}/sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
@@ -63,7 +64,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -139,7 +140,7 @@ jobs:
 
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
       DEPLOY_EE: ${{steps.detect_editions.outputs.DEPLOY_EE}}

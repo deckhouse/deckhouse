@@ -28,7 +28,7 @@ on:
 jobs:
   create_release_issue_for_milestone:
     name: Create issue for milestone
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Create issue

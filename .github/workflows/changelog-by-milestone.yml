@@ -25,7 +25,7 @@ on:
 jobs:
   condition_check:
     name: Check conditions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - name: Check PR
         id: pr
@@ -88,7 +88,7 @@ jobs:
     needs: condition_check
     if: needs.condition_check.outputs.ok == 'ok'
     name: Open Milestones
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - name: Find Open Milestones
         id: milestones
@@ -110,7 +110,7 @@ jobs:
   changelogs:
     if: needs.milestones.outputs.count > 0
     name: Changelog ${{ matrix.milestone.title }}
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: milestones
     strategy:
       max-parallel: 1
