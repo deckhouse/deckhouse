@@ -459,13 +459,29 @@ $(LOCALBIN):
 
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CLIENT_GEN ?= $(LOCALBIN)/client-gen
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
+CODE_GENERATOR_VERSION ?= v0.32.0
 
 .PHONY: controller-gen-generate
-controller-gen-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+controller-gen-generate: controller-gen client-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+# Generate clientset
+	$(CLIENT_GEN) \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1" \
+		--output-pkg "v1alpha1" \
+		--output-dir "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
+
+# Add the missing tool installations
+.PHONY: client-gen
+client-gen: $(CLIENT_GEN)
+$(CLIENT_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen,$(CODE_GENERATOR_VERSION))
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.

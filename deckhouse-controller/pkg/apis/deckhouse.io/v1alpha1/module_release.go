@@ -77,6 +77,8 @@ var (
 
 var _ runtime.Object = (*ModuleRelease)(nil)
 
+// +genclient
+// +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster

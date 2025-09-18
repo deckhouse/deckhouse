@@ -48,6 +48,8 @@ var (
 
 var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 
+// +genclient
+// +genclient:nonNamespaced
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 
