@@ -1286,7 +1286,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		moduleVersion = "v" + moduleVersion
 	}
 
-	modulePath, err := r.loader.Installer().Download(ctx, source, moduleName, moduleVersion)
+	modulePath, err := r.loader.Installer().RegistryService().Download(ctx, source, moduleName, moduleVersion)
 	if err != nil {
 		return fmt.Errorf("download the '%s' module: %w", moduleName, err)
 	}
