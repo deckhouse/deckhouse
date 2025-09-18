@@ -92,19 +92,25 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 
 		set, err := di.SettingsProvider.GetSettings(ctx, providerName, params.AdditionalParams)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot get settings for provider %s: %w", providerName, err)
+			return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, providerName, err)
+		}
+
+		if metaConfig.ClusterPrefix == "" {
+			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, providerName)
+		}
+
+		if metaConfig.Layout == "" {
+			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, providerName)
 		}
 
 		p := cloud.ProviderParams{
 			AdditionalParams: params.AdditionalParams,
-			Name:             providerName,
 			Settings:         set,
 		}
 
 		provider := cloud.NewProvider(metaConfig, clusterUUID, di, p, tmpDir, params.Logger)
 
-		params.Logger.LogDebugF("Cloud provider %s initialized for cluster %s with uuid. Root dir is %s\n",
-			provider.Name(), clusterUUID, provider.RootDir())
+		params.Logger.LogDebugF("Cloud %s initialized. Root dir is %s\n", provider.String(), provider.RootDir())
 
 		return provider, nil
 	}

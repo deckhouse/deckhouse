@@ -96,7 +96,8 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 
 	p.logger.LogDebugF("Copy cloud-providers modules (dir %s) from %s to %s\n", dir, sourceDir, destinationDir)
 
-	err = os.CopyFS(destinationDir, os.DirFS(sourceDir))
+	// todo replace with os.CopyFS with go 1.25
+	err = copyFS(destinationDir, os.DirFS(sourceDir), sourceDir)
 	if errors.Is(err, fs.ErrExist) {
 		p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Exists\n", dir, sourceDir, destinationDir)
 		return nil

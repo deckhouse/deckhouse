@@ -27,6 +27,7 @@ type CloudProvider interface {
 	Cleanup() error
 	Name() string
 	RootDir() string
+	String() string
 }
 
 type DummyCloudProvider struct {
@@ -65,6 +66,12 @@ func (p *DummyCloudProvider) Cleanup() error {
 
 func (p *DummyCloudProvider) RootDir() string {
 	p.logger.LogWarnF("Call RootDir on DummyCloudProvider")
+
+	return ""
+}
+
+func (p *DummyCloudProvider) String() string {
+	p.logger.LogWarnF("Call String on DummyCloudProvider")
 
 	return ""
 }
