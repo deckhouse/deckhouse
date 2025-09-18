@@ -30,7 +30,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -211,7 +210,7 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 			Name: cniName,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:  ptr.To(true),
+			Enabled:  true,
 			Version:  1,
 			Settings: v1alpha1.SettingsValues{},
 		},
@@ -283,12 +282,8 @@ func checkCni(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	// If MC exist, but is explicitly disabled, it means that CNI is in the process of disabling, there is nothing to do.
-	if cniModuleConfigs[0].Spec.Enabled != nil && !*cniModuleConfigs[0].Spec.Enabled {
+	if !cniModuleConfigs[0].Spec.Enabled {
 		return nil
-	}
-
-	if cniModuleConfigs[0].Spec.Enabled == nil {
-		secretMatchesMC = false
 	}
 
 	// If the secret matches MC, then we should

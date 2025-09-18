@@ -51,8 +51,7 @@ var (
 
 var _ runtime.Object = (*ModuleConfig)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleConfigList is a list of ModuleConfig resources
 type ModuleConfigList struct {
@@ -62,10 +61,9 @@ type ModuleConfigList struct {
 	Items []ModuleConfig `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleConfig is a configuration for module or for global config values.
 type ModuleConfig struct {
@@ -107,7 +105,7 @@ func (v SettingsValues) DeepCopyInto(out *SettingsValues) {
 type ModuleConfigSpec struct {
 	Version      int            `json:"version,omitempty"`
 	Settings     SettingsValues `json:"settings,omitempty"`
-	Enabled      *bool          `json:"enabled,omitempty"`
+	Enabled      bool           `json:"enabled"`
 	UpdatePolicy string         `json:"updatePolicy,omitempty"`
 	Source       string         `json:"source,omitempty"`
 	Maintenance  string         `json:"maintenance,omitempty"`
@@ -119,8 +117,5 @@ type ModuleConfigStatus struct {
 }
 
 func (m *ModuleConfig) IsEnabled() bool {
-	if m.Spec.Enabled != nil {
-		return *m.Spec.Enabled
-	}
-	return false
+	return m.Spec.Enabled
 }

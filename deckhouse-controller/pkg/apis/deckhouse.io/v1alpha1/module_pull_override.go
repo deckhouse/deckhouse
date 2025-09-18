@@ -55,8 +55,7 @@ var (
 
 var _ runtime.Object = (*ModulePullOverride)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModulePullOverrideList is a list of ModulePullOverride resources
 type ModulePullOverrideList struct {
@@ -66,10 +65,9 @@ type ModulePullOverrideList struct {
 	Items []ModulePullOverride `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModulePullOverride object
 type ModulePullOverride struct {

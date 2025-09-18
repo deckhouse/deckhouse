@@ -48,8 +48,7 @@ var (
 
 var _ runtime.Object = (*ModuleUpdatePolicy)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleUpdatePolicyList is a list of ModuleUpdatePolicy resources
 type ModuleUpdatePolicyList struct {
@@ -59,10 +58,8 @@ type ModuleUpdatePolicyList struct {
 	Items []ModuleUpdatePolicy `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleUpdatePolicy source
 type ModuleUpdatePolicy struct {

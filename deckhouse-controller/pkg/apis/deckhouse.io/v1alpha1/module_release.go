@@ -77,8 +77,7 @@ var (
 
 var _ runtime.Object = (*ModuleRelease)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleReleaseList is a list of ModuleRelease resources
 type ModuleReleaseList struct {
@@ -88,10 +87,9 @@ type ModuleReleaseList struct {
 	Items []ModuleRelease `json:"items"`
 }
 
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleRelease is a Module release object.
 type ModuleRelease struct {

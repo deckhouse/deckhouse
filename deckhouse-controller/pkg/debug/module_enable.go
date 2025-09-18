@@ -26,7 +26,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -124,7 +123,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 			Name: name,
 		},
 		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled: ptr.To(enabled),
+			Enabled: enabled,
 		},
 	}
 

@@ -127,7 +127,7 @@ func (v *Validator) Validate(config *v1alpha1.ModuleConfig) ValidationResult {
 		return result
 	}
 
-	if config.Spec.Enabled != nil && !(*config.Spec.Enabled) {
+	if !config.Spec.Enabled {
 		return result
 	}
 
