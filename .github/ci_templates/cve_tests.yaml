@@ -101,11 +101,9 @@ remove_labels:
     COMMIT_TAG: ${{github.ref_name}}
     COMMIT_SHA: ${{github.sha}}
     EVENT_NAME: ${{github.event_name}}
-    SCAN_TARGET="pr"
-    LATEST_RELEASES_AMOUNT="3"
-    TAG_TYPE="release"
-    SCAN_SEVERAL_LATEST_RELEASES="false"
-    MODULE_NAME: Deckhouse
+    TAG_TYPE: "release"
+    SCAN_SEVERAL_LATEST_RELEASES: "false"
+    MODULE_NAME: "Deckhouse"
     DECKHOUSE_PRIVATE_REPO: ${{secrets.DECKHOUSE_PRIVATE_REPO}}
     DEV_REGISTRY: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
     DEV_REGISTRY_USER: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
