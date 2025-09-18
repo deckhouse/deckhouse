@@ -75,7 +75,7 @@ remove_labels:
   env:
     DECKHOUSE_PRIVATE_REPO: ${{ secrets.DECKHOUSE_PRIVATE_REPO }}
     CVE_SCRIPT_PROJECT_ID: ${{ secrets.CVE_SCRIPT_PROJECT_ID || 'PROJECT_ID' }}
-    CVE_SCRIPT_PATH: ${{ secrets.CVE_SCRIPT_PATH || 'scripts/cve_scan.sh' }}
+    CVE_SCRIPT_PATH: ${{ secrets.CVE_SCRIPT_PATH || 'cve_scan.sh' }}
     CVE_SCRIPT_REF: ${{ secrets.CVE_SCRIPT_REF || 'main' }}
   run: |
     echo "Downloading CVE scan script from ${DECKHOUSE_PRIVATE_REPO}..."
