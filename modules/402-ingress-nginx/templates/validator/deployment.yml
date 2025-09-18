@@ -122,6 +122,9 @@ spec:
           image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
           securityContext:
             readOnlyRootFilesystem: true
+            capabilities:
+              add:
+              - SYS_ADMIN
           env:
             - name: POD_NAME
               valueFrom:

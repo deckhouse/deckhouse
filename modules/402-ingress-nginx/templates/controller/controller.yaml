@@ -216,6 +216,9 @@ spec:
         {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
           readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - SYS_ADMIN
         {{- end }}
         env:
         - name: POD_NAME
