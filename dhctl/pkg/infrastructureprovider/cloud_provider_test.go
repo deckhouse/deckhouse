@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
@@ -198,6 +199,123 @@ func TestCloudProviderGet(t *testing.T) {
 	require.True(t, strings.HasSuffix(providerGCP.RootDir(), "infra/72ce5a172c9b8efa"))
 }
 
+func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+	stat, err := os.Lstat(destination)
+	require.NoError(t, err, destination)
+	require.True(t, stat.Mode()&os.ModeSymlink != 0, destination)
+
+	realPath, err := os.Readlink(destination)
+	require.NoError(t, err, destination)
+	require.Equal(t, source, realPath)
+}
+
+func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+	stat, err := os.Stat(filePath)
+	require.NoError(t, err, filePath)
+
+	require.True(t, stat.Mode()&os.ModeSymlink == 0, filePath)
+	require.False(t, stat.IsDir(), filePath)
+
+	content, err := os.ReadFile(filePath)
+	require.NoError(t, err, filePath)
+
+	require.Equal(t, expectedContent, string(content), filePath)
+}
+
+func assertIsNotEmptyDir(t *testing.T, dirPath string) {
+	stat, err := os.Stat(dirPath)
+	require.NoError(t, err, dirPath)
+	require.True(t, stat.IsDir(), dirPath)
+
+	entries, err := os.ReadDir(dirPath)
+	require.NoError(t, err, dirPath)
+	require.True(t, len(entries) > 0, dirPath)
+}
+
+func assertFileNotExists(t *testing.T, path string) {
+	_, err := os.Stat(path)
+	require.Error(t, err, path)
+	require.True(t, os.IsNotExist(err), path)
+}
+
+type assertAllFilesCopiedToProviderDirParams struct {
+	provider infrastructure.CloudProvider
+
+	versionsContent string
+	usedLayout      string
+	usedStep        infrastructure.Step
+
+	pluginPaths []string
+
+	layouts []string
+	modules []string
+}
+
+func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopiedToProviderDirParams, providerParams CloudProviderGetterParams) {
+	provider := params.provider
+	require.False(t, interfaces.IsNil(provider))
+
+	require.NotEmpty(t, params.usedStep)
+	require.NotEmpty(t, params.usedLayout)
+	require.NotEmpty(t, params.versionsContent)
+
+	infraBin := "terraform"
+	if provider.NeedToUseTofu() {
+		infraBin = "opentofu"
+	}
+
+	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
+	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
+
+	require.NotEmpty(t, params.pluginPaths)
+
+	for _, pluginPath := range params.pluginPaths {
+		destinationPath := filepath.Join(provider.RootDir(), "plugins", pluginPath)
+		sourcePath := filepath.Join(providerParams.FSDIParams.PluginsDir, pluginPath)
+		assertFileExistsAndSymlink(t, sourcePath, destinationPath)
+	}
+
+	const versionsFile = "versions.tf"
+
+	versionsFileWithContentPath := filepath.Join(provider.RootDir(), versionsFile)
+	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
+
+	const modulesRootDir = "modules"
+	const layoutsRootDir = "layouts"
+
+	assertFileNotExists(t, filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, versionsFile))
+
+	require.NotEmpty(t, params.layouts)
+
+	for _, layout := range params.layouts {
+		layoutDir := filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, layout)
+		assertIsNotEmptyDir(t, layoutDir)
+	}
+
+	versionsFileForStep := filepath.Join(
+		provider.RootDir(),
+		modulesRootDir,
+		layoutsRootDir,
+		params.usedLayout,
+		string(params.usedStep),
+		versionsFile,
+	)
+
+	assertFileExistsAndSymlink(t, versionsFileWithContentPath, versionsFileForStep)
+
+	modulesDir := filepath.Join(provider.RootDir(), modulesRootDir, "terraform-modules")
+	assertIsNotEmptyDir(t, modulesDir)
+	assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(modulesDir, versionsFile))
+
+	require.NotEmpty(t, params.modules)
+
+	for _, module := range params.modules {
+		moduleDir := filepath.Join(modulesDir, module)
+		assertIsNotEmptyDir(t, moduleDir)
+		assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(moduleDir, versionsFile))
+	}
+}
+
 func TestCloudProviderWithTofuExecutorsGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTofuExecutorsGetting"
 
@@ -224,6 +342,105 @@ func TestCloudProviderWithTofuExecutorsGetting(t *testing.T) {
 	require.True(t, providerYandex.NeedToUseTofu())
 	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
 
-	_, err = providerYandex.Executor(context.TODO(), infrastructure.BaseInfraStep, params.Logger)
+	step := infrastructure.BaseInfraStep
+
+	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
 	require.NoError(t, err)
+
+	const versionsContent = `
+terraform {
+  required_version = ">= 0.14.8"
+  required_providers {
+    kubernetes = {
+      source  = "yandex-cloud/yandex"
+      version = ">= 0.83.0"
+    }
+  }
+}
+`
+
+	assertAllFilesCopiedToProviderDir(t, assertAllFilesCopiedToProviderDirParams{
+		provider:        providerYandex,
+		versionsContent: versionsContent,
+		layouts: []string{
+			"standard",
+			"with-nat-instance",
+			"without-nat",
+		},
+		usedLayout: yandexTestLayout,
+		usedStep:   step,
+		modules: []string{
+			"master-node",
+			"monitoring-service-account",
+			"static-node",
+			"vpc-components",
+		},
+		pluginPaths: []string{
+			"registry.opentofu.org/yandex-cloud/yandex/0.83.0/linux_amd64/terraform-provider-yandex",
+		},
+	}, params)
+}
+
+func TestCloudProviderWithTerraformExecutorsGetting(t *testing.T) {
+	testName := "TestCloudProviderWithTerraformExecutorsGetting"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		// testCleanup(t, testName, &params)
+	}()
+
+	getter := CloudProviderGetter(params)
+
+	cfg := &config.MetaConfig{}
+	cfg.ProviderName = gcp.ProviderName
+	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d019"
+	cfg.ClusterPrefix = "test"
+	cfg.Layout = gcpTestLayout
+
+	providerGCP, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	require.IsType(t, &cloud.Provider{}, providerGCP, "provider should be a cloud.Provider for gcp cluster")
+	require.False(t, providerGCP.NeedToUseTofu())
+	require.Equal(t, providerGCP.Name(), gcp.ProviderName)
+
+	step := infrastructure.BaseInfraStep
+
+	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+
+	const versionsContent = `
+terraform {
+  required_version = ">= 0.14.8"
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/google"
+      version = ">= 3.48.0"
+    }
+  }
+}
+`
+
+	assertAllFilesCopiedToProviderDir(t, assertAllFilesCopiedToProviderDirParams{
+		provider:        providerGCP,
+		versionsContent: versionsContent,
+		layouts: []string{
+			"standard",
+			"without-nat",
+		},
+		usedLayout: gcpTestLayout,
+		usedStep:   step,
+		modules: []string{
+			"base-infrastructure",
+			"firewall",
+			"master-node",
+			"static-node",
+		},
+		pluginPaths: []string{
+			"registry.terraform.io/hashicorp/google/3.48.0/linux_amd64/terraform-provider-google",
+		},
+	}, params)
 }
