@@ -171,7 +171,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream:   p.logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DefaultWriter,
+		DebugStream: p.logOptions.DebugWriter,
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes

@@ -22,6 +22,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	promdto "github.com/prometheus/client_model/go"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/storage"
-	promdto "github.com/prometheus/client_model/go"
 )
 
 var _ Storage = (*MetricStorage)(nil)
@@ -50,8 +50,7 @@ const (
 type MetricStorage struct {
 	Prefix string
 
-	groupedVault   *storage.GroupedVault
-	collectorFuncs []CollectorFunc
+	groupedVault *storage.GroupedVault
 
 	registry   *prometheus.Registry
 	gatherer   prometheus.Gatherer
@@ -108,9 +107,8 @@ func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
 	m := &MetricStorage{
 		Prefix: prefix,
 
-		gatherer:       prometheus.DefaultGatherer,
-		registerer:     prometheus.DefaultRegisterer,
-		collectorFuncs: make([]CollectorFunc, 0, 1),
+		gatherer:   prometheus.DefaultGatherer,
+		registerer: prometheus.DefaultRegisterer,
 
 		logger: log.NewLogger().Named("metrics-storage"),
 	}
@@ -375,12 +373,6 @@ func (m *MetricStorage) applyNonGroupedBatchOperations(ops []operation.MetricOpe
 
 // Collector returns collector of MetricStorage
 // it can be useful to collect metrics in external registerer
-func (m *MetricStorage) AddCollectorFunc(fn CollectorFunc) {
-	m.collectorFuncs = append(m.collectorFuncs, fn)
-}
-
-// Collector returns collector of MetricStorage
-// it can be useful to collect metrics in external registerer
 func (m *MetricStorage) Collector() prometheus.Collector {
 	if m.registry != nil {
 		return m.registry
@@ -420,10 +412,6 @@ func (m *MetricStorage) Collect(ch chan<- prometheus.Metric) {
 // prepared for gather
 func (m *MetricStorage) Gather() ([]*promdto.MetricFamily, error) {
 	var gatherer = prometheus.DefaultGatherer
-
-	for _, fn := range m.collectorFuncs {
-		fn(m)
-	}
 
 	if m.registry != nil {
 		gatherer = m.gatherer

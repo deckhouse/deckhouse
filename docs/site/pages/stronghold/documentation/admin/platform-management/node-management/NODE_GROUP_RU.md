@@ -298,7 +298,7 @@ status:
 1. Установка ограничений в NodeGroup `spec.nodeTemplate.taints` с дальнейшим снятием их в [spec.tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
 > Deckhouse по умолчанию допускает использование taint с ключом `dedicated`. Поэтому рекомендуется применять именно этот ключ с любым значением для taint на выделенных узлах.
-> Если необходимо использовать нестандартные ключи taint (например, dedicated.client.com), нужно добавить их в параметр [`modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это позволит системным компонентам, таким как `cni-flannel`, работать на этих узлах.
+> Если необходимо использовать нестандартные ключи taint (например, dedicated.client.com), нужно добавить их в массив [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это позволит системным компонентам, таким как `cni-flannel`, работать на этих узлах.
 
 Подробнее [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
 
