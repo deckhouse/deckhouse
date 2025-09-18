@@ -57,7 +57,7 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 	}
 
 	if len(instanceScope.Credentials.Spec.PrivateSSHKeyPassphrase) > 0 {
-		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PasswordEncoded)
+		passBytes, err := base64.StdEncoding.DecodeString(instanceScope.Credentials.Spec.PrivateSSHKeyPassphrase)
 		if err != nil {
 			return nil, err
 		}
