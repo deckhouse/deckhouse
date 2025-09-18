@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -55,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -80,7 +80,7 @@ func RegisterController(
 	mm moduleManager,
 	edition *d8edition.Edition,
 	dc dependency.Container,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	logger *log.Logger,
 ) error {
@@ -158,7 +158,7 @@ type reconciler struct {
 	dc     dependency.Container
 	logger *log.Logger
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager

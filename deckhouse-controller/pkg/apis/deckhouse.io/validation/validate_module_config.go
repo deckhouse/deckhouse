@@ -25,7 +25,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -39,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type AnnotationsOnly struct {
@@ -60,7 +60,7 @@ const disableReasonSuffix = "Please annotate ModuleConfig with `modules.deckhous
 func moduleConfigValidationHandler(
 	cli client.Client,
 	moduleStorage moduleStorage,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	moduleManager moduleManager,
 	configValidator *configtools.Validator,
 	setting *helpers.DeckhouseSettingsContainer,
