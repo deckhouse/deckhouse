@@ -144,7 +144,11 @@ apiServer:
     {{ if .apiserver.auditWebhookURL }}
     - name: audit-webhook-config-file
       value: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
-    {{- end }}
+    {{- end -}}
+    {{ if .apiserver.secretEncryptionKey }}
+    - name: encryption-provider-config
+      value: /etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
+    {{- end -}}
     - name: profiling
       value: "false"
     - name: request-timeout
