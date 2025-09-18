@@ -127,6 +127,9 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         securityContext:
+          capabilities:
+            add:
+            - SYS_ADMIN
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
@@ -145,10 +148,7 @@ spec:
           name: uwsgi-temp-path
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-        - mountPath: /tmp
-          name: tmp-nginx
-        - mountPath: /chroot/tmp
-          name: tmp-nginx
+        - mountPath: /chroot/tmp/nginx/
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -237,23 +237,6 @@ spec:
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - --
-        - /bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*
-        image: registry.example.com@imageHash-common-init
-        imagePullPolicy: IfNotPresent
-        name: mkdir-nginx
-        resources:
-          requests:
-            ephemeral-storage: 50Mi
-        securityContext:
-          readOnlyRootFilesystem: true
-        volumeMounts:
-        - mountPath: tmp
-          name: tmp-nginx
       priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
