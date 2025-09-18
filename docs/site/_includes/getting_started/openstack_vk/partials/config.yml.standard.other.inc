@@ -62,6 +62,7 @@ spec:
   enabled: true
   settings:
     bpfLBMode: SNAT
+    masqueradeMode: BPF
     tunnelMode: VXLAN
 ---
 # [<en>] Global Deckhouse settings.
