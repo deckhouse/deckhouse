@@ -67,6 +67,9 @@ systemctl -s SIGHUP kill systemd-logind
 rm -rf /var/cache/registrypackages
 rm -rf /etc/kubernetes
 rm -rf /var/lib/kubelet
+if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
+  chattr -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/*/layer.erofs
+fi
 rm -rf /var/lib/containerd
 rm -rf /etc/cni
 rm -rf /var/lib/cni
