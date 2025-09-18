@@ -169,7 +169,7 @@ type reconciler struct {
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	RunModuleWithNewOpenAPISchema(moduleName string) error
 	GetEnabledModuleNames() []string
 	AreModulesInited() bool
 }
@@ -536,8 +536,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 			module.InjectRegistryValue(utils.BuildRegistryValue(source))
 		}
 
-		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), "", modulePath); err != nil {
+		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName()); err != nil {
 			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
 
 			return res, fmt.Errorf("run module with new open api schema: %w", err)

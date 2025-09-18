@@ -104,8 +104,8 @@ type reconciler struct {
 
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
+	RegisterModule(ctx context.Context, moduleName string) error
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	AreModulesInited() bool
 }
 
@@ -171,6 +171,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -198,6 +199,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -211,6 +213,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -245,6 +248,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			r.log.Error("failed to get the module source for the module pull override", slog.String("source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageSourceNotFound {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageSourceNotFound
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
@@ -252,6 +256,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 				return ctrl.Result{}, uerr
 			}
 		}
+
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
@@ -307,8 +312,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	values := make(addonutils.Values)
-	if module := r.moduleManager.GetModule(mpo.GetModuleName()); module != nil {
-		values = module.GetConfigValues(false)
+	if mod := r.moduleManager.GetModule(mpo.GetModuleName()); mod != nil {
+		values = mod.GetConfigValues(false)
 	} else {
 		config := new(v1alpha1.ModuleConfig)
 		if err = r.client.Get(ctx, client.ObjectKey{Name: mpo.GetModuleName()}, config); err != nil {
@@ -353,18 +358,6 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{}, err
 	}
 
-	// disable target module hooks so as not to invoke them before restart
-	if r.moduleManager.GetModule(mpo.Name) != nil {
-		r.moduleManager.DisableModuleHooks(mpo.Name)
-	}
-
-	defer func() {
-		r.log.Info("restart Deckhouse because ModulePullOverride image was updated", slog.String("name", mpo.Name))
-		if err = syscall.Kill(1, syscall.SIGUSR2); err != nil {
-			r.log.Fatal("failed to send SIGUSR2 signal", log.Err(err))
-		}
-	}()
-
 	mpo.Status.Message = v1alpha1.ModulePullOverrideMessageReady
 	mpo.Status.ImageDigest = newChecksum
 	mpo.Status.Weight = moduleDef.Weight
@@ -391,6 +384,11 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
 		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	if err = r.moduleManager.RegisterModule(ctx, mpo.Name); err != nil {
+		r.log.Error("failed to register module", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
