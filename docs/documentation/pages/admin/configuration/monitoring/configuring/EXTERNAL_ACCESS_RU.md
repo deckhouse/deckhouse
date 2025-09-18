@@ -62,7 +62,7 @@ data:
 Добавьте data source в Grafana:
 
 {% alert level="info" %}
-В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**
+В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**.
 {% endalert %}
 
 <img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
