@@ -416,8 +416,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -800,8 +800,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -1184,8 +1184,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -1568,8 +1568,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -1952,8 +1952,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -2336,8 +2336,8 @@ jobs:
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_PATH}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_PATH}"
+            export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+            export WERF_REPO="${STAGE_REGISTRY_PATH}"
             export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
