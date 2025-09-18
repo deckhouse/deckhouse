@@ -64,5 +64,5 @@ You can enable containerd v2 in two ways:
 After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. Updating a node results in the disruption of the workload hosted on it (disruptive update). The node update process is managed by the parameters for applying disruptive updates to the node group ([`spec.disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
 
 {% alert level="info" %}
-At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
+During the migration process, the `/var/lib/containerd` folder will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
