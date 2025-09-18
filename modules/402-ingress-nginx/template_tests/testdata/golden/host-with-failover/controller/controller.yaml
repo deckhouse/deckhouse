@@ -163,6 +163,7 @@ spec:
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
+          name: tmp-nginx
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -447,6 +448,7 @@ spec:
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
         - mountPath: /chroot/tmp/nginx/
+          name: tmp-nginx
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
