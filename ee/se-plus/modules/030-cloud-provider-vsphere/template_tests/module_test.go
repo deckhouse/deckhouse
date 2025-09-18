@@ -404,7 +404,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")

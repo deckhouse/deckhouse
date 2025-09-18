@@ -267,7 +267,7 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: get_pki_checksum 
 				},
 				output{
 					maxUsedControlPlaneVersion: "1.32",
-					effectiveVersion:           "1.31",
+					effectiveVersion:           "1.32",
 					minUsedVersion:             "1.31.2",
 				},
 			),
