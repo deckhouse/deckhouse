@@ -206,27 +206,25 @@ func (s *Client) Start() error {
 
 	log.DebugF("Try to connect to through bastion host master host \n")
 
-	var addr string
-	var err error
-	err = retry.NewSilentLoop("Get SSH client", 50, 2*time.Second).Run(func() error {
+	var (
+		addr             string
+		err              error
+		targetClientConn ssh.Conn
+		targetNewChan    <-chan ssh.NewChannel
+		targetReqChan    <-chan *ssh.Request
+	)
+	err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
 		s.Settings.ChoiceNewHost()
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		targetConn, err = bastionClient.Dial("tcp", addr)
+		if err != nil {
+			return err
+		}
+		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
 		return err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
-	}
-	var targetClientConn ssh.Conn
-	var targetNewChan <-chan ssh.NewChannel
-	var targetReqChan <-chan *ssh.Request
-	err = retry.NewLoop("Connect to target SSH host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
-		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
-		return err
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to create client connection to target host: %w", err)
 	}
 
 	clientConn = targetClientConn
