@@ -126,6 +126,9 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         securityContext:
+          capabilities:
+            add:
+            - SYS_ADMIN
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
