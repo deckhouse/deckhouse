@@ -271,7 +271,7 @@ apiserver:
 `
 	const apiServerWithOidcFullKube129 = `
 internal:
-  effectiveKubernetesVersion: "1.29"
+  effectiveKubernetesVersion: "1.30"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -747,7 +747,7 @@ resources:
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
 			})
 		})
-		Context("apiserver oidc settings are set fully and kubernetes 1.29", func() {
+		Context("apiserver oidc settings are set fully and kubernetes 1.30", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcFullKube129)
 				f.HelmRender()
