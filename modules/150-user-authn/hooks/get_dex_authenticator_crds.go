@@ -18,7 +18,11 @@ package hooks
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -28,6 +32,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 )
@@ -143,6 +148,9 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	dexAuthenticators := make([]DexAuthenticator, 0, len(authenticators))
+	// Build computed names map: key "<name>@<namespace>" => {name, truncated, hash}
+	namesMap := make(map[string]interface{})
+
 	for dexAuthenticator, err := range sdkobjectpatch.SnapshotIter[DexAuthenticator](authenticators) {
 		if err != nil {
 			return fmt.Errorf("cannot convert dex authenticaor: failed to iterate over 'authenticators' snapshot: %w", err)
@@ -163,8 +171,104 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 
 		dexAuthenticator.Credentials = existedCredentials
 		dexAuthenticators = append(dexAuthenticators, dexAuthenticator)
+
+		// Compute safe base resource name
+		full := fmt.Sprintf("%s-dex-authenticator", dexAuthenticator.Name)
+		safeName, truncated, hash5 := SafeDNS1123Name(full)
+
+		// Compute safe secret name
+		fullSecretName := fmt.Sprintf("dex-authenticator-%s", dexAuthenticator.Name)
+		safeSecretName, secretTruncated, secretHash := SafeDNS1123Name(fullSecretName)
+
+		ingressNames := make(map[string]map[string]interface{})
+		signOutIngressNames := make(map[string]map[string]interface{})
+
+		if applications, found, _ := unstructured.NestedSlice(dexAuthenticator.Spec, "applications"); found {
+			for i, app := range applications {
+				appMap, ok := app.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				domain, ok := appMap["domain"].(string)
+				if !ok {
+					continue
+				}
+
+				var nameSuffix string
+				if i > 0 {
+					h := sha256.Sum256([]byte(domain))
+					hashedDomain := hex.EncodeToString(h[:])[:8]
+					nameSuffix = fmt.Sprintf("-%s", hashedDomain)
+				}
+
+				// Main ingress
+				fullIngressName := fmt.Sprintf("%s%s-dex-authenticator", dexAuthenticator.Name, nameSuffix)
+				safeIngressName, ingTruncated, ingHash := SafeDNS1123Name(fullIngressName)
+				ingressNames[fmt.Sprintf("%d", i)] = map[string]interface{}{
+					"name":      safeIngressName,
+					"truncated": ingTruncated,
+					"hash":      ingHash,
+				}
+
+				// SignOut ingress
+				if signOutURL, found, _ := unstructured.NestedString(appMap, "signOutURL"); found && signOutURL != "" {
+					fullSignOutIngressName := fmt.Sprintf("%s-sign-out", fullIngressName)
+					safeSignOutIngressName, signOutTruncated, signOutHash := SafeDNS1123Name(fullSignOutIngressName)
+					signOutIngressNames[fmt.Sprintf("%d", i)] = map[string]interface{}{
+						"name":      safeSignOutIngressName,
+						"truncated": signOutTruncated,
+						"hash":      signOutHash,
+					}
+				}
+			}
+		}
+
+		namesMap[dexAuthenticator.ID] = map[string]interface{}{
+			"name":                safeName,
+			"truncated":           truncated,
+			"hash":                hash5,
+			"secretName":          safeSecretName,
+			"secretTruncated":     secretTruncated,
+			"secretHash":          secretHash,
+			"ingressNames":        ingressNames,
+			"signOutIngressNames": signOutIngressNames,
+		}
 	}
 
 	input.Values.Set("userAuthn.internal.dexAuthenticatorCRDs", dexAuthenticators)
+	input.Values.Set("userAuthn.internal.dexAuthenticatorNames", namesMap)
 	return nil
+}
+
+var (
+	notAllowedRegexp = regexp.MustCompile("[^a-z0-9-]+")
+	multiDashRegexp  = regexp.MustCompile("-+")
+)
+
+// SafeDNS1123Name normalizes and truncates name to DNS-1123 and length <=63.
+// If truncation happens, "-<hash5>" is appended, where hash5 is first 5 hex of sha256(original).
+func SafeDNS1123Name(fullOriginalName string) (string, bool, string) {
+	// If base name length is within limit, keep it exactly as is.
+	if len(fullOriginalName) <= 63 {
+		return fullOriginalName, false, ""
+	}
+
+	// Normalize only when we have to truncate.
+	normalized := strings.ToLower(fullOriginalName)
+	normalized = notAllowedRegexp.ReplaceAllString(normalized, "-")
+	normalized = multiDashRegexp.ReplaceAllString(normalized, "-")
+	normalized = strings.Trim(normalized, "-")
+
+	// Compute hash only if needed later.
+	if len(normalized) <= 63 {
+		return normalized, false, ""
+	}
+
+	fullHash := stringsutil.Sha256Encode(fullOriginalName)
+	hash5 := fullHash[:5]
+
+	base := normalized[:57]
+	base = strings.TrimRight(base, "-")
+	safe := base + "-" + hash5
+	return safe, true, hash5
 }

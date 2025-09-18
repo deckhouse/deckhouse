@@ -112,7 +112,10 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			hec.HelmRender()
 		})
 		It("Should create desired objects", func() {
-			Expect(hec.KubernetesResource("Service", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
+			svc := hec.KubernetesResource("Service", "d8-test", "test-dex-authenticator")
+			Expect(svc.Exists()).To(BeTrue())
+			Expect(svc.Field("metadata.labels.deckhouse\\.io/dex-authenticator-for").Exists()).To(BeFalse())
+
 			Expect(hec.KubernetesResource("PodDisruptionBudget", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-dex-authenticator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Secret", "d8-test", "registry-dex-authenticator").Exists()).To(BeTrue())
@@ -178,6 +181,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			ingressTest2 := hec.KubernetesResource("Ingress", "d8-test", "test-2-dex-authenticator")
 			Expect(ingressTest2.Exists()).To(BeTrue())
 			Expect(ingressTest2.Field("spec.ingressClassName").String()).To(Equal("test"))
+			Expect(ingressTest2.Field("metadata.labels.deckhouse\\.io/name-truncated").Exists()).To(BeFalse())
 
 			Expect(ingressTest2.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator.com"]`))
 			Expect(ingressTest2.Field("spec.tls.0.secretName").String()).To(Equal("test"))
@@ -187,6 +191,7 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			ingressTest2Two := hec.KubernetesResource("Ingress", "d8-test", "test-2-3230e1af-dex-authenticator")
 			Expect(ingressTest2Two.Exists()).To(BeTrue())
 			Expect(ingressTest2Two.Field("spec.ingressClassName").String()).To(Equal("test-two"))
+			Expect(ingressTest2Two.Field("metadata.labels.deckhouse\\.io/name-truncated").Exists()).To(BeFalse())
 
 			Expect(ingressTest2Two.Field("spec.tls.0.hosts").String()).To(MatchJSON(`["authenticator-two.com"]`))
 			Expect(ingressTest2Two.Field("spec.tls.0.secretName").String()).To(Equal("test"))
