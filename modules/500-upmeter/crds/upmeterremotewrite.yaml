@@ -74,6 +74,11 @@ spec:
                           description: The CA certificate used when verifying the API server certificate.
                           type: string
                           x-doc-default: ""
+                    headers:
+                      type: object
+                      description: Additional HTTP headers to send with each remote write request.
+                      additionalProperties:
+                        type: string
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.
