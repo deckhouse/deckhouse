@@ -330,3 +330,64 @@ Example of an error output when creating a Pod with a container image that has n
 ```console
 [verify-image-signatures] Image signature verification failed: nginx:1.17.2
 ```
+
+## How to block deleting a node without a label
+
+> Note. DELETE operations are handled by Gatekeeper by default.
+
+You can create your own Gatekeeper policy to block Node deletion unless a special label is present. The example below uses `oldObject` to check labels on the Node being deleted:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customnodedeleteguard
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomNodeDeleteGuard
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            requiredLabelKey:
+              type: string
+            requiredLabelValue:
+              type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_delete { input.review.operation == "DELETE" }
+        is_node { input.review.kind.kind == "Node" }
+
+        has_required_label {
+          key := input.parameters.requiredLabelKey
+          val := input.parameters.requiredLabelValue
+          obj := input.review.oldObject
+          obj.metadata.labels[key] == val
+        }
+
+        violation[{"msg": msg}] {
+          is_delete
+          is_node
+          not has_required_label
+          msg := sprintf("Node deletion is blocked. Add label %q=%q to proceed.", [input.parameters.requiredLabelKey, input.parameters.requiredLabelValue])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomNodeDeleteGuard
+metadata:
+  name: require-node-delete-label
+spec:
+  enforcementAction: warn
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Node"]
+  parameters:
+    requiredLabelKey: "admission.deckhouse.io/allow-delete"
+    requiredLabelValue: "true"
+```
