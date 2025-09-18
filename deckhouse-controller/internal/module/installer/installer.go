@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/registry"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/erofs"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -109,13 +109,13 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	mountPoint := filepath.Join(i.mount, module)
 
 	logger.Debug("unmount old erofs image", slog.String("mount", mountPoint))
-	if err := erofs.Unmount(ctx, mountPoint); err != nil {
+	if err := verity.Unmount(ctx, mountPoint); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
-	if err := erofs.CloseMapper(ctx, module); err != nil {
+	if err := verity.CloseMapper(ctx, module); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("close module mapper: %w", err)
 	}
@@ -133,13 +133,13 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	imagePath := filepath.Join(modulePath, image)
 
 	logger.Debug("create erofs image", slog.String("path", imagePath))
-	if err := erofs.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+	if err := verity.CreateImage(ctx, tempModulePath, imagePath); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
 	}
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-	hash, err := erofs.CreateImageHash(ctx, imagePath)
+	hash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("create image hash from the path '%s': %w", imagePath, err)
@@ -150,13 +150,13 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	defer i.mtx.Unlock()
 
 	logger.Debug("create device mapper")
-	if err = erofs.CreateMapper(ctx, imagePath, hash); err != nil {
+	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
-	if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+	if err = verity.Mount(ctx, module, mountPoint); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
@@ -206,13 +206,13 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 	defer i.mtx.Unlock()
 
 	logger.Debug("unmount erofs image", slog.String("path", mountPath))
-	if err := erofs.Unmount(ctx, mountPath); err != nil {
+	if err := verity.Unmount(ctx, mountPath); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPath, err)
 	}
 
 	logger.Debug("close device mapper")
-	if err := erofs.CloseMapper(ctx, module); err != nil {
+	if err := verity.CloseMapper(ctx, module); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("close device mapper: %w", err)
 	}
@@ -248,13 +248,14 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	mountPoint := filepath.Join(i.mount, module)
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
-	if err = erofs.Unmount(ctx, mountPoint); err != nil {
+	if err = verity.Unmount(ctx, mountPoint); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
-	if err = erofs.CloseMapper(ctx, module); err != nil {
+	if err = verity.CloseMapper(ctx, module); err != nil {
+		span.RecordError(err)
 		return fmt.Errorf("close module mapper: %w", err)
 	}
 
@@ -281,13 +282,13 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 		logger.Debug("module verified")
 
 		logger.Debug("create device mapper", slog.String("path", imagePath))
-		if err = erofs.CreateMapper(ctx, imagePath, rootHash); err != nil {
+		if err = verity.CreateMapper(ctx, imagePath, rootHash); err != nil {
 			span.RecordError(err)
 			return fmt.Errorf("create device mapper: %w", err)
 		}
 
 		logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
-		if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+		if err = verity.Mount(ctx, module, mountPoint); err != nil {
 			span.RecordError(err)
 			return fmt.Errorf("mount erofs image: %w", err)
 		}
@@ -305,26 +306,26 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	defer img.Close()
 
 	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
-	if err = erofs.CreateImageByTar(ctx, img, imagePath); err != nil {
+	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("extract module image to erofs: %w", err)
 	}
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-	hash, err := erofs.CreateImageHash(ctx, imagePath)
+	hash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("create image hash: %w", err)
 	}
 
 	logger.Debug("create device mapper")
-	if err = erofs.CreateMapper(ctx, imagePath, hash); err != nil {
+	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
-	if err = erofs.Mount(ctx, module, mountPoint); err != nil {
+	if err = verity.Mount(ctx, module, mountPoint); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
@@ -358,7 +359,7 @@ func (i *Installer) verifyModule(ctx context.Context, module, version, hash stri
 		return errors.New("empty hash")
 	}
 
-	if err := erofs.VerifyImage(ctx, imagePath, hash); err != nil {
+	if err := verity.VerifyImage(ctx, imagePath, hash); err != nil {
 		return fmt.Errorf("verify root hash: %w", err)
 	}
 
