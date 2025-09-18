@@ -111,7 +111,7 @@ Depending on the chosen edition, authentication in the container registry `regis
 
 ### Choosing the installer image
 
-The installer runs as a Docker container. The container image is selected based on the edition and release channel:
+The installer runs as a container. The container image is selected based on the edition and release channel:
 
 ```shell
 registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>

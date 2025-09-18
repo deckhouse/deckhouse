@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/admin/overview.html
 lang: en
 ---
 
-This section is intended for Deckhouse Virtualization Platform (DVP) administrators. Administrators also have the rights to manage project resources, the description of which is contained in the [User Manual](https://deckhouse.ru/products/virtualization-platform/documentation/user/overview.html).
+This section is intended for Deckhouse Virtualization Platform (DVP) administrators. Administrators also have the rights to manage project resources, the description of which is contained in the [User Guide](https://deckhouse.ru/products/virtualization-platform/documentation/user/overview.html).
 
 The DVP administrator guide includes the following sections:
 

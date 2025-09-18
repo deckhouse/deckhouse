@@ -5,13 +5,24 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/virtuali
 
 ## Virtualization setup
 
-After configuring the storage, you need to enable the virtualization module. Enabling and configuring the module is done using the ModuleConfig resource.
+After configuring the storage, you need to enable the virtualization module. Enabling and configuring the module can be done via the web interface or using the following command:
 
-In the `spec` parameters, you need to set:
+```shell
+sudo -i d8 s module enable virtualization
+```
 
-- `enabled: true` — flag to enable the module;
-- `settings.virtualMachineCIDRs` — subnets, IP addresses from which virtual machines will be assigned IPs;
-- `settings.dvcr.storage.persistentVolumeClaim.size` — size of the disk space for storing virtual machine images.
+Edit the module configuration using the web admin interface or with the following command:
+
+```shell
+sudo -i d8 k edit mc virtualization
+```
+
+Specify the following parameters:
+
+- [settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#parameters-virtualmachinecidrs) — subnets, IP addresses from which virtual machines will be assigned IPs;
+- [settings.dvcr.storage.persistentVolumeClaim.size](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-size) — size of the disk space for storing virtual machine images;
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — the name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used);
+- [settings.dvcr.storage.type](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-type) — specify `PersistentVolumeClaim`.
 
 Example of virtualization module configuration:
 
@@ -127,7 +138,7 @@ Example:
 
 ```yaml
 spec:
-  ...
+  #...
   settings:
     virtualImages:
       allowedStorageClassNames:
@@ -149,7 +160,7 @@ Example:
 
 ```yaml
 spec:
-  ...
+  #...
   settings:
     virtualDisks:
       allowedStorageClassNames:
@@ -171,7 +182,6 @@ Not available in Community Edition.
 
 {% alert level="warning" %}
 To set up auditing, the following modules must be enabled:
-
 - `log-shipper`
 - `runtime-audit-engine`
 {% endalert %}

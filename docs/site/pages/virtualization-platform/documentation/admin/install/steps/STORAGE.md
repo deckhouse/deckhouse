@@ -3,44 +3,21 @@ title: "Set up storage"
 permalink: en/virtualization-platform/documentation/admin/install/steps/storage.html
 ---
 
-## Storage Configuration
-
 After adding worker nodes, it is necessary to configure the storage that will be used for creating virtual machine disks and storing cluster component metrics. The storage can be selected from the [supported list](/products/virtualization-platform/documentation/about/requirements.html#supported-storage-systems).
 
-Next, we will consider enabling and configuring the software-defined storage `sds-replicated-volume`. This storage allows you to create replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
+Next, we will consider using software-defined replicated block storage based on DRBD, which allows creating replicated volumes based on the disk space of nodes. As an example, we will configure a StorageClass based on volumes with two replicas, located on the disks `/dev/sda`.
 
-## Adding sds-replicated-volume
+## Enabling the ability to use of replicated storage
 
-To add the `sds-replicated-volume` storage, you need to enable two Deckhouse modules by creating ModuleConfig resources:
+Enable `sds-replicated-volume`, `snapshot-controller`, and `sds-node-configurator` modules using the web-interface, or run the following command:
 
-```yaml
-sudo -i d8 k create -f - <<EOF
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: snapshot-controller
-spec:
-  enabled: true
-  version: 1
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-node-configurator
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: sds-replicated-volume
-spec:
-  enabled: true
-EOF
+```shell
+sudo -i d8 s module enable sds-replicated-volume
+sudo -i d8 s module enable snapshot-controller
+sudo -i d8 s module enable sds-node-configurator
 ```
 
-Wait for the module to be enabled:
+Wait for the `sds-replicated-volume` module to be enabled:
 
 ```shell
 sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
@@ -52,7 +29,7 @@ Ensure that all the pods of the `sds-replicated-volume` module are in the `Runni
 sudo -i d8 k -n d8-sds-replicated-volume get pod -owide -w
 ```
 
-## Configuration of sds-replicated-volume
+## Configuration of replicated storage
 
 Configuring the storage involves combining the available block devices on the nodes into pools, from which a StorageClass will then be created.
 
@@ -74,12 +51,12 @@ Configuring the storage involves combining the available block devices on the no
 1. Create a VolumeGroup on each node.
 
    On each node, you need to create an LVM volume group using the [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html) resource.
-
-   To create the LVMVolumeGroup resource on the node, use the following commands:
-
-   ```yaml
-   export NODE_NAME="dvp-worker-1"
-   export DEV_NAME="dev-40bf7a561aee502f20b81cf1eff873a0455a95cb"
+   
+   To create the LVMVolumeGroup resource, use the following commands on each node (specify the node name and block device name):
+   
+   ```shell
+   export NODE_NAME="<NODE_NAME>"
+   export DEV_NAME="<BLOCK_DEVICE_NAME>"
    sudo -i d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: LVMVolumeGroup
@@ -100,8 +77,6 @@ Configuring the storage involves combining the available block devices on the no
    EOF
    ```
 
-   Repeat the actions for each node whose block device is planned to be used. In the example, this includes all three nodes: `master-0`, `dvp-master-1`, and `dvp-master-2`.
-
    Wait for all the created LVMVolumeGroup resources to transition to the `Ready` state:
 
    ```shell
@@ -119,9 +94,9 @@ Configuring the storage involves combining the available block devices on the no
 
 1. Create a pool of LVM volume groups.
 
-   The created volume groups need to be combined into a pool for replication. The pool is defined in the `ReplicatedStoragePool` resource:
+   Created volume groups need to be assembled into a pool for replication (specifies in ReplicatedStoragePool resource). To do this, run the following command (specify the names of the created volume groups): 
 
-   ```yaml
+   ```shell
    sudo -i d8 k apply -f - <<EOF
     apiVersion: storage.deckhouse.io/v1alpha1
     kind: ReplicatedStoragePool
@@ -130,6 +105,7 @@ Configuring the storage involves combining the available block devices on the no
     spec:
       type: LVM
       lvmVolumeGroups:
+        # Specify your volume group names.
         - name: vg-on-dvp-worker-01
         - name: vg-on-dvp-worker-02
         - name: vg-on-master
@@ -158,7 +134,7 @@ Configuring the storage involves combining the available block devices on the no
 
    Other parameters are described in the [ReplicatedStorageClass resource documentation](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
 
-   ```yaml
+   ```shell
    sudo -i d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: ReplicatedStorageClass
@@ -185,10 +161,9 @@ Configuring the storage involves combining the available block devices on the no
    sds-r2   replicated.csi.storage.deckhouse.io   Delete          WaitForFirstConsumer   true                   6s
    ```
 
-1. Set the default StorageClass:
+1. Set the default StorageClass (specify the name of your StorageClass object):
 
    ```shell
-   # Specify the name of your StorageClass object.
-   DEFAULT_STORAGE_CLASS=sds-r2
+   DEFAULT_STORAGE_CLASS=<DEFAULT_STORAGE_CLASS_NAME>
    sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
    ```
