@@ -364,6 +364,10 @@ entries:
             en: FAQ
             ru: FAQ
           url: /virtualization-platform/documentation/faq.html
+    - title:
+        en: Release notes
+        ru: История изменений
+      url: /virtualization-platform/documentation/release-notes.html
     #- title:
     #    en: DVP editions
     #    ru: Список  DVP
