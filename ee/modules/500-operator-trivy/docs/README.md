@@ -20,7 +20,7 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 Scanning starts:
 
 - automatically every 24 hours,
-- when changes occur in the namespaces for which scanning is enabled (in particular, when new objects appear).
+- when components using new images are deployed in the namespaces for which scanning is enabled.
 
 ## Where to view scan results
 
