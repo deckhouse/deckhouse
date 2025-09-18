@@ -15,9 +15,7 @@
 package logger
 
 import (
-	"fmt"
 	"log/slog"
-	"os"
 	"sync"
 )
 
@@ -69,9 +67,6 @@ func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
 
 type DebugLogWriter struct {
 	l *slog.Logger
-
-	m    sync.Mutex
-	prev []byte
 }
 
 func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
@@ -81,17 +76,8 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 }
 
 func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
-	fmt.Fprintln(os.Stderr, "Try to lock debug log writer")
-	w.m.Lock()
+	// slog is thread safe
+	w.l.Debug(string(p))
 
-	fmt.Fprintln(os.Stderr, "Locked debug log writer. Defer to unlock")
-
-	defer func() {
-		fmt.Fprintln(os.Stderr, "Try to unlock debug log writer")
-		w.m.Unlock()
-		fmt.Fprintln(os.Stderr, "Debug log writer unlocked")
-	}()
-
-	fmt.Fprintf(os.Stderr, "log string len: %d", len(string(p)))
-	return fmt.Fprintf(os.Stderr, "Print to stderr %s", p)
+	return len(p), nil
 }
