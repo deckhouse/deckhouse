@@ -16,12 +16,21 @@
 package fake
 
 import (
+	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha2"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
 type FakeDeckhouseV1alpha2 struct {
 	*testing.Fake
+}
+
+func (c *FakeDeckhouseV1alpha2) ModulePullOverrides() v1alpha2.ModulePullOverrideInterface {
+	return &FakeModulePullOverrides{c}
+}
+
+func (c *FakeDeckhouseV1alpha2) ModuleUpdatePolicies() v1alpha2.ModuleUpdatePolicyInterface {
+	return &FakeModuleUpdatePolicies{c}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

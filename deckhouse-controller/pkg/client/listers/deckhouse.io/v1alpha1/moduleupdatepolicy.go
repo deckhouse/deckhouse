@@ -22,44 +22,44 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// ModuleLister helps list Modules.
+// ModuleUpdatePolicyLister helps list ModuleUpdatePolicies.
 // All objects returned here must be treated as read-only.
-type ModuleLister interface {
-	// List lists all Modules in the indexer.
+type ModuleUpdatePolicyLister interface {
+	// List lists all ModuleUpdatePolicies in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.Module, err error)
-	// Get retrieves the Module from the index for a given name.
+	List(selector labels.Selector) (ret []*v1alpha1.ModuleUpdatePolicy, err error)
+	// Get retrieves the ModuleUpdatePolicy from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.Module, error)
-	ModuleListerExpansion
+	Get(name string) (*v1alpha1.ModuleUpdatePolicy, error)
+	ModuleUpdatePolicyListerExpansion
 }
 
-// moduleLister implements the ModuleLister interface.
-type moduleLister struct {
+// moduleUpdatePolicyLister implements the ModuleUpdatePolicyLister interface.
+type moduleUpdatePolicyLister struct {
 	indexer cache.Indexer
 }
 
-// NewModuleLister returns a new ModuleLister.
-func NewModuleLister(indexer cache.Indexer) ModuleLister {
-	return &moduleLister{indexer: indexer}
+// NewModuleUpdatePolicyLister returns a new ModuleUpdatePolicyLister.
+func NewModuleUpdatePolicyLister(indexer cache.Indexer) ModuleUpdatePolicyLister {
+	return &moduleUpdatePolicyLister{indexer: indexer}
 }
 
-// List lists all Modules in the indexer.
-func (s *moduleLister) List(selector labels.Selector) (ret []*v1alpha1.Module, err error) {
+// List lists all ModuleUpdatePolicies in the indexer.
+func (s *moduleUpdatePolicyLister) List(selector labels.Selector) (ret []*v1alpha1.ModuleUpdatePolicy, err error) {
 	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.Module))
+		ret = append(ret, m.(*v1alpha1.ModuleUpdatePolicy))
 	})
 	return ret, err
 }
 
-// Get retrieves the Module from the index for a given name.
-func (s *moduleLister) Get(name string) (*v1alpha1.Module, error) {
+// Get retrieves the ModuleUpdatePolicy from the index for a given name.
+func (s *moduleUpdatePolicyLister) Get(name string) (*v1alpha1.ModuleUpdatePolicy, error) {
 	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}
 	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("module"), name)
+		return nil, errors.NewNotFound(v1alpha1.Resource("moduleupdatepolicy"), name)
 	}
-	return obj.(*v1alpha1.Module), nil
+	return obj.(*v1alpha1.ModuleUpdatePolicy), nil
 }

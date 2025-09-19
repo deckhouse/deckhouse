@@ -464,14 +464,17 @@ $(LOCALBIN):
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
+INFORMER_GEN ?= $(LOCALBIN)/informer-gen
+LISTER_GEN ?= $(LOCALBIN)/lister-gen
 
 ## Tool Versions
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.7
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.30.11
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
-generate-kubernetes: controller-gen-generate client-gen-generate
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
 
 ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: controller-gen-generate
@@ -489,14 +492,51 @@ client-gen-generate: client-gen
 		--output-dir "./deckhouse-controller/pkg/client/clientset" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
 
-# Add the missing tool installations
+## Generate listers (required for informers)
+.PHONY: lister-gen-generate
+lister-gen-generate: lister-gen 
+	$(LISTER_GEN) \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-dir "./deckhouse-controller/pkg/client/listers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Generate informers
+.PHONY: informer-gen-generate
+informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
+	$(INFORMER_GEN) \
+		--versioned-clientset-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned" \
+		--listers-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers" \
+		--output-dir "./deckhouse-controller/pkg/client/informers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Tool installations
+
+## Download client-gen locally if necessary.
 .PHONY: client-gen
 client-gen: $(CLIENT_GEN)
 $(CLIENT_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen,$(CODE_GENERATOR_VERSION))
 
+## Download lister-gen locally if necessary.
+.PHONY: lister-gen
+lister-gen: $(LISTER_GEN)
+$(LISTER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(LISTER_GEN),k8s.io/code-generator/cmd/lister-gen,$(CODE_GENERATOR_VERSION))
+
+## Download informer-gen locally if necessary.
+.PHONY: informer-gen
+informer-gen: $(INFORMER_GEN)
+$(INFORMER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(INFORMER_GEN),k8s.io/code-generator/cmd/informer-gen,$(CODE_GENERATOR_VERSION))
+
+## Download controller-gen locally if necessary.
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+controller-gen: $(CONTROLLER_GEN) 
 $(CONTROLLER_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 
@@ -510,7 +550,7 @@ set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
 rm -f $(1) || true ;\
-GOBIN=$(LOCALBIN) go install $${package} ;\
+GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
 mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
