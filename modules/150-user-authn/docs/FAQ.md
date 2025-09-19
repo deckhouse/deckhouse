@@ -57,9 +57,11 @@ To enable Dex authentication for your application, follow these steps:
       - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
 
    > **Note:** If the DexAuthenticator name (`<NAME>`) is too long, the Service name may be truncated. To find the correct service name, use the following command (specify namespace name and DexAuthenticator name):
+   >
    > ```shell
    > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
    > ```
+   >
 
    Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 
