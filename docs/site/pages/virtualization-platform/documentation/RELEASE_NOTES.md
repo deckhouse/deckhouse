@@ -13,10 +13,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 ### Fixes
 
 * [vmsnapshot] When restoring a virtual machine from a snapshot, all annotations and labels that were present on the resources at the time of the snapshot are now restored correctly.
-* [module] Fixed an issue with queue blocking when the `settings.modules.publicClusterDomain` parameter was empty in the global ModuleConfig resource.
+* [module] Fixed an issue with queue blocking when the `settings.modules.publicClusterDomain` parameter was empty in the global `ModuleConfig` resource.
 * [module] Optimized hook performance during module installation.
 * [vmclass] Fixed core/coreFraction validation in the `VirtualMachineClass` resource.
-* [module] When the SDN module is disabled, the configuration of additional networks in the VM is not available.
+* [module] When the `SDN` module is disabled, the configuration of additional networks in the VM is not available.
 
 ### Security
 
@@ -26,7 +26,7 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ### Important notes before update
 
-In version v0.25.0, support for the module's operation with CRI containerd V2 has been added.
+In version v0.25.0, support for the `virtualization` module's operation with CRI containerd v2 has been added.
 After upgrading CRI from containerd v1 to containerd v2, it is necessary to recreate the images that were created using virtualization module version v0.24.0 and earlier.
 
 ### New Features
@@ -43,7 +43,7 @@ This allows creating VMs with an empty `spec.virtualMachineClassName` field, whi
 - [module] Added validation to ensure that virtual machine subnets do not overlap with system subnets (`podSubnetCIDR` and `serviceSubnetCIDR`).
 - [vi] To create a virtual image on a `PersistentVolumeClaim`, the storage must support the `RWX` and `Block` modes; otherwise, a warning will be displayed.
 - [vm] Fixed an issue where changing the operating system type caused the machine to enter a reboot loop.
-- [vm] Fixed an issue where a virtual machine would hang in the Starting phase when project quotas were insufficient. A quota shortage message will now be displayed in the virtual machine's status. To allow the machine to continue starting, the project quotas need to be increased.
+- [vm] Fixed an issue where a virtual machine would hang in the `Starting` phase when project quotas were insufficient. A quota shortage message will now be displayed in the virtual machine's status. To allow the machine to continue starting, the project quotas need to be increased.
 
 ### Other
 

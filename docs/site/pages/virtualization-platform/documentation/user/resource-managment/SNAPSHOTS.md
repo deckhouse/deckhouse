@@ -119,7 +119,7 @@ How to restore a disk from a previously created snapshot in the web interface:
 A virtual machine snapshot is a saved state of a virtual machine at a specific point in time. The `VirtualMachineSnapshot` resource is used to create virtual machine snapshots.
 
 {% alert level="warning" %}
-It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a Pending state while waiting for the images to become available.
+It is recommended to disconnect all images (VirtualImage/ClusterVirtualImage) from the virtual machine before creating its snapshot. Disk images are not saved together with the VM snapshot, and their absence in the cluster during recovery may cause the virtual machine to fail to start and remain in a `Pending` state while waiting for the images to become available.
 {% endalert %}
 
 ### Types of snapshots
@@ -229,6 +229,7 @@ One of three modes can be used for this operation:
 - `BestEffort`: Missing external dependencies (`ClusterVirtualImage`, `VirtualImage`) are ignored and removed from the VM configuration.
 
 Restoring a virtual machine from a snapshot is only possible if all the following conditions are met:
+
 - The VM to be restored exists in the cluster (the `VirtualMachine` resource exists and its `.metadata.uid` matches the identifier used when creating the snapshot).
 - The disks to be restored (identified by name) are either not attached to other VMs or do not exist in the cluster.
 - The IP address to be restored is either not used by any other VM or does not exist in the cluster.

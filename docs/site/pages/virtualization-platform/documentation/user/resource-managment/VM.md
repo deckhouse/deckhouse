@@ -30,15 +30,15 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    How to create a virtual machine image from an external source in the web interface:
 
-- Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" → "Disk Images" section.
-- Click "Create Image".
-- Select "Load data from link (HTTP)" from the list.
-- In the form that opens, enter `ubuntu` in the "Image Name" field.
-- Select `ContainerRegistry` in the "Storage" field.
-- In the "URL" field, paste `https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img`.
-- Click the "Create" button.
-- The image status is displayed at the top left, under the image name.
+   - Go to the "Projects" tab and select the desired project.
+   - Go to the "Virtualization" → "Disk Images" section.
+   - Click "Create Image".
+   - Select "Load data from link (HTTP)" from the list.
+   - In the form that opens, enter `ubuntu` in the "Image Name" field.
+   - Select `ContainerRegistry` in the "Storage" field.
+   - In the "URL" field, paste `https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img`.
+   - Click the "Create" button.
+   - The image status is displayed at the top left, under the image name.
 
 1. Create a virtual machine disk from the image created in the previous step (Caution: Make sure that the default StorageClass is present on the system before creating it):
 
@@ -59,21 +59,19 @@ Example of creating a virtual machine with Ubuntu 22.04.
 
    How to create a virtual machine disk from the image created in the previous step in the web interface (this step can be skipped and performed when creating a VM):
 
-- Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" section → "VM Disks".
-- Click "Create Disk".
-- In the form that opens, enter `linux-disk` in the "Disk Name" field.
-- In the "Source" field, make sure that the "Project" checkbox is selected.
-- Select `ubuntu` from the drop-down list
-- In the "Size" field, you can change the size to a larger one, for example, `5Gi`.
-- In the "StorageClass Name" field, you can select StorageClass or leave the default selection.
-- Click the "Create" button.
-- The disk status is displayed at the top left, under the disk name.
+   - Go to the "Projects" tab and select the desired project.
+   - Go to the "Virtualization" section → "VM Disks".
+   - Click "Create Disk".
+   - In the form that opens, enter `linux-disk` in the "Disk Name" field.
+   - In the "Source" field, make sure that the "Project" checkbox is selected.
+   - Select `ubuntu` from the drop-down list
+   - In the "Size" field, you can change the size to a larger one, for example, `5Gi`.
+   - In the "StorageClass Name" field, you can select StorageClass or leave the default selection.
+   - Click the "Create" button.
+   - The disk status is displayed at the top left, under the disk name.
 
-{% alert level="info" %}
-Remember, if your StorageClass has the WaitForFirstConsumer setting, the disk will wait for a VM to be created with that disk.
-In this case, the disk status will be "CREATING 0%," but the disk will already be selectable when creating a VM, [see the disks section](/products/virtualization-platform/documentation/user/resource-management/disks.html).
-{% endalert %}
+   > Remember, if your StorageClass has the WaitForFirstConsumer setting, the disk will wait for a VM to be created with that disk.
+   > In this case, the disk status will be "CREATING 0%," but the disk will already be selectable when creating a VM, [see the disks section](/products/virtualization-platform/documentation/user/resource-management/disks.html).
 
 1. Creating a virtual machine:
 
@@ -124,49 +122,49 @@ In this case, the disk status will be "CREATING 0%," but the disk will already b
 
    How to create a virtual machine in the web interface:
 
-- Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" → "Virtual Machines" section.
-- Click "Create".
-- In the form that opens, enter `linux-vm` in the "Name" field.
-- In the "Machine Parameters" section, you can leave the settings at their default values.
-- In the "Disks and Images" section, in the "Boot Disks" subsection, click "Add".
+   - Go to the "Projects" tab and select the desired project.
+   - Go to the "Virtualization" → "Virtual Machines" section.
+   - Click "Create".
+   - In the form that opens, enter `linux-vm` in the "Name" field.
+   - In the "Machine Parameters" section, you can leave the settings at their default values.
+   - In the "Disks and Images" section, in the "Boot Disks" subsection, click "Add".
 
-    If you have already created a disk:
-  - In the form that opens, click "Choose from existing".
-  - Select the `linux-disk` disk from the list.
+   If you have already created a disk:
+   - In the form that opens, click "Choose from existing".
+   - Select the `linux-disk` disk from the list.
 
-    If you have not created a disk:
+   If you have not created a disk:
 
-  - In the form that opens, click "Create new disk”"
-  - In the "Name" field, enter `linux-disk`.
-  - In the "Source" field, click the arrow to expand the list and make sure that the "Project" checkbox is selected.
-  - Select `ubuntu` from the drop-down list.
-  - In the "Size" field, you can change the size to a larger one, for example, `5Gi`.
-  - In the "Storage Class" field, you can select StorageClass or leave the default selection.
-  - Click the "Create and add" button.
+   - In the form that opens, click "Create new disk”"
+   - In the "Name" field, enter `linux-disk`.
+   - In the "Source" field, click the arrow to expand the list and make sure that the "Project" checkbox is selected.
+   - Select `ubuntu` from the drop-down list.
+   - In the "Size" field, you can change the size to a larger one, for example, `5Gi`.
+   - In the "Storage Class" field, you can select StorageClass or leave the default selection.
+   - Click the "Create and add" button.
 
-- Scroll down to the "Additional parameters" section.
-- Enable the "Cloud-init" switch.
-- Enter your data in the field that appears:
+   - Scroll down to the "Additional parameters" section.
+   - Enable the "Cloud-init" switch.
+   - Enter your data in the field that appears:
 
-    ```yaml
-    #cloud-config
-    ssh_pwauth: True
-    users:
-      - name: cloud
-        passwd: "$6$rounds=4096$saltsalt$fPmUsbjAuA7mnQNTajQM6ClhesyG0.yyQhvahas02ejfMAq1ykBo1RquzS0R6GgdIDlvS.kbUwDablGZKZcTP/"
-        shell: /bin/bash
-        sudo: ALL=(ALL) NOPASSWD:ALL
-        lock_passwd: False
-    ```
+   ```yaml
+   #cloud-config
+   ssh_pwauth: True
+   users:
+     - name: cloud
+       passwd: "$6$rounds=4096$saltsalt$fPmUsbjAuA7mnQNTajQM6ClhesyG0.yyQhvahas02ejfMAq1ykBo1RquzS0R6GgdIDlvS.kbUwDablGZKZcTP/"
+       shell: /bin/bash
+       sudo: ALL=(ALL) NOPASSWD:ALL
+       lock_passwd: False
+   ```
 
-- Click the "Create" button.
-- The VM status is displayed at the top left, under its name.
+   - Click the "Create" button.
+   - The VM status is displayed at the top left, under its name.
 
    Useful links:
 
-- [cloud-init documentation](https://cloudinit.readthedocs.io/)
-- [Resource Parameters](/products/virtualization-platform/reference/cr/)
+   - [cloud-init documentation](https://cloudinit.readthedocs.io/)
+   - [Resource Parameters](/products/virtualization-platform/reference/cr/)
 
 1. Verify with the command that the image and disk have been created and the virtual machine is running. Resources are not created instantly, so you will need to wait a while before they are ready.
 
@@ -206,11 +204,11 @@ In this case, the disk status will be "CREATING 0%," but the disk will already b
 
    How to connect to a virtual machine using the console in the web interface:
 
-- Go to the "Projects" tab and select the desired project.
-- Go to the "Virtualization" → "Virtual Machines" section.
-- Select the required VM from the list and click on its name.
-- In the form that opens, go to the "TTY" tab.
-- Go to the console window that opens. Here you can connect to the VM.
+   - Go to the "Projects" tab and select the desired project.
+   - Go to the "Virtualization" → "Virtual Machines" section.
+   - Select the required VM from the list and click on its name.
+   - In the form that opens, go to the "TTY" tab.
+   - Go to the console window that opens. Here you can connect to the VM.
 
 1. Use the following commands to delete previously created resources:
 
@@ -489,8 +487,7 @@ The policy divides the number of cores (`cores`) into ranges, such as 1-4 cores 
 
 If the VM configuration (cores, memory, or coreFraction) does not match the policy, the VM status will show the condition `type: SizingPolicyMatched, status: False`.
 
-If you change the policy in VirtualMachineClass, the configuration of existing VMs may need to be changed to match the new policy.
-Virtual machines that do not comply with the new policy will continue to run, but any changes to their configuration cannot be saved until they comply with the new policy.
+If you change the policy in the VirtualMachineClass, you may need to update the configuration of existing VMs to comply with the new policy. Virtual machines that do not meet the requirements of the new policy will continue to run, but any changes to their configuration cannot be saved until they comply with the new conditions.
 
 For example:
 
@@ -640,8 +637,8 @@ sudo systemctl enable --now qemu-guest-agent
 The following methods are available for connecting to the virtual machine:
 
 - remote management protocol (such as SSH), which must be preconfigured on the virtual machine.
-- serial console
-- VNC protocol
+- serial console.
+- VNC protocol.
 
 An example of connecting to a virtual machine using a serial console:
 
@@ -952,7 +949,7 @@ type: provisioning.virtualization.deckhouse.io/sysprep
 
 Note: The value of the `.data.unattend.xml` field must be Base64 encoded.
 
-fragment of virtual machine configuration using Sysprep initialization script in Secret:
+Fragment of virtual machine configuration using Sysprep initialization script in Secret:
 
 ```yaml
 spec:
@@ -1487,15 +1484,17 @@ The live migration process involves several steps:
 1. **Iterative synchronization**.
 
    After the initial transfer, only the modified pages are resent. This process is repeated in several cycles:
-- The higher the load on the VM, the more "dirty" pages appear, and the longer the migration takes.
-- With good network bandwidth, the amount of unsynchronized data gradually decreases.
+
+   - The higher the load on the VM, the more "dirty" pages appear, and the longer the migration takes.
+   - With good network bandwidth, the amount of unsynchronized data gradually decreases.
 
 1. **Final synchronization and switching**.
 
    When the number of dirty pages becomes minimal, the VM on the source node is suspended (typically for 100 milliseconds):
-- The remaining memory changes are transferred to the target node.
-- The state of the CPU, devices, and open connections are synchronized.
-- The VM is started on the new node and the source copy is deleted.
+
+   - The remaining memory changes are transferred to the target node.
+   - The state of the CPU, devices, and open connections are synchronized.
+   - The VM is started on the new node and the source copy is deleted.
 
 ![Migration](/images/virtualization-platform/migration.png)
 
@@ -1678,7 +1677,7 @@ Now the current node (groups green) does not match the new conditions. The syste
 
 ### IP addresses of virtual machines
 
-The `.spec.settings.virtualMachineCIDRs` block in the virtualization module configuration specifies a list of subnets to assign ip addresses to virtual machines (a shared pool of ip addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address).
+The `.spec.settings.virtualMachineCIDRs` block in the `virtualization` module configuration specifies a list of subnets to assign ip addresses to virtual machines (a shared pool of ip addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address).
 
 `VirtualMachineIPAddressLease` (`vmipl`) resource: A cluster resource that manages IP address leases from the shared pool specified in `virtualMachineCIDRs`.
 
@@ -1792,7 +1791,7 @@ EOF
 
 ### Additional network interfaces
 
-Virtual machines can be connected not only to the main cluster network interface but also to additional networks provided by the `d8-sdn` module. Such networks include project Networks and ClusterNetworks.
+Virtual machines can be connected not only to the main cluster network interface but also to additional networks provided by the `SDN` module. Such networks include project Networks and ClusterNetworks.
 
 Additional networks are defined in the `.spec.networks` configuration block. If this block is absent (default value), the VM is connected only to the main cluster network.
 
@@ -1806,7 +1805,7 @@ To avoid changing the order of network interfaces inside the guest OS, always ad
 
 Conditions and limitations:
 
-- The `d8-sdn` module is required to work with additional networks.
+- The `SDN` module is required to work with additional networks.
 - The order of networks in `.spec.networks` determines the sequence in which interfaces are attached to the VM bus.
 - Configuration of network parameters (IP addresses, gateways, DNS, etc.) in additional networks must be performed manually inside the guest OS (for example, via cloud-init).
 

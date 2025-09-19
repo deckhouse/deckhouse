@@ -38,13 +38,13 @@ The following preinstalled image formats are supported:
 
 Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
-Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.
+Once a share is created, the image type and size are automatically determined. This information is reflected in the resource status.
 
 Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the curl utility.
 
 Images can be created from other images and virtual machine disks.
 
-Project image two storage options are supported:
+Project image two storage types are supported:
 
 - `ContainerRegistry`: The default type in which the image is stored in `DVCR`.
 - `PersistentVolumeClaim`: The type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
@@ -100,7 +100,7 @@ After creation the `VirtualImage` resource can be in the following states (phase
 - `Failed`: An error occurred during the image creation process.
 - `Terminating`: The image is being deleted. The image may "hang" in this state if it is still connected to the virtual machine.
 
-As long as the image has not entered the `Ready` phase, the contents of the `.spec` block can be changed. If you change it, the disk creation process will start again. After entering the `Ready` phase, the contents of the `.spec` block cannot be changed!
+As long as the image has not entered the `Ready` phase, the contents of the `.spec` block can be changed. If you change it, the disk creation process will start again. After entering the `Ready` phase, the contents of the `.spec` block cannot be changed.
 
 Diagnosing problems with a resource is done by analyzing the information in the `.status.conditions` block
 
@@ -190,9 +190,9 @@ How to create an image and store it in PVC in the web interface:
 - Click the Create button.
 - The image status is displayed at the top left, under the image name.
 
-## Creating an image from Container Registry
+## Creating an image from container registry
 
-An image stored in Container Registry has a certain format. Let's look at an example:
+An image stored in container registry has a certain format. Let's look at an example:
 
 First, download the image locally:
 

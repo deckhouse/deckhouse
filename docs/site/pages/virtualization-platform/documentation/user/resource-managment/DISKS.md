@@ -5,19 +5,17 @@ permalink: en/virtualization-platform/documentation/user/resource-management/dis
 
 Disks in virtual machines are necessary for writing and storing data, ensuring that applications and operating systems can fully function. DVP provides the storage for these disks.
 
-Depending on the storage properties, the behavior of disks during creation of virtual machines during operation may differ:
+The behavior of disks when creating virtual machines depends on the `VolumeBindingMode` property of the corresponding StorageClass:
 
-VolumeBindingMode property:
-
-`Immediate`: The disk is created immediately after the resource is created (the disk is assumed to be available for connection to a virtual machine on any node in the cluster).
+If `VolumeBindingMode = Immediate`, the disk is created immediately after the resource is created (it is assumed that the disk will be available for attachment to the virtual machine on any node in the cluster).
 
 ![Immediate](/images/virtualization-platform/vd-immediate.png)
 
-`WaitForFirstConsumer`: The disk is created only after it is connected to the virtual machine and is created on the node on which the virtual machine will be running.
+If `VolumeBindingMode = WaitForFirstConsumer`, the disk is created only after it is attached to the virtual machine and will be created on the node where the virtual machine is scheduled to run.
 
 ![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.png)
 
-AccessMode:
+The behavior of disks when creating virtual machines during operation depends on the `AccessMode`:
 
 - `ReadWriteOnce (RWO)`: Only one instance of the virtual machine is granted access to the disk.
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
@@ -45,7 +43,7 @@ sds-replicated-thin-r3               replicated.csi.storage.deckhouse.io   Delet
 nfs-4-1-wffc                         nfs.csi.k8s.io                        Delete          WaitForFirstConsumer   true                   30d
 ```
 
-A full description of the disk configuration settings can be found at [link](/products/virtualization-platform/reference/cr/virtualdisk.html).
+A full description of the disk configuration settings can be found at [VirtualDisk resource documentation](/products/virtualization-platform/reference/cr/virtualdisk.html).
 
 How to find out the available storage options in the DVP web interface:
 
