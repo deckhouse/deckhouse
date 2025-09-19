@@ -20,6 +20,7 @@ http {
   client_body_temp_path /opt/nginx-static/writable/client_temp 1 2;
   proxy_temp_path /opt/nginx-static/writable/proxy_temp 1 2;
   fastcgi_temp_path /opt/nginx-static/writable/fastcgi_temp 1 2;
+  uwsgi_temp_path /opt/nginx-static/writable/uwsgi_temp 1 2;
 
   server {
     server_name _;
