@@ -40,6 +40,7 @@ memory: 50Mi
   {{- $config := index . 1 }}
   {{- $fullname := $config.fullname | default "csi-controller" }}
   {{- $snapshotterEnabled := dig "snapshotterEnabled" true $config }}
+  {{- $snapshotterSnapshotNamePrefix := dig "snapshotterSnapshotNamePrefix" false $config }}
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
   {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
@@ -56,6 +57,7 @@ memory: 50Mi
   {{- $attacherWorkers := $config.attacherWorkers | default "10" }}
   {{- $resizerWorkers := $config.resizerWorkers | default "10" }}
   {{- $snapshotterWorkers := $config.snapshotterWorkers | default "10" }}
+  {{- $csiControllerHaMode := $config.csiControllerHaMode | default false }}
   {{- $additionalCsiControllerPodAnnotations := $config.additionalCsiControllerPodAnnotations | default false }}
   {{- $additionalControllerEnvs := $config.additionalControllerEnvs }}
   {{- $additionalSyncerEnvs := $config.additionalSyncerEnvs }}
@@ -184,13 +186,17 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
 
 spec:
+  {{- if $csiControllerHaMode }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" $context | nindent 2 }}
+  {{- else }}
   replicas: 1
+  strategy:
+    type: Recreate
+  {{- end }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: {{ $fullname }}
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -205,6 +211,9 @@ spec:
       {{- end }}
       {{- end }}
     spec:
+      {{- if $csiControllerHaMode }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" $fullname)) | nindent 6 }}
+      {{- end }}
       hostNetwork: {{ $csiControllerHostNetwork }}
       hostPID: {{ $csiControllerHostPID }}
       {{- if eq $csiControllerHostNetwork "true" }}
@@ -373,7 +382,7 @@ spec:
             {{- include "syncer_resources" $context | nindent 12 }}
   {{- end }}
             {{- end }}
-            {{- if $snapshotterEnabled }}
+    {{- if $snapshotterEnabled }}
       - name: snapshotter
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: {{ $snapshotterImage | quote }}
@@ -387,6 +396,9 @@ spec:
         - "--leader-election-renew-deadline=20s"
         - "--leader-election-retry-period=5s"
         - "--worker-threads={{ $snapshotterWorkers }}"
+        {{- if $snapshotterSnapshotNamePrefix }}
+        - "--snapshot-name-prefix={{ $snapshotterSnapshotNamePrefix }}"
+        {{- end }}
         env:
         - name: ADDRESS
           value: /csi/csi.sock

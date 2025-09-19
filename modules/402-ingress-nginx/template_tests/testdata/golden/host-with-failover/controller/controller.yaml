@@ -141,9 +141,6 @@ spec:
           requests:
             ephemeral-storage: 150Mi
         securityContext:
-          capabilities:
-            add:
-            - SYS_ADMIN
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
@@ -426,9 +423,6 @@ spec:
           requests:
             ephemeral-storage: 150Mi
         securityContext:
-          capabilities:
-            add:
-            - SYS_ADMIN
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
