@@ -62,6 +62,7 @@ Tip for the section field:
   - "dhctl"
   - "global-hooks"
   - "go_lib"
+  - "helm_lib"
   - "jq_lib"
   - "shell_lib"
   - "testing", has forced low impact
