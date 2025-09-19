@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
@@ -114,12 +115,14 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("unmount old erofs image", slog.String("mount", mountPoint))
 	if err := verity.Unmount(ctx, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err := verity.CloseMapper(ctx, module); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("close module mapper: %w", err)
 	}
@@ -127,6 +130,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
 	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
@@ -138,6 +142,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("create erofs image", slog.String("path", imagePath))
 	if err := verity.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
 	}
@@ -145,18 +150,21 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	hash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create image hash from the path '%s': %w", imagePath, err)
 	}
 
 	logger.Debug("create device mapper")
 	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
 	if err = verity.Mount(ctx, module, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
@@ -197,6 +205,7 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 			return nil
 		}
 
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("check mount path '%s': %w", mountPath, err)
 	}
@@ -207,12 +216,14 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger.Debug("unmount erofs image", slog.String("path", mountPath))
 	if err := verity.Unmount(ctx, mountPath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("unmount erofs image '%s': %w", mountPath, err)
 	}
 
 	logger.Debug("close device mapper")
 	if err := verity.CloseMapper(ctx, module); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("close device mapper: %w", err)
 	}
@@ -236,6 +247,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// TODO(ipaqsa): delete after 1.74
 	symlink, err := i.getModuleSymlink(module)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("get module symlink: %w", err)
 	}
@@ -249,12 +261,14 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
 	if err = verity.Unmount(ctx, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err = verity.CloseMapper(ctx, module); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("close module mapper: %w", err)
 	}
@@ -262,6 +276,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
 	if err = os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
@@ -273,6 +288,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, ms, module, version)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("get image root hash: %w", err)
 	}
@@ -283,12 +299,14 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 		logger.Debug("create device mapper", slog.String("path", imagePath))
 		if err = verity.CreateMapper(ctx, imagePath, rootHash); err != nil {
+			span.SetStatus(codes.Error, err.Error())
 			span.RecordError(err)
 			return fmt.Errorf("create device mapper: %w", err)
 		}
 
 		logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
 		if err = verity.Mount(ctx, module, mountPoint); err != nil {
+			span.SetStatus(codes.Error, err.Error())
 			span.RecordError(err)
 			return fmt.Errorf("mount erofs image: %w", err)
 		}
@@ -300,6 +318,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	img, err := i.registry.GetImageReader(ctx, ms, module, version)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("download module image: %w", err)
 	}
@@ -307,6 +326,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
 	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("extract module image to erofs: %w", err)
 	}
@@ -314,18 +334,21 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	hash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create image hash: %w", err)
 	}
 
 	logger.Debug("create device mapper")
 	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("create device mapper: %w", err)
 	}
 
 	logger.Debug("mount erofs image mapper")
 	if err = verity.Mount(ctx, module, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
