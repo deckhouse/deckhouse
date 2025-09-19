@@ -12,7 +12,7 @@ lang: ru
 
 На главном экране Grafana расположена основная информация о кластере и его основных компонентах.
 
-В левой верхней части экрана указаны характеристики основных компонентов кластера: версия `containerd`, дистрибутив Linux, на базе которого работает кластер, а также версии Grafana, Prometheus и т.д.
+В левой верхней части экрана указаны характеристики основных компонентов кластера: версия containerd, дистрибутив Linux, на базе которого работает кластер, а также версии Grafana, Prometheus и т.д.
 
 В правой верхней части экрана расположены удобные графические обозначения для основных параметров — количества узлов кластере, количество запущенных в ней подов и других сущностей кластера.
 
@@ -42,7 +42,7 @@ lang: ru
 
 ![Блок фильтров](../../images/grafana/filter.png)
 
-На приведенном выше примере с дашбордом узлов кластера можно задать в фильтре отображение только одного из трех узлов, исключив из выдачи информацию об остальных двух узлах.
+Например, на приведенном выше примере с дашбордом узлов кластера можно задать в фильтре отображение только одного из трех узлов, исключив из выдачи информацию об остальных двух узлах.
 
 ![Применение фильтров](../../images/grafana/filter1.png)
 
@@ -123,13 +123,13 @@ lang: ru
 
   ![Control Plane Status](../../images/grafana/control-plane-status.png)
 
-- Дашборд «Deprecated APIs» — отображает состояния Kubernetes API, которое на текущий момент находится в состоянии прекращения поддержки. Также на нем расположены инструкции по миграции на актуальные версии и запросы к эндпойнтам этого API.
+- Дашборд «Deprecated APIs» — отображает состояния Kubernetes API, которое на текущий момент находится в состоянии прекращения поддержки. Также на нем расположены инструкции по миграции на актуальные версии и запросы к эндпоинтам этого API.
 
   ![Deprecated APIs](../../images/grafana/deprecated-apis.png)
 
-- Дашборд «DNS (coredns)» — данные о работе компонента CoreDNS.
+- Дашборд «DNS (coredns)» — данные о работе CoreDNS.
 
-  ![DNS (coredns)](../../images/grafana/dns.png)
+  ![DNS (CoreDNS)](../../images/grafana/dns.png)
 
 - Дашборд «etcd3» — состояние базы данных etcd.
 
@@ -139,11 +139,11 @@ lang: ru
 
   ![External ping](../../images/grafana/external-ping.png)
 
-- Дашборд «Ingress Nginx Controller Detail» — параметры Ingress-контроллера.
+- Дашборд «Ingress Nginx Controller Detail» — параметры Ingress Nginx-контроллера.
 
   ![Ingress Nginx Controller Detail](../../images/grafana/ingress-nginx-controller-detail.png)
 
-- Дашборд «Ingress Nginx Controllers» — подробные данные об Ingress-контроллерах кластера.
+- Дашборд «Ingress Nginx Controllers» — подробные данные об Ingress Nginx-контроллерах кластера.
 
   ![Ingress Nginx Controllers](../../images/grafana/ingress-nginx-controllers.png)
 
@@ -167,7 +167,7 @@ lang: ru
 
   ![Prometheus Benchmark](../../images/grafana/prometheus-benchmark.png)
 
-- Дашборд «Prometheus-(self)» — сводная информация о состоянии модуля `prometheus`.
+- Дашборд «Prometheus-(self)» — сводная информация о состоянии Prometheus.
 
   ![Prometheus-(self)](../../images/grafana/prometheus-self.png)
 
@@ -177,7 +177,7 @@ lang: ru
 
   ![Capacity Planning](../../images/grafana/capacity-planning.png)
 
-- Дашборд «Deckhouse» — сводная информация о состоянии главного компонента `deckhouse`.
+- Дашборд «Deckhouse» — сводная информация о состоянии ядра платформы.
 
   ![Deckhouse](../../images/grafana/deckhouse.png)
 
@@ -204,20 +204,20 @@ lang: ru
 - Admission policy engine. Содержит информацию, связанную с работой политик безопасности. В том числе: количество событий запрета выполнения действий из-за нарушения политики безопасности; разбивку запретов выполнения действий по типу запрета; журнал событий.
   Журнал событий безопасности, связанных с политиками безопасности, находится в окне OPA Violations.
 
-  Пример дашборда Admission policy engine.
+  ![Admission policy engine](../../images/grafana/admission-policy-engine.png)
 
 - CIS Kubernetes Benchmark. Дашборд с информацией о результатах работы сканера проверок конфигурации кластера на соответствие принятым подходам (лучшим практикам). Содержит сводную информацию о результатах проверки, без возможности детализации. Дашборд доступен при включенном модуле `operator-trivy`.
 
-  Пример дашборда CIS Kubernetes Benchmark.
+  ![CIS Kubernetes Benchmark](../../images/grafana/cis-kubernetes-benchmark.png)
 
 - Kubernetes audit logs. Журнал регистрации обращений к API-серверу. Содержит записи о всех обращениях к API-серверу кластера в JSON-формате.
 
-  Пример дашборда Kubernetes audit logs.
+  ![Kubernetes audit logs](../../images/grafana/kubernetes-audit-logs.png)
 
 - Runtime audit engine logs. Журнал регистрации событий безопасности аудита работы ядра Linux и API-сервера кластера.
 
-  Пример дашборда Runtime audit engine logs.
+  ![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
 
 - Trivy Image Vulnerability Overview. Дашборд со сводной и детализированной информацией о сканировании образов контейнеров подов в пространствах имен, отмеченных аннотацией `security-scanning.deckhouse.io/enabled`.
 
-  Пример дашборда Trivy Image Vulnerability Overview.
+  ![Trivy Image Vulnerability Overview](../../images/grafana/trivy-image-vulnerability-overview.png)
