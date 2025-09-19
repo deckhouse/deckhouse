@@ -79,3 +79,14 @@ bb-deckhouse-get-disruptive-update-approval() {
     bb-log-info "Disruption approved!"
     bb-flag-set disruption
 }
+
+bb-label-node-bashible-first-run-finished() {
+  while true; do
+      if bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf label nodes $(bb-d8-node-name) node.deckhouse.io/bashible-first-run-finished=true; then
+        echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+        break
+      fi
+      echo "Failed to set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name), retrying in 10 seconds..."
+      sleep 10
+    done
+}
