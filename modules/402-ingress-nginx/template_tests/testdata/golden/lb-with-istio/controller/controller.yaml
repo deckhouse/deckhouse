@@ -127,15 +127,10 @@ spec:
             ephemeral-storage: 150Mi
             memory: 200Mi
         securityContext:
-          capabilities:
-            add:
-            - SYS_ADMIN
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path

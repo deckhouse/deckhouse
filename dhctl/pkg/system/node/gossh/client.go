@@ -117,6 +117,7 @@ func (s *Client) Start() error {
 			User:            s.Settings.BastionUser,
 			Auth:            AuthMethods,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         5 * time.Second,
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
@@ -161,6 +162,7 @@ func (s *Client) Start() error {
 		User:            s.Settings.User,
 		Auth:            AuthMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         5 * time.Second,
 	}
 
 	var targetConn net.Conn
@@ -206,27 +208,25 @@ func (s *Client) Start() error {
 
 	log.DebugF("Try to connect to through bastion host master host \n")
 
-	var addr string
-	var err error
-	err = retry.NewSilentLoop("Get SSH client", 50, 2*time.Second).Run(func() error {
+	var (
+		addr             string
+		err              error
+		targetClientConn ssh.Conn
+		targetNewChan    <-chan ssh.NewChannel
+		targetReqChan    <-chan *ssh.Request
+	)
+	err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
 		s.Settings.ChoiceNewHost()
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		targetConn, err = bastionClient.Dial("tcp", addr)
+		if err != nil {
+			return err
+		}
+		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
 		return err
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
-	}
-	var targetClientConn ssh.Conn
-	var targetNewChan <-chan ssh.NewChannel
-	var targetReqChan <-chan *ssh.Request
-	err = retry.NewLoop("Connect to target SSH host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
-		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
-		return err
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to create client connection to target host: %w", err)
 	}
 
 	clientConn = targetClientConn
@@ -326,6 +326,10 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
+	if s.sshClient == nil {
+		log.DebugLn("no SSH client found to stop. Exiting...")
+		return
+	}
 	log.DebugLn("SSH Client is stopping now")
 	log.DebugLn("stopping kube proxies")
 	for _, p := range s.kubeProxies {

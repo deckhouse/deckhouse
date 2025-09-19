@@ -35,7 +35,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/shell-operator/pkg/metric"
 	cp "github.com/otiai10/copy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -63,6 +62,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -87,7 +87,7 @@ func RegisterController(
 	exts *extenders.ExtendersStack,
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
-	ms metric.Storage,
+	ms metricsstorage.Storage,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -151,7 +151,7 @@ type reconciler struct {
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
-	metricStorage        metric.Storage
+	metricStorage        metricsstorage.Storage
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
