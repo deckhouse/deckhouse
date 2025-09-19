@@ -655,10 +655,11 @@ list:
  .ro   – bool, read-only root FS (default true) 
  .caps – []string, capabilities.add (default empty) 
  .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .seccompProfile  – bool, disable seccompProfile when false (default true) 
 
 #### Usage
 
-`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001) `
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
 
 
 
