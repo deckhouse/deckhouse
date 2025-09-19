@@ -110,7 +110,7 @@ func testConfig() (string, error) {
 }
 
 func reloadConfig() (string, error) {
-	output, err := exec.Command(binNginx, "-s", "reload", "-e", "/dev/null").CombinedOutput()
+	output, err := exec.Command(binNginx, "-s", "reload", "-c", confNginx, "-e", "/dev/null").CombinedOutput()
 	return string(output), err
 }
 
