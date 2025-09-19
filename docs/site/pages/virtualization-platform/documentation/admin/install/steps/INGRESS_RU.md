@@ -5,7 +5,7 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроеный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
 ## Настройка Ingress
@@ -75,7 +75,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 ```
 
-Пример вывода, если использовался свой Wildcard-домен:
+Пример вывода, если использовался свой wildcard-домен:
 
 ```console
 %s.my-dvp-cluster.example.com
@@ -95,16 +95,13 @@ d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 
 ```console
 api.my-dvp-cluster.example.com
-argocd.my-dvp-cluster.example.com
 console.my-dvp-cluster.example.com
 dashboard.my-dvp-cluster.example.com
-documentation.my-dvp-cluster.example.com
 deckhouse-tools.my-dvp-cluster.example.com
 dex.my-dvp-cluster.example.com
+documentation.my-dvp-cluster.example.com
 grafana.my-dvp-cluster.example.com
 hubble.my-dvp-cluster.example.com
-istio.my-dvp-cluster.example.com
-istio-api-proxy.my-dvp-cluster.example.com
 kubeconfig.my-dvp-cluster.example.com
 openvpn-admin.my-dvp-cluster.example.com
 prometheus.my-dvp-cluster.example.com
@@ -116,16 +113,13 @@ upmeter.my-dvp-cluster.example.com
 
 ```console
 api-my-dvp-cluster.example.com
-argocd-my-dvp-cluster.example.com
 console-my-dvp-cluster.example.com
 dashboard-my-dvp-cluster.example.com
-documentation-my-dvp-cluster.example.com
 deckhouse-tools-my-dvp-cluster.example.com
 dex-my-dvp-cluster.example.com
+documentation-my-dvp-cluster.example.com
 grafana-my-dvp-cluster.example.com
 hubble-my-dvp-cluster.example.com
-istio-my-dvp-cluster.example.com
-istio-api-proxy-my-dvp-cluster.example.com
 kubeconfig-my-dvp-cluster.example.com
 openvpn-admin-my-dvp-cluster.example.com
 prometheus-my-dvp-cluster.example.com
@@ -142,16 +136,13 @@ export PUBLIC_IP="<PUBLIC_IP>"
 export CLUSTER_DOMAIN="my-dvp-cluster.example.com"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.$CLUSTER_DOMAIN
-$PUBLIC_IP argocd.$CLUSTER_DOMAIN
 $PUBLIC_IP console.$CLUSTER_DOMAIN
 $PUBLIC_IP dashboard.$CLUSTER_DOMAIN
-$PUBLIC_IP documentation.$CLUSTER_DOMAIN
 $PUBLIC_IP deckhouse-tools.$CLUSTER_DOMAIN
 $PUBLIC_IP dex.$CLUSTER_DOMAIN
+$PUBLIC_IP documentation.$CLUSTER_DOMAIN
 $PUBLIC_IP grafana.$CLUSTER_DOMAIN
 $PUBLIC_IP hubble.$CLUSTER_DOMAIN
-$PUBLIC_IP istio.$CLUSTER_DOMAIN
-$PUBLIC_IP istio-api-proxy.$CLUSTER_DOMAIN
 $PUBLIC_IP kubeconfig.$CLUSTER_DOMAIN
 $PUBLIC_IP openvpn-admin.$CLUSTER_DOMAIN
 $PUBLIC_IP prometheus.$CLUSTER_DOMAIN
@@ -208,7 +199,8 @@ EOF
 {% endalert %}
 
 Модуль `console` позволит управлять компонентами виртуализации через веб-интерфейс Deckhouse.
-Чтобы модуль, выполните следующую команду:
+
+Чтобы включить модуль, выполните следующую команду:
 
 ```shell
 d8 s module enable console

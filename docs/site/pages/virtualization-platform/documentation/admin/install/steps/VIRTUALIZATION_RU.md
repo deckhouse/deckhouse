@@ -5,10 +5,10 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроеный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
-После настройки хранилища необходимо включить модуль виртуализации. Включение и настройка модуля производятся с помощью веб-интерфейса администратора или с помощью следующей команды:
+После настройки хранилища необходимо включить модуль `virtualization`. Включение и настройка модуля производятся с помощью веб-интерфейса администратора или с помощью следующей команды:
 
 ```shell
 d8 s module enable virtualization
@@ -50,7 +50,7 @@ spec:
 d8 k get po -n d8-virtualization
 ```
 
-Пример вывода:
+{% offtopic title="Пример вывода..." %}
 
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
@@ -70,6 +70,8 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+
+{% endofftopic %}
 
 ## Конфигурация модуля `virtualization`
 
@@ -188,7 +190,7 @@ spec:
 - `runtime-audit-engine`.
 {% endalert %}
 
-Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля  в `true`:
+Чтобы включить аудит событий безопасности, установите параметр `.spec.settings.audit.enabled` настроек модуля в `true`:
 
 ```yaml
 spec:

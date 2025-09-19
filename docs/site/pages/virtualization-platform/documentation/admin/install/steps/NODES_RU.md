@@ -9,21 +9,8 @@ lang: ru
 Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](../../platform-management/node-management/adding-node.html).
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроеный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
-
-```shell
-d8 k get no
-```
-
-Пример вывода команды:
-
-```console
-NAME           STATUS   ROLES                  AGE     VERSION
-master-0       Ready    control-plane,master   5m      v1.29.10
-```
-
-
 
 ## Подготовка узлов
 
@@ -111,8 +98,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 sudo -i pdpl-user -i 63 caps
 ```
 
-Создайте ресурcы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html).
-Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
+Создайте ресурcы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
 ```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.
@@ -140,7 +126,7 @@ EOF
 d8 k get no
 ```
 
-Пример вывода:
+{% offtopic title="Пример вывода..." %}
 
 ```console
 NAME            STATUS   ROLES                  AGE    VERSION
@@ -148,3 +134,5 @@ master-0        Ready    control-plane,master   40m    v1.29.10
 dvp-worker-1    Ready    worker                 3m     v1.29.10
 dvp-worker-2    Ready    worker                 3m     v1.29.10
 ```
+
+{% endofftopic %}
