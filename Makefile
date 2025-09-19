@@ -462,19 +462,28 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 
 ## Tool Versions
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= v1.24.7
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.32.0
+CODE_GENERATOR_VERSION ?= v0.30.11
 
+## Generate codebase for deckhouse-controllers kubernetes entities
+.PHONY: generate-kubernetes
+generate-kubernetes: controller-gen-generate client-gen-generate
+
+## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 .PHONY: controller-gen-generate
-controller-gen-generate: controller-gen client-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
-# Generate clientset
+
+## Generate clientset
+.PHONY: client-gen-generate
+client-gen-generate: client-gen 
 	$(CLIENT_GEN) \
 		--clientset-name "versioned" \
 		--input-base "" \
-		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1" \
-		--output-pkg "v1alpha1" \
-		--output-dir "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
+		--output-dir "./deckhouse-controller/pkg/client/clientset" \
 		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
 
 # Add the missing tool installations
@@ -498,7 +507,7 @@ set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
 rm -f $(1) || true ;\
-GOBIN=$(LOCALBIN) go install $${package} ;\
+GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
 mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
