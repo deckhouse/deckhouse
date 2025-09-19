@@ -40,23 +40,23 @@ spec:
                     properties:
                       allowFailure:
                         description: |-
-                          if true, Shell-operator skips the hook execution errors.
-                          If false or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
+                          If `true`, Shell-operator skips the hook execution errors.
+                          If `false` or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
                         type: boolean
                       apiVersion:
                         description: |-
-                          is an optional group and version of object API.
-                          For example, it is v1 for core objects (Pod, etc.), rbac.authorization.k8s.io/v1beta1 for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
+                          Is an optional group and version of object API.
+                          For example, it is v1 for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
                         type: string
                       executeHookOnEvent:
                         description: |-
-                          the list of events which led to a hook’s execution.
-                          By default, all events are used to execute a hook: “Added”, “Modified” and “Deleted”.
+                          The list of events which led to a hook’s execution.
+                          By default, all events are used to execute a hook: "Added", "Modified" and "Deleted".
                         items:
                           type: string
                         type: array
                       executeHookOnSynchronization:
-                        description: if false, Shell-operator skips the hook execution with Synchronization binding context.
+                        description: If `false`, Shell-operator skips the hook execution with Synchronization binding context.
                         type: boolean
                       fieldSelector:
                         properties:
@@ -78,11 +78,11 @@ spec:
                           - matchExpressions
                         type: object
                       group:
-                        description: a key to include snapshots from a group of schedule and kubernetes bindings.
+                        description: A key to include snapshots from a group of schedule and kubernetes bindings.
                         type: string
                       includeSnapshotsFrom:
                         description: |-
-                          an array of names of kubernetes bindings in a hook.
+                          An array of names of kubernetes bindings in a hook.
                           When specified, a list of monitored objects from that bindings
                           will be added to the binding context in a snapshots field. Self-include is also possible.
                         items:
@@ -90,17 +90,17 @@ spec:
                         type: array
                       jqFilter:
                         description: |-
-                          an optional parameter that specifies event filtering using jq syntax.
-                          The hook will be triggered on the “Modified” event only if the filter result is changed after the last event.
+                          An optional parameter that specifies event filtering using jq syntax.
+                          The hook will be triggered on the "Modified" event only if the filter result is changed after the last event.
                         type: string
                       keepFullObjectsInMemory:
                         description: |-
-                          if not set or true, dumps of Kubernetes resources are cached
+                          If not set or `true`, dumps of Kubernetes resources are cached
                           for this binding, and the snapshot includes them as object fields.
                           Set to false if the hook does not rely on full objects to reduce the memory footprint.
                         type: boolean
                       kind:
-                        description: is the type of a monitored Kubernetes resource. This field is required.
+                        description: Is the type of a monitored Kubernetes resource. This field is required.
                         type: string
                       labelSelector:
                         description: |-
@@ -109,23 +109,25 @@ spec:
                           label selector matches no objects.
                         properties:
                           matchExpressions:
-                            description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                            description: |-
+                              `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
                             items:
                               description: |-
                                 A label selector requirement is a selector that contains values, a key, and an operator that
                                 relates the key and values.
                               properties:
                                 key:
-                                  description: key is the label key that the selector applies to.
+                                  description: |-
+                                    `key` is the label key that the selector applies to.
                                   type: string
                                 operator:
                                   description: |-
-                                    operator represents a key's relationship to a set of values.
+                                    `operator` represents a key's relationship to a set of values.
                                     Valid operators are In, NotIn, Exists and DoesNotExist.
                                   type: string
                                 values:
                                   description: |-
-                                    values is an array of string values. If the operator is In or NotIn,
+                                    `values` is an array of string values. If the operator is In or NotIn,
                                     the values array must be non-empty. If the operator is Exists or DoesNotExist,
                                     the values array must be empty. This array is replaced during a strategic
                                     merge patch.
@@ -143,7 +145,7 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              `matchLabels` is a map of {key,value} pairs. A single {key,value} in the matchLabels
                               map is equivalent to an element of matchExpressions, whose key field is "key", the
                               operator is "In", and the values array contains only "value". The requirements are ANDed.
                             type: object
@@ -161,7 +163,7 @@ spec:
                           - matchNames
                         type: object
                       namespace:
-                        description: filters to choose namespaces.
+                        description: Filters to choose namespaces.
                         properties:
                           labelSelector:
                             description: |-
@@ -170,23 +172,25 @@ spec:
                               label selector matches no objects.
                             properties:
                               matchExpressions:
-                                description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
+                                description: |-
+                                  `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
                                 items:
                                   description: |-
                                     A label selector requirement is a selector that contains values, a key, and an operator that
                                     relates the key and values.
                                   properties:
                                     key:
-                                      description: key is the label key that the selector applies to.
+                                      description: |-
+                                        `key` is the label key that the selector applies to.
                                       type: string
                                     operator:
                                       description: |-
-                                        operator represents a key's relationship to a set of values.
+                                        `operator` represents a key's relationship to a set of values.
                                         Valid operators are In, NotIn, Exists and DoesNotExist.
                                       type: string
                                     values:
                                       description: |-
-                                        values is an array of string values. If the operator is In or NotIn,
+                                        `values` is an array of string values. If the operator is In or NotIn,
                                         the values array must be non-empty. If the operator is Exists or DoesNotExist,
                                         the values array must be empty. This array is replaced during a strategic
                                         merge patch.
@@ -204,7 +208,7 @@ spec:
                                 additionalProperties:
                                   type: string
                                 description: |-
-                                  matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                  `matchLabels` is a map of {key,value} pairs. A single {key,value} in the matchLabels
                                   map is equivalent to an element of matchExpressions, whose key field is "key", the
                                   operator is "In", and the values array contains only "value". The requirements are ANDed.
                                 type: object
@@ -221,7 +225,7 @@ spec:
                             type: object
                         type: object
                       queue:
-                        description: a name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the “main” queue.
+                        description: A name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the main queue.
                         type: string
                       resynchronizationPeriod:
                         type: string
@@ -250,25 +254,25 @@ spec:
               items:
                 properties:
                   from:
-                    description: a version of a custom resource that hook can convert.
+                    description: A version of a custom resource that hook can convert.
                     type: string
                   handler:
-                    description: Code of the conversion handler
+                    description: Code of the conversion handler.
                     properties:
                       python:
-                        description: this is a python script handler for object
+                        description: This is a python script handler for object.
                         type: string
                     type: object
                   includeSnapshotsFrom:
                     description: |-
-                      an array of names of kubernetes bindings in a hook.
+                      An array of names of kubernetes bindings in a hook.
                       When specified, a list of monitored objects from
                       these bindings will be added to the binding context in the snapshots field.
                     items:
                       type: string
                     type: array
                   to:
-                    description: a version of a custom resource that hook can produce.
+                    description: A version of a custom resource that hook can produce.
                     type: string
                 required:
                   - from
@@ -287,7 +291,8 @@ spec:
             metadata:
               type: object
             status:
-              description: status defines the observed state of ConversionWebhook
+              description: |-
+                `status` defines the observed state of ConversionWebhook.
               type: object
           required:
             - conversions
