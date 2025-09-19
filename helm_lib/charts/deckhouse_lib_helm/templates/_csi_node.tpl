@@ -40,7 +40,7 @@ memory: 25Mi
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
   {{- if $driverRegistrarImage }}
-    {{- if $forceCsiNodeAndStaticNodesDepoloy }}
+    {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-scsi-generic") ($context.Values.global.enabledModules | has "csi-hpe") ($context.Values.global.enabledModules | has "csi-s3") ($context.Values.global.enabledModules | has "csi-huawei") }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -116,7 +116,7 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
-                {{- if $forceCsiNodeAndStaticNodesDepoloy }}
+                {{- if or $forceCsiNodeAndStaticNodesDepoloy (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-scsi-generic") (eq $fullname "csi-hpe") (eq $fullname "csi-s3") (eq $fullname "csi-huawei") }}
                 - Static
                 {{- end }}
               {{- if $additionalNodeSelectorTerms }}
