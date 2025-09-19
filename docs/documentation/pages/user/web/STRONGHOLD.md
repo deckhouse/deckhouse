@@ -1,9 +1,9 @@
 ---
-title: "Stronghold"
+title: "Secret management"
 permalink: en/user/web/stronghold.html
 ---
 
-The `stronghold` module's web UI is designed for managing secrets, authentication, and access control within the cluster.
+The web interface for managing secrets (Stronghold web interface) is designed for managing secret mechanisms, authentication, and access control in a cluster. Operation is provided by the `stronghold` module.
 
 It allows you to:
 
