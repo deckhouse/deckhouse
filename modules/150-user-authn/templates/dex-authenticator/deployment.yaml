@@ -9,9 +9,10 @@ memory: 25Mi
 {{- end }}
 
 {{- $context := . }}
-{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
-  {{- $info := (index ($context.Values.userAuthn.internal.dexAuthenticatorNames | default dict) $id) }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
   {{- $baseName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
   {{- $truncated := (index $info "truncated") }}
   {{- $hash := (index $info "hash") }}

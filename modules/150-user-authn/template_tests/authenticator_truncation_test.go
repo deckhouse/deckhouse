@@ -36,6 +36,7 @@ var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
 		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
+		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")

@@ -1,5 +1,9 @@
 {{- $context := . }}
-{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- if not .spec.applications }}
+    {{- continue }}
+  {{- end }}
   {{- range $idx, $app := $crd.spec.applications }}
   {{- $hashedDomain := sha256sum $app.domain | trunc 8 }}
   {{- $nameSuffix := "" }}
@@ -7,8 +11,8 @@
     {{- $nameSuffix = printf "-%s" $hashedDomain }}
   {{- end }}
   {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
-  {{- $info := (index ($context.Values.userAuthn.internal.dexAuthenticatorNames | default dict) $id) }}
-  {{- $svcName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $svcName := $info.name }}
   {{- $ingInfo := (index $info.ingressNames (printf "%d" $idx)) }}
   {{- $ingName := (default (printf "%s%s-dex-authenticator" $crd.name $nameSuffix) (index $ingInfo "name")) }}
   {{- $ingTruncated := (index $ingInfo "truncated") }}
