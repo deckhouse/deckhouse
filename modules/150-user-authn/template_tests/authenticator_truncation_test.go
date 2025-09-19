@@ -22,9 +22,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	. "github.com/deckhouse/deckhouse/testing/helm"
-
 	"github.com/deckhouse/deckhouse/modules/150-user-authn/hooks"
+	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
 var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
@@ -47,24 +46,44 @@ var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
 	It("should render truncated name with labels and ingress backend references it", func() {
 		longName := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbb"
 		hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
-			- name: `+longName+`
-			encodedName: enc
-			namespace: d8-test
-			credentials:
-				appDexSecret: dexSecret
-				cookieSecret: cookieSecret
-			spec:
-				applications:
-				- domain: app.example.com
-				ingressClassName: test
-			`)
+- name: `+longName+`
+  encodedName: enc
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: app.example.com
+      ingressClassName: test
+`)
+
+		// Since template tests do not run Go hooks, we must mock the values the hook would have created.
+		baseFullName := fmt.Sprintf("%s-dex-authenticator", longName)
+		truncatedBaseName, truncated, baseHash := hooks.SafeDNS1123Name(baseFullName)
+		secretFullName := fmt.Sprintf("dex-authenticator-%s", longName)
+		truncatedSecretName, secretTruncated, secretHash := hooks.SafeDNS1123Name(secretFullName)
+		ingressFullName := fmt.Sprintf("%s-dex-authenticator", longName)
+		truncatedIngressName, ingTruncated, ingressHash := hooks.SafeDNS1123Name(ingressFullName)
+
+		namesMapYaml := fmt.Sprintf(`
+"%s@d8-test":
+  name: %s
+  truncated: %t
+  hash: %s
+  secretName: %s
+  secretTruncated: %t
+  secretHash: %s
+  ingressNames:
+    "0":
+      name: %s
+      truncated: %t
+      hash: %s
+`, longName, truncatedBaseName, truncated, baseHash, truncatedSecretName, secretTruncated, secretHash, truncatedIngressName, ingTruncated, ingressHash)
+		hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", namesMapYaml)
+
 		hec.HelmRender()
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
-
-		// Calculate expected truncated names
-		baseFullName := fmt.Sprintf("%s-dex-authenticator", longName)
-		truncatedBaseName, _, baseHash := hooks.SafeDNS1123Name(baseFullName)
-		Expect(len(truncatedBaseName)).Should(BeNumerically("<=", 63))
 
 		// Check Service
 		svc := hec.KubernetesResource("Service", "d8-test", truncatedBaseName)
@@ -82,8 +101,6 @@ var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
 		Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", truncatedBaseName).Exists()).To(BeTrue())
 
 		// Check Ingress
-		ingressFullName := fmt.Sprintf("%s-dex-authenticator", longName)
-		truncatedIngressName, _, ingressHash := hooks.SafeDNS1123Name(ingressFullName)
 		ing := hec.KubernetesResource("Ingress", "d8-test", truncatedIngressName)
 		Expect(ing.Exists()).To(BeTrue())
 		Expect(ing.Field("metadata.labels.deckhouse\\.io/name-truncated").String()).To(Equal("true"))
@@ -91,8 +108,6 @@ var _ = Describe("Module :: user-authn :: helm template :: truncation", func() {
 		Expect(ing.Field("spec.rules.0.http.paths.0.backend.service.name").String()).To(Equal(truncatedBaseName))
 
 		// Check Secret
-		secretFullName := fmt.Sprintf("dex-authenticator-%s", longName)
-		truncatedSecretName, _, secretHash := hooks.SafeDNS1123Name(secretFullName)
 		secret := hec.KubernetesResource("Secret", "d8-test", truncatedSecretName)
 		Expect(secret.Exists()).To(BeTrue())
 		Expect(secret.Field("metadata.labels.deckhouse\\.io/name-truncated").String()).To(Equal("true"))

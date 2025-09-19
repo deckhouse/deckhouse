@@ -109,6 +109,56 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
     keepUsersLoggedInFor: "2h20m4s"
 `)
 			hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
+
+			// Since template tests do not run Go hooks, we must mock the values the hook would have created.
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
+"test-2@d8-test":
+  name: "test-2-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-2"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-2-dex-authenticator"
+      truncated: false
+      hash: ""
+    "1":
+      name: "test-2-3230e1af-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-3@d8-test":
+  name: "test-3-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-3"
+  secretTruncated: false
+  secretHash: ""
+"test-4@d8-test":
+  name: "test-4-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-4"
+  secretTruncated: false
+  secretHash: ""
+"test@d8-test":
+  name: "test-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-dex-authenticator"
+      truncated: false
+      hash: ""
+    "1":
+      name: "test-05f0e90e-dex-authenticator"
+      truncated: false
+      hash: ""
+`)
 			hec.HelmRender()
 		})
 		It("Should create desired objects", func() {

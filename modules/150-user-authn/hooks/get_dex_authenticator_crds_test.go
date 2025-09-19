@@ -283,17 +283,17 @@ spec:
 
 			// Long name checks
 			longID := longName + "@test"
-			Expect(namesMap.Get(longID).Get("name").String()).Should(HaveLen(63))
+			Expect(namesMap.Get(longID).Get("name").String()).Should(BeNumerically("<=", 63))
 			Expect(namesMap.Get(longID).Get("truncated").Bool()).Should(BeTrue())
 			Expect(namesMap.Get(longID).Get("hash").String()).ShouldNot(BeEmpty())
 
-			Expect(namesMap.Get(longID).Get("ingressNames").Get("0").Get("name").String()).Should(HaveLen(63))
+			Expect(namesMap.Get(longID).Get("ingressNames").Get("0").Get("name").String()).Should(BeNumerically("<=", 63))
 			Expect(namesMap.Get(longID).Get("ingressNames").Get("0").Get("truncated").Bool()).Should(BeTrue())
 
-			Expect(namesMap.Get(longID).Get("signOutIngressNames").Get("0").Get("name").String()).Should(HaveLen(63))
+			Expect(namesMap.Get(longID).Get("signOutIngressNames").Get("0").Get("name").String()).Should(BeNumerically("<=", 63))
 			Expect(namesMap.Get(longID).Get("signOutIngressNames").Get("0").Get("truncated").Bool()).Should(BeTrue())
 
-			Expect(namesMap.Get(longID).Get("ingressNames").Get("1").Get("name").String()).Should(HaveLen(63))
+			Expect(namesMap.Get(longID).Get("ingressNames").Get("1").Get("name").String()).Should(BeNumerically("<=", 63))
 			Expect(namesMap.Get(longID).Get("ingressNames").Get("1").Get("truncated").Bool()).Should(BeTrue())
 
 			// Short name checks

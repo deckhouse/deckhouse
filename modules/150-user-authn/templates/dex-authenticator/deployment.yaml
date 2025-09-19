@@ -11,7 +11,7 @@ memory: 25Mi
 {{- $context := . }}
 {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
-  {{- $info := (index $context.Values.userAuthn.internal.dexAuthenticatorNames $id) }}
+  {{- $info := (index ($context.Values.userAuthn.internal.dexAuthenticatorNames | default dict) $id) }}
   {{- $baseName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
   {{- $truncated := (index $info "truncated") }}
   {{- $hash := (index $info "hash") }}
