@@ -105,6 +105,10 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger.Debug("install module")
 
+	// mounts should not be executed simultaneously
+	i.mtx.Lock()
+	defer i.mtx.Unlock()
+
 	// /deckhouse/downloaded/modules/<module>
 	mountPoint := filepath.Join(i.mount, module)
 
@@ -144,10 +148,6 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 		span.RecordError(err)
 		return fmt.Errorf("create image hash from the path '%s': %w", imagePath, err)
 	}
-
-	// mounts should not be executed simultaneously
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
 
 	logger.Debug("create device mapper")
 	if err = verity.CreateMapper(ctx, imagePath, hash); err != nil {

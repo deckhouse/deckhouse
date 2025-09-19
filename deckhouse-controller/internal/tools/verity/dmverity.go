@@ -24,9 +24,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -63,28 +65,37 @@ func CreateMapper(ctx context.Context, imagePath, hash string) error {
 
 	span.SetAttributes(attribute.String("imagePath", imagePath))
 
-	// /deckhouse/download/<module>/<version>.erofs.verity
-	hashPath := fmt.Sprintf("%s.verity", imagePath)
+	return waitUntilMapperCreated(ctx, imagePath, hash)
+}
 
-	module := filepath.Base(filepath.Dir(imagePath))
+// waitUntilMapperCreated waits until /dev/mapper/<module> appears.
+// veritysetup open can return loop attaching error, it happens due to kernel race, so retry until ready
+func waitUntilMapperCreated(ctx context.Context, imagePath, hash string) error {
+	// magic numbers
+	interval := 200 * time.Millisecond
+	timeout := 3 * time.Second
+	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		// /deckhouse/download/<module>/<version>.erofs.verity
+		hashPath := fmt.Sprintf("%s.verity", imagePath)
 
-	args := []string{
-		openArg,
+		module := filepath.Base(filepath.Dir(imagePath))
 
-		imagePath,
-		module,
+		args := []string{
+			openArg,
+			imagePath,
+			module,
+			hashPath,
+			hash,
+		}
 
-		hashPath,
-		hash,
-	}
+		// veritysetup open <imagePath> <module> <hashPath> <hash>
+		cmd := exec.CommandContext(ctx, verityCommand, args...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return false, fmt.Errorf("veritysetup open: %w (output: %s)", err, string(output))
+		}
 
-	// veritysetup open <imagePath> <module> <hashPath> <hash>
-	cmd := exec.CommandContext(ctx, verityCommand, args...)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("veritysetup open: %w (output: %s)", err, string(output))
-	}
-
-	return nil
+		return true, nil
+	})
 }
 
 // CloseMapper closes device mapper for the module
