@@ -18,7 +18,9 @@ package migrate
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +40,19 @@ const (
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(changeAnnotation))
+
+func flowSchemaAPIVersion(kubeVersion *semver.Version) string {
+	Kubernetes126 := semver.MustParse("1.26")
+	Kubernetes129 := semver.MustParse("1.29")
+	switch {
+	case kubeVersion.GreaterThan(Kubernetes129):
+		return "v1"
+	case kubeVersion.GreaterThan(Kubernetes126):
+		return "v1beta3"
+	default:
+		return "v1beta2"
+	}
+}
 
 func changeAnnotationUnstructured(
 	ctx context.Context,
@@ -86,6 +101,11 @@ func changeAnnotationUnstructured(
 
 func changeAnnotation(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	ctx := context.Background()
+	val := input.Values.Get("global.discovery.kubernetesVersion").String()
+	ver, err := semver.NewVersion(val)
+	if err != nil {
+		return fmt.Errorf("global.discovery.kubernetesVersion contains a malformed semver: %s: %w", val, err)
+	}
 
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
@@ -100,12 +120,12 @@ func changeAnnotation(_ context.Context, input *go_hook.HookInput, dc dependency
 		},
 		{
 			Group:    flowSchemaGroup,
-			Version:  "v1",
+			Version:  flowSchemaAPIVersion(ver),
 			Resource: "flowschemas",
 		},
 		{
 			Group:    flowSchemaGroup,
-			Version:  "v1",
+			Version:  flowSchemaAPIVersion(ver),
 			Resource: "prioritylevelconfigurations",
 		},
 	}
