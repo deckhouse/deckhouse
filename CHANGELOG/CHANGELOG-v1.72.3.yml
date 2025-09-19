@@ -1,0 +1,27 @@
+dhctl:
+  fixes:
+    - summary: Add timeout to ssh client dial and fix stop.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15539
+    - summary: Fix ssh client start with bastion in dhctl.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15513
+    - summary: Fix deadlock while reading dhctl singlethreaded server logs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15512
+    - summary: >-
+        Fixed the behaviour of the attach operation when there are no keys in SSHConfig, only a
+        password
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15478
+docs:
+  fixes:
+    - summary: Containerdv2 migration FAQ fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15498
+ingress-nginx:
+  fixes:
+    - summary: fix set_annotation_validation_suspended.go hook to set correct metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15485
+    - summary: fix set_annotation_validation_suspended.go hook to set correct metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15462
+loki:
+  fixes:
+    - summary: Change stage to Preview
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15553
+
