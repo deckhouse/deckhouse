@@ -143,6 +143,7 @@
   },
   "observability": {
     "editions": [
+      "ce",
       "be",
       "se",
       "se-plus",
