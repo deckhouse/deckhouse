@@ -51,10 +51,16 @@ To enable Dex authentication for your application, follow these steps:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
-      - `NAME` — the value of the `metadata.name` parameter of the `DexAuthenticator` resource;
-      - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource;
+   - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
+      - `SERVICE_NAME` — is the name of the authenticator's Service. Usually, it is `<NAME>-dex-authenticator` (`<NAME>` is the `metadata.name` of the `DexAuthenticator` resource).
+      - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource.
       - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
+
+   > **Note:** If the `DexAuthenticator` resource name (`<NAME>`) is too long, the Service name will be truncated to fit within Kubernetes' 63-character limit. In this case, you can find the correct service name by running the following command:
+   > ```shell
+   > kubectl get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+   > ```
+   > Replace `<NS>` and `<NAME>` with your values. If this command returns an empty string, it means the name was not truncated and you should use the standard `<NAME>-dex-authenticator` format.
 
    Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 
