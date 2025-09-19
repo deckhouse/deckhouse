@@ -2,10 +2,4 @@ apiVersion: v2
 description: Helm utils template definitions for Deckhouse modules.
 name: deckhouse_lib_helm
 type: library
-<<<<<<< HEAD
-version: 1.58.1
-||||||| merged common ancestors
-version: 1.58.0
-=======
 version: 1.63.6
->>>>>>> upstrim/allow-privilege-escalation-improvement
