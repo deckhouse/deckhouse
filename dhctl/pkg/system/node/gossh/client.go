@@ -117,6 +117,7 @@ func (s *Client) Start() error {
 			User:            s.Settings.BastionUser,
 			Auth:            AuthMethods,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         5 * time.Second,
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
@@ -161,6 +162,7 @@ func (s *Client) Start() error {
 		User:            s.Settings.User,
 		Auth:            AuthMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         5 * time.Second,
 	}
 
 	var targetConn net.Conn
@@ -324,6 +326,10 @@ func (s *Client) Check() node.Check {
 
 // Stop the client
 func (s *Client) Stop() {
+	if s.sshClient == nil {
+		log.DebugLn("no SSH client found to stop. Exiting...")
+		return
+	}
 	log.DebugLn("SSH Client is stopping now")
 	log.DebugLn("stopping kube proxies")
 	for _, p := range s.kubeProxies {
