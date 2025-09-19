@@ -109,6 +109,7 @@ spec:
               command:
               - /cni-uninstall.sh
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -150,6 +151,17 @@ spec:
             drop:
               - ALL
         volumeMounts:
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features.h
+          name: write-files
+          subPath: features.h
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_skb.h
+          name: write-files
+          subPath: features_skb.h
+        - mountPath: /var/lib/cilium/bpf/include/bpf/features_xdp.h
+          name: write-files
+          subPath: features_xdp.h
+        - name: tmp
+          mountPath: /root/.config
         - mountPath: /sys/fs/bpf
           mountPropagation: HostToContainer
           name: bpf-maps
@@ -235,6 +247,22 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
+      - name: touch-files
+        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        securityContext:
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+          - --
+          - "/bin/touch /tmp/features.h /tmp/features_skb.h /tmp/features_xdp.h && chmod 0666 /tmp/*"
+        volumeMounts:
+          - name: write-files
+            mountPath: /tmp/
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         imagePullPolicy: IfNotPresent
@@ -273,6 +301,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -305,6 +334,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           capabilities:
             add:
               - NET_ADMIN
@@ -339,6 +369,7 @@ spec:
         - name: tmp
           mountPath: /tmp
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
         resources:
           requests:
@@ -364,6 +395,7 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -394,6 +426,7 @@ spec:
           rm /hostbin/cilium-sysctlfix
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: s0
@@ -423,6 +456,7 @@ spec:
         - --
         terminationMessagePolicy: FallbackToLogsOnError
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: true
         volumeMounts:
         - name: bpf-maps
@@ -459,6 +493,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
+          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -508,6 +543,7 @@ spec:
             memory: 10Mi
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
         securityContext:
+          readOnlyRootFilesystem: true
           seLinuxOptions:
             level: 's0'
             type: 'spc_t'
@@ -522,6 +558,8 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
+      - name: write-files
+        emptyDir: {}
       - name: tmp
         emptyDir: {}
       - name: host-proc-sys-net
