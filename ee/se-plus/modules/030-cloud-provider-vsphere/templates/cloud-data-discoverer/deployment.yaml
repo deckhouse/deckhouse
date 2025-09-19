@@ -119,6 +119,11 @@ spec:
           value: {{ .Values.global.discovery.clusterUUID | quote }}
         - name: CSI_COMPATIBILITY_FLAG
           value: {{ .Values.cloudProviderVsphere.internal.compatibilityFlag | quote }}
+        - name: VM_FOLDER_PATH
+          valueFrom:
+            secretKeyRef:
+              name: cloud-data-discoverer
+              key: vmFolderPath
         livenessProbe:
           httpGet:
             path: /healthz
