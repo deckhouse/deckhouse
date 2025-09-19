@@ -40,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,6 +117,7 @@ type deckhouseReleaseReconciler struct {
 
 	registrySecret *utils.DeckhouseRegistrySecret
 	metricsUpdater MetricsUpdater
+	eventRecorder  record.EventRecorder
 
 	deckhouseVersion string
 }
@@ -141,6 +143,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
+		eventRecorder:  mgr.GetEventRecorderFor("deckhouse-release-controller"),
 	}
 
 	// Add Preflight Check
@@ -716,6 +719,9 @@ func (r *deckhouseReleaseReconciler) ApplyRelease(ctx context.Context, dr *v1alp
 func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v1alpha1.DeckhouseRelease, deployedReleaseInfo *releaseUpdater.ReleaseInfo, updateInfo *ReleaseUpdateInfo) error {
 	r.logger.Info("applying release", slog.String("name", dr.GetName()))
 
+	// Record event about release update process
+	r.recordReleaseUpdateEvent(dr, updateInfo)
+
 	err := r.bumpDeckhouseDeployment(ctx, dr)
 	if err != nil {
 		return fmt.Errorf("deploy release: %w", err)
@@ -1160,4 +1166,18 @@ func newDeckhouseReleaseWithName(name string) *v1alpha1.DeckhouseRelease {
 			Name: name,
 		},
 	}
+}
+
+// recordReleaseUpdateEvent records a Kubernetes event for release update process
+func (r *deckhouseReleaseReconciler) recordReleaseUpdateEvent(release *v1alpha1.DeckhouseRelease, updateInfo *ReleaseUpdateInfo) {
+	if updateInfo == nil {
+		return
+	}
+
+	r.eventRecorder.Eventf(release, corev1.EventTypeNormal, "ReleaseUpdateInitiated",
+		"Release update initiated: task=%s, force=%t, podReady=%t, requirementsMet=%t",
+		updateInfo.TaskCalculation.TaskType,
+		updateInfo.ForceRelease.IsForced,
+		updateInfo.PodReadiness.IsReady,
+		updateInfo.RequirementsCheck.RequirementsMet)
 }
