@@ -12,8 +12,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deckhouse/delivery-kit-sdk v0.0.0-20250817081531-36a4bf268b0e h1:EqbDDfDY2so7gnQF+r6ZagWntjWqiHayH1725Q8wMKc=
-github.com/deckhouse/delivery-kit-sdk v0.0.0-20250817081531-36a4bf268b0e/go.mod h1:6idedofcaW43YLVGOAv7Uz9X4xOek/YyOPhiBEr36iM=
+github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f h1:z0HVydB3RdiW02V301QPJDx0xmmVgJf1Bkjyu9oILXU=
+github.com/deckhouse/delivery-kit-sdk v0.0.0-20250916111427-09b1cd34f71f/go.mod h1:6idedofcaW43YLVGOAv7Uz9X4xOek/YyOPhiBEr36iM=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3 h1:Ho1eOS+y2q4ogphFgyIwIwG0AfTyYlSNUvdB0uoY5wk=
 github.com/deckhouse/rootca v0.0.0-20250721220328-2b84d72a5db3/go.mod h1:fFmOHeP+jqXhyEVftxMtsmBa5K8XTeVn3/AGVT9xcm8=
 github.com/docker/cli v25.0.5+incompatible h1:3Llw3kcE1gOScEojA247iDD+p1l9hHeC7H3vf3Zd5fk=
