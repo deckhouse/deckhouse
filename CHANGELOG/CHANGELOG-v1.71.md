@@ -56,6 +56,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix arg `encryption-provider-config ` for kubeadm configuration. [#15521](https://github.com/deckhouse/deckhouse/pull/15521)
+ - **[candi]** Disable immutable flag on erofs files in cleanup node stage. [#15520](https://github.com/deckhouse/deckhouse/pull/15520)
  - **[candi]** containerd migration fix [#14622](https://github.com/deckhouse/deckhouse/pull/14622)
  - **[candi]** Resolved the issue with downloading packages for external modules using ctr for bb-rp-fetch. [#14236](https://github.com/deckhouse/deckhouse/pull/14236)
  - **[candi]** Fixed double preview version in candi/version_map. [#13670](https://github.com/deckhouse/deckhouse/pull/13670)
