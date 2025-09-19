@@ -17,6 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -241,5 +245,103 @@ data:
   }
 }]`))
 		})
+	})
+
+	Context("With DexAuthenticator with multiple applications", func() {
+		const longName = "this-is-a-very-very-long-name-that-will-be-truncated-for-sure"
+		const shortName = "short-name"
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: ` + longName + `
+  namespace: test
+spec:
+  applications:
+  - domain: long.name.one.com
+    signOutURL: /logout
+  - domain: long.name.two.com
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: ` + shortName + `
+  namespace: test
+spec:
+  applications:
+  - domain: short.name.one.com
+`))
+			f.RunHook()
+		})
+		It("Should fill names map with base, ingress and sign-out ingress names", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			namesMap := f.ValuesGet("userAuthn.internal.dexAuthenticatorNames")
+			Expect(namesMap.Exists()).To(BeTrue())
+
+			// Long name checks
+			longID := longName + "@test"
+			Expect(len(namesMap.Get(longID).Get("name").String())).Should(BeNumerically("<=", 63))
+			Expect(namesMap.Get(longID).Get("truncated").Bool()).Should(BeTrue())
+			Expect(namesMap.Get(longID).Get("hash").String()).ShouldNot(BeEmpty())
+
+			Expect(len(namesMap.Get(longID).Get("ingressNames").Get("0").Get("name").String())).Should(BeNumerically("<=", 63))
+			Expect(namesMap.Get(longID).Get("ingressNames").Get("0").Get("truncated").Bool()).Should(BeTrue())
+
+			Expect(len(namesMap.Get(longID).Get("signOutIngressNames").Get("0").Get("name").String())).Should(BeNumerically("<=", 63))
+			Expect(namesMap.Get(longID).Get("signOutIngressNames").Get("0").Get("truncated").Bool()).Should(BeTrue())
+
+			Expect(len(namesMap.Get(longID).Get("ingressNames").Get("1").Get("name").String())).Should(BeNumerically("<=", 63))
+			Expect(namesMap.Get(longID).Get("ingressNames").Get("1").Get("truncated").Bool()).Should(BeTrue())
+
+			// Short name checks
+			shortID := shortName + "@test"
+			Expect(namesMap.Get(shortID).Get("name").String()).Should(Equal(shortName + "-dex-authenticator"))
+			Expect(namesMap.Get(shortID).Get("truncated").Bool()).Should(BeFalse())
+
+			Expect(namesMap.Get(shortID).Get("ingressNames").Get("0").Get("name").String()).Should(Equal(shortName + "-dex-authenticator"))
+			Expect(namesMap.Get(shortID).Get("ingressNames").Get("0").Get("truncated").Bool()).Should(BeFalse())
+		})
+	})
+})
+
+var _ = Describe("safeDNS1123Name", func() {
+	It("keeps names <=63 as-is", func() {
+		name := strings.Repeat("a", 63)
+		safe, truncated, hash5 := SafeDNS1123Name(name)
+		Expect(safe).To(Equal(name))
+		Expect(truncated).To(BeFalse())
+		Expect(hash5).To(Equal(""))
+	})
+
+	It("truncates names >63 to 57 and appends -hash5", func() {
+		original := strings.Repeat("a", 64)
+		h := sha256.Sum256([]byte(original))
+		expected := strings.Repeat("a", 57) + "-" + hex.EncodeToString(h[:])[:5]
+		safe, truncated, hash5 := SafeDNS1123Name(original)
+		Expect(truncated).To(BeTrue())
+		Expect(len(safe)).To(BeNumerically("<=", 63))
+		Expect(safe).To(Equal(expected))
+		Expect(hash5).To(Equal(expected[len(expected)-5:]))
+	})
+
+	It("normalizes invalid characters and case only when truncating is needed", func() {
+		in := "A_B.C-"
+		// len("A_B.C-") is 6 <= 63, so function returns input as-is
+		safe, truncated, hash5 := SafeDNS1123Name(in)
+		Expect(safe).To(Equal(in))
+		Expect(truncated).To(BeFalse())
+		Expect(hash5).To(Equal(""))
+	})
+
+	It("is deterministic for same input", func() {
+		in := strings.Repeat("x", 70)
+		s1, t1, h1 := SafeDNS1123Name(in)
+		s2, t2, h2 := SafeDNS1123Name(in)
+		Expect(s1).To(Equal(s2))
+		Expect(t1).To(Equal(t2))
+		Expect(h1).To(Equal(h2))
 	})
 })

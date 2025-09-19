@@ -132,6 +132,10 @@ properties:
                   type: string
                 appDexSecret:
                   type: string
+      dexAuthenticatorNames:
+        type: object
+        default: {}
+        additionalProperties: true
       dexClientCRDs:
         type: array
         default: []

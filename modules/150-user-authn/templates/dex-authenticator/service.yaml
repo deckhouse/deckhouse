@@ -1,12 +1,23 @@
 {{- $context := . }}
-{{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+{{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+{{- $info := index $dexAuthenticatorNames $id | default dict }}
+{{- $svcName := $info.name }}
+{{- $truncated := $info.truncated }}
+{{- $hash := (index $info "hash") }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $crd.name }}-dex-authenticator
+  name: {{ $svcName }}
   namespace: {{ $crd.namespace }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "dex-authenticator")) | nindent 2 }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
 spec:
   ports:
   - name: https
