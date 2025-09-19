@@ -499,9 +499,9 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			meta.Changelog = make(map[string]any)
-			return meta, nil
+		} else {
+			meta.Changelog = changelog
 		}
-		meta.Changelog = changelog
 	}
 
 	if rr.moduleReader.Len() > 0 {

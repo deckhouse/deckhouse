@@ -154,11 +154,9 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
 			meta.Changelog = make(map[string]any)
-
-			return meta, nil
+		} else {
+			meta.Changelog = changelog
 		}
-
-		meta.Changelog = changelog
 	}
 
 	if rr.moduleReader.Len() > 0 {
