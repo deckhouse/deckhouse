@@ -164,6 +164,10 @@ If you need to create a new subnet, specify the `withNATInstance.internalSubnetC
 
 One of the parameters — `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR` — is required.
 
+When the `withNATInstance.internalSubnetCIDR` parameter is specified, the NAT instance will be created in a single instance in zone `a`.
+
+When the `withNATInstance.internalSubnetID` parameter is specified, the NAT instance will be created in a single instance in the zone specified in the designated network settings.
+
 If the `withNATInstance.externalSubnetID` is provided in addition to previous ones, the NAT instance will be attached to it via secondary interface.
 
 ![Yandex Cloud WithNATInstance Layout scheme](../../images/cloud-provider-yandex/yandex-withnatinstance.png)
