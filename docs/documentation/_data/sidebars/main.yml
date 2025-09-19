@@ -1204,6 +1204,7 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
+              featureStatus: preview
               folders:
                 - title:
                     en: Description
