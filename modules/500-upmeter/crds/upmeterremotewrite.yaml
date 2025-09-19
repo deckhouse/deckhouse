@@ -79,6 +79,16 @@ spec:
                       description: Additional HTTP headers to send with each remote write request.
                       additionalProperties:
                         type: string
+                      properties:
+                        X-Scope-OrgID:
+                          description: |
+                            The `X-Scope-OrgID` header specifying the tenant ID.
+                          type: string
+                        X-Auth-Token:
+                          description: |
+                            The `X-Auth-Token` header specifying the authentication token.
+                          type: string
+                      required: ["X-Scope-OrgID", "X-Auth-Token"]
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.
