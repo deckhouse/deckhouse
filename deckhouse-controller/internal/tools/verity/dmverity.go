@@ -74,10 +74,10 @@ func waitUntilMapperCreated(ctx context.Context, imagePath, hash string) error {
 	// magic numbers
 	interval := 200 * time.Millisecond
 	timeout := 3 * time.Second
-	return wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
-		// /deckhouse/download/<module>/<version>.erofs.verity
-		hashPath := fmt.Sprintf("%s.verity", imagePath)
+	var lastErr error
 
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		hashPath := fmt.Sprintf("%s.verity", imagePath)
 		module := filepath.Base(filepath.Dir(imagePath))
 
 		args := []string{
@@ -90,12 +90,19 @@ func waitUntilMapperCreated(ctx context.Context, imagePath, hash string) error {
 
 		// veritysetup open <imagePath> <module> <hashPath> <hash>
 		cmd := exec.CommandContext(ctx, verityCommand, args...)
-		if output, err := cmd.CombinedOutput(); err != nil {
-			return false, fmt.Errorf("veritysetup open: %w (output: %s)", err, string(output))
+		if out, err := cmd.CombinedOutput(); err != nil {
+			lastErr = fmt.Errorf("veritysetup open: %w (last output: %s)", lastErr, string(out))
+			return false, nil
 		}
 
 		return true, nil
 	})
+
+	if lastErr != nil {
+		return lastErr
+	}
+
+	return err
 }
 
 // CloseMapper closes device mapper for the module
