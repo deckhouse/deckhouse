@@ -20,12 +20,27 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+type initEntry struct {
+	once sync.Once
+	err  error
+}
+
+var initOnceByKey sync.Map
+var initMutex sync.Mutex
+
+
+func getInitOnceKey(workingDir string) *initEntry {
+	v, _ := initOnceByKey.LoadOrStore(workingDir, &initEntry{})
+	return v.(*initEntry)
+}
 
 func terraformCmd(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "terraform", args...)
@@ -65,20 +80,36 @@ func NewExecutor(workingDir string, looger log.Logger) *Executor {
 }
 
 func (e *Executor) Init(ctx context.Context, pluginsDir string) error {
-	args := []string{
-		"init",
-		fmt.Sprintf("-plugin-dir=%s", pluginsDir),
-		"-get-plugins=false",
-		"-no-color",
-		"-input=false",
-		e.workingDir,
-	}
+    initMutex.Lock()
+    defer initMutex.Unlock()
 
-	e.cmd = terraformCmd(ctx, args...)
+    lockFilePath := filepath.Join(e.workingDir, ".terraform.lock.hcl")
+    _, statErr := os.Stat(lockFilePath)
+		if  os.IsNotExist(statErr) {
+			e.logger.LogDebugF("terraform.Init .terraform.lock.hcl IsNotExist: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
+        // Init runs again when lock file is missing
+        initOnceByKey.Delete(e.workingDir)
+    }
 
-	_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+	onceKey := getInitOnceKey(e.workingDir)
+	e.logger.LogDebugF("terraform.Init called: workingDir=%q pluginsDir=%q\n", e.workingDir, pluginsDir)
+	onceKey.once.Do(func() {
+		e.logger.LogDebugF("terraform.Init executing once for key=%q\n", pluginsDir+"|"+e.workingDir)
+		args := []string{
+			"init",
+			fmt.Sprintf("-plugin-dir=%s", pluginsDir),
+			"-get-plugins=false",
+			"-no-color",
+			"-input=false",
+			e.workingDir,
+		}
 
-	return err
+		e.cmd = terraformCmd(ctx, args...)
+
+		_, err := infrastructure.Exec(ctx, e.cmd, e.logger)
+		onceKey.err = err
+	})
+	return onceKey.err
 }
 
 func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) error {
