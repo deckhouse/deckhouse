@@ -29,7 +29,7 @@ spec:
                         ca:
                           description: Сертификат ЦС (CA), используемый при проверке сертификата API-сервера.
                     headers:
-                      description: Дополнительные HTTP-заголовки для отправки с каждым запросом.
+                      description: HTTP-заголовки, необходимые при отправке с каждым запросом.
                 additionalLabels:
                   description: Дополнительные метки для добавления ко всем метрикам.
                 intervalSeconds:
