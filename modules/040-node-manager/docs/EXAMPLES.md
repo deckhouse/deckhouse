@@ -240,6 +240,10 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 
 ### Using the Cluster API Provider Static
 
+{% alert level="warning" %}
+If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding regular nodes using CAPS, [make sure](../control-plane-manager/faq.html#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) that they will not be "captured".
+{% endalert %}
+
 A brief example of adding a static node to a cluster using [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 
 1. Prepare the necessary resources.
