@@ -18,7 +18,7 @@ package fake
 import (
 	"context"
 
-	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	types "k8s.io/apimachinery/pkg/types"
@@ -28,27 +28,27 @@ import (
 
 // FakeModuleUpdatePolicies implements ModuleUpdatePolicyInterface
 type FakeModuleUpdatePolicies struct {
-	Fake *FakeDeckhouseV1alpha2
+	Fake *FakeDeckhouseV1alpha1
 }
 
-var moduleupdatepoliciesResource = v1alpha2.SchemeGroupVersion.WithResource("moduleupdatepolicies")
+var moduleupdatepoliciesResource = v1alpha1.SchemeGroupVersion.WithResource("moduleupdatepolicies")
 
-var moduleupdatepoliciesKind = v1alpha2.SchemeGroupVersion.WithKind("ModuleUpdatePolicy")
+var moduleupdatepoliciesKind = v1alpha1.SchemeGroupVersion.WithKind("ModuleUpdatePolicy")
 
 // Get takes name of the moduleUpdatePolicy, and returns the corresponding moduleUpdatePolicy object, and an error if there is any.
-func (c *FakeModuleUpdatePolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha2.ModuleUpdatePolicy, err error) {
+func (c *FakeModuleUpdatePolicies) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleUpdatePolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(moduleupdatepoliciesResource, name), &v1alpha2.ModuleUpdatePolicy{})
+		Invokes(testing.NewRootGetAction(moduleupdatepoliciesResource, name), &v1alpha1.ModuleUpdatePolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha2.ModuleUpdatePolicy), err
+	return obj.(*v1alpha1.ModuleUpdatePolicy), err
 }
 
 // List takes label and field selectors, and returns the list of ModuleUpdatePolicies that match those selectors.
-func (c *FakeModuleUpdatePolicies) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha2.ModuleUpdatePolicyList, err error) {
+func (c *FakeModuleUpdatePolicies) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleUpdatePolicyList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(moduleupdatepoliciesResource, moduleupdatepoliciesKind, opts), &v1alpha2.ModuleUpdatePolicyList{})
+		Invokes(testing.NewRootListAction(moduleupdatepoliciesResource, moduleupdatepoliciesKind, opts), &v1alpha1.ModuleUpdatePolicyList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (c *FakeModuleUpdatePolicies) List(ctx context.Context, opts v1.ListOptions
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha2.ModuleUpdatePolicyList{ListMeta: obj.(*v1alpha2.ModuleUpdatePolicyList).ListMeta}
-	for _, item := range obj.(*v1alpha2.ModuleUpdatePolicyList).Items {
+	list := &v1alpha1.ModuleUpdatePolicyList{ListMeta: obj.(*v1alpha1.ModuleUpdatePolicyList).ListMeta}
+	for _, item := range obj.(*v1alpha1.ModuleUpdatePolicyList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -73,29 +73,29 @@ func (c *FakeModuleUpdatePolicies) Watch(ctx context.Context, opts v1.ListOption
 }
 
 // Create takes the representation of a moduleUpdatePolicy and creates it.  Returns the server's representation of the moduleUpdatePolicy, and an error, if there is any.
-func (c *FakeModuleUpdatePolicies) Create(ctx context.Context, moduleUpdatePolicy *v1alpha2.ModuleUpdatePolicy, opts v1.CreateOptions) (result *v1alpha2.ModuleUpdatePolicy, err error) {
+func (c *FakeModuleUpdatePolicies) Create(ctx context.Context, moduleUpdatePolicy *v1alpha1.ModuleUpdatePolicy, opts v1.CreateOptions) (result *v1alpha1.ModuleUpdatePolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(moduleupdatepoliciesResource, moduleUpdatePolicy), &v1alpha2.ModuleUpdatePolicy{})
+		Invokes(testing.NewRootCreateAction(moduleupdatepoliciesResource, moduleUpdatePolicy), &v1alpha1.ModuleUpdatePolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha2.ModuleUpdatePolicy), err
+	return obj.(*v1alpha1.ModuleUpdatePolicy), err
 }
 
 // Update takes the representation of a moduleUpdatePolicy and updates it. Returns the server's representation of the moduleUpdatePolicy, and an error, if there is any.
-func (c *FakeModuleUpdatePolicies) Update(ctx context.Context, moduleUpdatePolicy *v1alpha2.ModuleUpdatePolicy, opts v1.UpdateOptions) (result *v1alpha2.ModuleUpdatePolicy, err error) {
+func (c *FakeModuleUpdatePolicies) Update(ctx context.Context, moduleUpdatePolicy *v1alpha1.ModuleUpdatePolicy, opts v1.UpdateOptions) (result *v1alpha1.ModuleUpdatePolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(moduleupdatepoliciesResource, moduleUpdatePolicy), &v1alpha2.ModuleUpdatePolicy{})
+		Invokes(testing.NewRootUpdateAction(moduleupdatepoliciesResource, moduleUpdatePolicy), &v1alpha1.ModuleUpdatePolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha2.ModuleUpdatePolicy), err
+	return obj.(*v1alpha1.ModuleUpdatePolicy), err
 }
 
 // Delete takes name of the moduleUpdatePolicy and deletes it. Returns an error if one occurs.
 func (c *FakeModuleUpdatePolicies) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(moduleupdatepoliciesResource, name, opts), &v1alpha2.ModuleUpdatePolicy{})
+		Invokes(testing.NewRootDeleteActionWithOptions(moduleupdatepoliciesResource, name, opts), &v1alpha1.ModuleUpdatePolicy{})
 	return err
 }
 
@@ -103,16 +103,16 @@ func (c *FakeModuleUpdatePolicies) Delete(ctx context.Context, name string, opts
 func (c *FakeModuleUpdatePolicies) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(moduleupdatepoliciesResource, listOpts)
 
-	_, err := c.Fake.Invokes(action, &v1alpha2.ModuleUpdatePolicyList{})
+	_, err := c.Fake.Invokes(action, &v1alpha1.ModuleUpdatePolicyList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched moduleUpdatePolicy.
-func (c *FakeModuleUpdatePolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha2.ModuleUpdatePolicy, err error) {
+func (c *FakeModuleUpdatePolicies) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleUpdatePolicy, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(moduleupdatepoliciesResource, name, pt, data, subresources...), &v1alpha2.ModuleUpdatePolicy{})
+		Invokes(testing.NewRootPatchSubresourceAction(moduleupdatepoliciesResource, name, pt, data, subresources...), &v1alpha1.ModuleUpdatePolicy{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*v1alpha2.ModuleUpdatePolicy), err
+	return obj.(*v1alpha1.ModuleUpdatePolicy), err
 }

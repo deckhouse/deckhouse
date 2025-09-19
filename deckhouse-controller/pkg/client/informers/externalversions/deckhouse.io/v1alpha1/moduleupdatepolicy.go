@@ -29,58 +29,58 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ModuleReleaseInformer provides access to a shared informer and lister for
-// ModuleReleases.
-type ModuleReleaseInformer interface {
+// ModuleUpdatePolicyInformer provides access to a shared informer and lister for
+// ModuleUpdatePolicies.
+type ModuleUpdatePolicyInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModuleReleaseLister
+	Lister() v1alpha1.ModuleUpdatePolicyLister
 }
 
-type moduleReleaseInformer struct {
+type moduleUpdatePolicyInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 }
 
-// NewModuleReleaseInformer constructs a new informer for ModuleRelease type.
+// NewModuleUpdatePolicyInformer constructs a new informer for ModuleUpdatePolicy type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewModuleReleaseInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredModuleReleaseInformer(client, resyncPeriod, indexers, nil)
+func NewModuleUpdatePolicyInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredModuleUpdatePolicyInformer(client, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredModuleReleaseInformer constructs a new informer for ModuleRelease type.
+// NewFilteredModuleUpdatePolicyInformer constructs a new informer for ModuleUpdatePolicy type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredModuleReleaseInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredModuleUpdatePolicyInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().ModuleReleases().List(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ModuleUpdatePolicies().List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha1().ModuleReleases().Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha1().ModuleUpdatePolicies().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModuleRelease{},
+		&deckhouseiov1alpha1.ModuleUpdatePolicy{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *moduleReleaseInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredModuleReleaseInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *moduleUpdatePolicyInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredModuleUpdatePolicyInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *moduleReleaseInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleRelease{}, f.defaultInformer)
+func (f *moduleUpdatePolicyInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleUpdatePolicy{}, f.defaultInformer)
 }
 
-func (f *moduleReleaseInformer) Lister() v1alpha1.ModuleReleaseLister {
-	return v1alpha1.NewModuleReleaseLister(f.Informer().GetIndexer())
+func (f *moduleUpdatePolicyInformer) Lister() v1alpha1.ModuleUpdatePolicyLister {
+	return v1alpha1.NewModuleUpdatePolicyLister(f.Informer().GetIndexer())
 }
