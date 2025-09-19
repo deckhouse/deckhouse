@@ -91,16 +91,16 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 func (p *ProgressTracker) FindLastCompletedPhase(
 	completedPhase, nextPhase OperationPhase,
 ) (OperationPhase, bool) {
-	if completedPhase != "" {
+	phases, ok := operationPhases(p.progress.Operation)
+	if !ok {
 		return completedPhase, false
 	}
 
 	if nextPhase == "" {
-		return completedPhase, false
+		return nOrEmpty(phases, len(phases)-1).Phase, true
 	}
 
-	phases, ok := operationPhases(p.progress.Operation)
-	if !ok {
+	if completedPhase != "" {
 		return completedPhase, false
 	}
 
