@@ -117,7 +117,7 @@ func (s *Client) Start() error {
 			User:            s.Settings.BastionUser,
 			Auth:            AuthMethods,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			Timeout:         2 * time.Second,
+			Timeout:         5 * time.Second,
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
@@ -162,7 +162,7 @@ func (s *Client) Start() error {
 		User:            s.Settings.User,
 		Auth:            AuthMethods,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         2 * time.Second,
+		Timeout:         5 * time.Second,
 	}
 
 	var targetConn net.Conn
