@@ -219,8 +219,10 @@ etcd:
     extraArgs:
       - name: initial-cluster-state
         value: existing
+      {{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
       - name: experimental-initial-corrupt-check
         value: "true"
+      {{- end }}
       {{- if hasKey .etcd "quotaBackendBytes" }}
       - name: quota-backend-bytes
         value: {{ .etcd.quotaBackendBytes | quote }}
