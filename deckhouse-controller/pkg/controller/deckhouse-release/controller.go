@@ -1170,7 +1170,7 @@ func newDeckhouseReleaseWithName(name string) *v1alpha1.DeckhouseRelease {
 
 // recordReleaseUpdateEvent records a Kubernetes event for release update process
 func (r *deckhouseReleaseReconciler) recordReleaseUpdateEvent(release *v1alpha1.DeckhouseRelease, updateInfo *ReleaseUpdateInfo) {
-	if updateInfo == nil {
+	if updateInfo == nil || r.eventRecorder == nil {
 		return
 	}
 
