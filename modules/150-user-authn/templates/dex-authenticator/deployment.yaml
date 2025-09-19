@@ -23,9 +23,8 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- $vpaLabels := dict "app" "dex-authenticator" }}
+  {{- $vpaLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
-  {{- $_ := set $vpaLabels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $vpaLabels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $vpaLabels "deckhouse.io/name-hash" $hash }}
   {{- end }}
@@ -58,9 +57,8 @@ kind: PodDisruptionBudget
 metadata:
   name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- $pdbLabels := dict "app" "dex-authenticator" }}
+  {{- $pdbLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
-  {{- $_ := set $pdbLabels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $pdbLabels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $pdbLabels "deckhouse.io/name-hash" $hash }}
   {{- end }}
@@ -77,9 +75,8 @@ kind: Deployment
 metadata:
   name: {{ $baseName }}
   namespace: {{ $crd.namespace }}
-  {{- $depLabels := dict "app" "dex-authenticator" }}
+  {{- $depLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
-  {{- $_ := set $depLabels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $depLabels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $depLabels "deckhouse.io/name-hash" $hash }}
   {{- end }}

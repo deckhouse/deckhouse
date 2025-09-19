@@ -55,11 +55,11 @@ title: "Модуль user-authn: FAQ"
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`.
       - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
-   > **Важно:** Если имя ресурса `DexAuthenticator` (`<NAME>`) слишком длинное, имя Service будет сокращено, чтобы соответствовать ограничению Kubernetes в 63 символа. В этом случае вы можете найти корректное имя сервиса с помощью следующей команды:
+   > **Важно:** Если имя ресурса `DexAuthenticator` (`<NAME>`) слишком длинное, имя Service может быть сокращено. Чтобы найти корректное имя сервиса, вы всегда можете воспользоваться следующей командой:
    > ```shell
    > kubectl get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
    > ```
-   > Замените `<NS>` и `<NAME>` на ваши значения. Если команда вернет пустую строку, значит, имя не было сокращено и следует использовать стандартный формат `<NAME>-dex-authenticator`.
+   > Замените `<NS>` и `<NAME>` на ваши значения.
 
    Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
 

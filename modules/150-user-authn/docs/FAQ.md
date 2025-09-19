@@ -56,11 +56,11 @@ To enable Dex authentication for your application, follow these steps:
       - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource.
       - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
 
-   > **Note:** If the `DexAuthenticator` resource name (`<NAME>`) is too long, the Service name will be truncated to fit within Kubernetes' 63-character limit. In this case, you can find the correct service name by running the following command:
+   > **Note:** If the `DexAuthenticator` resource name (`<NAME>`) is too long, the Service name may be truncated. To find the correct service name, you can always use the following command:
    > ```shell
    > kubectl get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
    > ```
-   > Replace `<NS>` and `<NAME>` with your values. If this command returns an empty string, it means the name was not truncated and you should use the standard `<NAME>-dex-authenticator` format.
+   > Replace `<NS>` and `<NAME>` with your values.
 
    Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 

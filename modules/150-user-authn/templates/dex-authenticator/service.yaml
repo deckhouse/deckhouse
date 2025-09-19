@@ -11,9 +11,8 @@ kind: Service
 metadata:
   name: {{ $svcName }}
   namespace: {{ $crd.namespace }}
-  {{- $labels := dict "app" "dex-authenticator" }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
-  {{- $_ := set $labels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $labels "deckhouse.io/name-hash" $hash }}
   {{- end }}

@@ -29,9 +29,8 @@ metadata:
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   name: {{ $ingName }}
   namespace: {{ $crd.namespace }}
-  {{- $labels := dict "app" "dex-authenticator" }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $ingTruncated }}
-  {{- $_ := set $labels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $labels "deckhouse.io/name-hash" $ingHash }}
   {{- end }}
@@ -74,9 +73,8 @@ metadata:
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   name: {{ $signOutIngressName }}
   namespace: {{ $crd.namespace }}
-  {{- $labels := dict "app" "dex-authenticator" }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $signOutIngTruncated }}
-  {{- $_ := set $labels "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
   {{- $_ := set $labels "deckhouse.io/name-hash" $signOutIngHash }}
   {{- end }}
