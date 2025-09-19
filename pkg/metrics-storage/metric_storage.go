@@ -63,6 +63,13 @@ type MetricStorage struct {
 type Option func(*MetricStorage)
 
 // WithNewRegistry is an option to create a new prometheus registry
+func WithPrefix(prefix string) Option {
+	return func(m *MetricStorage) {
+		m.Prefix = prefix
+	}
+}
+
+// WithNewRegistry is an option to create a new prometheus registry
 func WithNewRegistry() Option {
 	return func(m *MetricStorage) {
 		m.registry = prometheus.NewRegistry()
@@ -103,10 +110,8 @@ func WithLogger(logger *log.Logger) Option {
 //   - WithNewRegistry: Creates a new isolated Prometheus registry for the metrics
 //   - WithRegistry: Uses a provided Prometheus registry
 //   - WithLogger: Sets a custom logger for the metrics storage
-func NewMetricStorage(prefix string, opts ...Option) *MetricStorage {
+func NewMetricStorage(opts ...Option) *MetricStorage {
 	m := &MetricStorage{
-		Prefix: prefix,
-
 		gatherer:   prometheus.DefaultGatherer,
 		registerer: prometheus.DefaultRegisterer,
 
