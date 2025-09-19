@@ -83,7 +83,25 @@ function set_labels() {
 
 function fail_fast() {
   local unsupported=$1
+  local errs=$2
   if (( unsupported )); then
+    for err in "${errs[@]}"; do
+      if [[ "$err" == "systemd" ]]; then
+        bb-log-error "minimum required version of systemd ${MIN_SYSTEMD}"
+      fi
+
+      if [[ "$err" == "kernel" ]]; then
+        bb-log-error "minimum required version of kernel ${MIN_KERNEL}"
+      fi
+
+      if [[ "$err" == "cgroupv2" ]]; then
+        bb-log-error "required cgroupv2 support"
+      fi
+
+      if [[ "$err" == "erofs" ]]; then
+        bb-log-error "required erofs kernel module"
+      fi
+    done
     bb-log-error "containerd V2 is not supported"
     exit 1
   fi
@@ -103,7 +121,7 @@ function main() {
     set_labels "$unsupported" "$errs"
   fi
   {{- if eq .cri "ContainerdV2" }}
-  fail_fast "$unsupported"
+  fail_fast "$unsupported" "$errs"
   {{ end }}
 }
 
