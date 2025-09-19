@@ -116,25 +116,6 @@
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
 
-<<<<<<< HEAD
-||||||| 4503319c27
-## Admission Client
-
-### helm_lib_admission_webhook_client_ca_certificate
-
-Renders a ConfigMap with the public CA certificate used to verify client TLS certificates for AdmissionReview requests, ensuring secure mTLS authentication
-
-#### Usage
-
-`{{ include "helm_lib_admission_webhook_client_ca_certificate" (list . "namespace") }} `
-
-#### Arguments
-
-list:
--  Template context with .Values, .Chart, etc
--  Namespace where CA configmap will be created
-
-=======
 ## Admission Client Ca
 
 ### helm_lib_admission_webhook_client_ca_certificate
@@ -151,7 +132,6 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Namespace where CA configmap will be created  
 
->>>>>>> origin/main
 ## Api Version And Kind
 
 ### helm_lib_kind_exists
@@ -675,19 +655,11 @@ list:
  .ro   – bool, read-only root FS (default true) 
  .caps – []string, capabilities.add (default empty) 
  .uid  – int, runAsUser/runAsGroup (default 64535) 
-<<<<<<< HEAD
-
-#### Usage
-
-`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001) `
-||||||| 4503319c27
-=======
  .seccompProfile  – bool, disable seccompProfile when false (default true) 
 
 #### Usage
 
 `include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
->>>>>>> origin/main
 
 
 
