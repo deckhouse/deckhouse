@@ -35,21 +35,25 @@ func TestProgressTracker_FindLastCompletedPhase(t *testing.T) {
 
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, nil)
 
-	phase, skipped := progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[0].Phase, "")
+	phase, ok := progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[0].Phase, phases.BootstrapPhases()[1].Phase)
 	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
-	assert.False(t, skipped)
+	assert.False(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[0].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[0].Phase)
 	assert.EqualValues(t, "", phase)
-	assert.True(t, skipped)
+	assert.True(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[1].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[1].Phase)
 	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
-	assert.True(t, skipped)
+	assert.True(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, "")
+	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase, phase)
+	assert.True(t, ok)
+
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase)
 	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, phase)
-	assert.True(t, skipped)
+	assert.True(t, ok)
 }
 
 func TestProgressTracker(t *testing.T) {

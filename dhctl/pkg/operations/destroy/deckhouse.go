@@ -42,7 +42,9 @@ type DeckhouseDestroyer struct {
 	DeckhouseDestroyerOptions
 }
 
-func NewDeckhouseDestroyer(sshClient node.SSHClient, state *State, opts DeckhouseDestroyerOptions) *DeckhouseDestroyer {
+func NewDeckhouseDestroyer(
+	sshClient node.SSHClient, state *State, opts DeckhouseDestroyerOptions,
+) *DeckhouseDestroyer {
 	return &DeckhouseDestroyer{
 		sshClient:                 sshClient,
 		state:                     state,
