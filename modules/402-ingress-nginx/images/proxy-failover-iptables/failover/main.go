@@ -21,7 +21,10 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-iptables/iptables"
@@ -119,11 +122,16 @@ func main() {
 
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
-	done := make(chan bool)
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	for {
 		select {
-		case <-done:
+		case sig := <-sigs:
+			log.Printf("caught %s signal, terminating...", sig)
 			return
+
 		case <-ticker.C:
 			err := loop(iptablesMgr)
 			if err != nil {
