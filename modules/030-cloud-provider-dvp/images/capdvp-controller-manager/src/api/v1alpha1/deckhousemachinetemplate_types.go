@@ -52,6 +52,9 @@ type DeckhouseMachineSpecTemplate struct {
 	// +kubebuilder:default="8Gi"
 	Memory resource.Quantity `json:"memory"`
 
+	// AdditionalDisks holds the list of additional (non-boot) disks to attach to the VM.
+	AdditionalDisks []AdditionalDisks `json:"additionalDisks,omitempty"`
+
 	// RootDiskSize holds the size of the bootable disk.
 	RootDiskSize resource.Quantity `json:"rootDiskSize"`
 
