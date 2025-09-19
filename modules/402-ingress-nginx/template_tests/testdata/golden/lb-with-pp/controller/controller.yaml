@@ -126,6 +126,10 @@ spec:
             cpu: 350m
             ephemeral-storage: 150Mi
             memory: 500Mi
+        securityContext:
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx/body
           name: client-body-temp-path

@@ -18,7 +18,7 @@ git:
   includePaths:
   - '**/*.patch'
   stageDependencies:
-    install:
+    setup:
     - '**/*.patch'
 secrets:
 - id: SOURCE_REPO

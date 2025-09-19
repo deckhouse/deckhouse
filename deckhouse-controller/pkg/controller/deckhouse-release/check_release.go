@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/shell-operator/pkg/metric"
 	registryv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
@@ -52,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -81,7 +81,7 @@ type DeckhouseReleaseFetcherConfig struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	logger *log.Logger
 }
@@ -179,7 +179,7 @@ type DeckhouseReleaseFetcher struct {
 	releaseChannel          string
 	releaseVersionImageHash string
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	logger *log.Logger
 }
@@ -251,6 +251,11 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
+	}
+
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
 	}
 
 	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)

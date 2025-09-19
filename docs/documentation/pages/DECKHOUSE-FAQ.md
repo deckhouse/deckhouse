@@ -632,7 +632,7 @@ Check [releases.deckhouse.io](https://releases.deckhouse.io) for the current sta
    - `--no-modules` — to skip downloading modules packages (module-*.tar);
    - `--no-security-db` — to skip downloading security scanner databases (security.tar);
    - `--since-version=X.Y` — to download all versions of Deckhouse starting from the specified minor version. This parameter will be ignored if a version higher than the version on the Rock Solid updates channel is specified. This parameter cannot be used simultaneously with the `--deckhouse-tag` parameter;
-   - `--deckhouse-tag` — to download only a specific build of Deckhouse (without considering update channels). This parameter cannot be used simultaneously with the `--since-version` parameter;
+   - `--deckhouse-tag` — to download only a specific build of Deckhouse (without considering release channels). This parameter cannot be used simultaneously with the `--since-version` parameter;
    - `--include-module` / `-i` = `name[@Major.Minor]` — to download only a specific whitelist of modules (and optionally their minimal versions). Specify multiple times to whitelist more modules. This flags are ignored if used with `--no-modules`.
    - `--exclude-module` / `-e` = `name` — to skip downloading of a specific blacklisted set of modules. Specify multiple times to blacklist more modules. Ignored if `--no-modules` or `--include-module` are used.
    - `--modules-path-suffix` — to change the suffix of the module repository path in the main Deckhouse repository. By default, the suffix is `/modules`. (for example, the full path to the repository with modules will look like `registry.deckhouse.io/deckhouse/EDITION/modules` with this default).
@@ -1945,13 +1945,13 @@ Deckhouse Kubernetes Platform automatically checks cluster nodes for compliance 
 * Nodes meet the requirements described [in general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri).
 * The server has no custom configurations in `/etc/containerd/conf.d` ([example custom configuration](./modules/node-manager/faq.html#how-to-deploy-custom-containerd-configuration)).
 
-If any of the requirements described in the [general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config` is added to it.
+If any of the requirements described in the [general cluster parameters](./installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Kubernetes Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config=custom` is added to it.
 
 If one of these labels is present, changing the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
 
 ```shell
 kubectl get node -l node.deckhouse.io/containerd-v2-unsupported
-kubectl get node -l node.deckhouse.io/containerd-config
+kubectl get node -l node.deckhouse.io/containerd-config=custom
 ```
 
 Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
@@ -1971,16 +1971,8 @@ You can migrate to containerd v2 in one of the following ways:
 * By specifying the value `ContainerdV2` for the [`defaultCRI`](./installing/configuration.html#clusterconfiguration-defaultcri) parameter in the general cluster parameters. In this case, the container runtime will be changed in all node groups, unless where explicitly defined using the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter.
 * By specifying the value `ContainerdV2` for the [`spec.cri.type`](./modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for a specific node group.
 
-After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
-
-Example:
-
-```shell
-kubectl annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
-```
-
-During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
+After changing parameter values to `ContainerdV2`, Deckhouse Kubernetes Platform will begin sequentially updating the nodes. Updating a node results in the disruption of the workload hosted on it (disruptive update). The node update process is managed by the parameters for applying disruptive updates to the node group ([spec.disruptions.approvalMode](./modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
 
 {% alert level="info" %}
-Under certain conditions, this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
