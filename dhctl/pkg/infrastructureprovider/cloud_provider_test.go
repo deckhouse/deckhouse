@@ -251,6 +251,16 @@ type assertAllFilesCopiedToProviderDirParams struct {
 	modules []string
 }
 
+func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	infraBin := "terraform"
+	if provider.NeedToUseTofu() {
+		infraBin = "opentofu"
+	}
+
+	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
+	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
+}
+
 func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopiedToProviderDirParams, providerParams CloudProviderGetterParams) {
 	provider := params.provider
 	require.False(t, interfaces.IsNil(provider))
@@ -259,13 +269,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	require.NotEmpty(t, params.usedLayout)
 	require.NotEmpty(t, params.versionsContent)
 
-	infraBin := "terraform"
-	if provider.NeedToUseTofu() {
-		infraBin = "opentofu"
-	}
-
-	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
-	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
+	assertInfraUtilCopied(t, provider, providerParams)
 
 	require.NotEmpty(t, params.pluginPaths)
 
@@ -316,8 +320,8 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	}
 }
 
-func TestCloudProviderWithTofuExecutorsGetting(t *testing.T) {
-	testName := "TestCloudProviderWithTofuExecutorsGetting"
+func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
+	testName := "TestCloudProviderWithTofuExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
 		t.Skip(fmt.Sprintf("Skipping %s test", testName))
@@ -358,8 +362,7 @@ terraform {
   }
 }
 `
-
-	assertAllFilesCopiedToProviderDir(t, assertAllFilesCopiedToProviderDirParams{
+	testParams := assertAllFilesCopiedToProviderDirParams{
 		provider:        providerYandex,
 		versionsContent: versionsContent,
 		layouts: []string{
@@ -378,11 +381,36 @@ terraform {
 		pluginPaths: []string{
 			"registry.opentofu.org/yandex-cloud/yandex/0.83.0/linux_amd64/terraform-provider-yandex",
 		},
-	}, params)
+	}
+
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// does not corrupt if multiple executor get
+	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// does not corrupt is another step used
+	anotherStep := infrastructure.MasterNodeStep
+	testParams.usedStep = anotherStep
+	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// all steps presents
+	staticStep := infrastructure.StaticNodeStep
+	testParams.usedStep = staticStep
+	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+	for _, s := range []infrastructure.Step{step, anotherStep, staticStep} {
+		testParams.usedStep = s
+		assertAllFilesCopiedToProviderDir(t, testParams, params)
+	}
 }
 
-func TestCloudProviderWithTerraformExecutorsGetting(t *testing.T) {
-	testName := "TestCloudProviderWithTerraformExecutorsGetting"
+func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
+	testName := "TestCloudProviderWithTerraformExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
 		t.Skip(fmt.Sprintf("Skipping %s test", testName))
@@ -390,7 +418,7 @@ func TestCloudProviderWithTerraformExecutorsGetting(t *testing.T) {
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
-		// testCleanup(t, testName, &params)
+		testCleanup(t, testName, &params)
 	}()
 
 	getter := CloudProviderGetter(params)
@@ -424,7 +452,7 @@ terraform {
 }
 `
 
-	assertAllFilesCopiedToProviderDir(t, assertAllFilesCopiedToProviderDirParams{
+	testParams := assertAllFilesCopiedToProviderDirParams{
 		provider:        providerGCP,
 		versionsContent: versionsContent,
 		layouts: []string{
@@ -442,5 +470,104 @@ terraform {
 		pluginPaths: []string{
 			"registry.terraform.io/hashicorp/google/3.48.0/linux_amd64/terraform-provider-google",
 		},
-	}, params)
+	}
+
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// does not corrupt if multiple executor get
+	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// does not corrupt is another step used
+	anotherStep := infrastructure.MasterNodeStep
+	testParams.usedStep = anotherStep
+	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+
+	// all steps presents
+	staticStep := infrastructure.StaticNodeStep
+	testParams.usedStep = staticStep
+	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
+	require.NoError(t, err)
+	assertAllFilesCopiedToProviderDir(t, testParams, params)
+	for _, s := range []infrastructure.Step{step, anotherStep, staticStep} {
+		testParams.usedStep = s
+		assertAllFilesCopiedToProviderDir(t, testParams, params)
+	}
+}
+
+func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	require.False(t, interfaces.IsNil(provider))
+
+	assertInfraUtilCopied(t, provider, providerParams)
+
+	entries, err := os.ReadDir(provider.RootDir())
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+}
+
+func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
+	testName := "TestCloudProviderWithTofuOutputExecutorGetting"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	getter := CloudProviderGetter(params)
+
+	cfg := &config.MetaConfig{}
+	cfg.ProviderName = yandex.ProviderName
+	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d029"
+	cfg.ClusterPrefix = "test"
+	cfg.Layout = yandexTestLayout
+
+	providerYandex, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
+	require.True(t, providerYandex.NeedToUseTofu())
+	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+
+	_, err = providerYandex.OutputExecutor(context.TODO(), params.Logger)
+	require.NoError(t, err)
+
+	assertAllFilesCopiedToProviderDirForOutputExecutor(t, providerYandex, params)
+}
+
+func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
+	testName := "TestCloudProviderWithTerraformOutputExecutorGetting"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	getter := CloudProviderGetter(params)
+
+	cfg := &config.MetaConfig{}
+	cfg.ProviderName = gcp.ProviderName
+	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d119"
+	cfg.ClusterPrefix = "test"
+	cfg.Layout = gcpTestLayout
+
+	providerGCP, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	require.IsType(t, &cloud.Provider{}, providerGCP, "provider should be a cloud.Provider for gcp cluster")
+	require.False(t, providerGCP.NeedToUseTofu())
+	require.Equal(t, providerGCP.Name(), gcp.ProviderName)
+
+	_, err = providerGCP.OutputExecutor(context.TODO(), params.Logger)
+	require.NoError(t, err)
+
+	assertAllFilesCopiedToProviderDirForOutputExecutor(t, providerGCP, params)
 }
