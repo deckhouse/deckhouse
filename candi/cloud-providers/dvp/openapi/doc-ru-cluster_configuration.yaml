@@ -121,6 +121,28 @@ apiVersions:
                           description: |
                             Имя образа, который будет использоваться для создания корневого диска.
                             > Для установки требуются образы ОС Linux с предустановленным cloud-init.
+                additionalDisks:
+                  description: |
+                    Параметры дополнительных дисков виртуальной машины.
+
+                    Каждый элемент массива описывает отдельный дополнительный диск.
+                    Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                  type: array
+                  items:
+                    type: object
+                    required: [size, storageClass]
+                    properties:
+                      size:
+                        type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        description: |
+                          Размер дополнительного диска.
+                        example: 10Gi
+                      storageClass:
+                        type: string
+                        description: |
+                          Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                        example: ceph-pool-r2-csi-rbd-immediate
                 etcdDisk:
                   description: |
                     Указание настроек для диска данных etcd.
@@ -180,6 +202,28 @@ apiVersions:
                 properties:
                   virtualMachine: *instanceClassVirtualMachine
                   rootDisk: *instanceClassRootDisk
+                  additionalDisks:
+                    description: |
+                      Параметры дополнительных дисков виртуальной машины.
+
+                      Каждый элемент массива описывает отдельный дополнительный диск.
+                      Для каждого диска необходимо задать параметры `size` и `storageClass`.
+                    type: array
+                    items:
+                      type: object
+                      required: [size, storageClass]
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Размер дополнительного диска.
+                          example: 10Gi
+                        storageClass:
+                          type: string
+                          description: |
+                            Имя существующего StorageClass, который будет использоваться для создания дополнительного диска.
+                          example: ceph-pool-r2-csi-rbd-immediate
         layout:
           description: |
             Название схемы размещения.
