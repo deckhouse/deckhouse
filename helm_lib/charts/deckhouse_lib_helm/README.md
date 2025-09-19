@@ -4,6 +4,8 @@
 
 | Table of contents |
 |---|
+| **Admission Client Ca** |
+| [helm_lib_admission_webhook_client_ca_certificate](#helm_lib_admission_webhook_client_ca_certificate) |
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
@@ -113,6 +115,22 @@
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
+
+## Admission Client Ca
+
+### helm_lib_admission_webhook_client_ca_certificate
+
+ Renders configmap with admission webhook client CA certificate which uses to verify the AdmissionReview requests. 
+
+#### Usage
+
+`{{ include "helm_lib_admission_webhook_client_ca_certificate" (list . "namespace") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Namespace where CA configmap will be created  
 
 ## Api Version And Kind
 
@@ -637,10 +655,11 @@ list:
  .ro   – bool, read-only root FS (default true) 
  .caps – []string, capabilities.add (default empty) 
  .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .seccompProfile  – bool, disable seccompProfile when false (default true) 
 
 #### Usage
 
-`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001) `
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
 
 
 

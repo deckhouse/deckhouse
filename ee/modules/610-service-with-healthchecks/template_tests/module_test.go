@@ -65,11 +65,14 @@ debug: true
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
 - args:
@@ -115,11 +118,14 @@ debug: true
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
 `
