@@ -18,6 +18,7 @@ events {
 http {
   access_log off;
   client_body_temp_path /opt/nginx-static/writable/client_temp 1 2;
+  proxy_temp_path /opt/nginx-static/writable/proxy_temp 1 2;
 
   server {
     server_name _;
