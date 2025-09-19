@@ -205,9 +205,13 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ##@ Generate
 
+## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate -v
+generate: generate-kubernetes generate-tools
+
+.PHONY: generate-tools
+generate-tools:
+	cd tools; go generate -v; cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
