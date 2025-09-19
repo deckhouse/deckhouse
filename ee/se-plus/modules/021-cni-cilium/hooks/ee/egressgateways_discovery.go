@@ -136,6 +136,7 @@ func applyEgressGatewayInstanceFilter(obj *unstructured.Unstructured) (go_hook.F
 
 	for i := range egi.Status.Conditions {
 		egi.Status.Conditions[i].LastHeartbeatTime = metav1.Time{}
+		egi.Status.Conditions[i].LastTransitionTime = metav1.Time{}
 	}
 
 	return EgressGatewayInstanceInfo{
@@ -345,16 +346,18 @@ func handleEgressGateways(ctx context.Context, input *go_hook.HookInput) error {
 
 		egState.DesiredActiveNode = egState.electDesiredActiveNode()
 
-		var isNodeFoundInCurrentActiveNodes bool
-		for _, currentActiveNode := range egState.CurrentActiveNodes {
-			if currentActiveNode == egState.DesiredActiveNode {
-				isNodeFoundInCurrentActiveNodes = true
-			} else {
-				nodesToUnlabel[currentActiveNode] = appendToSliceUniqString(nodesToUnlabel[currentActiveNode], activeNodeLabelPrefix+egName)
+		if egState.DesiredActiveNode != "" {
+			var isNodeFoundInCurrentActiveNodes bool
+			for _, currentActiveNode := range egState.CurrentActiveNodes {
+				if currentActiveNode == egState.DesiredActiveNode {
+					isNodeFoundInCurrentActiveNodes = true
+				} else {
+					nodesToUnlabel[currentActiveNode] = appendToSliceUniqString(nodesToUnlabel[currentActiveNode], activeNodeLabelPrefix+egName)
+				}
 			}
-		}
-		if !isNodeFoundInCurrentActiveNodes && egState.DesiredActiveNode != "" {
-			nodesToLabel[egState.DesiredActiveNode] = appendToSliceUniqString(nodesToLabel[egState.DesiredActiveNode], activeNodeLabelPrefix+egName)
+			if !isNodeFoundInCurrentActiveNodes {
+				nodesToLabel[egState.DesiredActiveNode] = appendToSliceUniqString(nodesToLabel[egState.DesiredActiveNode], activeNodeLabelPrefix+egName)
+			}
 		}
 
 		eg := egressInternalMap[egName]
@@ -486,7 +489,9 @@ func removeLabels(input *go_hook.HookInput, labels []string, apiVersion string, 
 
 func processAddingLabels(input *go_hook.HookInput, nodeToLabel map[string][]string) {
 	for keyName, labels := range nodeToLabel {
-		input.PatchCollector.PatchWithMutatingFunc(appendLabels(labels), "v1", "Node", "", keyName)
+		if len(labels) > 0 {
+			input.PatchCollector.PatchWithMutatingFunc(appendLabels(labels), "v1", "Node", "", keyName)
+		}
 	}
 }
 

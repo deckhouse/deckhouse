@@ -83,7 +83,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "metrics_exporter_resources" . | nindent 12 }}
+            {{- include "metrics-exporter_resources" . | nindent 12 }}
   {{- end }}
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
