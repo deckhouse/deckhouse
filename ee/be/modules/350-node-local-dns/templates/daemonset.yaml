@@ -66,7 +66,7 @@ spec:
       automountServiceAccountToken: true
       initContainers:
       - name: sbin-iptables
-        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
+        image: {{ include "helm_lib_module_common_image" (list . "init") }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
           readOnlyRootFilesystem: true
         imagePullPolicy: IfNotPresent
@@ -90,7 +90,7 @@ spec:
             mountPath: /tmp
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       containers:
       - name: coredns
         {{- /*
