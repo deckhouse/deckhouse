@@ -85,13 +85,13 @@ import:
   add: /opentofu/opentofu
   to: /dhctl-tests/bin/opentofu
   before: setup
-- image: {{ $.TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ $.TF.yandex.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.opentofu.org/{{ $.TF.yandex.namespace }}/{{ $.TF.yandex.type }}/{{ $$.TF.yandex.version }}/linux_amd64/{{ $.TF.yandex.destinationBinary }}
+- image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.yandex.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
   before: setup
-- image: {{ $.TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ $.TF.gcp.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.terraform.io/{{ $.TF.gcp.namespace }}/{{ $.TF.gcp.type }}/{{ $$.TF.gcp.version }}/linux_amd64/{{ $.TF.gcp.destinationBinary }}
+- image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.gcp.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
   before: setup
 - image: images-digests
   add: /images_digests.json
