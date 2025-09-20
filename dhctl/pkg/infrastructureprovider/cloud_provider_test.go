@@ -697,10 +697,11 @@ func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParam
 }
 
 type executorTestInitParams struct {
-	provider infrastructure.CloudProvider
-	step     infrastructure.Step
-	params   CloudProviderGetterParams
-	layout   string
+	provider   infrastructure.CloudProvider
+	step       infrastructure.Step
+	params     CloudProviderGetterParams
+	layout     string
+	pluginsDir []string
 }
 
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
@@ -709,15 +710,23 @@ func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T,
 	require.False(t, interfaces.IsNil(params.provider))
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.pluginsDir)
 	require.NotNil(t, params.params.FSDIParams)
 
 	tmp := filepath.Join(params.provider.RootDir(), "tf_dhctl")
 
 	assertIsNotEmptyDir(t, tmp)
-	assertPluginsPresent(t, path.Join(tmp, "providers"), yandexPluginsDir, params.params.FSDIParams.PluginsDir)
+	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)
 	assertFileExists(t, path.Join(tmp, "plugin_path"))
-	assertLockFilePresent(t, path.Join(getTestStepDir(params.provider.RootDir(), params.step, params.layout)))
+
+	lockFileDir := params.provider.RootDir()
+	if params.provider.NeedToUseTofu() {
+		lockFileDir = getTestStepDir(params.provider.RootDir(), params.step, params.layout)
+	}
+
+	assertLockFilePresent(t, lockFileDir)
 	assertDirsNotContainsLockFile(t, params.params)
+	assertDirsNotContainsFileInFSSources(t, params.params, "lock.json")
 }
 
 func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode int, params CloudProviderGetterParams, err error) {
@@ -753,9 +762,9 @@ func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastruct
 
 	planParams := infrastructure.PlanOpts{
 		Destroy:          false,
-		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s", params.step)),
-		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s", params.step)),
-		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s", params.step)),
+		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s.tfstate", params.step)),
+		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s.tfvars.json", params.step)),
+		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s.tfplan", params.step)),
 		DetailedExitCode: true,
 	}
 
@@ -775,6 +784,7 @@ type execInitAndPlanResultsParams struct {
 	params         CloudProviderGetterParams
 	configProvider func() []byte
 	layout         string
+	pluginsDir     []string
 }
 
 func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
@@ -784,6 +794,7 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
+	require.NotNil(t, params.pluginsDir)
 
 	executor, err := params.provider.Executor(context.TODO(), params.step, params.params.Logger)
 	require.NoError(t, err)
@@ -791,10 +802,11 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 	err = executor.Init(context.TODO())
 	require.NoError(t, err)
 	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
-		provider: params.provider,
-		step:     params.step,
-		params:   params.params,
-		layout:   params.layout,
+		provider:   params.provider,
+		step:       params.step,
+		params:     params.params,
+		layout:     params.layout,
+		pluginsDir: params.pluginsDir,
 	})
 
 	planParams := getTestPlanParams(t, getTestParamsPlanParams{
@@ -840,7 +852,8 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.MarshalConfig()
 		},
-		layout: yandexTestLayout,
+		layout:     yandexTestLayout,
+		pluginsDir: yandexPluginsDir,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -848,9 +861,10 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		step:     infrastructure.MasterNodeStep,
 		params:   params,
 		configProvider: func() []byte {
-			return cfg.MarshalConfig()
+			return cfg.NodeGroupConfig("master", 0, "")
 		},
-		layout: yandexTestLayout,
+		layout:     yandexTestLayout,
+		pluginsDir: yandexPluginsDir,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -860,6 +874,67 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.NodeGroupConfig("worker", 0, "")
 		},
-		layout: yandexTestLayout,
+		layout:     yandexTestLayout,
+		pluginsDir: yandexPluginsDir,
+	})
+}
+
+func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
+	testName := "TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	cfg := provideTestMetaConfig(t, testProvideMetaConfigParams{
+		env:      "GCP_CLOUD_CONFIG",
+		testName: testName,
+		layout:   gcpTestLayout,
+		uuid:     "e0bcfdc2-95a1-11f0-987b-234a7238ed8c",
+		logger:   params.Logger,
+	})
+
+	getter := CloudProviderGetter(params)
+
+	providerGCP, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerGCP,
+		step:     infrastructure.BaseInfraStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.MarshalConfig()
+		},
+		layout:     gcpTestLayout,
+		pluginsDir: gcpPluginsDir,
+	})
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerGCP,
+		step:     infrastructure.MasterNodeStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.NodeGroupConfig("master", 0, "")
+		},
+		layout:     gcpTestLayout,
+		pluginsDir: gcpPluginsDir,
+	})
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerGCP,
+		step:     infrastructure.StaticNodeStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.NodeGroupConfig("worker", 0, "")
+		},
+		layout:     gcpTestLayout,
+		pluginsDir: gcpPluginsDir,
 	})
 }
