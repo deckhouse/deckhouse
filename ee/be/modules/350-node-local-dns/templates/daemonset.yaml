@@ -64,12 +64,40 @@ spec:
 {{- end }}
       serviceAccountName: d8-node-local-dns
       automountServiceAccountToken: true
+      initContainers:
+      - name: sbin-iptables
+        image: {{ include "helm_lib_module_common_image" (list . "init") }}
+        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore \
+            iptables-legacy iptables-legacy-save iptables-legacy-restore \
+            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
+            iptables-nft iptables-nft-save iptables-nft-restore \
+            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+              ln -f -s /sbin/iptables-wrapper "/tmp/${cmd}"
+          done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+        volumeMounts:
+          - name: sbin-iptables
+            mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       containers:
       - name: coredns
         {{- /*
           UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
         */}}
         securityContext:
+          readOnlyRootFilesystem: true
           allowPrivilegeEscalation: true
           capabilities:
             add:
@@ -134,6 +162,8 @@ spec:
           mountPath: /etc/coredns
         - name: tmp
           mountPath: /tmp
+        - mountPath: /usr/sbin
+          name: sbin-iptables
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -144,6 +174,7 @@ spec:
       - name: iptables-loop
         # containers messing with iptables and iptables-wrapper have to be run as root because iptables-legacy binary requires to be run as root (setsuid isn't an option).
         {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 8 }}
+          readOnlyRootFilesystem: true
           capabilities:
             add:
             - NET_RAW
@@ -158,6 +189,8 @@ spec:
           readOnly: false
         - name: tmp
           mountPath: /tmp
+        - mountPath: /usr/sbin
+          name: sbin-iptables
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -220,6 +253,8 @@ spec:
         configMap:
           name: node-local-dns
       - name: tmp
+        emptyDir: {}
+      - name: sbin-iptables
         emptyDir: {}
       imagePullSecrets:
       - name: deckhouse-registry

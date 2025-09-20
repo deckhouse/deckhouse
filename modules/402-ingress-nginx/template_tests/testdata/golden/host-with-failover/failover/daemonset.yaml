@@ -89,6 +89,7 @@ spec:
             - NET_RAW
             - NET_ADMIN
             - NET_BIND_SERVICE
+          readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
@@ -96,6 +97,21 @@ spec:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
+        - mountPath: /opt/nginx-static/conf/nginx.conf
+          name: write-files
+          subPath: nginx.conf
+        - mountPath: /opt/nginx-static/logs
+          name: tmp-nginx
+        - mountPath: /opt/nginx-static/client_body_temp
+          name: tmp-nginx
+        - mountPath: /opt/nginx-static/proxy_temp
+          name: tmp-nginx
+        - mountPath: /opt/nginx-static/fastcgi_temp
+          name: tmp-nginx
+        - mountPath: /opt/nginx-static/uwsgi_temp
+          name: tmp-nginx
+        - mountPath: /opt/nginx-static/scgi_temp
+          name: tmp-nginx
       - env:
         - name: NODE_NAME
           valueFrom:
@@ -117,6 +133,7 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+          readOnlyRootFilesystem: true
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
@@ -124,6 +141,8 @@ spec:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
+        - mountPath: /usr/sbin
+          name: sbin-iptables
       - args:
         - -web.listen-address=127.0.0.1:10354
         - -nginx.scrape-uri=http://127.0.0.1:10253/nginx_status
@@ -143,6 +162,7 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
+          readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
@@ -195,7 +215,58 @@ spec:
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
+      initContainers:
+      - command:
+        - /bin/touch
+        - /tmp/nginx.conf
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: touch-files
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+        volumeMounts:
+        - mountPath: /tmp
+          name: write-files
+      - command:
+        - sh
+        - -ec
+        - |
+          for cmd in \
+            iptables iptables-save iptables-restore \
+            ip6tables ip6tables-save ip6tables-restore \
+            iptables-legacy iptables-legacy-save iptables-legacy-restore \
+            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
+            iptables-nft iptables-nft-save iptables-nft-restore \
+            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
+              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+          done
+          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
+          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+        image: registry.example.com@imageHash-common-init
+        imagePullPolicy: IfNotPresent
+        name: sbin-iptables
+        resources:
+          requests:
+            ephemeral-storage: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+        volumeMounts:
+        - mountPath: /tmp
+          name: sbin-iptables
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsGroup: 64535
+        runAsNonRoot: true
+        runAsUser: 64535
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 300
       tolerations:
@@ -216,6 +287,12 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
         name: xtables-lock
+      - emptyDir: {}
+        name: write-files
+      - emptyDir: {}
+        name: tmp-nginx
+      - emptyDir: {}
+        name: sbin-iptables
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

@@ -14,6 +14,8 @@ import:
     add: /bin/ps
     to: /usr/bin/ps
     before: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/usr/local/bin/node-collector" ]

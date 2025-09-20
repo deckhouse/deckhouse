@@ -1,0 +1,4 @@
+dirs:
+- /usr/sbin
+files:
+- /run/xtables.lock
