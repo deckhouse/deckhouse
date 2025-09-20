@@ -23,7 +23,6 @@ git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    env: {"PATH": "/usr/sbin:/sbin:/"}
     entrypoint: [ "/coredns" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact

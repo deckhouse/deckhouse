@@ -81,7 +81,7 @@ spec:
             ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
             iptables-nft iptables-nft-save iptables-nft-restore \
             ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
-              ln -f -s /iptables-wrapper "/tmp/${cmd}"
+              ln -f -s /sbin/iptables-wrapper "/tmp/${cmd}"
           done
           ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
           ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi

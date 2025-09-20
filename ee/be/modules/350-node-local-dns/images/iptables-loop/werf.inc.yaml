@@ -23,7 +23,6 @@ git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    env: {"PATH": "/usr/sbin:/sbin:/"}
     entrypoint: [ "/iptables-loop" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
