@@ -135,6 +135,8 @@ shell:
   - git clone --depth 1 --branch {{ $istioProxyDepsRev }} {{ .SOURCE_REPO }}/istio/envoy-build-deps.git /tmp/bazel-deps
   - rm -rf /tmp/bazel-deps/.git
   #
+  - export GOROOT="/usr/local/go" GOPATH="/go"
+  - export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export BAZEL_VERSION="6.3.2" USE_BAZEL_VERSION="6.3.2"

@@ -81,6 +81,8 @@ shell:
   - chmod -R a+w /tmp
   - chown -R 1337:1337 /cilium/proxy
   setup:
+  - export GOROOT="/usr/local/go" GOPATH="/go"
+  - export PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /cilium/proxy
