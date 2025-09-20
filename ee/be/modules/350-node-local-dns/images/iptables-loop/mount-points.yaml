@@ -1,5 +1,4 @@
 dirs:
-- /etc/coredns
 - /usr/sbin
 files:
 - /run/xtables.lock
