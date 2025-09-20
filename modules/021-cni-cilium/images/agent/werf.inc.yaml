@@ -495,8 +495,8 @@ shell:
       done
     done
   # additional relocate from cilium
-  - mkdir -p /relocate/var/lib/cilium
-  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium
+  - mkdir -p /relocate/var/lib/{cilium,cilium-rw}
+  - cp -a /var/lib/cilium/bpf /relocate/var/lib/cilium-rw # for rw mode
   - echo ". /etc/bashrc.d/bash_completion.sh" >> /root/.bashrc
   - mkdir -p /relocate/root && cp -a /root/.bashrc /relocate/root
   # additional relocate for fix locale
