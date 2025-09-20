@@ -153,15 +153,6 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
 }
 
-func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, providerName string, useTofu bool) {
-	t.Helper()
-
-	require.False(t, interfaces.IsNil(provider))
-	require.IsType(t, &cloud.Provider{}, provider, "provider should be a cloud.Provider for", providerName)
-	require.Equal(t, provider.NeedToUseTofu(), useTofu)
-	require.Equal(t, provider.Name(), providerName)
-}
-
 func TestCloudProviderGet(t *testing.T) {
 	testName := "TestCloudProviderGet"
 
@@ -214,164 +205,6 @@ func TestCloudProviderGet(t *testing.T) {
 	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 	require.True(t, strings.HasSuffix(providerGCP.RootDir(), "infra/72ce5a172c9b8efa"))
 	require.NotEqual(t, providerGCP.RootDir(), providerYandex.RootDir())
-}
-
-func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
-	t.Helper()
-
-	stat, err := os.Lstat(destination)
-	require.NoError(t, err, destination)
-	require.True(t, stat.Mode()&os.ModeSymlink != 0, destination)
-
-	realPath, err := os.Readlink(destination)
-	require.NoError(t, err, destination)
-	require.Equal(t, source, realPath)
-}
-
-func assertFileExists(t *testing.T, filePath string) {
-	t.Helper()
-
-	stat, err := os.Stat(filePath)
-	require.NoError(t, err, filePath)
-
-	require.True(t, stat.Mode()&os.ModeSymlink == 0, filePath)
-	require.False(t, stat.IsDir(), filePath)
-}
-
-func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
-	t.Helper()
-
-	assertFileExists(t, filePath)
-
-	content, err := os.ReadFile(filePath)
-	require.NoError(t, err, filePath)
-	require.True(t, len(content) > 0, filePath)
-}
-
-func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
-	t.Helper()
-
-	assertFileExists(t, filePath)
-
-	content, err := os.ReadFile(filePath)
-	require.NoError(t, err, filePath)
-
-	require.Equal(t, expectedContent, string(content), filePath)
-}
-
-func assertIsNotEmptyDir(t *testing.T, dirPath string) {
-	t.Helper()
-
-	stat, err := os.Stat(dirPath)
-	require.NoError(t, err, dirPath)
-	require.True(t, stat.IsDir(), dirPath)
-
-	entries, err := os.ReadDir(dirPath)
-	require.NoError(t, err, dirPath)
-	require.True(t, len(entries) > 0, dirPath)
-}
-
-func assertFileNotExists(t *testing.T, path string) {
-	t.Helper()
-
-	_, err := os.Stat(path)
-	require.Error(t, err, path)
-	require.True(t, os.IsNotExist(err), path)
-}
-
-type assertAllFilesCopiedToProviderDirParams struct {
-	provider infrastructure.CloudProvider
-
-	versionsContent string
-	usedLayout      string
-	usedStep        infrastructure.Step
-
-	pluginPaths []string
-
-	layouts []string
-	modules []string
-}
-
-func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
-	t.Helper()
-
-	infraBin := "terraform"
-	if provider.NeedToUseTofu() {
-		infraBin = "opentofu"
-	}
-
-	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
-	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
-}
-
-func assertPluginsPresent(t *testing.T, root string, pluginPaths []string, source string) {
-	t.Helper()
-
-	for _, pluginPath := range pluginPaths {
-		destinationPath := filepath.Join(root, pluginPath)
-		sourcePath := filepath.Join(source, pluginPath)
-		assertFileExistsAndSymlink(t, sourcePath, destinationPath)
-	}
-}
-
-func getTestStepDir(root string, step infrastructure.Step, layout string) string {
-	return filepath.Join(
-		root,
-		modulesRootDir,
-		layoutsRootDir,
-		layout,
-		string(step),
-	)
-}
-
-func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopiedToProviderDirParams, providerParams CloudProviderGetterParams) {
-	t.Helper()
-
-	provider := params.provider
-	require.False(t, interfaces.IsNil(provider))
-
-	require.NotEmpty(t, params.usedStep)
-	require.NotEmpty(t, params.usedLayout)
-	require.NotEmpty(t, params.versionsContent)
-
-	assertInfraUtilCopied(t, provider, providerParams)
-
-	require.NotEmpty(t, params.pluginPaths)
-
-	assertPluginsPresent(t, filepath.Join(provider.RootDir(), "plugins"), params.pluginPaths, providerParams.FSDIParams.PluginsDir)
-
-	const versionsFile = "versions.tf"
-
-	versionsFileWithContentPath := filepath.Join(provider.RootDir(), versionsFile)
-	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
-
-	assertFileNotExists(t, filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, versionsFile))
-
-	require.NotEmpty(t, params.layouts)
-
-	for _, layout := range params.layouts {
-		layoutDir := filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, layout)
-		assertIsNotEmptyDir(t, layoutDir)
-	}
-
-	versionsFileForStep := filepath.Join(
-		getTestStepDir(provider.RootDir(), params.usedStep, params.usedLayout),
-		versionsFile,
-	)
-
-	assertFileExistsAndSymlink(t, versionsFileWithContentPath, versionsFileForStep)
-
-	modulesDir := filepath.Join(provider.RootDir(), modulesRootDir, "terraform-modules")
-	assertIsNotEmptyDir(t, modulesDir)
-	assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(modulesDir, versionsFile))
-
-	require.NotEmpty(t, params.modules)
-
-	for _, module := range params.modules {
-		moduleDir := filepath.Join(modulesDir, module)
-		assertIsNotEmptyDir(t, moduleDir)
-		assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(moduleDir, versionsFile))
-	}
 }
 
 func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
@@ -542,18 +375,6 @@ terraform {
 		testParams.usedStep = s
 		assertAllFilesCopiedToProviderDir(t, testParams, params)
 	}
-}
-
-func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
-	t.Helper()
-
-	require.False(t, interfaces.IsNil(provider))
-
-	assertInfraUtilCopied(t, provider, providerParams)
-
-	entries, err := os.ReadDir(provider.RootDir())
-	require.NoError(t, err)
-	require.Len(t, entries, 1)
 }
 
 func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
@@ -937,4 +758,183 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		layout:     gcpTestLayout,
 		pluginsDir: gcpPluginsDir,
 	})
+}
+
+func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, providerName string, useTofu bool) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(provider))
+	require.IsType(t, &cloud.Provider{}, provider, "provider should be a cloud.Provider for", providerName)
+	require.Equal(t, provider.NeedToUseTofu(), useTofu)
+	require.Equal(t, provider.Name(), providerName)
+}
+
+func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+	t.Helper()
+
+	stat, err := os.Lstat(destination)
+	require.NoError(t, err, destination)
+	require.True(t, stat.Mode()&os.ModeSymlink != 0, destination)
+
+	realPath, err := os.Readlink(destination)
+	require.NoError(t, err, destination)
+	require.Equal(t, source, realPath)
+}
+
+func assertFileExists(t *testing.T, filePath string) {
+	t.Helper()
+
+	stat, err := os.Stat(filePath)
+	require.NoError(t, err, filePath)
+
+	require.True(t, stat.Mode()&os.ModeSymlink == 0, filePath)
+	require.False(t, stat.IsDir(), filePath)
+}
+
+func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
+	t.Helper()
+
+	assertFileExists(t, filePath)
+
+	content, err := os.ReadFile(filePath)
+	require.NoError(t, err, filePath)
+	require.True(t, len(content) > 0, filePath)
+}
+
+func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+	t.Helper()
+
+	assertFileExists(t, filePath)
+
+	content, err := os.ReadFile(filePath)
+	require.NoError(t, err, filePath)
+
+	require.Equal(t, expectedContent, string(content), filePath)
+}
+
+func assertIsNotEmptyDir(t *testing.T, dirPath string) {
+	t.Helper()
+
+	stat, err := os.Stat(dirPath)
+	require.NoError(t, err, dirPath)
+	require.True(t, stat.IsDir(), dirPath)
+
+	entries, err := os.ReadDir(dirPath)
+	require.NoError(t, err, dirPath)
+	require.True(t, len(entries) > 0, dirPath)
+}
+
+func assertFileNotExists(t *testing.T, path string) {
+	t.Helper()
+
+	_, err := os.Stat(path)
+	require.Error(t, err, path)
+	require.True(t, os.IsNotExist(err), path)
+}
+
+type assertAllFilesCopiedToProviderDirParams struct {
+	provider infrastructure.CloudProvider
+
+	versionsContent string
+	usedLayout      string
+	usedStep        infrastructure.Step
+
+	pluginPaths []string
+
+	layouts []string
+	modules []string
+}
+
+func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
+	infraBin := "terraform"
+	if provider.NeedToUseTofu() {
+		infraBin = "opentofu"
+	}
+
+	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
+	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
+}
+
+func assertPluginsPresent(t *testing.T, root string, pluginPaths []string, source string) {
+	t.Helper()
+
+	for _, pluginPath := range pluginPaths {
+		destinationPath := filepath.Join(root, pluginPath)
+		sourcePath := filepath.Join(source, pluginPath)
+		assertFileExistsAndSymlink(t, sourcePath, destinationPath)
+	}
+}
+
+func getTestStepDir(root string, step infrastructure.Step, layout string) string {
+	return filepath.Join(
+		root,
+		modulesRootDir,
+		layoutsRootDir,
+		layout,
+		string(step),
+	)
+}
+
+func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopiedToProviderDirParams, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
+	provider := params.provider
+	require.False(t, interfaces.IsNil(provider))
+
+	require.NotEmpty(t, params.usedStep)
+	require.NotEmpty(t, params.usedLayout)
+	require.NotEmpty(t, params.versionsContent)
+
+	assertInfraUtilCopied(t, provider, providerParams)
+
+	require.NotEmpty(t, params.pluginPaths)
+
+	assertPluginsPresent(t, filepath.Join(provider.RootDir(), "plugins"), params.pluginPaths, providerParams.FSDIParams.PluginsDir)
+
+	const versionsFile = "versions.tf"
+
+	versionsFileWithContentPath := filepath.Join(provider.RootDir(), versionsFile)
+	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
+
+	assertFileNotExists(t, filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, versionsFile))
+
+	require.NotEmpty(t, params.layouts)
+
+	for _, layout := range params.layouts {
+		layoutDir := filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, layout)
+		assertIsNotEmptyDir(t, layoutDir)
+	}
+
+	versionsFileForStep := filepath.Join(
+		getTestStepDir(provider.RootDir(), params.usedStep, params.usedLayout),
+		versionsFile,
+	)
+
+	assertFileExistsAndSymlink(t, versionsFileWithContentPath, versionsFileForStep)
+
+	modulesDir := filepath.Join(provider.RootDir(), modulesRootDir, "terraform-modules")
+	assertIsNotEmptyDir(t, modulesDir)
+	assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(modulesDir, versionsFile))
+
+	require.NotEmpty(t, params.modules)
+
+	for _, module := range params.modules {
+		moduleDir := filepath.Join(modulesDir, module)
+		assertIsNotEmptyDir(t, moduleDir)
+		assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(moduleDir, versionsFile))
+	}
+}
+
+func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(provider))
+
+	assertInfraUtilCopied(t, provider, providerParams)
+
+	entries, err := os.ReadDir(provider.RootDir())
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
 }
