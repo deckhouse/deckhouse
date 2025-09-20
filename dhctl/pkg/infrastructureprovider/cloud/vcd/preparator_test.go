@@ -88,10 +88,25 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 }
 
 func TestValidateMetaConfig(t *testing.T) {
+	const validServer = "https://myserver:8080/api"
+
+	setServer := func(t *testing.T, server string, cfg *config.MetaConfig) {
+		p, err := json.Marshal(providerConfig{
+			Server: server,
+		})
+		require.NoError(t, err)
+
+		cfg.ProviderClusterConfig = map[string]json.RawMessage{
+			"provider": p,
+		}
+	}
+
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
 		preparator := newTestPreparator(true, testGetLegacyAPI)
 
 		cfg := &config.MetaConfig{}
+
+		setServer(t, validServer, cfg)
 
 		cfg.ClusterPrefix = prefix
 		err := preparator.Validate(context.TODO(), cfg)
@@ -113,6 +128,15 @@ func TestValidateMetaConfig(t *testing.T) {
 	cfg := &config.MetaConfig{}
 
 	cfg.ClusterPrefix = ""
+	setServer(t, validServer, cfg)
 	err := preparator.Validate(context.TODO(), cfg)
 	require.NoError(t, err)
+
+	// invalid server
+	cfgInvalid := &config.MetaConfig{}
+
+	cfgInvalid.ClusterPrefix = "test"
+	setServer(t, "https://myserver:8080/api/", cfg)
+	err = preparator.Validate(context.TODO(), cfg)
+	require.Error(t, err)
 }

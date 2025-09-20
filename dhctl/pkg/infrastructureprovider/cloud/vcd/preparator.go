@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
@@ -53,6 +54,20 @@ func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.Met
 		if err != nil {
 			return fmt.Errorf("%v for provider %s", err, ProviderName)
 		}
+	}
+
+	var providerConfiguration providerConfig
+	if err := json.Unmarshal(metaConfig.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
+		return fmt.Errorf("unable to unmarshal vcd provider configuration: %v", err)
+	}
+
+	server := strings.TrimSpace(providerConfiguration.Server)
+	if server == "" {
+		return nil
+	}
+
+	if strings.HasSuffix(server, "/") {
+		return fmt.Errorf("provider.server must not end with a slash '/'")
 	}
 
 	return nil
