@@ -159,7 +159,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 
 	p.logger.LogDebugF("Got step dir %s for %s. Getting version content\n", stepDir, p.String())
 
-	vContentProvider := getVersionContentProvider(p.params.Settings, p.name)
+	vContentProvider := getVersionContentProvider(p.params.Settings, p.name, p.logger)
 	versionContent, err := vContentProvider(p.params.Settings, p.metaConfig, p.logger)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get version content for %s: %w", p.String(), err)

@@ -31,14 +31,17 @@ var versionContentProviders = map[string]versionContentProvider{
 
 var contentProviderMutex sync.Mutex
 
-func getVersionContentProvider(s settings.ProviderSettings, provider string) versionContentProvider {
+func getVersionContentProvider(s settings.ProviderSettings, provider string, logger log.Logger) versionContentProvider {
 	contentProviderMutex.Lock()
 	defer contentProviderMutex.Unlock()
 
 	choicer, ok := versionContentProviders[provider]
 	if ok {
+		logger.LogDebugF("Found custom version choicer for provider %s\n", provider)
 		return choicer
 	}
+
+	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
 
 	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, error) {
 		if len(settings.Versions()) != 1 {

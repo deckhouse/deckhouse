@@ -24,7 +24,7 @@ const template = `
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
-    kubernetes = {
+    %s = {
       source  = "%s"
       version = ">= %s"
     }
@@ -34,5 +34,5 @@ terraform {
 
 func GetVersionContent(settings settings.ProviderSettings, version string) []byte {
 	source := settings.Namespace() + "/" + settings.Type()
-	return []byte(fmt.Sprintf(template, source, version))
+	return []byte(fmt.Sprintf(template, settings.Type(), source, version))
 }

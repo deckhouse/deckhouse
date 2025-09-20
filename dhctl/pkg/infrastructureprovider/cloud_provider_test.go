@@ -40,6 +40,18 @@ import (
 const (
 	yandexTestLayout = "without-nat"
 	gcpTestLayout    = "without-nat"
+	modulesRootDir   = "modules"
+	layoutsRootDir   = "layouts"
+	lockFile         = ".terraform.lock.hcl"
+)
+
+var (
+	yandexPluginsDir = []string{
+		"registry.opentofu.org/yandex-cloud/yandex/0.83.0/linux_amd64/terraform-provider-yandex",
+	}
+	gcpPluginsDir = []string{
+		"registry.terraform.io/hashicorp/google/3.48.0/linux_amd64/terraform-provider-google",
+	}
 )
 
 func getTestFSDIParams() *fs.DIParams {
@@ -141,6 +153,15 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
 }
 
+func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, providerName string, useTofu bool) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(provider))
+	require.IsType(t, &cloud.Provider{}, provider, "provider should be a cloud.Provider for", providerName)
+	require.Equal(t, provider.NeedToUseTofu(), useTofu)
+	require.Equal(t, provider.Name(), providerName)
+}
+
 func TestCloudProviderGet(t *testing.T) {
 	testName := "TestCloudProviderGet"
 
@@ -171,9 +192,7 @@ func TestCloudProviderGet(t *testing.T) {
 	providerYandex, err := getter(context.TODO(), getMetaConfig(t, yandex.ProviderName, yandexTestLayout))
 	require.NoError(t, err)
 
-	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
-	require.True(t, providerYandex.NeedToUseTofu())
-	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 	require.True(t, strings.HasSuffix(providerYandex.RootDir(), "infra/e688020e4bc6a1cf"))
 
 	cfgForYandexWithDifferentPrefix := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
@@ -192,14 +211,14 @@ func TestCloudProviderGet(t *testing.T) {
 	providerGCP, err := getter(context.TODO(), getMetaConfig(t, gcp.ProviderName, gcpTestLayout))
 	require.NoError(t, err)
 
-	require.NotEqual(t, providerGCP.RootDir(), providerYandex.RootDir())
-	require.IsType(t, &cloud.Provider{}, providerGCP, "provider should be a cloud.Provider for GCP cluster")
-	require.False(t, providerGCP.NeedToUseTofu())
-	require.Equal(t, providerGCP.Name(), gcp.ProviderName)
+	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 	require.True(t, strings.HasSuffix(providerGCP.RootDir(), "infra/72ce5a172c9b8efa"))
+	require.NotEqual(t, providerGCP.RootDir(), providerYandex.RootDir())
 }
 
 func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
+	t.Helper()
+
 	stat, err := os.Lstat(destination)
 	require.NoError(t, err, destination)
 	require.True(t, stat.Mode()&os.ModeSymlink != 0, destination)
@@ -209,12 +228,30 @@ func assertFileExistsAndSymlink(t *testing.T, source string, destination string)
 	require.Equal(t, source, realPath)
 }
 
-func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+func assertFileExists(t *testing.T, filePath string) {
+	t.Helper()
+
 	stat, err := os.Stat(filePath)
 	require.NoError(t, err, filePath)
 
 	require.True(t, stat.Mode()&os.ModeSymlink == 0, filePath)
 	require.False(t, stat.IsDir(), filePath)
+}
+
+func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
+	t.Helper()
+
+	assertFileExists(t, filePath)
+
+	content, err := os.ReadFile(filePath)
+	require.NoError(t, err, filePath)
+	require.True(t, len(content) > 0, filePath)
+}
+
+func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+	t.Helper()
+
+	assertFileExists(t, filePath)
 
 	content, err := os.ReadFile(filePath)
 	require.NoError(t, err, filePath)
@@ -223,6 +260,8 @@ func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent
 }
 
 func assertIsNotEmptyDir(t *testing.T, dirPath string) {
+	t.Helper()
+
 	stat, err := os.Stat(dirPath)
 	require.NoError(t, err, dirPath)
 	require.True(t, stat.IsDir(), dirPath)
@@ -233,6 +272,8 @@ func assertIsNotEmptyDir(t *testing.T, dirPath string) {
 }
 
 func assertFileNotExists(t *testing.T, path string) {
+	t.Helper()
+
 	_, err := os.Stat(path)
 	require.Error(t, err, path)
 	require.True(t, os.IsNotExist(err), path)
@@ -252,6 +293,8 @@ type assertAllFilesCopiedToProviderDirParams struct {
 }
 
 func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
 	infraBin := "terraform"
 	if provider.NeedToUseTofu() {
 		infraBin = "opentofu"
@@ -261,7 +304,29 @@ func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, 
 	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
 }
 
+func assertPluginsPresent(t *testing.T, root string, pluginPaths []string, source string) {
+	t.Helper()
+
+	for _, pluginPath := range pluginPaths {
+		destinationPath := filepath.Join(root, pluginPath)
+		sourcePath := filepath.Join(source, pluginPath)
+		assertFileExistsAndSymlink(t, sourcePath, destinationPath)
+	}
+}
+
+func getTestStepDir(root string, step infrastructure.Step, layout string) string {
+	return filepath.Join(
+		root,
+		modulesRootDir,
+		layoutsRootDir,
+		layout,
+		string(step),
+	)
+}
+
 func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopiedToProviderDirParams, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
 	provider := params.provider
 	require.False(t, interfaces.IsNil(provider))
 
@@ -273,19 +338,12 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 
 	require.NotEmpty(t, params.pluginPaths)
 
-	for _, pluginPath := range params.pluginPaths {
-		destinationPath := filepath.Join(provider.RootDir(), "plugins", pluginPath)
-		sourcePath := filepath.Join(providerParams.FSDIParams.PluginsDir, pluginPath)
-		assertFileExistsAndSymlink(t, sourcePath, destinationPath)
-	}
+	assertPluginsPresent(t, filepath.Join(provider.RootDir(), "plugins"), params.pluginPaths, providerParams.FSDIParams.PluginsDir)
 
 	const versionsFile = "versions.tf"
 
 	versionsFileWithContentPath := filepath.Join(provider.RootDir(), versionsFile)
 	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
-
-	const modulesRootDir = "modules"
-	const layoutsRootDir = "layouts"
 
 	assertFileNotExists(t, filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, versionsFile))
 
@@ -297,11 +355,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	}
 
 	versionsFileForStep := filepath.Join(
-		provider.RootDir(),
-		modulesRootDir,
-		layoutsRootDir,
-		params.usedLayout,
-		string(params.usedStep),
+		getTestStepDir(provider.RootDir(), params.usedStep, params.usedLayout),
 		versionsFile,
 	)
 
@@ -342,9 +396,7 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 
 	providerYandex, err := getter(context.TODO(), cfg)
 	require.NoError(t, err)
-	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
-	require.True(t, providerYandex.NeedToUseTofu())
-	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 
 	step := infrastructure.BaseInfraStep
 
@@ -355,7 +407,7 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
-    kubernetes = {
+    yandex = {
       source  = "yandex-cloud/yandex"
       version = ">= 0.83.0"
     }
@@ -378,9 +430,7 @@ terraform {
 			"static-node",
 			"vpc-components",
 		},
-		pluginPaths: []string{
-			"registry.opentofu.org/yandex-cloud/yandex/0.83.0/linux_amd64/terraform-provider-yandex",
-		},
+		pluginPaths: yandexPluginsDir,
 	}
 
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
@@ -431,9 +481,7 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 
 	providerGCP, err := getter(context.TODO(), cfg)
 	require.NoError(t, err)
-	require.IsType(t, &cloud.Provider{}, providerGCP, "provider should be a cloud.Provider for gcp cluster")
-	require.False(t, providerGCP.NeedToUseTofu())
-	require.Equal(t, providerGCP.Name(), gcp.ProviderName)
+	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 
 	step := infrastructure.BaseInfraStep
 
@@ -444,7 +492,7 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
-    kubernetes = {
+    google = {
       source  = "hashicorp/google"
       version = ">= 3.48.0"
     }
@@ -467,9 +515,7 @@ terraform {
 			"master-node",
 			"static-node",
 		},
-		pluginPaths: []string{
-			"registry.terraform.io/hashicorp/google/3.48.0/linux_amd64/terraform-provider-google",
-		},
+		pluginPaths: gcpPluginsDir,
 	}
 
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
@@ -499,6 +545,8 @@ terraform {
 }
 
 func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+	t.Helper()
+
 	require.False(t, interfaces.IsNil(provider))
 
 	assertInfraUtilCopied(t, provider, providerParams)
@@ -530,9 +578,7 @@ func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 
 	providerYandex, err := getter(context.TODO(), cfg)
 	require.NoError(t, err)
-	require.IsType(t, &cloud.Provider{}, providerYandex, "provider should be a cloud.Provider for yandex cluster")
-	require.True(t, providerYandex.NeedToUseTofu())
-	require.Equal(t, providerYandex.Name(), yandex.ProviderName)
+	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
 
 	_, err = providerYandex.OutputExecutor(context.TODO(), params.Logger)
 	require.NoError(t, err)
@@ -562,12 +608,258 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 
 	providerGCP, err := getter(context.TODO(), cfg)
 	require.NoError(t, err)
-	require.IsType(t, &cloud.Provider{}, providerGCP, "provider should be a cloud.Provider for gcp cluster")
-	require.False(t, providerGCP.NeedToUseTofu())
-	require.Equal(t, providerGCP.Name(), gcp.ProviderName)
+	assertCloudProvider(t, providerGCP, gcp.ProviderName, false)
 
 	_, err = providerGCP.OutputExecutor(context.TODO(), params.Logger)
 	require.NoError(t, err)
 
 	assertAllFilesCopiedToProviderDirForOutputExecutor(t, providerGCP, params)
+}
+
+type testProvideMetaConfigParams struct {
+	env, testName, layout, uuid string
+	logger                      log.Logger
+}
+
+func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *config.MetaConfig {
+	require.NotEmpty(t, params.env)
+	require.NotEmpty(t, params.testName)
+	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.uuid)
+	require.False(t, interfaces.IsNil(params.logger))
+
+	configPath := os.Getenv(params.env)
+
+	if configPath == "" {
+		t.Skip(fmt.Sprintf("Skipping %s test. Use %s for provide configuration", params.testName, params.env))
+	}
+
+	stat, err := os.Stat(configPath)
+	require.NoError(t, err)
+	require.False(t, stat.IsDir())
+
+	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
+		logger: params.logger,
+	}))
+
+	require.NoError(t, err)
+	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)
+
+	cfg.UUID = params.uuid
+
+	return cfg
+}
+
+func assertLockFilePresent(t *testing.T, root string) {
+	t.Helper()
+
+	stat, err := os.Stat(path.Join(root, lockFile))
+	require.NoError(t, err)
+	require.False(t, stat.IsDir())
+}
+
+func assertFileDoesNotPresentsInDir(t *testing.T, dir string, file string) {
+	t.Helper()
+
+	err := filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
+		require.NoError(t, err, p)
+		if info.IsDir() {
+			return nil
+		}
+
+		filename := path.Base(p)
+		require.NotEqual(t, filename, "/", p)
+
+		require.False(t, strings.HasPrefix(filename, file), p)
+
+		return nil
+	})
+
+	require.NoError(t, err)
+}
+
+func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGetterParams, file string) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
+}
+
+func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParams) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertDirsNotContainsFileInFSSources(t, params, lockFile)
+}
+
+type executorTestInitParams struct {
+	provider infrastructure.CloudProvider
+	step     infrastructure.Step
+	params   CloudProviderGetterParams
+	layout   string
+}
+
+func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotEmpty(t, params.step)
+	require.NotEmpty(t, params.layout)
+	require.NotNil(t, params.params.FSDIParams)
+
+	tmp := filepath.Join(params.provider.RootDir(), "tf_dhctl")
+
+	assertIsNotEmptyDir(t, tmp)
+	assertPluginsPresent(t, path.Join(tmp, "providers"), yandexPluginsDir, params.params.FSDIParams.PluginsDir)
+	assertFileExists(t, path.Join(tmp, "plugin_path"))
+	assertLockFilePresent(t, path.Join(getTestStepDir(params.provider.RootDir(), params.step, params.layout)))
+	assertDirsNotContainsLockFile(t, params.params)
+}
+
+func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode int, params CloudProviderGetterParams, err error) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertDirsNotContainsLockFile(t, params)
+
+	require.NotEqual(t, exitCode, 0)
+	require.Error(t, err)
+	assertFileExists(t, planParams.VariablesPath)
+	assertFileExists(t, planParams.StatePath)
+	assertFileExistsAndHasAnyContent(t, planParams.OutPath)
+
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.OutPath))
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.VariablesPath))
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.StatePath))
+}
+
+type getTestParamsPlanParams struct {
+	provider       infrastructure.CloudProvider
+	configProvider func() []byte
+	step           infrastructure.Step
+}
+
+func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotNil(t, params.configProvider)
+	require.NotEmpty(t, params.step)
+
+	planParams := infrastructure.PlanOpts{
+		Destroy:          false,
+		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s", params.step)),
+		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s", params.step)),
+		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s", params.step)),
+		DetailedExitCode: true,
+	}
+
+	content := params.configProvider()
+	err := os.WriteFile(planParams.VariablesPath, content, 0o666)
+	require.NoError(t, err)
+
+	err = os.WriteFile(planParams.StatePath, nil, 0o666)
+	require.NoError(t, err)
+
+	return planParams
+}
+
+type execInitAndPlanResultsParams struct {
+	provider       infrastructure.CloudProvider
+	step           infrastructure.Step
+	params         CloudProviderGetterParams
+	configProvider func() []byte
+	layout         string
+}
+
+func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotNil(t, params.configProvider)
+	require.NotEmpty(t, params.step)
+	require.NotEmpty(t, params.layout)
+
+	executor, err := params.provider.Executor(context.TODO(), params.step, params.params.Logger)
+	require.NoError(t, err)
+
+	err = executor.Init(context.TODO())
+	require.NoError(t, err)
+	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
+		provider: params.provider,
+		step:     params.step,
+		params:   params.params,
+		layout:   params.layout,
+	})
+
+	planParams := getTestPlanParams(t, getTestParamsPlanParams{
+		provider:       params.provider,
+		step:           params.step,
+		configProvider: params.configProvider,
+	})
+
+	exitCode, err := executor.Plan(context.TODO(), planParams)
+	assertPlanResult(t, planParams, exitCode, params.params, err)
+}
+
+func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
+	testName := "TestTofuInitAndPlanWithCreatingWorkerFilesInRoot"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	cfg := provideTestMetaConfig(t, testProvideMetaConfigParams{
+		env:      "YANDEX_CLOUD_CONFIG",
+		testName: testName,
+		layout:   yandexTestLayout,
+		uuid:     "e0bcfdc2-95a1-11f0-987b-234a7238ed8d",
+		logger:   params.Logger,
+	})
+
+	getter := CloudProviderGetter(params)
+
+	providerYandex, err := getter(context.TODO(), cfg)
+	require.NoError(t, err)
+	assertCloudProvider(t, providerYandex, yandex.ProviderName, true)
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerYandex,
+		step:     infrastructure.BaseInfraStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.MarshalConfig()
+		},
+		layout: yandexTestLayout,
+	})
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerYandex,
+		step:     infrastructure.MasterNodeStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.MarshalConfig()
+		},
+		layout: yandexTestLayout,
+	})
+
+	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
+		provider: providerYandex,
+		step:     infrastructure.StaticNodeStep,
+		params:   params,
+		configProvider: func() []byte {
+			return cfg.NodeGroupConfig("worker", 0, "")
+		},
+		layout: yandexTestLayout,
+	})
 }

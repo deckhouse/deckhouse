@@ -50,7 +50,7 @@ func TestVersionsContentLegacy(t *testing.T) {
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
-    kubernetes = {
+    vcd = {
       source  = "vmware/vcd"
       version = ">= %s"
     }
@@ -73,7 +73,7 @@ func TestVersionsContentCurrent(t *testing.T) {
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
-    kubernetes = {
+    vcd = {
       source  = "vmware/vcd"
       version = ">= %s"
     }
