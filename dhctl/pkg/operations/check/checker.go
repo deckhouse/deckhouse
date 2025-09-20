@@ -33,6 +33,7 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type Params struct {
@@ -47,13 +48,21 @@ type Params struct {
 	KubeClient *client.KubernetesClient // optional
 
 	TmpDir string
+	Logger log.Logger
 }
 
 type Checker struct {
 	*Params
+
+	logger log.Logger
 }
 
 func NewChecker(params *Params) *Checker {
+	logger := params.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	if !params.CommanderMode {
 		panic("check operation currently supported only in commander mode")
 	}
@@ -65,6 +74,7 @@ func NewChecker(params *Params) *Checker {
 
 	return &Checker{
 		Params: params,
+		logger: logger,
 	}
 }
 
@@ -74,7 +84,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 		return nil, err
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
@@ -144,7 +154,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
 	if err != nil {
 		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
 	}

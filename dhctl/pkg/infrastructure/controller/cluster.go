@@ -95,7 +95,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	for nodeGroupName, nodeGroupStates := range nodesState {
-		ngController, err := NewNodesController(metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.infrastructureContext)
+		ngController, err := NewNodesController(ctx, metaConfig, r.cache, nodeGroupName, nodeGroupStates.Settings, r.infrastructureContext)
 		if err != nil {
 			return err
 		}

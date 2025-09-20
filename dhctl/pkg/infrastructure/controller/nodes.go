@@ -32,8 +32,8 @@ type NodeGroupInfrastructureController struct {
 	nodeGroupName         string
 }
 
-func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte, infrastructureContext *infrastructure.Context) (*NodeGroupInfrastructureController, error) {
-	ngMetaConfig, err := getNgMetaConfig(clusterMetaConfig, settings)
+func NewNodesController(ctx context.Context, clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte, infrastructureContext *infrastructure.Context) (*NodeGroupInfrastructureController, error) {
+	ngMetaConfig, err := getNgMetaConfig(ctx, clusterMetaConfig, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +46,9 @@ func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.C
 	}, nil
 }
 
-func getNgMetaConfig(clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
+func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
 	// we use dummy preparator because metaConfig was prepared early
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare(config.DummyPreparatorProvider())
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}

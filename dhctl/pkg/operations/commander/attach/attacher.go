@@ -52,6 +52,7 @@ type Params struct {
 	AttachResources       AttachResources
 	ScanOnly              *bool
 	TmpDir                string
+	Logger                log.Logger
 }
 
 type AttachResources struct {
@@ -183,7 +184,13 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
 
-		metaConfig, err = config.ParseConfigInCluster(ctx, kubeClient, infrastructureprovider.MetaConfigPreparatorProvider())
+		metaConfig, err = config.ParseConfigInCluster(
+			ctx,
+			kubeClient,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
+			),
+		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
 		}

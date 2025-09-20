@@ -162,8 +162,11 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),

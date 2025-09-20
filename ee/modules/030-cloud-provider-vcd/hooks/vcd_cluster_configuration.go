@@ -17,7 +17,7 @@ import (
 )
 
 func preparatorProvider(_ string) config.MetaConfigPreparator {
-	return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
+	return vcd.NewMetaConfigPreparatorWithoutLogger(vcd.MetaConfigPreparatorParams{
 		// todo it was bad idea patch metaconfig during installation
 		// we need to prepare meta config in dhctl during installation
 		// for checking vcd version
@@ -27,6 +27,8 @@ func preparatorProvider(_ string) config.MetaConfigPreparator {
 		// after first converge we deploy vcd data discoverer and hook legacy_mode.go
 		// directory form data discoverer
 		PrepareMetaConfig: false,
+		// cluster prefix does not provide here
+		ValidateClusterPrefix: false,
 	})
 }
 

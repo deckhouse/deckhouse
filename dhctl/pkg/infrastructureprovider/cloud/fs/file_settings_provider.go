@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 
@@ -31,7 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-var infraVersionKeys = []string{"opentofu", "terraform"}
+const (
+	opentofuKey  = "opentofu"
+	terraformKey = "terraform"
+)
 
 type settingsStore map[string]settings.ProviderSettings
 
@@ -115,13 +117,13 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 	for name, rawSettings := range infrastructureProviders {
 		var ok bool
 		switch name {
-		case infraVersionKeys[0]:
+		case opentofuKey:
 			tofuVersion, ok = rawSettings.(string)
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for OpenTofu version setting", name)
 			}
 			logger.LogDebugF("Found opentofu version: %s\n", tofuVersion)
-		case infraVersionKeys[1]:
+		case terraformKey:
 			terraformVersion, ok = rawSettings.(string)
 			if !ok {
 				return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: wrong type for Terraform version setting", name)
@@ -135,13 +137,18 @@ func loadTerraformVersionFileSettings(filename string, logger log.Logger) (setti
 	}
 
 	if tofuVersion == "" {
-		return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing terraform version", filename)
+		return nil, fmt.Errorf("Cannot unmarshal infrastructure versions file %s: missing opentofu version", filename)
 	}
 
 	res := make(settingsStore)
 
+	var noneProviderKeys = map[string]struct{}{
+		opentofuKey:  {},
+		terraformKey: {},
+	}
+
 	for name, rawSettings := range infrastructureProviders {
-		if slices.Contains(infraVersionKeys, name) {
+		if _, ok := noneProviderKeys[name]; ok {
 			logger.LogDebugF("Found not provider name key %s\n", name)
 			continue
 		}

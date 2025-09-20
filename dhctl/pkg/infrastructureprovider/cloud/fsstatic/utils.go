@@ -53,7 +53,7 @@ func CreateLinkIfNotExists(source string, check CheckLinkSource, destination str
 		return fmt.Errorf("Cannot create link %s to %s: %w", source, destination, err)
 	}
 
-	if err := os.Link(source, destination); err != nil {
+	if err := os.Symlink(source, destination); err != nil {
 		return fmt.Errorf("Cannot create link %s to %s: %w", source, destination, err)
 	}
 

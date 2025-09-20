@@ -16,6 +16,7 @@ package fs
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -30,21 +31,34 @@ type DIParams struct {
 	PluginsDir        string
 }
 
-func checkDir(dir string, errPrefix string) error {
+func isDir(dir string, errPrefix string) error {
 	if !fs.IsDirExists(dir) {
-		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix+dir, dir)
+		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
 	}
 
 	return nil
 }
 
-func checkNoneRootDir(dir string, errPrefix string) error {
+func isNotRootDir(dir string, errPrefix string) error {
 	if path.Clean(dir) == "/" {
 		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
 	}
 
 	if !fs.IsDirExists(dir) {
-		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix+dir, dir)
+		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
+	}
+
+	return nil
+}
+
+func isFile(file string, errPrefix string) error {
+	stat, err := os.Stat(file)
+	if err != nil {
+		return fmt.Errorf("%s file '%s' does not exist or got another fs error: %w", errPrefix, file, err)
+	}
+
+	if stat.IsDir() {
+		return fmt.Errorf("%s '%s' is not file", errPrefix, file)
 	}
 
 	return nil
@@ -55,19 +69,19 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 		return nil, fmt.Errorf("no fs.DI params provided")
 	}
 
-	if err := checkDir(params.BinariesDir, "BinariesDir"); err != nil {
+	if err := isDir(params.BinariesDir, "BinariesDir"); err != nil {
 		return nil, err
 	}
 
-	if err := checkDir(params.InfraVersionsFile, "InfraVersionsFile"); err != nil {
+	if err := isFile(params.InfraVersionsFile, "InfraVersionsFile"); err != nil {
 		return nil, err
 	}
 
-	if err := checkNoneRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
+	if err := isNotRootDir(params.CloudProviderDir, "CloudProviderDir"); err != nil {
 		return nil, err
 	}
 
-	if err := checkDir(params.PluginsDir, "PluginsDir"); err != nil {
+	if err := isDir(params.PluginsDir, "PluginsDir"); err != nil {
 		return nil, err
 	}
 

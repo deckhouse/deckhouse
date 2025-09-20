@@ -95,7 +95,13 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigInCluster(ctx, kubeCl, infrastructureprovider.MetaConfigPreparatorProvider())
+		metaConfig, err := config.ParseConfigInCluster(
+			ctx,
+			kubeCl,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
+		)
 		if err != nil {
 			return err
 		}

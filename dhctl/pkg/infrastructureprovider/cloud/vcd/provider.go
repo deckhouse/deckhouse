@@ -14,7 +14,10 @@
 
 package vcd
 
-const ProviderName = "vcd"
+const (
+	ProviderName  = "vcd"
+	legacyVersion = "3.10.0"
+)
 
 type providerConfig struct {
 	Server   string `json:"server"`

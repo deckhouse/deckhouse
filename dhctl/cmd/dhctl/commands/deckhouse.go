@@ -95,7 +95,12 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(app.ConfigPaths, infrastructureprovider.MetaConfigPreparatorProvider())
+		metaConfig, err := config.ParseConfig(
+			context.TODO(),
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			))
 		if err != nil {
 			return err
 		}

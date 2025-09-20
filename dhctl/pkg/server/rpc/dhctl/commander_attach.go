@@ -236,6 +236,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		},
 		ScanOnly: p.request.ScanOnly,
 		TmpDir:   s.params.TmpDir,
+		Logger:   log.GetDefaultLogger(),
 	})
 
 	result, attachErr := attacher.Attach(ctx)

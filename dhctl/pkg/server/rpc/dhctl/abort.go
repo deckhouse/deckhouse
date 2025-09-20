@@ -284,6 +284,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		OnProgressFunc:    p.sendProgress,
 		CommanderMode:     p.request.Options.CommanderMode,
 		CommanderUUID:     commanderUUID,
+		Logger:            log.GetDefaultLogger(),
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

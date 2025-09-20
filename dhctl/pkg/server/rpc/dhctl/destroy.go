@@ -191,8 +191,11 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
@@ -266,7 +269,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 	}
 
-	destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+	destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 		NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
 		StateCache:     cache.Global(),
 		OnPhaseFunc:    p.switchPhase,
@@ -277,6 +280,8 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
+		TmpDir: s.params.TmpDir,
+		Logger: log.GetDefaultLogger(),
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

@@ -79,6 +79,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			},
 			ProviderGetter: providerGetter,
 			TmpDir:         tmpDir,
+			Logger:         log.GetDefaultLogger(),
 		})
 		_, err = converger.Converge(context.Background())
 
@@ -115,6 +116,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			},
 			ProviderGetter: providerGetter,
 			TmpDir:         tmpDir,
+			Logger:         log.GetDefaultLogger(),
 		})
 		return converger.AutoConverge()
 	})
@@ -174,6 +176,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
 			TmpDir:                                tmpDir,
+			Logger:                                log.GetDefaultLogger(),
 		})
 		return converger.ConvergeMigration(context.Background())
 	})

@@ -25,9 +25,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type Context struct {
@@ -46,6 +48,8 @@ type Context struct {
 	stateChecker          infrastructure.StateChecker
 
 	providerGetter infrastructure.CloudProviderGetter
+
+	logger log.Logger
 }
 
 type Params struct {
@@ -53,15 +57,23 @@ type Params struct {
 	Cache          dstate.Cache
 	ChangeParams   infrastructure.ChangeActionSettings
 	ProviderGetter infrastructure.CloudProviderGetter
+	Logger         log.Logger
 }
 
 func newContext(ctx context.Context, params Params) *Context {
+	logger := params.Logger
+
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &Context{
 		providerGetter: params.ProviderGetter,
 		kubeClient:     params.KubeClient,
 		stateCache:     params.Cache,
 		changeParams:   params.ChangeParams,
 		ctx:            ctx,
+		logger:         logger,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -159,7 +171,7 @@ func (c *Context) CompleteExecutionPhase(data any) error {
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 	if c.CommanderMode() {
-		metaConfig, err := commander.ParseMetaConfig(c.stateCache, c.commanderParams)
+		metaConfig, err := commander.ParseMetaConfig(c.Ctx(), c.stateCache, c.commanderParams, c.logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
 		}
@@ -167,12 +179,16 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger)
 	if err != nil {
 		return nil, err
 	}
 
 	return metaConfig, nil
+}
+
+func (c *Context) Logger() log.Logger {
+	return c.logger
 }
 
 func (c *Context) ChangesSettings() infrastructure.ChangeActionSettings {

@@ -161,8 +161,11 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	var metaConfig *config.MetaConfig
 	err = log.Process("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
+			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
-			infrastructureprovider.MetaConfigPreparatorProvider(),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),

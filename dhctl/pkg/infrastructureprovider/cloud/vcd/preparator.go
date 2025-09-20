@@ -15,47 +15,60 @@
 package vcd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type MetaConfigPreparatorParams struct {
-	PrepareMetaConfig bool
+	PrepareMetaConfig     bool
+	ValidateClusterPrefix bool
 }
 
 type MetaConfigPreparator struct {
 	params MetaConfigPreparatorParams
+	logger log.Logger
+	getAPI apiVersionGetter
 }
 
-func NewMetaConfigPreparator(params MetaConfigPreparatorParams) *MetaConfigPreparator {
+func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
+	return NewMetaConfigPreparator(params, log.GetSilentLogger())
+}
+
+func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
 		params: params,
+		logger: logger,
+		getAPI: getAPIVersion,
 	}
 }
 
-func (p MetaConfigPreparator) Validate(metaConfig *config.MetaConfig) error {
-	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
-	if err != nil {
-		return fmt.Errorf("%v for provider %s", err, ProviderName)
+func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
+	if p.params.ValidateClusterPrefix {
+		err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
+		if err != nil {
+			return fmt.Errorf("%v for provider %s", err, ProviderName)
+		}
 	}
 
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(metaConfig *config.MetaConfig) error {
+func (p MetaConfigPreparator) Prepare(_ context.Context, metaConfig *config.MetaConfig) error {
 	if !p.params.PrepareMetaConfig {
 		return nil
 	}
 
-	apiVersion, err := getAPIVersion(metaConfig)
+	apiVersion, err := p.getAPI(metaConfig, p.logger)
 	if err != nil {
 		return err
 	}
 
-	return versionConstraintAction(apiVersion, func(legacy bool) error {
+	return versionConstraintAction(apiVersion, p.logger, func(legacy bool) error {
 		if !legacy {
 			return nil
 		}

@@ -12,21 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package interfaces
+package gcp
 
-import (
-	"reflect"
-)
-
-func IsNil(value any) bool {
-	iv := reflect.ValueOf(value)
-	if !iv.IsValid() {
-		return true
-	}
-	switch iv.Kind() {
-	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Func, reflect.Interface:
-		return iv.IsNil()
-	default:
-		return false
-	}
-}
+const ProviderName = "gcp"

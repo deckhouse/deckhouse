@@ -55,7 +55,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderVsphere.internal.providerDiscoveryData", discoveryData)
 
 	return nil
-}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider()))
+}, cluster_configuration.NewConfig(infrastructureprovider.MetaConfigPreparatorProvider(infrastructureprovider.NewPreparatorProviderParamsWithoutLogger())))
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {
 	b, err := json.Marshal(in)

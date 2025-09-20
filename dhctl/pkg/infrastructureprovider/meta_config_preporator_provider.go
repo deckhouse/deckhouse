@@ -15,26 +15,53 @@
 package infrastructureprovider
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
-func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
+type PreparatorProviderParams struct {
+	logger log.Logger
+}
+
+func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
+	return PreparatorProviderParams{
+		logger: logger,
+	}
+}
+
+func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
+	return PreparatorProviderParams{
+		logger: log.NewSilentLogger(),
+	}
+}
+
+// looger can be nil if nil will use silent logger
+func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
+	logger := params.logger
+
+	if interfaces.IsNil(logger) {
+		logger = log.NewSilentLogger()
+	}
+
 	return func(provider string) config.MetaConfigPreparator {
 		switch provider {
 		// static cluster
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator()
+			return yandex.NewMetaConfigPreparator(true)
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
-				PrepareMetaConfig: true,
-			})
+				PrepareMetaConfig:     true,
+				ValidateClusterPrefix: true,
+			}, logger)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
@@ -43,7 +70,7 @@ func MetaConfigPreparatorProvider() config.MetaConfigPreparatorProvider {
 
 type defaultCloudOnlyPrefixValidatorPreparator struct{}
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(metaConfig *config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(_ context.Context, metaConfig *config.MetaConfig) error {
 	err := validation.DefaultPrefixValidator(metaConfig.ClusterPrefix)
 	if err != nil {
 		return fmt.Errorf("%v for provider %s", err, metaConfig.ProviderName)
@@ -52,6 +79,6 @@ func (p *defaultCloudOnlyPrefixValidatorPreparator) Validate(metaConfig *config.
 	return nil
 }
 
-func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(*config.MetaConfig) error {
+func (p *defaultCloudOnlyPrefixValidatorPreparator) Prepare(_ context.Context, _ *config.MetaConfig) error {
 	return nil
 }

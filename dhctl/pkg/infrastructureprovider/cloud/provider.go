@@ -20,6 +20,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type ProviderAdditionalParams struct {
@@ -85,4 +86,4 @@ type ProviderModulesProvider interface {
 	DownloadSpecs(ctx context.Context, params DownloadSpecsParams, destination string) error
 }
 
-type versionContentProvider func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error)
+type versionContentProvider func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, error)

@@ -1,3 +1,17 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package cloud
 
 import (
@@ -8,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var versionContentProviders = map[string]versionContentProvider{
@@ -16,16 +31,19 @@ var versionContentProviders = map[string]versionContentProvider{
 
 var contentProviderMutex sync.Mutex
 
-func getVersionContentProvider(s settings.ProviderSettings, provider string) versionContentProvider {
+func getVersionContentProvider(s settings.ProviderSettings, provider string, logger log.Logger) versionContentProvider {
 	contentProviderMutex.Lock()
 	defer contentProviderMutex.Unlock()
 
 	choicer, ok := versionContentProviders[provider]
 	if ok {
+		logger.LogDebugF("Found custom version choicer for provider %s\n", provider)
 		return choicer
 	}
 
-	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig) ([]byte, error) {
+	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
+
+	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, error) {
 		if len(settings.Versions()) != 1 {
 			return nil, fmt.Errorf("no one version found for provider %s", provider)
 		}
