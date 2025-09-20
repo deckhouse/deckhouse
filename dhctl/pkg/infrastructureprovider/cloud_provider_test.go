@@ -437,209 +437,6 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 	assertAllFilesCopiedToProviderDirForOutputExecutor(t, providerGCP, params)
 }
 
-type testProvideMetaConfigParams struct {
-	env, testName, layout, uuid string
-	logger                      log.Logger
-}
-
-func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *config.MetaConfig {
-	require.NotEmpty(t, params.env)
-	require.NotEmpty(t, params.testName)
-	require.NotEmpty(t, params.layout)
-	require.NotEmpty(t, params.uuid)
-	require.False(t, interfaces.IsNil(params.logger))
-
-	configPath := os.Getenv(params.env)
-
-	if configPath == "" {
-		t.Skip(fmt.Sprintf("Skipping %s test. Use %s for provide configuration", params.testName, params.env))
-	}
-
-	stat, err := os.Stat(configPath)
-	require.NoError(t, err)
-	require.False(t, stat.IsDir())
-
-	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
-		logger: params.logger,
-	}))
-
-	require.NoError(t, err)
-	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)
-
-	cfg.UUID = params.uuid
-
-	return cfg
-}
-
-func assertLockFilePresent(t *testing.T, root string) {
-	t.Helper()
-
-	stat, err := os.Stat(path.Join(root, lockFile))
-	require.NoError(t, err)
-	require.False(t, stat.IsDir())
-}
-
-func assertFileDoesNotPresentsInDir(t *testing.T, dir string, file string) {
-	t.Helper()
-
-	err := filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
-		require.NoError(t, err, p)
-		if info.IsDir() {
-			return nil
-		}
-
-		filename := path.Base(p)
-		require.NotEqual(t, filename, "/", p)
-
-		require.False(t, strings.HasPrefix(filename, file), p)
-
-		return nil
-	})
-
-	require.NoError(t, err)
-}
-
-func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGetterParams, file string) {
-	t.Helper()
-
-	require.NotNil(t, params.FSDIParams)
-
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
-}
-
-func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParams) {
-	t.Helper()
-
-	require.NotNil(t, params.FSDIParams)
-
-	assertDirsNotContainsFileInFSSources(t, params, lockFile)
-}
-
-type executorTestInitParams struct {
-	provider   infrastructure.CloudProvider
-	step       infrastructure.Step
-	params     CloudProviderGetterParams
-	layout     string
-	pluginsDir []string
-}
-
-func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
-	t.Helper()
-
-	require.False(t, interfaces.IsNil(params.provider))
-	require.NotEmpty(t, params.step)
-	require.NotEmpty(t, params.layout)
-	require.NotEmpty(t, params.pluginsDir)
-	require.NotNil(t, params.params.FSDIParams)
-
-	tmp := filepath.Join(params.provider.RootDir(), "tf_dhctl")
-
-	assertIsNotEmptyDir(t, tmp)
-	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)
-	assertFileExists(t, path.Join(tmp, "plugin_path"))
-
-	lockFileDir := params.provider.RootDir()
-	if params.provider.NeedToUseTofu() {
-		lockFileDir = getTestStepDir(params.provider.RootDir(), params.step, params.layout)
-	}
-
-	assertLockFilePresent(t, lockFileDir)
-	assertDirsNotContainsLockFile(t, params.params)
-	assertDirsNotContainsFileInFSSources(t, params.params, "lock.json")
-}
-
-func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode int, params CloudProviderGetterParams, err error) {
-	t.Helper()
-
-	require.NotNil(t, params.FSDIParams)
-
-	assertDirsNotContainsLockFile(t, params)
-
-	require.NotEqual(t, exitCode, 0)
-	require.Error(t, err)
-	assertFileExists(t, planParams.VariablesPath)
-	assertFileExists(t, planParams.StatePath)
-	assertFileExistsAndHasAnyContent(t, planParams.OutPath)
-
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.OutPath))
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.VariablesPath))
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.StatePath))
-}
-
-type getTestParamsPlanParams struct {
-	provider       infrastructure.CloudProvider
-	configProvider func() []byte
-	step           infrastructure.Step
-}
-
-func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
-	t.Helper()
-
-	require.False(t, interfaces.IsNil(params.provider))
-	require.NotNil(t, params.configProvider)
-	require.NotEmpty(t, params.step)
-
-	planParams := infrastructure.PlanOpts{
-		Destroy:          false,
-		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s.tfstate", params.step)),
-		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s.tfvars.json", params.step)),
-		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s.tfplan", params.step)),
-		DetailedExitCode: true,
-	}
-
-	content := params.configProvider()
-	err := os.WriteFile(planParams.VariablesPath, content, 0o666)
-	require.NoError(t, err)
-
-	err = os.WriteFile(planParams.StatePath, nil, 0o666)
-	require.NoError(t, err)
-
-	return planParams
-}
-
-type execInitAndPlanResultsParams struct {
-	provider       infrastructure.CloudProvider
-	step           infrastructure.Step
-	params         CloudProviderGetterParams
-	configProvider func() []byte
-	layout         string
-	pluginsDir     []string
-}
-
-func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
-	t.Helper()
-
-	require.False(t, interfaces.IsNil(params.provider))
-	require.NotNil(t, params.configProvider)
-	require.NotEmpty(t, params.step)
-	require.NotEmpty(t, params.layout)
-	require.NotNil(t, params.pluginsDir)
-
-	executor, err := params.provider.Executor(context.TODO(), params.step, params.params.Logger)
-	require.NoError(t, err)
-
-	err = executor.Init(context.TODO())
-	require.NoError(t, err)
-	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
-		provider:   params.provider,
-		step:       params.step,
-		params:     params.params,
-		layout:     params.layout,
-		pluginsDir: params.pluginsDir,
-	})
-
-	planParams := getTestPlanParams(t, getTestParamsPlanParams{
-		provider:       params.provider,
-		step:           params.step,
-		configProvider: params.configProvider,
-	})
-
-	exitCode, err := executor.Plan(context.TODO(), planParams)
-	assertPlanResult(t, planParams, exitCode, params.params, err)
-}
-
 func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTofuInitAndPlanWithCreatingWorkerFilesInRoot"
 
@@ -937,4 +734,207 @@ func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider i
 	entries, err := os.ReadDir(provider.RootDir())
 	require.NoError(t, err)
 	require.Len(t, entries, 1)
+}
+
+type testProvideMetaConfigParams struct {
+	env, testName, layout, uuid string
+	logger                      log.Logger
+}
+
+func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *config.MetaConfig {
+	require.NotEmpty(t, params.env)
+	require.NotEmpty(t, params.testName)
+	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.uuid)
+	require.False(t, interfaces.IsNil(params.logger))
+
+	configPath := os.Getenv(params.env)
+
+	if configPath == "" {
+		t.Skip(fmt.Sprintf("Skipping %s test. Use %s for provide configuration", params.testName, params.env))
+	}
+
+	stat, err := os.Stat(configPath)
+	require.NoError(t, err)
+	require.False(t, stat.IsDir())
+
+	cfg, err := config.ParseConfig(context.TODO(), []string{configPath}, MetaConfigPreparatorProvider(PreparatorProviderParams{
+		logger: params.logger,
+	}))
+
+	require.NoError(t, err)
+	require.Equal(t, params.layout, cfg.Layout, "layout should be", params.layout)
+
+	cfg.UUID = params.uuid
+
+	return cfg
+}
+
+func assertLockFilePresent(t *testing.T, root string) {
+	t.Helper()
+
+	stat, err := os.Stat(path.Join(root, lockFile))
+	require.NoError(t, err)
+	require.False(t, stat.IsDir())
+}
+
+func assertFileDoesNotPresentsInDir(t *testing.T, dir string, file string) {
+	t.Helper()
+
+	err := filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
+		require.NoError(t, err, p)
+		if info.IsDir() {
+			return nil
+		}
+
+		filename := path.Base(p)
+		require.NotEqual(t, filename, "/", p)
+
+		require.False(t, strings.HasPrefix(filename, file), p)
+
+		return nil
+	})
+
+	require.NoError(t, err)
+}
+
+func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGetterParams, file string) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
+	assertFileDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
+}
+
+func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParams) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertDirsNotContainsFileInFSSources(t, params, lockFile)
+}
+
+type executorTestInitParams struct {
+	provider   infrastructure.CloudProvider
+	step       infrastructure.Step
+	params     CloudProviderGetterParams
+	layout     string
+	pluginsDir []string
+}
+
+func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotEmpty(t, params.step)
+	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.pluginsDir)
+	require.NotNil(t, params.params.FSDIParams)
+
+	tmp := filepath.Join(params.provider.RootDir(), "tf_dhctl")
+
+	assertIsNotEmptyDir(t, tmp)
+	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)
+	assertFileExists(t, path.Join(tmp, "plugin_path"))
+
+	lockFileDir := params.provider.RootDir()
+	if params.provider.NeedToUseTofu() {
+		lockFileDir = getTestStepDir(params.provider.RootDir(), params.step, params.layout)
+	}
+
+	assertLockFilePresent(t, lockFileDir)
+	assertDirsNotContainsLockFile(t, params.params)
+	assertDirsNotContainsFileInFSSources(t, params.params, "lock.json")
+}
+
+func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode int, params CloudProviderGetterParams, err error) {
+	t.Helper()
+
+	require.NotNil(t, params.FSDIParams)
+
+	assertDirsNotContainsLockFile(t, params)
+
+	require.NotEqual(t, exitCode, 0)
+	require.Error(t, err)
+	assertFileExists(t, planParams.VariablesPath)
+	assertFileExists(t, planParams.StatePath)
+	assertFileExistsAndHasAnyContent(t, planParams.OutPath)
+
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.OutPath))
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.VariablesPath))
+	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.StatePath))
+}
+
+type getTestParamsPlanParams struct {
+	provider       infrastructure.CloudProvider
+	configProvider func() []byte
+	step           infrastructure.Step
+}
+
+func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotNil(t, params.configProvider)
+	require.NotEmpty(t, params.step)
+
+	planParams := infrastructure.PlanOpts{
+		Destroy:          false,
+		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s.tfstate", params.step)),
+		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s.tfvars.json", params.step)),
+		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s.tfplan", params.step)),
+		DetailedExitCode: true,
+	}
+
+	content := params.configProvider()
+	err := os.WriteFile(planParams.VariablesPath, content, 0o666)
+	require.NoError(t, err)
+
+	err = os.WriteFile(planParams.StatePath, nil, 0o666)
+	require.NoError(t, err)
+
+	return planParams
+}
+
+type execInitAndPlanResultsParams struct {
+	provider       infrastructure.CloudProvider
+	step           infrastructure.Step
+	params         CloudProviderGetterParams
+	configProvider func() []byte
+	layout         string
+	pluginsDir     []string
+}
+
+func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(params.provider))
+	require.NotNil(t, params.configProvider)
+	require.NotEmpty(t, params.step)
+	require.NotEmpty(t, params.layout)
+	require.NotNil(t, params.pluginsDir)
+
+	executor, err := params.provider.Executor(context.TODO(), params.step, params.params.Logger)
+	require.NoError(t, err)
+
+	err = executor.Init(context.TODO())
+	require.NoError(t, err)
+	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
+		provider:   params.provider,
+		step:       params.step,
+		params:     params.params,
+		layout:     params.layout,
+		pluginsDir: params.pluginsDir,
+	})
+
+	planParams := getTestPlanParams(t, getTestParamsPlanParams{
+		provider:       params.provider,
+		step:           params.step,
+		configProvider: params.configProvider,
+	})
+
+	exitCode, err := executor.Plan(context.TODO(), planParams)
+	assertPlanResult(t, planParams, exitCode, params.params, err)
 }
