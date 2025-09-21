@@ -237,8 +237,10 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 
 	step := infrastructure.BaseInfraStep
 
-	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
+	executor, err := providerYandex.Executor(context.TODO(), step, params.Logger)
 	require.NoError(t, err)
+
+	assertCorrectExecutorStatesDir(t, executor, providerYandex, yandexPluginVersion)
 
 	versionsContent := fmt.Sprintf(`
 terraform {
@@ -325,8 +327,10 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 
 	step := infrastructure.BaseInfraStep
 
-	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
+	executor, err := providerGCP.Executor(context.TODO(), step, params.Logger)
 	require.NoError(t, err)
+
+	assertCorrectExecutorStatesDir(t, executor, providerGCP, gcpPluginVersion)
 
 	versionsContent := fmt.Sprintf(`
 terraform {
@@ -582,6 +586,21 @@ func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, pr
 	require.Equal(t, provider.Name(), providerName)
 }
 
+func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Executor, provider infrastructure.CloudProvider, pluginVersion string) {
+	t.Helper()
+
+	require.False(t, interfaces.IsNil(executor))
+	require.False(t, interfaces.IsNil(provider))
+	require.NotEmpty(t, pluginVersion)
+
+	executorStatesDir := executor.GetStatesDir()
+	require.NotEmpty(t, executorStatesDir)
+	require.NotEqual(t, path.Clean(executorStatesDir), "/")
+	require.NotEqual(t, executorStatesDir, provider.RootDir())
+	require.True(t, strings.HasPrefix(executorStatesDir, provider.RootDir()))
+	require.Equal(t, executorStatesDir, filepath.Join(provider.RootDir(), pluginVersion))
+}
+
 func assertFileExistsAndSymlink(t *testing.T, source string, destination string) {
 	t.Helper()
 
@@ -614,7 +633,7 @@ func assertFileExistsAndHasAnyContent(t *testing.T, filePath string) {
 	require.True(t, len(content) > 0, filePath)
 }
 
-func assertFilExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
+func assertFileExistsAndHasContent(t *testing.T, filePath string, expectedContent string) {
 	t.Helper()
 
 	assertFileExists(t, filePath)
@@ -750,7 +769,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	const versionsFile = "versions.tf"
 
 	versionsFileWithContentPath := filepath.Join(infraRoot, versionsFile)
-	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
+	assertFileExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
 
 	assertFileNotExists(t, filepath.Join(infraRoot, modulesRootDir, layoutsRootDir, versionsFile))
 
