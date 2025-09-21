@@ -74,9 +74,9 @@ remove_labels:
 - name: Download CVE scan script from private GitLab
   env:
     DECKHOUSE_PRIVATE_REPO: ${{ secrets.DECKHOUSE_PRIVATE_REPO }}
-    CVE_SCRIPT_PROJECT_ID: ${{ secrets.CVE_SCRIPT_PROJECT_ID || 'PROJECT_ID' }}
-    CVE_SCRIPT_PATH: ${{ secrets.CVE_SCRIPT_PATH || 'cve_scan.sh' }}
-    CVE_SCRIPT_REF: ${{ secrets.CVE_SCRIPT_REF || 'main' }}
+    CVE_SCRIPT_PROJECT_ID: ${{ inputs.project_id }}
+    CVE_SCRIPT_PATH: "cve_scan.sh"
+    CVE_SCRIPT_REF: "main"
   run: |
     echo "Downloading CVE scan script from ${DECKHOUSE_PRIVATE_REPO}..."
     mkdir -p ${{ env.WORKDIR }}/scripts
