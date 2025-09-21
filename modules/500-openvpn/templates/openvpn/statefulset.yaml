@@ -113,9 +113,6 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
 {{- if or (not .Values.openvpn.internal.migrated) (.Values.global.enabledModules | has "cni-cilium") }}
       initContainers:
-  {{- if (.Values.global.enabledModules | has "cni-cilium") }}
-      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
-  {{- end }}
   {{- if not .Values.openvpn.internal.migrated }}
       - name: migration
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
@@ -321,7 +318,7 @@ spec:
   {{- end }}
 # kube-rbac-proxy
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"

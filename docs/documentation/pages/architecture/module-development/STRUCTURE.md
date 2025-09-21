@@ -581,4 +581,96 @@ disable:
   message: "Disabling this module will delete all resources, created by the module."
 ```
 
+### Configuring module accessibility in DKP editions
+
+The `accessibility` parameter lets you define the DKP editions and module bundles in which a module is available,
+and whether it should be enabled by default.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed
+    ce:
+      available: false
+    ee:
+      available: true
+      enabledInBundles:
+        - Managed   
+```
+
+Parameter description:
+
+- `accessibility`: *Object.* Root block for configuring module accessibility.
+- `editions`: *Object.* Set of keys representing edition names.
+  Each edition can have its own accessibility settings.
+- `_default`: *Object.* Default configuration used when no settings are defined for a specific edition.
+- `available`: *Boolean.* Defines whether the module is available in the specified edition.
+- `enabledInBundles`: *Array of strings.* Module bundles in which the module is enabled by default.
+  Supported module bundles (the full contents of each bundle are listed on [this page](../../../v1/#module-bundles)):
+  - `Default`: Recommended set of modules for running a cluster.
+    Includes monitoring, authorization control, networking, and other essential components.
+  - `Managed`: Set of modules for clusters managed by cloud providers (for example, Google Kubernetes Engine).
+  - `Minimal`: Minimal set that includes only the current module.
+    > Note that basic modules (such as the CNI module) are not included in this set.
+    > Without basic modules, Deckhouse can only operate in an already deployed cluster.
+- Sections containing edition names. Define module behavior in specified editions.
+  Possible values: `be`, `ce`, `ee`, `se`, `se-plus`.
+
+#### Module accessibility logic
+
+The following diagram illustrates the logic for determining module accessibility and whether it is enabled by default:
+
+![Module accessibility logic](../../../images/architecture/module-development/module_accessibility.png)
+
+#### Configuration examples
+
+In the following example, the module will be unavailable in all editions except DKP Enterprise Edition.
+In DKP Enterprise Edition, the module will be enabled by default in the `Managed` bundle.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: false
+    ee:
+      available: true
+      enabledInBundles:
+        - Managed
+```
+
+In the next example, the module will be available in all DKP editions.
+In the `Managed` and `Default` bundles, the module will be enabled by default.
+
+```yaml
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Managed
+        - Default
+```
+
+In the following example, the module will be available in all DKP editions.
+It will be enabled in the `Default` and `Managed` bundles for all editions,
+except for DKP Basic Edition and DKP Community Edition.
+
+```yaml
+accessibility:
+  editions:
+    _default:                   
+      available: true           
+      enabledInBundles:         
+        - Default
+        - Managed
+    be:
+      available: false
+    ce:                         
+      available: false
+```
+
 {% endraw %}

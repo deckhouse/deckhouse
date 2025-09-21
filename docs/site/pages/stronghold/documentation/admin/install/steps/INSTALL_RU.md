@@ -211,7 +211,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
   - SSH-ключи доступа;
   - файл конфигурации;
   - файл ресурсов и т. д.
-- `<RELEASE_CHANNEL>` — [канал обновлений](../../../about/update-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../../about/release-channels.html) платформы в kebab-case. Должен совпадать с установленным в `config.yaml`:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *Early Access*;

@@ -752,17 +752,25 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Steps to troubleshoot:
+        This happened because there were several sources for configuring CNI parameters in the cluster, and ModuleConfig did not have the highest priority previously.
 
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+        To resolve this issue, the following steps should be taken:
+
+        1. Find the ConfigMap `d8-system/desired-cni-moduleconfig` in the cluster, which contains the actual ModuleConfig settings.
 
            ```bash
            d8 k -n d8-system get configmap desired-cni-moduleconfig -o yaml
            ```
 
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
+        2. Apply this prepared ModuleConfig to the cluster. This will not cause any actual reconfigurations in the cluster and is completely safe.
+
+        3. Once the parameters in "ModuleConfig" match those used in the cluster:
+             - this alert will be resolved,
+             - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source of truth.
+
+        4. After that, you can add the desired parameters to the ModuleConfig CNI and they will be applied immediately.
       summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
+        The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
@@ -2085,6 +2093,39 @@ alerts:
       summary: |
         The metallb ModuleConfig settings are outdated.
       severity: "5"
+      markupFormat: markdown
+    - name: D8ModuleOutdatedByMajorVersion
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        Module `{{ $labels.moduleName }}` is running {{ $labels.majorReleaseDepth }} major versions behind on major version releases.
+        Major version updates may contain breaking changes and require immediate attention and careful planning.
+
+        To check the module releases status, run the following command:
+
+        ```bash
+        kubectl get mr -l module={{ $labels.moduleName }}
+        ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
+
+        This major release has from-to version constraints that must be met before applying the update.
+        To check the update instructions (from-to versions), run the following command:
+
+        ```bash
+        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        ```
+
+        This will show you the update paths including the from-to versions defined in the release.{{ end }}
+
+        To approve the module major release update, run the following command:
+
+        ```bash
+        d8 k annotate mr {{ $labels.name }} modules.deckhouse.io/approved="true"
+        ```{{ end }}
+      summary: |
+        Module {{ $labels.moduleName }} is running {{ $labels.majorReleaseDepth }} major versions behind.
+      severity: "9"
       markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
@@ -3947,22 +3988,6 @@ alerts:
         The BTF module required for ebpf_exporter is missing from the kernel.
       severity: "8"
       markupFormat: markdown
-    - name: ExtendedMonitoringDeprecatatedAnnotation
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/deprecated-annotation.yaml
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the deprecated annotation `extended-monitoring.flant.com/enabled` is used in the cluster.
-
-        Steps to resolve:
-
-        1. Check the `d8_deprecated_legacy_annotation` metric in Prometheus for a list of all detected usages.
-        1. Migrate to the `extended-monitoring.deckhouse.io/enabled` label.
-      summary: |
-        Deprecated annotation is used in the cluster.
-      severity: "4"
-      markupFormat: markdown
     - name: ExtendedMonitoringTargetDown
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/self.yaml
       moduleUrl: 340-extended-monitoring
@@ -4040,6 +4065,23 @@ alerts:
         File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
+    - name: GeoIPDownloadErrorDetected
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The controller `{{ $labels.controller }}` failed to download the GeoIP database.
+
+        **Reason:** `{{ $labels.reason }}`
+
+        **Type:** `{{ $labels.type }}`
+
+        If this issue persists, investigate network connectivity or database availability.
+      summary: |
+        GeoIP DB download error in controller {{ $labels.controller }}.
+      severity: "4"
+      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -4994,6 +5036,17 @@ alerts:
         Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
       markupFormat: markdown
+    - name: ModuleIsDeprecated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
+      summary: |
+        Module {{ $labels.module }} is deprecated.
+      severity: "9"
+      markupFormat: markdown
     - name: ModuleIsInMaintenanceMode
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -5374,6 +5427,11 @@ alerts:
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+        To find which `IngressNginxController` resources have the annotation, use the following command:
+        ```shell
+        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
+        ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
       severity: "3"

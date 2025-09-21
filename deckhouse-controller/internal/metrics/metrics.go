@@ -19,4 +19,5 @@ const (
 	MigratedModuleNotFoundGroup             = "migrated_module_not_found"
 	ExperimentalModulesAreAllowedMetricName = "is_experimental_modules_allowed"
 	ExperimentalModuleIsEnabled             = "is_experimental_module_enabled"
+	DeprecatedModuleIsEnabled               = "is_deprecated_module_enabled"
 )

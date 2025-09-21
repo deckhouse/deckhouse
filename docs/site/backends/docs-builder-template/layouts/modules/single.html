@@ -62,10 +62,13 @@
         {{- end }}
 
         {{- if $moduleStatus }}
-          {{- if (T (printf "module_alert_%s_long" (replace (lower $moduleStatus) " " "_" ) )) }}
-            {{- partial "alert" ( dict "level" "warn" "content" (T (printf "module_alert_%s_long" (replace (lower $moduleStatus) " " "_" ) )) ) }}
+          {{- $statusKey := replace (lower $moduleStatus) " " "_" -}}
+          {{- if (T (printf "module_alert_%s_long" $statusKey )) }}
+             {{- $level := "warn" -}}
+             {{- if eq $statusKey "general_availability" }}{{ $level = "info" }}{{ end -}}
+             {{- partial "alert" ( dict "level" $level "content" (T (printf "module_alert_%s_long" $statusKey )) ) }}
           {{- end }}
-        {{- end }}
+       {{- end }}
 
         {{.Content}}
 

@@ -54,7 +54,7 @@ func Serve(network, address string, parallelTasksLimit int, requestsCounterMaxDu
 	defer close(done)
 	sem := make(chan struct{}, parallelTasksLimit)
 
-	dhctlProxy := NewStreamDirector(log, singlethreadedMethodsPrefix)
+	dhctlProxy := NewStreamDirector(singlethreadedMethodsPrefix)
 
 	requestsCounter := rc.New(requestsCounterMaxDuration, sem)
 	requestsCounter.Run(ctx)

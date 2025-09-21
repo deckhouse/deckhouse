@@ -320,12 +320,12 @@ Where:
    - SSH access keys;
    - Configuration file;
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [update channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
-   - `alpha` — for the Alpha update channel;
-   - `beta` — for the Beta update channel;
-   - `early-access` — for the Early Access update channel;
-   - `stable` — for the Stable update channel;
-   - `rock-solid` — for the Rock Solid update channel.
+1. `<RELEASE_CHANNEL>` — the [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
+   - `alpha` — for the Alpha release channel;
+   - `beta` — for the Beta release channel;
+   - `early-access` — for the Early Access release channel;
+   - `stable` — for the Stable release channel;
+   - `rock-solid` — for the Rock Solid release channel.
 
 Here is an example of a command to run the installer container for Deckhouse CE:
 

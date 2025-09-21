@@ -303,7 +303,7 @@ status:
 {% alert level="info" %}
 Deckhouse по умолчанию допускает использование taint с ключом `dedicated`. Поэтому рекомендуется применять именно этот ключ с любым значением для taint на выделенных узлах.
 
-Если необходимо использовать нестандартные ключи taint (например, `dedicated.client.com`), нужно добавить их в параметр [`modules.placement.customTolerationKeys`](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys). Это позволит системным компонентам, таким как `cni-flannel`, работать на этих узлах.
+Если необходимо использовать нестандартные ключи taint (например, `dedicated.client.com`), нужно добавить их в массив [`.spec.settings.modules.placement.customTolerationKeys`](../../../../reference/mc.html#global-parameters-modules-placement-customtolerationkeys). Это позволит системным компонентам, таким как `cni-flannel`, работать на этих узлах.
 {% endalert %}
 
 Подробнее [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
