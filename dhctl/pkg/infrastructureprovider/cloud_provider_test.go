@@ -295,6 +295,8 @@ terraform {
 		testParams.usedStep = s
 		assertAllFilesCopiedToProviderDir(t, testParams, params)
 	}
+
+	assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t, providerYandex, params)
 }
 
 func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
@@ -381,6 +383,8 @@ terraform {
 		testParams.usedStep = s
 		assertAllFilesCopiedToProviderDir(t, testParams, params)
 	}
+
+	assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t, providerGCP, params)
 }
 
 func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
@@ -631,6 +635,39 @@ func assertIsNotEmptyDir(t *testing.T, dirPath string) {
 	entries, err := os.ReadDir(dirPath)
 	require.NoError(t, err, dirPath)
 	require.True(t, len(entries) > 0, dirPath)
+}
+
+func assertDirNotExists(t *testing.T, dirPath string) {
+	t.Helper()
+
+	_, err := os.Stat(dirPath)
+	require.True(t, os.IsNotExist(err), dirPath)
+}
+
+func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams) {
+	require.NotNil(t, params.FSDIParams)
+
+	assertIsNotEmptyDir(t, params.FSDIParams.PluginsDir)
+	assertIsNotEmptyDir(t, params.FSDIParams.BinariesDir)
+	assertIsNotEmptyDir(t, params.FSDIParams.CloudProviderDir)
+	assertFileExistsAndHasAnyContent(t, params.FSDIParams.InfraVersionsFile)
+}
+
+func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams) {
+	require.False(t, interfaces.IsNil(provider))
+	require.NotNil(t, params.FSDIParams)
+
+	// cleanup
+	err := provider.Cleanup()
+	require.NoError(t, err)
+	assertDirNotExists(t, provider.RootDir())
+	assertFSDIDirsAndFilesExists(t, params)
+
+	// double cleanup does not provide error
+	err = provider.Cleanup()
+	require.NoError(t, err)
+	assertDirNotExists(t, provider.RootDir())
+	assertFSDIDirsAndFilesExists(t, params)
 }
 
 func assertFileNotExists(t *testing.T, path string) {
