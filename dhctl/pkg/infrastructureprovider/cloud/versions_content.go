@@ -15,6 +15,7 @@
 package cloud
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -43,11 +44,14 @@ func getVersionContentProvider(s settings.ProviderSettings, provider string, log
 
 	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
 
-	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, error) {
-		if len(settings.Versions()) != 1 {
-			return nil, fmt.Errorf("no one version found for provider %s", provider)
+	return func(_ context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, string, error) {
+		l := len(settings.Versions())
+		if l != 1 {
+			return nil, "", fmt.Errorf("no one version (%d) found for provider %s", l, provider)
 		}
 
-		return version.GetVersionContent(s, settings.Versions()[0]), nil
+		v := settings.Versions()[0]
+
+		return version.GetVersionContent(s, v), v, nil
 	}
 }
