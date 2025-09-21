@@ -95,20 +95,20 @@ data:
             try_files /$lang/search-external-modules-index/search.json =404;
         }
 
-        # Search index for embedded modules from the latest version
+        # Search index for embedded modules
         location ~* ^/modules/search-embedded-modules-index.json$  {
-            rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/latest/$lang/search-embedded-modules-index.json break;
+            set $module "$1";
+            set $module_doc "$2";
+            set $channel_name "stable";
+
+            rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/${channel_name}/modules/$lang/search-embedded-modules-index.json break;
 
             limit_except GET {
                 deny all;
             }
 
-            set $module "$1";
-            set $module_doc "$2";
-            set $channel_name "stable";
-
-            rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/${channel_version}/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
@@ -160,8 +160,8 @@ data:
             }
 
             # Serve doc for the stable channel. Don't redirect as it shoud be SEO friendly.
-            rewrite /$    /modules-{{ $.Values.werf.env }}/$channel_version/$lang/modules/$module/${module_doc}index.html break;
-            rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$channel_version/$lang/modules/$module/$module_doc break;
+            rewrite /$    /modules-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/${module_doc}index.html break;
+            rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/$module_doc break;
 
             limit_except GET {
                 deny all;
@@ -193,11 +193,11 @@ data:
             }
 
             set $module "$1";
-            set $channel "$2";
+            set $module_version "$2";
             set $module_doc "$3";
 
-            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /modules-{{ $.Values.werf.env }}/$channel/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /modules-{{ $.Values.werf.env }}/$channel/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /modules-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /modules-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;

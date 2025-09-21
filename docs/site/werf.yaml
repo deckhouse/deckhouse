@@ -10,9 +10,6 @@
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
 
-{{- $context := . }}
-{{- $_ := set $context "ModulePath" "../../" }}
-
 project: deckhouse-web
 configVersion: 1
 cleanup:

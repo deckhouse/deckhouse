@@ -59,7 +59,7 @@ shell:
         mkdir -m 777 -p /app/_site/
         jekyll build -d /app/_site/ --config  _config.yml
 git:
-# Common files used for building site and documentation (plugins, assets, etc.)
+# Common files used for building site and documentation (plugins, assets, etc.), plus unversionized products documentation
 - add: /docs/documentation
   to: /srv/jekyll-data/site
   owner: jekyll
@@ -140,9 +140,9 @@ imageSpec:
 # TODO use the common image fro nginx
 fromImage: builder/alpine-3.20
 shell:
-  beforeSetup:
+  beforeInstall:
   - apk add --no-cache nginx
-  setup:
+  install:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf
       {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
