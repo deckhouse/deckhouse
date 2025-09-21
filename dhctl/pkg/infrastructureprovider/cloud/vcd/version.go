@@ -15,6 +15,7 @@
 package vcd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -28,7 +29,7 @@ import (
 	"github.com/vmware/go-vcloud-director/v3/govcd"
 )
 
-func VersionContentProvider(settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, error) {
+func VersionContentProvider(_ context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
 	return versionContentProviderWithAPI(getAPIVersion, settings, metaConfig, logger)
 }
 
@@ -98,13 +99,14 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 
 type apiVersionGetter func(metaConfig *config.MetaConfig, logger log.Logger) (string, error)
 
-func versionContentProviderWithAPI(getVersion apiVersionGetter, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, error) {
+func versionContentProviderWithAPI(getVersion apiVersionGetter, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
 	apiVersion, err := getVersion(metaConfig, logger)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	var content []byte
+	var resultVersion string
 
 	err = versionConstraintAction(apiVersion, logger, func(legacy bool) error {
 		versions := settings.Versions()
@@ -121,14 +123,15 @@ func versionContentProviderWithAPI(getVersion apiVersionGetter, settings setting
 			}
 		}
 
+		resultVersion = ver
 		content = version.GetVersionContent(settings, ver)
 
 		return nil
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return content, nil
+	return content, resultVersion, nil
 }

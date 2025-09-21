@@ -38,19 +38,23 @@ import (
 )
 
 const (
-	yandexTestLayout = "without-nat"
+	yandexTestLayout    = "without-nat"
+	yandexPluginVersion = "0.83.0"
+
 	gcpTestLayout    = "without-nat"
-	modulesRootDir   = "modules"
-	layoutsRootDir   = "layouts"
-	lockFile         = ".terraform.lock.hcl"
+	gcpPluginVersion = "3.48.0"
+
+	modulesRootDir = "modules"
+	layoutsRootDir = "layouts"
+	lockFile       = ".terraform.lock.hcl"
 )
 
 var (
 	yandexPluginsDir = []string{
-		"registry.opentofu.org/yandex-cloud/yandex/0.83.0/linux_amd64/terraform-provider-yandex",
+		fmt.Sprintf("registry.opentofu.org/yandex-cloud/yandex/%s/linux_amd64/terraform-provider-yandex", yandexPluginVersion),
 	}
 	gcpPluginsDir = []string{
-		"registry.terraform.io/hashicorp/google/3.48.0/linux_amd64/terraform-provider-google",
+		fmt.Sprintf("registry.terraform.io/hashicorp/google/%s/linux_amd64/terraform-provider-google", gcpPluginVersion),
 	}
 )
 
@@ -236,17 +240,17 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 	_, err = providerYandex.Executor(context.TODO(), step, params.Logger)
 	require.NoError(t, err)
 
-	const versionsContent = `
+	versionsContent := fmt.Sprintf(`
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
     yandex = {
       source  = "yandex-cloud/yandex"
-      version = ">= 0.83.0"
+      version = ">= %s"
     }
   }
 }
-`
+`, yandexPluginVersion)
 	testParams := assertAllFilesCopiedToProviderDirParams{
 		provider:        providerYandex,
 		versionsContent: versionsContent,
@@ -263,7 +267,8 @@ terraform {
 			"static-node",
 			"vpc-components",
 		},
-		pluginPaths: yandexPluginsDir,
+		pluginPaths:   yandexPluginsDir,
+		pluginVersion: yandexPluginVersion,
 	}
 
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
@@ -321,17 +326,17 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 	_, err = providerGCP.Executor(context.TODO(), step, params.Logger)
 	require.NoError(t, err)
 
-	const versionsContent = `
+	versionsContent := fmt.Sprintf(`
 terraform {
   required_version = ">= 0.14.8"
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 3.48.0"
+      version = ">= %s"
     }
   }
 }
-`
+`, gcpPluginVersion)
 
 	testParams := assertAllFilesCopiedToProviderDirParams{
 		provider:        providerGCP,
@@ -348,7 +353,8 @@ terraform {
 			"master-node",
 			"static-node",
 		},
-		pluginPaths: gcpPluginsDir,
+		pluginPaths:   gcpPluginsDir,
+		pluginVersion: gcpPluginVersion,
 	}
 
 	assertAllFilesCopiedToProviderDir(t, testParams, params)
@@ -470,8 +476,9 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.MarshalConfig()
 		},
-		layout:     yandexTestLayout,
-		pluginsDir: yandexPluginsDir,
+		layout:        yandexTestLayout,
+		pluginsDir:    yandexPluginsDir,
+		pluginVersion: yandexPluginVersion,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -481,8 +488,9 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.NodeGroupConfig("master", 0, "")
 		},
-		layout:     yandexTestLayout,
-		pluginsDir: yandexPluginsDir,
+		layout:        yandexTestLayout,
+		pluginsDir:    yandexPluginsDir,
+		pluginVersion: yandexPluginVersion,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -492,8 +500,9 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.NodeGroupConfig("worker", 0, "")
 		},
-		layout:     yandexTestLayout,
-		pluginsDir: yandexPluginsDir,
+		layout:        yandexTestLayout,
+		pluginsDir:    yandexPluginsDir,
+		pluginVersion: yandexPluginVersion,
 	})
 }
 
@@ -530,8 +539,9 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.MarshalConfig()
 		},
-		layout:     gcpTestLayout,
-		pluginsDir: gcpPluginsDir,
+		layout:        gcpTestLayout,
+		pluginsDir:    gcpPluginsDir,
+		pluginVersion: gcpPluginVersion,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -541,8 +551,9 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.NodeGroupConfig("master", 0, "")
 		},
-		layout:     gcpTestLayout,
-		pluginsDir: gcpPluginsDir,
+		layout:        gcpTestLayout,
+		pluginsDir:    gcpPluginsDir,
+		pluginVersion: gcpPluginVersion,
 	})
 
 	assertExecInitAndPlanResults(t, execInitAndPlanResultsParams{
@@ -552,8 +563,9 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 		configProvider: func() []byte {
 			return cfg.NodeGroupConfig("worker", 0, "")
 		},
-		layout:     gcpTestLayout,
-		pluginsDir: gcpPluginsDir,
+		layout:        gcpTestLayout,
+		pluginsDir:    gcpPluginsDir,
+		pluginVersion: gcpPluginVersion,
 	})
 }
 
@@ -632,6 +644,7 @@ func assertFileNotExists(t *testing.T, path string) {
 type assertAllFilesCopiedToProviderDirParams struct {
 	provider infrastructure.CloudProvider
 
+	pluginVersion   string
 	versionsContent string
 	usedLayout      string
 	usedStep        infrastructure.Step
@@ -642,7 +655,7 @@ type assertAllFilesCopiedToProviderDirParams struct {
 	modules []string
 }
 
-func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
+func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams, pluginVersion string) {
 	t.Helper()
 
 	infraBin := "terraform"
@@ -651,7 +664,7 @@ func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, 
 	}
 
 	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
-	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), infraBin))
+	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), pluginVersion, infraBin))
 }
 
 func assertPluginsPresent(t *testing.T, root string, pluginPaths []string, source string) {
@@ -683,35 +696,42 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	require.NotEmpty(t, params.usedStep)
 	require.NotEmpty(t, params.usedLayout)
 	require.NotEmpty(t, params.versionsContent)
+	require.NotEmpty(t, params.pluginVersion)
 
-	assertInfraUtilCopied(t, provider, providerParams)
+	assertInfraUtilCopied(t, provider, providerParams, params.pluginVersion)
 
 	require.NotEmpty(t, params.pluginPaths)
 
-	assertPluginsPresent(t, filepath.Join(provider.RootDir(), "plugins"), params.pluginPaths, providerParams.FSDIParams.PluginsDir)
+	infraRoot := filepath.Join(provider.RootDir(), params.pluginVersion)
+
+	assertPluginsPresent(t,
+		filepath.Join(infraRoot, "plugins"),
+		params.pluginPaths,
+		providerParams.FSDIParams.PluginsDir,
+	)
 
 	const versionsFile = "versions.tf"
 
-	versionsFileWithContentPath := filepath.Join(provider.RootDir(), versionsFile)
+	versionsFileWithContentPath := filepath.Join(infraRoot, versionsFile)
 	assertFilExistsAndHasContent(t, versionsFileWithContentPath, params.versionsContent)
 
-	assertFileNotExists(t, filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, versionsFile))
+	assertFileNotExists(t, filepath.Join(infraRoot, modulesRootDir, layoutsRootDir, versionsFile))
 
 	require.NotEmpty(t, params.layouts)
 
 	for _, layout := range params.layouts {
-		layoutDir := filepath.Join(provider.RootDir(), modulesRootDir, layoutsRootDir, layout)
+		layoutDir := filepath.Join(infraRoot, modulesRootDir, layoutsRootDir, layout)
 		assertIsNotEmptyDir(t, layoutDir)
 	}
 
 	versionsFileForStep := filepath.Join(
-		getTestStepDir(provider.RootDir(), params.usedStep, params.usedLayout),
+		getTestStepDir(infraRoot, params.usedStep, params.usedLayout),
 		versionsFile,
 	)
 
 	assertFileExistsAndSymlink(t, versionsFileWithContentPath, versionsFileForStep)
 
-	modulesDir := filepath.Join(provider.RootDir(), modulesRootDir, "terraform-modules")
+	modulesDir := filepath.Join(infraRoot, modulesRootDir, "terraform-modules")
 	assertIsNotEmptyDir(t, modulesDir)
 	assertFileExistsAndSymlink(t, versionsFileWithContentPath, filepath.Join(modulesDir, versionsFile))
 
@@ -729,7 +749,7 @@ func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider i
 
 	require.False(t, interfaces.IsNil(provider))
 
-	assertInfraUtilCopied(t, provider, providerParams)
+	assertInfraUtilCopied(t, provider, providerParams, "")
 
 	entries, err := os.ReadDir(provider.RootDir())
 	require.NoError(t, err)
@@ -817,11 +837,12 @@ func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParam
 }
 
 type executorTestInitParams struct {
-	provider   infrastructure.CloudProvider
-	step       infrastructure.Step
-	params     CloudProviderGetterParams
-	layout     string
-	pluginsDir []string
+	provider      infrastructure.CloudProvider
+	step          infrastructure.Step
+	params        CloudProviderGetterParams
+	layout        string
+	pluginsDir    []string
+	pluginVersion string
 }
 
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
@@ -831,17 +852,20 @@ func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T,
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.pluginsDir)
+	require.NotEmpty(t, params.pluginVersion)
 	require.NotNil(t, params.params.FSDIParams)
 
-	tmp := filepath.Join(params.provider.RootDir(), "tf_dhctl")
+	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
+
+	tmp := filepath.Join(infraRoot, "tf_dhctl")
 
 	assertIsNotEmptyDir(t, tmp)
 	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)
 	assertFileExists(t, path.Join(tmp, "plugin_path"))
 
-	lockFileDir := params.provider.RootDir()
+	lockFileDir := infraRoot
 	if params.provider.NeedToUseTofu() {
-		lockFileDir = getTestStepDir(params.provider.RootDir(), params.step, params.layout)
+		lockFileDir = getTestStepDir(infraRoot, params.step, params.layout)
 	}
 
 	assertLockFilePresent(t, lockFileDir)
@@ -871,6 +895,7 @@ type getTestParamsPlanParams struct {
 	provider       infrastructure.CloudProvider
 	configProvider func() []byte
 	step           infrastructure.Step
+	pluginVersion  string
 }
 
 func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
@@ -879,12 +904,15 @@ func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastruct
 	require.False(t, interfaces.IsNil(params.provider))
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
+	require.NotEmpty(t, params.pluginVersion)
+
+	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
 
 	planParams := infrastructure.PlanOpts{
 		Destroy:          false,
-		StatePath:        filepath.Join(params.provider.RootDir(), fmt.Sprintf("state_%s.tfstate", params.step)),
-		VariablesPath:    filepath.Join(params.provider.RootDir(), fmt.Sprintf("variables_%s.tfvars.json", params.step)),
-		OutPath:          filepath.Join(params.provider.RootDir(), fmt.Sprintf("output_%s.tfplan", params.step)),
+		StatePath:        filepath.Join(infraRoot, fmt.Sprintf("state_%s.tfstate", params.step)),
+		VariablesPath:    filepath.Join(infraRoot, fmt.Sprintf("variables_%s.tfvars.json", params.step)),
+		OutPath:          filepath.Join(infraRoot, fmt.Sprintf("output_%s.tfplan", params.step)),
 		DetailedExitCode: true,
 	}
 
@@ -905,6 +933,7 @@ type execInitAndPlanResultsParams struct {
 	configProvider func() []byte
 	layout         string
 	pluginsDir     []string
+	pluginVersion  string
 }
 
 func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
@@ -914,6 +943,7 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.pluginVersion)
 	require.NotNil(t, params.pluginsDir)
 
 	executor, err := params.provider.Executor(context.TODO(), params.step, params.params.Logger)
@@ -922,17 +952,19 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 	err = executor.Init(context.TODO())
 	require.NoError(t, err)
 	asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t, executorTestInitParams{
-		provider:   params.provider,
-		step:       params.step,
-		params:     params.params,
-		layout:     params.layout,
-		pluginsDir: params.pluginsDir,
+		provider:      params.provider,
+		step:          params.step,
+		params:        params.params,
+		layout:        params.layout,
+		pluginsDir:    params.pluginsDir,
+		pluginVersion: params.pluginVersion,
 	})
 
 	planParams := getTestPlanParams(t, getTestParamsPlanParams{
 		provider:       params.provider,
 		step:           params.step,
 		configProvider: params.configProvider,
+		pluginVersion:  params.pluginVersion,
 	})
 
 	exitCode, err := executor.Plan(context.TODO(), planParams)

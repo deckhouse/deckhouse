@@ -43,9 +43,10 @@ func TestVersionsContentLegacy(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, err := versionContentProviderWithAPI(testGetLegacyAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithAPI(testGetLegacyAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
 
 	require.NoError(t, err)
+	require.Equal(t, version, legacyVersion)
 	require.Equal(t, string(content), fmt.Sprintf(`
 terraform {
   required_version = ">= 0.14.8"
@@ -66,9 +67,10 @@ func TestVersionsContentCurrent(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, err := versionContentProviderWithAPI(testGetCurrentAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithAPI(testGetCurrentAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
 
 	require.NoError(t, err)
+	require.Equal(t, version, versionsForTest[1])
 	require.Equal(t, string(content), fmt.Sprintf(`
 terraform {
   required_version = ">= 0.14.8"

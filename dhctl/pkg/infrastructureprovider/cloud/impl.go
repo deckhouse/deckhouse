@@ -113,7 +113,13 @@ func (p *Provider) String() string {
 }
 
 func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infrastructure.OutputExecutor, error) {
-	infraUtilDestination, err := p.makeRootDirAndDownloadInfraUtil(ctx, "Failed init output executor")
+	const errPrefix = "Failed init output executor"
+	err := p.makeRootDir(errPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	infraUtilDestination, err := p.downloadInfraUtil(ctx, p.rootDir, errPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -139,17 +145,46 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 }
 
 func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logger log.Logger) (infrastructure.Executor, error) {
-	infraUtilDestination, err := p.makeRootDirAndDownloadInfraUtil(ctx, "Failed init executor")
+	const errPrefix = "Failed init executor"
+
+	if err := p.makeRootDir(errPrefix); err != nil {
+		return nil, err
+	}
+
+	p.logger.LogDebugF("Getting version content\n", p.String())
+
+	vContentProvider := getVersionContentProvider(p.params.Settings, p.name, p.logger)
+	versionContent, version, err := vContentProvider(ctx, p.params.Settings, p.metaConfig, p.logger)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get version content for %s: %w", p.String(), err)
+	}
+
+	infraRootDir := filepath.Join(p.rootDir, version)
+
+	p.logger.LogDebugF(
+		"Got version %s for %s with content:\n%s\n Infra root dir will be %s\n",
+		version,
+		p.String(),
+		versionContent,
+		infraRootDir,
+	)
+
+	err = p.makeDir(infraRootDir, errPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	pluginsDir, err := p.downloadAllPluginsVersions(ctx)
+	infraUtilDestination, err := p.downloadInfraUtil(ctx, infraRootDir, errPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	modulesDir, err := p.downloadModules(ctx)
+	pluginsDir, err := p.downloadPluginVersion(ctx, infraRootDir, version)
+	if err != nil {
+		return nil, err
+	}
+
+	modulesDir, err := p.downloadModules(ctx, infraRootDir)
 	if err != nil {
 		return nil, err
 	}
@@ -157,15 +192,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	stepStr := string(step)
 	stepDir := filepath.Join(modulesDir, fsstatic.LayoutsDir, p.layout, stepStr)
 
-	p.logger.LogDebugF("Got step dir %s for %s. Getting version content\n", stepDir, p.String())
-
-	vContentProvider := getVersionContentProvider(p.params.Settings, p.name, p.logger)
-	versionContent, err := vContentProvider(p.params.Settings, p.metaConfig, p.logger)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot get version content for %s: %w", p.String(), err)
-	}
-
-	err = p.fillVersionsToModulesAndLayoutStep(versionContent, stepDir, modulesDir)
+	err = p.fillVersionsToModulesAndLayoutStep(versionContent, infraRootDir, stepDir, modulesDir)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +203,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 			WorkingDir: stepDir,
 			PluginsDir: pluginsDir,
 			RunExecutorParams: terraform.RunExecutorParams{
-				RootDir:          p.rootDir,
+				RootDir:          infraRootDir,
 				TerraformBinPath: infraUtilDestination,
 			},
 			Step:           step,
@@ -190,7 +217,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		WorkingDir: stepDir,
 		PluginsDir: pluginsDir,
 		RunExecutorParams: tofu.RunExecutorParams{
-			RootDir:     p.rootDir,
+			RootDir:     infraRootDir,
 			TofuBinPath: infraUtilDestination,
 		},
 		Step:           step,
@@ -238,10 +265,10 @@ Versions content SHA sum is %s
 	return false, fmt.Errorf("Cannot get root versions file %s for %s: %w", versionsRootFile, p.String(), err)
 }
 
-func (p *Provider) fillVersionsToModulesAndLayoutStep(versionContent []byte, stepDir, modulesDir string) error {
+func (p *Provider) fillVersionsToModulesAndLayoutStep(versionContent []byte, infraRoot, stepDir, modulesDir string) error {
 	versionsSum := stringsutil.Sha256EncodeBytes(versionContent)
 
-	versionsRootFile := fsstatic.GetVersionsFile(p.rootDir)
+	versionsRootFile := fsstatic.GetVersionsFile(infraRoot)
 
 	p.logger.LogDebugF(`Got version content for %s:
 %s
@@ -300,35 +327,26 @@ Root versions file %s
 	})
 }
 
-func (p *Provider) makeRootDirAndDownloadInfraUtil(ctx context.Context, errorPref string) (string, error) {
-	if err := p.makeRootDir(); err != nil {
-		return "", fmt.Errorf("%s. %w", errorPref, err)
-	}
-
-	infraUtilDestination, err := p.downloadInfraUtil(ctx)
-	if err != nil {
-		return "", fmt.Errorf("%s. %w", errorPref, err)
-	}
-
-	return infraUtilDestination, nil
-}
-
-func (p *Provider) makeRootDir() error {
-	err := os.MkdirAll(p.rootDir, 0755)
+func (p *Provider) makeDir(dir, errPrefix string) error {
+	err := os.MkdirAll(dir, 0777)
 	if err == nil {
 		return nil
 	}
 
 	if os.IsExist(err) {
-		p.logger.LogDebugF("Directory %s already exists for %s, skipping creation", p.rootDir, p.String())
+		p.logger.LogDebugF("Directory %s already exists for %s, skipping creation", dir, p.String())
 		return nil
 	}
 
-	return fmt.Errorf("Failed to make root dir %s for %s: %w", p.rootDir, p.String(), err)
+	return fmt.Errorf("%s. Failed to make dir %s for %s: %w", errPrefix, dir, p.String(), err)
 }
 
-func (p *Provider) downloadModules(ctx context.Context) (string, error) {
-	destination := filepath.Join(p.rootDir, "modules")
+func (p *Provider) makeRootDir(errPrefix string) error {
+	return p.makeDir(p.rootDir, errPrefix)
+}
+
+func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string, error) {
+	destination := filepath.Join(rootDir, "modules")
 
 	p.logger.LogDebugF("Create modules destination %s for %s\n", destination, p.String())
 
@@ -351,51 +369,50 @@ func (p *Provider) downloadModules(ctx context.Context) (string, error) {
 	return destination, nil
 }
 
-func (p *Provider) downloadAllPluginsVersions(ctx context.Context) (string, error) {
-	pluginsDir := filepath.Join(p.rootDir, "plugins")
+func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version string) (string, error) {
+	pluginsDir := filepath.Join(rootDir, "plugins")
 
 	arch := p.arch()
 
-	for _, v := range p.params.Settings.Versions() {
-		destination := fsstatic.GetPluginDir(pluginsDir, p.params.Settings, v, arch)
-		destinationDir := path.Dir(destination)
-		destinationDir = strings.TrimRight(destinationDir, "/")
-		// for windows
-		destinationDir = strings.TrimRight(destinationDir, "\\")
+	destination := fsstatic.GetPluginDir(pluginsDir, p.params.Settings, version, arch)
+	destinationDir := path.Dir(destination)
+	destinationDir = strings.TrimRight(destinationDir, "/")
+	// for windows
+	destinationDir = strings.TrimRight(destinationDir, "\\")
 
-		p.logger.LogDebugF("Create plugins dir destination %s for %s\n", destinationDir, p.String())
+	p.logger.LogDebugF("Create plugins dir destination %s for %s version %s\n", destinationDir, p.String(), version)
 
-		err := os.MkdirAll(destinationDir, 0755)
-		if err != nil {
-			return "", fmt.Errorf("Cannot create plugins destination dir %s for %s: %w", destinationDir, p.String(), err)
-		}
-		params := InfrastructurePluginProviderParams{
-			Version: Version{
-				Version: v,
-				Arch:    arch,
-			},
-			Settings: p.params.Settings,
-		}
+	err := os.MkdirAll(destinationDir, 0755)
+	if err != nil {
+		return "", fmt.Errorf("Cannot create plugins destination dir %s for %s: %w", destinationDir, p.String(), err)
+	}
+	params := InfrastructurePluginProviderParams{
+		Version: Version{
+			Version: version,
+			Arch:    arch,
+		},
+		Settings: p.params.Settings,
+	}
 
-		p.logger.LogDebugF(
-			"Download cloud %s plugin %s to destination %s for %s\n",
-			p.name,
-			params.Version.String(),
-			destinationDir,
-			p.String(),
-		)
+	p.logger.LogDebugF(
+		"Download cloud %s plugin %s version %s to destination %s for %s\n",
+		p.name,
+		params.Version.String(),
+		version,
+		destinationDir,
+		p.String(),
+	)
 
-		err = p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination)
-		if err != nil {
-			return "", fmt.Errorf("Cannot download plugin to %s for %s: %w", destination, p.String(), err)
-		}
+	err = p.di.InfraPluginProvider.DownloadPlugin(ctx, params, destination)
+	if err != nil {
+		return "", fmt.Errorf("Cannot download plugin version %s to %s for %s: %w", version, destination, p.String(), err)
 	}
 
 	return pluginsDir, nil
 }
 
-func (p *Provider) downloadInfraUtil(ctx context.Context) (string, error) {
-	destination := fsstatic.GetInfraUtilPath(p.rootDir, p.params.Settings)
+func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix string) (string, error) {
+	destination := fsstatic.GetInfraUtilPath(rootDir, p.params.Settings)
 
 	params := InfrastructureUtilProviderParams{
 		Version{
@@ -415,7 +432,7 @@ func (p *Provider) downloadInfraUtil(ctx context.Context) (string, error) {
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("Cannot download infrastructure util to %s for %s: %w", destination, p.String(), err)
+		return "", fmt.Errorf("%s. Cannot download infrastructure util to %s for %s: %w", errPrefix, destination, p.String(), err)
 	}
 
 	return destination, nil
