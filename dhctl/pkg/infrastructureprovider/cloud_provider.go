@@ -34,6 +34,8 @@ type CloudProviderGetterParams struct {
 	AdditionalParams cloud.ProviderAdditionalParams
 	Logger           log.Logger
 	FSDIParams       *fs.DIParams
+
+	VersionProviderGetter cloud.VersionsContentProviderGetter
 }
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
@@ -79,13 +81,29 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 		}
 
 		diParams := defaultFSDIParams
+		diParamsLog := "Use default"
 		if params.FSDIParams != nil {
 			diParams = params.FSDIParams
+			diParamsLog = "Using custom"
 		}
+
+		params.Logger.LogDebugF("%s FSDIParams: %v\n", diParamsLog, diParams)
 
 		di, err := fs.GetDi(params.Logger, diParams)
 		if err != nil {
-			return nil, fmt.Errorf("Cannot get fs.DI: %w", err)
+			return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
+		}
+
+		if di.VersionsContentProviderGetter == nil {
+			if params.VersionProviderGetter != nil {
+				params.Logger.LogDebugF("Use custom VersionProviderGetter\n")
+				di.VersionsContentProviderGetter = params.VersionProviderGetter
+			} else {
+				params.Logger.LogDebugF("Use default VersionProviderGetter\n")
+				di.VersionsContentProviderGetter = cloud.DefaultVersionContentProvider
+			}
+		} else {
+			params.Logger.LogDebugF("fs.GetDI provider our own VersionProviderGetter\n")
 		}
 
 		providerName := metaConfig.ProviderName

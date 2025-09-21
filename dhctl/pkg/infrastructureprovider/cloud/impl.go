@@ -22,6 +22,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -36,11 +37,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
+type VersionsContentProviderGetter func(s settings.ProviderSettings, provider string, logger log.Logger) VersionContentProvider
+
 type ProviderDI struct {
 	SettingsProvider    SettingsProvider
 	InfraUtilProvider   InfrastructureUtilProvider
 	InfraPluginProvider InfrastructurePluginProvider
 	ModulesProvider     ProviderModulesProvider
+
+	VersionsContentProviderGetter VersionsContentProviderGetter
 }
 
 type ProviderParams struct {
@@ -54,7 +59,8 @@ type Provider struct {
 	name   string
 	uuid   string
 
-	rootDir string
+	rootDirRoutinesMutex sync.Mutex
+	rootDir              string
 
 	params     ProviderParams
 	metaConfig *config.MetaConfig
@@ -113,6 +119,9 @@ func (p *Provider) String() string {
 }
 
 func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infrastructure.OutputExecutor, error) {
+	p.rootDirRoutinesMutex.Lock()
+	defer p.rootDirRoutinesMutex.Unlock()
+
 	const errPrefix = "Failed init output executor"
 	err := p.makeRootDir(errPrefix)
 	if err != nil {
@@ -145,15 +154,22 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 }
 
 func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logger log.Logger) (infrastructure.Executor, error) {
+	p.rootDirRoutinesMutex.Lock()
+	defer p.rootDirRoutinesMutex.Unlock()
+
 	const errPrefix = "Failed init executor"
+
+	if p.di.VersionsContentProviderGetter == nil {
+		return nil, fmt.Errorf("%s. No VersionsContentProviderGetter defined for %s", errPrefix, p.String())
+	}
 
 	if err := p.makeRootDir(errPrefix); err != nil {
 		return nil, err
 	}
 
-	p.logger.LogDebugF("Getting version content\n", p.String())
+	p.logger.LogDebugF("Getting version content for %s\n", p.String())
 
-	vContentProvider := getVersionContentProvider(p.params.Settings, p.name, p.logger)
+	vContentProvider := p.di.VersionsContentProviderGetter(p.params.Settings, p.name, p.logger)
 	versionContent, version, err := vContentProvider(ctx, p.params.Settings, p.metaConfig, p.logger)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get version content for %s: %w", p.String(), err)
@@ -293,6 +309,7 @@ Root versions file %s
 		if err != nil {
 			return fmt.Errorf("Cannot write root versions %s file for %s: %w", versionsRootFile, p.String(), err)
 		}
+		p.logger.LogDebugF("Root versions file %s for %s wrote\n", versionsRootFile, p.String())
 	} else {
 		p.logger.LogDebugF("Root versions file %s for %s does not need to rewrite\n", versionsRootFile, p.String())
 	}
@@ -444,5 +461,20 @@ func (p *Provider) arch() string {
 }
 
 func (p *Provider) Cleanup() error {
-	return os.RemoveAll(p.rootDir)
+	p.rootDirRoutinesMutex.Lock()
+	defer p.rootDirRoutinesMutex.Unlock()
+
+	_, err := os.Stat(p.rootDir)
+	if err == nil {
+		p.logger.LogDebugF("Removing root dir %s for %s\n", p.rootDir, p.String())
+		return os.RemoveAll(p.rootDir)
+	}
+
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("Cannot remove root dir %s for %s: %w", p.rootDir, p.String(), err)
+	}
+
+	p.logger.LogDebugF("Root dir %s for %s already removed\n", p.rootDir, p.String())
+
+	return nil
 }
