@@ -181,7 +181,7 @@ spec:
             - |
               touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log
               cp /chroot/etc/nginx/nginx.conf /tmp/nginx.conf
-              chmod 0666 -R /tmp
+              chmod 0666 /tmp/*
           volumeMounts:
             - name: write-files
               mountPath: /tmp
