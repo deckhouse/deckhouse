@@ -49,7 +49,6 @@ func New(endpoints []string, options ...Option) (Client, error) {
 		Endpoints:            endpoints,
 		DialTimeout:          10 * time.Second,
 		AutoSyncInterval:     30 * time.Second,
-		DialOptions:          []grpc.DialOption{grpc.WithBlock()},
 		DialKeepAliveTime:    60 * time.Second,
 		DialKeepAliveTimeout: 5 * time.Second,
 	}
@@ -70,9 +69,7 @@ func New(endpoints []string, options ...Option) (Client, error) {
 		cfg.TLS.InsecureSkipVerify = true
 	}
 
-	cli, err := clientv3.New(cfg)
-
-	return cli, err
+	return clientv3.New(cfg)
 }
 
 type etcdOptions struct {
