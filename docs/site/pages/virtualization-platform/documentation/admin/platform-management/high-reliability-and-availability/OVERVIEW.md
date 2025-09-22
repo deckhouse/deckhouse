@@ -18,7 +18,3 @@ For more information on enabling HA mode, refer to [Managing HA mode](enable.htm
 If the cluster has more than one master node, HA mode is automatically enabled,
 both during the initial deployment and when additional nodes are added later.
 Recommended roles and number of nodes can be found in [Recommendations for configuring cluster nodes and preventing overload](recommendations.html).
-
-DVP provides chaos engineering tools to test cluster resilience.
-These tools let you deliberately or randomly disrupt individual components and observe the infrastructure's response.
-For information on configuring these tools, refer to [Chaos engineering](chaos-engineering.html).

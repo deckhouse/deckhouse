@@ -15,7 +15,7 @@ and the procedure for working with certificate issuers.
 
 {% alert level="info" %}
 Examples of certificate configuration, usage of the `tls-acme` annotation,
-and secure handling of credentials are described in [Using TLS certificates](../../../user/security/tls.html).
+and secure handling of credentials are described in [Using TLS certificates](/products/virtualization-platform/documentation/user/security/tls.html).
 {% endalert %}
 
 ## Monitoring

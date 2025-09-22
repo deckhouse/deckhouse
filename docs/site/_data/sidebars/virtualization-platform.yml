@@ -92,10 +92,6 @@ entries:
                     en: Managing HA mode
                     ru: Управление режимом HA
                   url: /virtualization-platform/documentation/admin/platform-management/high-reliability-and-availability/enable.html
-                - title:
-                    en: Chaos engineering
-                    ru: Хаос-инжиниринг
-                  url: /virtualization-platform/documentation/admin/platform-management/high-reliability-and-availability/chaos-engineering.html
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
@@ -361,14 +357,6 @@ entries:
                     en: Certificate management
                     ru: Управление сертификатами
                   url: /virtualization-platform/documentation/admin/platform-management/security/certificates.html
-                - title:
-                    en: Integration with KUMA and antivirus software
-                    ru: Интеграция с KUMA и антивирусным ПО
-                  url: /virtualization-platform/documentation/admin/platform-management/security/kuma-and-av-software.html
-                - title:
-                    en: Distribution of secrets across namespaces
-                    ru: Распространение секретов по пространствам имён
-                  url: /virtualization-platform/documentation/admin/platform-management/security/secret-distribution.html
             - title:
                 en: Monitoring configuration
                 ru: Настройка мониторинга
@@ -509,10 +497,6 @@ entries:
             en: Security
             ru: Безопасность
           folders:
-            - title:
-                en: Container image vulnerability scanning
-                ru: Сканирование контейнерных образов на уязвимости
-              url: /virtualization-platform/documentation/user/security/scanning.html
             - title:
                 en: Using TLS certificates
                 ru: Использование TLS-сертификатов

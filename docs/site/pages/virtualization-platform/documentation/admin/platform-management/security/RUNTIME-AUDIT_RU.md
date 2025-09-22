@@ -23,7 +23,7 @@ DVP использует два основных источника событи
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
 
-Подробности об архитектуре реализации аудита можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
+Подробности об архитектуре реализации аудита можно найти [в разделе Архитектура](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ## Минимальные требования
 
@@ -124,7 +124,7 @@ DVP использует два основных источника событи
 
 - **пользовательские правила**, которые задаются через [кастомный ресурс FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules).
 
-Подробности о работе правил аудита безопасности можно найти [в разделе Архитектура](../../../../architecture/security/runtime-audit.html).
+Подробности о работе правил аудита безопасности можно найти [в разделе Архитектура](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ### Добавление пользовательского правила
 

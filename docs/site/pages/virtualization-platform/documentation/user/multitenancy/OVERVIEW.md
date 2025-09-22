@@ -131,4 +131,4 @@ Note that changing the template might cause resource conflicts.
 If the new template’s chart defines resources that already exist in the namespace, the template can't be applied.
 {% endalert %}
 
-For details on project templates and their creation, refer to the [Administration section](../admin/multitenancy.html).
+For details on project templates and their creation, refer to the [Administration section](/products/virtualization-platform/documentation/admin/platform-management/access-control/projects.html).

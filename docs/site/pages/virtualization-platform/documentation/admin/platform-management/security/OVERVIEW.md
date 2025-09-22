@@ -29,7 +29,3 @@ In this section, you will find information on:
   - Issuing, renewing, and managing TLS certificates using the built-in `cert-manager` tool.
   - Examples of using Let’s Encrypt, HashiCorp Vault, self-signed, and external CAs.
   - Support for `HTTP-01` and `DNS-01` validation types.
-
-- Integration with external monitoring and security systems:
-  - Sending logs to Kaspersky Unified Monitoring and Analysis Platform (KUMA).
-  - Configuring exclusions for antivirus solutions, using Kaspersky Endpoint Security for Linux (KESL) as an example.

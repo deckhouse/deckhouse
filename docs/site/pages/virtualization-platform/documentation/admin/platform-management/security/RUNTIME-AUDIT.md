@@ -22,7 +22,7 @@ DVP uses two main sources of events:
 - Linux kernel events — via the eBPF driver for the [Falco](https://falco.org/) threat detection system.
 - [Kubernetes API audit](./kubernetes-api-audit.html) events — via integration with [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) and a webhook interface.
 
-For details about the auditing architecture, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For details about the auditing architecture, refer to [Architecture](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ## Minimum requirements
 
@@ -118,7 +118,7 @@ DVP includes:
 
 - **Custom rules**, defined via the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
-For more information on how security audit rules work, refer to [Architecture](../../../../architecture/security/runtime-audit.html).
+For more information on how security audit rules work, refer to [Architecture](/products/virtualization-platform/documentation/architecture/security/runtime-audit.html).
 
 ### Adding a custom rule
 

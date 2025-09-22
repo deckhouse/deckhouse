@@ -29,7 +29,3 @@ lang: ru
   - выпуск, продление и контроль TLS-сертификатов с помощью встроенного инструмента `cert-manager`;
   - примеры использования Let’s Encrypt, HashiCorp Vault, самоподписанных и внешних CA;
   - поддержка видов валидации `HTTP-01` и `DNS-01`.
-
-- Интеграция с внешними системами мониторинга и безопасности:
-  - отправка логов в Kaspersky Unified Monitoring and Analysis Platform (KUMA);
-  - настройка исключений для антивирусных решений на примере Kaspersky Endpoint Security for Linux (KESL).
