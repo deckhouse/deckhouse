@@ -145,7 +145,12 @@ Deckhouse checks whether the dependency is met in the following cases:
 
 ## Dependency on the version of other modules
 
-This dependency defines the list of **enabled** modules and their versions that are required for the module to work. 
+Dependencies on other modules describe the conditions for enabling, updating, and disabling a module.
+A module in the Deckhouse Kubernetes Platform may have required and optional dependencies on versions of other modules.
+
+### Required dependencies
+
+This dependency defines the list of **enabled** modules and their versions that are required for the module to work.
 
 {% alert level="info" %}
 The built-in DKP module version is considered equal to the DKP version.
@@ -170,30 +175,72 @@ requirements:
     operator-trivy: '> v1.64.0'
 ```
 
-### Optional module requirements
+### Optional requirements
+
+{% alert level="danger" %}
+Optional dependencies for modules are available for Deckhouse Kubernetes Platform starting with version 1.73.
+If you need to use them for a module, [set a Deckhouse Kubernetes Platform version dependency](#deckhouse-kubernetes-platform-version-dependency) 1.73 or higher for that module.
+{% endalert %}
 
 Use this when your module works alone, but integrates with another module **if it is present**.
+
+{% alert level="info" %}
+Optional dependencies may affect the ability to enable, disable, and update both modules: the dependent module and the module on which it depends.
+{% endalert %}
 
 To mark a requirement as optional, add `!optional` to the version constraint string:
 
 ```yaml
+name: prometheus
 requirements:
   modules:
-    test1: ">v0.22.1 !optional"
+    test: ">v0.22.1 !optional"
 ```
 
-Rules:
+> In the description and examples below:
+>
+> - `prometheus` — the target module for which an optional dependency is specified;
+> - `test` — a module that can be used in conjunction with the target module.
 
-- If `test1` is **enabled**, its version **must** meet the requirement.
-- If `test1` is **disabled**, the requirement is ignored, and the module can be installed or updated.
-- If `test1` is later enabled with an incompatible version, the enabling will be rejected, and the module will remain disabled.
+#### Restrictions on enabling and disabling prometheus when there is an optional dependency on test
 
-Quick examples:
+When there is an optional dependency on the version of another module, the target module has the following restrictions on enabling and disabling:
 
-- `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → the installation fails due to an unmet dependency.
-- `test1` disabled + `>v0.22.1 !optional` → install succeeds; the optional requirement is skipped.
-- `test` disabled, `test1` enabled at `v0.21.1` + `>v0.22.1 !optional` → enabling `test` is denied.
-- `test` enabled with a requirement on `test1`; enabling `test1` at a non‑matching version is denied and `test1` remains disabled.
+1. If `test` is not enabled in the cluster, `prometheus` can be enabled.
+
+   **Example:** `test` is disabled + `prometheus` has an optional requirement `test: ">v0.22.1 !optional"` → `prometheus` will be enabled, the requirement is skipped.
+
+1. If `test` is already enabled in the cluster, enabling `prometheus` with `requirements` is only possible if `requirements` specifies requirements that the current version of `test` meets.
+
+   **Example:** `test` version `v0.21.1` is enabled in the cluster + an optional requirement `test: ">v0.22.1 !optional"` is set for `prometheus` → installing/enabling `prometheus` will result in a dependency mismatch error (the current version of `test` does not match `requirements`).
+
+1. If `test` is disabled in the cluster, `prometheus` will remain enabled.
+
+   **Example:** `test` is enabled in the cluster + an optional requirement `test: ">v0.22.1 !optional"` is set for `prometheus` → disabling `test` will be successful, `prometheus` will not be disabled.
+
+#### Restrictions on updating prometheus when there is an optional dependency on test
+
+When there is an optional dependency on the version of another module, the target module has the following update restrictions:
+
+1. `prometheus` can be updated even if the cluster does not have the `test` module.
+
+   **Example:** `test` is disabled + `prometheus` has an optional requirement `test: ">v0.22.1 !optional"` → `prometheus` will be updated.
+
+1. The update for `prometheus` will be blocked until `test` specified in `requirements` is updated in the cluster.
+
+   **Example:** `test` is disabled + an optional requirement `test: ">v0.22.1 !optional"` is set for `prometheus` → `prometheus` will not be updated until `test` is updated.
+
+#### Restrictions on enabling test, whose version is specified in prometheus dependencies
+
+If the `prometheus` module is enabled, it is not possible to enable `test`, whose version does not match the expression specified in `requirements` for `prometheus`.
+
+**Example:** `prometheus` is included + an optional requirement `test: ">v0.22.1 !optional"` is specified for `prometheus` → an attempt to include `test v0.21.1` will result in a dependency mismatch error (the version `test v0.21.1` does not match the condition in `requirements` for `prometheus`).
+
+#### Restrictions on updating test, whose version is specified in prometheus dependencies
+
+If prometheus and test are included in the cluster, test can only be updated to a version that meets the requirements specified in requirements for prometheus.
+
+**Example:** The `prometheus` and `test` modules are included in the cluster + an optional requirement `test: ‘=v0.22.1 !optional’` is set for `prometheus` + an attempt to update `test` to version `0.23.1` → `test` will not be updated because the required version does not meet the `requirements` for `prometheus`.
 
 {% alert level="warning" %}
 - Enabling or disabling modules may take longer because of extra extender checks.
