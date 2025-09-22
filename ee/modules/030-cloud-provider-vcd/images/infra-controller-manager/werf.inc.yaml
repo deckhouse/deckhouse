@@ -19,6 +19,8 @@ git:
     excludePaths:
       - "**/*.md"
       - "**/*.yaml"
+      - "PROJECT"
+      - "Makefile"
     stageDependencies:
       install:
         - go.mod
