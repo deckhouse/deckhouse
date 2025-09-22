@@ -19,7 +19,7 @@ cat /etc/resolv.conf > /chroot/etc/resolv.conf
 if [ "$NGINX_PROFILING_ENABLED" == "true" ]; then
   args="$@"
   nginxWithCaps="/chroot/usr/local/nginx/sbin/nginx"
-  nginxWOCaps="/chroot/etc/ingress-controller/nginx/"
+  nginxWOCaps="/chroot/etc/ingress-controller/nginx/nginx"
 
   if [ ! -f $nginxWOCaps ]; then
     # copy the nginx binary to drop capabilities (valgrind doesn't want to profile a privileged file)
