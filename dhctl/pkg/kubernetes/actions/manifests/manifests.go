@@ -181,7 +181,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -322,13 +322,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `mkdir -p /tmp/downloaded/modules && chown -hR 64535 /tmp/downloaded /tmp/downloaded/modules && chmod 0700 /tmp/downloaded /tmp/downloaded/modules`,
+			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				Name:      "deckhouse",
 				ReadOnly:  false,
-				MountPath: "/tmp",
+				MountPath: "/deckhouse",
 			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
