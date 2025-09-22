@@ -100,7 +100,6 @@ spec:
           UID: 0 GID:0 using for privilege access for iptables because using hostNetwork
         */}}
         securityContext:
-          readOnlyRootFilesystem: true
           allowPrivilegeEscalation: true
           capabilities:
             add:
