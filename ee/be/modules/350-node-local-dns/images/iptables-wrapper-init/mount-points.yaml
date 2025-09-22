@@ -1,5 +1,4 @@
-flies:
+files:
 - /run/xtables.lock
-- /var/run/xtables.lock
 dirs:
 - /sbin
