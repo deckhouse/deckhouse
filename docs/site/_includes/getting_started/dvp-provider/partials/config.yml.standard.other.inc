@@ -130,7 +130,7 @@ masterNodeGroup:
         size: 8Gi
       # [<en>] The name of the VirtualMachineClass.
       # [<ru>] Имя VirtualMachineClass.
-      virtualMachineClassName: general
+      virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
       # [<en>] Static IP addresses (or Auto for automatic IP address assignment) to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
       # [<ru>] Статические IP-адреса (или Auto для автоматического назначения IP-адреса), назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.
       ipAddresses:
@@ -143,18 +143,20 @@ masterNodeGroup:
       size: 50Gi
       # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
       # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: *!CHANGE_STORAGE_CLASS*
       # [<en>] Image parameters that will be used to create the virtual machine's root disk.
       # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
       image:
         # [<en>] Kind of the image source.
-        # [<ru>] Тип источника изображения.
+        # [<en>] You might consider changing this.
+        # [<ru>] Тип источника образа.
+        # [<ru>] Возможно, захотите изменить.
         kind: ClusterVirtualImage
         # [<en>] Name of the image that will be used to create the root disk.
         # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
         # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
         # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
-        name: ubuntu-2204
+        name: *!CHANGE_NAME*
     # [<en>] Settings for the etcd data disk.
     # [<ru>] Настройки для диска данных etcd.
     etcdDisk:
@@ -163,7 +165,7 @@ masterNodeGroup:
       size: 15Gi
       # [<en>] Name of the existing StorageClass will be used to create the etcd data disk.
       # [<ru>] Имя существующего StorageClass будет использоваться для создания диска данных etcd.
-      storageClass: ceph-pool-r2-csi-rbd-immediate
+      storageClass: *!CHANGE_STORAGE_CLASS*
 # [<en>] Public SSH key for accessing cloud nodes.
 # [<en>] This key will be added to the user on created nodes (the user name depends on the image used).
 # [<ru>] Публичная часть SSH-ключа для доступа к узлам облака.
@@ -176,7 +178,9 @@ provider:
   # [<ru>] Kubeconfig для подключения к API Deckhouse Kubernetes Platform в кодировке Base64.
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
   # [<en>] Namespace in which DKP cluster resources will be created.
+  # [<en>] You might consider changing this.
   # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DKP.
+  # [<ru>] Возможно, захотите изменить.
   namespace: demo
 ---
 # [<en>] Section containing parameters of instance class for worker nodes.
@@ -208,9 +212,11 @@ spec:
       size: 8Gi
     # [<en>] The name of the VirtualMachineClass.
     # [<ru>] Имя VirtualMachineClass.
-    virtualMachineClassName: general
+    virtualMachineClassName: *!CHANGE_VIRTUAL_MACHINE_CLASS_NAME*
     # [<en>] Defines a bootloader for the virtual machine.
+    # [<en>] You might consider changing this.
     # [<ru>] Определяет загрузчик для виртуальной машины.
+    # [<ru>] Возможно, захотите изменить.
     bootloader: EFI
   # [<en>] Specifies settings for the root disk of the virtual machine.
   # [<ru>] Указывает настройки для корневого диска виртуальной машины.
@@ -220,18 +226,20 @@ spec:
     size: 50Gi
     # [<en>] Name of the existing StorageClass will be used to create the virtual machine's root disk.
     # [<ru>] Имя существующего StorageClass будет использоваться для создания корневого диска виртуальной машины.
-    storageClass: ceph-pool-r2-csi-rbd-immediate
+    storageClass: *!CHANGE_STORAGE_CLASS*
     # [<en>] Image parameters that will be used to create the virtual machine's root disk.
     # [<ru>] Параметры образа, который будет использоваться для создания корневого диска виртуальной машины.
     image:
       # [<en>] Kind of the image source.
-      # [<ru>] Тип источника изображения.
+      # [<en>] You might consider changing this.
+      # [<ru>] Тип источника образа.
+      # [<ru>] Возможно, захотите изменить.
       kind: ClusterVirtualImage
       # [<en>] Name of the image that will be used to create the root disk.
       # [<en>] The installation requires Linux OS images with cloud-init pre-installed.
       # [<ru>] Имя образа, который будет использоваться для создания корневого диска.
       # [<ru>] Для установки требуются образы ОС Linux с предустановленным cloud-init.
-      name: ubuntu-2204
+      name: *!CHANGE_NAME*
 ---
 # [<en>] Section containing parameters of worker node group.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/040-node-manager/cr.html#nodegroup
