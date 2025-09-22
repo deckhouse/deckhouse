@@ -81,7 +81,7 @@ d8 k get mc global -ojson | jq -r '.spec.settings.modules.publicDomainTemplate'
 %s.my-dvp-cluster.example.com
 ```
 
-Пример вывода, если использовался домен от сервиса ssslip.io:
+Пример вывода, если использовался домен от сервиса sslip.io:
 
 ```console
 %s.54.43.32.21.sslip.io

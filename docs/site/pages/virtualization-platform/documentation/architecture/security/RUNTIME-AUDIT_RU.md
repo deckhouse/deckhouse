@@ -25,7 +25,7 @@ Deckhouse запускает объединённые в DaemonSet агенты 
   и сохраняет их в общую директорию;
 - [`falcosidekick`](https://github.com/falcosecurity/falcosidekick) — принимает события от `falco`
   и экспортирует их в виде метрик во внешние системы;
-- `kube-rbac-proxy` — защищает эндпойнт метрик `falcosidekick` от неавторизованного доступа.
+- `kube-rbac-proxy` — защищает эндпоинт метрик `falcosidekick` от неавторизованного доступа.
 
 ![Компоненты пода Falco](/images/runtime-audit-engine/falco_pod.svg)
 <!--- Source: https://docs.google.com/drawings/d/1rxSuJFs0tumfZ56WbAJ36crtPoy_NiPBHE6Hq5lejuI --->

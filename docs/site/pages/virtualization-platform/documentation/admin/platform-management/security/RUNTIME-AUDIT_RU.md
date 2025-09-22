@@ -292,7 +292,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 Для отладки и эмуляции событий безопасности в DVP можно использовать:
 
 - утилиту `event-generator`;
-- HTTP-эндпойнт `/test` сервиса `falcosidekick`.
+- HTTP-эндпоинт `/test` сервиса `falcosidekick`.
 
 ### Включение логов для отладки
 
@@ -331,7 +331,7 @@ d8 k run falco-event-generator --image=falcosecurity/event-generator run
 #### Falcosidekick
 
 Чтобы имитировать отправку тестовых событий для сервиса `falcosidekick`,
-используйте HTTP-эндпойнт `/test`:
+используйте HTTP-эндпоинт `/test`:
 
 1. Создайте тестовое событие, выполнив следующую команду:
 

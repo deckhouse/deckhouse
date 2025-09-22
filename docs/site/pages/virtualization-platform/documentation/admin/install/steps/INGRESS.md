@@ -83,7 +83,7 @@ Example output if a custom Wildcard domain was used:
 %s.my-dvp-cluster.example.com
 ```
 
-Example output if a domain from the ssslip.io service was used:
+Example output if a domain from the sslip.io service was used:
 
 ```console
 %s.54.43.32.21.sslip.io
