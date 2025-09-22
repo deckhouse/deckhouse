@@ -91,7 +91,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 			IsDebug:          r.isDebug,
 		})
 
-		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter, r.logger)
 	}
 
 	provider, err := r.infrastructureContext.CloudProviderGetter()(ctx, metaConfig)

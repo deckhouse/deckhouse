@@ -68,6 +68,8 @@ func getTestFSDIParams() *fs.DIParams {
 }
 
 func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProviderGetterParams {
+	t.Helper()
+
 	id, err := uuid.NewRandom()
 	require.NoError(t, err)
 
@@ -84,7 +86,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 	return CloudProviderGetterParams{
 		TmpDir:           tmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           logger,
 		FSDIParams:       getTestFSDIParams(),
 		IsDebug:          false,
 		ProviderCache:    newCloudProvidersMapCache(),
@@ -92,9 +94,12 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 }
 
 func testCleanup(t *testing.T, testName string, params *CloudProviderGetterParams) {
+	t.Helper()
+
 	tmpDir := path.Clean(params.TmpDir)
 	require.NotEmpty(t, tmpDir, testName)
 	require.NotEqual(t, tmpDir, "/", testName)
+	require.False(t, interfaces.IsNil(params.IsDebug))
 
 	params.Logger.LogInfoF("Cleanup for test %s. Remove tmp dir %s\n", testName, tmpDir)
 

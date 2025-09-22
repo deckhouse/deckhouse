@@ -133,7 +133,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
 		kubeCl:                kubeCl,
-		infrastructureContext: infrastructure.NewContext(),
+		infrastructureContext: infrastructure.NewContext(logger),
 		CheckInterval:         params.Interval,
 
 		existedEntities: newPreviouslyExistedEntities(),

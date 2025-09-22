@@ -53,7 +53,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)

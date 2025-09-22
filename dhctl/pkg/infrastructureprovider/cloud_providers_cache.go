@@ -85,7 +85,7 @@ func (c *cloudProvidersMapCache) Add(clusterUUID string, metaConfig *config.Meta
 		p = nil
 	}
 
-	provider.SetAfterCleanupFunc(afterCleanup)
+	provider.AddAfterCleanupFunc("cloudProviderCacheCleaner", afterCleanup)
 	return provider
 }
 

@@ -136,9 +136,8 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
 	if m.UUID == "" {
-		return "", fmt.Errorf("Unable to get full UUID for provider %s. It is empty", m.ProviderName)
+		return "", fmt.Errorf("Unable to get full UUID for provider '%s/%s'. It is empty", m.ClusterPrefix, m.ProviderName)
 	}
-	// todo need commander uuid set
 	return m.UUID, nil
 }
 

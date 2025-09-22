@@ -97,7 +97,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		IsDebug:          i.Params.IsDebug,
 	})
 
-	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+	i.Params.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, i.Params.Logger)
 
 	provider, err := i.Params.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {

@@ -63,9 +63,10 @@ type Provider struct {
 	settings         settings.ProviderSettings
 	metaConfig       *config.MetaConfig
 
-	di           *ProviderDI
-	logger       log.Logger
-	afterCleanup infrastructure.AfterCleanupProviderFunc
+	di     *ProviderDI
+	logger log.Logger
+
+	cleanuper *infrastructure.AfterCleanupProviderRunner
 
 	isDebug bool
 }
@@ -94,6 +95,8 @@ func NewProvider(params ProviderParams) *Provider {
 		settings:         params.Settings,
 		additionalParams: params.AdditionalParams,
 	}
+
+	p.cleanuper = infrastructure.NewAfterCleanupRunner(p.String())
 
 	p.generateRootDir(params.TmpDir)
 	return p
@@ -194,7 +197,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	infraRootDir := filepath.Join(p.rootDir, version)
 
 	p.logger.LogDebugF(
-		"Got version %s for %s with content:\n%s\n Infra root dir will be %s\n",
+		"Got version %s for %s with content:\n%s\nInfra root dir will be %s\n",
 		version,
 		p.String(),
 		versionContent,
@@ -476,17 +479,15 @@ func (p *Provider) arch() string {
 	return "linux_amd64"
 }
 
-func (p *Provider) SetAfterCleanupFunc(f infrastructure.AfterCleanupProviderFunc) {
-	p.afterCleanup = f
+func (p *Provider) AddAfterCleanupFunc(group string, f infrastructure.AfterCleanupProviderFunc) {
+	p.cleanuper.Add(group, f)
 }
 
 func (p *Provider) Cleanup() error {
 	rootDir := p.rootDir
 
 	defer func() {
-		if p.afterCleanup != nil {
-			p.afterCleanup(p.logger)
-		}
+		p.cleanuper.Cleanup(p.logger)
 	}()
 
 	if p.isDebug {
