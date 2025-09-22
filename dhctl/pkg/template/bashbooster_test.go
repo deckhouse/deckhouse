@@ -27,7 +27,7 @@ var clusterConfig = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 proxy:
