@@ -266,10 +266,12 @@ spec:
     allowedProcMount: Unmasked
     allowedUnsafeSysctls:
     - user/huyser
+    - "*"
     allowedVolumes:
     - '*'
     forbiddenSysctls:
     - user/huyser
+    - user/example
     fsGroup:
       rule: RunAsAny
     readOnlyRootFilesystem: true
@@ -302,9 +304,6 @@ spec:
     allowedHostPorts:
     - min: 10
       max: 100
-    allowedUnsafeSysctls: ["*"]
-    forbiddenSysctls:
-    - user/example
     requiredDropCapabilities:
     - ALL
     seccompProfiles:
