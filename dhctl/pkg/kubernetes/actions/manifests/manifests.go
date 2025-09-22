@@ -63,7 +63,7 @@ type imagesDigests map[string]map[string]interface{}
 func loadImagesDigests(filename string) (imagesDigests, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
 		return map[string]map[string]interface{}{
-			"common": {
+			"deckhouse": {
 				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
 			},
 		}, nil
