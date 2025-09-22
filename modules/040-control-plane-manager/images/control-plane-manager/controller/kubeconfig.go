@@ -9,7 +9,8 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
@@ -28,7 +29,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -71,20 +71,7 @@ func shouldRecreateKubeConfig(err error) bool {
 func renewKubeconfigs() error {
 	log.Info("phase: renew kubeconfigs")
 
-	kubeconfigs := []string{"admin", "controller-manager", "scheduler"}
-
-	c, err := semver.NewConstraint(">= 1.29")
-	if err != nil {
-		return fmt.Errorf("constraint not being parsable: %s", err.Error())
-	}
-	v, err := semver.NewVersion(config.KubernetesVersion)
-	if err != nil {
-		return fmt.Errorf("version not being parsable: %s", err.Error())
-	}
-	// if KubernetesVersion >= 1.29
-	if c.Check(v) {
-		kubeconfigs = []string{"super-admin", "admin", "controller-manager", "scheduler"}
-	}
+	kubeconfigs := []string{"super-admin", "admin", "controller-manager", "scheduler"}
 
 	for _, v := range kubeconfigs {
 		if err := renewKubeconfig(v); err != nil {
