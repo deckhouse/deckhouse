@@ -15,7 +15,7 @@ If `VolumeBindingMode = WaitForFirstConsumer`, the disk is created only after it
 
 ![WaitForFirstConsumer](/images/virtualization-platform/vd-wffc.png)
 
-The behavior of disks when creating virtual machines during operation depends on the `AccessMode`:
+The behavior of disks during operation depends on the `AccessMode`:
 
 - `ReadWriteOnce (RWO)`: Only one instance of the virtual machine is granted access to the disk.
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
