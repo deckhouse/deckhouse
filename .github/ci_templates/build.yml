@@ -41,7 +41,7 @@ steps:
 {!{ end }!}
   {!{ tmpl.Exec "import_secrets" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
-  {!{- if eq $buildType "dev" }!}
+  {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
   {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
@@ -79,7 +79,7 @@ steps:
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+{!{- if or (eq $buildType "release") (eq $buildType "pre-release") (eq $buildType "main") }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
