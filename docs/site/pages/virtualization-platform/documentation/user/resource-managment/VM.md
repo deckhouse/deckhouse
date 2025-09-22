@@ -408,7 +408,7 @@ A virtual machine (VM) goes through several phases in its existence, from creati
     - Incompatibility of processor instructions (when using host or host-passthrough processor types).
     - Difference in kernel versions on hypervisor nodes.
     - Not enough CPU or memory on eligible nodes.
-    - Neumspace or project quotas have been exceeded.
+    - Namespace or project quotas have been exceeded.
   - Diagnostics:
     - Check the `.status.conditions` condition `type: Migrating` as well as the `.status.migrationState` block
 
