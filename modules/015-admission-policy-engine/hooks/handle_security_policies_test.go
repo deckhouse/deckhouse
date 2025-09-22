@@ -70,6 +70,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					"labelSelector": {}
 				},
 				"policies": {
+					"allowRbacWildcards": true,
 					"automountServiceAccountToken": true,
  					"seccompProfiles": {},
 					"verifyImageSignatures": [
