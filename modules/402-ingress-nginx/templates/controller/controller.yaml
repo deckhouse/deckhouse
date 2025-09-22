@@ -210,6 +210,9 @@ spec:
           runAsGroup: 0
           capabilities:
             add:
+            - SETGID
+            - SETUID
+            - CHOWN
             - DAC_OVERRIDE
             - SYS_ADMIN
             - SYS_CHROOT
