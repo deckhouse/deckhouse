@@ -168,7 +168,6 @@ func (s *Client) Start() error {
 	var targetConn net.Conn
 	var clientConn ssh.Conn
 
-	config.Timeout = 30 * time.Second
 	config.BannerCallback = func(message string) error {
 		return nil
 	}
@@ -185,7 +184,10 @@ func (s *Client) Start() error {
 
 		var err error
 		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
-			s.Settings.ChoiceNewHost()
+			if len(s.kubeProxies) == 0 {
+				s.Settings.ChoiceNewHost()
+			}
+
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			client, err = ssh.Dial("tcp", addr, config)
 			return err
@@ -216,7 +218,9 @@ func (s *Client) Start() error {
 		targetReqChan    <-chan *ssh.Request
 	)
 	err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
-		s.Settings.ChoiceNewHost()
+		if len(s.kubeProxies) == 0 {
+			s.Settings.ChoiceNewHost()
+		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		targetConn, err = bastionClient.Dial("tcp", addr)
 		if err != nil {
@@ -271,12 +275,6 @@ func (s *Client) keepAlive() {
 				s.live = false
 				s.stopChan = nil
 				s.Start()
-				for _, sess := range s.sessionList {
-					if sess != nil {
-						sess.Signal(ssh.SIGKILL)
-						sess.Close()
-					}
-				}
 				s.sessionList = nil
 				return
 			}
