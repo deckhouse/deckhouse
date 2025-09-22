@@ -1,0 +1,74 @@
+diff --git a/plugin/cache/cache.go b/plugin/cache/cache.go
+index a2ae9a307..a1dce0330 100644
+--- a/plugin/cache/cache.go
++++ b/plugin/cache/cache.go
+@@ -51,6 +51,9 @@ type Cache struct {
+ 	// Keep ttl option
+ 	keepttl bool
+ 
++	// Metric for
++	enableNXDomainByClientDomain bool
++
+ 	// Testing.
+ 	now func() time.Time
+ }
+@@ -216,6 +219,11 @@ func (w *ResponseWriter) WriteMsg(res *dns.Msg) error {
+ 			w.set(res, key, mt, duration)
+ 			cacheSize.WithLabelValues(w.server, Success, w.zonesMetricLabel, w.viewMetricLabel).Set(float64(w.pcache.Len()))
+ 			cacheSize.WithLabelValues(w.server, Denial, w.zonesMetricLabel, w.viewMetricLabel).Set(float64(w.ncache.Len()))
++			if w.enableNXDomainByClientDomain && mt == response.NameError {
++				qLabel := res.Question[0].Name
++				ipOnly := clientIPOnly(w.remoteAddr)
++				cacheNXDomainByClientDomain.WithLabelValues(ipOnly, qLabel).Inc()
++			}
+ 		} else {
+ 			// Don't log it, but increment counter
+ 			cacheDrops.WithLabelValues(w.server, w.zonesMetricLabel, w.viewMetricLabel).Inc()
+@@ -320,3 +328,14 @@ const (
+ 	// Denial is the class defined for negative caching.
+ 	Denial = "denial"
+ )
++
++func clientIPOnly(addr net.Addr) string {
++	if addr == nil {
++		return "unknown"
++	}
++	h, _, err := net.SplitHostPort(addr.String())
++	if err != nil {
++		return addr.String()
++	}
++	return h
++}
+diff --git a/plugin/cache/metrics.go b/plugin/cache/metrics.go
+index 77edb0286..cd29dfa44 100644
+--- a/plugin/cache/metrics.go
++++ b/plugin/cache/metrics.go
+@@ -64,4 +64,11 @@ var (
+ 		Name:      "evictions_total",
+ 		Help:      "The count of cache evictions.",
+ 	}, []string{"server", "type", "zones", "view"})
++	// cacheNXDomainByClientDomain is counter for top client with NXDOMAIN errors.
++	cacheNXDomainByClientDomain = promauto.NewCounterVec(prometheus.CounterOpts{
++		Namespace: plugin.Namespace,
++		Subsystem: "cache",
++		Name:      "nxdomain_by_client_domain_total",
++		Help:      "NXDOMAIN responses served by cache, grouped by client IP and normalized domain.",
++	}, []string{"src_ip", "qname"})
+ )
+diff --git a/plugin/cache/setup.go b/plugin/cache/setup.go
+index f8278b872..3be8d9e33 100644
+--- a/plugin/cache/setup.go
++++ b/plugin/cache/setup.go
+@@ -246,6 +246,12 @@ func cacheParse(c *caddy.Controller) (*Cache, error) {
+ 					return nil, c.ArgErr()
+ 				}
+ 				ca.keepttl = true
++			case "nxdomain_verbose":
++				args := c.RemainingArgs()
++				if len(args) != 0 {
++					return nil, c.ArgErr()
++				}
++				ca.enableNXDomainByClientDomain = true
+ 			default:
+ 				return nil, c.ArgErr()
+ 			}
