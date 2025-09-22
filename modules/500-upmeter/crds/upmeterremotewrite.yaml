@@ -77,7 +77,6 @@ spec:
                     headers:
                       type: object
                       description: Additional HTTP headers to send with each remote write request.
-                      additionalProperties: false
                       properties:
                         X-Scope-OrgID:
                           description: |
