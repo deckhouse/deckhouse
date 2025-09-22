@@ -21,7 +21,6 @@ PROTOC_GEN_GO_VERSION = 1.32
 PROTOC_GEN_GO_GROC_VERSION = 1.3
 
 # Build versions
-GO_VERSION=1.19.3
 GOARCH=amd64
 
 DHCTL_BIN_NAME=bin/dhctl
@@ -116,6 +115,9 @@ build-test: check-vars
 
 test: check-vars
 	go test -p 1 ./...
+
+test-race: check-vars
+	go test -race -p 1 ./...
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy
