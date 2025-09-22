@@ -148,7 +148,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"flanneld": "imageHash-cniFlannel-flanneld",
 	},
 	"cniSimpleBridge": map[string]interface{}{
-		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
+		"iptablesWrapperInit": "imageHash-cniSimpleBridge-iptablesWrapperInit",
+		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
