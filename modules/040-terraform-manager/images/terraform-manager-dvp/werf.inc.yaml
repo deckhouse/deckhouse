@@ -4,10 +4,6 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
 import:
-- image: tools/jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes

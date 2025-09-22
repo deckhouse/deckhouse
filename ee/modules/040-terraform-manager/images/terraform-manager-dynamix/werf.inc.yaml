@@ -4,10 +4,6 @@ git:
   - add: /{{ .ModulePath }}candi/cloud-providers/dynamix
     to: /deckhouse/candi/cloud-providers/dynamix
 import:
-  - image: tools/jq
-    add: /usr/bin/jq
-    to: /usr/bin/jq
-    before: setup
   - image: terraform-provider-decort
     add: /terraform-provider-decort
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "decort") }}/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort

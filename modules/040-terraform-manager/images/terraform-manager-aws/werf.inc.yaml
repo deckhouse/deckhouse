@@ -4,10 +4,6 @@ git:
 - add: /{{ .ModulePath }}candi/cloud-providers/aws
   to: /deckhouse/candi/cloud-providers/aws
 import:
-- image: tools/jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
 - image: terraform-provider-aws
   add: /terraform-provider-aws
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "aws") }}/{{ .TF.aws.namespace }}/{{ .TF.aws.type }}/{{ .TF.aws.version }}/linux_amd64/terraform-provider-aws

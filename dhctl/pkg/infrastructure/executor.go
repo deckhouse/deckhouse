@@ -267,52 +267,30 @@ func (e *DummyExecutor) Stop() {
 	e.logger.LogWarnLn("Call Stop on dummy executor")
 }
 
-func ParseMultipleArrays(data []byte) ([][]string, error) {
-	var result [][]string
-	dec := json.NewDecoder(bytes.NewReader(data))
-
-	for {
-		var arr []string
-		if err := dec.Decode(&arr); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		result = append(result, arr)
-	}
-	return result, nil
-}
-
 func GetActions(ctx context.Context, cmd *exec.Cmd) (actions []string, err error) {
-	cmd2 := exec.CommandContext(ctx, "/usr/bin/jq", ".resource_changes[].change.actions | if type==\"string\" then [.] else . end")
-
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		return actions, fmt.Errorf("failed to pipe stdout: %w", err)
+	type state struct {
+		ResourceChanges []struct {
+			Change struct {
+				Actions []string `json:"actions"`
+			} `json:"change"`
+		} `json:"resource_changes"`
 	}
-	cmd2.Stdin = stdoutPipe
 
 	buf := bytes.NewBuffer(make([]byte, 0, 5000))
-	cmd2.Stdout = buf
+	cmd.Stdout = buf
 
-	if err := cmd.Start(); err != nil {
+	if err := cmd.Run(); err != nil {
 		return actions, fmt.Errorf("failed to start terraform: %w", err)
 	}
-	if err := cmd2.Run(); err != nil {
-		return actions, fmt.Errorf("failed to run jq: %w", err)
-	}
-	if err := cmd.Wait(); err != nil {
-		return actions, fmt.Errorf("terraform failed: %w", err)
-	}
 
-	var allActions [][]string
-	allActions, err = ParseMultipleArrays(buf.Bytes())
+	var res state
+	err = json.Unmarshal(buf.Bytes(), &res)
 	if err != nil {
-		return actions, fmt.Errorf("failed to parse actions: %w", err)
+		return actions, fmt.Errorf("failed to unmarshal json: %w", err)
 	}
-	for _, i := range allActions {
-		actions = append(actions, i...)
+	for _, i := range res.ResourceChanges {
+		act := i.Change.Actions
+		actions = append(actions, act...)
 	}
 
 	return actions, nil
