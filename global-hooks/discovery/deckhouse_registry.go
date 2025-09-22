@@ -43,7 +43,7 @@ type registrySecret struct {
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       imageModulesD8RegistryConfSnap,

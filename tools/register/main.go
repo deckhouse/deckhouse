@@ -88,13 +88,8 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 
 		// Handle directories
 		if f.IsDir() {
-			// For global-hooks, skip all subdirectories to avoid duplicate imports
-			if isGlobalHooks && path != dir {
-				return filepath.SkipDir
-			}
-
-			// For regular modules, skip specific directories
-			if !isGlobalHooks && shouldSkipDirectory(f.Name()) {
+			// Skip specific problematic directories for all cases
+			if shouldSkipDirectory(f.Name()) {
 				return filepath.SkipDir
 			}
 
@@ -107,10 +102,17 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 		}
 
 		// Generate module name and add to collection
-		moduleName := filepath.Join(
-			deckhouseModuleName,
-			filepath.Dir(strings.TrimPrefix(path, workDir)),
-		)
+		var moduleName string
+		if isGlobalHooks {
+			// For global-hooks, always use the base import regardless of subdirectory
+			moduleName = "github.com/deckhouse/deckhouse/global-hooks"
+		} else {
+			// For regular modules, use the full directory path
+			moduleName = filepath.Join(
+				deckhouseModuleName,
+				filepath.Dir(strings.TrimPrefix(path, workDir)),
+			)
+		}
 		files[moduleName] = struct{}{}
 		return nil
 	})
