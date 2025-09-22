@@ -219,8 +219,14 @@ etcd:
     extraArgs:
       - name: initial-cluster-state
         value: existing
+      {{- /*
+      Kubeadm using --feature-gates=InitialCorruptCheck=true by default since v1.34 k8s and v3.6.0 etcd, experimental-initial-corrupt-check must be removed in v3.7.0 etcd
+      https://github.com/kubernetes/kubernetes/pull/132838/files
+      */ -}}
+      {{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
       - name: experimental-initial-corrupt-check
         value: "true"
+      {{- end }}
       {{- if hasKey .etcd "quotaBackendBytes" }}
       - name: quota-backend-bytes
         value: {{ .etcd.quotaBackendBytes | quote }}
