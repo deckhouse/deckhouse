@@ -102,7 +102,7 @@ func validateStaticInstanceAddresses(_ context.Context, input *go_hook.HookInput
 	}
 
 	masterAddresses := make(map[string]struct{})
-	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[NodeInfo](nodeSnapshots) {
+	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[NodeInfoAddress](nodeSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes snapshots': %v", err)
 		}
