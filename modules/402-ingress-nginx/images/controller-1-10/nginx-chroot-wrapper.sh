@@ -16,37 +16,38 @@
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
 
-if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
-  echo "Profiling enabled"
-  logDirInChroot="/var/log/valgrind"
-  timestamp=$(date +%Y%m%d_%H%M%S)
-  logfile="${logDirInChroot}/memcheck.${timestamp}.log"
+if [ "$NGINX_PROFILING_ENABLED" == "true" ]; then
+  args="$@"
+  if [ "$args" == "-c /etc/nginx/nginx.conf" ]; then
+    logDirInChroot="/var/log/valgrind"
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    logfile="${logDirInChroot}/memcheck.${timestamp}.log"
 
-  echo "Drop NGINX file capabilities as it prevent valgrind from running"
-  nginxWithCaps="/chroot/usr/local/nginx/sbin/nginx"
-  nginxWOCaps="/chroot/etc/ingress-controller/nginx/"
+    # echo "Drop NGINX file capabilities as it prevent valgrind from running"
+    nginxWithCaps="/chroot/usr/local/nginx/sbin/nginx"
+    nginxWOCaps="/chroot/etc/ingress-controller/nginx/"
+    # copy the nginx binary to drop capabilities (valgrind doesn't want to profile a privileged file)
+    cp -f $nginxWithCaps $nginxWOCaps
 
-  # copy the nginx binary to drop capabilities (valgrind doesn't want to profile a privileged file)
-  cp -f $nginxWithCaps $nginxWOCaps
+    # echo "Mounting proc fs"
+    # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
+    mount -t proc /proc /chroot/proc
+    # Set hack for www-data user
+    # echo 'www-data:x:64535:64535:www-data:/nonexistent:/usr/sbin/nologin' >> /chroot/etc/passwd
+    # echo 'www-data:x:64535:' >> /chroot/etc/group
 
-  echo "Mounting proc fs"
-  # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
-  mount -t proc /proc /chroot/proc
-  echo "Set hack for www-data user"
-  #echo 'www-data:x:64535:64535:www-data:/nonexistent:/usr/sbin/nologin' >> /chroot/etc/passwd
-  #echo 'www-data:x:64535:' >> /chroot/etc/group
-
-  echo "Run profiling with Valgrind"
-  echo "The log will be written to a file $logfile"
-  unshare -R /chroot /usr/local/valgrind \
-    --trace-children=yes \
-    --log-file="$logfile" \
-    --tool=memcheck \
-    --leak-check=full \
-    --show-leak-kinds=all \
-    /etc/ingress-controller/nginx/nginx "$@"
-
+  # echo "Run profiling with Valgrind"
+  # echo "The log will be written to a file $logfile"
+    unshare -R /chroot /usr/local/valgrind \
+      --trace-children=yes \
+      --log-file="$logfile" \
+      --tool=memcheck \
+      --leak-check=full \
+      --show-leak-kinds=all \
+      /etc/ingress-controller/nginx/nginx "$@"
+  else
+    unshare -R /chroot /etc/ingress-controller/nginx/nginx "$@"
+  fi
 else
-  echo "Regular mode"
   unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
 fi
