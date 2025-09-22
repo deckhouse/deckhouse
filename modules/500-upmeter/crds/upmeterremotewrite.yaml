@@ -87,6 +87,8 @@ spec:
                           description: |
                             The `X-Auth-Token` header specifying the authentication token.
                           type: string
+                      oneOf:
+                        - required: ["X-Scope-OrgID", "X-Auth-Token"]
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.
