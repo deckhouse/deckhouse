@@ -14,7 +14,7 @@ Deckhouse Kubernetes Platform (DKP) supports the following module dependencies:
 - [Kubernetes version](#kubernetes-version-dependency);
 - [version of other modules](#dependency-on-the-version-of-other-modules).
 
-### Deckhouse Kubernetes Platform version dependency
+## Deckhouse Kubernetes Platform version dependency
 
 This dependency defines the minimum or maximum DKP version with which the module is compatible.
 
@@ -33,7 +33,7 @@ For testing, you can set the `TEST_EXTENDER_DECKHOUSE_VERSION` environment varia
 
 Deckhouse checks whether the dependency is met in the following cases:
 
-1. **When installing or upgrading a module**  
+1. **When installing or upgrading a module**
    If the DKP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
 
    Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
@@ -49,7 +49,7 @@ Deckhouse checks whether the dependency is met in the following cases:
       test-v0.8.3              Pending      test-alpha      2m30s            requirements are not satisfied: current deckhouse version is not suitable: 1.0.0 is less than or equal to v1.64.0 
    ```
 
-1. **When upgrading Deckhouse Kubernetes Platform**  
+1. **When upgrading Deckhouse Kubernetes Platform**
    Deckhouse checks if the new DKP version matches the dependencies of the installed and active modules. If at least one module is not compatible with the new version, the DKP upgrade will not be performed.
 
    Below is an example of the DeckhouseRelease resource for which the DKP version does not meet the module requirements:
@@ -66,10 +66,10 @@ Deckhouse checks whether the dependency is met in the following cases:
    v1.73.4                  Pending       2m13s            requirements of test are not satisfied: v1.73.4 deckhouse version is not suitable: v1.73.4 is greater than or equal to v1.73.4
    ```
 
-1. **When conducting initial module analyses**  
+1. **When conducting initial module analyses**
    Deckhouse checks the current version of DKP and the dependencies of the installed modules. If a mismatch is discovered, the module will be disabled.
 
-### Kubernetes version dependency
+## Kubernetes version dependency
 
 This dependency defines the minimum or maximum Kubernetes version with which the module is compatible.
 
@@ -88,7 +88,7 @@ For testing, you can set the `TEST_EXTENDER_KUBERNETES_VERSION` environment vari
 
 Deckhouse checks whether the dependency is met in the following cases:
 
-1. **When installing or upgrading a module**  
+1. **When installing or upgrading a module**
    If the Kubernetes version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
   
    Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
@@ -105,7 +105,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    virtualization-v.0.0.0-dev4   Deployed      deckhouse      142d
    ```
 
-1. **When upgrading Kubernetes**  
+1. **When upgrading Kubernetes**
    Deckhouse examines the dependencies of active modules, and if at least one module is incompatible with the new Kubernetes version, the version upgrade will not proceed.
 
    Below is an example of the output you may encounter when a module is incompatible with a newer version of Kubernetes:
@@ -124,10 +124,10 @@ Deckhouse checks whether the dependency is met in the following cases:
            Error: admission webhook "kubernetes-version.deckhouse-webhook.deckhouse.io" denied the request: requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28
    ```
 
-1. **When conducting initial module analyses**  
+1. **When conducting initial module analyses**
    If the Kubernetes version does not conform to the dependencies of the modules that are already installed, DKP will disable those modules.
 
-1. **When upgrading Deckhouse Kubernetes Platform**  
+1. **When upgrading Deckhouse Kubernetes Platform**
    Deckhouse checks the default Kubernetes version value for DKP and if it is not compatible with the active modules, the DKP update will not be carried out.
 
    Below is an example of the DeckhouseRelease resource for which the Kubernetes version does not meet the module requirements:
@@ -143,7 +143,7 @@ Deckhouse checks whether the dependency is met in the following cases:
    v1.73.3                  Pending       7s              requirements of test are not satisfied: 1.27 kubernetes version is not suitable: 1.27.0 is less than or equal to 1.28            
    ```
 
-### Dependency on the version of other modules
+## Dependency on the version of other modules
 
 This dependency defines the list of **enabled** modules and their minimum versions that are required for the module to work. The built-in DKP module version is considered equal to the DKP version.
 
@@ -166,7 +166,7 @@ requirements:
     operator-trivy: '> v1.64.0'
 ```
 
-#### Optional module requirements
+### Optional module requirements
 
 Use this when your module works alone, but integrates with another module **if it is present**.
 
