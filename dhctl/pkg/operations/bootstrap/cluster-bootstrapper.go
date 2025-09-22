@@ -102,8 +102,9 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
-	TmpDir string
-	Logger log.Logger
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 
 	*client.KubernetesInitParams
 }
@@ -182,6 +183,24 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func (b *ClusterBootstrapper) cleanup(ctx context.Context, metaConfig *config.MetaConfig) {
+	if b.InfrastructureContext == nil {
+		b.logger.LogWarnF("InfrastructureContext is nil. Skip cleanup.\n")
+		return
+	}
+
+	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		b.logger.LogErrorF("Error getting cloud provider: %v. Cannot cleanup.\n", err)
+		return
+	}
+
+	err = provider.Cleanup()
+	if err != nil {
+		log.ErrorF("Cannot cleanup provider: %v\n", err)
+	}
+}
+
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -218,7 +237,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
 	})
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
@@ -329,6 +349,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	var nodeIP string
 	var devicePath string
 	var resourcesTemplateData map[string]interface{}
+
+	defer b.cleanup(ctx, metaConfig)
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		err = preflightChecker.Cloud(ctx)

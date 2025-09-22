@@ -180,6 +180,8 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
@@ -187,16 +189,16 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
@@ -211,7 +213,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -238,7 +240,8 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           tmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
 	})
 
 	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter)
@@ -259,6 +262,10 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
+		IsDebug:               s.params.IsDebug,
+		TmpDir:                tmpDir,
+		Logger:                loggerFor,
+		InfrastructureContext: infrastructureContext,
 	}
 
 	convergeParams := &converge.Params{
@@ -285,7 +292,8 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		OnCheckResult:              onCheckResult,
 		ProviderGetter:             providerGetter,
 		TmpDir:                     tmpDir,
-		Logger:                     log.GetDefaultLogger(),
+		Logger:                     loggerFor,
+		IsDebug:                    s.params.IsDebug,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
@@ -313,6 +321,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 
 	checkParams.KubeClient = kubeClient
 	checkParams.SSHClient = sshClient
+
 	convergeParams.KubeClient = kubeClient
 	convergeParams.SSHClient = sshClient
 

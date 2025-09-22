@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type StateLoader interface {
@@ -44,7 +45,9 @@ type ClusterInfra struct {
 	cache                 state.Cache
 	infrastructureContext *infrastructure.Context
 
-	tmpDir string
+	tmpDir  string
+	isDebug bool
+	logger  log.Logger
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
@@ -52,9 +55,16 @@ type ClusterInfra struct {
 type ClusterInfraOptions struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	TmpDir                 string
+	IsDebug                bool
+	Logger                 log.Logger
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {
+	logger := opts.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &ClusterInfra{
 		stateLoader:           terraState,
 		cache:                 cache,
@@ -62,6 +72,8 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infra
 
 		PhasedExecutionContext: opts.PhasedExecutionContext,
 		tmpDir:                 opts.TmpDir,
+		isDebug:                opts.IsDebug,
+		logger:                 logger,
 	}
 }
 
@@ -75,11 +87,24 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           r.tmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           r.logger,
+			IsDebug:          r.isDebug,
 		})
 
 		r.infrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	}
+
+	provider, err := r.infrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err := provider.Cleanup()
+		if err != nil {
+			r.logger.LogErrorF("Failed to cleanup infrastructure cloud provider: %v\n", err)
+		}
+	}()
 
 	clusterState, nodesState, err := r.stateLoader.PopulateClusterState(ctx)
 	if err != nil {

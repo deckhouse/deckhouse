@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -43,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type checkParams struct {
@@ -148,6 +148,8 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
@@ -155,16 +157,16 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
@@ -179,7 +181,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -212,7 +214,8 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
 	})
 
 	checkParams := &check.Params{
@@ -224,6 +227,9 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter),
+		Logger:                loggerFor,
+		IsDebug:               s.params.IsDebug,
+		TmpDir:                s.params.TmpDir,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
@@ -242,7 +248,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+	if !interfaces.IsNil(sshClient) {
 		err = sshClient.Start()
 		if err != nil {
 			return &pb.CheckResult{Err: err.Error()}
@@ -254,7 +260,14 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 
 	checker := check.NewChecker(checkParams)
 
-	result, checkErr := checker.Check(ctx)
+	result, cleanProvider, checkErr := checker.Check(ctx)
+	defer func() {
+		err := cleanProvider()
+		if err != nil {
+			loggerFor.LogErrorF("Error cleaning up checker: %v\n", err)
+		}
+	}()
+
 	resultData, marshalErr := json.Marshal(result)
 	state, stateErr := extractLastState()
 

@@ -49,6 +49,8 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 			Path:     app.MetricsPath,
 			Interval: app.CheckInterval,
 			TmpDir:   app.TmpDirName,
+			Logger:   log.GetDefaultLogger(),
+			IsDebug:  app.IsDebug,
 		})
 		exporter.Start(context.Background())
 		return nil
@@ -115,6 +117,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			TmpDir:           app.TmpDirName,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           log.GetDefaultLogger(),
+			IsDebug:          app.IsDebug,
 		})
 
 		provider, err := providerGetter(ctx, metaConfig)
@@ -139,7 +142,8 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		if provider.NeedToUseTofu() && needMigrationToTofu {
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
-		return nil
+
+		return provider.Cleanup()
 	})
 	return cmd
 }

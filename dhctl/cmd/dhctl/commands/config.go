@@ -40,11 +40,13 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
+		logger := log.GetDefaultLogger()
+
 		metaConfig, err := config.LoadConfigFromFile(
 			context.TODO(),
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
 		)
 		if err != nil {
@@ -79,11 +81,13 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineRenderConfigFlags(cmd)
 
 	runFunc := func() error {
+		logger := log.GetDefaultLogger()
+
 		metaConfig, err := config.LoadConfigFromFile(
 			context.TODO(),
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(logger),
 			))
 		if err != nil {
 			return err
@@ -132,8 +136,10 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 		var err error
 		var metaConfig *config.MetaConfig
 
+		logger := log.GetDefaultLogger()
+
 		preparatorProvider := infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			infrastructureprovider.NewPreparatorProviderParams(logger),
 		)
 
 		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
