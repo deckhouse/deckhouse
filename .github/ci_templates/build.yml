@@ -41,10 +41,12 @@ steps:
 {!{ end }!}
   {!{ tmpl.Exec "import_secrets" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+  {!{- if eq $buildType "dev" }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
+  {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
   {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
