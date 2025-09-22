@@ -104,7 +104,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 			IsDebug:          c.IsDebug,
 		})
 
-		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger)
 	}
 
 	provider, err := c.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)

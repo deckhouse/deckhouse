@@ -226,7 +226,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter),
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                s.params.TmpDir,

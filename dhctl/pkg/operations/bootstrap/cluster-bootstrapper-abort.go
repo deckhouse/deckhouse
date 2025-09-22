@@ -109,7 +109,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)

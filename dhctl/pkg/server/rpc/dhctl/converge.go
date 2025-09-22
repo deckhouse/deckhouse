@@ -244,7 +244,7 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter)
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {

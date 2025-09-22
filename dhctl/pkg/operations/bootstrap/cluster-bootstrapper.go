@@ -241,7 +241,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")

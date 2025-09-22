@@ -120,7 +120,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			diParamsLog = "Using custom"
 		}
 
-		params.Logger.LogDebugF("%s FSDIParams: %v\n", diParamsLog, diParams)
+		params.Logger.LogDebugF("%s FSDIParams: %+v\n", diParamsLog, diParams)
 
 		di, err := fs.GetDi(params.Logger, diParams)
 		if err != nil {

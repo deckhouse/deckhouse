@@ -125,7 +125,7 @@ func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastr
 	if c.infrastructureContext != nil {
 		ctx = c.infrastructureContext
 	} else {
-		ctx = infrastructure.NewContextWithProvider(c.providerGetter)
+		ctx = infrastructure.NewContextWithProvider(c.providerGetter, c.Logger())
 	}
 
 	ctx.WithStateChecker(c.stateChecker)

@@ -261,7 +261,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter),
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
 		TmpDir:                s.params.TmpDir,
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
