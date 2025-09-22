@@ -16,10 +16,8 @@ package moduleloader
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
 	"time"
 
@@ -104,24 +102,14 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 
 // restoreModulesByOverrides checks ModulePullOverrides and restore them on the FS
 func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
-	currentNodeName := os.Getenv("DECKHOUSE_NODE_NAME")
-	if len(currentNodeName) == 0 {
-		return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
-	}
-
 	mpos := new(v1alpha2.ModulePullOverrideList)
 	if err := l.client.List(ctx, mpos); err != nil {
 		return fmt.Errorf("list module pull overrides: %w", err)
 	}
 
 	for _, mpo := range mpos.Items {
-		// ignore deleted mpo
-		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		// skip unready mpo
-		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
+		// ignore deleted mpo or unready mpo
+		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
 			continue
 		}
 
@@ -132,25 +120,25 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 				return err
 			}
 
-			l.logger.Info("the module does not exist, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// skip embedded module
 		if module.IsEmbedded() {
-			l.logger.Info("the module is embedded, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("module is embedded, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// module must be enabled
 		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
-			l.logger.Info("the module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// source must be
 		if module.Properties.Source == "" {
-			l.logger.Info("the module does have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
+			l.logger.Info("the module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
@@ -166,33 +154,6 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
-		}
-
-		// mpo's status.weight field isn't set - get it from the module's definition
-		if mpo.Status.Weight == 0 {
-			meta, err := l.installer.RegistryService().GetModuleMeta(ctx, source, mpo.Name, mpo.Spec.ImageTag)
-			if err != nil {
-				return err
-			}
-
-			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = meta.Definition.Weight
-			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
-			_ = l.client.Status().Update(ctx, &mpo)
-		}
-
-		// if deployedOn annotation isn't set or its value doesn't equal to current node name - overwrite the module from the repository
-		if deployedOn, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || deployedOn != currentNodeName {
-			l.logger.Info("reinitialize module pull override due to stale/absent deployedOn annotation", slog.String("name", mpo.Name))
-			if len(mpo.ObjectMeta.Annotations) == 0 {
-				mpo.ObjectMeta.Annotations = make(map[string]string)
-			}
-
-			mpo.ObjectMeta.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn] = currentNodeName
-
-			if err = l.client.Update(ctx, &mpo); err != nil {
-				l.logger.Warn("failed to annotate module pull override", slog.String("name", mpo.Name), log.Err(err))
-			}
 		}
 
 		if err = l.installer.Restore(ctx, source, module.Name, mpo.Spec.ImageTag); err != nil {
@@ -224,13 +185,15 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 
 	deployedReleases := make(map[string]v1alpha1.ModuleRelease)
 	for _, release := range releases {
+		moduleName := release.GetModuleName()
+
 		// ignore deleted release and not deployed
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.ObjectMeta.DeletionTimestamp.IsZero() {
 			continue
 		}
 
 		// if we already have deployed release - make it superseded
-		deployedRelease, ok := deployedReleases[release.Spec.ModuleName]
+		deployedRelease, ok := deployedReleases[moduleName]
 		if ok {
 			updatedDeployedRelease := deployedRelease.DeepCopy()
 			updatedDeployedRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
@@ -242,40 +205,40 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			}
 		}
 
-		deployedReleases[release.Spec.ModuleName] = release
+		deployedReleases[moduleName] = release
 
 		// if ModulePullOverride exists, don't check and restore overridden release
-		exists, err := utils.ModulePullOverrideExists(ctx, l.client, release.Spec.ModuleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, l.client, moduleName)
 		if err != nil {
-			return fmt.Errorf("get module pull override for the '%s' module: %w", release.Spec.ModuleName, err)
+			return fmt.Errorf("get module pull override for the '%s' module: %w", moduleName, err)
 		}
 		if exists {
-			l.logger.Info("module is overridden, skip release restoring", slog.String("name", release.Spec.ModuleName))
+			l.logger.Info("module is overridden, skip release restoring", slog.String("name", moduleName))
 			continue
 		}
 
 		// update module version
 		module := new(v1alpha1.Module)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
+		if err = l.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get the module '%s': %w", release.Spec.ModuleName, err)
+				return fmt.Errorf("get the module '%s': %w", moduleName, err)
 			}
 			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
 		} else {
-			l.logger.Debug("set module version", slog.String("name", release.GetModuleName()), slog.String("version", release.GetModuleVersion()))
+			l.logger.Debug("set module version", slog.String("name", moduleName), slog.String("version", release.GetModuleVersion()))
 			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
 				module.Properties.Version = release.GetModuleVersion()
 				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("update the module '%s': %w", release.GetModuleName(), err)
+				return fmt.Errorf("update the module '%s': %w", moduleName, err)
 			}
 		}
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, release.Spec.ModuleName, err)
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
 		if err = l.installer.Restore(ctx, source, module.Name, release.GetModuleVersion()); err != nil {

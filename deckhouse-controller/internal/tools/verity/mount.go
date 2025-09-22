@@ -30,7 +30,7 @@ import (
 const (
 	erofsType = "erofs"
 
-	tracerName = "erofs"
+	tracerName = "verity"
 )
 
 // Mount ensures the mount path and mounts the device mapper to it
@@ -41,17 +41,16 @@ func Mount(ctx context.Context, module, mountPath string) error {
 	// /dev/mapper/<module>
 	dmPath := fmt.Sprintf(dmTemplate, module)
 
-	span.SetAttributes(attribute.String("mapperPath", dmPath))
-	span.SetAttributes(attribute.String("mountPath", mountPath))
+	span.SetAttributes(attribute.String("mapper", dmPath))
+	span.SetAttributes(attribute.String("path", mountPath))
 
 	// create the mount path if it does not exist
 	if _, err := os.Stat(mountPath); os.IsNotExist(err) {
 		if err = os.MkdirAll(mountPath, 0755); err != nil {
-			return fmt.Errorf("create '%s' mount path: %w", mountPath, err)
+			return fmt.Errorf("create the path '%s': %w", mountPath, err)
 		}
 	}
 
-	// mount to /deckhouse/downloaded/modules/<module>
 	return unix.Mount(dmPath, mountPath, erofsType, unix.MS_RDONLY, "")
 }
 
@@ -60,7 +59,7 @@ func Unmount(ctx context.Context, mountPath string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Unmount")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("mountPath", mountPath))
+	span.SetAttributes(attribute.String("path", mountPath))
 
 	// ignore if not exist
 	if _, err := os.Stat(mountPath); os.IsNotExist(err) {
@@ -71,10 +70,9 @@ func Unmount(ctx context.Context, mountPath string) error {
 	if err := unix.Unmount(mountPath, 0); err != nil {
 		// if we get this error, it means the target is not mount so just delete it
 		if !errors.Is(err, unix.EINVAL) {
-			return fmt.Errorf("unmount the '%s' mount path: %w", mountPath, err)
+			return fmt.Errorf("unmount the path '%s' : %w", mountPath, err)
 		}
 	}
 
-	// remove /deckhouse/downloaded/modules/<module>
 	return os.RemoveAll(mountPath)
 }

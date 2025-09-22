@@ -56,7 +56,7 @@ const (
 )
 
 // CreateMapper creates device mapper for the erofs image.
-// It creates two loop devices and attach image and hash file for them
+// It creates two loop devices and attach image and hash file for them.
 // Equivalent shell command:
 // veritysetup open <imagePath> <module> <hashPath> <hash>
 func CreateMapper(ctx context.Context, imagePath, hash string) error {

@@ -48,7 +48,9 @@ const (
 	staticTimestampArg = "-T 1750791050" // 2025-06-24T18:50:50Z
 )
 
-// CreateImage uses mkfs.erofs to create image from module dir
+// CreateImage uses mkfs.erofs to create image from module dir.
+// Equivalent shell command:
+// mkfs.erofs --aufs --quiet -Enoinline_data -T 1750791050 -Uclear -x-1 <imagePath> <modulePath>
 func CreateImage(ctx context.Context, modulePath, imagePath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateImage")
 	defer span.End()
@@ -78,7 +80,9 @@ func CreateImage(ctx context.Context, modulePath, imagePath string) error {
 	return nil
 }
 
-// CreateImageByTar uses mkfs.erofs to create image from tar
+// CreateImageByTar uses mkfs.erofs to create image from tar.
+// Equivalent shell command:
+// mkfs.erofs --tar=f --aufs --quiet -Enoinline_data -T 1750791050 -Uclear -x-1 <imagePath> <modulePath>
 func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateImageByTar")
 	defer span.End()
