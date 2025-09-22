@@ -312,10 +312,3 @@ window.addEventListener("load", function() {
   openDiagram()
 });
 
-// $(window).on('load', function() {
-//     const hash = window.location.href;
-//     console.log(hash)
-//     if(hash) {
-
-//     }
-// });
