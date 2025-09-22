@@ -77,8 +77,7 @@ spec:
                     headers:
                       type: object
                       description: Additional HTTP headers to send with each remote write request.
-                      additionalProperties:
-                        type: string
+                      additionalProperties: false
                       properties:
                         X-Scope-OrgID:
                           description: |
@@ -88,7 +87,6 @@ spec:
                           description: |
                             The `X-Auth-Token` header specifying the authentication token.
                           type: string
-                      required: ["X-Scope-OrgID", "X-Auth-Token"]
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.
