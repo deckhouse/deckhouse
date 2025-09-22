@@ -27,7 +27,12 @@ spec:
       rego: |
         package d8.security_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg, "details": {}}] {
+          not_delete
           is_binding(input.review.kind.kind)
           binding := input.review.object
           ref_name := binding.roleRef.name
@@ -36,6 +41,7 @@ spec:
         }
 
         violation[{"msg": msg, "details": {}}] {
+          not_delete
           is_binding(input.review.kind.kind)
           binding := input.review.object
           subject := binding.subjects[_]
