@@ -257,6 +257,7 @@ spec:
     allowHostNetwork: false
     allowPrivilegeEscalation: false
     allowPrivileged: false
+    allowRbacWildcards: true
     allowedCapabilities: []
     allowedAppArmor:
     - runtime/default
