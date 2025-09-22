@@ -2,8 +2,21 @@ apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
   name: d8allowrbacwildcards
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
   annotations:
-    description: Prohibits the use of wildcards in RBAC RoleBindings and ClusterRoleBindings if the corresponding policy is disabled.
+    metadata.gatekeeper.sh/title: "RBAC Wildcards"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Prohibits the use of wildcards (`*`) in RBAC RoleBindings and ClusterRoleBindings
+      when the corresponding SecurityPolicy flag is disabled.
+      Restricting wildcards in RBAC bindings helps to reduce the blast radius of
+      granted permissions and avoid accidental over-privileging.
+      
+      For more information, see
+      https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 spec:
   crd:
     spec:
@@ -14,7 +27,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        violation[{"msg": msg}] {
+        violation[{"msg": msg, "details": {}}] {
           is_binding(input.review.kind.kind)
           binding := input.review.object
           ref_name := binding.roleRef.name
@@ -22,7 +35,7 @@ spec:
           msg := sprintf("Wildcard is forbidden in roleRef.name of %v '%v': '%v'", [input.review.kind.kind, binding.metadata.name, ref_name])
         }
 
-        violation[{"msg": msg}] {
+        violation[{"msg": msg, "details": {}}] {
           is_binding(input.review.kind.kind)
           binding := input.review.object
           subject := binding.subjects[_]
