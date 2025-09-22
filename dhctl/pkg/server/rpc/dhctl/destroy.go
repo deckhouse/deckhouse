@@ -178,6 +178,8 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
@@ -185,11 +187,11 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
@@ -209,7 +211,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -232,7 +234,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	}
 
 	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,
@@ -280,8 +282,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir: s.params.TmpDir,
-		Logger: log.GetDefaultLogger(),
+		TmpDir:  s.params.TmpDir,
+		Logger:  loggerFor,
+		IsDebug: s.params.IsDebug,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

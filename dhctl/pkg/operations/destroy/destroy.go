@@ -69,8 +69,9 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir string
-	Logger log.Logger
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 }
 
 type ClusterDestroyer struct {
@@ -90,8 +91,9 @@ type ClusterDestroyer struct {
 	CommanderMode bool
 	CommanderUUID uuid.UUID
 
-	tmpDir string
-	logger log.Logger
+	tmpDir  string
+	logger  log.Logger
+	isDebug bool
 }
 
 func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
@@ -148,6 +150,8 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		controller.ClusterInfraOptions{
 			PhasedExecutionContext: pec,
 			TmpDir:                 params.TmpDir,
+			IsDebug:                params.IsDebug,
+			Logger:                 logger,
 		},
 	)
 
@@ -168,8 +172,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		CommanderMode:          params.CommanderMode,
 		CommanderUUID:          params.CommanderUUID,
 
-		tmpDir: params.TmpDir,
-		logger: logger,
+		tmpDir:  params.TmpDir,
+		logger:  logger,
+		isDebug: params.IsDebug,
 	}, nil
 }
 

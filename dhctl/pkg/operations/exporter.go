@@ -37,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type previouslyExistedEntities struct {
@@ -70,7 +71,9 @@ type ConvergeExporter struct {
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
 
-	tmpDir string
+	tmpDir  string
+	logger  log.Logger
+	isDebug bool
 }
 
 var (
@@ -100,6 +103,8 @@ type ExporterParams struct {
 	Path     string
 	Interval time.Duration
 	TmpDir   string
+	Logger   log.Logger
+	IsDebug  bool
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
@@ -119,6 +124,11 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		panic(err)
 	}
 
+	logger := params.Logger
+	if interfaces.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
@@ -131,6 +141,9 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		OneGaugeMetrics: make(map[string]prometheus.Gauge),
 		GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
 		CounterMetrics:  make(map[string]*prometheus.CounterVec),
+		tmpDir:          params.TmpDir,
+		logger:          logger,
+		isDebug:         params.IsDebug,
 	}
 }
 
@@ -251,7 +264,6 @@ func (c *ConvergeExporter) convergeLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			cache.ClearTemporaryDirs()
 			c.recordStatistic(c.getStatistic(ctx))
 		case <-ctx.Done():
 			log.ErrorLn("Stop exporter...")
@@ -265,7 +277,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 		ctx,
 		c.kubeCl,
 		infrastructureprovider.MetaConfigPreparatorProvider(
-			infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+			infrastructureprovider.NewPreparatorProviderParams(c.logger),
 		),
 	)
 	if err != nil {
@@ -284,7 +296,8 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           c.tmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           c.logger,
+		IsDebug:          c.isDebug,
 	})
 
 	provider, err := providerGetter(ctx, metaConfig)
@@ -293,6 +306,15 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context) (*check.Statistics,
 		c.CounterMetrics["errors"].WithLabelValues().Inc()
 		return nil, false
 	}
+
+	defer func() {
+		err := provider.Cleanup()
+		if err != nil {
+			c.logger.LogErrorF("Cannot cleanup provider after getting statistic: %v\n", err)
+			c.CounterMetrics["errors"].WithLabelValues().Inc()
+		}
+		cache.ClearTemporaryDirs()
+	}()
 
 	c.infrastructureContext.SetCloudProviderGetter(providerGetter)
 

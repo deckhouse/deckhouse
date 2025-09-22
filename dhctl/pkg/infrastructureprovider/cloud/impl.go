@@ -37,7 +37,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
-type VersionsContentProviderGetter func(s settings.ProviderSettings, provider string, logger log.Logger) VersionContentProvider
+type (
+	VersionsContentProviderGetter func(s settings.ProviderSettings, provider string, logger log.Logger) VersionContentProvider
+)
 
 type ProviderDI struct {
 	SettingsProvider    SettingsProvider
@@ -46,11 +48,6 @@ type ProviderDI struct {
 	ModulesProvider     ProviderModulesProvider
 
 	VersionsContentProviderGetter VersionsContentProviderGetter
-}
-
-type ProviderParams struct {
-	AdditionalParams ProviderAdditionalParams
-	Settings         settings.ProviderSettings
 }
 
 type Provider struct {
@@ -62,26 +59,43 @@ type Provider struct {
 	rootDirRoutinesMutex sync.Mutex
 	rootDir              string
 
-	params     ProviderParams
-	metaConfig *config.MetaConfig
+	additionalParams ProviderAdditionalParams
+	settings         settings.ProviderSettings
+	metaConfig       *config.MetaConfig
 
-	di     *ProviderDI
-	logger log.Logger
+	di           *ProviderDI
+	logger       log.Logger
+	afterCleanup infrastructure.AfterCleanupProviderFunc
+
+	isDebug bool
 }
 
-func NewProvider(metaConfig *config.MetaConfig, uuid string, di *ProviderDI, params ProviderParams, tmpDir string, logger log.Logger) *Provider {
+type ProviderParams struct {
+	MetaConfig       *config.MetaConfig
+	UUID             string
+	DI               *ProviderDI
+	TmpDir           string
+	Logger           log.Logger
+	IsDebug          bool
+	Settings         settings.ProviderSettings
+	AdditionalParams ProviderAdditionalParams
+}
+
+func NewProvider(params ProviderParams) *Provider {
 	p := &Provider{
-		prefix:     metaConfig.ClusterPrefix,
-		layout:     metaConfig.Layout,
-		name:       metaConfig.ProviderName,
-		uuid:       uuid,
-		di:         di,
-		params:     params,
-		metaConfig: metaConfig,
-		logger:     logger,
+		prefix:           params.MetaConfig.ClusterPrefix,
+		layout:           params.MetaConfig.Layout,
+		name:             params.MetaConfig.ProviderName,
+		uuid:             params.UUID,
+		di:               params.DI,
+		metaConfig:       params.MetaConfig,
+		logger:           params.Logger,
+		isDebug:          params.IsDebug,
+		settings:         params.Settings,
+		additionalParams: params.AdditionalParams,
 	}
 
-	p.generateRootDir(tmpDir)
+	p.generateRootDir(params.TmpDir)
 	return p
 }
 
@@ -103,7 +117,7 @@ func (p *Provider) RootDir() string {
 }
 
 func (p *Provider) NeedToUseTofu() bool {
-	return p.params.Settings.UseOpenTofu()
+	return p.settings.UseOpenTofu()
 }
 
 func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
@@ -111,7 +125,7 @@ func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
 		return dvp.IsVMManifest(rc, p.logger)
 	}
 
-	return rc.Type == p.params.Settings.VmResourceType()
+	return rc.Type == p.settings.VmResourceType()
 }
 
 func (p *Provider) String() string {
@@ -128,26 +142,28 @@ func (p *Provider) OutputExecutor(ctx context.Context, logger log.Logger) (infra
 		return nil, err
 	}
 
-	infraUtilDestination, err := p.downloadInfraUtil(ctx, p.rootDir, errPrefix)
+	rootDir := p.rootDir
+
+	infraUtilDestination, err := p.downloadInfraUtil(ctx, rootDir, errPrefix)
 	if err != nil {
 		return nil, err
 	}
 
-	if !p.params.Settings.UseOpenTofu() {
-		p.logger.LogDebugF("Create terraform output executor %s\n", p.String())
+	if !p.settings.UseOpenTofu() {
+		p.logger.LogDebugF("Create terraform output executor for %s\n", p.String())
 		return terraform.NewOutputExecutor(terraform.OutputExecutorParams{
 			RunExecutorParams: terraform.RunExecutorParams{
-				RootDir:          p.rootDir,
+				RootDir:          rootDir,
 				TerraformBinPath: infraUtilDestination,
 			},
 		}, logger), nil
 	}
 
-	p.logger.LogDebugF("Create opentofu output executor %s\n", p.String())
+	p.logger.LogDebugF("Create opentofu output executor for %s\n", p.String())
 
 	return tofu.NewOutputExecutor(tofu.OutputExecutorParams{
 		RunExecutorParams: tofu.RunExecutorParams{
-			RootDir:     p.rootDir,
+			RootDir:     rootDir,
 			TofuBinPath: infraUtilDestination,
 		},
 	}, logger), nil
@@ -169,8 +185,8 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 
 	p.logger.LogDebugF("Getting version content for %s\n", p.String())
 
-	vContentProvider := p.di.VersionsContentProviderGetter(p.params.Settings, p.name, p.logger)
-	versionContent, version, err := vContentProvider(ctx, p.params.Settings, p.metaConfig, p.logger)
+	vContentProvider := p.di.VersionsContentProviderGetter(p.settings, p.name, p.logger)
+	versionContent, version, err := vContentProvider(ctx, p.settings, p.metaConfig, p.logger)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get version content for %s: %w", p.String(), err)
 	}
@@ -213,7 +229,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		return nil, err
 	}
 
-	if !p.params.Settings.UseOpenTofu() {
+	if !p.settings.UseOpenTofu() {
 		p.logger.LogDebugF("Create terraform executor for %s with step %s\n", p.String(), step)
 		return terraform.NewExecutor(terraform.ExecutorParams{
 			WorkingDir: stepDir,
@@ -376,7 +392,7 @@ func (p *Provider) downloadModules(ctx context.Context, rootDir string) (string,
 
 	err = p.di.ModulesProvider.DownloadModules(ctx, DownloadModulesParams{
 		ModulesParams{
-			Settings: p.params.Settings,
+			Settings: p.settings,
 		},
 	}, destination)
 	if err != nil {
@@ -391,7 +407,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 
 	arch := p.arch()
 
-	destination := fsstatic.GetPluginDir(pluginsDir, p.params.Settings, version, arch)
+	destination := fsstatic.GetPluginDir(pluginsDir, p.settings, version, arch)
 	destinationDir := path.Dir(destination)
 	destinationDir = strings.TrimRight(destinationDir, "/")
 	// for windows
@@ -408,7 +424,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 			Version: version,
 			Arch:    arch,
 		},
-		Settings: p.params.Settings,
+		Settings: p.settings,
 	}
 
 	p.logger.LogDebugF(
@@ -429,18 +445,18 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 }
 
 func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix string) (string, error) {
-	destination := fsstatic.GetInfraUtilPath(rootDir, p.params.Settings)
+	destination := fsstatic.GetInfraUtilPath(rootDir, p.settings)
 
 	params := InfrastructureUtilProviderParams{
 		Version{
-			Version: p.params.Settings.InfrastructureVersion(),
+			Version: p.settings.InfrastructureVersion(),
 			Arch:    p.arch(),
 		},
 	}
 
 	var err error
 
-	if p.params.Settings.UseOpenTofu() {
+	if p.settings.UseOpenTofu() {
 		p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
 		err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination)
 	} else {
@@ -460,21 +476,46 @@ func (p *Provider) arch() string {
 	return "linux_amd64"
 }
 
+func (p *Provider) SetAfterCleanupFunc(f infrastructure.AfterCleanupProviderFunc) {
+	p.afterCleanup = f
+}
+
 func (p *Provider) Cleanup() error {
+	rootDir := p.rootDir
+
+	defer func() {
+		if p.afterCleanup != nil {
+			p.afterCleanup(p.logger)
+		}
+	}()
+
+	if p.isDebug {
+		p.logger.LogInfoF(
+			"Cloud %s was not cleaned up because you use debug mode. Root dir is: '%s'. If need cleanup manually.\n",
+			p.String(),
+			rootDir,
+		)
+		return nil
+	}
+
 	p.rootDirRoutinesMutex.Lock()
 	defer p.rootDirRoutinesMutex.Unlock()
 
-	_, err := os.Stat(p.rootDir)
+	_, err := os.Stat(rootDir)
 	if err == nil {
-		p.logger.LogDebugF("Removing root dir %s for %s\n", p.rootDir, p.String())
-		return os.RemoveAll(p.rootDir)
+		p.logger.LogDebugF("Removing root dir %s for %s\n", rootDir, p.String())
+		err := os.RemoveAll(rootDir)
+		if err != nil {
+			return fmt.Errorf("Cannot remove root dir %s for %s: %w", rootDir, p.String(), err)
+		}
+		return nil
 	}
 
 	if !os.IsNotExist(err) {
-		return fmt.Errorf("Cannot remove root dir %s for %s: %w", p.rootDir, p.String(), err)
+		return fmt.Errorf("Cannot remove root dir %s for %s: %w", rootDir, p.String(), err)
 	}
 
-	p.logger.LogDebugF("Root dir %s for %s already removed\n", p.rootDir, p.String())
+	p.logger.LogDebugF("Root dir %s for %s already removed\n", rootDir, p.String())
 
 	return nil
 }

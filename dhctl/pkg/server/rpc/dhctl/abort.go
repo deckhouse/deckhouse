@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -40,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 type abortParams struct {
@@ -176,6 +176,8 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		DebugStream: p.logOptions.DebugWriter,
 	})
 
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
@@ -183,15 +185,15 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var (
 		configPaths []string
 		configPath  string
 		cleanup     func() error
 	)
-	err = log.Process("default", "Preparing configuration", func() error {
+	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -219,7 +221,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	}
 
 	var initialState phases.DhctlState
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -233,7 +235,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 	}
 
 	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,
@@ -251,7 +253,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() && len(connectionConfig.SSHHosts) > 0 {
+		if !interfaces.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
 			err = sshClient.Start()
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
@@ -284,7 +286,9 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		OnProgressFunc:    p.sendProgress,
 		CommanderMode:     p.request.Options.CommanderMode,
 		CommanderUUID:     commanderUUID,
-		Logger:            log.GetDefaultLogger(),
+		Logger:            loggerFor,
+		IsDebug:           s.params.IsDebug,
+		TmpDir:            s.params.TmpDir,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

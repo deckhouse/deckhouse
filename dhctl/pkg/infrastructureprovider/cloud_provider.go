@@ -34,8 +34,10 @@ type CloudProviderGetterParams struct {
 	AdditionalParams cloud.ProviderAdditionalParams
 	Logger           log.Logger
 	FSDIParams       *fs.DIParams
+	IsDebug          bool
 
 	VersionProviderGetter cloud.VersionsContentProviderGetter
+	ProviderCache         CloudProvidersCache
 }
 
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
@@ -57,14 +59,18 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 		PluginsDir:        filepath.Join(global.GetDhctlPath(), "plugins"),
 	}
 
+	providersCache := params.ProviderCache
+	providersCacheLogMessage := "Provider cache is not nil. Using custom\n"
+	if interfaces.IsNil(providersCache) {
+		providersCacheLogMessage = "Provider cache is nil. Using default\n"
+		providersCache = defaultProvidersCache
+	}
+
+	params.Logger.LogDebugF(providersCacheLogMessage)
+
 	return func(ctx context.Context, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
 		if metaConfig == nil {
 			return nil, fmt.Errorf("Cannot get CloudProvider. metaConfig must not be nil")
-		}
-
-		if metaConfig.ProviderName == "" {
-			params.Logger.LogDebugLn("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster")
-			return infrastructure.NewDummyCloudProvider(params.Logger), nil
 		}
 
 		if interfaces.IsNil(ctx) {
@@ -78,6 +84,33 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 
 		if clusterUUID == "" {
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
+		}
+
+		if metaConfig.ProviderName == "" {
+			cachedProvider, stored := providersCache.Get(clusterUUID, metaConfig, params.Logger)
+			if stored {
+				return cachedProvider, nil
+			}
+
+			params.Logger.LogDebugLn("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster")
+
+			newProvider := infrastructure.NewDummyCloudProvider(params.Logger)
+			return providersCache.Add(clusterUUID, metaConfig, newProvider, params.Logger), nil
+		}
+
+		providerName := metaConfig.ProviderName
+
+		if metaConfig.ClusterPrefix == "" {
+			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, providerName)
+		}
+
+		if metaConfig.Layout == "" {
+			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, providerName)
+		}
+
+		cachedProvider, stored := providersCache.Get(clusterUUID, metaConfig, params.Logger)
+		if stored {
+			return cachedProvider, nil
 		}
 
 		diParams := defaultFSDIParams
@@ -106,30 +139,26 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			params.Logger.LogDebugF("fs.GetDI provider our own VersionProviderGetter\n")
 		}
 
-		providerName := metaConfig.ProviderName
-
 		set, err := di.SettingsProvider.GetSettings(ctx, providerName, params.AdditionalParams)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, providerName, err)
 		}
 
-		if metaConfig.ClusterPrefix == "" {
-			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, providerName)
-		}
-
-		if metaConfig.Layout == "" {
-			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, providerName)
-		}
-
 		p := cloud.ProviderParams{
-			AdditionalParams: params.AdditionalParams,
+			MetaConfig:       metaConfig,
+			UUID:             clusterUUID,
+			Logger:           params.Logger,
+			DI:               di,
+			TmpDir:           tmpDir,
+			IsDebug:          params.IsDebug,
 			Settings:         set,
+			AdditionalParams: params.AdditionalParams,
 		}
 
-		provider := cloud.NewProvider(metaConfig, clusterUUID, di, p, tmpDir, params.Logger)
+		newProvider := providersCache.Add(clusterUUID, metaConfig, cloud.NewProvider(p), params.Logger)
 
-		params.Logger.LogDebugF("Cloud %s initialized. Root dir is %s\n", provider.String(), provider.RootDir())
+		params.Logger.LogDebugF("Cloud %s initialized and added in cache. Root dir is %s\n", newProvider.String(), newProvider.RootDir())
 
-		return provider, nil
+		return newProvider, nil
 	}
 }

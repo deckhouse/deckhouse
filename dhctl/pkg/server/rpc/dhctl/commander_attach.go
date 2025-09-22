@@ -173,6 +173,9 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		Width:       int(p.request.Options.LogWidth),
 		DebugStream: p.logOptions.DebugWriter,
 	})
+
+	loggerFor := log.GetDefaultLogger()
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
@@ -180,11 +183,11 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 	app.CacheDir = s.params.CacheDir
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { log.InfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
+	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
 
 	var sshClient node.SSHClient
-	err = log.Process("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,
@@ -236,7 +239,8 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 		},
 		ScanOnly: p.request.ScanOnly,
 		TmpDir:   s.params.TmpDir,
-		Logger:   log.GetDefaultLogger(),
+		Logger:   loggerFor,
+		IsDebug:  s.params.IsDebug,
 	})
 
 	result, attachErr := attacher.Attach(ctx)

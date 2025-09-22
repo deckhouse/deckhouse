@@ -49,7 +49,8 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
 	})
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
@@ -76,6 +77,8 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		return err
 	}
 	metaConfig.UUID = clusterUUID
+
+	defer b.cleanup(ctx, metaConfig)
 
 	return log.Process("bootstrap", "Cloud infrastructure", func() error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)

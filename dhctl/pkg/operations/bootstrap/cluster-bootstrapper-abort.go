@@ -105,7 +105,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
 	})
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
@@ -159,6 +160,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					controller.ClusterInfraOptions{
 						PhasedExecutionContext: b.PhasedExecutionContext,
 						TmpDir:                 b.TmpDir,
+						Logger:                 b.Logger,
+						IsDebug:                b.IsDebug,
 					},
 				)
 			} else {
@@ -216,6 +219,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 
 		destroyParams.Logger = b.logger
+		destroyParams.IsDebug = b.IsDebug
+		destroyParams.TmpDir = b.TmpDir
 
 		destroyer, err = destroy.NewClusterDestroyer(ctx, destroyParams)
 		if err != nil {
@@ -256,6 +261,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
+	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err

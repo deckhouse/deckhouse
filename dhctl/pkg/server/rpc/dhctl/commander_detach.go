@@ -243,11 +243,13 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	}
 
 	stateCache := cache.Global()
+	loggerFor := log.GetDefaultLogger()
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
 	})
 
 	checker := check.NewChecker(&check.Params{
@@ -260,6 +262,9 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter),
+		TmpDir:                s.params.TmpDir,
+		Logger:                loggerFor,
+		IsDebug:               s.params.IsDebug,
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{

@@ -47,9 +47,12 @@ type Params struct {
 
 	KubeClient *client.KubernetesClient // optional
 
-	TmpDir string
-	Logger log.Logger
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 }
+
+type Cleaner func() error
 
 type Checker struct {
 	*Params
@@ -78,24 +81,39 @@ func NewChecker(params *Params) *Checker {
 	}
 }
 
-func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
+func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
+	cleaner := func() error {
+		return nil
+	}
+
 	kubeCl, err := c.GetKubeClient(ctx)
 	if err != nil {
-		return nil, err
+		return nil, cleaner, err
 	}
 
 	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
+	if err != nil {
+		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
+	}
+
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           c.logger,
+			IsDebug:          c.IsDebug,
 		})
 
 		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
 	}
+
+	provider, err := c.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+		return nil, cleaner, err
+	}
+
+	cleaner = func() error {
+		return provider.Cleanup()
 	}
 
 	res := &CheckResult{
@@ -105,7 +123,7 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	if c.CommanderMode {
 		shouldUpdate, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, c.CommanderUUID)
 		if err != nil {
-			return nil, fmt.Errorf("uuid consistency check failed: %w", err)
+			return nil, cleaner, fmt.Errorf("uuid consistency check failed: %w", err)
 		}
 		if shouldUpdate {
 			res.Status = res.Status.CombineStatus(CheckStatusOutOfSync)
@@ -117,14 +135,14 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	if metaConfig.ClusterType == config.CloudClusterType {
 		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
 		if err != nil {
-			return nil, fmt.Errorf("unable to check infra state: %w", err)
+			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
 		}
 		res.Status = res.Status.CombineStatus(resInfra.Status)
 
 		if resInfra.Status == CheckStatusDestructiveOutOfSync {
 			res.DestructiveChangeID, err = DestructiveChangeID(resInfra.Statistics)
 			if err != nil {
-				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+				return nil, cleaner, fmt.Errorf("unable to generate destructive change id: %w", err)
 			}
 		}
 
@@ -135,13 +153,13 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to check configuration state: %w", err)
+		return nil, cleaner, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
 	res.StatusDetails.ConfigurationStatus = configurationStatus
 	res.HasTerraformState = hasTerraformState
 
-	return res, nil
+	return res, cleaner, nil
 }
 
 func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {

@@ -58,11 +58,14 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           logger,
+			IsDebug:          isDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -79,7 +82,8 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			},
 			ProviderGetter: providerGetter,
 			TmpDir:         tmpDir,
-			Logger:         log.GetDefaultLogger(),
+			Logger:         logger,
+			IsDebug:        isDebug,
 		})
 		_, err = converger.Converge(context.Background())
 
@@ -96,11 +100,14 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           logger,
+			IsDebug:          isDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -116,7 +123,8 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			},
 			ProviderGetter: providerGetter,
 			TmpDir:         tmpDir,
-			Logger:         log.GetDefaultLogger(),
+			Logger:         logger,
+			IsDebug:        isDebug,
 		})
 		return converger.AutoConverge()
 	})
@@ -154,11 +162,14 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		tmpDir := app.TmpDirName
+		loggerFor := log.GetDefaultLogger()
+		isDebug := app.IsDebug
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           loggerFor,
+			IsDebug:          isDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -176,7 +187,8 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
 			TmpDir:                                tmpDir,
-			Logger:                                log.GetDefaultLogger(),
+			Logger:                                loggerFor,
+			IsDebug:                               isDebug,
 		})
 		return converger.ConvergeMigration(context.Background())
 	})
