@@ -141,8 +141,9 @@ spec:
         - mountPath: /run/xtables.lock
           name: xtables-lock
           readOnly: false
-        - mountPath: /usr/sbin
-          name: sbin-iptables
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
       - args:
         - -web.listen-address=127.0.0.1:10354
         - -nginx.scrape-uri=http://127.0.0.1:10253/nginx_status
@@ -234,34 +235,33 @@ spec:
         - mountPath: /tmp
           name: write-files
       - command:
-        - sh
+        - /bin/bash
         - -ec
-        - |
-          for cmd in \
-            iptables iptables-save iptables-restore \
-            ip6tables ip6tables-save ip6tables-restore \
-            iptables-legacy iptables-legacy-save iptables-legacy-restore \
-            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
-            iptables-nft iptables-nft-save iptables-nft-restore \
-            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
-              ln -f -s /iptables-wrapper "/tmp/${cmd}"
-          done
-          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
-          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
-        image: registry.example.com@imageHash-common-init
-        imagePullPolicy: IfNotPresent
-        name: sbin-iptables
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv\n/usr/bin/cp /_sbin/* /sbin/ -rv
+          \n/usr/bin/cp /relocate/sbin/* /sbin/ -rv\n/sbin/iptables --version\n/usr/bin/rm
+          /sbin/iptables-wrapper -v\n"
+        image: registry.example.com@imageHash-ingressNginx-iptablesWrapperInit
+        name: iptables-wrapper-init
         resources:
           requests:
-            ephemeral-storage: 50Mi
+            ephemeral-storage: 60Mi
         securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            drop:
+            - ALL
           readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
         volumeMounts:
-        - mountPath: /tmp
-          name: sbin-iptables
+        - mountPath: /sbin
+          name: sbin
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
       priorityClassName: system-cluster-critical
       securityContext:
         runAsGroup: 64535
@@ -291,8 +291,10 @@ spec:
         name: write-files
       - emptyDir: {}
         name: tmp-nginx
-      - emptyDir: {}
-        name: sbin-iptables
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+        name: sbin
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

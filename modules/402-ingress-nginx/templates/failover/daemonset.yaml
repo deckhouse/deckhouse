@@ -1,3 +1,8 @@
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
 {{- $crdChecksum := toJson $crd | sha256sum }}
@@ -89,8 +94,10 @@ spec:
           emptyDir: {}
         - name: tmp-nginx
           emptyDir: {}
-        - name: sbin-iptables
-          emptyDir: {}
+        - name: sbin
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Mi
       initContainers:
       - name: touch-files
         image: {{ include "helm_lib_module_common_image" (list $context "init") }}
@@ -106,32 +113,32 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
-      - name: sbin-iptables
-        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
-        {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
-          readOnlyRootFilesystem: true
-        imagePullPolicy: IfNotPresent
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        image: {{ include "helm_lib_module_image" (list $context "iptablesWrapperInit") }}
         command:
-        - sh
+        - /bin/bash
         - -ec
         - |
-          for cmd in \
-            iptables iptables-save iptables-restore \
-            ip6tables ip6tables-save ip6tables-restore \
-            iptables-legacy iptables-legacy-save iptables-legacy-restore \
-            ip6tables-legacy ip6tables-legacy-save ip6tables-legacy-restore \
-            iptables-nft iptables-nft-save iptables-nft-restore \
-            ip6tables-nft ip6tables-nft-save ip6tables-nft-restore; do
-              ln -f -s /iptables-wrapper "/tmp/${cmd}"
-          done
-          ln -f -s /sbin/xtables-legacy-multi /tmp/xtables-legacy-multi
-          ln -f -s /sbin/xtables-nft-multi /tmp/xtables-nft-multi
+          /usr/bin/cp /iptables-wrapper /sbin/ -rv
+          /usr/bin/cp /_sbin/* /sbin/ -rv 
+          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+          /sbin/iptables --version
+          /usr/bin/rm /sbin/iptables-wrapper -v
         volumeMounts:
-          - name: sbin-iptables
-            mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
         resources:
           requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+      {{- end }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: controller
@@ -208,8 +215,9 @@ spec:
           - mountPath: /run/xtables.lock
             name: xtables-lock
             readOnly: false
-          - mountPath: /usr/sbin
-            name: sbin-iptables
+          - mountPath: /sbin
+            name: sbin
+            readOnly: true
       - name: nginx-exporter
         image: {{ include "helm_lib_module_image" (list $context "nginxExporter") }}
         args:
