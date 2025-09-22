@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # If reboot flag is not set, nothing to do
 if ! bb-flag? reboot; then
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+    bb-label-node-bashible-first-run-finished
+    touch $BASHIBLE_INITIALIZED_FILE
+  fi
   bb-flag-unset disruption
   exit 0
 fi
