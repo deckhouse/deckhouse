@@ -145,7 +145,11 @@ Deckhouse checks whether the dependency is met in the following cases:
 
 ## Dependency on the version of other modules
 
-This dependency defines the list of **enabled** modules and their minimum versions that are required for the module to work. The built-in DKP module version is considered equal to the DKP version.
+This dependency defines the list of **enabled** modules and their versions that are required for the module to work. 
+
+{% alert level="info" %}
+The built-in DKP module version is considered equal to the DKP version.
+{% endalert %}
 
 If you need to specify that some module is simply enabled, no matter what version, then you can use the following syntax (using the `user-authn` module as an example):
 
