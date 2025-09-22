@@ -85,15 +85,18 @@ spec:
         - name: deckhouse-registry
       initContainers:
         - name: touch-files
-          image: {{ include "helm_lib_module_common_image" (list $ctx "init") }}
+          image: {{ include "helm_lib_module_image" (list $ctx (printf "controller%s" ($version | replace "." ""))) }}
           securityContext:
             readOnlyRootFilesystem: true
           imagePullPolicy: IfNotPresent
           command:
             - sh
-            - -c
+            - -ec
             - --
-            - "/bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf && chmod 0666 /tmp/*"
+            - |
+              touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log
+              cp /chroot/etc/nginx/nginx.conf /tmp/nginx.conf
+              chmod 0666 -R /tmp
           volumeMounts:
             - name: write-files
               mountPath: /tmp/

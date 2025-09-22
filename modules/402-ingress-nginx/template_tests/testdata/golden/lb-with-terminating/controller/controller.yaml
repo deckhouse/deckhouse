@@ -252,11 +252,13 @@ spec:
       initContainers:
       - command:
         - sh
-        - -c
+        - -ec
         - --
-        - /bin/touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log /tmp/nginx.conf
-          && chmod 0666 /tmp/*
-        image: registry.example.com@imageHash-common-init
+        - |
+          touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log
+          cp /chroot/etc/nginx/nginx.conf /tmp/nginx.conf
+          chmod 0666 -R /tmp
+        image: registry.example.com@imageHash-ingressNginx-controller19
         imagePullPolicy: IfNotPresent
         name: touch-files
         resources:
