@@ -123,6 +123,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 						}
 					],
 					"allowedUnsafeSysctls": [
+						"user/huyser",
 						"*"
 					],
 					"allowHostIPC": true,
@@ -130,8 +131,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					"allowHostPID": false,
 					"allowPrivileged": false,
 					"allowPrivilegeEscalation": false,
+					"allowRbacWildcards": true,
 					"automountServiceAccountToken": true,
 					"forbiddenSysctls": [
+						"user/huyser",
 						"user/example"
 					],
 					"readOnlyRootFilesystem": true,
