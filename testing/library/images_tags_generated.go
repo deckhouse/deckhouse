@@ -332,8 +332,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
 	},
 	"networkGateway": map[string]interface{}{
-		"dnsmasq": "imageHash-networkGateway-dnsmasq",
-		"snat":    "imageHash-networkGateway-snat",
+		"dnsmasq":             "imageHash-networkGateway-dnsmasq",
+		"iptablesWrapperInit": "imageHash-networkGateway-iptablesWrapperInit",
+		"snat":                "imageHash-networkGateway-snat",
 	},
 	"networkPolicyEngine": map[string]interface{}{
 		"iptablesWrapperInit": "imageHash-networkPolicyEngine-iptablesWrapperInit",
