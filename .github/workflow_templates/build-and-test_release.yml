@@ -133,7 +133,6 @@ jobs:
       - workflow_render
       - build_fe
       - detect_editions
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_EE == 'true') }}
     env:
       WERF_ENV: "EE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -148,7 +147,6 @@ jobs:
       - workflow_render
       - build_fe
       - detect_editions
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE == 'true') }}
     env:
       WERF_ENV: "SE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -163,7 +161,6 @@ jobs:
       - workflow_render
       - build_fe
       - detect_editions
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_SE-plus == 'true') }}
     env:
       WERF_ENV: "SE-plus"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -178,7 +175,6 @@ jobs:
       - workflow_render
       - build_fe
       - detect_editions
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_BE == 'true') }}
     env:
       WERF_ENV: "BE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
@@ -193,7 +189,6 @@ jobs:
       - workflow_render
       - build_fe
       - detect_editions
-    if: ${{ startsWith(github.ref, 'refs/tags/v') || (needs.detect_editions.outputs.BUILD_CE == 'true') }}
     env:
       WERF_ENV: "CE"
 {!{ tmpl.Exec "build_template" (slice $ctx "release") | strings.Indent 4 }!}
