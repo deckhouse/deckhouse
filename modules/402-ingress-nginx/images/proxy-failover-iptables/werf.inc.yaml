@@ -35,7 +35,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
 fromCacheVersion: "2025-09-18-1"
 import:
-- image: {{ .ModuleName }}/failover-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/failover
   to: /failover
   before: setup
