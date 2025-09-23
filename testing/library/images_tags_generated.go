@@ -145,10 +145,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"safeAgentUpdater":    "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
-		"flanneld": "imageHash-cniFlannel-flanneld",
+		"flanneld":            "imageHash-cniFlannel-flanneld",
+		"iptablesWrapperInit": "imageHash-cniFlannel-iptablesWrapperInit",
 	},
 	"cniSimpleBridge": map[string]interface{}{
-		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
+		"iptablesWrapperInit": "imageHash-cniSimpleBridge-iptablesWrapperInit",
+		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
@@ -331,11 +333,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
 	},
 	"networkGateway": map[string]interface{}{
-		"dnsmasq": "imageHash-networkGateway-dnsmasq",
-		"snat":    "imageHash-networkGateway-snat",
+		"dnsmasq":             "imageHash-networkGateway-dnsmasq",
+		"iptablesWrapperInit": "imageHash-networkGateway-iptablesWrapperInit",
+		"snat":                "imageHash-networkGateway-snat",
 	},
 	"networkPolicyEngine": map[string]interface{}{
-		"kubeRouter": "imageHash-networkPolicyEngine-kubeRouter",
+		"iptablesWrapperInit": "imageHash-networkPolicyEngine-iptablesWrapperInit",
+		"kubeRouter":          "imageHash-networkPolicyEngine-kubeRouter",
 	},
 	"nodeLocalDns": map[string]interface{}{
 		"coredns":                    "imageHash-nodeLocalDns-coredns",
