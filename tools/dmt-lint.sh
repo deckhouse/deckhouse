@@ -60,33 +60,12 @@ function install_dmt() {
 function structure_prepare {
   modules_dir=("ee/modules" "ee/be/modules" "ee/fe/modules" "ee/se/modules" "ee/se-plus/modules")
   candi_cloud_providers_dir=("ee/candi/cloud-providers" "ee/se-plus/candi/cloud-providers")
-  
-  # Копируем исходную структуру проекта
   cp -R /deckhouse-src /deckhouse
-  
-  # Копируем модули из Enterprise папок, обрабатывая конфликты файлов
   for dir in "${modules_dir[@]}"; do
-    if [ -d "/deckhouse/${dir}" ]; then
-      # Перед копированием удаляем конфликтующие файлы в целевой директории
-      # Это необходимо для избежания ошибок копирования при перезаписи
-      find /deckhouse/"${dir}" -name "values-*.yaml" -type f | while read -r source_file; do
-        filename=$(basename "$source_file")
-        target_file="/deckhouse/modules/$filename"
-        if [ -f "$target_file" ]; then
-          rm -f "$target_file"
-        fi
-      done
-      
-      # Копируем файлы с принудительной перезаписью
-      cp -rf /deckhouse/"${dir}"/* /deckhouse/modules/
-    fi
+    cp -R /deckhouse/"${dir}"/* /deckhouse/modules
   done
-  
-  # Копируем cloud-providers аналогичным образом
   for dir in "${candi_cloud_providers_dir[@]}"; do
-    if [ -d "/deckhouse/${dir}" ]; then
-      cp -rf /deckhouse/"${dir}"/* /deckhouse/candi/cloud-providers/
-    fi
+    cp -R /deckhouse/"${dir}"/* /deckhouse/candi/cloud-providers
   done
 }
 
