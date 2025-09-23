@@ -51,7 +51,7 @@ import:
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make automake gettext-dev autoconf libtool flex bison clang binutils g++ linux-headers
+  - apk add --no-cache make automake gettext-dev autoconf pkgconf libtool flex bison clang binutils g++ linux-headers
   setup:
   - cd /src/util-linux
   - export LDFLAGS="-Wl,-z,now -Wl,-z,relro -static -s"
