@@ -1,4 +1,4 @@
-{{- $version := "2.41.2" }}
+{{- $version := "2.39.3" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
