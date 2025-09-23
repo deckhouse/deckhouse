@@ -5,7 +5,7 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/nodes.ht
 
 After the initial installation, the cluster consists of only one node — the master node. To run virtual machines on the prepared worker nodes, they need to be added to the cluster.
 
-Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](../../platform-management/node-management/adding-node.html).
+Next, we'll cover the process of adding two worker nodes. For more detailed information about adding static nodes to the cluster, refer to the [documentation](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html).
 
 {% alert level=“info” %}
 To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster.

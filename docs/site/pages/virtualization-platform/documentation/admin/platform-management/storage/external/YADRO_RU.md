@@ -11,7 +11,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает интегра�
 
 ## Включение модуля
 
-Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в DVP используется модуль `csi-yadro-tatlin-unified`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Чтобы включить модуль, выполните команду:
+Для управления томами на основе системы хранения данных [TATLIN.UNIFIED (Yadro)](https://yadro.com/ru/tatlin/unified) в DVP используется модуль `csi-yadro-tatlin-unified`, позволяющий создавать ресурсы StorageClass через создание пользовательских ресурсов [YadroTatlinUnifiedStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Чтобы включить модуль, выполните команду:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -40,7 +40,7 @@ si-yadro-tatlin-unified            Embedded  Available   True       True
 
 ## Подключение к системе хранения данных TATLIN.UNIFIED
 
-Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroTatlinUnifiedStorageConnection](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection):
+Чтобы создать подключение к системе хранения данных `TATLIN.UNIFIED` и иметь возможность настраивать объекты StorageClass, примените следующий ресурс [YadroTatlinUnifiedStorageConnection](/products/kubernetes-platform/documentation/v1/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection):
 
 ```shell
 d8 k apply -f - <<EOF
@@ -64,7 +64,7 @@ EOF
 
 ## Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass) может привести к ошибкам.
+Для создания StorageClass необходимо использовать ресурс [YadroTatlinUnifiedStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass). Ручное создание ресурса StorageClass без [YadroTatlinUnifiedStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageclass) может привести к ошибкам.
 
 Пример команды для создания класса хранения на основе системы хранения данных `TATLIN.UNIFIED`:
 

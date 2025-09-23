@@ -12,12 +12,12 @@ Deckhouse Virtualization Platform (DVP) поддерживает создани�
 
 Создание снимков поддерживается следующими CSI-драйверами:
 
-- [Облачные ресурсы провайдера OpenStack](/modules/cloud-provider-openstack/);
-- [Облачные ресурсы провайдера VMWare vSphere](/modules/cloud-provider-vsphere/);
+- [Облачные ресурсы провайдера OpenStack](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/);
+- [Облачные ресурсы провайдера VMWare vSphere](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/);
 - [Распределённое хранилище Ceph](../storage/external/ceph.html);
-- [Облачные ресурсы провайдера Amazon Web Services](/modules/cloud-provider-aws/);
-- [Облачные ресурсы провайдера Microsoft Azure](/modules/cloud-provider-azure/);
-- [Облачные ресурсы провайдера Google Cloud Platform](/modules/cloud-provider-gcp/);
+- [Облачные ресурсы провайдера Amazon Web Services](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/);
+- [Облачные ресурсы провайдера Microsoft Azure](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/);
+- [Облачные ресурсы провайдера Google Cloud Platform](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/);
 - [Реплицируемое хранилище на основе DRBD](../storage/sds/lvm-replicated.html);
 - [Хранилище данных NFS](../storage/external/nfs.html).
 

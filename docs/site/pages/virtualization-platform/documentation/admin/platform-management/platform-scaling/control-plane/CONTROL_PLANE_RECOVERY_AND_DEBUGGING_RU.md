@@ -116,7 +116,7 @@ etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-1. Измените параметр [`maxDbSize`](/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) в настройках модуля `control-plane-manager` на тот, который был задан в манифесте.
+1. Измените параметр [`maxDbSize`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) в настройках модуля `control-plane-manager` на тот, который был задан в манифесте.
 
 ## Отказоустойчивость
 

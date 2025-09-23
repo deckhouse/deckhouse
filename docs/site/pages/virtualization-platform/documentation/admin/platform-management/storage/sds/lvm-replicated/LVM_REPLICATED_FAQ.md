@@ -44,7 +44,7 @@ There are two ways to obtain this information:
 
 ## Assigning the default StorageClass
 
-To designate a StorageClass as the default, set the field `spec.isDefault` to `true` in the [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) custom resource.
+To designate a StorageClass as the default, set the field `spec.isDefault` to `true` in the [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) custom resource.
 
 ## Adding an existing LVMVolumeGroup
 
@@ -54,9 +54,9 @@ To designate a StorageClass as the default, set the field `spec.isDefault` to `t
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   After that the Volume Group will be discovered automatically and a corresponding [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource will be created.
+   After that the Volume Group will be discovered automatically and a corresponding [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource will be created.
 
-1. Reference this resource in [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) parameters using `spec.lvmVolumeGroups[].name`.  
+1. Reference this resource in [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) parameters using `spec.lvmVolumeGroups[].name`.  
    If an LVMThin pool is used, additionally specify its name in `spec.lvmVolumeGroups[].thinPoolName`.
 
 ## Changing DRBD volume limits and cluster ports
@@ -265,7 +265,7 @@ linstor node list -s AutoplaceTarget
 
 Issues can arise at various component layers. The cheat sheet below helps diagnose volume failures in LINSTOR.
 
-![Volume failure diagnostics in LINSTOR](../../../../images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
+![Volume failure diagnostics in LINSTOR](/images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
 <!-- Source: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit -->
 
 ### Start error of linstor-node while loading the DRBD module
@@ -327,7 +327,7 @@ If the output contains messages like `Remote failed to finish a request within �
 
 ## After the ReplicatedStoragePool resource is deleted, the corresponding Storage Pool remains in the backend
 
-This is expected behavior. The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource.
+This is expected behavior. The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource.
 
 ## Restrictions on changing ReplicatedStorageClass spec
 
@@ -479,7 +479,7 @@ The backup is stored in encoded segments in Secrets named `linstor-%date_time%-b
 
 The issue is most likely related to node labels.
 
-- Check [`dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) in module settings:
+- Check [`dataNodes.nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) in module settings:
 
   ```shell
   d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -511,7 +511,7 @@ The issue is most likely related to node labels.
 
 ## Additional support
 
-Reasons for failed operations are shown in the `status.reason` field of [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) and [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resources. If that information is insufficient, consult the `sds-replicated-volume-controller` logs.
+Reasons for failed operations are shown in the `status.reason` field of [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) and [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resources. If that information is insufficient, consult the `sds-replicated-volume-controller` logs.
 
 ## Migration from the linstor module to sds-replicated-volume
 
@@ -633,7 +633,7 @@ Additional parameters:
 
 ### Migrating to ReplicatedStoragePool
 
-The [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource allows you to create Storage Pools in the backend. It is recommended to create this resource even for existing Storage Pools and reference existing [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). The controller will detect that the Storage Pools already exist and leave them unchanged, showing `Created` in `status.phase`.
+The [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource allows you to create Storage Pools in the backend. It is recommended to create this resource even for existing Storage Pools and reference existing [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). The controller will detect that the Storage Pools already exist and leave them unchanged, showing `Created` in `status.phase`.
 
 ## Migration from the sds-drbd module to sds-replicated-volume
 
@@ -718,7 +718,7 @@ The logic of these resources remains unchanged. However, verify that no DRBDStor
 Using DRBD with more than one replica already provides network‑level RAID functionality. Local RAID can cause the following issues:
 
 - Significantly increases space overhead when using redundant RAID.  
-  Example: [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with `replication` set to `ConsistencyAndAvailability`. DRBD will store three data replicas (one per node). If those nodes use RAID1, storing 1 GB of data will require 6 GB of disk space. Redundant RAID is reasonable only to simplify server maintenance when storage cost is irrelevant. RAID1 then allows replacing disks without moving data replicas off a "problem" disk.
+  Example: [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with `replication` set to `ConsistencyAndAvailability`. DRBD will store three data replicas (one per node). If those nodes use RAID1, storing 1 GB of data will require 6 GB of disk space. Redundant RAID is reasonable only to simplify server maintenance when storage cost is irrelevant. RAID1 then allows replacing disks without moving data replicas off a "problem" disk.
 
 - With RAID0 the performance gain is negligible because data replication occurs over the network and the bottleneck is likely the network. Additionally, reduced host storage reliability can lead to data unavailability since DRBD failover from a broken replica to a healthy one is not instantaneous.
 

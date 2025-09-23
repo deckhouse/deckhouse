@@ -5,19 +5,19 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Работоспособность гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](../../../../../supported_versions.html#linux). При использовании нестандартных ядер или дистрибутивов поведение может быть непредсказуемым.
+Работоспособность гарантируется только при использовании стоковых ядер, поставляемых вместе с [поддерживаемыми дистрибутивами](/products/virtualization-platform/documentation/about/requirements.html). При использовании нестандартных ядер или дистрибутивов поведение может быть непредсказуемым.
 {% endalert %}
 
 Контроллер оперирует двумя типами кастомных ресурсов Kubernetes:
 
-- [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) — ресурс, представляющий блочное устройство;
-- [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) — ресурс, описывающий группу томов Logical Volume Manager.
+- [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) — ресурс, представляющий блочное устройство;
+- [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) — ресурс, описывающий группу томов Logical Volume Manager.
 
 ## Работа с ресурсами BlockDevice
 
 ### Создание ресурса BlockDevice
 
-Контроллер периодически сканирует доступные блочные устройства на каждом узле и автоматически формирует ресурс [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) при обнаружении устройства, соответствующего правилам. В результате создаётся объект ресурса с уникальным именем, содержащий детальную информацию о характеристиках устройства.
+Контроллер периодически сканирует доступные блочные устройства на каждом узле и автоматически формирует ресурс [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) при обнаружении устройства, соответствующего правилам. В результате создаётся объект ресурса с уникальным именем, содержащий детальную информацию о характеристиках устройства.
 
 #### Критерии отбора устройства контроллером
 
@@ -29,27 +29,27 @@ lang: ru
 - ёмкость устройства превышает 1 GiB;
 - для виртуальных дисков обязательно наличие серийного номера.
 
-Сформированный ресурс [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) служит источником данных для последующей работы с ресурсами [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
+Сформированный ресурс [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) служит источником данных для последующей работы с ресурсами [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
 ### Обновление ресурса BlockDevice
 
-При изменении состояния блочного устройства (например, изменение размера, изменение метаданных или исчезновение устройства из системы) контроллер автоматически обнаруживает эти изменения и обновляет поля ресурса [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice), обеспечивая актуальность информации. Пользовательская правка ресурса [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) запрещена и будет перезаписана контроллером.
+При изменении состояния блочного устройства (например, изменение размера, изменение метаданных или исчезновение устройства из системы) контроллер автоматически обнаруживает эти изменения и обновляет поля ресурса [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice), обеспечивая актуальность информации. Пользовательская правка ресурса [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) запрещена и будет перезаписана контроллером.
 
 ### Удаление ресурса BlockDevice
 
-Контроллер удаляет ресурс [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) только при выполнении условий:
+Контроллер удаляет ресурс [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) только при выполнении условий:
 
 - Ресурс находится в состоянии `Consumable` (доступен для потребления в Logical Volume Manager).
 - Блочное устройство более не доступно в системе (устройство было удалено или отключено).
-- Блочное устройство не входит в состав группы томов с лейблом `storage.deckhouse.io/enabled=true` (такая группа томов управляется [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) и удаление [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) не производится).
+- Блочное устройство не входит в состав группы томов с лейблом `storage.deckhouse.io/enabled=true` (такая группа томов управляется [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) и удаление [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) не производится).
 
 {% alert level="info" %}
-Удаление ресурса [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) происходит без участия пользователя. При ручном удалении ресурса контроллер повторно создаст его при следующем сканировании, если устройство по-прежнему удовлетворяет критериям.
+Удаление ресурса [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) происходит без участия пользователя. При ручном удалении ресурса контроллер повторно создаст его при следующем сканировании, если устройство по-прежнему удовлетворяет критериям.
 {% endalert %}
 
 ## Работа с ресурсами LVMVolumeGroup
 
-Ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) объединяет несколько ресурсов [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) в единую группу томов Logical Volume Manager (LVM) на узле и отображает текущее состояние этой группы.
+Ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) объединяет несколько ресурсов [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) в единую группу томов Logical Volume Manager (LVM) на узле и отображает текущее состояние этой группы.
 
 {% alert level="info" %}
 На текущий момент поддерживается только тип `Local` (локальные группы томов).
@@ -57,17 +57,17 @@ lang: ru
 
 ### Создание ресурса LVMVolumeGroup
 
-Существует два сценария формирования ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup):
+Существует два сценария формирования ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup):
 
 - Автоматическое создание ресурса:
   - Контроллер сканирует список активных групп томов LVM на каждом узле.
-  - Если у обнаруженной группы томов присутствует лейбл `storage.deckhouse.io/enabled=true` и нет соответствующего ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), контроллер автоматически создаёт ресурс.
+  - Если у обнаруженной группы томов присутствует лейбл `storage.deckhouse.io/enabled=true` и нет соответствующего ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), контроллер автоматически создаёт ресурс.
   - При этом контроллер заполняет секцию `spec`, за исключением поля `thinPools`. Все остальные параметры (имена блочных устройств, имя Volume Group и т.д.) подтягиваются автоматически из состояния системы.
   - Для управления пулами малого размера (thin pool) пользователь может вручную добавить информацию о них в секцию `spec` после создания ресурса.
 
 - Ручное создание ресурса:
   - Пользователь формирует YAML-манифест, указывая минимальный набор полей:
-    - `metadata.name` — уникальное имя ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup);
+    - `metadata.name` — уникальное имя ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup);
     - `spec` — имя узла, на котором будет существовать группа томов.
   - После валидации контроллер создаёт группу томов на узле и добавляет в кастомный ресурс актуальную информацию о состоянии созданной LVM Volume Group.
 
@@ -149,7 +149,7 @@ lang: ru
         size: 250Gi
   ```
 
-Пользователь может использовать любые допустимые селекторы (`matchLabels` или `matchExpressions`) для выбора [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice):
+Пользователь может использовать любые допустимые селекторы (`matchLabels` или `matchExpressions`) для выбора [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice):
 
 - `matchLabels` позволяет выбрать все устройства, у которых совпадает указанный лейбл (например, `kubernetes.io/hostname=node-0`);
 - `matchExpressions` позволяет задать более гибкие выражения, например, включение перечисленных имён устройств.
@@ -191,7 +191,7 @@ d8 k delete lvg <имя-ресурса>
 
 ### Вывод ресурса BlockDevice из LVMVolumeGroup
 
-1. Чтобы исключить конкретный [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) из состава Volume Group, отредактируйте селектор `spec.blockDeviceSelector` ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) или удалите соответствующий лейбл у ресурса [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice).
+1. Чтобы исключить конкретный [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) из состава Volume Group, отредактируйте селектор `spec.blockDeviceSelector` ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) или удалите соответствующий лейбл у ресурса [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice).
 
 1. Вручную перенесите данные на узле (если в Volume Group есть тома) следующей командой:
 
@@ -213,7 +213,7 @@ d8 k delete lvg <имя-ресурса>
 
 {% alert level="info" %}
 Если в процессе удаления остаются логические тома, удалите их заранее с помощью команды `lvremove`.
-Для защиты от непреднамеренного удаления можно использовать аннотацию `storage.deckhouse.io/deletion-protection` — до её снятия ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) не будет удалён.
+Для защиты от непреднамеренного удаления можно использовать аннотацию `storage.deckhouse.io/deletion-protection` — до её снятия ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) не будет удалён.
 {% endalert %}
 
 ## Защита от утечек данных между томами

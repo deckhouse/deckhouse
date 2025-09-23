@@ -6,7 +6,7 @@ lang: ru
 
 После первоначальной установки кластер состоит только из одного узла — master-узла. Для того чтобы запускать виртуальные машины на подготовленных worker-узлах, их необходимо добавить в кластер.
 
-Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](../../platform-management/node-management/adding-node.html).
+Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html).
 
 {% alert level="info" %}
 Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.

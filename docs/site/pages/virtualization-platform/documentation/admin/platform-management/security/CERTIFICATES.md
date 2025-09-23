@@ -155,7 +155,7 @@ The following example is based on using Yandex Cloud DNS:
 You can now use the created ClusterIssuer to issue certificates for all DVP components or for a specific component.
 
 For example, to use this ClusterIssuer for issuing certificates for all DVP components,
-set its name in the global parameter [`clusterIssuerName`](../../../reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
+set its name in the global parameter [`clusterIssuerName`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername):
 
 ```yaml
   spec:
@@ -173,7 +173,7 @@ set its name in the global parameter [`clusterIssuerName`](../../../reference/ap
 
 To configure certificate issuance using Vault, refer to the [HashiCorp documentation](https://developer.hashicorp.com/vault/tutorials/archive/kubernetes-cert-manager?in=vault%2Fkubernetes).
 
-After configuring the PKI and [enabling Kubernetes authentication](../access/authorization/), follow these steps:
+After configuring the PKI and enabling Kubernetes authentication, follow these steps:
 
 1. Create a ServiceAccount and copy the reference to its secret:
 

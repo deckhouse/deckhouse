@@ -48,7 +48,7 @@ You can enable HA mode globally for DVP in one of the following ways.
 
 ### Using Deckhouse web UI
 
-If the [`console`](/modules/console) module is enabled in the cluster,
+If the [`console`](/products/kubernetes-platform/modules/console/) module is enabled in the cluster,
 open the Deckhouse web UI, navigate to **Deckhouse** — **Global settings** — **Global module settings**,
 and switch the **HA mode** toggle to **Yes**.
 

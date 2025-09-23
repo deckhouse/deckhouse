@@ -85,7 +85,7 @@ d8 k -n d8-sds-node-configurator get pod -w
 
 ### Создание групп томов LVM
 
-Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс [BlockDevices](/modules/sds-node-configurator/cr.html#blockdevice), который отражает их актуальное состояние:
+Перед тем как приступить к настройке создания объектов StorageClass, необходимо объединить доступные на узлах блочные устройства в группы томов LVM. В дальнейшем группы томов будут использоваться для размещения PersistentVolume. Чтобы получить доступные блочные устройства, можно использовать ресурс [BlockDevices](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice), который отражает их актуальное состояние:
 
 ```shell
 d8 k get bd
@@ -105,7 +105,7 @@ dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140
 
 В примере вывода перечислены шесть блочных устройств, расположенных на трёх узлах.
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). Для создания ресурса LVMVolumeGroup на узле `worker-0` примените следующий ресурс, предварительно заменив имена узла и блочных устройств на необходимые:
+Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). Для создания ресурса LVMVolumeGroup на узле `worker-0` примените следующий ресурс, предварительно заменив имена узла и блочных устройств на необходимые:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -135,7 +135,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get lvg vg-on-worker-0 -w
@@ -150,7 +150,7 @@ vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi
 
 Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана группа томов LVM с именем `vg`.
 
-Далее необходимо повторить создание ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) для оставшихся узлов (`worker-1` и `worker-2`), изменив в примере выше имя ресурса [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), имя узла и имена блочных устройств, соответствующих узлу.
+Далее необходимо повторить создание ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) для оставшихся узлов (`worker-1` и `worker-2`), изменив в примере выше имя ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), имя узла и имена блочных устройств, соответствующих узлу.
 
 Убедитесь, что группы томов LVM созданы на всех узлах, где планируется их использовать, выполнив следующую команду:
 
@@ -169,7 +169,7 @@ vg-on-worker-2   0/0         True                    Ready   worker-2   360484Mi
 
 ### Создание реплицированных thick pool
 
-Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
+Теперь, когда на узлах созданы нужные группы томов LVM, необходимо объединить их в единое логическое пространство. Это можно сделать, объединив их в реплицированные пулы хранения в бэкенде `LINSTOR` через интерфейс в виде ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
 
 Пулы хранения могут быть двух типов: LVM (thick) и LVMThin (thin). Thick pool обладает высокой производительностью, сравнимой с производительностью накопителя, но не позволяет использовать снимки. Пример создания реплицированного thick pool:
 
@@ -188,7 +188,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -205,7 +205,7 @@ thick-pool   Completed   LVM    87d
 
 В отличие от thick pool, thin pool позволяет использовать снимки, но обладает меньшей производительностью.
 
-Созданные ранее ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) подходят для создания thick pool. Если вам важно иметь возможность создавать реплицированные thin pool, обновите конфигурацию ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup), добавив определение для thin pool:
+Созданные ранее ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) подходят для создания thick pool. Если вам важно иметь возможность создавать реплицированные thin pool, обновите конфигурацию ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), добавив определение для thin pool:
 
 ```shell
 d8 k patch lvg vg-on-worker-0 --type='json' -p='[
@@ -222,7 +222,7 @@ d8 k patch lvg vg-on-worker-0 --type='json' -p='[
 ]'
 ```
 
-В обновленной версии [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
+В обновленной версии [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) 70% доступного пространства будет использовано для создания thin pool. Оставшиеся 30% могут быть использованы для thick pool.
 
 Повторите добавление thin pool для оставшихся узлов (`worker-1` и `worker-2`). Пример создания реплицированного thin pool:
 
@@ -244,7 +244,7 @@ spec:
 EOF
 ```
 
-Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
+Дождитесь, когда созданный ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) перейдет в состояние `Completed`. Чтобы проверить состояние ресурса, выполните следующую команду:
 
 ```shell
 d8 k get rsp data -w
@@ -259,9 +259,9 @@ thin-pool   Completed   LVMThin   87d
 
 ## Создание объектов StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) может привести к нежелательному поведению.
+Создание объектов StorageClass осуществляется через ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) может привести к нежелательному поведению.
 
-Пример создания ресурса [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) на основе thick pool, PersistentVolumes которого будут размещены на группах томов на трех узлах:
+Пример создания ресурса [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) на основе thick pool, PersistentVolumes которого будут размещены на группах томов на трех узлах:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -285,13 +285,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданный ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get rsc replicated-storage-class -w
 ```
 
-В результате будет выведена информация о созданном [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass):
+В результате будет выведена информация о созданном [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass):
 
 ```console
 NAME                       PHASE     AGE

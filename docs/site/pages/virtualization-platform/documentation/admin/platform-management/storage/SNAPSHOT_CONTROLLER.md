@@ -11,12 +11,12 @@ Snapshots capture the state of a volume at a specific point in time and can be u
 
 The following CSI drivers support snapshot creation:
 
-- [OpenStack cloud provider](/modules/cloud-provider-openstack/)
-- [VMware vSphere cloud provider](/modules/cloud-provider-vsphere/)
+- [OpenStack cloud provider](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/)
+- [VMware vSphere cloud provider](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/)
 - [Distributed storage based on Ceph](../storage/external/ceph.html)
-- [Amazon Web Services cloud provider](/modules/cloud-provider-aws/)
-- [Microsoft Azure cloud provider](/modules/cloud-provider-azure/)
-- [Google Cloud Platform cloud provider](/modules/cloud-provider-gcp/)
+- [Amazon Web Services cloud provider](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/)
+- [Microsoft Azure cloud provider](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-azure/)
+- [Google Cloud Platform cloud provider](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-gcp/)
 - [Replicated storage based on DRBD](../storage/sds/lvm-replicated.html)
 - [NFS-based storage](../storage/external/nfs.html)
 

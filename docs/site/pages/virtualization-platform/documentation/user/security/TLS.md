@@ -14,7 +14,7 @@ This page covers the following aspects of certificate usage in DVP:
 
 {% alert level="info" %}
 For a general overview of certificate management in DVP, the list of supported issuers, and setup recommendations,
-refer to [Certificate management](../../admin/configuration/security/certificates.html).
+refer to [Certificate management](/products/virtualization-platform/documentation/admin/platform-management/security/certificates.html).
 {% endalert %}
 
 ## Working with certificates
@@ -77,7 +77,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
    - Your email is shown at the top under **Email Address**.
    - To view the key, click **View** next to **Global API Key** at the bottom.
 
-1. Edit the [`cert-manager` module settings](/modules/cert-manager/configuration.html), adding the following section:
+1. Edit the [`cert-manager` module settings](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html), adding the following section:
 
    ```yaml
    settings:
@@ -171,7 +171,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
 
    - Open the [user management page](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) and create a user with the above policy.
 
-1. Edit the [`cert-manager` module settings](/modules/cert-manager/configuration.html) to add the following section:
+1. Edit the [`cert-manager` module settings](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html) to add the following section:
 
    ```yaml
    settings:
@@ -214,7 +214,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
      base64 project-209317-556c656b81c4.json
      ```
 
-1. Save the Base64 string in the [`cloudDNSServiceAccount`](/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount) parameter.
+1. Save the Base64 string in the [`cloudDNSServiceAccount`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount) parameter.
 
    DVP will automatically create a ClusterIssuer and Secret for CloudDNS in the `d8-cert-manager` namespace.
 

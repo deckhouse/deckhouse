@@ -98,7 +98,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html -->
 
-Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
+Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html#ingressnginxcontroller).
 
 ### Пример для AWS (Network Load Balancer)
 
@@ -217,7 +217,7 @@ spec:
 
 Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. Для соблюдения этого условия MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
 
-Таким образом, для данного примера конфигурация модуля [`metallb`](/modules/metallb/configuration.html) должна быть такой:
+Таким образом, для данного примера конфигурация модуля [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html) должна быть такой:
 
 ```yaml
 metallb:

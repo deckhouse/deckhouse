@@ -10,7 +10,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает работу с
 
 ## Включение модуля
 
-Для управления томами на основе протокола NFS используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Чтобы включить модуль, выполните команду:
+Для управления томами на основе протокола NFS используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass). Чтобы включить модуль, выполните команду:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -39,7 +39,7 @@ csi-nfs           Embedded  Available   True       True
 
 ## Создание StorageClass
 
-Для создания StorageClass используйте ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Ручное создание ресурса StorageClass без использования [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) может привести к ошибкам.
+Для создания StorageClass используйте ресурс [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass). Ручное создание ресурса StorageClass без использования [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass) может привести к ошибкам.
 
 Адрес NFS-сервера и путь к точке монтирования должны быть указаны явно. Также необходимо указать версию NFS-сервера (например, `"4.1"`).
 
@@ -61,13 +61,13 @@ spec:
   EOF
 ```
 
-Проверьте, что созданный ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) перешел в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданный ресурс [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass) перешел в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-В результате будет выведена информация о созданном ресурсе [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass):
+В результате будет выведена информация о созданном ресурсе [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass):
 
 ```console
 NAME                PHASE     AGE
@@ -162,7 +162,7 @@ csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52
 
 ## Удаление PV при включённой поддержке RPC-with-TLS
 
-Если ресурс [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) настроен с поддержкой RPC-with-TLS, возможно, не удастся удалить созданные PV. Это может произойти, если удалён секрет, содержащий параметры монтирования (например, после удаления [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass)). В результате контроллер не сможет смонтировать папку на NFS-сервере для удаления каталога `<имя PV>`.
+Если ресурс [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass) настроен с поддержкой RPC-with-TLS, возможно, не удастся удалить созданные PV. Это может произойти, если удалён секрет, содержащий параметры монтирования (например, после удаления [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass)). В результате контроллер не сможет смонтировать папку на NFS-сервере для удаления каталога `<имя PV>`.
 
 ## Добавление нескольких CA в параметр tlsParameters.ca в ModuleConfig
 

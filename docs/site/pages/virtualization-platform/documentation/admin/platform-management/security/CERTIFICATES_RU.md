@@ -159,7 +159,7 @@ DVP экспортирует метрики в Prometheus, что позволя
 для всех компонентов DVP или конкретного компонента.
 
 Например, чтобы использовать ClusterIssuer для получения сертификатов для всех компонентов DVP,
-укажите его имя [в глобальном параметре `clusterIssuerName`](../../../reference/api/global.html#parameters-modules-https-certmanager-clusterissuername):
+укажите его имя [в глобальном параметре `clusterIssuerName`](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername):
 
 ```yaml
   spec:
@@ -177,7 +177,7 @@ DVP экспортирует метрики в Prometheus, что позволя
 
 Для настройки заказа сертификатов с помощью Vault используйте [документацию HashiСorp](https://developer.hashicorp.com/vault/tutorials/archive/kubernetes-cert-manager?in=vault%2Fkubernetes).
 
-После настройки PKI и [включения авторизации в Kubernetes](../access/authorization/), выполните следующее:
+После настройки PKI и включения авторизации в Kubernetes, выполните следующее:
 
 1. Создайте ServiceAccount и скопируйте ссылку на его Secret:
 

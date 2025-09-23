@@ -37,7 +37,7 @@ EOF
 
 ## Connecting to a Ceph cluster
 
-To configure a connection to a Ceph cluster, apply the [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection) resource. Example usage:
+To configure a connection to a Ceph cluster, apply the [CephClusterConnection](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephclusterconnection) resource. Example usage:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -69,7 +69,7 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Creating StorageClass
 
-The creation of StorageClass objects is done through the [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) may lead to errors. Example of creating a StorageClass based on RBD:
+The creation of StorageClass objects is done through the [CephStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephstorageclass) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [CephStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephstorageclass) may lead to errors. Example of creating a StorageClass based on RBD:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -104,13 +104,13 @@ spec:
 EOF
 ```
 
-Check that the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources have transitioned to the `Created` phase by running the following command:
+Check that the created [CephStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephstorageclass) resources have transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get cephstorageclass
 ```
 
-In the output, you should see information about the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources:
+In the output, you should see information about the created [CephStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephstorageclass) resources:
 
 ```console
 NAME          PHASE     AGE
@@ -155,7 +155,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 
 ## Examples
 
-Example definition of a [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection):
+Example definition of a [CephClusterConnection](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephclusterconnection):
 
 ```yaml
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -178,7 +178,7 @@ You can verify that the object has been created with the following command (`Pha
 d8 k get cephclusterconnection <name-of-cephclusterconnection>
 ```
 
-Example definition of a [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
+Example definition of a [CephStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-ceph/cr.html#cephstorageclass):
 
 - For RBD:
 

@@ -58,7 +58,7 @@ The sequence of integrity checks at startup:
 1. If the hashes match, the check passes. If they don't match, the image is not started.
 
 To enhance security, you can also configure image pull policies
-using [security policies](../../admin/configuration/security/policies.html) to ensure
+using [security policies](/products/virtualization-platform/documentation/admin/platform-management/security/policies.html) to ensure
 that only up-to-date image versions are used for container startup.
 
 ## Integrity control of running user application containers
@@ -75,4 +75,4 @@ Auditing uses:
 Integrity control of running containers can detect threats such as launching command-line shells inside containers or pods,
 discovering containers running in privileged mode, mounting insecure paths into containers, or attempts to read sensitive data.
 
-For more details on configuring security audits, refer to [Security event audit](../../admin/configuration/security/events/runtime-audit.html).
+For more details on configuring security audits, refer to [Security event audit](/products/virtualization-platform/documentation/admin/platform-management/security/events/runtime-audit.html).

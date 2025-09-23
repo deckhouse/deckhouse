@@ -10,12 +10,12 @@ lang: ru
 
 Миграция на containerd v2 возможна при выполнении следующих условий:
 
-- Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
-- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
+- Узлы соответствуют требованиям, описанным [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri).
+- На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 
-При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Virtualization Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config`.
+При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri), Deckhouse Virtualization Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если  на узле есть кастомные конфигурации  в `/etc/containerd/conf.d`, на него добавляется лейбл `node.deckhouse.io/containerd-config`.
 
-При наличии одного из этих лейблов смена   параметра [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
+При наличии одного из этих лейблов смена   параметра [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
 
 ```shell
 d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
@@ -36,7 +36,7 @@ ls -l /etc/containerd/conf.d
 
 Включение containerd v2 возможно двумя способами:
 
-1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 
    Пример:
 
@@ -47,7 +47,7 @@ ls -l /etc/containerd/conf.d
    defaultCRI: ContainerdV2
    ```
 
-1. **Для конкретной группы узлов**. Укажите `ContainerdV2` в параметре [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) в объекте [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+1. **Для конкретной группы узлов**. Укажите `ContainerdV2` в параметре [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) в объекте [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup).
 
    Пример:
 
@@ -61,7 +61,7 @@ ls -l /etc/containerd/conf.d
        type: ContainerdV2
    ```
 
-При переходе на containerd v2 Deckhouse Virtualization Platform начнет поочерёдное обновление узлов. Если в группе узлов установлен параметр [spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`, то для обновления **каждого** узла в такой группе на узел нужно будет установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
+При переходе на containerd v2 Deckhouse Virtualization Platform начнет поочерёдное обновление узлов. Если в группе узлов установлен параметр [spec.disruptions.approvalMode](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`, то для обновления **каждого** узла в такой группе на узел нужно будет установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
 
 Пример команды для добавления аннотации на узел:
 
@@ -69,8 +69,8 @@ ls -l /etc/containerd/conf.d
 d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
 ```
 
-Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).
+Во время миграции будет выполнен drain в соответствии с настройками [spec.disruptions.automatic.drainBeforeApproval](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval).
 
 {% alert level="info" %}
-При [определенных условиях](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) процесс может не произойти, как описано в документации настройки. Директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
+При [определенных условиях](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) процесс может не произойти, как описано в документации настройки. Директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов подов, и узел перезагрузится.
 {% endalert %}

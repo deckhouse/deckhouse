@@ -45,7 +45,7 @@ lang: ru
 
 ## Назначение StorageClass по умолчанию
 
-Для назначения StorageClass по умолчанию необходимо в кастомном ресурсе [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) в поле `spec.isDefault` указать значение `true`.
+Для назначения StorageClass по умолчанию необходимо в кастомном ресурсе [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) в поле `spec.isDefault` указать значение `true`.
 
 ## Добавление существующей LVMVolumeGroup
 
@@ -55,9 +55,9 @@ lang: ru
    vgchange myvg-0 --add-tag storage.deckhouse.io/enabled=true
    ```
 
-   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup).
+   После этого Volume Group будет автоматически обнаружена, и для неё будет создан ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup).
 
-1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) в поле `spec.lvmVolumeGroups[].name`. Если используется пул LVMThin, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
+1. Полученный ресурс укажите в параметрах [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) в поле `spec.lvmVolumeGroups[].name`. Если используется пул LVMThin, дополнительно задайте имя в `spec.lvmVolumeGroups[].thinPoolName`.
 
 ## Изменение ограничений DRBD‑томов и портов кластера
 
@@ -265,7 +265,7 @@ linstor node list -s AutoplaceTarget
 
 Проблемы могут возникнуть на разных уровнях работы компонентов. Ниже приведена шпаргалка для диагностики неисправностей томов в LINSTOR.
 
-![Диагностика неисправностей томов в LINSTOR](../../../../images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
+![Диагностика неисправностей томов в LINSTOR](/images/storage/sds/lvm-replicated/linstor-debug-cheatsheet.svg)
 <!--- Исходник: https://docs.google.com/drawings/d/19hn3nRj6jx4N_haJE0OydbGKgd-m8AUSr0IqfHfT6YA/edit --->
 
 ### Ошибка запуска linstor-node при загрузке DRBD‑модуля
@@ -327,7 +327,7 @@ dmesg | grep 'Remote failed to finish a request within'
 
 ## После удаления ресурса ReplicatedStoragePool остаётся соответствующий ему Storage Pool
 
-Это ожидаемое поведение. Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
+Это ожидаемое поведение. Модуль `sds-replicated-volume` не обрабатывает операции удаления ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool).
 
 ## Ограничения на изменение spec ReplicatedStorageClass
 
@@ -479,7 +479,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 С высокой вероятностью проблемы связаны с лейблами на узлах.
 
-- Проверьте [`dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля:
+- Проверьте [`dataNodes.nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля:
 
   ```shell
   d8 k get mc sds-replicated-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -510,7 +510,7 @@ linstor-20240425074718-backup-completed      Opaque                           0 
 
 ## Дополнительная поддержка
 
-Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
+Информация о причинах неудачных операций отображается в поле `status.reason` ресурсов [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass). При недостатке информации для диагностики рекомендуется обращаться к логам `sds-replicated-volume-controller`.
 
 ## Миграция с модуля linstor на sds-replicated-volume
 
@@ -632,7 +632,7 @@ StorageClass в данном модуле управляются через ре
 
 ### Миграция на ReplicatedStoragePool
 
-Ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) предназначен для создания `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
+Ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) предназначен для создания `Storage Pool` в бэкенде модуля. Рекомендуется создать этот ресурс даже для уже существующих `Storage Pool` и указать в этом ресурсе существующие [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). В этом случае контроллер увидит, что соответствующие `Storage Pool` созданы, и оставит их без изменений, а в поле `status.phase` созданного ресурса будет отображено значение `Created`.
 
 ## Миграция с модуля sds-drbd на sds-replicated-volume
 
@@ -716,7 +716,7 @@ StorageClass в данном модуле управляются через ре
 
 Использование DRBD с более чем одной репликой уже обеспечивает функциональность сетевого RAID. Применение RAID локально может привести к следующим проблемам:
 
-- В несколько раз увеличивает дополнительное потребление используемого пространства в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 ГБ данных потребуется суммарно 6 ГБ места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
+- В несколько раз увеличивает дополнительное потребление используемого пространства в случае использования RAID с избыточностью. Например, используется [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с `replication`, выставленном в `ConsistencyAndAvailability`. При таких настройках DRBD будет сохранять данные в трех репликах (по одной реплике на три разных узла). Если на этих узлах будет использоваться RAID1, то для хранения 1 ГБ данных потребуется суммарно 6 ГБ места на дисках. RAID с избыточностью есть смысл использовать для упрощения обслуживания серверов в том случае, когда цена хранения не имеет значения. RAID1 в таком случае позволит менять диски на серверах без необходимости перемещения реплик данных с "проблемного" диска.
 
 - В случае RAID0 прирост производительности будет незаметен, т. к. репликация данных будет осуществляться по сети и узким местом с высокой вероятностью будет именно сеть. Кроме того, уменьшение надежности хранилища на хосте потенциально будет приводить к недоступности данных, так как в DRBD переключение со сломавшейся реплики на здоровую происходит не мгновенно.
 

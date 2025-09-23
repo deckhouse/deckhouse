@@ -130,10 +130,6 @@ entries:
                         ru: Основы управления узлами в Deckhouse
                       url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/node/node-management.html
                     - title:
-                        en: Adding and managing cloud nodes
-                        ru: Добавление и управление облачными узлами
-                      url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/node/cloud-node.html
-                    - title:
                         en: Adding and managing bare-metal nodes
                         ru: Добавление и управление bare-metal узлами
                       url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html
@@ -433,6 +429,10 @@ entries:
                     en: Projects
                     ru: Проекты
                   url: /virtualization-platform/documentation/admin/platform-management/access-control/projects.html
+        - title:
+            en: Backup and restore
+            ru: Резервное копирование и восстановление
+          url: /virtualization-platform/documentation/admin/backup-and-restore.html
         - title:
             en: Platform update
             ru: Обновление платформы

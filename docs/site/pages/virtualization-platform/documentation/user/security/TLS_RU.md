@@ -15,7 +15,7 @@ Deckhouse Virtualization Platform (DVP) предоставляет встрое�
 
 {% alert level="info" %}
 Общее описание порядка управления сертификатами в DVP, список поддерживаемых издателей,
-а также рекомендации по их настройке приведены [на странице «Управление сертификатами»](../../admin/configuration/security/certificates.html).
+а также рекомендации по их настройке приведены [на странице «Управление сертификатами»](/products/virtualization-platform/documentation/admin/platform-management/security/certificates.html).
 {% endalert %}
 
 ## Работа с сертификатами
@@ -79,7 +79,7 @@ Deckhouse Virtualization Platform (DVP) предоставляет встрое�
    - ваша почта указана наверху под **Email Address**;
    - для просмотра API-ключа нажмите **View** напротив **Global API Key** внизу страницы.
 
-1. Отредактируйте [настройки модуля `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
+1. Отредактируйте [настройки модуля `cert-manager`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
@@ -173,7 +173,7 @@ Deckhouse Virtualization Platform (DVP) предоставляет встрое�
 
    - зайдите на [страницу управления пользователями](https://console.aws.amazon.com/iam/home?region=us-east-2#/users) и добавьте пользователя с созданной ранее политикой.
 
-1. Отредактируйте [настройки модуля `cert-manager`](/modules/cert-manager/configuration.html), добавив следующую секцию:
+1. Отредактируйте [настройки модуля `cert-manager`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html), добавив следующую секцию:
 
    ```yaml
    settings:
@@ -216,7 +216,7 @@ Deckhouse Virtualization Platform (DVP) предоставляет встрое�
      base64 project-209317-556c656b81c4.json
      ```
 
-1. Сохраните полученную Base64-строку в [параметре `cloudDNSServiceAccount`](/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount).
+1. Сохраните полученную Base64-строку в [параметре `cloudDNSServiceAccount`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount).
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для CloudDNS в пространстве имён `d8-cert-manager`.
 

@@ -29,7 +29,7 @@ which is especially important for secure integrations with external APIs and ser
 This can be achieved by defining policies that allow or block specific traffic flows.
 
 Outgoing traffic management is implemented using the Egress Gateway feature
-(provided by the [`cni-cilium`](/modules/cni-cilium/) module).
+(provided by the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) module).
 
 ## Internal network configuration
 
@@ -38,6 +38,6 @@ Administrators can configure pod-to-pod and pod-to-node communication, as well a
 
 ## Network policies
 
-Network policies in DVP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
+[Network policies](../network/policy/configuration.html) in DVP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
 Network policies ensure pod isolation, protect against internal cluster attacks,
 and provide control over access to external services as well as incoming and outgoing connections.

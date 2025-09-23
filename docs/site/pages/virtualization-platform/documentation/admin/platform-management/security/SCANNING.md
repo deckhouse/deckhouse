@@ -60,5 +60,3 @@ To manually trigger a rescan of a resource, you can use either of the following 
   ```shell
   d8 k delete VulnerabilityReport -n <NAMESPACE> <REPORT_NAME>
   ```
-
-For details on how to view scan results, see [Scanning container images for vulnerabilities](../../../user/security/scanning.html).

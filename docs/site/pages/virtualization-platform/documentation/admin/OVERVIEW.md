@@ -9,7 +9,7 @@ This section is intended for Deckhouse Virtualization Platform (DVP) administrat
 The DVP administrator guide includes the following sections:
 
 - [Platform installation](./install/steps/prepare.html) - environment preparation, installation, and initial access setup.
-- [Platform configuration](./platform-management/node-management/node-group.html) - management of cluster nodes, network, storage, virtualization, and access control.
+- [Platform configuration](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/overview.html) - management of cluster nodes, network, storage, virtualization, and access control.
 - [Platform update](./update/update.html) - configuration of the DVP update mode and update windows, manual update approval.
 - [Removing the platform](./removing/removing.html) - DVP removal procedure.
 

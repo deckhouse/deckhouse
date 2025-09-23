@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-В Deckhouse Virtualization Platform (DVP) реализована поддержка систем хранения данных (СХД) HPE 3PAR для управления томами в Kubernetes с использованием CSI-драйвера. Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения HPE 3PAR применяется модуль `csi-hpe`, с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass).
+В Deckhouse Virtualization Platform (DVP) реализована поддержка систем хранения данных (СХД) HPE 3PAR для управления томами в Kubernetes с использованием CSI-драйвера. Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения HPE 3PAR применяется модуль `csi-hpe`, с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [HPEStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-hpe/cr.html#hpestorageclass).
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.hpe.com` пользователем запрещено.
@@ -49,7 +49,7 @@ d8 k get module csi-hpe -w
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурсы [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass) и [HPEStorageConnection](/modules/csi-hpe/cr.html#hpestorageconnection). Пример команд для создания таких ресурсов:
+Для создания StorageClass необходимо использовать ресурсы [HPEStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-hpe/cr.html#hpestorageclass) и [HPEStorageConnection](/products/kubernetes-platform/documentation/v1/modules/csi-hpe/cr.html#hpestorageconnection). Пример команд для создания таких ресурсов:
 
 - Создание ресурса HPEStorageConnection:
 

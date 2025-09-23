@@ -8,7 +8,7 @@ Deckhouse Virtualization Platform (DVP) предоставляет возмож�
 
 ## Принцип работы
 
-Для каждого ресурса [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении ВМ.
+Для каждого ресурса [LocalPathProvisioner](/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner) создается соответствующий объект StorageClass. Список узлов, на которых разрешено использовать StorageClass, определяется на основе поля `nodeGroups` и используется при размещении ВМ.
 
 При запросе диска ВМ происходит следующее:
 
@@ -56,7 +56,7 @@ spec:
 
 ## Настройка Prometheus с использованием локального хранилища
 
-1. Примените ресурс [LocalPathProvisioner](/modules/local-path-provisioner/cr.html#localpathprovisioner):
+1. Примените ресурс [LocalPathProvisioner](/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
