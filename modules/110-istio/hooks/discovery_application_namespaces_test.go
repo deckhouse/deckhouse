@@ -204,7 +204,7 @@ metadata:
   labels:
     istio.io/rev: v1x7x4
 ---
-# ns with definite revision with d8 systemrefix
+# ns with definite revision with d8 prefix
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -212,7 +212,7 @@ metadata:
   labels:
     istio.io/rev: v1x8x0
 ---
-# ns with global revision with d8 systemrefix
+# ns with global revision with d8 prefix
 apiVersion: v1
 kind: Namespace
 metadata:
