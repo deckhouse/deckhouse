@@ -228,7 +228,7 @@ When there is an optional dependency on the version of another module, the targe
 
 1. The update for `prometheus` will be blocked until `test` specified in `requirements` is updated in the cluster.
 
-   **Example:** `test` is disabled + an optional requirement `test: ">v0.22.1 !optional"` is set for `prometheus` → `prometheus` will not be updated until `test` is updated.
+   **Example:** `test` is enabled + an optional requirement `test: ">v0.22.1 !optional"` is set for `prometheus` → `prometheus` will not be updated until `test` is updated.
 
 #### Restrictions on enabling test, whose version is specified in prometheus dependencies
 
