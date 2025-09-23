@@ -59,6 +59,34 @@ remove_labels:
     echo "TAG=pr$PR_NUMBER" >> $GITHUB_ENV
 # </template: exctract_pr_number>
 {!{- end -}!}
+
+{!{ define "add_ssh_keys_for_cve_tests" }!}
+# <template: add_ssh_keys_for_cve_tests>
+- name: Start ssh-agent
+  uses: {!{ index (ds "actions") "ssh-agent" }!}
+  with:
+    ssh-private-key: |
+      ${{ secrets.CVE_TESTS_SSH_PRIVATE_KEY }}
+- name: Add ssh_known_hosts
+  run: |
+    HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{ secrets.CVE_TESTS_REPO_GIT }})
+    echo "::add-mask::$HOST"
+    IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+    for IP in $IPS; do
+      echo "::add-mask::$IP"
+    done
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+      CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+      if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+      fi
+    done <<< "$HOST_KEYS"
+# </template: add_ssh_keys_for_cve_tests>
+{!{- end -}!}
+
 {!{ define "cve_scan_deckhouse_images" }!}
 # <template: cve_scan_deckhouse_images>
 - name: Set scan target type
@@ -72,22 +100,14 @@ remove_labels:
     fi
 
 - name: Download CVE scan script from private GitLab
-  env:
-    DECKHOUSE_PRIVATE_REPO: ${{ secrets.DECKHOUSE_PRIVATE_REPO }}
-    CVE_SCRIPT_PROJECT_ID: ${{ inputs.project_id }}
-    CVE_SCRIPT_PATH: "cve_scan.sh"
-    CVE_SCRIPT_REF: "main"
   run: |
-    echo "Downloading CVE scan script from private GitLab..."
-    mkdir -p ${{ env.WORKDIR }}/scripts
-    encoded_path=$(echo "${CVE_SCRIPT_PATH}" | sed 's/\//%2F/g' | sed 's/\./%2E/g')
-    script_url="https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${CVE_SCRIPT_PROJECT_ID}/repository/files/${encoded_path}/raw?ref=${CVE_SCRIPT_REF}"
+    echo "Cloning CVE scan script from private GitLab..."
     
-    echo "Downloading from: ${script_url}"
-    curl -L --fail-with-body -H "PRIVATE-TOKEN: ${{ secrets.FOX_ACCESS_TOKEN }}" "${script_url}" -o "${{ env.WORKDIR }}/scripts/cve_scan.sh"
+    mkdir -p ${{ env.WORKDIR }}/scripts
+    git clone ${{ secrets.CVE_TESTS_REPO_GIT }} ${{ env.WORKDIR }}/scripts
     chmod +x "${{ env.WORKDIR }}/scripts/cve_scan.sh"
     
-    echo "CVE scan script downloaded successfully"
+    echo "CVE scan script cloned successfully"
 
 - name: Run Deckhouse images CVE tests on ${{env.TAG}}
   env:
