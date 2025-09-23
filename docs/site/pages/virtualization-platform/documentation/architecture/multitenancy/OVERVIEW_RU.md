@@ -16,7 +16,7 @@ lang: ru
 При создании Project из определенного ProjectTemplate происходит следующее:
 
 1. Переданные [параметры](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](/products/virtualization-platform/reference/cr/projecttemplate.html));
-1. Выполняется рендеринг [шаблона для ресурсов](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
+1. Выполняется рендеринг [шаблона для ресурсов](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) ресурса [Project](/products/virtualization-platform/reference/cr/project.html#project);
 1. Создаётся пространство имён с именем, которое совпадает c именем [Project](/products/virtualization-platform/reference/cr/project.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 

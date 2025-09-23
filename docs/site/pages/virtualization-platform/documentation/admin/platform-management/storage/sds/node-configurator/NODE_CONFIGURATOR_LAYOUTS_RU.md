@@ -123,14 +123,14 @@ lvchange -an <VG_or_LV_NAME>
 
 1. Добавьте подготовленный узел в кластер DVP.
 
-   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
+   Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`, то агент `sds‑node‑configurator` обнаружит VG `main` и создаст ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup). Его можно использовать в модулях `sds‑local‑volume` и `sds‑replicated‑volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Полное зеркало»)
 
 В этом сценарии три узла кластера DVP сконфигурированы в режиме «Полное зеркало».  
-После запуска автоматического обнаружения в кластере появятся три CRD-ресурса типа [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) с автоматически сгенерированными именами.
+После запуска автоматического обнаружения в кластере появятся три CRD-ресурса типа [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) с автоматически сгенерированными именами.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -147,7 +147,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Полное зеркало»)
 
-Чтобы сконфигурировать `sds-local-volume` в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
+Чтобы сконфигурировать `sds-local-volume` в режиме «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) и укажите в нём все обнаруженные [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup). Это гарантирует, что VG с меткой `main` будет доступен на каждом узле в модуле:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -171,7 +171,7 @@ EOF
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
    чтобы VG `main` использовалась на всех узлах в модуле `sds-replicated-volume`:
 
    ```shell
@@ -189,7 +189,7 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool):
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -268,17 +268,17 @@ EOF
 
    Если узел подходит под `nodeSelector`, который указан в `spec.nodeSelector` модулей `sds-replicated-volume` или `sds-local-volume`,
    то на этом узле запустится агент модуля `sds-node-configurator`,
-   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) в кластер DVP.
-   Дальше ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
+   который определит VG `main-safe` и `main-unsafe` и добавит соответствующие этим VG ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) в кластер DVP.
+   Дальше ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) можно использовать для создания томов в модулях `sds-replicated-volume` или `sds-local-volume`.
 
 #### Пример настройки модулей SDS (одинаковые диски, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -298,8 +298,8 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (одинаковые диски, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass)
-и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `main-safe`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass)
+и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `main-safe`:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -323,8 +323,8 @@ EOF
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-safe` и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) с именем `data-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) с параметром `replication: None`
    использовалась только VG `main-safe`:
 
    ```shell
@@ -342,8 +342,8 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) с именем `data-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `main-unsafe`:
 
    ```shell
@@ -361,7 +361,7 @@ EOF
    EOF
    ```
 
-1. Создайте ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool),
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `main-safe` и `main-unsafe`:
 
    ```shell
@@ -453,11 +453,11 @@ EOF
 #### Пример настройки модулей SDS (комбинированное хранилище, «Полное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Полное зеркало».
-В кластере DVP при этом появятся три ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+В кластере DVP при этом появятся три ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -476,8 +476,8 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Полное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass)
-и добавьте в него все ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-local-volume`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Полное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass)
+и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-local-volume`:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -500,7 +500,7 @@ EOF
 {% alert level="info" %}
 В примере выше `<local-storage-class-name>` замените на информативное имя, в зависимости от типа дополнительных дисков.
 
-Примеры информативных имен ресурса [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) для дополнительных дисков разных типов:
+Примеры информативных имен ресурса [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) для дополнительных дисков разных типов:
 
 - `local-sc-ssd-nvme` — для дисков NVMe SSD;
 - `local-sc-ssd-sata` — для дисков SATA SSD;
@@ -511,7 +511,7 @@ EOF
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Полное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) и добавьте в него все ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
    чтобы VG `<vg-name>` использовалась на всех узлах в модуле `sds-replicated-volume`:
 
    ```shell
@@ -531,13 +531,13 @@ EOF
 
    > В примере выше замените `<replicated-storage-pool-name>` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
    > - `data-ssd-nvme` — для дисков NVMe SSD;
    > - `data-ssd-sata` — для дисков SATA SSD;
    > - `data-hdd` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool):
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданного ранее ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -618,11 +618,11 @@ EOF
 #### Пример настройки модулей SDS (комбинированное хранилище, «Частичное зеркало»)
 
 В данном примере предполагается, что вы настроили три узла по сценарию «Частичное зеркало».
-В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
-В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
+В кластере DVP при этом появятся шесть ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) со случайно сгенерированными именами.
+В будущем добавится возможность указывать имя для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
 которые создаются в процессе автоматического обнаружения VG, с помощью тега `LVM` с желаемым именем ресурса.
 
-Чтобы вывести список ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), выполните следующую команду:
+Чтобы вывести список ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), выполните следующую команду:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -644,8 +644,8 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 ##### Настройка модуля sds-local-volume (комбинированное хранилище, «Частичное зеркало»)
 
-Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass)
-и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `<vg-name>-safe`:
+Чтобы настроить модуль `sds-local-volume` по сценарию «Частичное зеркало», создайте ресурс [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass)
+и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), чтобы на всех узлах в модуле `sds-local-volume` использовалась только VG `<vg-name>-safe`:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -668,7 +668,7 @@ EOF
 {% alert level="info" %}
 В примере выше замените `<local-storage-class-name>` на информативное имя, в зависимости от типа дополнительных дисков.
 
-Примеры информативных имен ресурса [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) для дополнительных дисков разных типов:
+Примеры информативных имен ресурса [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) для дополнительных дисков разных типов:
 
 - `local-sc-ssd-nvme` — для дисков NVMe SSD;
 - `local-sc-ssd-sata` — для дисков SATA SSD;
@@ -679,8 +679,8 @@ EOF
 
 Чтобы настроить модуль `sds-replicated-volume` по сценарию «Частичное зеркало», выполните следующее:
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-safe` и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: None`
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) с именем `data-<vg-name>-safe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) с параметром `replication: None`
    использовалась только VG `<vg-name>-safe`:
 
    ```shell
@@ -700,14 +700,14 @@ EOF
 
    > В примере выше замените `data-<vg-name>-safe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
    > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
    > - `data-ssd-sata-safe` — для дисков SATA SSD;
    > - `data-hdd-safe` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) с именем `data-<vg-name>-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup),
-   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
+1. Создайте ресурс [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) с именем `data-<vg-name>-unsafe` и добавьте в него ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup),
+   чтобы на всех узлах в модуле `sds-replicated-volume` в [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) с параметром `replication: Availability` или
    `replication: ConsistencyAndAvailability` использовалась только VG `<vg-name>-unsafe`:
 
    ```shell
@@ -727,13 +727,13 @@ EOF
 
    > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
    > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
    > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
    > - `data-hdd-unsafe` — для дисков HDD.
 
-1. Создайте ресурс [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool),
+1. Создайте ресурс [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) и в поле `storagePool` укажите имя созданных ранее ресурсов [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool),
    чтобы на всех узлах использовались VG `<vg-name>-safe` и `<vg-name>-unsafe`:
 
    ```shell
@@ -773,7 +773,7 @@ EOF
 
    > В примере выше замените `data-<vg-name>-unsafe` на информативное имя, в зависимости от типа дополнительных дисков.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
    > - `data-ssd-nvme-unsafe` — для дисков NVMe SSD;
    > - `data-ssd-sata-unsafe` — для дисков SATA SSD;
@@ -781,7 +781,7 @@ EOF
    >
    > Аналогичным образом замените `data-<vg-name>-safe`.
    >
-   > Примеры информативных имен ресурса [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
+   > Примеры информативных имен ресурса [ReplicatedStoragePool](/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) для дополнительных дисков разных типов:
    >
    > - `data-ssd-nvme-safe` — для дисков NVMe SSD;
    > - `data-ssd-sata-safe` — для дисков SATA SSD;

@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-В Deckhouse Virtualization Platform управление статичными маршрутами и правилами ip rule на узлах кластера реализуется с помощью модуля [`static-routing-manager`](/products/kubernetes-platform/documentation/v1/modules/static-routing-manager/stable/).
+В Deckhouse Virtualization Platform управление статичными маршрутами и правилами ip rule на узлах кластера реализуется с помощью модуля [`static-routing-manager`](/modules/static-routing-manager/stable/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/static-routing-manager/examples.html -->
 

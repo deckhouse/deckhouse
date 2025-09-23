@@ -10,7 +10,7 @@ lang: ru
 
 Для корректной работы модуля `sds-local-volume` выполните следующие шаги:
 
-1. Настройте LVMVolumeGroup. Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
+1. Настройте LVMVolumeGroup. Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
 1. Включите модуль `sds-node-configurator`. Убедитесь, что модуль включен **до** включения модуля `sds-local-volume`.
 1. Создайте соответствующие StorageClass'ы. Создание StorageClass для CSI-драйвера `local.csi.storage.deckhouse.io` пользователем **запрещено**.
 
@@ -83,14 +83,14 @@ lang: ru
 d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-Размещение подов `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
+Размещение подов `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/stable/configuration.html#parameters-datanodes-nodeselector) модуля.
 
 ### Настройка хранилища на узлах
 
-Для настройки хранилища на узлах необходимо создать группы томов LVM с использованием ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup). В данном примере создается хранилище Thick.
+Для настройки хранилища на узлах необходимо создать группы томов LVM с использованием ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup). В данном примере создается хранилище Thick.
 
 {% alert level="warning" %}
-Перед созданием ресурса [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) убедитесь, что на данном узле запущен под `sds-local-volume-csi-node`. Это можно сделать командой:
+Перед созданием ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) убедитесь, что на данном узле запущен под `sds-local-volume-csi-node`. Это можно сделать командой:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -owide
@@ -98,7 +98,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
 {% endalert %}
 
-1. Получите все ресурсы [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice), которые доступны в вашем кластере:
+1. Получите все ресурсы [BlockDevice](/modules/sds-node-configurator/stable/cr.html#blockdevice), которые доступны в вашем кластере:
 
    ```shell
    d8 k get bd
@@ -116,7 +116,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
    ```
 
-1. Создайте ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-0`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-0`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -139,7 +139,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-0 -w
@@ -147,7 +147,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-0` из блочных устройств `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-1. Создайте ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-1`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-1`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -170,7 +170,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-1 -w
@@ -178,7 +178,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Если ресурс перешел в состояние `Ready`, это значит, что на узле `worker-1` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-1. Создайте ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) для узла `worker-2`:
+1. Создайте ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) для узла `worker-2`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -201,7 +201,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
+1. Дождитесь, когда созданный ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) перейдет в состояние `Ready`:
 
    ```shell
    d8 k get lvg vg-1-on-worker-2 -w
@@ -209,7 +209,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    Если ресурс перешел в состояние `Ready`, то это значит, что на узле `worker-2` из блочного устройства `/dev/nvme1n1` и `/dev/nvme0n1p6` была создана LVM VG с именем `vg-1`.
 
-1. Создайте ресурс [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass):
+1. Создайте ресурс [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass):
 
    ```shell
    d8 k apply -f -<<EOF
@@ -251,7 +251,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-   > **Важно.** В [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
+   > **Важно.** В [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) с `type: Thick` нельзя использовать LocalVolumeGroup, содержащие хотя бы один thin pool.
 
 1. Дождитесь, когда созданный ресурс LocalStorageClass перейдет в состояние `Created`:
 

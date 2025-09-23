@@ -103,5 +103,5 @@ spec:
 {% alert level="warning" %}
 После добавления, удаления или изменения значения аннотации необходимо вручную перезапустить поды kube-proxy.
 
-При включении модуля [`cni-cilium`](../../../../modules/cni-cilium/) модуль `kube-proxy` отключается автоматически.
+При включении модуля [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) модуль `kube-proxy` отключается автоматически.
 {% endalert %}
