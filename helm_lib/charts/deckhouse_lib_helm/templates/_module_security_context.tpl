@@ -106,6 +106,12 @@ securityContext:
 {{- end }}
 {{- end }}
 {{- define "helm_lib_module_container_security_context_pss_restricted_flexible_labels" -}}
+{{- $ro := true -}}
+{{- if hasKey . "ro" -}}
+  {{- $ro = .ro -}}
+{{- end -}}
+{{- $caps := default (list) .caps -}}
+{{- $uid  := default 64535 .uid  -}}
 {{- if $caps }}
     deckhouse.io/skip-pss-check-capabilities: true
 {{- end }}
