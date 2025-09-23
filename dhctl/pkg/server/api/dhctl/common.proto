@@ -40,12 +40,12 @@ message Progress {
   double progress = 2;
   string completed_phase = 3;
   string current_phase = 4;
-  string next_phase = 5;
-  string completed_sub_phase = 6;
-  string current_sub_phase = 7;
-  string next_sub_phase = 8;
+  string next_phase = 8;
+  string completed_sub_phase = 5;
+  string current_sub_phase = 6;
+  string next_sub_phase = 9;
 
-  repeated PhaseWithSubPhases phases = 9;
+  repeated PhaseWithSubPhases phases = 7;
 }
 
 message OperationOptions {
