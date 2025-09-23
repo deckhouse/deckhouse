@@ -184,7 +184,7 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
-          readOnlyRootFileSystem: true
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP
