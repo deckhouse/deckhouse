@@ -3605,13 +3605,13 @@
     "list": [
       {
         "current": {
-          "selected": true,
-          "text": "prometheus",
-          "value": "aeyug49qkq6m8c"
+          "selected": false,
+          "text": "default",
+          "value": "default"
         },
         "hide": 0,
         "includeAll": false,
-        "label": "Prometheus",
+        "label": "datasource",
         "multi": false,
         "name": "ds_prometheus",
         "options": [],

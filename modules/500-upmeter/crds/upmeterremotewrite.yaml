@@ -76,7 +76,10 @@ spec:
                           x-doc-default: ""
                 additionalLabels:
                   type: object
-                  description: Additional labels to add to all metrics.
+                  description: |
+                    Additional labels to add to all metrics.
+                    If you want to send metrics from multiple clusters, you need to add the "cluster" label to all metrics to avoid duplicates.
+                    If you set the "cluster" label, you can use Upmeter multi-cluster Grafana dashboard.
                   additionalProperties:
                     type: string
                 intervalSeconds:
