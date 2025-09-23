@@ -42,7 +42,7 @@ shell:
   - apk add --no-cache patchelf file findutils
   setup:
   - mkdir -p /opt/deckhouse/bin
-  - cp -pr /src/usr/bin/* /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/* /opt/deckhouse/bin
   - cp -pr /src/usr/lib /opt/deckhouse
   - cd /opt/deckhouse/bin
   - |
