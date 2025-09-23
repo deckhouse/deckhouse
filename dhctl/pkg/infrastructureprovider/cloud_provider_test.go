@@ -388,6 +388,50 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	err = providerGCP.Cleanup()
 	require.NoError(t, err)
 	assertProvidersCacheHasCountOfKeys(t, defaultProvidersCache, 0)
+
+	// cleanup default cache
+	providerGCPTmp, err := getter(context.TODO(), cfgProviderGCP)
+	require.NoError(t, err)
+	// provide new provider but for one cluster
+	require.Equal(t, providerGCPTmp.String(), providerGCP.String())
+	require.NotEqual(t, providerGCPTmp, providerGCP)
+
+	providerYandexTmp, err := getter(context.TODO(), providerYandexMetaConfig)
+	require.NoError(t, err)
+	// provide new provider but for one cluster
+	require.Equal(t, providerYandexTmp.String(), providerYandex.String())
+	require.NotEqual(t, providerYandexTmp, providerYandex)
+
+	assertProvidersCacheHasCountOfKeys(t, defaultProvidersCache, 2)
+
+	CleanupProvidersFromDefaultCache(params.Logger)
+
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	// do not allow any operations on finalized cache
+	_, err = getter(context.TODO(), providerYandexMetaConfig)
+	require.Error(t, err)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	_, err = getter(context.TODO(), cfgProviderGCP)
+	require.Error(t, err)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	_, _, err = defaultProvidersCache.Get(providerYandexMetaConfig.UUID, providerYandexMetaConfig, params.Logger)
+	require.Error(t, err)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	_, err = defaultProvidersCache.GetOrAdd(context.TODO(), providerYandexMetaConfig.UUID, providerYandexMetaConfig, params.Logger, func(context.Context, string, *config.MetaConfig, log.Logger) (infrastructure.CloudProvider, error) {
+		return providerYandex, nil
+	})
+	require.Error(t, err)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	err = defaultProvidersCache.IterateOverCache(func(key string, provider infrastructure.CloudProvider) {
+		require.True(t, false, "Do not allow iterate over finalized default cache")
+	})
+	require.Error(t, err)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 }
 
 func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
@@ -881,9 +925,11 @@ func getTestProvidersCacheEntries(t *testing.T, cache CloudProvidersCache) map[s
 
 	entries := make(map[string]infrastructure.CloudProvider)
 
-	cache.IterateOverCache(func(key string, provider infrastructure.CloudProvider) {
+	err := cache.IterateOverCache(func(key string, provider infrastructure.CloudProvider) {
 		entries[key] = provider
 	})
+
+	require.NoError(t, err)
 
 	return entries
 }
@@ -905,7 +951,8 @@ func assertGetProviderFromCache(t *testing.T, params testProviderInCacheParams) 
 	require.False(t, interfaces.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
-	cachedProvider, exists := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
+	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
+	require.NoError(t, err)
 	require.True(t, exists)
 	require.False(t, interfaces.IsNil(cachedProvider))
 
@@ -922,7 +969,8 @@ func assertDoesNotGetProviderFromCache(t *testing.T, params testProviderInCacheP
 	require.True(t, interfaces.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
-	cachedProvider, exists := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
+	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
+	require.NoError(t, err)
 	require.False(t, exists)
 	require.True(t, interfaces.IsNil(cachedProvider))
 
@@ -1072,6 +1120,20 @@ func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider in
 	require.True(t, params.IsDebug)
 	require.NotNil(t, params.FSDIParams)
 
+	const cleanupGroup = "testAfterCleanupDebug"
+
+	anotherCleanupExecutedFirst := false
+	provider.AddAfterCleanupFunc(cleanupGroup, func(logger log.Logger) {
+		logger.LogInfoLn("Test first AfterCleanup with debug called")
+		anotherCleanupExecutedFirst = true
+	})
+
+	anotherCleanupExecutedSecond := false
+	provider.AddAfterCleanupFunc(cleanupGroup, func(logger log.Logger) {
+		logger.LogInfoLn("Test second AfterCleanup with debug called")
+		anotherCleanupExecutedSecond = true
+	})
+
 	_, err := provider.Executor(context.TODO(), infrastructure.BaseInfraStep, params.Logger)
 	require.NoError(t, err)
 
@@ -1079,22 +1141,57 @@ func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider in
 	require.NoError(t, err)
 	assertIsNotEmptyDir(t, provider.RootDir())
 	assertFSDIDirsAndFilesExists(t, params)
+	// all cleanup functions called in one group anotherGroup is cache clean do not need test
+	require.True(t, anotherCleanupExecutedFirst)
+	require.True(t, anotherCleanupExecutedSecond)
+
+	anotherCleanupExecutedFirst = false
+	anotherCleanupExecutedSecond = false
+
+	// double cleanup does not provide error
+	err = provider.Cleanup()
+	require.NoError(t, err)
+	assertIsNotEmptyDir(t, provider.RootDir())
+	assertFSDIDirsAndFilesExists(t, params)
+	// all cleanup functions called in one group anotherGroup is cache clean do not need test
+	require.False(t, anotherCleanupExecutedFirst)
+	require.False(t, anotherCleanupExecutedSecond)
 }
 
 func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams, cacheParams testProviderInCacheParams) {
 	require.False(t, interfaces.IsNil(provider))
 	require.NotNil(t, params.FSDIParams)
 
+	const cleanupGroup = "testAfterCleanup"
+
+	anotherCleanupExecutedFirst := false
+	provider.AddAfterCleanupFunc(cleanupGroup, func(logger log.Logger) {
+		logger.LogInfoLn("Test first AfterCleanup without debug called")
+		anotherCleanupExecutedFirst = true
+	})
+
+	anotherCleanupExecutedSecond := false
+	provider.AddAfterCleanupFunc(cleanupGroup, func(logger log.Logger) {
+		logger.LogInfoLn("Test second AfterCleanup without debug called")
+		anotherCleanupExecutedSecond = true
+	})
+
 	// cleanup
 	err := provider.Cleanup()
 	require.NoError(t, err)
 	assertDirNotExists(t, provider.RootDir())
 	assertFSDIDirsAndFilesExists(t, params)
+	// all cleanup functions called in one group anotherGroup is cache clean do not need test
+	require.True(t, anotherCleanupExecutedFirst)
+	require.True(t, anotherCleanupExecutedSecond)
 
 	// cleanup cache
 	cacheForGetParams := cacheParams
 	cacheForGetParams.cacheLen = 0
 	assertDoesNotGetProviderFromCache(t, cacheForGetParams)
+
+	anotherCleanupExecutedFirst = false
+	anotherCleanupExecutedSecond = false
 
 	// double cleanup does not provide error
 	err = provider.Cleanup()
@@ -1102,6 +1199,9 @@ func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrast
 	assertDirNotExists(t, provider.RootDir())
 	assertFSDIDirsAndFilesExists(t, params)
 	assertDoesNotGetProviderFromCache(t, cacheForGetParams)
+	// does not execute additional cleanup
+	require.False(t, anotherCleanupExecutedFirst)
+	require.False(t, anotherCleanupExecutedSecond)
 }
 
 func assertFileNotExists(t *testing.T, path string) {
