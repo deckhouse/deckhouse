@@ -249,7 +249,7 @@ steps:
 
 {!{- if eq $buildType "release" }!}
   - name: Check DKP images manifests in public registry
-    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     id: check_images
     env:
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
