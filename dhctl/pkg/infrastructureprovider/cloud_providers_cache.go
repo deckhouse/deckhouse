@@ -33,7 +33,7 @@ func CleanupProvidersFromDefaultCache(logger log.Logger) {
 	defer defaultProvidersCache.finalizedMutex.Unlock()
 
 	for _, provider := range defaultProvidersCache.cloudProvidersCache {
-		logger.LogDebugF("CleanDefaultProvidersCache called. Cleanup provider %s from default cache\n", provider.String())
+		logger.LogDebugF("CleanupProvidersFromDefaultCache called. Cleanup provider %s from default cache\n", provider.String())
 		if err := provider.Cleanup(); err != nil {
 			logger.LogWarnF("Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
 		}
@@ -115,9 +115,6 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 		return nil, err
 	}
 
-	c.cloudProvidersCache[cacheKey] = provider
-	logger.LogDebugF("Store %s in cache with key %s\n", provider.String(), cacheKey)
-
 	afterCleanup := func(l log.Logger) {
 		c.cloudProvidersCacheMutex.Lock()
 		defer c.cloudProvidersCacheMutex.Unlock()
@@ -134,6 +131,9 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 	}
 
 	provider.AddAfterCleanupFunc("cloudProviderCacheCleaner", afterCleanup)
+
+	c.cloudProvidersCache[cacheKey] = provider
+	logger.LogDebugF("Store %s in cache with key %s\n", provider.String(), cacheKey)
 
 	return provider, nil
 }

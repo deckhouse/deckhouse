@@ -145,7 +145,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			p := cloud.ProviderParams{
 				MetaConfig:       metaConfig,
 				UUID:             clusterUUID,
-				Logger:           params.Logger,
+				Logger:           logger,
 				DI:               di,
 				TmpDir:           tmpDir,
 				IsDebug:          params.IsDebug,
