@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
@@ -35,21 +36,25 @@ func TestProgressTracker_FindLastCompletedPhase(t *testing.T) {
 
 	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, nil)
 
-	phase, skipped := progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[0].Phase, "")
+	phase, ok := progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[0].Phase, phases.BootstrapPhases()[1].Phase)
 	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
-	assert.False(t, skipped)
+	assert.False(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[0].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[0].Phase)
 	assert.EqualValues(t, "", phase)
-	assert.True(t, skipped)
+	assert.True(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[1].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[1].Phase)
 	assert.EqualValues(t, phases.BootstrapPhases()[0].Phase, phase)
-	assert.True(t, skipped)
+	assert.True(t, ok)
 
-	phase, skipped = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase)
+	phase, ok = progressTracker.FindLastCompletedPhase(phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, "")
 	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, phase)
-	assert.True(t, skipped)
+	assert.False(t, ok)
+
+	phase, ok = progressTracker.FindLastCompletedPhase("", phases.BootstrapPhases()[len(phases.BootstrapPhases())-1].Phase)
+	assert.EqualValues(t, phases.BootstrapPhases()[len(phases.BootstrapPhases())-2].Phase, phase)
+	assert.True(t, ok)
 }
 
 func TestProgressTracker(t *testing.T) {
@@ -76,6 +81,9 @@ func TestProgressTracker(t *testing.T) {
 	require.NoError(t, progressTracker.Progress(phases.CreateResourcesPhase, "", opts))
 	require.NoError(t, progressTracker.Progress(phases.ExecPostBootstrapPhase, "", opts))
 	require.NoError(t, progressTracker.Progress(phases.FinalizationPhase, "", opts))
+
+	// do nothing because progress is already 1
+	require.NoError(t, progressTracker.Complete())
 
 	expected := []phases.Progress{
 		{
@@ -180,6 +188,64 @@ func TestProgressTracker(t *testing.T) {
 			Phases:         bootstrapPhases,
 			Progress:       1,
 			CompletedPhase: bootstrapPhases[7].Phase,
+			CurrentPhase:   "",
+			NextPhase:      "",
+		},
+	}
+
+	if !cmp.Equal(expected, result, cmpOpts) {
+		t.Errorf("Diff: %v", cmp.Diff(expected, result, cmpOpts))
+	}
+}
+
+func TestProgressTracker_Complete(t *testing.T) {
+	t.Parallel()
+
+	var result []phases.Progress
+
+	bootstrapPhases := phases.BootstrapPhases()
+
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+
+		return nil
+	})
+
+	require.NoError(t, progressTracker.Progress("", "", opts))
+	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", opts))
+	require.NoError(t, progressTracker.Complete())
+
+	lastPhases := phases.BootstrapPhases()
+	for i := range lastPhases {
+		// everything except BaseInfraPhase should be skipped
+		if i == 0 {
+			continue
+		}
+		lastPhases[i].Action = ptr.To(phases.PhaseActionSkip)
+	}
+
+	expected := []phases.Progress{
+		{
+			Operation:      phases.OperationBootstrap,
+			Phases:         bootstrapPhases,
+			Progress:       0,
+			CompletedPhase: "",
+			CurrentPhase:   bootstrapPhases[0].Phase,
+			NextPhase:      bootstrapPhases[1].Phase,
+		},
+		{
+			Operation:      phases.OperationBootstrap,
+			Phases:         bootstrapPhases,
+			Progress:       0.125,
+			CompletedPhase: bootstrapPhases[0].Phase,
+			CurrentPhase:   bootstrapPhases[1].Phase,
+			NextPhase:      bootstrapPhases[2].Phase,
+		},
+		{
+			Operation:      phases.OperationBootstrap,
+			Phases:         lastPhases,
+			Progress:       1,
+			CompletedPhase: lastPhases[7].Phase,
 			CurrentPhase:   "",
 			NextPhase:      "",
 		},
