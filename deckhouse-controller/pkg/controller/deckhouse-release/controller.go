@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/gofrs/uuid/v5"
@@ -94,9 +93,11 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
-	parsedVersion, err := semver.NewVersion(deckhouseVersion)
-	if err != nil {
-		return fmt.Errorf("parse deckhouse version: %w", err)
+	// Skip semantic version validation for custom version formats
+	// Use the version string as-is, but ensure it starts with 'v' if it doesn't already
+	formattedVersion := deckhouseVersion
+	if !strings.HasPrefix(deckhouseVersion, "v") {
+		formattedVersion = "v" + deckhouseVersion
 	}
 
 	r := &deckhouseReleaseReconciler{
@@ -107,7 +108,7 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		updateSettings:     updateSettings,
 		metricStorage:      metricStorage,
 		preflightCountDown: preflightCountDown,
-		deckhouseVersion:   fmt.Sprintf("v%d.%d.%d", parsedVersion.Major(), parsedVersion.Minor(), parsedVersion.Patch()),
+		deckhouseVersion:   formattedVersion,
 
 		metricsUpdater: releaseUpdater.NewMetricsUpdater(metricStorage, releaseUpdater.D8ReleaseBlockedMetricName),
 	}
