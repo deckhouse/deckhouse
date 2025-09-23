@@ -84,7 +84,7 @@ Example of configuring metrics collection via gateway (Pushgateway):
    You can enable the module in the web interface (Deckhouse Console), or using the following command:
 
    ```shell
-   d8 platform module enable prometheus-pushgateway
+   d8 system module enable prometheus-pushgateway
    ```
 
 2. Specify the gateway names in the `instances` parameter of the `prometheus-pushgateway` module through the web interface, or using the following command:

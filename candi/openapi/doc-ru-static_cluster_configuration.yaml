@@ -8,7 +8,7 @@ apiVersions:
       Чтобы изменить содержимое ресурса `StaticClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
-      d8 p edit static-cluster-configuration
+      d8 system edit static-cluster-configuration
       ```
     properties:
       apiVersion:

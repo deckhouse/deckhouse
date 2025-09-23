@@ -44,7 +44,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 1. Командой:
 
    ```shell
-   d8 platform module enable node-manager
+   d8 system module enable node-manager
    # Или disable.
    ```
 

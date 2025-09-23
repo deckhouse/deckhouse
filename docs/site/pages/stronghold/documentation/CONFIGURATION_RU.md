@@ -10,7 +10,7 @@ lang: ru
 Включите модуль можно выполнив команду:
 
 ```shell
-d8 p module enable stronghold
+d8 system module enable stronghold
 ```
 
 По умолчанию модуль запустится в режиме `Automatic` с инлетом `Ingress`.
@@ -21,7 +21,7 @@ d8 p module enable stronghold
 Выключить модуль можно выполнив команду:
 
 ```shell
-d8 p module disable stronghold
+d8 system module disable stronghold
 ```
 
 {% alert level="danger" %}
@@ -373,7 +373,7 @@ spec:
 После этого можно включить модуль `stronghold`, инициализация и настройка интеграции с `dex` произойдет автоматически.
 
 ```shell
-d8 p module enable stronghold
+d8 system module enable stronghold
 ```
 
 После запуска модуля проследить:

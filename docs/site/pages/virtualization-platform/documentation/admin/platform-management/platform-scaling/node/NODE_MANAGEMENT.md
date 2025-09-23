@@ -47,7 +47,7 @@ Node management is implemented via the [`node-manager`](/products/kubernetes-pla
 1. Using the command:
 
    ```shell
-   d8 platform module enable node-manager
+   d8 system module enable node-manager
    # Or disable.
    ```
 

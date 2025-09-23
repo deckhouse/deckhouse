@@ -18,7 +18,7 @@ lang: ru
 1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration):
 
    ```shell
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Установите желаемую версию Kubernetes (`kubernetesVersion`):
