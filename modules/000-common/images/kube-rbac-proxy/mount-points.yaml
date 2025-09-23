@@ -1,2 +1,2 @@
 dirs:
-  - /etc/kube-rbac-proxy
+- /etc/kube-rbac-proxy

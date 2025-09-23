@@ -80,13 +80,8 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
         command:
         - /bin/bash
-        - -ec
-        - |
-          /usr/bin/cp /iptables-wrapper /sbin/ -rv
-          /usr/bin/cp /_sbin/* /sbin/ -rv 
-          /usr/bin/cp /relocate/sbin/* /sbin/ -rv
-          /sbin/iptables --version
-          /usr/bin/rm /sbin/iptables-wrapper -v
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
         volumeMounts:
         - mountPath: /sbin
           name: sbin
@@ -190,7 +185,12 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+<<<<<<< HEAD
           readOnlyRootFileSystem: true
+||||||| c7ecb55aa0
+=======
+          readOnlyRootFilesystem: true
+>>>>>>> upstrim/main
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP
