@@ -366,15 +366,15 @@
         ```
 
   - alert: DeckhouseHighMemoryUsage
-    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.9)
-    for: 1m
+    expr: max by (pod, namespace, node) (container_memory_working_set_bytes{container="deckhouse"} / container_spec_memory_limit_bytes{container="deckhouse"} > 0.85)
+    for: 30s
     labels:
       severity_level: "3"
     annotations:
       plk_markup_format: "markdown"
       plk_protocol_version: "1"
       description: |
-        Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
+        Deckhouse pod `{{ $labels.pod }}` in namespace `{{ $labels.namespace }}` on node `{{ $labels.node }}` has high memory usage.
 
         Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
 

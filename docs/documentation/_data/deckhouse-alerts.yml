@@ -3568,7 +3568,7 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Deckhouse pod `{{ $labels.pod }}` on node `{{ $labels.node }}` has high memory usage.
+        Deckhouse pod `{{ $labels.pod }}` in namespace `{{ $labels.namespace }}` on node `{{ $labels.node }}` has high memory usage.
 
         Please, if possible, get the dumps for debugging purposes (it will take around 30 seconds):
 
