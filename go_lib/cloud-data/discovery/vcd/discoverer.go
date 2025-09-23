@@ -101,11 +101,10 @@ func (c *Config) client() (*govcd.VCDClient, error) {
 			return nil, fmt.Errorf("failed to set authorization header: %s", err)
 		}
 	} else {
-		resp, err := vcdClient.GetAuthResponse(c.User, c.Password, c.Org)
+		_, err = vcdClient.GetAuthResponse(c.User, c.Password, c.Org)
 		if err != nil {
 			return nil, fmt.Errorf("unable to authenticate: %s", err)
 		}
-		fmt.Printf("Token: %s\n", resp.Header[govcd.AuthorizationHeader])
 	}
 	return vcdClient, nil
 }
@@ -236,7 +235,6 @@ func (d *Discoverer) DiscoveryData(_ context.Context, options meta.DiscoveryData
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	d.logger.Debugf("discovery data: %v", discoveryDataJson)
 	return discoveryDataJson, nil
 }
 
