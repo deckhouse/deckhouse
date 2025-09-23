@@ -26,27 +26,25 @@ if [ "$NGINX_PROFILING_ENABLED" == "true" ]; then
     cp -f $nginxWithCaps $nginxWOCaps
   fi
 
-  if [ "$args" == "-c /etc/nginx/nginx.conf" ]; then
-    logDirInChroot="/var/log/valgrind"
-    timestamp=$(date +%Y%m%d_%H%M%S)
-    logfile="${logDirInChroot}/memcheck.${timestamp}.log"
-
+  if [ ! -f /chroot/proc/cmdline ]; then
     # echo "Mounting proc fs"
     # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
     mount -t proc /proc /chroot/proc
-
-    # echo "Run profiling with Valgrind"
-    # echo "The log will be written to a file $logfile"
-    unshare -R /chroot /usr/local/valgrind \
-      --trace-children=yes \
-      --log-file="$logfile" \
-      --tool=memcheck \
-      --leak-check=full \
-      --show-leak-kinds=all \
-      /etc/ingress-controller/nginx/nginx "$@"
-  else
-    unshare -R /chroot /etc/ingress-controller/nginx/nginx "$@"
   fi
+
+  logDirInChroot="/var/log/valgrind"
+  timestamp=$(date +%Y%m%d_%H%M%S%N)
+  logfile="${logDirInChroot}/memcheck.${timestamp}.log"
+
+  # echo "Run profiling with Valgrind"
+  # echo "The log will be written to a file $logfile"
+  unshare -R /chroot /usr/local/valgrind \
+    --trace-children=yes \
+    --log-file="$logfile" \
+    --tool=memcheck \
+    --leak-check=full \
+    --show-leak-kinds=all \
+    /etc/ingress-controller/nginx/nginx "$@"
 else
   unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
 fi
