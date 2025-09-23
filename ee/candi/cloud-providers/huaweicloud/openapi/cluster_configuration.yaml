@@ -36,6 +36,9 @@ apiVersions:
             flavorName: m1.large
             rootDiskSize: 50
             imageName: "debian-11-genericcloud-amd64-20220911-1135"
+          volumeTypeMap:
+            eu-1a: fast-eu-1a
+            eu-1b: fast-eu-1b
         nodeGroups:
           - name: front
             replicas: 2
@@ -43,9 +46,9 @@ apiVersions:
               flavorName: m1.large
               imageName: "debian-11-genericcloud-amd64-20220911-1135"
               rootDiskSize: 50
-            zones:
-              - eu-1a
-              - eu-1b
+            volumeTypeMap:
+              eu-1a: fast-eu-1a
+              eu-1b: fast-eu-1b
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
     properties:
@@ -220,7 +223,7 @@ apiVersions:
                 <<: *instanceClassProperties
             volumeTypeMap:
               description: |
-                A dictionary of disk types for storing Kubernetes configuration files.
+                A dictionary of disk types for worker nodes of the group.
 
                 Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
 
@@ -228,7 +231,7 @@ apiVersions:
 
                 We recommend using the fastest disks provided by the provider in all cases.
 
-                If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `fast-eu-1a` disk type, while master-1, master-3 will have the `fast-eu-1b` disk type.
+                If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5` for the front group, then front-0, front-2, front-4 will have the `fast-eu-1a` disk type, while front-1, front-3 will have the `fast-eu-1b` disk type.
               x-examples:
                 - eu-1a: fast-eu-1a
                   eu-1b: fast-eu-1b
