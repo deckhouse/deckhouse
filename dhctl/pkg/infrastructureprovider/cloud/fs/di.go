@@ -86,7 +86,7 @@ func GetDi(logger log.Logger, params *DIParams) (*cloud.ProviderDI, error) {
 	}
 
 	return &cloud.ProviderDI{
-		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile),
+		SettingsProvider:    newSettingsProvider(logger, params.InfraVersionsFile, loadOrGetStore),
 		InfraUtilProvider:   newInfrastructureUtilProvider(logger, params.BinariesDir),
 		InfraPluginProvider: newPluginsProvider(logger, params.PluginsDir),
 		ModulesProvider:     newModulesProvider(logger, params.CloudProviderDir),
