@@ -432,6 +432,10 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
+
+	// double cleanup cache does not panic
+	CleanupProvidersFromDefaultCache(params.Logger)
+	require.Len(t, defaultProvidersCache.cloudProvidersCache, 0)
 }
 
 func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
