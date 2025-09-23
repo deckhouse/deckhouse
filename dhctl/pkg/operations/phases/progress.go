@@ -17,9 +17,12 @@ package phases
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"slices"
 	"sync"
+
+	"k8s.io/utils/ptr"
 )
 
 type OnProgressFunc func(Progress) error
@@ -131,6 +134,35 @@ func (p *ProgressTracker) Progress(
 	p.mx.Unlock()
 
 	return p.onProgressFunc(progress.Clone())
+}
+
+func (p *ProgressTracker) Complete() error {
+	if p.onProgressFunc == nil {
+		return nil
+	}
+
+	p.mx.Lock()
+
+	const epsilon = 1e-9
+	if math.Abs(p.progress.Progress-1.0) < epsilon {
+		p.mx.Unlock()
+		return nil
+	}
+
+	for i := range p.progress.Phases {
+		if p.progress.Phases[i].Action == nil {
+			p.progress.Phases[i].Action = ptr.To(PhaseActionSkip)
+		}
+	}
+
+	p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
+	p.progress.CurrentPhase = ""
+	p.progress.NextPhase = ""
+	p.progress.Progress = 1.0
+
+	p.mx.Unlock()
+
+	return p.onProgressFunc(p.progress.Clone())
 }
 
 func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts ProgressOpts) Progress {

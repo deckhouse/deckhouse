@@ -129,7 +129,9 @@ func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
 
 	clusterInfra := controller.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.InfrastructureContext, controller.ClusterInfraOptions{PhasedExecutionContext: pec})
 
-	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client(), []NodeIP{}, d8Destroyer)
+	staticDestroyer := NewStaticMastersDestroyer(
+		wrapper.Client(), []NodeIP{}, d8Destroyer, params.StateCache, StaticDestroyerOptions{pec},
+	)
 
 	return &ClusterDestroyer{
 		state:           state,
@@ -265,14 +267,25 @@ type StaticMastersDestroyer struct {
 	SSHClient       node.SSHClient
 	IPs             []NodeIP
 	d8Destroyer     *DeckhouseDestroyer
+	stateCache      dhctlstate.Cache
 	userCredentials *convergectx.NodeUserCredentials
+
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
 
-func NewStaticMastersDestroyer(c node.SSHClient, ips []NodeIP, d8destroyer *DeckhouseDestroyer) *StaticMastersDestroyer {
+type StaticDestroyerOptions struct {
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+}
+
+func NewStaticMastersDestroyer(
+	c node.SSHClient, ips []NodeIP, d8destroyer *DeckhouseDestroyer, stateCache dhctlstate.Cache, opts StaticDestroyerOptions,
+) *StaticMastersDestroyer {
 	return &StaticMastersDestroyer{
-		SSHClient:   c,
-		IPs:         ips,
-		d8Destroyer: d8destroyer,
+		SSHClient:              c,
+		IPs:                    ips,
+		d8Destroyer:            d8destroyer,
+		stateCache:             stateCache,
+		PhasedExecutionContext: opts.PhasedExecutionContext,
 	}
 }
 
@@ -281,6 +294,14 @@ func (d *StaticMastersDestroyer) SetUserCredentials(cr *convergectx.NodeUserCred
 }
 
 func (d *StaticMastersDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	if d.PhasedExecutionContext != nil {
+		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, d.stateCache); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
+	}
+
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
