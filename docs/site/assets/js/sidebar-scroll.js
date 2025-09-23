@@ -18,9 +18,7 @@ $(window).on('load', function() {
   if(lastPathname.lastIndexOf('v1') !== 1) {
     lastPathname = lastPathname.replace(/v1/g, '.');
   }
- console.log(lastPathname)
   const activeLink = document.querySelector(`ul.sidebar li.sidebar__item.active a[href$="${lastPathname}"]`);
-  console.log(activeLink)
   
   const hash = window.location.hash;
   const activeLinkToc = document.querySelector(`li.toc-sidebar__item a[href="${hash}"]`);
@@ -39,7 +37,14 @@ $(window).on('load', function() {
     return top;
   }
 
-  const activeLinkTop = getTopActiveLink(activeLink, sidebarLeft);
+  function getTopActiveLinkSidebar(element) {
+    const elementTop = element.offsetTop;
+
+    let parentTop = element.offsetParent;
+    return elementTop + parentTop.offsetTop;
+  }
+
+  const activeLinkTop = getTopActiveLinkSidebar(activeLink);
 
   if(activeLinkTop < sidebars[0].scrollTop || (activeLinkTop + activeLink.offsetHeight) > (sidebars[0].scrollTop + sidebars[0].scrollHeight)) {
     sidebars[0].scrollIntoView({
@@ -49,7 +54,7 @@ $(window).on('load', function() {
   }
 
   sidebars[0].scrollTo({
-    top: activeLinkTop - 310,
+    top: activeLinkTop,
     behavior: 'smooth'
   })
 
