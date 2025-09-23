@@ -17,6 +17,9 @@ spec:
         name: always_true
         condition: (evt.num>=0)
     - macro:
+        name: never_true
+        condition: (evt.num=0)
+    - macro:
         name: open_write
         condition: (evt.type in (open,openat,openat2) and evt.is_open_write=true and fd.typechar='f' and fd.num>=0)
     - macro:
@@ -118,13 +121,13 @@ spec:
         items: []
     - macro:
         name: user_known_container_drift_activities
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: user_known_modify_bin_dir_activities
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: user_known_package_manager_in_container
-        condition: (always_true)
+        condition: (never_true)
     - macro:
         name: system_namespace
         condition: ((ka.target.namespace in (kube-system, kube-public, default)) or (ka.target.name startswith "d8-"))
