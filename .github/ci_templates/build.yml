@@ -141,7 +141,6 @@ steps:
       {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
         export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
         export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-        export WERF_SECONDARY_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
       {!{- else }!}
         export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
         export WERF_REPO="${DEV_REGISTRY_PATH}"
