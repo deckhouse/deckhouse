@@ -112,7 +112,6 @@ spec:
               command:
               - /cni-uninstall.sh
         securityContext:
-          readOnlyRootFilesystem: true
           privileged: false
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
@@ -156,17 +155,6 @@ spec:
             drop:
               - ALL
         volumeMounts:
-        - mountPath: /var/lib/cilium/bpf/include/bpf/features.h
-          name: write-files
-          subPath: features.h
-        - mountPath: /var/lib/cilium/bpf/include/bpf/features_skb.h
-          name: write-files
-          subPath: features_skb.h
-        - mountPath: /var/lib/cilium/bpf/include/bpf/features_xdp.h
-          name: write-files
-          subPath: features_xdp.h
-        - name: tmp
-          mountPath: /root/.config
         - mountPath: /sys/fs/bpf
           mountPropagation: HostToContainer
           name: bpf-maps
@@ -256,22 +244,6 @@ spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
-      - name: touch-files
-        image: {{ include "helm_lib_module_common_image" (list $context "init") }}
-        securityContext:
-          readOnlyRootFilesystem: true
-        imagePullPolicy: IfNotPresent
-        command:
-          - sh
-          - -c
-          - --
-          - "/bin/touch /tmp/features.h /tmp/features_skb.h /tmp/features_xdp.h && chmod 0666 /tmp/*"
-        volumeMounts:
-          - name: write-files
-            mountPath: /tmp/
-        resources:
-          requests:
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
       - name: check-wg-kernel-compat
         image: {{ include "helm_lib_module_image" (list $context "checkWgKernelCompat") }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "NET_ADMIN" "NET_RAW" "SYS_MODULE")) | nindent 8 }}
@@ -294,7 +266,6 @@ spec:
       - name: check-linux-kernel
         image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
         {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
-          readOnlyRootFilesystem: true
         env:
         - name: KERNEL_CONSTRAINT
           value: "{{ $context.Values.cniCilium.internal.minimalRequiredKernelVersionConstraint }}"
@@ -386,7 +357,6 @@ spec:
         - name: cni-path
           mountPath: /hostbin
         securityContext:
-          readOnlyRootFilesystem: true
           privileged: false
           seLinuxOptions:
             level: 's0'
@@ -481,7 +451,6 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6445"
         securityContext:
-          readOnlyRootFilesystem: true
           privileged: false
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false
@@ -544,8 +513,6 @@ spec:
       serviceAccountName: agent
       terminationGracePeriodSeconds: 1
       volumes:
-      - name: write-files
-        emptyDir: {}
       - name: tmp
         emptyDir: {}
       - name: host-proc-sys-net

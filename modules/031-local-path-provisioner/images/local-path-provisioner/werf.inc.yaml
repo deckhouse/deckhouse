@@ -7,11 +7,11 @@ import:
     add: /local-path-provisioner
     to: /usr/bin/local-path-provisioner
     after: install
-git:
-{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/local-path-provisioner"]
+git:
+{{- include "image mount points" . }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
