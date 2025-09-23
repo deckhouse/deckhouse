@@ -231,6 +231,8 @@ apiVersions:
 
                 We recommend using the fastest disks provided by the provider in all cases.
 
+                If the `volumeTypeMap` property is not specified for a node group, the `volumeTypeMap` from `masterNodeGroup` will be used as a fallback for that node group.
+
                 If the value specified in `replicas` exceeds the number of elements in the dictionary, the nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5` for the front group, then front-0, front-2, front-4 will have the `fast-eu-1a` disk type, while front-1, front-3 will have the `fast-eu-1b` disk type.
               x-examples:
                 - eu-1a: fast-eu-1a
