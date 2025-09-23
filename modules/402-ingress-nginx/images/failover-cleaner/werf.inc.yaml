@@ -11,7 +11,7 @@ git:
     - '**/*.sum'
     - '**/*.mod'
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+image: {{ .ModuleName }}/failover-cleaner-artifact
 fromImage: builder/golang-alpine-1.23
 final: false
 import:

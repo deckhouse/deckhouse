@@ -126,16 +126,12 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         securityContext:
-<<<<<<< HEAD
-||||||| 814800fa0c
-=======
           capabilities:
             add:
             - SYS_CHROOT
             - NET_BIND_SERVICE
             drop:
             - ALL
->>>>>>> upstrim/main
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
@@ -147,34 +143,10 @@ spec:
           name: var-log-nginx
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
-<<<<<<< HEAD
-        - mountPath: /tmp
-          name: tmp-nginx
-        - mountPath: /chroot/tmp
-          name: tmp-nginx
-        - mountPath: /chroot/etc/resolv.conf
-          name: write-files
-          subPath: resolv.conf
-        - mountPath: /chroot/etc/nginx/nginx.conf
-          name: write-files
-          subPath: nginx.conf
-        - mountPath: /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-          name: write-files
-          subPath: opentelemetry.toml
-        - mountPath: /chroot/var/log/nginx/error.log
-          name: write-files
-          subPath: error.log
-        - mountPath: /chroot/etc/ingress-controller/ssl
-          name: tmp-ssl
-||||||| 814800fa0c
-        - mountPath: /chroot/tmp/nginx/
-          name: tmp-nginx
-=======
         - mountPath: /chroot/tmp
           name: tmp
         - mountPath: /chroot/etc/ingress-controller
           name: etc-ingress-controller
->>>>>>> upstrim/main
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -259,43 +231,6 @@ spec:
       - name: deckhouse-registry
       initContainers:
       - command:
-<<<<<<< HEAD
-        - sh
-        - -ec
-        - --
-        - |
-          touch /tmp/resolv.conf /tmp/opentelemetry.toml /tmp/error.log
-          cp /chroot/etc/nginx/nginx.conf /tmp/nginx.conf
-          chmod 0666 /tmp/*
-        image: registry.example.com@imageHash-ingressNginx-controller19
-        imagePullPolicy: IfNotPresent
-        name: touch-files
-        resources:
-          requests:
-            ephemeral-storage: 50Mi
-        securityContext:
-          readOnlyRootFilesystem: true
-        volumeMounts:
-        - mountPath: /tmp
-          name: write-files
-      - command:
-        - sh
-        - -c
-        - --
-        - /bin/mkdir -p /tmp/nginx && chmod 0777 /tmp/*
-        image: registry.example.com@imageHash-common-init
-        imagePullPolicy: IfNotPresent
-        name: mkdir-nginx
-        resources:
-          requests:
-            ephemeral-storage: 50Mi
-        securityContext:
-          readOnlyRootFilesystem: true
-        volumeMounts:
-        - mountPath: tmp
-          name: tmp-nginx
-||||||| 814800fa0c
-=======
         - /bin/bash
         - -c
         - |-
@@ -328,7 +263,6 @@ spec:
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
->>>>>>> upstrim/main
       priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
@@ -344,17 +278,7 @@ spec:
       - key: drbd.linbit.com/ignore-fail-over
       volumes:
       - emptyDir: {}
-<<<<<<< HEAD
-        name: write-files
-      - emptyDir: {}
-        name: tmp-ssl
-      - emptyDir: {}
-        name: tmp-nginx
-||||||| 814800fa0c
-        name: tmp-nginx
-=======
         name: tmp
->>>>>>> upstrim/main
       - emptyDir: {}
         name: etc-ingress-controller
       - emptyDir: {}
