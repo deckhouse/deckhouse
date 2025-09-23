@@ -8,6 +8,22 @@ Deckhouse Virtualization Platform (DVP) поддерживает работу с
 
 На этой странице представлены инструкции по подключению NFS-хранилища в DVP, настройке соединения, созданию StorageClass и проверке работоспособности системы.
 
+## Системные требования и рекомендации
+
+### Требования
+
+- Используйте стоковые ядра, поставляемые вместе с [поддерживаемыми дистрибутивами](/products/virtualization-platform/documentation/about/requirements.html);
+- Убедитесь в наличии развернутого и настроенного NFS-сервера;
+- Для поддержки RPC-with-TLS включите в ядре Linux опции `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`.
+
+{% alert level="warning" %}
+Для работы NFS как хранилища виртуальных дисков в DVP настройте NFS-сервер с опцией `no_root_squash`.
+{% endalert %}
+
+### Рекомендации
+
+Чтобы поды модуля перезапускались при изменении параметра `tlsParameters` в настройках модуля, должен быть включен модуль [pod-reloader](/products/kubernetes-platform/documentation/v1/modules/pod-reloader) (включен по умолчанию).
+
 ## Включение модуля
 
 Для управления томами на основе протокола NFS используется модуль `csi-nfs`, который создаёт StorageClass через пользовательские ресурсы [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass). Чтобы включить модуль, выполните команду:
@@ -154,11 +170,6 @@ csi-nfs-6nqq8                    2/2     Running   0          1h    172.18.18.52
    ```
 
 Команда выведет список всех снимков и их текущее состояние.
-
-## Требования к дистрибутиву Linux для разворачивания NFS-сервера с поддержкой RPC-with-TLS
-
-- Ядро должно быть собрано с включенными параметрами `CONFIG_TLS` и `CONFIG_NET_HANDSHAKE`.
-- Версия пакета `nfs-utils` (в дистрибутивах на основе Debian пакет называется `nfs-common`) должна быть >= 2.6.3.
 
 ## Удаление PV при включённой поддержке RPC-with-TLS
 

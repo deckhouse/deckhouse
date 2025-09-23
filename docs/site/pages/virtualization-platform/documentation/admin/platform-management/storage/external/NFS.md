@@ -7,6 +7,22 @@ Deckhouse Virtualization Platform (DVP) supports Network File System (NFS), enab
 
 This page provides instructions for connecting NFS storage in DVP, configuring the connection, creating a StorageClass, and verifying system operability.
 
+## System Requirements and Recommendations
+
+### Requirements
+
+- Use stock kernels shipped with the [supported distributions](/products/virtualization-platform/documentation/about/requirements.html);
+- Ensure that an NFS server is deployed and properly configured;
+- To support RPC-with-TLS, enable the `CONFIG_TLS` and `CONFIG_NET_HANDSHAKE` options in the Linux kernel.
+
+{% alert level="warning" %}
+To use NFS as storage for virtual disks in DVP, configure the NFS server with the `no_root_squash` option.
+{% endalert %}
+
+### Recommendations
+
+To ensure that the module pods restart when the `tlsParameters` setting in the module configuration changes, the [pod-reloader](/products/kubernetes-platform/documentation/v1/modules/pod-reloader) module must be enabled (it is enabled by default).
+
 ## Enabling the module
 
 The `csi-nfs` module manages volumes based on the NFS protocol and supports StorageClass creation through custom [NFSStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-nfs/cr.html#nfsstorageclass) resources. To enable the module, execute the command:
@@ -152,11 +168,6 @@ In DVP, snapshots are created by archiving the volume’s folder. The archive is
    ```
 
 This command will display a list of all snapshots and their current statuses.
-
-## Requirements for a Linux distribution to deploy an NFS server with RPC-with-TLS support
-
-- The kernel must be built with the `CONFIG_TLS` and `CONFIG_NET_HANDSHAKE` options enabled.
-- The version of the `nfs-utils` package (called `nfs-common` in Debian-based distributions) must be >= 2.6.3.
 
 ## Deleting PVs with RPC-with-TLS enabled
 
