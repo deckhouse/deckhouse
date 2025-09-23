@@ -105,6 +105,11 @@ securityContext:
     type: RuntimeDefault
 {{- end }}
 {{- end }}
+{{- define "helm_lib_module_container_security_context_pss_restricted_flexible_labels" -}}
+{{- if $caps }}
+    deckhouse.io/skip-pss-check-capabilities: true
+{{- end }}
+{{- end }}
 
 
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
