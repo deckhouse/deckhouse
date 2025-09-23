@@ -197,7 +197,7 @@ requirements:
     test: ">v0.22.1 !optional"
 ```
 
-> In the description and examples below:
+> The following sections describes restrictions on the use of optional module dependencies and provides examples of settings where:
 >
 > - `prometheus` — the target module for which an optional dependency is specified;
 > - `test` — a module that can be used in conjunction with the target module.
