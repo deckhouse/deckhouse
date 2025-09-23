@@ -272,8 +272,10 @@ func convertProgress(p phases.Progress) *pb.Progress {
 		Progress:          p.Progress,
 		CompletedPhase:    string(p.CompletedPhase),
 		CurrentPhase:      string(p.CurrentPhase),
+		NextPhase:         string(p.NextPhase),
 		CompletedSubPhase: string(p.CompletedSubPhase),
 		CurrentSubPhase:   string(p.CurrentSubPhase),
+		NextSubPhase:      string(p.NextSubPhase),
 		Phases:            allPhases,
 	}
 }

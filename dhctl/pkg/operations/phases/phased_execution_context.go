@@ -145,6 +145,12 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) Finalize(stateCache dsta
 	if pec.stopOperationCondition {
 		return nil
 	}
+
+	err := pec.progressTracker.Complete()
+	if err != nil {
+		log.ErrorF("Failed to complete progress: %v", err)
+	}
+
 	return pec.setLastState(stateCache)
 }
 
