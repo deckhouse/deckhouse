@@ -68,6 +68,34 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 
 	params.Logger.LogDebugF(providersCacheLogMessage)
 
+	getFSDIParams := func() *fs.DIParams {
+		diParams := defaultFSDIParams
+		diParamsLog := "Use default"
+		if params.FSDIParams != nil {
+			diParams = params.FSDIParams
+			diParamsLog = "Using custom"
+		}
+
+		params.Logger.LogDebugF("%s FSDIParams: %+v\n", diParamsLog, diParams)
+		return diParams
+	}
+
+	setVersionsContentProviderGetter := func(di *cloud.ProviderDI) {
+		if di.VersionsContentProviderGetter != nil {
+			params.Logger.LogDebugF("fs.GetDI provider our own VersionProviderGetter\n")
+			return
+		}
+
+		if params.VersionProviderGetter != nil {
+			params.Logger.LogDebugF("Use custom VersionProviderGetter\n")
+			di.VersionsContentProviderGetter = params.VersionProviderGetter
+			return
+		}
+
+		params.Logger.LogDebugF("Use default VersionProviderGetter\n")
+		di.VersionsContentProviderGetter = cloud.DefaultVersionContentProvider
+	}
+
 	return func(ctx context.Context, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
 		if metaConfig == nil {
 			return nil, fmt.Errorf("Cannot get CloudProvider. metaConfig must not be nil")
@@ -87,78 +115,48 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 		}
 
 		if metaConfig.ProviderName == "" {
-			cachedProvider, stored := providersCache.Get(clusterUUID, metaConfig, params.Logger)
-			if stored {
-				return cachedProvider, nil
-			}
-
-			params.Logger.LogDebugLn("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster")
-
-			newProvider := infrastructure.NewDummyCloudProvider(params.Logger)
-			return providersCache.Add(clusterUUID, metaConfig, newProvider, params.Logger), nil
+			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, params.Logger, func(_ context.Context, clusterUUID string, _ *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error) {
+				logger.LogDebugF("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster: %s\n", clusterUUID)
+				return infrastructure.NewDummyCloudProvider(logger), nil
+			})
 		}
 
-		providerName := metaConfig.ProviderName
-
 		if metaConfig.ClusterPrefix == "" {
-			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, providerName)
+			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, metaConfig.ProviderName)
 		}
 
 		if metaConfig.Layout == "" {
-			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, providerName)
+			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, metaConfig.ProviderName)
 		}
 
-		cachedProvider, stored := providersCache.Get(clusterUUID, metaConfig, params.Logger)
-		if stored {
-			return cachedProvider, nil
-		}
-
-		diParams := defaultFSDIParams
-		diParamsLog := "Use default"
-		if params.FSDIParams != nil {
-			diParams = params.FSDIParams
-			diParamsLog = "Using custom"
-		}
-
-		params.Logger.LogDebugF("%s FSDIParams: %+v\n", diParamsLog, diParams)
-
-		di, err := fs.GetDi(params.Logger, diParams)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
-		}
-
-		if di.VersionsContentProviderGetter == nil {
-			if params.VersionProviderGetter != nil {
-				params.Logger.LogDebugF("Use custom VersionProviderGetter\n")
-				di.VersionsContentProviderGetter = params.VersionProviderGetter
-			} else {
-				params.Logger.LogDebugF("Use default VersionProviderGetter\n")
-				di.VersionsContentProviderGetter = cloud.DefaultVersionContentProvider
+		return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, params.Logger, func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error) {
+			di, err := fs.GetDi(logger, getFSDIParams())
+			if err != nil {
+				return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
 			}
-		} else {
-			params.Logger.LogDebugF("fs.GetDI provider our own VersionProviderGetter\n")
-		}
 
-		set, err := di.SettingsProvider.GetSettings(ctx, providerName, params.AdditionalParams)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, providerName, err)
-		}
+			setVersionsContentProviderGetter(di)
 
-		p := cloud.ProviderParams{
-			MetaConfig:       metaConfig,
-			UUID:             clusterUUID,
-			Logger:           params.Logger,
-			DI:               di,
-			TmpDir:           tmpDir,
-			IsDebug:          params.IsDebug,
-			Settings:         set,
-			AdditionalParams: params.AdditionalParams,
-		}
+			set, err := di.SettingsProvider.GetSettings(ctx, metaConfig.ProviderName, params.AdditionalParams)
+			if err != nil {
+				return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, metaConfig.ProviderName, err)
+			}
 
-		newProvider := providersCache.Add(clusterUUID, metaConfig, cloud.NewProvider(p), params.Logger)
+			p := cloud.ProviderParams{
+				MetaConfig:       metaConfig,
+				UUID:             clusterUUID,
+				Logger:           params.Logger,
+				DI:               di,
+				TmpDir:           tmpDir,
+				IsDebug:          params.IsDebug,
+				Settings:         set,
+				AdditionalParams: params.AdditionalParams,
+			}
 
-		params.Logger.LogDebugF("Cloud %s initialized and added in cache. Root dir is %s\n", newProvider.String(), newProvider.RootDir())
+			provider := cloud.NewProvider(p)
+			logger.LogDebugF("Cloud %s initialized and added in cache. Root dir is %s\n", provider.String(), provider.RootDir())
 
-		return newProvider, nil
+			return provider, nil
+		})
 	}
 }

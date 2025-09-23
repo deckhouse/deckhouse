@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
@@ -318,42 +319,54 @@ func main() {
 	runApplication(kpApp)
 }
 
+func initLogger(c *kingpin.ParseContext) error {
+	log.InitLogger(app.LoggerType)
+	if app.DoNotWriteDebugLogFile {
+		return nil
+	}
+
+	if c.SelectedCommand == nil {
+		return nil
+	}
+
+	logPath := app.DebugLogFilePath
+
+	if logPath == "" {
+		cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
+		logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
+		logPath = path.Join(app.TmpDirName, logFile)
+	}
+
+	outFile, err := os.Create(logPath)
+	if err != nil {
+		return err
+	}
+
+	err = log.WrapWithTeeLogger(outFile, 1024)
+	if err != nil {
+		return err
+	}
+
+	log.InfoF("Debug log file: %s\n", logPath)
+
+	tomb.RegisterOnShutdown("Finalize logger", func() {
+		if err := log.FlushAndClose(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
+			return
+		}
+	})
+
+	return nil
+}
+
 func runApplication(kpApp *kingpin.Application) {
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		log.InitLogger(app.LoggerType)
-		if app.DoNotWriteDebugLogFile {
-			return nil
-		}
-
-		if c.SelectedCommand == nil {
-			return nil
-		}
-
-		logPath := app.DebugLogFilePath
-
-		if logPath == "" {
-			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
-			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
-			logPath = path.Join(app.TmpDirName, logFile)
-		}
-
-		outFile, err := os.Create(logPath)
-		if err != nil {
+		if err := initLogger(c); err != nil {
 			return err
 		}
 
-		err = log.WrapWithTeeLogger(outFile, 1024)
-		if err != nil {
-			return err
-		}
-
-		log.InfoF("Debug log file: %s\n", logPath)
-
-		tomb.RegisterOnShutdown("Finalize logger", func() {
-			if err := log.FlushAndClose(); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-				return
-			}
+		tomb.RegisterOnShutdown("Cleanup providers from default cache", func() {
+			infrastructureprovider.CleanupProvidersFromDefaultCache(log.GetDefaultLogger())
 		})
 
 		return nil

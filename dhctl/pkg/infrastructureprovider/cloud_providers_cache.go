@@ -15,6 +15,7 @@
 package infrastructureprovider
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -26,45 +27,92 @@ import (
 
 var defaultProvidersCache = newCloudProvidersMapCache()
 
-type CloudProvidersCacheIteratorFunc func(key string, provider infrastructure.CloudProvider)
+// CleanupProvidersFromDefaultCache - warning! is not tread-safe to avoid deadlock
+func CleanupProvidersFromDefaultCache(logger log.Logger) {
+	defaultProvidersCache.finalizedMutex.Lock()
+	defer defaultProvidersCache.finalizedMutex.Unlock()
+
+	for _, provider := range defaultProvidersCache.cloudProvidersCache {
+		logger.LogDebugF("CleanDefaultProvidersCache called. Cleanup provider %s from default cache\n", provider.String())
+		if err := provider.Cleanup(); err != nil {
+			logger.LogWarnF("Failed to cleanup provider %s from default cache: %v\n", provider.String(), err)
+		}
+	}
+
+	defaultProvidersCache.finalized = true
+}
+
+type (
+	ProviderCreatorForCache func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error)
+
+	CloudProvidersCacheIteratorFunc func(key string, provider infrastructure.CloudProvider)
+)
 
 type CloudProvidersCache interface {
-	Add(uuid string, metaConfig *config.MetaConfig, provider infrastructure.CloudProvider, logger log.Logger) infrastructure.CloudProvider
-	Get(uuid string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool)
-	IterateOverCache(iteratorFunc CloudProvidersCacheIteratorFunc)
+	GetOrAdd(ctx context.Context, uuid string, metaConfig *config.MetaConfig, logger log.Logger, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error)
+	Get(uuid string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool, error)
+	IterateOverCache(iteratorFunc CloudProvidersCacheIteratorFunc) error
 }
 
 type cloudProvidersMapCache struct {
 	cloudProvidersCacheMutex sync.Mutex
 	cloudProvidersCache      map[string]infrastructure.CloudProvider
+
+	finalizedMutex sync.Mutex
+	finalized      bool
 }
 
 func newCloudProvidersMapCache() *cloudProvidersMapCache {
 	return &cloudProvidersMapCache{
 		cloudProvidersCache: make(map[string]infrastructure.CloudProvider),
+		finalized:           false,
 	}
 }
 
-func (c *cloudProvidersMapCache) Add(clusterUUID string, metaConfig *config.MetaConfig, provider infrastructure.CloudProvider, logger log.Logger) infrastructure.CloudProvider {
-	if interfaces.IsNil(provider) {
-		logger.LogWarnF("Do not store nil provider for cluster %s in cache\n", clusterUUID)
-		return provider
+func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger, creator ProviderCreatorForCache) (infrastructure.CloudProvider, error) {
+	if creator == nil {
+		return nil, fmt.Errorf("Provider creator is nil for cluster %s", clusterUUID)
+	}
+
+	create := func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, error) {
+		provider, err := creator(ctx, clusterUUID, metaConfig, logger)
+		if err != nil {
+			return nil, err
+		}
+
+		if interfaces.IsNil(provider) {
+			return nil, fmt.Errorf("Do not store nil provider for cluster %s in cache", clusterUUID)
+		}
+
+		return provider, nil
 	}
 
 	if metaConfig.ProviderName == "" {
 		logger.LogDebugF("Do not store provider for empty provider for cluster %s probably it is static cluster and do not need any cleanup\n", clusterUUID)
-		return provider
+		return create(ctx, clusterUUID, metaConfig, logger)
 	}
 
-	cacheKey := c.getKey(clusterUUID, metaConfig)
+	c.finalizedMutex.Lock()
+	defer c.finalizedMutex.Unlock()
+
+	cacheKey := getKey(clusterUUID, metaConfig)
+
+	if c.finalized {
+		return nil, fmt.Errorf("Cache finalized! Do not add provider for cluster wit key %s to finalized cache!", cacheKey)
+	}
 
 	c.cloudProvidersCacheMutex.Lock()
 	defer c.cloudProvidersCacheMutex.Unlock()
 
 	cachedProvider, ok := c.cloudProvidersCache[cacheKey]
 	if ok {
-		logger.LogDebugF("Found existing provider for cluster %s in cache by key %s. Returns from cache\n", provider.String(), cacheKey)
-		return cachedProvider
+		logger.LogDebugF("Found existing provider for cluster %s in cache by key %s. Returns from cache\n", cachedProvider.String(), cacheKey)
+		return cachedProvider, nil
+	}
+
+	provider, err := create(ctx, clusterUUID, metaConfig, logger)
+	if err != nil {
+		return nil, err
 	}
 
 	c.cloudProvidersCache[cacheKey] = provider
@@ -86,16 +134,24 @@ func (c *cloudProvidersMapCache) Add(clusterUUID string, metaConfig *config.Meta
 	}
 
 	provider.AddAfterCleanupFunc("cloudProviderCacheCleaner", afterCleanup)
-	return provider
+
+	return provider, nil
 }
 
-func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool) {
+func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.MetaConfig, logger log.Logger) (infrastructure.CloudProvider, bool, error) {
 	if metaConfig.ProviderName == "" {
 		logger.LogDebugF("Do not store provider for cluster %s in cache with empty provider name\n", clusterUUID)
-		return nil, false
+		return nil, false, nil
 	}
 
-	cacheKey := c.getKey(clusterUUID, metaConfig)
+	cacheKey := getKey(clusterUUID, metaConfig)
+
+	c.finalizedMutex.Lock()
+	defer c.finalizedMutex.Unlock()
+
+	if c.finalized {
+		return nil, false, fmt.Errorf("Cache finalized! Do not get provider with key %s to finalized cache!", cacheKey)
+	}
 
 	c.cloudProvidersCacheMutex.Lock()
 	defer c.cloudProvidersCacheMutex.Unlock()
@@ -103,29 +159,38 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 	provider, ok := c.cloudProvidersCache[cacheKey]
 	if !ok {
 		logger.LogDebugF("Provider with key %s not found.\n", cacheKey)
-		return nil, false
+		return nil, false, nil
 	}
 
 	if interfaces.IsNil(provider) {
 		logger.LogDebugF("Provider with key %s is nil.\n", cacheKey)
-		return nil, false
+		return nil, false, nil
 	}
 
 	logger.LogDebugF("Found existing provider for cluster %s in cache by key %s. Returns it.\n", provider.String(), cacheKey)
 
-	return provider, true
+	return provider, true, nil
 }
 
-func (c *cloudProvidersMapCache) IterateOverCache(f CloudProvidersCacheIteratorFunc) {
+func (c *cloudProvidersMapCache) IterateOverCache(f CloudProvidersCacheIteratorFunc) error {
+	c.finalizedMutex.Lock()
+	defer c.finalizedMutex.Unlock()
+
+	if c.finalized {
+		return fmt.Errorf("Cache finalized! Do not iterate over cache!")
+	}
+
 	c.cloudProvidersCacheMutex.Lock()
 	defer c.cloudProvidersCacheMutex.Unlock()
 
 	for key, provider := range c.cloudProvidersCache {
 		f(key, provider)
 	}
+
+	return nil
 }
 
-func (c *cloudProvidersMapCache) getKey(clusterUUID string, metaConfig *config.MetaConfig) string {
+func getKey(clusterUUID string, metaConfig *config.MetaConfig) string {
 	return fmt.Sprintf(
 		"%s/%s/%s/%s",
 		metaConfig.ClusterPrefix,
