@@ -201,6 +201,36 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
+
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -517,6 +547,36 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
 
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
@@ -835,6 +895,36 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
+
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -1151,6 +1241,36 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
 
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
@@ -1469,6 +1589,36 @@ jobs:
           fetch-depth: 0
       # </template: checkout_full_step>
 
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
+
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
         id: check_stage_registry
@@ -1785,6 +1935,36 @@ jobs:
         with:
           fetch-depth: 0
       # </template: checkout_full_step>
+
+      # <template: login_flant_registry_step>
+      - name: Check flant registry credentials
+        id: check_flant_registry
+        env:
+          HOST: ${{secrets.FLANT_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_flant_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.FLANT_REGISTRY_HOST }}/sys/deckhouse-oss" >> $GITHUB_OUTPUT
+          else
+            echo "web_registry_path=${GHA_TEST_REGISTRY_PATH}" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to flant registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.FLANT_REGISTRY_HOST }}
+          username: ${{ secrets.FLANT_REGISTRY_USER }}
+          password: ${{ secrets.FLANT_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_flant_registry_step>
 
       # <template: login_stage_registry_step>
       - name: Check stage registry credentials
