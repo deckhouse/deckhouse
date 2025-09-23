@@ -83,7 +83,7 @@ func TestProgressTracker(t *testing.T) {
 	require.NoError(t, progressTracker.Progress(phases.FinalizationPhase, "", opts))
 
 	// do nothing because progress is already 1
-	require.NoError(t, progressTracker.Complete())
+	require.NoError(t, progressTracker.Complete(phases.FinalizationPhase))
 
 	expected := []phases.Progress{
 		{
@@ -213,12 +213,12 @@ func TestProgressTracker_Complete(t *testing.T) {
 
 	require.NoError(t, progressTracker.Progress("", "", opts))
 	require.NoError(t, progressTracker.Progress(phases.BaseInfraPhase, "", opts))
-	require.NoError(t, progressTracker.Complete())
+	require.NoError(t, progressTracker.Complete(phases.RegistryPackagesProxyPhase))
 
 	lastPhases := phases.BootstrapPhases()
 	for i := range lastPhases {
-		// everything except BaseInfraPhase should be skipped
-		if i == 0 {
+		// everything except BaseInfraPhase and RegistryPackagesProxyPhase should be skipped
+		if i <= 1 {
 			continue
 		}
 		lastPhases[i].Action = ptr.To(phases.PhaseActionSkip)
