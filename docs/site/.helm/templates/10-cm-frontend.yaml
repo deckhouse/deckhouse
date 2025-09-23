@@ -170,6 +170,7 @@ data:
             set $doc_path "$1";
 
             # Serve doc for the stable channel.
+            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/${doc_path} break;
             rewrite /$    /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path}index.html break;
             rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path} break;
 
@@ -204,6 +205,7 @@ data:
                 deny all;
             }
 
+            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/${doc_path} break;
             rewrite /$    /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path}index.html break;
             rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path} break;
 
