@@ -1,0 +1,76 @@
+---
+title: "Migrating container runtime to containerd v2"
+permalink: en/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/migrating.html
+lang: en
+---
+
+You can configure containerd v2 as the primary container runtime either at the cluster level or for specific node groups. This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.
+
+## Requirements
+
+Migration to containerd v2 is possible under the following conditions:
+
+- Nodes meet the requirements described in the [cluster-wide parameters](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri).
+- There are no custom configurations on the server in `/etc/containerd/conf.d` ([example of a custom configuration](/products/kubernetes-platform/documentation/v1/modules/node-manager/faq.html#how-to-use-containerd-with-nvidia-gpu-support)).
+
+If any of the requirements described in the [general cluster parameters](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) are not met, Deckhouse Virtualization Platform adds the label `node.deckhouse.io/containerd-v2-unsupported` to the node. If the node has custom configurations in `/etc/containerd/conf.d`, the label `node.deckhouse.io/containerd-config` is added to it.
+
+If one of these labels is present, changing the [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter for the node group will be unavailable. Nodes that do not meet the migration conditions can be viewed using the following commands:
+
+```shell
+d8 k get node -l node.deckhouse.io/containerd-v2-unsupported
+d8 k get node -l node.deckhouse.io/containerd-config
+```
+
+Additionally, a administrator can verify if a specific node meets the requirements using the following commands:
+
+```shell
+uname -r | cut -d- -f1
+stat -f -c %T /sys/fs/cgroup
+systemctl --version | awk 'NR==1{print $2}'
+modprobe -qn erofs && echo "TRUE" || echo "FALSE"
+ls -l /etc/containerd/conf.d
+```
+
+## How to enable containerd v2
+
+You can enable containerd v2 in two ways:
+
+1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
+
+   Example:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: ClusterConfiguration
+   ...
+   defaultCRI: ContainerdV2
+   ```
+
+1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) object.
+
+   Example:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: worker
+   spec:
+     cri:
+       type: ContainerdV2
+   ```
+
+When migrating to containerd v2 Deckhouse Virtualization Platform will begin sequentially updating the nodes. If a node group has the [spec.disruptions.approvalMode](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) parameter set to `Manual`, each node in such a group will require the annotation `update.node.deckhouse.io/disruption-approved=` for the update.
+
+Example:
+
+```shell
+d8 k annotate node ${NODE_1} update.node.deckhouse.io/disruption-approved=
+```
+
+During migration, a drain will be executed according to the [spec.disruptions.automatic.drainBeforeApproval](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) settings.
+
+{% alert level="info" %}
+Under [certain conditions](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval), this process may not occur, as detailed in the settings documentation. The folder `/var/lib/containerd` will be cleared, causing pod images to be re-downloaded, and the node will reboot.
+{% endalert %}
