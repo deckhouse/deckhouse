@@ -42,7 +42,7 @@ spec:
         - /bin/sh
         - -ec
         - |
-          cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/ && \
+          cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/;
           exec cilium-agent --config-dir=/tmp/cilium/config-map \
                             --prometheus-serve-addr=127.0.0.1:9092
         startupProbe:
