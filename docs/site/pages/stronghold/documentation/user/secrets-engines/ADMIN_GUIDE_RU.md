@@ -56,7 +56,7 @@ spec:
 или выполните команду:
 
 ```shell
-d8 p module enable stronghold
+d8 system module enable stronghold
 ```
 
 По умолчанию, модуль запускается в режиме `Automatic` с инлетом `Ingress`. В текущей версии, другие режимы и инлеты не предусмотрены.
