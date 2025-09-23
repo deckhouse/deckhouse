@@ -39,12 +39,12 @@ spec:
       - name: cilium-agent
         image: {{ include "helm_lib_module_image" (list $context "agentDistroless") }}
         command:
-          - /bin/sh
-          - -ec
-          - |
-            cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/
-            exec cilium-agent --config-dir=/tmp/cilium/config-map \
-                              --prometheus-serve-addr=127.0.0.1:9092
+        - /bin/sh
+        - -ec
+        - |
+          cp -a /var/lib/cilium-rw/bpf /var/lib/cilium/
+          exec cilium-agent --config-dir=/tmp/cilium/config-map \
+                            --prometheus-serve-addr=127.0.0.1:9092
         startupProbe:
           httpGet:
             host: "127.0.0.1"
