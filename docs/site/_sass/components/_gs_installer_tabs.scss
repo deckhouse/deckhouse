@@ -1,20 +1,14 @@
 .installer_box {
   max-width: 100%;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #e9ecef;
-  padding: 20px;
+  padding-top: 20px;
 }
 
 .installer_two-columns {
-  display: flex;
-  gap: 20px;
   max-width: 100%;
   margin: 20px auto;
 }
 
 .column-left {
-  flex: 2;
   padding: 20px;
   background-color: #f8f9fa;
   border-radius: 8px;
@@ -212,3 +206,62 @@ select:focus {
   color: white;
 }
 
+.main-tabs-container {
+    font-family: Arial, sans-serif;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    margin-top: 20px;
+}
+
+.main-tabs {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+}
+
+.main-tab {
+    padding: 12px 24px;
+    color: #0064ff;
+    border: #0064ff solid 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-right: 8px;
+    position: relative;
+    background-color: white;
+}
+
+.main-tab.active {
+    background-color: #0064ff;
+    color: white;
+}
+
+.main-beta-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ff6600;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    transform: rotate(12deg);
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+}
+
+.main-tab-content {
+    display: none;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+}
+
+.main-tab-content.active {
+    display: block;
+}

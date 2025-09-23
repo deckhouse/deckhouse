@@ -10,21 +10,26 @@ toc: false
 <link rel="stylesheet" type="text/css" href='{% css_asset_tag getting-started-css %}[_assets/css/getting-started.css]{% endcss_asset_tag %}' />
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 
-<p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
-    Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
-
-<p>Установка платформы Deckhouse Kubernetes Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
-  из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
-  поэтому ниже приведены примеры установки для разных вариантов.</p>
-
-<div class="tabs">
-  <button id="tab-button-manual-install" class="tab-button active" onclick="openInstallTab(event, 'tab-manual-install');">Вручную из командной строки</button>
-  <button id="tab-button-gui-install" class="tab-button" onclick="openInstallTab(event, 'tab-gui-install');">C помощью графического установщика</button>
+<div class="main-tabs-container">
+  <div class="main-tabs">
+    <button id="tab-button-manual-install" class="main-tab active" onclick="openInstallTab(event, 'tab-manual-install');">Вручную из командной строки</button>
+    <button id="tab-button-gui-install" class="main-tab" onclick="openInstallTab(event, 'tab-gui-install');">
+      C помощью графического установщика
+      <span class="main-beta-badge">Beta</span>
+    </button>
+  </div>
 </div>
 <div id="tab-gui-install" class="tab-content">
 {% include getting_started/global/partials/installer/installer_block_ru.html %}
 </div>
 <div id="tab-manual-install" class="tab-content active">
+<p>Скорее всего, вы уже ознакомились с основными <a href="/products/kubernetes-platform/">возможностями Deckhouse
+  Platform</a>. В данном руководстве рассмотрен пошаговый процесс установки платформы.</p>
+
+<p>Установка платформы Deckhouse Kubernetes Platform возможна как на физические серверы (bare metal), так и в инфраструктуру одного
+  из поддерживаемых облачных провайдеров. В зависимости от выбранной инфраструктуры процесс может немного отличаться,
+  поэтому ниже приведены примеры установки для разных вариантов.</p>
+
 <h2>Выберите тип инфраструктуры, в которой будет устанавливаться Deckhouse Kubernetes Platform</h2>
 
 <div class="block" style="margin: 0;">

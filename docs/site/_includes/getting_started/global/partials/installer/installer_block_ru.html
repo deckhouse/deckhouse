@@ -1,7 +1,18 @@
 <div class="installer_box">
-  <h2>Попробуйте графический установщик Deckhouse Kubernetes Platform! <span class="beta-badge">Beta</span></h2>
+  {% alert level="info" %}
+  На текущий момент графический установщик поддерживает **не все платформы**. Установить DKP с его помощью возможно в следующие окружения:
+
+  * Bare metal (выделенные хосты)
+  * Yandex Cloud
+  * OpenStack
+  * Selectel (OpenStack)
+  * VK Cloud (OpenStack)
+  * VMware vCloud Director.
+
+  Поддерживаются **все редакции** от CE до EE, включая Deckhouse Certified Security Edition (bare metal).
+  {% endalert %}
   <div class="installer_two-columns">
-    <div class="column-left">
+    <div>
       <ol>
         <li>Запустите docker на вашем компьютере</li>
         <li>
@@ -97,32 +108,14 @@ docker run --privileged --pull always -v /mnt/c/Users/%USERNAME%/.d8installer:/m
         <li>Откройте <a>http://localhost:8080</a></li>
       </ol>
     </div>
-    <div class="column-right">
-      <h3>Поддерживаемые редакции:</h3>
-      <ul>
-        <li>Все от Community Edition до Enterprise Edition</li>
-        <li>И даже Deckhouse Certified Security Edition (bare metal)</li>
-      </ul>
-      <h3>Поддерживаемые платформы:</h3>
-      <ul>
-        <li>Bare metal (выделенные хосты)</li>
-        <li>Yandex Cloud</li>
-        <li>OpenStack</li>
-        <li>Selectel (OpenStack)</li>
-        <li>VK Cloud (OpenStack)</li>
-        <li>VMware vCloud Director</li>
-      </ul>
-      <b>Остальные скоро подтянутся!</b>
-    </div>
   </div>
 </div>
 
 <script>
   function openTab(evt, tabName) {
-      var tabContents = document.getElementsByClassName("tab-content");
-      for (var i = 0; i < tabContents.length; i++) {
-          tabContents[i].classList.remove("active");
-      }
+      document.getElementById("tab-mac").classList.remove("active");
+      document.getElementById("tab-linux").classList.remove("active");
+      document.getElementById("tab-windows").classList.remove("active");
 
       document.getElementById("tab-button-mac").classList.remove("active");
       document.getElementById("tab-button-linux").classList.remove("active");
