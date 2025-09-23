@@ -1,2 +1,7 @@
 dirs:
+<<<<<<< HEAD
   - /var/files
+||||||| 814800fa0c
+=======
+- /var/files
+>>>>>>> upstrim/main

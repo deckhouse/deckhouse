@@ -117,8 +117,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "kruise") }}
           imagePullPolicy: IfNotPresent
           name: kruise
-          {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
-            readOnlyRootFilesystem: true
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           env:
             - name: KUBE_CACHE_MUTATION_DETECTOR
               value: "true"
@@ -145,8 +144,8 @@ spec:
               path: readyz
               port: 8000
           volumeMounts:
-          - mountPath: /tmp/kruise-webhook-certs
-            name: tmp-webhook-certs
+          - name: tmp
+            mountPath: /tmp
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
@@ -215,8 +214,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "kruiseStateMetrics") }}
           imagePullPolicy: IfNotPresent
           name: kruise-state-metrics
-          {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
-            readOnlyRootFilesystem: true
+          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 10 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -238,7 +236,7 @@ spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: kruise
       volumes:
-      - name: tmp-webhook-certs
+      - name: tmp
         emptyDir: {}
       affinity:
         podAntiAffinity:

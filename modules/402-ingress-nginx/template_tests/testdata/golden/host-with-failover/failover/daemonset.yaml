@@ -84,19 +84,31 @@ spec:
             ephemeral-storage: 50Mi
             memory: 500Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+            - NET_RAW
             - NET_BIND_SERVICE
+<<<<<<< HEAD
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+||||||| 814800fa0c
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+=======
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+>>>>>>> upstrim/main
         volumeMounts:
         - mountPath: /opt/nginx-static/additional-conf
           name: additional-config
           readOnly: true
+<<<<<<< HEAD
         - mountPath: /opt/nginx-static/conf/nginx.conf
           name: write-files
           subPath: nginx.conf
@@ -112,6 +124,11 @@ spec:
           name: tmp-nginx
         - mountPath: /opt/nginx-static/scgi_temp
           name: tmp-nginx
+||||||| 814800fa0c
+=======
+        - mountPath: /opt/nginx-static/writable
+          name: writable
+>>>>>>> upstrim/main
       - env:
         - name: NODE_NAME
           valueFrom:
@@ -129,10 +146,17 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
-            - NET_RAW
             - NET_ADMIN
+<<<<<<< HEAD
+||||||| 814800fa0c
+=======
+            - NET_RAW
+            drop:
+            - ALL
+>>>>>>> upstrim/main
           readOnlyRootFilesystem: true
           runAsGroup: 0
           runAsNonRoot: false
@@ -163,10 +187,22 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
+<<<<<<< HEAD
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+||||||| 814800fa0c
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+=======
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+>>>>>>> upstrim/main
       - args:
         - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4208
         - --v=2
@@ -207,17 +243,13 @@ spec:
             drop:
             - ALL
           readOnlyRootFilesystem: true
-          runAsGroup: 64535
-          runAsNonRoot: true
-          runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
       - command:
+<<<<<<< HEAD
         - /bin/touch
         - /tmp/nginx.conf
         image: registry.example.com@imageHash-common-init
@@ -240,6 +272,14 @@ spec:
         - "/usr/bin/cp /iptables-wrapper /sbin/ -rv\n/usr/bin/cp /_sbin/* /sbin/ -rv
           \n/usr/bin/cp /relocate/sbin/* /sbin/ -rv\n/sbin/iptables --version\n/usr/bin/rm
           /sbin/iptables-wrapper -v\n"
+||||||| 814800fa0c
+=======
+        - /bin/bash
+        - -c
+        - /usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/
+          -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version
+          && /usr/bin/rm /sbin/iptables-wrapper -v
+>>>>>>> upstrim/main
         image: registry.example.com@imageHash-ingressNginx-iptablesWrapperInit
         name: iptables-wrapper-init
         resources:
@@ -287,6 +327,7 @@ spec:
           path: /run/xtables.lock
           type: FileOrCreate
         name: xtables-lock
+<<<<<<< HEAD
       - emptyDir: {}
         name: write-files
       - emptyDir: {}
@@ -295,6 +336,16 @@ spec:
           medium: Memory
           sizeLimit: 4Mi
         name: sbin
+||||||| 814800fa0c
+=======
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+        name: sbin
+      - emptyDir:
+          medium: Memory
+        name: writable
+>>>>>>> upstrim/main
   updateStrategy:
     rollingUpdate:
       maxSurge: 0

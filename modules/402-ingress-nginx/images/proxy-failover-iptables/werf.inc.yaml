@@ -28,18 +28,19 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
-  - chown -R 64535:64535 failover
+  - chown -R 0:0 failover
   - chmod 0700 failover
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
+fromCacheVersion: "2025-09-18-1"
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/failover-artifact
   add: /src/failover
   to: /failover
   before: setup
 git:
-{{- include "image mount points" . }}
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/failover"]

@@ -27,29 +27,30 @@ import:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: {{ .ModuleName }}/iptables-wrapper-init-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate
   to: /relocate
   before: setup
 git:
-{{- include "image mount points" . }}
+{{- include "image mount points" $ }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
+fromImage: common/relocate-artifact
 shell:
   install:
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "/relocate/sbin/${cmd}"
-        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
+  - mkdir -p /relocate/sbin
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
+    done
+    # broken symlinks are not imported from the artifact
+    touch /iptables-wrapper
+  - |
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
         done
       done
+    done

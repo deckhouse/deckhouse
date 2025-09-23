@@ -34,7 +34,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/failover-cleaner-artifact
   add: /failover-cleaner
   to: /failover-cleaner
   before: setup

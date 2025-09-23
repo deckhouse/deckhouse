@@ -53,12 +53,22 @@ import:
     add: /tmp/manager
     to: /manager
     before: setup
+<<<<<<< HEAD
   - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
     add: /tmp/tmp
     to: /tmp
     before: setup
 git:
 {{- include "image mount points" . }}
+||||||| 814800fa0c
+  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
+    add: /tmp/tmp
+    to: /tmp
+    before: setup
+=======
+git:
+{{- include "image mount points" $ }}
+>>>>>>> upstrim/main
 imageSpec:
   config:
     entrypoint: ["/manager"]

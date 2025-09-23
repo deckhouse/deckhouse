@@ -127,23 +127,28 @@ spec:
             ephemeral-storage: 150Mi
             memory: 500Mi
         securityContext:
+<<<<<<< HEAD
+||||||| 814800fa0c
+=======
+          capabilities:
+            add:
+            - SYS_CHROOT
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+>>>>>>> upstrim/main
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
         volumeMounts:
-        - mountPath: /chroot/var/lib/nginx/body
-          name: client-body-temp-path
-        - mountPath: /chroot/var/lib/nginx/fastcgi
-          name: fastcgi-temp-path
-        - mountPath: /chroot/var/lib/nginx/proxy
-          name: proxy-temp-path
-        - mountPath: /chroot/var/lib/nginx/scgi
-          name: scgi-temp-path
-        - mountPath: /chroot/var/lib/nginx/uwsgi
-          name: uwsgi-temp-path
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
+<<<<<<< HEAD
         - mountPath: /tmp
           name: tmp-nginx
         - mountPath: /chroot/tmp
@@ -162,6 +167,15 @@ spec:
           subPath: error.log
         - mountPath: /chroot/etc/ingress-controller/ssl
           name: tmp-ssl
+||||||| 814800fa0c
+        - mountPath: /chroot/tmp/nginx/
+          name: tmp-nginx
+=======
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+>>>>>>> upstrim/main
       - image: registry.example.com@imageHash-ingressNginx-protobufExporter
         name: protobuf-exporter
         resources:
@@ -236,22 +250,17 @@ spec:
             ephemeral-storage: 50Mi
             memory: 20Mi
         securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
-          seccompProfile:
-            type: RuntimeDefault
       dnsPolicy: ClusterFirst
       hostNetwork: false
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
       - command:
+<<<<<<< HEAD
         - sh
         - -ec
         - --
@@ -286,6 +295,41 @@ spec:
         volumeMounts:
         - mountPath: tmp
           name: tmp-nginx
+||||||| 814800fa0c
+=======
+        - /bin/bash
+        - -c
+        - |-
+          mkdir /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry /chroot/tmp/nginx -vp && /usr/bin/touch /chroot/var/log/nginx/access.log && echo -e 'pid /tmp/nginx/nginx.pid;
+          error_log stderr;
+          events {}
+          http {}
+          daemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf && ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat && ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat && ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
+        image: registry.example.com@imageHash-ingressNginx-init
+        name: init
+        resources:
+          requests:
+            ephemeral-storage: 60Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          fsGroup: 64535
+          readOnlyRootFilesystem: true
+          runAsGroup: 64535
+          runAsNonRoot: true
+          runAsUser: 64535
+        volumeMounts:
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
+>>>>>>> upstrim/main
       priorityClassName: system-cluster-critical
       serviceAccountName: ingress-nginx
       terminationGracePeriodSeconds: 420
@@ -301,21 +345,23 @@ spec:
       - key: drbd.linbit.com/ignore-fail-over
       volumes:
       - emptyDir: {}
+<<<<<<< HEAD
         name: write-files
       - emptyDir: {}
         name: tmp-ssl
       - emptyDir: {}
         name: tmp-nginx
+||||||| 814800fa0c
+        name: tmp-nginx
+=======
+        name: tmp
+>>>>>>> upstrim/main
       - emptyDir: {}
-        name: client-body-temp-path
+        name: etc-ingress-controller
       - emptyDir: {}
-        name: fastcgi-temp-path
+        name: var-lib-nginx
       - emptyDir: {}
-        name: proxy-temp-path
-      - emptyDir: {}
-        name: scgi-temp-path
-      - emptyDir: {}
-        name: uwsgi-temp-path
+        name: var-log-nginx
       - name: secret-nginx-auth-tls
         secret:
           secretName: ingress-nginx-test-without-hpa-auth-tls
