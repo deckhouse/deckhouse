@@ -36,8 +36,17 @@ spec:
   hostNetwork: true
   securityContext:
     fsGroup: 64535
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+  shareProcessNamespace: true
+  terminationGracePeriodSeconds: 15
   containers:
   - name: kubernetes-api-proxy
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
     securityContext:
       allowPrivilegeEscalation: false
       shareProcessNamespace: true

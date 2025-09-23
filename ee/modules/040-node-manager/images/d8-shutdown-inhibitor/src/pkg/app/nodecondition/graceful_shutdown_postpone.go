@@ -17,7 +17,13 @@ const (
 	ReasonOnStart                = "ShutdownInhibitorIsStarted"
 	ReasonOnUnlock               = "NoRunningPodsWithLabel"
 	ReasonPodsArePresent         = "PodsWithLabelAreRunningOnNode"
+	ReasonPendindgState          = "Pending"
 )
+
+var kubeletShutdownReasons = []string{
+	"ShutdownInProgress",
+	"NodeShutdown",
+}
 
 func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 	return &gracefulShutdownPostpone{}
@@ -26,11 +32,18 @@ func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 type gracefulShutdownPostpone struct{}
 
 func (g *gracefulShutdownPostpone) SetOnStart(nodeName string) error {
-	if err := uncordonOnStart(nodeName); err != nil {
+	afterReboot, err := uncordonOnStart(nodeName)
+	if err != nil {
 		return err
 	}
+	if !afterReboot {
+		return nil
+	}
+	return g.SetStatusUnknow(nodeName)
+}
 
-	return patchGracefulShutdownPostponeCondition(nodeName, StatusFalse, ReasonOnStart)
+func (g *gracefulShutdownPostpone) SetStatusUnknow(nodeName string) error {
+	return patchGracefulShutdownPostponeCondition(nodeName, StatusUnknown, ReasonPendindgState)
 }
 
 func (g *gracefulShutdownPostpone) SetPodsArePresent(nodeName string) error {
@@ -57,19 +70,21 @@ func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) err
 	return reformatExitError(err)
 }
 
-func nodeIsReady(k *kubernetes.Kubectl, nodeName string) (bool, error) {
+func nodeShutdownInProgress(k *kubernetes.Kubectl, nodeName string) (bool) {
 	nodeNotReadyCondition, err := k.GetCondition(nodeName, "KubeletNotReady")
 	if err != nil {
-		return false, reformatExitError(err)
+		reformatExitError(err)
 	}
 	if nodeNotReadyCondition != nil &&
 		nodeNotReadyCondition.Status == "False" &&
 		nodeNotReadyCondition.Type == "Ready" &&
+		nodeNotReadyCondition.Message == "node is shutting down" &&
 		nodeNotReadyCondition.Reason == "KubeletNotReady" {
-		return false, fmt.Errorf("node %q is not ready", nodeName)
+		return true
 	}
-	return true, nil
+	return false
 }
+
 
 func cordonedByInhibitor(k *kubernetes.Kubectl, nodeName string) (bool, error) {
 	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
@@ -107,44 +122,36 @@ func isShutdownInhibitedByPods(condition *kubernetes.Condition) bool {
 		condition.Reason == ReasonPodsArePresent
 }
 
-func uncordonOnStart(nodeName string) error {
+func uncordonOnStart(nodeName string) (bool, error) {
 	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
 	k := kubernetes.NewDefaultKubectl()
 
-	// 1. isOurCordon?
-	isOurCordon, err := cordonedByInhibitor(k, nodeName)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
+	isShutdownInProgress := nodeShutdownInProgress(k, nodeName)
+	fmt.Printf("uncordonOnStart: isShutdownInProgress %t\n", isShutdownInProgress)
 
-	if !isOurCordon {
-		fmt.Println("uncordonOnStart: Node is not cordoned by inhibitor. No action needed")
-		return nil
-	}
-
-	// 1. nodeIsReady?
-	isReady, err := nodeIsReady(k, nodeName)
-	if err != nil {
-		isReady = false
-	}
-	fmt.Printf("uncordonOnStart: isReady %t\n", isReady)
-
-	// 3. isInhibitorShutdownActive?
 	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
 	isInhibited := isShutdownInhibitedByPods(podsPresentCondition)
 	fmt.Printf("uncordonOnStart: isInhibited %t\n", isInhibited)
 
-	if !isReady && isInhibited {
+	if isShutdownInProgress && isInhibited {
 		fmt.Println("uncordonOnStart: Node is NotReady and a valid shutdown signal is active. Holding cordon")
-		return nil
+		return false, nil
 	}
-	if isReady {
-		fmt.Println("uncordonOnStart: uncordonAndCleanup")
-		// 4. Uncordon
-		return uncordonAndCleanup(k, nodeName)
+
+	fmt.Println("uncordonOnStart: uncordonAndCleanup")
+	isOurCordon, err := cordonedByInhibitor(k, nodeName)
+	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
+	if err != nil {
+		reformatExitError(err)
 	}
-	return nil
+
+	if !isOurCordon {
+		fmt.Println("uncordonOnStart: Node is not cordoned by inhibitor. No action needed")
+		return true, nil
+	}
+
+	return true, uncordonAndCleanup(k, nodeName)
+
 }
 
 func reformatExitError(err error) error {
