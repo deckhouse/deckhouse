@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/overview.html
 lang: ru
 ---
 
-Данный раздел предназначен для администраторов Deckhouse Virtualization Platform и описывает порядок создания и изменения кластерных ресурсов. Администраторы также обладают правами на управление проектными ресурсами, описание которых содержится в [Руководстве пользователя](https://deckhouse.ru/products/virtualization-platform/documentation/user/overview.html).
+Данный раздел предназначен для администраторов Deckhouse Virtualization Platform и описывает порядок создания и изменения кластерных ресурсов. Администраторы также обладают правами на управление проектными ресурсами, описание которых содержится в [Руководстве пользователя](/products/virtualization-platform/documentation/user/overview.html).
 
 В руководстве администратора платформы представлены следующие разделы:
 
