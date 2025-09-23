@@ -7,13 +7,14 @@ rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platf
 rewrite ^/products/kubernetes-platform/gs$ /products/kubernetes-platform/gs/ permanent;
 rewrite ^/products/kubernetes-platform/guides$ /products/kubernetes-platform/guides/ permanent;
 rewrite ^/products/kubernetes-platform/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
+rewrite ^/products/kubernetes-platform/modules/(.*)$ /modules/$1 redirect;
 #rewrite ^/modules/(.*)$ /products/kubernetes-platform/modules/$1 permanent;
 #rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
 rewrite ^/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
 rewrite ^.*/documentation/v1/modules/490-virtualization/(examples|configuration|cr|faq).html(.*)$ /modules/virtualization/stable/$1.html$2 permanent;
 rewrite ^.*/documentation/v1/modules/490-virtualization/.*$ /modules/virtualization/stable/ permanent;
-rewrite ^/products/kubernetes-platform/modules/csi-yadro/(.*)?$ /products/kubernetes-platform/modules/csi-yadro-tatlin-unified/$1 permanent;
-rewrite ^/products/kubernetes-platform/modules/sds-drbd/(.*)?$ /products/kubernetes-platform/modules/sds-replicated-volume/$1 permanent;
+#rewrite ^/products/kubernetes-platform/modules/csi-yadro/(.*)?$ /products/kubernetes-platform/modules/csi-yadro-tatlin-unified/$1 permanent;
+#rewrite ^/products/kubernetes-platform/modules/sds-drbd/(.*)?$ /products/kubernetes-platform/modules/sds-replicated-volume/$1 permanent;
 #rewrite ^/modules/([^./]+)/?$ /modules/$1/stable/ permanent;
 #rewrite ^/modules/([^./]+)/((?!(alpha|beta|early-access|stable|rock-solid)).+)$ /modules/$1/stable/$2 permanent;
 rewrite ^(/en|/ru)?(/documentation/v1\.[0-9]+)\.[0-9]+(/.*)$ /products/kubernetes-platform$2$3 permanent;

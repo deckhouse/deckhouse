@@ -144,9 +144,6 @@ shell:
   - apk add --no-cache nginx
   install:
   - |
-      cat <<"EOD" > /etc/nginx/nginx.conf
-      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
-      EOD
       mkdir -p /scripts
       cat <<"EOD" > /scripts/channels-convert.sh
       {{- .Files.Get ".werf/channels-convert.sh" | nindent 6 }}

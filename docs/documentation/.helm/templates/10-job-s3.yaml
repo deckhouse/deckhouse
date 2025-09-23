@@ -53,7 +53,7 @@ spec:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Chart.Name }}-s3-doc-upload-{{ .VersionDNSNormalized }}
+  name: {{ .Chart.Name }}-s3-dkpdoc-upload-{{ .VersionDNSNormalized }}
   annotations:
     werf.io/skip-logs: "false"
     werf.io/show-logs-only-for-containers: "s3-loader"
@@ -74,7 +74,7 @@ spec:
           - s3
           - sync
           - /documentation
-          - s3://{{ .Values.global.doc_s3_bucket }}/modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/docs/
+          - s3://{{ .Values.global.doc_s3_bucket }}/modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/docs-dkp/
           - --ca-bundle
           - /.aws/s3-root.crt
           - --delete
