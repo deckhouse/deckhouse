@@ -15,17 +15,21 @@
 package fs
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 var terraformProviders = []string{
@@ -86,4 +90,57 @@ func TestProvidersSettings(t *testing.T) {
 			require.Equal(t, settings.InfrastructureVersion(), "0.14.8")
 		})
 	}
+}
+
+func TestProviderSettingsLoadError(t *testing.T) {
+	// settings store returns error on not exists file
+	sFailed := newSettingsProvider(log.GetDefaultLogger(), "/not/exists/file-aakjdiejfuefuefjej", func(_ log.Logger, _ string) (settingsStore, error) {
+		return nil, fmt.Errorf("file does not exist")
+	})
+	require.Error(t, sFailed.initError)
+	require.Nil(t, sFailed.store)
+	require.Len(t, fileToSettingsStore, 0)
+
+	// failed store returns init error due getting
+	_, err := sFailed.GetSettings(context.TODO(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
+	require.Error(t, err)
+}
+
+func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
+	file := infrastructure.GetInfrastructureVersions()
+	logger := log.GetDefaultLogger()
+
+	assertOneStoreInCache := func(t *testing.T, store *SettingsProvider) {
+		require.NoError(t, store.initError)
+		require.NotNil(t, store)
+		require.Len(t, fileToSettingsStore, 1)
+		require.Contains(t, fileToSettingsStore, file)
+	}
+
+	allProviders := append(make([]string, 0), tofuProviders...)
+	allProviders = append(allProviders, terraformProviders...)
+	assertGettingDoesNotAffectStores := func(t *testing.T, store *SettingsProvider) {
+		require.Len(t, fileToSettingsStore, 1)
+		require.Len(t, store.store, len(allProviders))
+	}
+
+	sFirst := newSettingsProvider(logger, file, loadOrGetStore)
+	assertOneStoreInCache(t, sFirst)
+
+	sSecond := newSettingsProvider(logger, file, loadOrGetStore)
+	assertOneStoreInCache(t, sSecond)
+
+	require.Equal(t, sFirst.store, sSecond.store)
+
+	// get settings for existing provider
+	settingsYandex, err := sFirst.GetSettings(context.TODO(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
+	require.NoError(t, err)
+	require.False(t, interfaces.IsNil(settingsYandex))
+	require.Equal(t, settingsYandex.CloudName(), yandex.ProviderName)
+	assertGettingDoesNotAffectStores(t, sFirst)
+
+	// returns error for non exists store
+	_, err = sFirst.GetSettings(context.TODO(), "incorrect", cloud.ProviderAdditionalParams{})
+	require.Error(t, err)
+	assertGettingDoesNotAffectStores(t, sFirst)
 }

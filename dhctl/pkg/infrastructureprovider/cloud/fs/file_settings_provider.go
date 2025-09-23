@@ -35,7 +35,10 @@ const (
 	terraformKey = "terraform"
 )
 
-type settingsStore map[string]settings.ProviderSettings
+type (
+	settingsStore map[string]settings.ProviderSettings
+	loader        func(logger log.Logger, infraVersionsFile string) (settingsStore, error)
+)
 
 type SettingsProvider struct {
 	initError error
@@ -44,8 +47,35 @@ type SettingsProvider struct {
 	store settingsStore
 }
 
-func newSettingsProvider(logger log.Logger, infraVersionsFile string) *SettingsProvider {
+var (
+	fileSettingsStoreMutex sync.Mutex
+	fileToSettingsStore    = make(map[string]settingsStore)
+)
+
+func loadOrGetStore(logger log.Logger, infraVersionsFile string) (settingsStore, error) {
+	fileSettingsStoreMutex.Lock()
+	defer fileSettingsStoreMutex.Unlock()
+
+	store, ok := fileToSettingsStore[infraVersionsFile]
+	if ok {
+		logger.LogDebugF("Providers settings store for terraform versions file %s loaded from cache\n", infraVersionsFile)
+		return store, nil
+	}
+
 	store, err := loadTerraformVersionFileSettings(infraVersionsFile, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	fileToSettingsStore[infraVersionsFile] = store
+
+	logger.LogDebugF("Providers settings store for terraform versions file %s loaded from file and add to cache\n", infraVersionsFile)
+
+	return store, nil
+}
+
+func newSettingsProvider(logger log.Logger, infraVersionsFile string, loader loader) *SettingsProvider {
+	store, err := loader(logger, infraVersionsFile)
 	if err != nil {
 		return &SettingsProvider{
 			initError: err,
@@ -95,6 +125,8 @@ func simpleFromMap(s any, terraformVersion string, openTofuVersion string) (*set
 	} else {
 		set.InfrastructureVersionVal = pointer.String(terraformVersion)
 	}
+
+	set.CloudNameVal = pointer.String(strings.ToLower(*set.CloudNameVal))
 
 	return &set, nil
 }
