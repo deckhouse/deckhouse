@@ -31,6 +31,12 @@ func (*testInterfaceImpl) Do() {
 	fmt.Println("Call Do on testInterfaceImpl")
 }
 
+type testErrorImpl struct{}
+
+func (*testErrorImpl) Error() string {
+	return "error"
+}
+
 func TestIsNil(t *testing.T) {
 	require.True(t, IsNil(nil))
 
@@ -65,6 +71,59 @@ func TestIsNil(t *testing.T) {
 
 	f = nil
 	require.True(t, IsNil(f))
+
+	returnsNil := func() testInterface {
+		return nil
+	}
+	require.True(t, IsNil(returnsNil()))
+
+	vv := returnsNil()
+	require.True(t, IsNil(vv))
+
+	returnsNilFromLocal := func() testInterface {
+		var i testInterface
+		return i
+	}
+	require.True(t, IsNil(returnsNilFromLocal()))
+
+	vvv := returnsNilFromLocal()
+	require.True(t, IsNil(vvv))
+
+	returnsNilFromLocalPointer := func() testInterface {
+		var i *testInterfaceImpl
+		return i
+	}
+	require.True(t, IsNil(returnsNilFromLocalPointer()))
+
+	vvvv := returnsNilFromLocalPointer()
+	require.True(t, IsNil(vvvv))
+
+	returnsNilPointer := func() *testInterfaceImpl {
+		var i *testInterfaceImpl
+		return i
+	}
+	require.True(t, IsNil(returnsNilPointer()))
+
+	vvvvv := returnsNilPointer()
+	require.True(t, IsNil(vvvvv))
+
+	returnsErr := func() error {
+		return nil
+	}
+	require.True(t, IsNil(returnsErr()))
+
+	err1 := returnsErr()
+	require.True(t, IsNil(err1))
+
+	returnsErrImpl := func() error {
+		var e *testErrorImpl
+		return e
+	}
+	require.True(t, IsNil(returnsErrImpl()))
+
+	err2 := returnsErrImpl()
+	require.True(t, IsNil(err2))
+
 }
 
 func TestIsNotNil(t *testing.T) {
@@ -99,6 +158,56 @@ func TestIsNotNil(t *testing.T) {
 
 	f := func() {}
 	require.False(t, IsNil(f))
+
+	returnsNoneNilFromLocal := func() testInterface {
+		var iii testInterface
+		iii = &testInterfaceImpl{}
+		return iii
+	}
+	require.False(t, IsNil(returnsNoneNilFromLocal()))
+
+	vv := returnsNoneNilFromLocal()
+	require.False(t, IsNil(vv))
+
+	returnsNoneNil := func() testInterface {
+		return &testInterfaceImpl{}
+	}
+	require.False(t, IsNil(returnsNoneNil()))
+
+	vvv := returnsNoneNil()
+	require.False(t, IsNil(vvv))
+
+	returnsNoneNilErr := func() error {
+		return fmt.Errorf("test error")
+	}
+	require.False(t, IsNil(returnsNoneNilErr()))
+
+	err1 := returnsNoneNilErr()
+	require.False(t, IsNil(err1))
+
+	returnsNoneNilErrImpl := func() error {
+		return &testErrorImpl{}
+	}
+	require.False(t, IsNil(returnsNoneNilErrImpl()))
+
+	err2 := returnsNoneNilErrImpl()
+	require.False(t, IsNil(err2))
+
+	returnsNoneNilStruct := func() *testInterfaceImpl {
+		return &testInterfaceImpl{}
+	}
+	require.False(t, IsNil(returnsNoneNilStruct()))
+
+	vs := returnsNoneNilStruct()
+	require.False(t, IsNil(vs))
+
+	returnsStruct := func() testInterfaceImpl {
+		return testInterfaceImpl{}
+	}
+	require.False(t, IsNil(returnsStruct()))
+
+	ns := returnsStruct()
+	require.False(t, IsNil(ns))
 }
 
 func TestIsNilAfterSet(t *testing.T) {
