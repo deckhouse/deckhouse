@@ -8,8 +8,7 @@ To automate actions on group nodes, use the [NodeGroupConfiguration](/products/k
 - Installing and configuring additional OS packages.  
 
   Examples:  
-  - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
-  - [Configuring containerd with Nvidia GPU support](node-customization.html#how-to-use-containerd-with-nvidia-gpu-support)
+  - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)
 
 - Updating the OS kernel to a specific version.
 

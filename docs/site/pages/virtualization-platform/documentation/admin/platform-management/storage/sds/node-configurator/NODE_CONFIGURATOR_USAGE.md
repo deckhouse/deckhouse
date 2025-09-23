@@ -9,14 +9,14 @@ Functionality is guaranteed only when using stock kernels supplied with [support
 
 The controller operates with two types of Kubernetes custom resources:
 
-- [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice): A resource representing a block device.
-- [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup): A resource describing a Logical Volume Manager volume group.
+- [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice): A resource representing a block device.
+- [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup): A resource describing a Logical Volume Manager volume group.
 
 ## Working with BlockDevice resources
 
 ### Creating a BlockDevice resource
 
-The controller periodically scans available block devices on each node and automatically creates a [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource when it detects a device that matches the rules. As a result, a resource object with a unique name is created, containing detailed information about the device's characteristics.
+The controller periodically scans available block devices on each node and automatically creates a [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource when it detects a device that matches the rules. As a result, a resource object with a unique name is created, containing detailed information about the device's characteristics.
 
 #### Criteria for device selection by the controller
 
@@ -28,27 +28,27 @@ The controller periodically scans available block devices on each node and autom
 - The device's capacity exceeds 1 GiB.
 - For virtual disks, a serial number is required.
 
-The created [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource serves as a data source for subsequent work with [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources.
+The created [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource serves as a data source for subsequent work with [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources.
 
 ### Updating a BlockDevice resource
 
-When the state of a block device changes (for example, size change, metadata change, or the device disappears from the system), the controller automatically detects these changes and updates the fields of the [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource, ensuring the information is up-to-date. User edits to the [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource are prohibited and will be overwritten by the controller.
+When the state of a block device changes (for example, size change, metadata change, or the device disappears from the system), the controller automatically detects these changes and updates the fields of the [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource, ensuring the information is up-to-date. User edits to the [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource are prohibited and will be overwritten by the controller.
 
 ### Deleting a BlockDevice resource
 
-The controller deletes a [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource only when the following conditions are met:
+The controller deletes a [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource only when the following conditions are met:
 
 - The resource is in the `Consumable` state (available for consumption in the Logical Volume Manager).
 - The block device is no longer available in the system (the device has been removed or disconnected).
-- The block device is not part of a volume group with the label `storage.deckhouse.io/enabled=true` (such a volume group is managed by [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), and the [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) is not deleted).
+- The block device is not part of a volume group with the label `storage.deckhouse.io/enabled=true` (such a volume group is managed by [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), and the [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) is not deleted).
 
 {% alert level="info" %}
-A [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource is deleted without a help from a user. If the user manually deletes the resource, the controller will recreate it during the next scan if the device still meets the criteria.
+A [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource is deleted without a help from a user. If the user manually deletes the resource, the controller will recreate it during the next scan if the device still meets the criteria.
 {% endalert %}
 
 ## Working with LVMVolumeGroup resources
 
-The [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource combines several [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resources into a single Logical Volume Manager (LVM) volume group on a node and reflects the current state of this group.
+The [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource combines several [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resources into a single Logical Volume Manager (LVM) volume group on a node and reflects the current state of this group.
 
 {% alert level="info" %}
 Currently, only the `Local` type (local volume groups) is supported.
@@ -56,17 +56,17 @@ Currently, only the `Local` type (local volume groups) is supported.
 
 ### Creating an LVMVolumeGroup resource
 
-There are two scenarios for creating an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource:
+There are two scenarios for creating an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource:
 
 - Automatic creation of the resource:
   - The controller scans the list of active LVM volume groups on each node.
-  - If a discovered volume group has the label `storage.deckhouse.io/enabled=true` and there is no corresponding [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource, the controller automatically creates the resource.
+  - If a discovered volume group has the label `storage.deckhouse.io/enabled=true` and there is no corresponding [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource, the controller automatically creates the resource.
   - The controller fills out the `spec` section, except for the `thinPools` field. All other parameters (block device names, Volume Group name, etc.) are automatically pulled from the system state.
   - To manage thin pools, the user can manually add information about them to the `spec` section after the resource is created.
 
 - Manual creation of the resource:
   - The user creates a YAML manifest, specifying the minimum set of fields:
-    - `metadata.name`: Unique name for the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource.
+    - `metadata.name`: Unique name for the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource.
     - `spec`: Name of the node where the volume group will exist.
   - After validation, the controller creates the volume group on the node and updates the custom resource with current information about the state of the created LVM Volume Group.
 
@@ -148,7 +148,7 @@ There are two scenarios for creating an [LVMVolumeGroup](/products/kubernetes-pl
         size: 250Gi
   ```
 
-The user can use any valid selectors (`matchLabels` or `matchExpressions`) to select [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resources:
+The user can use any valid selectors (`matchLabels` or `matchExpressions`) to select [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resources:
 
 - `matchLabels` allows selecting all devices that have the specified label (for example, `kubernetes.io/hostname=node-0`).
 - `matchExpressions` allows for more flexible expressions, such as including listed device names.
@@ -190,7 +190,7 @@ To prevent accidental deletion of the resource, you can set the annotation `stor
 
 ### Removing a BlockDevice from an LVMVolumeGroup
 
-1. To exclude a specific [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) from the Volume Group, adjust the `spec.blockDeviceSelector` selector of the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource or remove the corresponding label from the [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resource.
+1. To exclude a specific [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) from the Volume Group, adjust the `spec.blockDeviceSelector` selector of the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource or remove the corresponding label from the [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resource.
 
 1. On the node, manually transfer data (if there are volumes in the Volume Group) using the following command:
 
@@ -212,7 +212,7 @@ To prevent accidental deletion of the resource, you can set the annotation `stor
 
 {% alert level="info" %}
 If logical volumes remain during the removal process, delete them in advance using the `lvremove` command.
-To protect against unintentional deletion, you can use the annotation `storage.deckhouse.io/deletion-protection` — until it is removed, the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource will not be deleted.
+To protect against unintentional deletion, you can use the annotation `storage.deckhouse.io/deletion-protection` — until it is removed, the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource will not be deleted.
 {% endalert %}
 
 ## Protecting against data leaks between volumes

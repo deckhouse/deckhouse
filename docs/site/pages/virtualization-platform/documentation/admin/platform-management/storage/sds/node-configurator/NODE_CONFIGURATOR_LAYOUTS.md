@@ -122,14 +122,14 @@ To configure a node according to this scenario, follow these steps:
 
 1. Add the prepared node to the DVP cluster.
 
-   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will detect the VG `main` and create a [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource. This can be used in the `sds-local-volume` and `sds-replicated-volume` modules.
+   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will detect the VG `main` and create a [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource. This can be used in the `sds-local-volume` and `sds-replicated-volume` modules.
 
 #### Example of configuring SDS modules (identical disks, "Full mirror")
 
 In this scenario, three nodes of the DVP cluster are configured in "Full mirror" mode.  
-After automatic discovery, three CRD resources of type [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) with automatically generated names will appear in the cluster.
+After automatic discovery, three CRD resources of type [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) with automatically generated names will appear in the cluster.
 
-To list the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
+To list the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources, execute the following command:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -146,7 +146,7 @@ vg-c7863e12-c143-42bb-8e33-d578ce50d6c7   0/0         True                    Re
 
 ##### Configuring the sds-local-volume module (identical disks, "Full mirror")
 
-To configure `sds-local-volume` in "Full Mirror" mode, create a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource and specify all discovered [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources in it. This ensures that the VG with the label `main` is available on each node in the module:
+To configure `sds-local-volume` in "Full Mirror" mode, create a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and specify all discovered [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources in it. This ensures that the VG with the label `main` is available on each node in the module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -170,7 +170,7 @@ EOF
 
 To configure the `sds-replicated-volume` module according to the "Full mirror" scenario, follow these steps:
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it, so that the VG `main` is used on all nodes in the `sds-replicated-volume` module:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it, so that the VG `main` is used on all nodes in the `sds-replicated-volume` module:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -187,7 +187,7 @@ To configure the `sds-replicated-volume` module according to the "Full mirror" s
    EOF
    ```
 
-1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource in the `storagePool` field:
+1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource in the `storagePool` field:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -263,13 +263,13 @@ To configure a node according to the "Partial mirror" scenario, follow these ste
 
 1. Add the prepared node to the DVP cluster.
 
-   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will run on this node, detect the VGs `main-safe` and `main-unsafe`, and add the corresponding [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to the DVP cluster. These [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources can then be used to create volumes in the `sds-replicated-volume` or `sds-local-volume` modules.
+   If the node matches the `nodeSelector` specified in `spec.nodeSelector` of the `sds-replicated-volume` or `sds-local-volume` modules, the `sds-node-configurator` agent will run on this node, detect the VGs `main-safe` and `main-unsafe`, and add the corresponding [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to the DVP cluster. These [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources can then be used to create volumes in the `sds-replicated-volume` or `sds-local-volume` modules.
 
 #### Example of configuring SDS modules (identical disks, "Partial mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Partial mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Partial mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
-To list the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
+To list the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources, execute the following command:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -289,7 +289,7 @@ vg-fe679d22-2bc7-409c-85a9-9f0ee29a6ca2   0/0         True                    Re
 
 ##### Configuring the sds-local-volume module (identical disks, "Partial mirror")
 
-To configure the `sds-local-volume` module according to the "Partial mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `main-safe` is used on all nodes in the `sds-local-volume` module:
+To configure the `sds-local-volume` module according to the "Partial mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `main-safe` is used on all nodes in the `sds-local-volume` module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -313,7 +313,7 @@ EOF
 
 To configure the `sds-replicated-volume` module according to the "Partial mirror" scenario, follow these steps:
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-safe` and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `main-safe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: None`:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource named `data-safe` and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `main-safe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) with the parameter `replication: None`:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -330,7 +330,7 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
    EOF
    ```
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-unsafe` and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `main-unsafe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: Availability` or `replication: ConsistencyAndAvailability`:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource named `data-unsafe` and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `main-unsafe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) with the parameter `replication: Availability` or `replication: ConsistencyAndAvailability`:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -347,7 +347,7 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
    EOF
    ```
 
-1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resources in the `storagePool` field so that the VGs `main-safe` and `main-unsafe` are used on all nodes:
+1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resources in the `storagePool` field so that the VGs `main-safe` and `main-unsafe` are used on all nodes:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -436,9 +436,9 @@ Examples of VG names for additional disks of different types:
 
 #### Example of configuring SDS modules (combined storage, "Full mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Full Mirror" scenario. In the DVP cluster, three [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Full Mirror" scenario. In the DVP cluster, three [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
-To list the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
+To list the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources, execute the following command:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -457,7 +457,7 @@ Where `<vg-name>` is the name assigned to the VG on the mirror in the previous s
 
 ##### Configuring the sds-local-volume module (combined storage, "Full mirror")
 
-To configure the `sds-local-volume` module according to the "Full Mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-local-volume` module:
+To configure the `sds-local-volume` module according to the "Full Mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-local-volume` module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -480,7 +480,7 @@ EOF
 {% alert level="info" %}
 In the example above, replace `<local-storage-class-name>` with an informative name depending on the type of additional disks.
 
-Examples of informative names for the [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource for additional disks of different types:
+Examples of informative names for the [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource for additional disks of different types:
 
 - `local-sc-ssd-nvme`: For NVMe SSD disks.
 - `local-sc-ssd-sata`: For SATA SSD disks.
@@ -491,7 +491,7 @@ Examples of informative names for the [LocalStorageClass](/products/kubernetes-p
 
 To configure the `sds-replicated-volume` module according to the "Full Mirror" scenario, follow these steps:
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-replicated-volume` module:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource and add all [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that the VG `<vg-name>` is used on all nodes in the `sds-replicated-volume` module:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -510,13 +510,13 @@ To configure the `sds-replicated-volume` module according to the "Full Mirror" s
 
    > In the example above, replace `<replicated-storage-pool-name>` with an informative name depending on the type of additional disks.
    >
-   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
+   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource for additional disks of different types:
    >
    > - `data-ssd-nvme`: For NVMe SSD disks.
    > - `data-ssd-sata`: For SATA SSD disks.
    > - `data-hdd`: For HDD disks.
 
-1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource in the `storagePool` field:
+1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource in the `storagePool` field:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -591,9 +591,9 @@ To configure a node with additional disks according to the "Partial mirror" scen
 
 #### Example of configuring SDS modules (Combined storage, "Partial mirror")
 
-In this example, it is assumed that you have configured three nodes according to the "Partial Mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
+In this example, it is assumed that you have configured three nodes according to the "Partial Mirror" scenario. In the DVP cluster, six [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources with randomly generated names will appear. In the future, it will be possible to specify a name for the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources created during the automatic VG discovery process using the `LVM` tag with the desired resource name.
 
-To list the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources, execute the following command:
+To list the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources, execute the following command:
 
 ```shell
 d8 k get lvmvolumegroups.storage.deckhouse.io
@@ -615,7 +615,7 @@ Where `<vg-name>` is the prefix of the name assigned to the VGs created in the p
 
 ##### Configuring the sds-local-volume module (combined storage, "Partial mirror")
 
-To configure the `sds-local-volume` module according to the "Partial Mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-local-volume` module:
+To configure the `sds-local-volume` module according to the "Partial Mirror" scenario, create a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-local-volume` module:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -638,7 +638,7 @@ EOF
 {% alert level="info" %}
 In the example above, replace `<local-storage-class-name>` with an informative name depending on the type of additional disks.
 
-Examples of informative names for the [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource for additional disks of different types:
+Examples of informative names for the [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource for additional disks of different types:
 
 - `local-sc-ssd-nvme`: For NVMe SSD disks.
 - `local-sc-ssd-sata`: For SATA SSD disks.
@@ -649,7 +649,7 @@ Examples of informative names for the [LocalStorageClass](/products/kubernetes-p
 
 To configure the `sds-replicated-volume` module according to the "Partial mirror" scenario, follow these steps:
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-<vg-name>-safe` and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: None`:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource named `data-<vg-name>-safe` and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-safe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) with the parameter `replication: None`:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -668,13 +668,13 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
 
    > In the example above, replace `data-<vg-name>-safe` with an informative name depending on the type of additional disks.
    >
-   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
+   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource for additional disks of different types:
    >
    > - `data-ssd-nvme-safe`: For NVMe SSD disks.
    > - `data-ssd-sata-safe`: For SATA SSD disks.
    > - `data-hdd-safe`: For HDD disks.
 
-1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource named `data-<vg-name>-unsafe` and add the [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-unsafe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) with the parameter `replication: Availability` or `replication: ConsistencyAndAvailability`:
+1. Create a [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource named `data-<vg-name>-unsafe` and add the [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources to it so that only the VG `<vg-name>-unsafe` is used on all nodes in the `sds-replicated-volume` module for [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) with the parameter `replication: Availability` or `replication: ConsistencyAndAvailability`:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -693,13 +693,13 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
 
    > In the example above, replace `data-<vg-name>-unsafe` with an informative name depending on the type of additional disks.
    >
-   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
+   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource for additional disks of different types:
    >
    > - `data-ssd-nvme-unsafe`: For NVMe SSD disks.
    > - `data-ssd-sata-unsafe`: For SATA SSD disks.
    > - `data-hdd-unsafe`: For HDD disks.
 
-1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resources in the `storagePool` field so that the VGs `<vg-name>-safe` and `<vg-name>-unsafe` are used on all nodes:
+1. Create a [ReplicatedStorageClass](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource and specify the name of the previously created [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resources in the `storagePool` field so that the VGs `<vg-name>-safe` and `<vg-name>-unsafe` are used on all nodes:
 
    ```shell
    d8 k apply -f -<<EOF
@@ -738,7 +738,7 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
 
    > In the example above, replace `data-<vg-name>-unsafe` with an informative name depending on the type of additional disks.
    >
-   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
+   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource for additional disks of different types:
    >
    > - `data-ssd-nvme-unsafe`: For NVMe SSD disks.
    > - `data-ssd-sata-unsafe`: For SATA SSD disks.
@@ -746,7 +746,7 @@ To configure the `sds-replicated-volume` module according to the "Partial mirror
    >
    > In a similar way, replace `data-<vg-name>-safe`.
    >
-   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/documentation/v1/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource for additional disks of different types:
+   > Examples of informative names for the [ReplicatedStoragePool](/products/kubernetes-platform/modules/sds-replicated-volume/stable/cr.html#replicatedstoragepool) resource for additional disks of different types:
    >
    > - `data-ssd-nvme-safe`: For NVMe SSD disks.
    > - `data-ssd-sata-safe`: For SATA SSD disks.

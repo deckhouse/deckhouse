@@ -9,7 +9,7 @@ Local storage reduces network latency and provides higher performance compared t
 
 To ensure the correct operation of the `sds-local-volume` module, follow these steps:
 
-1. Configure LVMVolumeGroup. Before creating a StorageClass, you must create an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `sds-node-configurator` module on the cluster nodes.
+1. Configure LVMVolumeGroup. Before creating a StorageClass, you must create an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `sds-node-configurator` module on the cluster nodes.
 1. Enable the `sds-node-configurator` module. Ensure that the module is enabled **before** enabling the `sds-local-volume` module.
 1. Create the corresponding StorageClasses. Creating a StorageClass for the CSI driver `local.csi.storage.deckhouse.io` by a user is **prohibited**.
 
@@ -82,14 +82,14 @@ By default, these pods are launched on all cluster nodes. You can verify their p
 d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-The placement of `sds-local-volume-csi-node` pods is managed by specific labels (`nodeSelector`). These labels are set in the [`spec.settings.dataNodes.nodeSelector`](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) parameter of the module.
+The placement of `sds-local-volume-csi-node` pods is managed by specific labels (`nodeSelector`). These labels are set in the [`spec.settings.dataNodes.nodeSelector`](/products/kubernetes-platform/modules/sds-local-volume/stable/configuration.html#parameters-datanodes-nodeselector) parameter of the module.
 
 ### Configuring storage on nodes
 
-To configure storage on nodes, you need to create LVM volume groups using [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resources. This example creates a Thick storage.
+To configure storage on nodes, you need to create LVM volume groups using [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resources. This example creates a Thick storage.
 
 {% alert level="warning" %}
-Before creating an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource, ensure that the `sds-local-volume-csi-node` pod is running on the respective node. This can be checked with the command:
+Before creating an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource, ensure that the `sds-local-volume-csi-node` pod is running on the respective node. This can be checked with the command:
 
 ```shell
 d8 k -n d8-sds-local-volume get pod -owide
@@ -97,7 +97,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
 {% endalert %}
 
-1. Retrieve all [BlockDevice](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#blockdevice) resources available in your cluster:
+1. Retrieve all [BlockDevice](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#blockdevice) resources available in your cluster:
 
    ```shell
    d8 k get bd
@@ -115,7 +115,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    dev-6c5abbd549100834c6b1668c8f89fb97872ee2b1   worker-2   false        894006140416   /dev/nvme0n1p6
    ```
 
-1. Create an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-0` node:
+1. Create an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-0` node:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -138,7 +138,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
+1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-0 -w
@@ -146,7 +146,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-0` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-1. Create an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-1` node:
+1. Create an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-1` node:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -169,7 +169,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
+1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-1 -w
@@ -177,7 +177,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-1` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-1. Create an [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource for the `worker-2` node:
+1. Create an [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource for the `worker-2` node:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -200,7 +200,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
+1. Wait for the created [LVMVolumeGroup](/products/kubernetes-platform/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) resource to transition to the `Ready` state:
 
    ```shell
    d8 k get lvg vg-1-on-worker-2 -w
@@ -208,7 +208,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
    If the resource has transitioned to the `Ready` state, it means that an LVM VG named `vg-1` has been created on the `worker-2` node from the block devices `/dev/nvme1n1` and `/dev/nvme0n1p6`.
 
-1. Create a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) resource:
+1. Create a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) resource:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -250,7 +250,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    EOF
    ```
 
-   > **Important.** In a [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
+   > **Important.** In a [LocalStorageClass](/products/kubernetes-platform/modules/sds-local-volume/stable/cr.html#localstorageclass) with `type: Thick`, you cannot use an LVMVolumeGroup that contains at least one thin pool.
 
 1. Wait for the created LocalStorageClass resource to transition to the `Created` state:
 

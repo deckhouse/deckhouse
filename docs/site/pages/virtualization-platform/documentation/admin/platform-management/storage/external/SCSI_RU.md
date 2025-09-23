@@ -59,7 +59,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Создание SCSITarget
 
-Для создания SCSITarget необходимо использовать ресурс [SCSITarget](/products/kubernetes-platform/documentation/v1/modules/csi-scsi-generic/cr.html#scsitarget). Пример команд для создания такого ресурса:
+Для создания SCSITarget необходимо использовать ресурс [SCSITarget](/products/kubernetes-platform/modules/csi-scsi-generic/stable/cr.html#scsitarget). Пример команд для создания такого ресурса:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -111,7 +111,7 @@ d8 k get scsitargets.storage.deckhouse.io <имя scsitarget>
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-scsi-generic/cr.html#scsistorageclass). Пример команды для создания такого ресурса:
+Для создания StorageClass необходимо использовать ресурс [SCSIStorageClass](/products/kubernetes-platform/modules/csi-scsi-generic/stable/cr.html#scsistorageclass). Пример команды для создания такого ресурса:
 
 ```shell
 d8 k apply -f -<<EOF
