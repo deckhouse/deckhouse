@@ -77,7 +77,6 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "frontend") | nindent 6 }}
   {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
-      {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       serviceAccountName: ingress-nginx
       hostNetwork: true
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}

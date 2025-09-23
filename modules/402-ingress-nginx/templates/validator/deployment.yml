@@ -211,12 +211,6 @@ spec:
         - name: webhook-cert
           secret:
             secretName: ingress-admission-certificate
-        - name: write-files
-          emptyDir: {}
-        - name: tmp-ssl
-          emptyDir: {}
-        - name: tmp-nginx
-          emptyDir: {}
 {{- end }}
 
 {{- $context := . }}
