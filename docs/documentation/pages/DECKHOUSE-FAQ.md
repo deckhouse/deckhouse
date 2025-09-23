@@ -942,7 +942,7 @@ The general cluster parameters are stored in the [ClusterConfiguration](installi
 To change the general cluster parameters, run the command:
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 After saving the changes, Deckhouse will bring the cluster configuration to the state according to the changed configuration. Depending on the size of the cluster, this may take some time.
@@ -954,7 +954,7 @@ Cloud provider setting of a cloud of hybrid cluster are stored in the `<PROVIDER
 Regardless of the cloud provider used, its settings can be changed using the following command:
 
 ```shell
-d8 p edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 ### How do I change the configuration of a static cluster?
@@ -964,7 +964,7 @@ Settings of a static cluster are stored in the [StaticClusterConfiguration](inst
 To change the settings of a static cluster, run the command:
 
 ```shell
-d8 p edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ### How to switch Deckhouse edition to CE/BE/SE/SE+/EE?
@@ -1042,7 +1042,7 @@ If the cluster is not managed by the `registry` module, proceed to the [instruct
    Disable the modules not supported by the new edition:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
@@ -1292,7 +1292,7 @@ Removing this parameter will trigger a check for the presence of critical compon
    Disable the modules not supported by the new edition:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Wait for the Deckhouse pod to reach `Ready` state and [ensure all tasks in the queue are completed](#how-to-check-the-job-queue-in-deckhouse).
@@ -1371,7 +1371,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    1. Run the command:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
 
    1. Change the `kubernetesVersion` parameter to the required value, for example, `"1.27"` (in quotation marks) for Kubernetes 1.27.
@@ -1582,7 +1582,7 @@ To switch a Deckhouse Enterprise Edition cluster to Certified Security Edition, 
    1. Run the command:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
 
    1. Change the `kubernetesVersion` parameter to the desired value, for example `"1.27"` (in quotes) for Kubernetes 1.27.
@@ -1876,7 +1876,7 @@ To upgrade the Kubernetes version in a cluster change the [kubernetesVersion](in
 1. Run the command:
 
    ```shell
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Change the `kubernetesVersion` field.

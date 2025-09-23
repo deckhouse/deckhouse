@@ -8,5 +8,5 @@ To install Deckhouse Stronghold, enable the stronghold module. The module can be
 On a host with access to the DKP cluster, execute the following command using the [Deckhouse CLI](/products/stronghold/reference/cli/d8/):
 
 ```bash
-d8 platform module enable stronghold
+d8 system module enable stronghold
 ```

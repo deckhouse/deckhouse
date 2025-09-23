@@ -945,7 +945,7 @@ spec:
 Чтобы изменить общие параметры кластера, выполните команду:
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 После сохранения изменений Deckhouse приведет конфигурацию кластера к измененному состоянию. В зависимости от размеров кластера это может занять какое-то время.
@@ -957,7 +957,7 @@ d8 platform edit cluster-configuration
 Независимо от используемого облачного провайдера его настройки можно изменить с помощью следующей команды:
 
 ```shell
-d8 p edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 ### Как изменить конфигурацию статического кластера?
@@ -967,7 +967,7 @@ d8 p edit provider-cluster-configuration
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-d8 p edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ### Как переключить редакцию Deckhouse на CE/BE/SE/SE+/EE?
@@ -1048,7 +1048,7 @@ d8 p edit static-cluster-configuration
    Отключите неподдерживаемые новой редакцией модули:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
@@ -1298,7 +1298,7 @@ d8 p edit static-cluster-configuration
    Отключите неподдерживаемые новой редакцией модули:
 
    ```shell
-   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 platform module disable",$1'} | bash
+   echo $MODULES_WILL_DISABLE | tr ' ' '\n' | awk {'print "d8 system module disable",$1'} | bash
    ```
 
    Дождитесь, пока под Deckhouse перейдёт в состояние `Ready` и [убедитесь в выполнении всех задач в очереди](#как-проверить-очередь-заданий-в-deckhouse).
@@ -1377,7 +1377,7 @@ d8 p edit static-cluster-configuration
    1. Выполните команду:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
 
    1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
@@ -1588,7 +1588,7 @@ d8 p edit static-cluster-configuration
    1. Выполните команду:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
 
    1. Измените параметр `kubernetesVersion` на необходимое значение, например, `"1.27"` (в кавычках) для Kubernetes 1.27.
@@ -1882,7 +1882,7 @@ d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-contro
 1. Выполните команду:
 
    ```shell
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Измените параметр `kubernetesVersion`.
