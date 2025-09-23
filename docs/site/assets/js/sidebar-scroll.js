@@ -18,8 +18,9 @@ $(window).on('load', function() {
   if(lastPathname.lastIndexOf('v1') !== 1) {
     lastPathname = lastPathname.replace(/v1/g, '.');
   }
-
+ console.log(lastPathname)
   const activeLink = document.querySelector(`ul.sidebar li.sidebar__item.active a[href$="${lastPathname}"]`);
+  console.log(activeLink)
   
   const hash = window.location.hash;
   const activeLinkToc = document.querySelector(`li.toc-sidebar__item a[href="${hash}"]`);
@@ -48,13 +49,13 @@ $(window).on('load', function() {
   }
 
   sidebars[0].scrollTo({
-    top: activeLinkTop,
+    top: activeLinkTop - 310,
     behavior: 'smooth'
   })
 
   const tocActiveLinkTop = getTopActiveLink(activeLinkToc, sidebarToc);
 
-    sidebars[1].scrollTo({
+  sidebars[1].scrollTo({
     top: tocActiveLinkTop,
     behavior: 'smooth'
   })
