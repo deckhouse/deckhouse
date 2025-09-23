@@ -136,7 +136,7 @@ func (p *ProgressTracker) Progress(
 	return p.onProgressFunc(progress.Clone())
 }
 
-func (p *ProgressTracker) Complete() error {
+func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 	if p.onProgressFunc == nil {
 		return nil
 	}
@@ -149,10 +149,20 @@ func (p *ProgressTracker) Complete() error {
 		return nil
 	}
 
+	lastCompletedPhaseIndex := slices.IndexFunc(p.progress.Phases, func(phases PhaseWithSubPhases) bool {
+		return phases.Phase == lastCompletedPhase
+	})
+
 	for i := range p.progress.Phases {
-		if p.progress.Phases[i].Action == nil {
-			p.progress.Phases[i].Action = ptr.To(PhaseActionSkip)
+		if p.progress.Phases[i].Action != nil {
+			continue
 		}
+
+		if i <= lastCompletedPhaseIndex {
+			p.progress.Phases[i].Action = ptr.To(PhaseActionDefault)
+			continue
+		}
+		p.progress.Phases[i].Action = ptr.To(PhaseActionSkip)
 	}
 
 	p.progress.CompletedPhase = nOrEmpty(p.progress.Phases, len(p.progress.Phases)-1).Phase
