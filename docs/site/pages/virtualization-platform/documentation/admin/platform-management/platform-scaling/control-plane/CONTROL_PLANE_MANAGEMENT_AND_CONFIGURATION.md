@@ -50,7 +50,7 @@ You can enable or disable the [`control-plane-manager`](/products/kubernetes-pla
    d8 platform module disable control-plane-manager
    ```  
   
-1. Via the [Deckhouse web interface](/products/kubernetes-platform/modules/console/):
+1. Via the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section.
    - Find the `control-plane-manager` module and click on it.

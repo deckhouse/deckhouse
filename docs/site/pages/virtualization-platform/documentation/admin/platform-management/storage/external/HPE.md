@@ -3,7 +3,7 @@ title: "HPE data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/hpe.html
 ---
 
-Deckhouse Virtualization Platform (DVP) includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](/products/kubernetes-platform/modules/csi-hpe/stable/cr.html#hpestorageclass) resource.
+Deckhouse Virtualization Platform (DVP) includes support for HPE 3PAR storage systems, enabling volume management in Kubernetes using a CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for mission-critical workloads. The `csi-hpe` module is used to work with HPE 3PAR systems, allowing StorageClass creation in Kubernetes through the [HPEStorageClass](/modules/csi-hpe/stable/cr.html#hpestorageclass) resource.
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
@@ -48,7 +48,7 @@ d8 k get module csi-hpe -w
 
 ### Creating a StorageClass
 
-To create a StorageClass, you need to use the [HPEStorageClass](/products/kubernetes-platform/modules/csi-hpe/stable/cr.html#hpestorageclass) and [HPEStorageConnection](/products/kubernetes-platform/modules/csi-hpe/stable/cr.html#hpestorageconnection) resource. Here is an example command to create such a resource:
+To create a StorageClass, you need to use the [HPEStorageClass](/modules/csi-hpe/stable/cr.html#hpestorageclass) and [HPEStorageConnection](/modules/csi-hpe/stable/cr.html#hpestorageconnection) resource. Here is an example command to create such a resource:
 
 - Creating a HPEStorageConnection resource:
 

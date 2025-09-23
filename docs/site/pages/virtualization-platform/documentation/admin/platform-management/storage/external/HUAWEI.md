@@ -3,7 +3,7 @@ title: "Huawei data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
 ---
 
-Deckhouse Virtualization Platform (DVP) provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageclass). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
+Deckhouse Virtualization Platform (DVP) provides support for Huawei Dorado storage systems, enabling volume management in Kubernetes using a CSI driver through the creation of custom resources like [HuaweiStorageClass](/modules/csi-huawei/stable/cr.html#huaweistorageclass). This solution ensures high-performance and fault-tolerant storage, making it an optimal choice for mission-critical workloads.
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.huawei.com` CSI driver is not allowed.  
@@ -48,7 +48,7 @@ d8 k get module csi-huawei -w
 
 ### Creating a StorageClass
 
-To create a StorageClass, you need to use the [HuaweiStorageClass](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageclass) and [HuaweiStorageConnection](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageconnection) resource. Here is an example command to create such a resource:
+To create a StorageClass, you need to use the [HuaweiStorageClass](/modules/csi-huawei/stable/cr.html#huaweistorageclass) and [HuaweiStorageConnection](/modules/csi-huawei/stable/cr.html#huaweistorageconnection) resource. Here is an example command to create such a resource:
 
 - Creating a HuaweiStorageConnection resource:
 

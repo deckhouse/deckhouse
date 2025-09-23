@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/st
 lang: ru
 ---
 
-В Deckhouse Virtualization Platform (DVP) предусмотрена поддержка систем хранения данных (СХД) Huawei Dorado, позволяющая управлять томами в Kubernetes с использованием CSI-драйвера через создание пользовательских ресурсов [HuaweiStorageClass](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageclass). Это решение обеспечивает высокую производительность и отказоустойчивость хранения данных, что делает его оптимальным выбором для критически важных рабочих нагрузок.
+В Deckhouse Virtualization Platform (DVP) предусмотрена поддержка систем хранения данных (СХД) Huawei Dorado, позволяющая управлять томами в Kubernetes с использованием CSI-драйвера через создание пользовательских ресурсов [HuaweiStorageClass](/modules/csi-huawei/stable/cr.html#huaweistorageclass). Это решение обеспечивает высокую производительность и отказоустойчивость хранения данных, что делает его оптимальным выбором для критически важных рабочих нагрузок.
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.huawei.com` пользователем запрещено.
@@ -49,7 +49,7 @@ d8 k get module csi-huawei -w
 
 ### Создание StorageClass
 
-Для создания StorageClass необходимо использовать ресурсы [HuaweiStorageClass](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageclass) и [HuaweiStorageConnection](/products/kubernetes-platform/modules/csi-huawei/stable/cr.html#huaweistorageconnection). Пример команд для создания таких ресурсов:
+Для создания StorageClass необходимо использовать ресурсы [HuaweiStorageClass](/modules/csi-huawei/stable/cr.html#huaweistorageclass) и [HuaweiStorageConnection](/modules/csi-huawei/stable/cr.html#huaweistorageconnection). Пример команд для создания таких ресурсов:
 
 - Создание ресурса HuaweiStorageConnection:
 

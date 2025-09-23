@@ -38,7 +38,7 @@ EOF
 
 ## Подключение к Ceph-кластеру
 
-Чтобы настроить подключение к Ceph-кластеру, примените ресурс [CephClusterConnection](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephclusterconnection). Пример команды:
+Чтобы настроить подключение к Ceph-кластеру, примените ресурс [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection). Пример команды:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -70,7 +70,7 @@ d8 k get cephclusterconnection ceph-cluster-1
 
 ## Создание StorageClass
 
-Создание объектов StorageClass осуществляется через ресурс [CephStorageClass](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [CephStorageClass](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephstorageclass) может привести к ошибкам. Пример создания StorageClass на основе RBD:
+Создание объектов StorageClass осуществляется через ресурс [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass), который определяет конфигурацию для желаемого класса хранения. Ручное создание ресурса StorageClass без [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass) может привести к ошибкам. Пример создания StorageClass на основе RBD:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -105,13 +105,13 @@ spec:
 EOF
 ```
 
-Проверьте, что созданные ресурсы [CephStorageClass](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephstorageclass) перешли в состояние `Created`, выполнив следующую команду:
+Проверьте, что созданные ресурсы [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass) перешли в состояние `Created`, выполнив следующую команду:
 
 ```shell
 d8 k get cephstorageclass
 ```
 
-В результате будет выведена информация о созданных ресурсах [CephStorageClass](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephstorageclass):
+В результате будет выведена информация о созданных ресурсах [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 ```console
 NAME          PHASE     AGE
@@ -157,7 +157,7 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
 
 ## Примеры
 
-Пример описания [CephClusterConnection](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephclusterconnection):
+Пример описания [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection):
 
 ```yaml
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -180,7 +180,7 @@ spec:
 d8 k get cephclusterconnection <имя cephclusterconnection>
 ```
 
-Пример описания [CephStorageClass](/products/kubernetes-platform/modules/csi-ceph/stable/cr.html#cephstorageclass):
+Пример описания [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass):
 
 - Для RBD
 

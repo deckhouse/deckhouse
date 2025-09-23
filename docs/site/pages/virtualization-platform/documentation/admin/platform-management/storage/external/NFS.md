@@ -25,7 +25,7 @@ To ensure that the module pods restart when the `tlsParameters` setting in the m
 
 ## Enabling the module
 
-The `csi-nfs` module manages volumes based on the NFS protocol and supports StorageClass creation through custom [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources. To enable the module, execute the command:
+The `csi-nfs` module manages volumes based on the NFS protocol and supports StorageClass creation through custom [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources. To enable the module, execute the command:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -54,7 +54,7 @@ csi-nfs           Embedded  Available   True       True
 
 ## Creating a StorageClass
 
-To create a StorageClass, use the [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource. Creating a StorageClass manually without using [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) can lead to errors.
+To create a StorageClass, use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource. Creating a StorageClass manually without using [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) can lead to errors.
 
 The NFS server address and mount point path must be explicitly specified. You must also specify the NFS server version (for example, `"4.1"`).
 
@@ -76,13 +76,13 @@ spec:
 EOF
 ```
 
-Check that the created [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource has transitioned to the `Created` phase by running the following command:
+Check that the created [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-In the output, you should see information about the created [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource:
+In the output, you should see information about the created [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource:
 
 ```console
 NAME                PHASE     AGE
@@ -171,7 +171,7 @@ This command will display a list of all snapshots and their current statuses.
 
 ## Deleting PVs with RPC-with-TLS enabled
 
-If the [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass) is configured with RPC-with-TLS support, it may be impossible to delete PVs. This can happen if the secret storing mount parameters is deleted (for example, after deleting the [NFSStorageClass](/products/kubernetes-platform/modules/csi-nfs/stable/cr.html#nfsstorageclass)). As a result, the controller is unable to mount the NFS path to delete the `<PV name>` directory.
+If the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) is configured with RPC-with-TLS support, it may be impossible to delete PVs. This can happen if the secret storing mount parameters is deleted (for example, after deleting the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass)). As a result, the controller is unable to mount the NFS path to delete the `<PV name>` directory.
 
 ## Adding multiple CAs to tlsParameters.ca in ModuleConfig
 

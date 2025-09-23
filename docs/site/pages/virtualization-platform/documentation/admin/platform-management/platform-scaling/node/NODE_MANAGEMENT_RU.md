@@ -48,7 +48,7 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
    # Или disable.
    ```
 
-1. Через [веб-интерфейс Deckhouse](/products/kubernetes-platform/modules/console/):
+1. Через [веб-интерфейс Deckhouse](/modules/console/):
 
    - Перейдите в раздел «Deckhouse - «Модули»;
    - Найдите модуль `node-manager` и нажмите на него;
