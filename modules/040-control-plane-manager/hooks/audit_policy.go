@@ -110,6 +110,7 @@ func filterConfigMap(unstructured *unstructured.Unstructured) (go_hook.FilterRes
 func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 	var policy audit.Policy
 
+	// Start with adding basic policies.
 	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
 		extraData, err := sdkobjectpatch.UnmarshalToStruct[ConfigMapInfo](input.Snapshots, "configmaps_with_extra_audit_policy")
 		if err != nil {
@@ -117,22 +118,25 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 		}
 		appendBasicPolicyRules(&policy, extraData)
 	}
-	datas, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.Snapshots, "kube_audit_policy_secret")
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal kube_audit_policy_secret snapshot: %w", err)
-	}
-	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(datas) > 0 {
-		data := datas[0]
-		err := appendAdditionalPolicyRules(&policy, &data)
-		if err != nil {
-			return err
-		}
-	}
 
+	// Add policies for virtualization module.
 	for _, module := range input.Values.Get("global.enabledModules").Array() {
 		if module.String() == "virtualization" {
 			appendVirtualizationPolicyRules(&policy)
 			break
+		}
+	}
+
+	// Append custom policies if secret is present.
+	auditPolicyDataSnaps, err := sdkobjectpatch.UnmarshalToStruct[[]byte](input.Snapshots, "kube_audit_policy_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal kube_audit_policy_secret snapshot: %w", err)
+	}
+	if input.Values.Get("controlPlaneManager.apiserver.auditPolicyEnabled").Bool() && len(auditPolicyDataSnaps) > 0 {
+		auditPolicyData := auditPolicyDataSnaps[0]
+		err := appendAdditionalPolicyRules(&policy, &auditPolicyData)
+		if err != nil {
+			return err
 		}
 	}
 
