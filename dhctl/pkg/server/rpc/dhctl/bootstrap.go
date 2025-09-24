@@ -40,7 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type bootstrapParams struct {
@@ -267,7 +267,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if !interfaces.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
+		if !value.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
 			err = sshClient.Start()
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)

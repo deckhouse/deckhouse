@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Context struct {
@@ -63,7 +63,7 @@ type Params struct {
 func newContext(ctx context.Context, params Params) *Context {
 	logger := params.Logger
 
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

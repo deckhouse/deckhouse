@@ -33,7 +33,7 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Params struct {
@@ -62,7 +62,7 @@ type Checker struct {
 
 func NewChecker(params *Params) *Checker {
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

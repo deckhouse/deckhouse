@@ -97,7 +97,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
-		err = fmt.Errorf(errBuf.String())
+		err = fmt.Errorf("%s", errBuf.String())
 		if app.IsDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
 		}

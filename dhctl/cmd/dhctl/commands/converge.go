@@ -29,7 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -157,7 +157,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if interfaces.IsNil(sshClient) {
+		if value.IsNil(sshClient) {
 			sshClient = nil
 		}
 

@@ -33,8 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 const (
@@ -89,7 +89,7 @@ func getTestCloudProviderGetterParams(t *testing.T, testName string) CloudProvid
 		Logger:           logger,
 		FSDIParams:       getTestFSDIParams(),
 		IsDebug:          false,
-		ProviderCache:    newCloudProvidersMapCache(),
+		ProvidersCache:   newCloudProvidersMapCache(),
 	}
 }
 
@@ -99,7 +99,7 @@ func testCleanup(t *testing.T, testName string, params *CloudProviderGetterParam
 	tmpDir := path.Clean(params.TmpDir)
 	require.NotEmpty(t, tmpDir, testName)
 	require.NotEqual(t, tmpDir, "/", testName)
-	require.False(t, interfaces.IsNil(params.IsDebug))
+	require.False(t, value.IsNil(params.IsDebug))
 
 	params.Logger.LogInfoF("Cleanup for test %s. Remove tmp dir %s\n", testName, tmpDir)
 
@@ -127,27 +127,27 @@ func TestFailCloudProviderGet(t *testing.T) {
 
 	_, err := getter(context.TODO(), cfg)
 	require.Error(t, err)
-	assertProvidersCacheIsEmpty(t, params.ProviderCache)
+	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	// incorrect provider
 	cfg.ProviderName = "incorrect"
 	cfg.UUID = "fb6dfacc-93fd-11f0-9697-efd55958d098"
 	_, err = getter(context.TODO(), cfg)
 	require.Error(t, err)
-	assertProvidersCacheIsEmpty(t, params.ProviderCache)
+	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	cfg.ProviderName = yandex.ProviderName
 
 	// empty prefix
 	_, err = getter(context.TODO(), cfg)
 	require.Error(t, err)
-	assertProvidersCacheIsEmpty(t, params.ProviderCache)
+	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 
 	// empty layout
 	cfg.ClusterPrefix = "test"
 	_, err = getter(context.TODO(), cfg)
 	require.Error(t, err)
-	assertProvidersCacheIsEmpty(t, params.ProviderCache)
+	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 }
 
 func TestCloudProviderGetForStatic(t *testing.T) {
@@ -168,7 +168,7 @@ func TestCloudProviderGetForStatic(t *testing.T) {
 	require.NoError(t, err)
 	require.IsType(t, &infrastructure.DummyCloudProvider{}, provider, "provider should be a DummyCloudProvider for static cluster")
 	// do not cache providers for static
-	assertProvidersCacheIsEmpty(t, params.ProviderCache)
+	assertProvidersCacheIsEmpty(t, params.ProvidersCache)
 }
 
 func TestCloudProviderGet(t *testing.T) {
@@ -207,7 +207,7 @@ func TestCloudProviderGet(t *testing.T) {
 	providerInClusterParams := testProviderInCacheParams{
 		metaConfig: providerYandexMetaConfig,
 		provider:   providerYandex,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 	}
@@ -222,7 +222,7 @@ func TestCloudProviderGet(t *testing.T) {
 	providerInClusterParams = testProviderInCacheParams{
 		metaConfig: cfgForYandexWithDifferentPrefix,
 		provider:   providerYandexWithAnotherPrefix,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   2,
 		logger:     params.Logger,
 	}
@@ -237,7 +237,7 @@ func TestCloudProviderGet(t *testing.T) {
 	providerInClusterParams = testProviderInCacheParams{
 		metaConfig: cfgForYandexWithDifferentUUID,
 		provider:   providerYandexWithAnotherUUID,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   3,
 		logger:     params.Logger,
 	}
@@ -255,7 +255,7 @@ func TestCloudProviderGet(t *testing.T) {
 	providerInClusterParams = testProviderInCacheParams{
 		metaConfig: cfgProviderGCP,
 		provider:   providerGCP,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   4,
 		logger:     params.Logger,
 	}
@@ -267,7 +267,7 @@ func TestCloudProviderGet(t *testing.T) {
 	notExistsMetaConfigYandex.ClusterPrefix = "not-exists"
 	assertDoesNotGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: notExistsMetaConfigYandex,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   4,
 		logger:     params.Logger,
 	})
@@ -276,7 +276,7 @@ func TestCloudProviderGet(t *testing.T) {
 	notExistsMetaConfigGCP.ClusterPrefix = "not-exists"
 	assertDoesNotGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: notExistsMetaConfigGCP,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   4,
 		logger:     params.Logger,
 	})
@@ -306,7 +306,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 		testCleanup(t, testName, &params)
 	}()
 
-	params.ProviderCache = nil
+	params.ProvidersCache = nil
 
 	getter := CloudProviderGetter(params)
 
@@ -505,7 +505,7 @@ terraform {
 	// executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerYandex,
@@ -526,7 +526,7 @@ terraform {
 	// executor with another step does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerYandex,
@@ -545,7 +545,7 @@ terraform {
 
 	assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t, providerYandex, params, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		logger:     params.Logger,
 	})
 
@@ -559,7 +559,7 @@ terraform {
 	assertCloudProvider(t, providerYandexWithDebug, yandex.ProviderName, true)
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerYandexWithDebug,
@@ -568,7 +568,7 @@ terraform {
 	// yes we should clean provider from cache in debug mode anyway
 	assertDoesNotGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   0,
 		logger:     params.Logger,
 	})
@@ -646,7 +646,7 @@ terraform {
 	// executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerGCP,
@@ -662,7 +662,7 @@ terraform {
 	// executor does not affect cache for another step
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerGCP,
@@ -681,7 +681,7 @@ terraform {
 
 	assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t, providerGCP, params, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		logger:     params.Logger,
 	})
 
@@ -695,7 +695,7 @@ terraform {
 	assertCloudProvider(t, providerGCPWithDebug, gcp.ProviderName, false)
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerGCPWithDebug,
@@ -704,7 +704,7 @@ terraform {
 	// yes we should clean provider from cache in debug mode anyway
 	assertDoesNotGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   0,
 		logger:     params.Logger,
 	})
@@ -739,7 +739,7 @@ func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 	// output executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerYandex,
@@ -777,7 +777,7 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 	// output executor does not affect cache
 	assertGetProviderFromCache(t, testProviderInCacheParams{
 		metaConfig: cfg,
-		cache:      params.ProviderCache,
+		cache:      params.ProvidersCache,
 		cacheLen:   1,
 		logger:     params.Logger,
 		provider:   providerGCP,
@@ -925,7 +925,7 @@ func getCacheKeyForCluster(metaConfig *config.MetaConfig) string {
 func getTestProvidersCacheEntries(t *testing.T, cache CloudProvidersCache) map[string]infrastructure.CloudProvider {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(cache))
+	require.False(t, value.IsNil(cache))
 
 	entries := make(map[string]infrastructure.CloudProvider)
 
@@ -950,15 +950,15 @@ func assertGetProviderFromCache(t *testing.T, params testProviderInCacheParams) 
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, interfaces.IsNil(params.logger))
-	require.False(t, interfaces.IsNil(params.cache))
-	require.False(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.logger))
+	require.False(t, value.IsNil(params.cache))
+	require.False(t, value.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
 	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
 	require.NoError(t, err)
 	require.True(t, exists)
-	require.False(t, interfaces.IsNil(cachedProvider))
+	require.False(t, value.IsNil(cachedProvider))
 
 	require.Equal(t, params.provider.String(), cachedProvider.String())
 	require.Equal(t, params.provider, cachedProvider)
@@ -968,15 +968,15 @@ func assertDoesNotGetProviderFromCache(t *testing.T, params testProviderInCacheP
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, interfaces.IsNil(params.logger))
-	require.False(t, interfaces.IsNil(params.cache))
-	require.True(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.logger))
+	require.False(t, value.IsNil(params.cache))
+	require.True(t, value.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
 	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
 	require.NoError(t, err)
 	require.False(t, exists)
-	require.True(t, interfaces.IsNil(cachedProvider))
+	require.True(t, value.IsNil(cachedProvider))
 
 	entities := getTestProvidersCacheEntries(t, params.cache)
 	require.Len(t, entities, params.cacheLen)
@@ -986,9 +986,9 @@ func assertProviderForClusterInCache(t *testing.T, params testProviderInCachePar
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, interfaces.IsNil(params.logger))
-	require.False(t, interfaces.IsNil(params.cache))
-	require.False(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.logger))
+	require.False(t, value.IsNil(params.cache))
+	require.False(t, value.IsNil(params.provider))
 
 	entries := getTestProvidersCacheEntries(t, params.cache)
 	if params.cacheLen >= 0 {
@@ -999,7 +999,7 @@ func assertProviderForClusterInCache(t *testing.T, params testProviderInCachePar
 	require.Contains(t, entries, cacheKey)
 
 	providerInCache := entries[cacheKey]
-	require.False(t, interfaces.IsNil(providerInCache))
+	require.False(t, value.IsNil(providerInCache))
 
 	require.Equal(t, params.provider.String(), providerInCache.String())
 	require.Equal(t, params.provider, providerInCache)
@@ -1022,7 +1022,7 @@ func assertProvidersCacheHasCountOfKeys(t *testing.T, cache CloudProvidersCache,
 func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, providerName string, useTofu bool) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(provider))
+	require.False(t, value.IsNil(provider))
 	require.IsType(t, &cloud.Provider{}, provider, "provider should be a cloud.Provider for", providerName)
 	require.Equal(t, provider.NeedToUseTofu(), useTofu)
 	require.Equal(t, provider.Name(), providerName)
@@ -1031,8 +1031,8 @@ func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, pr
 func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Executor, provider infrastructure.CloudProvider, pluginVersion string) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(executor))
-	require.False(t, interfaces.IsNil(provider))
+	require.False(t, value.IsNil(executor))
+	require.False(t, value.IsNil(provider))
 	require.NotEmpty(t, pluginVersion)
 
 	executorStatesDir := executor.GetStatesDir()
@@ -1119,8 +1119,8 @@ func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams
 func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(provider))
-	require.False(t, interfaces.IsNil(params.Logger))
+	require.False(t, value.IsNil(provider))
+	require.False(t, value.IsNil(params.Logger))
 	require.True(t, params.IsDebug)
 	require.NotNil(t, params.FSDIParams)
 
@@ -1163,7 +1163,7 @@ func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider in
 }
 
 func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams, cacheParams testProviderInCacheParams) {
-	require.False(t, interfaces.IsNil(provider))
+	require.False(t, value.IsNil(provider))
 	require.NotNil(t, params.FSDIParams)
 
 	const cleanupGroup = "testAfterCleanup"
@@ -1266,7 +1266,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	t.Helper()
 
 	provider := params.provider
-	require.False(t, interfaces.IsNil(provider))
+	require.False(t, value.IsNil(provider))
 
 	require.NotEmpty(t, params.usedStep)
 	require.NotEmpty(t, params.usedLayout)
@@ -1322,7 +1322,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(provider))
+	require.False(t, value.IsNil(provider))
 
 	assertInfraUtilCopied(t, provider, providerParams, "")
 
@@ -1341,7 +1341,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	require.NotEmpty(t, params.testName)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.uuid)
-	require.False(t, interfaces.IsNil(params.logger))
+	require.False(t, value.IsNil(params.logger))
 
 	configPath := os.Getenv(params.env)
 
@@ -1423,7 +1423,7 @@ type executorTestInitParams struct {
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.provider))
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.pluginsDir)
@@ -1476,7 +1476,7 @@ type getTestParamsPlanParams struct {
 func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.provider))
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.pluginVersion)
@@ -1514,7 +1514,7 @@ type execInitAndPlanResultsParams struct {
 func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
 	t.Helper()
 
-	require.False(t, interfaces.IsNil(params.provider))
+	require.False(t, value.IsNil(params.provider))
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)

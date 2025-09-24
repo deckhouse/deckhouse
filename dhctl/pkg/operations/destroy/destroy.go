@@ -46,8 +46,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Destroyer interface {
@@ -100,7 +100,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	state := NewDestroyState(params.StateCache)
 
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

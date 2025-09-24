@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 var versionsForTest = []string{legacyVersion, "3.14.1"}
@@ -152,5 +152,5 @@ func TestVCDClientProvider(t *testing.T) {
 	setProviderConfig(t, cfg, "https://my-server:8080")
 	c, err := newVcdCloudClient(cfg, logger)
 	require.NoError(t, err)
-	require.False(t, interfaces.IsNil(c))
+	require.False(t, value.IsNil(c))
 }

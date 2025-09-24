@@ -49,8 +49,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 const (
@@ -124,7 +124,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	}
 
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
