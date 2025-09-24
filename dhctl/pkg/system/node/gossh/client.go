@@ -129,7 +129,7 @@ func (s *Client) Start() error {
 		if err != nil {
 			return fmt.Errorf("could not connect to bastion host")
 		}
-		log.DebugF("Connected successfully to bastion host %s", bastionAddr)
+		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
 
 	var becomePass string
@@ -263,7 +263,7 @@ func (s *Client) keepAlive() {
 		default:
 			session, err := s.sshClient.NewSession()
 			if err != nil {
-				log.DebugF("Keep-alive to %s failed: %v", s.Settings.Host(), err)
+				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
 				s.live = false
 				s.stopChan = nil
 				s.Start()
@@ -271,7 +271,7 @@ func (s *Client) keepAlive() {
 				return
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
-				log.DebugF("Keep-alive failed: %v", err)
+				log.DebugF("Keep-alive failed: %v\n", err)
 				s.live = false
 				s.stopChan = nil
 				s.Start()
