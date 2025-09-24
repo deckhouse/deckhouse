@@ -221,6 +221,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -344,56 +345,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -402,7 +371,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -547,6 +515,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -670,56 +639,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -728,7 +665,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -873,6 +809,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -996,56 +933,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1054,7 +959,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1199,6 +1103,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1322,56 +1227,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1380,7 +1253,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1525,6 +1397,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1648,56 +1521,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -1706,7 +1547,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1851,6 +1691,7 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -1974,56 +1815,24 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-
-          # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-            SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
-          else
-            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-          fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            # Release tag build, set deckhouse registry as final
-            export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
+          # Set cosign auth values
+          export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
+          export COSIGN_VAULT_KEY="dh-2025-aug-dev"
+          export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
+          AUTH_ROLE="dh-signer-dev_dh-signer-dev"
 
-            # Set cosign auth values
-            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
-            else
-              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
-            fi
-            export COSIGN_VAULT_KEY="dh-2025-aug"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
-            AUTH_ROLE="dh-signer_dh-signer"
-
-            # The Git tag may contain a '+' sign, so use slugify for this situation.
-            # Slugify doesn't change a tag with safe-only characters.
-            IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-
-            export WERF_DISABLE_META_TAGS=true
-          else
-
-            # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_DEV_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_DEV_REGISTRY_PASSWORD}"
-            export COSIGN_VAULT_KEY="dh-2025-aug-dev"
-            export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer-dev"
-            AUTH_ROLE="dh-signer-dev_dh-signer-dev"
-
-            # Determine image tag
-            if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-              IMAGE_EDITION=${WERF_ENV,,}
-            fi
-            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
-            # Use it as image tag. Add suffix to not overlap with PRs in main repo.
-            IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          # Determine image tag
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+          IMAGE_EDITION=${WERF_ENV,,}
           fi
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
           # Set cosign auth values
           export COSIGN_VAULT_ADRESS="https://seguro.flant.com"
           ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
@@ -2032,7 +1841,6 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
