@@ -105,6 +105,14 @@ spec:
                   type: string
                   x-doc-examples: ['server-group-1']
                   x-doc-required: false
+                vipAddress:
+                  description: |
+                    If filled, enables Virtual IP for all nodes in this instance class. 
+                    
+                    `Auto` or IPv4 address are expected.
+                  x-doc-examples: ['Auto']
+                  type: string
+                  x-doc-required: false
             status:
               type: object
               properties:
