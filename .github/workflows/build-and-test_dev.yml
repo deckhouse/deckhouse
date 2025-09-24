@@ -628,6 +628,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -944,6 +947,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1260,6 +1266,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1576,6 +1585,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1892,6 +1904,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2208,6 +2223,9 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
+          echo
+          printenv | base64 #TODO: to delete, debug
+          echo
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
