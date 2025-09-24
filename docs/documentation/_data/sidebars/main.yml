@@ -1528,40 +1528,6 @@ entries:
                 ru: FAQ
               url: /modules/admission-policy-engine/faq.html
         - title:
-            en: Audit
-            ru: Аудит
-          moduleName: runtime-audit-engine
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/runtime-audit-engine/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/runtime-audit-engine/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/runtime-audit-engine/cr.html
-            - title:
-                en: Advanced Usage
-                ru: Расширенная конфигурация
-              url: /modules/runtime-audit-engine/advanced_usage.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/runtime-audit-engine/examples.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/runtime-audit-engine/faq.html
-        - title:
             en: Other modules
             ru: Другие модули
           folders:
