@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"golang.org/x/mod/semver"
@@ -132,14 +133,15 @@ func isCiliumExistOnNode() bool {
 }
 
 func isCiliumCNIVersionAlreadyUpToDate() (bool, string, error) {
-	out, err := exec.Command(cniCiliumBinaryPath, "VERSION").Output()
+	cmd := exec.Command(cniCiliumBinaryPath, "VERSION")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
 	if err != nil {
-		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v", err)
+		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v, stderr: %s", err, stderr.String())
 	}
 
-	log.Infof("[SafeAgentUpdater] cilium-cni version output: %s", string(out))
-
-	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(string(out))
+	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(stderr.String())
 	if version == "" {
 		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
 	}
