@@ -69,6 +69,7 @@ spec:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                       description: |
                         Машиночитаемая причина блокировки учётной записи.
                         Используется для проверки политик и автоматических обработчиков.
@@ -149,6 +150,7 @@ spec:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                       description: |
                         Машиночитаемая причина блокировки учётной записи.
                         Используется для проверки политик и автоматических обработчиков.
