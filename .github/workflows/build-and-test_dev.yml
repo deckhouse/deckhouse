@@ -576,8 +576,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -588,11 +588,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
@@ -892,8 +892,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -904,11 +904,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
@@ -1208,8 +1208,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1220,11 +1220,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
@@ -1524,8 +1524,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1536,11 +1536,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
@@ -1840,8 +1840,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1852,11 +1852,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
@@ -2156,8 +2156,8 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
-            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -2168,11 +2168,11 @@ jobs:
 
             # Set cosign auth values
             if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
             else
-              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
-              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+              export REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              export REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
             fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
