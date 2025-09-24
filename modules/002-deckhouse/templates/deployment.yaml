@@ -113,7 +113,7 @@ spec:
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       initContainers:
         - name: init-downloaded-modules
           image: {{ include "helm_lib_module_image" (list . "init") }}
@@ -283,6 +283,8 @@ spec:
               {{- include "deckhouse_resources" . | nindent 14 }}
           workingDir: /deckhouse
           volumeMounts:
+          - mountPath: /dev
+            name: dev-dir
           - mountPath: /tmp
             name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
@@ -349,6 +351,10 @@ spec:
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
       volumes:
+      - name: dev-dir
+        hostPath:
+          path: /dev
+          type: Directory
       - emptyDir:
           medium: Memory
         name: tmp
