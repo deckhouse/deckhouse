@@ -27,6 +27,7 @@ shell:
       for base in iptables ip6tables; do
         for cmd in ${base}-${mode} ${base}-${mode}-save ${base}-${mode}-restore; do
           ln -sf xtables-${mode}-multi "${cmd}"
+          ls
         done
       done
     done
@@ -237,6 +238,7 @@ import:
 shell:
   install:
   - ln -s /var/run /run
+  - ls -la /
 imageSpec:
   config:
     env: { "LANG": "C.UTF-8", "LANGUAGE": "C.UTF-8", "LC_ALL": "C.UTF-8", "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true", "EDITOR": "/usr/bin/vim" }
