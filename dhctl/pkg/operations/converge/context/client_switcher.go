@@ -34,7 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type KubeClientSwitcher struct {
@@ -53,7 +53,7 @@ type KubeClientSwitcherParams struct {
 
 func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params KubeClientSwitcherParams) *KubeClientSwitcher {
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

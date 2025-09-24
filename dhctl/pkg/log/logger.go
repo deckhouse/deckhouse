@@ -468,7 +468,7 @@ func (d *SimpleLogger) LogJSON(content []byte) {
 }
 
 func (d *SimpleLogger) Write(content []byte) (int, error) {
-	d.logger.Infof(string(content))
+	d.logger.Infof("%s", string(content))
 	return len(content), nil
 }
 

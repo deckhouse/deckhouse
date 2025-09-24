@@ -266,7 +266,7 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 				return nil
 			}
 
-			return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
 		})
 }
 
@@ -323,7 +323,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 				return nil
 			}
 
-			return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+			return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
 		})
 }
 

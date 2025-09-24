@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package interfaces
+package value
 
 import (
 	"fmt"
@@ -45,6 +45,9 @@ func TestIsNil(t *testing.T) {
 
 	var err error
 	require.True(t, IsNil(err))
+
+	var ival *int
+	require.True(t, IsNil(ival))
 
 	assertCallFuncWithInterface := func(t *testing.T, actual testInterface) {
 		require.True(t, IsNil(actual))
@@ -128,6 +131,10 @@ func TestIsNil(t *testing.T) {
 
 func TestIsNotNil(t *testing.T) {
 	require.False(t, IsNil(struct{}{}))
+	require.False(t, IsNil(""))
+	require.False(t, IsNil(0))
+	require.False(t, IsNil(0.0))
+	require.False(t, IsNil('a'))
 	require.False(t, IsNil(testInterfaceImpl{}))
 	require.False(t, IsNil(&testInterfaceImpl{}))
 

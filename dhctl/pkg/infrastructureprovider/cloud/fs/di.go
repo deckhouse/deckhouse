@@ -32,6 +32,10 @@ type DIParams struct {
 }
 
 func isDir(dir string, errPrefix string) error {
+	if !path.IsAbs(dir) {
+		return fmt.Errorf("%s is not an absolute path", dir)
+	}
+
 	if !fs.IsDirExists(dir) {
 		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
 	}
@@ -44,14 +48,18 @@ func isNotRootDir(dir string, errPrefix string) error {
 		return fmt.Errorf("%s dir '%s' should not be /", errPrefix, dir)
 	}
 
-	if !fs.IsDirExists(dir) {
-		return fmt.Errorf("%s dir '%s' is empty or does not exists", errPrefix, dir)
+	if err := isDir(dir, errPrefix); err != nil {
+		return err
 	}
 
 	return nil
 }
 
 func isFile(file string, errPrefix string) error {
+	if !path.IsAbs(file) {
+		return fmt.Errorf("%s is not an absolute path", file)
+	}
+
 	stat, err := os.Stat(file)
 	if err != nil {
 		return fmt.Errorf("%s file '%s' does not exist or got another fs error: %w", errPrefix, file, err)

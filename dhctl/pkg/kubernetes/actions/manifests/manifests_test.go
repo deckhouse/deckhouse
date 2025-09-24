@@ -75,7 +75,7 @@ func compareDeployments(t *testing.T, depl1, depl2 *appsv1.Deployment) {
 	}
 
 	if diff > 0 {
-		t.Fatalf(builder.String())
+		t.Fatalf("%s", builder.String())
 	}
 }
 

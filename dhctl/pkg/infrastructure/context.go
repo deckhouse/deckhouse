@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type CloudProviderGetter func(ctx context.Context, metaConfig *config.MetaConfig) (CloudProvider, error)
@@ -36,7 +36,7 @@ type Context struct {
 }
 
 func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Context {
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
@@ -48,7 +48,7 @@ func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Co
 }
 
 func NewContext(logger log.Logger) *Context {
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

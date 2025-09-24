@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type PreparatorProviderParams struct {
@@ -46,7 +46,7 @@ func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
 	logger := params.logger
 
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
 
