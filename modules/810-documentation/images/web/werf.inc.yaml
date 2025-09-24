@@ -11,5 +11,4 @@
 {{- end }}
 
 {{- $context := . }}
-{{- $_ := set $context "BuildModules" false }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-web.inc.yaml" .ModulePath)) $context }}

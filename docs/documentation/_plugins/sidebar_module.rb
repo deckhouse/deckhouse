@@ -58,8 +58,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
   end
 
-  # puts "site.data['sidebars']['embedded-modules']:"
-  # puts JSON.pretty_generate(site.data['sidebars']['embedded-modules'])
+  if site.data['sidebars']['embedded-modules'].empty?
+    puts "Sidebar is empty."
+  end
 end
 
 module Jekyll

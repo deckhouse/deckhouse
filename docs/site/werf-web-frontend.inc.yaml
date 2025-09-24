@@ -171,6 +171,11 @@ import:
   add: /app/_site/
   to: /app/embedded-modules
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}/static
+  add: /app/_site
+  to: /app/dkp-docs
+  before: setup
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{- end }}
