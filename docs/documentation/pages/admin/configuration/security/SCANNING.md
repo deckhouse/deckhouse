@@ -8,8 +8,8 @@ in container images based on the [Trivy](https://github.com/aquasecurity/trivy) 
 
 ## Vulnerability scanning
 
-DKP performs regular scans of all container images used in cluster Pods.
-The scan runs every 24 hours and checks for:
+DKP scans all container images used by cluster pods.
+The checks include:
 
 - Known vulnerabilities (CVEs) in the images in use.
 - Compliance with CIS benchmarks (compliance checks).
@@ -32,9 +32,14 @@ d8 k label namespace default security-scanning.deckhouse.io/enabled=""
 In the current version, there is no option to limit the list of resources to be scanned within a namespace.
 DKP scans **all resources** in a namespace labeled with `security-scanning.deckhouse.io/enabled=""`.
 
-## Rescanning
+## Start conditions and scanning process
 
-Scanning occurs automatically every 24 hours according to the following process:
+Scanning starts:
+
+- automatically every 24 hours,
+- when components with new images are deployed in namespaces with scanning enabled.
+
+Scanning occurs according to the following process:
 
 1. In the namespace of each scanned resource, a VulnerabilityReport object is created.
 1. This object contains the annotation `trivy-operator.aquasecurity.github.io/report-ttl`,
