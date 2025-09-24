@@ -840,12 +840,12 @@ module JSONSchemaRenderer
             if ! site.data['modules']['crds'].has_key?(resourceGroup)
               site.data['modules']['crds'][resourceGroup] = {
                     'internal' => {
-                      'en' => "/en/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
-                      'ru' => "/ru/platform/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                      'en' => "/en/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/ru/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
                     },
                     'external' => {
-                      'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
-                      'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
+                      'en' => "/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ],
+                      'ru' => "/modules/%s/cr.html\#%s" % [ moduleName, resourceName.downcase ]
                     }
               }
             end

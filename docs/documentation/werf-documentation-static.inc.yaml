@@ -93,10 +93,7 @@ git:
   group: jekyll
   includePaths:
 {{ if eq .ModuleName "website-docs" }}
-    - site/_config.yml
     - site/_includes/head.html
-    - site/Gemfile
-    - site/Gemfile.lock
 {{ else }}
     - site
 {{ end }}

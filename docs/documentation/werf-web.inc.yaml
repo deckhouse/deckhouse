@@ -1,26 +1,5 @@
+{{ if or (eq $.Env "development") (eq $.Env "local") }}
 ---
-{{ if eq .ModuleName "documentation" }}
-# Nginx for serving documentation static files
-# Image documentation/web (for website)
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/nginx-static
-git:
-{{- include "image mount points" . }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
-  add: /app/_site/documentation
-  to: /app/platform
-  before: setup
-  excludePaths:
-  - '*/gs/'
-  - '*/guides/'
-  - search-index.json
-  - '*/sitemap*.xml'
-  - '*/robots.txt'
-imageSpec:
-  config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
-{{ else if or (eq $.Env "development") (eq $.Env "local") }}
 # Nginx for serving documentation static files
 # Image website-docs/web (for local running and development)
 image: {{ .ModuleName }}/{{ .ImageName }}

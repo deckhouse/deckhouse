@@ -3,7 +3,7 @@ require_relative "utils"
 
 Jekyll::Hooks.register :site, :pre_render do |site|
 
-  puts "Generating sidebar for embedded modules"
+  puts "Generating sidebar for embedded modules..."
 
   site.data['sidebars']['embedded-modules'] = {} if site.data['sidebars']['embedded-modules'].nil?
 
@@ -59,7 +59,9 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   end
 
   if site.data['sidebars']['embedded-modules'].empty?
-    puts "Sidebar is empty."
+    puts "Sidebar for embedded modules is empty (maybe it is not necessary here at all)."
+  else
+    puts "Sidebar for embedded modules has been generated."
   end
 end
 

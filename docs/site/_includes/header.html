@@ -188,7 +188,7 @@
               >
                 <a
                   {%- if item.external_url %} href="{{ item.external_url }}" {%- if !item.target %} target="_blank"{% endif %}
-                  {%- elsif item.url %} href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ item.url }}"
+                  {%- elsif item.url %} href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ item.url }}"
                   {%- else %} href="#"
                   {%- endif %}
                   {%- if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}
@@ -204,7 +204,7 @@
                             {%- if subitem.external_url %}
                               href="{{ subitem.external_url }}" {%- if !subitem.target %} target="_blank"{% endif %}
                             {%- elsif subitem.url %}
-                              href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ subitem.url }}"
+                              href="{% if site.mode == 'module' %}/{{ page.lang }}{% endif %}{{ subitem.url }}"
                             {%- else %}
                               href="#"
                             {% endif %}
