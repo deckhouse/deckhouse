@@ -5330,7 +5330,7 @@ alerts:
         ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
-      severity: "3"
+      severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
