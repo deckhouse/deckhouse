@@ -228,6 +228,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 		// error can occur on wrong auth only, we don't want to requeue the source until auth is fixed
@@ -238,6 +239,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
 		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 		return ctrl.Result{}, err
