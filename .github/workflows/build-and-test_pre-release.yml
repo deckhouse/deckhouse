@@ -322,6 +322,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -378,17 +380,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -668,6 +677,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -724,17 +735,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1014,6 +1032,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1070,17 +1090,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1360,6 +1387,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1416,17 +1445,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -1706,6 +1742,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1762,17 +1800,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
@@ -2052,6 +2097,8 @@ jobs:
           DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
           DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
           DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -2108,17 +2155,24 @@ jobs:
             SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
           else
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+            REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+            REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
           fi
-            export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-            export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             # Release tag build, set deckhouse registry as final
             export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
             # Set cosign auth values
-            export REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
-            export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+              REGISTRY_USER="${DECKHOUSE_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_PASSWORD}"
+            else
+              REGISTRY_USER="${GHCR_IO_REGISTRY_USER}"
+              REGISTRY_PASSWORD="${GHCR_IO_REGISTRY_PASSWORD}"
+            fi
             export COSIGN_VAULT_KEY="dh-2025-aug"
             export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
             AUTH_ROLE="dh-signer_dh-signer"
