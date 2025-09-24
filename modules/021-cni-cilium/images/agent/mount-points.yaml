@@ -14,3 +14,4 @@ dirs:
   - /hostbin
   - /root/.config
   - /etc/config
+  - /var/lib/cilium/bpf
