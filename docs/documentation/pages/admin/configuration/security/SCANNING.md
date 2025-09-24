@@ -8,8 +8,8 @@ in container images based on the [Trivy](https://github.com/aquasecurity/trivy) 
 
 ## Vulnerability scanning
 
-DKP scans of all container images used in cluster Pods.
-The checks for:
+DKP scans all container images used by cluster pods.
+The checks include:
 
 - Known vulnerabilities (CVEs) in the images in use.
 - Compliance with CIS benchmarks (compliance checks).
@@ -37,7 +37,7 @@ DKP scans **all resources** in a namespace labeled with `security-scanning.deckh
 Scanning starts:
 
 - automatically every 24 hours,
-- when components using new images are deployed in the namespaces for which scanning is enabled.
+- when components with new images are deployed in namespaces with scanning enabled.
 
 Scanning occurs according to the following process:
 
