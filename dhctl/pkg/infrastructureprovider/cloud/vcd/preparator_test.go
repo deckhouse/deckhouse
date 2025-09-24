@@ -25,19 +25,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func newTestPreparator(prepareConfig bool, getter apiVersionGetter) *MetaConfigPreparator {
+func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPreparator {
 	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
 		PrepareMetaConfig:     prepareConfig,
 		ValidateClusterPrefix: true,
 	}, log.GetDefaultLogger())
 
-	p.getAPI = getter
+	p.clientProvider = func(_ *config.MetaConfig, _ log.Logger) (cloudClient, error) {
+		return client, nil
+	}
 
 	return p
 }
 
 func TestDisableMetaConfigPreparator(t *testing.T) {
-	preparator := newTestPreparator(false, testGetLegacyAPI)
+	preparator := newTestPreparator(false, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
 	err := preparator.Prepare(context.TODO(), cfg)
 
@@ -46,7 +48,7 @@ func TestDisableMetaConfigPreparator(t *testing.T) {
 }
 
 func TestPreparatorWithCurrentAPI(t *testing.T) {
-	preparator := newTestPreparator(false, testGetCurrentAPI)
+	preparator := newTestPreparator(false, testGetCurrentClient())
 	cfg := &config.MetaConfig{}
 	err := preparator.Prepare(context.TODO(), cfg)
 
@@ -66,7 +68,7 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 		require.Equal(t, res, expect)
 	}
 
-	preparator := newTestPreparator(true, testGetLegacyAPI)
+	preparator := newTestPreparator(true, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
 	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
 	err := preparator.Prepare(context.TODO(), cfg)
@@ -102,7 +104,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	}
 
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		preparator := newTestPreparator(true, testGetLegacyAPI)
+		preparator := newTestPreparator(true, testGetLegacyClient())
 
 		cfg := &config.MetaConfig{}
 
@@ -123,7 +125,7 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	preparator := newTestPreparator(false, testGetLegacyAPI)
+	preparator := newTestPreparator(false, testGetLegacyClient())
 	preparator.params.ValidateClusterPrefix = false
 	cfg := &config.MetaConfig{}
 
