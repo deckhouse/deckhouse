@@ -51,6 +51,7 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  {{- include "image-build.build" (set $ "BuildCommand" `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go .`) | indent 4 }}
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o /caps-controller-manager cmd/main.go`) | indent 6 }}
   - chown 64535:64535 /caps-controller-manager
   - chmod 0700 /caps-controller-manager

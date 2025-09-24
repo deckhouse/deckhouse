@@ -43,14 +43,12 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make bash git
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  {{- include "image-build.build" (set $ "BuildCommand" `go build -trimpath -ldflags "-s -w -extldflags \"-static\"" -o bin/manager sigs.k8s.io/cluster-api .`) | indent 4 }}
+  - |
+  {{- include "image-build.build" (set $ "BuildCommand" `go build -trimpath -ldflags "-s -w -extldflags \"-static\"" -o bin/manager sigs.k8s.io/cluster-api`) | indent 6 }}
   - mv /src/bin/manager /capi-controller-manager
   - chown 64535:64535 /capi-controller-manager
   - chmod 0700 /capi-controller-manager
