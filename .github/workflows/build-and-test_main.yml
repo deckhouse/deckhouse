@@ -402,7 +402,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -728,7 +728,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1054,7 +1054,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1380,7 +1380,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1706,7 +1706,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -2032,7 +2032,7 @@ jobs:
           AUTH_ROLE="null" #clear value
 
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo '${{ toJson(secrets) }}' | base64 -d
+          echo '${{ toJson(secrets) }}' | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
