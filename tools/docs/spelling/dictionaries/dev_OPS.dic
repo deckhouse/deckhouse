@@ -1,4 +1,4 @@
-2482
+2486
 1GB
 2GB
 5XX
@@ -34,6 +34,7 @@ allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
 allowVolumeExpansion
+amd
 AMD
 ami
 AMIs
@@ -55,8 +56,8 @@ APIVersion
 app
 apparmor
 AppArmor
-app’s
 apps
+app’s
 Aps
 aren
 argocd
@@ -264,8 +265,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMap’s
 ConfigMaps
+ConfigMap’s
 configOverrides
 configs
 configurator
@@ -341,6 +342,7 @@ Daemonsets
 DaemonSets
 dapp
 dappdeps
+darwin
 dashboard
 datacenter
 Datacenter
@@ -407,8 +409,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfile’s
 Dockerfiles
+Dockerfile’s
 dockerignore
 dockersamples
 documentation
@@ -952,6 +954,7 @@ NGINX’s
 NIC
 NICs
 NLB
+Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -960,7 +963,6 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
-Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1567,6 +1569,7 @@ wildcards
 Wildcards
 withCredentials
 WithNAT
+WithNatInstance
 WithNATInstance
 WithoutNAT
 WORKDIR
@@ -2208,6 +2211,7 @@ ZvirtInstanceClass
 раскопировано
 распарсены
 распарсить
+рассинхронизации
 ребут
 реверт
 Ревью
