@@ -60,3 +60,9 @@ Key changes:
 ### 009-kerberos-ldap-spnego.patch
 
 Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
+### 010-reset-pass-feat-2fa-fix.patch
+
+This patch implements logic with forced password change flag, which can be set externally by some controlller.
+User will be forced to change his password after successfull login. 
+
+Also fixes a 2FA bug where a user’s local account could become broken if they had no TOTP keys configured and Dex had 2FA enabled (users were created before this feature turned active).
