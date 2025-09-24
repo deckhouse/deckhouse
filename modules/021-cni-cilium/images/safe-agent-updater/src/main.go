@@ -137,6 +137,8 @@ func isCiliumCNIVersionAlreadyUpToDate() (bool, string, error) {
 		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v", err)
 	}
 
+	log.Infof("[SafeAgentUpdater] cilium-cni version output: %s", string(out))
+
 	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(string(out))
 	if version == "" {
 		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
