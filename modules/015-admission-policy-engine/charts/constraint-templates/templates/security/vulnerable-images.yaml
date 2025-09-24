@@ -17,7 +17,12 @@ spec:
       rego: |
         package d8.vulnerableimages
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg}] {
+          not_delete
           images := [img | img = retrieve_images[_]]
           response := external_data({"provider": "trivy-provider", "keys": images})
 

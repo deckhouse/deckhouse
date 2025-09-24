@@ -50,7 +50,12 @@ spec:
       rego: |
         package d8.security_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg, "details": {}}] {
+          not_delete
           input_share_hostnetwork(input.review.object)
           msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
         }

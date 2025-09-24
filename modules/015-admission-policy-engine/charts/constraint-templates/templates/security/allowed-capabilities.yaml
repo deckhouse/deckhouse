@@ -42,37 +42,47 @@ spec:
       rego: |
         package d8.security_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.containers[_]
           has_disallowed_capabilities(container)
           msg := sprintf("container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.containers[_]
           missing_drop_capabilities(container)
           msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
         }
 
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.initContainers[_]
           has_disallowed_capabilities(container)
           msg := sprintf("init container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.initContainers[_]
           missing_drop_capabilities(container)
           msg := sprintf("init container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
         }
 
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.ephemeralContainers[_]
           has_disallowed_capabilities(container)
           msg := sprintf("ephemeral container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
+          not_delete
           container := input.review.object.spec.ephemeralContainers[_]
           missing_drop_capabilities(container)
           msg := sprintf("ephemeral container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])

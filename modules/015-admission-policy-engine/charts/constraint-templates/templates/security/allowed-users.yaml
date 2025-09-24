@@ -129,7 +129,12 @@ spec:
       rego: |
         package d8.security_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg}] {
+          not_delete
           fields := ["runAsUser", "runAsGroup", "supplementalGroups", "fsGroup"]
           field := fields[_]
           container := input_containers[_]

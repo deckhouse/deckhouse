@@ -28,7 +28,12 @@ spec:
       rego: |
         package d8.operation_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg}] {
+          not_delete
           ingressClass := input.review.object.spec.ingressClassName
           not contains(input.parameters.ingressClassNames, ingressClass)
           msg := sprintf("Ingress <%v> has invalid ingress class: %v, allowed: %v", [input.review.object.metadata.name, ingressClass, input.parameters.ingressClassNames])

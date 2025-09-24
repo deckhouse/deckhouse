@@ -32,7 +32,12 @@ spec:
       rego: |
         package d8.security_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg, "details": {}}] {
+          not_delete
           ingress_name := input.review.object.metadata.name
           some i
           host := input.review.object.spec.rules[i].host

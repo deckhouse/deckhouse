@@ -20,7 +20,12 @@ spec:
       rego: |
         package d8.operation_policies
 
+        not_delete {
+          input.review.operation != "DELETE"
+        }
+
         violation[{"msg": msg}] {
+          not_delete
           hostNetwork := input.review.object.spec.hostNetwork
           hostNetwork == true
 
@@ -31,6 +36,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not_delete
           hostNetwork := input.review.object.spec.hostNetwork
           hostNetwork == true
 
