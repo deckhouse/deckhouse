@@ -44,13 +44,14 @@ func DefaultVersionContentProvider(s settings.ProviderSettings, provider string,
 
 	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
 
-	return func(_ context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, string, error) {
-		l := len(settings.Versions())
+	return func(_ context.Context, settings settings.ProviderSettings, _ *config.MetaConfig, _ log.Logger) ([]byte, string, error) {
+		versions := settings.Versions()
+		l := len(versions)
 		if l != 1 {
 			return nil, "", fmt.Errorf("No one version (%d) found for provider %s", l, provider)
 		}
 
-		v := settings.Versions()[0]
+		v := versions[0]
 
 		return version.GetVersionContent(s, v), v, nil
 	}
