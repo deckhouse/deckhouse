@@ -19,7 +19,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"golang.org/x/mod/semver"
 	"os"
+	"os/exec"
+	"regexp"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -30,6 +33,7 @@ import (
 )
 
 const (
+	cniCiliumBinaryPath          = "/hostbin/cilium-cni"
 	ciliumNS                     = "d8-cni-cilium"
 	generationAnnotation         = "safe-agent-updater-daemonset-generation"
 	migrationSucceededAnnotation = "network.deckhouse.io/cilium-1-17-migration-succeeded"
@@ -52,6 +56,22 @@ func main() {
 	if len(desiredAgentImageHash) == 0 {
 		log.Fatalf("[SafeAgentUpdater] Failed to get env CILIUM_AGENT_DESIRED_IMAGE_HASH.")
 	}
+
+	if !isCiliumExistOnNode() {
+		log.Infof("[SafeAgentUpdater] Cilium CNI binary does not exist on node %s.", nodeName)
+		return
+	}
+
+	if ok, version, err := isCiliumCNIVersionAlreadyUpToDate(); err != nil {
+		log.Fatal(err)
+	} else if ok {
+		log.Infof("[SafeAgentUpdater] Cilium CNI plugin version is not less than 1.17: %s", version)
+		if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	currentAgentPodName, currentAgentImageHash, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(kubeClient, nodeName)
 	if err != nil {
 		log.Fatal(err)
@@ -104,6 +124,25 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Infof("[SafeAgentUpdater] Finished and exit")
+}
+
+func isCiliumExistOnNode() bool {
+	_, err := os.Stat(cniCiliumBinaryPath)
+	return !os.IsNotExist(err)
+}
+
+func isCiliumCNIVersionAlreadyUpToDate() (bool, string, error) {
+	out, err := exec.Command(cniCiliumBinaryPath, "VERSION").Output()
+	if err != nil {
+		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v", err)
+	}
+
+	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(string(out))
+	if version == "" {
+		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
+	}
+
+	return semver.Compare("v"+version, "v1.17.0") >= 0, version, nil
 }
 
 func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, currentAgentImageHash string, isCurrentAgentPodGenerationDesired bool, err error) {
