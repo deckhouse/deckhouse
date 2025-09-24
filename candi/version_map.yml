@@ -8,6 +8,7 @@ bashible: &bashible
     "10":
     "11":
     "12":
+    "13":
   centos:
     "7":
     "8":
