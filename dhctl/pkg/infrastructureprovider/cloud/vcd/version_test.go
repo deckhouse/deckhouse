@@ -15,6 +15,8 @@
 package vcd
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -24,16 +26,31 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 )
 
 var versionsForTest = []string{legacyVersion, "3.14.1"}
 
-func testGetLegacyAPI(_ *config.MetaConfig, _ log.Logger) (string, error) {
-	return "36.2", nil
+type testCloudClient struct {
+	version string
 }
 
-func testGetCurrentAPI(_ *config.MetaConfig, _ log.Logger) (string, error) {
-	return "38.0", nil
+func newTestCloudClient(version string) *testCloudClient {
+	return &testCloudClient{
+		version: version,
+	}
+}
+
+func (c *testCloudClient) GetVersion(context.Context) (string, error) {
+	return c.version, nil
+}
+
+func testGetLegacyClient() cloudClient {
+	return newTestCloudClient("36.2")
+}
+
+func testGetCurrentClient() cloudClient {
+	return newTestCloudClient("38.0")
 }
 
 func TestVersionsContentLegacy(t *testing.T) {
@@ -43,7 +60,7 @@ func TestVersionsContentLegacy(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithAPI(testGetLegacyAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetLegacyClient(), set, log.GetDefaultLogger())
 
 	require.NoError(t, err)
 	require.Equal(t, version, legacyVersion)
@@ -67,7 +84,7 @@ func TestVersionsContentCurrent(t *testing.T) {
 		TypeVal:      pointer.String("vcd"),
 	}
 
-	content, version, err := versionContentProviderWithAPI(testGetCurrentAPI, set, &config.MetaConfig{}, log.GetDefaultLogger())
+	content, version, err := versionContentProviderWithClient(context.TODO(), testGetCurrentClient(), set, log.GetDefaultLogger())
 
 	require.NoError(t, err)
 	require.Equal(t, version, versionsForTest[1])
@@ -82,4 +99,58 @@ terraform {
   }
 }
 `, versionsForTest[1]))
+}
+
+func TestVCDClientProvider(t *testing.T) {
+	logger := log.GetDefaultLogger()
+
+	assertError := func(t *testing.T, c *config.MetaConfig) {
+		_, err := newVcdCloudClient(c, logger)
+		require.Error(t, err)
+	}
+
+	setProviderConfig := func(t *testing.T, c *config.MetaConfig, url string) {
+		pc, err := json.Marshal(providerConfig{
+			Server:   url,
+			Insecure: true,
+		})
+		require.NoError(t, err)
+
+		c.ProviderClusterConfig = map[string]json.RawMessage{
+			"provider": pc,
+		}
+	}
+
+	cfg := &config.MetaConfig{}
+	// no cloud
+	assertError(t, cfg)
+
+	// static cluster
+	cfg.ClusterType = config.StaticClusterType
+	assertError(t, cfg)
+
+	cfg.ClusterType = config.CloudClusterType
+
+	// valid cloud type but invalid cloud name
+	cfg.ProviderName = "yandex"
+	assertError(t, cfg)
+
+	// vcd but upper case
+	cfg.ProviderName = "VCD"
+	assertError(t, cfg)
+
+	cfg.ProviderName = ProviderName
+
+	// correct provider but without cluster config
+	assertError(t, cfg)
+
+	// invalid url
+	setProviderConfig(t, cfg, ":-//blah")
+	assertError(t, cfg)
+
+	// valid url
+	setProviderConfig(t, cfg, "https://my-server:8080")
+	c, err := newVcdCloudClient(cfg, logger)
+	require.NoError(t, err)
+	require.False(t, interfaces.IsNil(c))
 }

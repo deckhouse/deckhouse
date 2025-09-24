@@ -29,32 +29,39 @@ import (
 	"github.com/vmware/go-vcloud-director/v3/govcd"
 )
 
-func VersionContentProvider(_ context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
-	return versionContentProviderWithAPI(getAPIVersion, settings, metaConfig, logger)
+func VersionContentProvider(ctx context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
+	client, err := newVcdCloudClient(metaConfig, logger)
+	if err != nil {
+		return nil, "", err
+	}
+	return versionContentProviderWithClient(ctx, client, settings, logger)
 }
 
-func getAPIVersion(m *config.MetaConfig, _ log.Logger) (string, error) {
+type cloudClient interface {
+	GetVersion(ctx context.Context) (string, error)
+}
+
+type vcdCloudClient struct {
+	client *govcd.VCDClient
+}
+
+func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) {
 	if m.ClusterType != config.CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return "", fmt.Errorf("current cluster type is not a cloud type")
+		return nil, fmt.Errorf("current cluster type is not a cloud type")
 	}
 
-	var cloud config.ClusterConfigCloudSpec
-	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
-		return "", fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
-	}
-
-	if cloud.Provider != ProviderName {
-		return "", fmt.Errorf("current provider type is not VCD")
+	if m.ProviderName != ProviderName {
+		return nil, fmt.Errorf("current provider type is not VCD")
 	}
 
 	var providerConfiguration providerConfig
 	if err := json.Unmarshal(m.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
-		return "", fmt.Errorf("unable to unmarshal provider configuration: %v", err)
+		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
 	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
 	if err != nil {
-		return "", fmt.Errorf("unable to parse VCD provider url: %v", err)
+		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
 	}
 	insecure := providerConfiguration.Insecure
 
@@ -64,8 +71,13 @@ func getAPIVersion(m *config.MetaConfig, _ log.Logger) (string, error) {
 	)
 
 	vcdClient.Client.APIVCDMaxVersionIs("")
+	vcdClient.Client.MaxRetryTimeout = 10 // seconds
 
-	apiVersion, err := vcdClient.Client.MaxSupportedVersion()
+	return &vcdCloudClient{client: vcdClient}, nil
+}
+
+func (v *vcdCloudClient) GetVersion(context.Context) (string, error) {
+	apiVersion, err := v.client.Client.MaxSupportedVersion()
 	if err != nil {
 		return "", fmt.Errorf("unable to get VCD API version: %v", err)
 	}
@@ -97,10 +109,8 @@ func versionConstraintAction(apiVersion string, logger log.Logger, action func(l
 	return action(false)
 }
 
-type apiVersionGetter func(metaConfig *config.MetaConfig, logger log.Logger) (string, error)
-
-func versionContentProviderWithAPI(getVersion apiVersionGetter, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
-	apiVersion, err := getVersion(metaConfig, logger)
+func versionContentProviderWithClient(ctx context.Context, client cloudClient, settings settings.ProviderSettings, logger log.Logger) ([]byte, string, error) {
+	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
 		return nil, "", err
 	}

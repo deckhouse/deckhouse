@@ -25,15 +25,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+type clientProvider func(m *config.MetaConfig, l log.Logger) (cloudClient, error)
+
 type MetaConfigPreparatorParams struct {
 	PrepareMetaConfig     bool
 	ValidateClusterPrefix bool
 }
 
 type MetaConfigPreparator struct {
-	params MetaConfigPreparatorParams
-	logger log.Logger
-	getAPI apiVersionGetter
+	params         MetaConfigPreparatorParams
+	logger         log.Logger
+	clientProvider clientProvider
 }
 
 func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *MetaConfigPreparator {
@@ -42,9 +44,9 @@ func NewMetaConfigPreparatorWithoutLogger(params MetaConfigPreparatorParams) *Me
 
 func NewMetaConfigPreparator(params MetaConfigPreparatorParams, logger log.Logger) *MetaConfigPreparator {
 	return &MetaConfigPreparator{
-		params: params,
-		logger: logger,
-		getAPI: getAPIVersion,
+		params:         params,
+		logger:         logger,
+		clientProvider: newVcdCloudClient,
 	}
 }
 
@@ -73,12 +75,17 @@ func (p MetaConfigPreparator) Validate(_ context.Context, metaConfig *config.Met
 	return nil
 }
 
-func (p MetaConfigPreparator) Prepare(_ context.Context, metaConfig *config.MetaConfig) error {
+func (p MetaConfigPreparator) Prepare(ctx context.Context, metaConfig *config.MetaConfig) error {
 	if !p.params.PrepareMetaConfig {
 		return nil
 	}
 
-	apiVersion, err := p.getAPI(metaConfig, p.logger)
+	client, err := p.clientProvider(metaConfig, p.logger)
+	if err != nil {
+		return fmt.Errorf("Cannot get cloud client: %w", err)
+	}
+
+	apiVersion, err := client.GetVersion(ctx)
 	if err != nil {
 		return err
 	}
