@@ -11,6 +11,7 @@ metadata:
 provisioner: csi.vsphere.vmware.com
 parameters:
   DatastoreURL: {{ $storageClass.datastoreURL | quote }}
+  StoragePolicyName: {{ $storageClass.storagePolicyName | quote }}
 allowedTopologies:
 - matchLabelExpressions:
   - key: failure-domain.beta.kubernetes.io/region
