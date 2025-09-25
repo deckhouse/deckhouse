@@ -340,8 +340,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
@@ -629,8 +629,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
@@ -918,8 +918,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
@@ -1207,8 +1207,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
@@ -1496,8 +1496,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
@@ -1785,8 +1785,8 @@ jobs:
           TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
           echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
           mkdir -p "$TEMP_WORKDIR"
-          export REGISTRY_PATH="${DECKHOUSE_STAGE_REGISTRY_HOST}"
-          export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
+          export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+          export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
 
           # Set cosign auth values
           export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
