@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-fromCacheVersion: "2025-09-25.01"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/api-proxy
