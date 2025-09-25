@@ -39,6 +39,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - go build -ldflags="-s -w" -o /src/metadata-exporter main.go exporter.go models.go
   - chmod 0500 /src/metadata-exporter
+  - chown -R 64535:64535 /src/metadata-exporter
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
