@@ -372,7 +372,7 @@ containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriodByPodPriority:
 - priority: 2000000999
-  shutdownGracePeriodSeconds: 15
+  shutdownGracePeriodSeconds: 5
 - priority: 1999999999
   shutdownGracePeriodSeconds: ${shutdownGracePeriodCriticalPods}
 - priority: 0
