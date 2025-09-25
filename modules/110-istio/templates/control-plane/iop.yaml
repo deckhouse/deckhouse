@@ -97,6 +97,7 @@ spec:
         ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
         PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION: "true"
         PILOT_ENABLE_CROSS_CLUSTER_WORKLOAD_ENTRY: "true"
+        ISTIO_META_ENABLE_ENVOY_ACCESS_LOG_SERVICE: "true"
       holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
