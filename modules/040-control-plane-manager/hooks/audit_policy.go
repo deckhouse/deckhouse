@@ -117,14 +117,8 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("failed to unmarshal configmaps_with_extra_audit_policy snapshot: %w", err)
 		}
 		appendBasicPolicyRules(&policy, extraData)
-	}
-
-	// Add policies for virtualization module.
-	for _, module := range input.Values.Get("global.enabledModules").Array() {
-		if module.String() == "virtualization" {
-			appendVirtualizationPolicyRules(&policy)
-			break
-		}
+		// Add policies for virtualization module.
+		appendVirtualizationPolicyRules(&policy)
 	}
 
 	// Append custom policies if secret is present.
