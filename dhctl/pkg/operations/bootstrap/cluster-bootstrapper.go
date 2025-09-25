@@ -183,22 +183,23 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
-func (b *ClusterBootstrapper) cleanup(ctx context.Context, metaConfig *config.MetaConfig) {
+func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
 	if b.InfrastructureContext == nil {
-		b.logger.LogWarnF("InfrastructureContext is nil. Skip cleanup.\n")
-		return
+		b.logger.LogDebugF("InfrastructureContext is nil. Skip cleanup.\n")
+		return func() {}, nil
 	}
 
 	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
 	if err != nil {
-		b.logger.LogErrorF("Error getting cloud provider: %v. Cannot cleanup.\n", err)
-		return
+		return nil, err
 	}
 
-	err = provider.Cleanup()
-	if err != nil {
-		log.ErrorF("Cannot cleanup provider: %v\n", err)
-	}
+	return func() {
+		err = provider.Cleanup()
+		if err != nil {
+			b.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}, nil
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
@@ -350,7 +351,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	var devicePath string
 	var resourcesTemplateData map[string]interface{}
 
-	defer b.cleanup(ctx, metaConfig)
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer cleanup()
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		err = preflightChecker.Cloud(ctx)

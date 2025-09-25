@@ -78,7 +78,12 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 	metaConfig.UUID = clusterUUID
 
-	defer b.cleanup(ctx, metaConfig)
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer cleanup()
 
 	return log.Process("bootstrap", "Cloud infrastructure", func() error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)

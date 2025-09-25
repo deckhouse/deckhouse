@@ -210,6 +210,15 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			return fmt.Errorf("unable to parse cluster config: %w", err)
 		}
 
+		if _, err := metaConfig.GetFullUUID(); err != nil || metaConfig.UUID == "" {
+			u, err := infrastructurestate.GetClusterUUID(ctx, kubeClient)
+			if err != nil {
+				return err
+			}
+
+			metaConfig.UUID = u
+		}
+
 		cachePath := metaConfig.CachePath()
 		if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
 			return fmt.Errorf("unable to init cache: %w", err)
