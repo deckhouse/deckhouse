@@ -20,6 +20,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -47,6 +49,9 @@ const (
 	modulesRootDir = "modules"
 	layoutsRootDir = "layouts"
 	lockFile       = ".terraform.lock.hcl"
+
+	tofuBin      = "opentofu"
+	terraformBin = "terraform"
 )
 
 var (
@@ -912,6 +917,143 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	})
 }
 
+func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
+	testName := "TestTofuApplyWithCreatingWorkerFilesInRoot"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	assertApplyWithCreatingWorkerFilesInRoot(t, assertApplyWithCreatingWorkerFilesInRootParams{
+		params:        params,
+		provider:      yandex.ProviderName,
+		pluginVersion: yandexPluginVersion,
+		useTofu:       true,
+		pluginsDir:    yandexPluginsDir,
+	})
+}
+
+type assertApplyWithCreatingWorkerFilesInRootParams struct {
+	params                  CloudProviderGetterParams
+	provider, pluginVersion string
+	useTofu                 bool
+	pluginsDir              []string
+}
+
+func assertApplyWithCreatingWorkerFilesInRoot(t *testing.T, params assertApplyWithCreatingWorkerFilesInRootParams) {
+	require.NotEmpty(t, params.provider)
+	require.NotEmpty(t, params.pluginVersion)
+	require.NotEmpty(t, params.pluginsDir)
+
+	applyStep := infrastructure.BaseInfraStep
+	applyLayout := "fake"
+
+	cfgApply := fakeApplyTestMetaConfig(t, fakeApplyTestMetaConfigParams{
+		layout:   applyLayout,
+		uuid:     "f04bd5fa-998a-11f0-98c9-83a48e5f683f",
+		provider: params.provider,
+	})
+
+	getter := CloudProviderGetter(params.params)
+
+	applyProvider, err := getter(context.TODO(), cfgApply)
+
+	_, cleanup := testPrepareFakeLayoutForApply(t, testPrepareFakeLayoutForApplyParams{
+		provider: applyProvider,
+		step:     applyStep,
+		layout:   applyLayout,
+	}, params.params)
+
+	defer cleanup(t)
+
+	assertCloudProvider(t, applyProvider, params.provider, params.useTofu)
+	require.NoError(t, err)
+
+	execParams := execInitAndPlanResultsParams{
+		provider: applyProvider,
+		step:     applyStep,
+		params:   params.params,
+		configProvider: func() []byte {
+			return []byte("{}")
+		},
+		layout:        applyLayout,
+		pluginsDir:    params.pluginsDir,
+		pluginVersion: params.pluginVersion,
+	}
+
+	executorForApply, planParams := assertExecInitAndPlanResults(t, execParams)
+
+	err = executorForApply.Apply(context.TODO(), infrastructure.ApplyOpts{
+		StatePath:     planParams.StatePath,
+		PlanPath:      planParams.OutPath,
+		VariablesPath: planParams.VariablesPath,
+	})
+
+	require.NoError(t, err)
+
+	assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t, execParams)
+}
+
+type testPrepareFakeLayoutForApplyParams struct {
+	layout   string
+	provider infrastructure.CloudProvider
+	step     infrastructure.Step
+}
+
+func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutForApplyParams, cloudParams CloudProviderGetterParams) (string, func(t *testing.T)) {
+	require.False(t, value.IsNil(params.provider))
+	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.step)
+	require.NotNil(t, cloudParams.FSDIParams)
+
+	step := string(params.step)
+
+	fakeLayoutDir := filepath.Join(
+		cloudParams.FSDIParams.CloudProviderDir,
+		params.provider.Name(),
+		layoutsRootDir,
+		params.layout,
+	)
+
+	fakeStepDir := filepath.Join(fakeLayoutDir, step)
+
+	err := os.MkdirAll(fakeStepDir, 0o777)
+	require.NoError(t, err)
+
+	cloudParams.Logger.LogInfoF("Fake layout dir %s created\n", fakeLayoutDir)
+
+	cleanup := func(tt *testing.T) {
+		err := os.RemoveAll(fakeLayoutDir)
+		require.NoError(tt, err)
+		cloudParams.Logger.LogInfoF("Fake layout dir %s removed\n", fakeLayoutDir)
+	}
+
+	infraBin := filepath.Join(cloudParams.FSDIParams.BinariesDir, getProviderInfraUtilBinary(t, params.provider))
+
+	fakeResources := fmt.Sprintf(`
+resource "terraform_data" "example" {
+  provisioner "local-exec" {
+    command = "%s --version"
+  }
+}
+`, infraBin)
+
+	resourcesPath := filepath.Join(fakeStepDir, "main.tf")
+
+	err = os.WriteFile(resourcesPath, []byte(fakeResources), 0o777)
+	if err != nil {
+		cleanup(t)
+		require.NoError(t, err)
+	}
+
+	return fakeLayoutDir, cleanup
+}
+
 func getCacheKeyForCluster(metaConfig *config.MetaConfig) string {
 	return fmt.Sprintf(
 		"%s/%s/%s/%s",
@@ -1086,23 +1228,29 @@ func assertFileExistsAndHasContent(t *testing.T, filePath string, expectedConten
 	require.Equal(t, expectedContent, string(content), filePath)
 }
 
-func assertIsNotEmptyDir(t *testing.T, dirPath string) {
+func assertDirExists(t *testing.T, dirPath string) {
 	t.Helper()
 
 	stat, err := os.Stat(dirPath)
 	require.NoError(t, err, dirPath)
 	require.True(t, stat.IsDir(), dirPath)
+}
+
+func assertIsNotEmptyDir(t *testing.T, dirPath string) {
+	t.Helper()
+
+	assertDirExists(t, dirPath)
 
 	entries, err := os.ReadDir(dirPath)
 	require.NoError(t, err, dirPath)
 	require.True(t, len(entries) > 0, dirPath)
 }
 
-func assertDirNotExists(t *testing.T, dirPath string) {
+func assertDirNotExists(t *testing.T, dirPath, msg string) {
 	t.Helper()
 
 	_, err := os.Stat(dirPath)
-	require.True(t, os.IsNotExist(err), dirPath)
+	require.True(t, os.IsNotExist(err), dirPath, msg)
 }
 
 func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams) {
@@ -1183,7 +1331,7 @@ func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrast
 	// cleanup
 	err := provider.Cleanup()
 	require.NoError(t, err)
-	assertDirNotExists(t, provider.RootDir())
+	assertDirNotExists(t, provider.RootDir(), "")
 	assertFSDIDirsAndFilesExists(t, params)
 	// all cleanup functions called in one group anotherGroup is cache clean do not need test
 	require.True(t, anotherCleanupExecutedFirst)
@@ -1200,7 +1348,7 @@ func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrast
 	// double cleanup does not provide error
 	err = provider.Cleanup()
 	require.NoError(t, err)
-	assertDirNotExists(t, provider.RootDir())
+	assertDirNotExists(t, provider.RootDir(), "")
 	assertFSDIDirsAndFilesExists(t, params)
 	assertDoesNotGetProviderFromCache(t, cacheForGetParams)
 	// does not execute additional cleanup
@@ -1230,14 +1378,23 @@ type assertAllFilesCopiedToProviderDirParams struct {
 	modules []string
 }
 
+func getProviderInfraUtilBinary(t *testing.T, provider infrastructure.CloudProvider) string {
+	t.Helper()
+
+	require.False(t, value.IsNil(provider))
+
+	infraBin := terraformBin
+	if provider.NeedToUseTofu() {
+		infraBin = tofuBin
+	}
+
+	return infraBin
+}
+
 func assertInfraUtilCopied(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams, pluginVersion string) {
 	t.Helper()
 
-	infraBin := "terraform"
-	if provider.NeedToUseTofu() {
-		infraBin = "opentofu"
-	}
-
+	infraBin := getProviderInfraUtilBinary(t, provider)
 	infraBinPath := filepath.Join(providerParams.FSDIParams.BinariesDir, infraBin)
 	assertFileExistsAndSymlink(t, infraBinPath, filepath.Join(provider.RootDir(), pluginVersion, infraBin))
 }
@@ -1331,6 +1488,24 @@ func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider i
 	require.Len(t, entries, 1)
 }
 
+type fakeApplyTestMetaConfigParams struct {
+	layout, uuid, provider string
+}
+
+func fakeApplyTestMetaConfig(t *testing.T, params fakeApplyTestMetaConfigParams) *config.MetaConfig {
+	require.NotEmpty(t, params.layout)
+	require.NotEmpty(t, params.provider)
+	require.NotEmpty(t, params.uuid)
+
+	cfg := &config.MetaConfig{}
+	cfg.UUID = params.uuid
+	cfg.ProviderName = params.provider
+	cfg.Layout = params.layout
+	cfg.ClusterPrefix = "fake-test"
+
+	return cfg
+}
+
 type testProvideMetaConfigParams struct {
 	env, testName, layout, uuid string
 	logger                      log.Logger
@@ -1373,34 +1548,52 @@ func assertLockFilePresent(t *testing.T, root string) {
 	require.False(t, stat.IsDir())
 }
 
-func assertFileDoesNotPresentsInDir(t *testing.T, dir string, file string) {
+type stringOrRegex struct {
+	regex    *regexp.Regexp
+	value    string
+	excludes []string
+}
+
+func assertFileOrDirDoesNotPresentsInDir(t *testing.T, dir string, file stringOrRegex) {
 	t.Helper()
+
+	if file.regex == nil {
+		require.NotEmpty(t, file.value)
+	}
 
 	err := filepath.Walk(dir, func(p string, info os.FileInfo, err error) error {
 		require.NoError(t, err, p)
-		if info.IsDir() {
-			return nil
-		}
 
 		filename := path.Base(p)
 		require.NotEqual(t, filename, "/", p)
 
-		require.False(t, strings.HasPrefix(filename, file), p)
+		if len(file.excludes) > 0 {
+			if slices.Contains(file.excludes, filename) {
+				fmt.Printf("Found full match exclude %s\n", p)
+				return nil
+			}
+		}
 
+		if file.regex != nil {
+			require.False(t, file.regex.MatchString(filename), p)
+			return nil
+		}
+
+		require.False(t, strings.HasPrefix(filename, file.value), p)
 		return nil
 	})
 
 	require.NoError(t, err)
 }
 
-func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGetterParams, file string) {
+func assertDirsNotContainsFileInFSSources(t *testing.T, params CloudProviderGetterParams, file stringOrRegex) {
 	t.Helper()
 
 	require.NotNil(t, params.FSDIParams)
 
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
-	assertFileDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
+	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.BinariesDir, file)
+	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.CloudProviderDir, file)
+	assertFileOrDirDoesNotPresentsInDir(t, params.FSDIParams.PluginsDir, file)
 }
 
 func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParams) {
@@ -1408,7 +1601,7 @@ func assertDirsNotContainsLockFile(t *testing.T, params CloudProviderGetterParam
 
 	require.NotNil(t, params.FSDIParams)
 
-	assertDirsNotContainsFileInFSSources(t, params, lockFile)
+	assertDirsNotContainsFileInFSSources(t, params, stringOrRegex{value: lockFile})
 }
 
 type executorTestInitParams struct {
@@ -1445,7 +1638,7 @@ func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T,
 
 	assertLockFilePresent(t, lockFileDir)
 	assertDirsNotContainsLockFile(t, params.params)
-	assertDirsNotContainsFileInFSSources(t, params.params, "lock.json")
+	assertDirsNotContainsFileInFSSources(t, params.params, stringOrRegex{value: "lock.json"})
 }
 
 func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode int, params CloudProviderGetterParams, err error) {
@@ -1461,9 +1654,15 @@ func assertPlanResult(t *testing.T, planParams infrastructure.PlanOpts, exitCode
 	assertFileExists(t, planParams.StatePath)
 	assertFileExistsAndHasAnyContent(t, planParams.OutPath)
 
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.OutPath))
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.VariablesPath))
-	assertDirsNotContainsFileInFSSources(t, params, path.Base(planParams.StatePath))
+	assertDirsNotContainsFileInFSSources(t, params, stringOrRegex{
+		value: path.Base(planParams.OutPath),
+	})
+	assertDirsNotContainsFileInFSSources(t, params, stringOrRegex{
+		value: path.Base(planParams.VariablesPath),
+	})
+	assertDirsNotContainsFileInFSSources(t, params, stringOrRegex{
+		value: path.Base(planParams.StatePath),
+	})
 }
 
 type getTestParamsPlanParams struct {
@@ -1471,6 +1670,7 @@ type getTestParamsPlanParams struct {
 	configProvider func() []byte
 	step           infrastructure.Step
 	pluginVersion  string
+	layout         string
 }
 
 func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
@@ -1480,14 +1680,15 @@ func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastruct
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.pluginVersion)
+	require.NotEmpty(t, params.layout)
 
 	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
 
 	planParams := infrastructure.PlanOpts{
 		Destroy:          false,
-		StatePath:        filepath.Join(infraRoot, fmt.Sprintf("state_%s.tfstate", params.step)),
-		VariablesPath:    filepath.Join(infraRoot, fmt.Sprintf("variables_%s.tfvars.json", params.step)),
-		OutPath:          filepath.Join(infraRoot, fmt.Sprintf("output_%s.tfplan", params.step)),
+		StatePath:        filepath.Join(infraRoot, fmt.Sprintf("state__%s_%s.tfstate", params.layout, params.step)),
+		VariablesPath:    filepath.Join(infraRoot, fmt.Sprintf("variables_%s_%s.tfvars.json", params.layout, params.step)),
+		OutPath:          filepath.Join(infraRoot, fmt.Sprintf("output_%s_%s.tfplan", params.layout, params.step)),
 		DetailedExitCode: true,
 	}
 
@@ -1511,7 +1712,59 @@ type execInitAndPlanResultsParams struct {
 	pluginVersion  string
 }
 
-func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) {
+func assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t *testing.T, params execInitAndPlanResultsParams) {
+	t.Helper()
+
+	require.False(t, value.IsNil(params.provider))
+	require.NotEmpty(t, params.pluginVersion)
+	require.NotEmpty(t, params.pluginsDir)
+	require.NotNil(t, params.params.FSDIParams)
+
+	const terraformDir = ".terraform.d"
+
+	if os.Getenv("SKIP_TEST_PROVIDER_TERRAFORM_HOME") == "" {
+		home, err := os.UserHomeDir()
+		require.NoError(t, err)
+		full := filepath.Join(home, terraformDir)
+		assertDirNotExists(t, full, fmt.Sprintf("Dir %s present for skip use SKIP_TEST_PROVIDER_TERRAFORM_HOME=true env", full))
+	} else {
+		params.params.Logger.LogInfoF("%s dir in home was skipped\n", terraformDir)
+	}
+
+	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
+	assertDirExists(t, filepath.Join(infraRoot, terraformDir))
+
+	getExcludes := func(params execInitAndPlanResultsParams, infraBin string) []string {
+		excludes := []string{
+			"terraform-modules",
+			"registry.terraform.io",
+			"registry.opentofu.org",
+			infraBin,
+		}
+
+		for _, p := range yandexPluginsDir {
+			excludes = append(excludes, filepath.Base(p))
+		}
+
+		for _, p := range gcpPluginsDir {
+			excludes = append(excludes, filepath.Base(p))
+		}
+
+		return excludes
+	}
+
+	assertDirsNotContainsFileInFSSources(t, params.params, stringOrRegex{
+		regex:    regexp.MustCompile(".*terraform.*"),
+		excludes: getExcludes(params, terraformBin),
+	})
+
+	assertDirsNotContainsFileInFSSources(t, params.params, stringOrRegex{
+		regex:    regexp.MustCompile(".*tofu.*"),
+		excludes: getExcludes(params, tofuBin),
+	})
+}
+
+func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) (infrastructure.Executor, infrastructure.PlanOpts) {
 	t.Helper()
 
 	require.False(t, value.IsNil(params.provider))
@@ -1535,13 +1788,19 @@ func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsPar
 		pluginVersion: params.pluginVersion,
 	})
 
+	assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t, params)
+
 	planParams := getTestPlanParams(t, getTestParamsPlanParams{
 		provider:       params.provider,
 		step:           params.step,
 		configProvider: params.configProvider,
 		pluginVersion:  params.pluginVersion,
+		layout:         params.layout,
 	})
 
 	exitCode, err := executor.Plan(context.TODO(), planParams)
 	assertPlanResult(t, planParams, exitCode, params.params, err)
+	assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t, params)
+
+	return executor, planParams
 }

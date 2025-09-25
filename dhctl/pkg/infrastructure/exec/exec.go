@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -107,4 +108,17 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		err = nil
 	}
 	return exitCode, err
+}
+
+func ReplaceHomeDirEnv(env []string, homeDir string) []string {
+	res := make([]string, 0, len(env))
+	for _, e := range env {
+		v := e
+		if strings.HasPrefix(e, "HOME=") {
+			v = fmt.Sprintf("HOME=%s", homeDir)
+		}
+		res = append(res, v)
+	}
+
+	return res
 }

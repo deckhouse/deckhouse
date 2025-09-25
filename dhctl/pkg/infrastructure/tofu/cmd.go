@@ -23,6 +23,7 @@ import (
 	"strings"
 	"syscall"
 
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -44,12 +45,14 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
 
-	cmd.Env = append(
+	envs := append(
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
 		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
 		"TF_DATA_DIR="+filepath.Join(params.RootDir, "tf_dhctl"),
 	)
+
+	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
 
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
