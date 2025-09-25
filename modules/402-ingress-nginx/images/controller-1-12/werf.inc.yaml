@@ -970,6 +970,10 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
 git:
 {{- include "image mount points" $ }}
 shell:
