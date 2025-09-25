@@ -114,7 +114,7 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
-	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local", "--max-retries", "10")
+	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
