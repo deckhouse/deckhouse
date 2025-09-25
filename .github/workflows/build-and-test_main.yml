@@ -289,8 +289,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -580,8 +578,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -871,8 +867,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1162,8 +1156,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1453,8 +1445,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
@@ -1744,8 +1734,6 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
           DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
           DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}

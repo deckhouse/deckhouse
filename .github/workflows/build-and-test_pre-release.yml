@@ -289,10 +289,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -345,8 +344,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
@@ -577,10 +576,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -633,8 +631,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
@@ -865,10 +863,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -921,8 +918,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
@@ -1153,10 +1150,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1209,8 +1205,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
@@ -1441,10 +1437,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1497,8 +1492,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
@@ -1729,10 +1724,9 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
-          DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
-          DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
           COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
@@ -1785,8 +1779,8 @@ jobs:
           export WERF_REPO="${DECKHOUSE_STAGE_REGISTRY_HOST}"
 
           # Set cosign auth values
-          export REGISTRY_USER="${DECKHOUSE_STAGE_REGISTRY_USER}"
-          export REGISTRY_PASSWORD="${DECKHOUSE_STAGE_REGISTRY_PASSWORD}"
+          export REGISTRY_USER="${DECKHOUSE_REGISTRY_STAGE_USER}"
+          export REGISTRY_PASSWORD="${DECKHOUSE_REGISTRY_STAGE_PASSWORD}"
           export COSIGN_VAULT_KEY="dh-2025-aug"
           export COSIGN_TRANSIT_SECRET_ENGINE_PATH="dh-signer"
           AUTH_ROLE="dh-signer_dh-signer"
