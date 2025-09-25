@@ -217,6 +217,13 @@ import:
   add: /usr/bin/pwru
   to: /usr/bin/pwru
   before: install
+- image: control-plane-manager/etcd
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - etcdctl
+  - etcdutl
+  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /usr/bin
   to: /usr/bin
