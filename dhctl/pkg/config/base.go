@@ -204,7 +204,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 // if validation schema for ModuleConfig or another resources not found returns ErrSchemaNotFound error
 func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore, opts ...ValidateOption) (bool, error) {
 	doc = strings.TrimSpace(doc)
-	spew.Dump("[xx]", doc)
+	spew.Dump("[xx parseDocument]", doc)
 	if doc == "" {
 		return false, nil
 	}
@@ -278,6 +278,8 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
+	spew.Dump("[xx ParseConfigFromData]", configData)
+
 	bigFileTmp := strings.TrimSpace(configData)
 	docs := input.YAMLSplitRegexp.Split(bigFileTmp, -1)
 
@@ -285,6 +287,7 @@ func ParseConfigFromData(ctx context.Context, configData string, preparatorProvi
 
 	metaConfig := MetaConfig{}
 	for _, doc := range docs {
+		spew.Dump("[xx doc]", doc)
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err
