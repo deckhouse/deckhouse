@@ -7,11 +7,11 @@ permalink: en/architecture/monitoring/
 
 ![Interaction diagram](../../images/prometheus/prometheus_monitoring_new.svg)
 
-### Components installed by Deckhouse
+### Components installed by DKP
 
 | Component                   | Description                                                                                                                                                                                                                                                                                        |
 |-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **prometheus-operator**     | Deckhouse module responsible for running Prometheus in the cluster.                                                                                                                                                                                                                                   |
+| **prometheus-operator**     | DKP module responsible for running Prometheus in the cluster.                                                                                                                                                                                                                                   |
 | **prometheus-main**         | Main Prometheus that performs scraping every 30 seconds (can be changed using the `scrapeInterval` parameter). It processes all rules, sends alerts and is the main data source.                                                                        |
 | **prometheus-longterm**     | Additional Prometheus storing sparse data samples from the main prometheus-main                                                                                                                                                                                                      |
 | **aggregating-proxy**       | Aggregating and caching proxy that combines main and longterm into one source. Helps avoid data gaps when one of the Prometheus instances is unavailable.                                                                                                                                     |
@@ -25,12 +25,12 @@ permalink: en/architecture/monitoring/
 
 ### External components
 
-Deckhouse can integrate with a large number of diverse solutions in the following ways:
+DKP can integrate with a large number of diverse solutions in the following ways:
 
 | Name                       | Description|
 |--------------------------------|--------------------------------------------------------------------------|
-| **Alertmanagers**              | Alertmanagers can be connected to Prometheus and Grafana and be located both in the Deckhouse cluster and outside it.|
-| **Long-term metrics storages** | Using the `remote write` protocol, it is possible to send metrics from Deckhouse to a large number of storage systems, including [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
+| **Alertmanagers**              | Alertmanagers can be connected to Prometheus and Grafana and be located both in the DKP cluster and outside it.|
+| **Long-term metrics storages** | Using the `remote write` protocol, it is possible to send metrics from DKP to a large number of storage systems, including [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
 
 
 ## Prometheus

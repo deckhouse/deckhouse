@@ -8,7 +8,7 @@ This section describes the operation of logging system components in Deckhouse K
 ## Log collection and delivery mechanism
 
 The [`log-shipper` module](/modules/log-shipper/) is used for log collection and delivery in DKP.
-A separate `log-shipper` instance runs on each cluster node and is configured based on Deckhouse resources.
+A separate `log-shipper` instance runs on each cluster node and is configured based on DKP resources.
 The `log-shipper` module uses [Vector](https://vector.dev/) as a logging agent.
 The combination of settings for log collection and delivery forms a *pipeline*.
 
@@ -16,7 +16,7 @@ The combination of settings for log collection and delivery forms a *pipeline*.
 
 <!-- Source diagram: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse monitors ClusterLoggingConfig, ClusterLogDestination, and PodLoggingConfig resources:
+1. DKP monitors ClusterLoggingConfig, ClusterLogDestination, and PodLoggingConfig resources:
 
    - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig): Describes log sources at the cluster level,
      including collection, filtering, and parsing rules;
@@ -24,7 +24,7 @@ The combination of settings for log collection and delivery forms a *pipeline*.
      within a specified namespace, including collection, filtering, and parsing rules;
    - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination): Sets log storage parameters.
 
-1. Based on the specified parameters, Deckhouse automatically creates a configuration file and saves it in a Secret in Kubernetes.
+1. Based on the specified parameters, DKP automatically creates a configuration file and saves it in a Secret in Kubernetes.
 1. The Secret is mounted on all `log-shipper` agent pods.
    When the configuration changes, updates occur automatically using the `reloader` sidecar container.
 

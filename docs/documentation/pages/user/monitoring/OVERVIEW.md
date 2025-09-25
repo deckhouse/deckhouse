@@ -3,7 +3,7 @@ title: "Overview"
 permalink: en/user/monitoring/
 ---
 
-Deckhouse provides a convenient and ready-to-use Kubernetes cluster monitoring system.
+Deckhouse Kubernetes Platform (DKP) provides a convenient and ready-to-use Kubernetes cluster monitoring system.
 
 By default, monitoring collects a large number of metrics and contains configured triggers for tracking the general state of applications, as well as provides access to them in the form of convenient dashboards in the Grafana web interface.
 

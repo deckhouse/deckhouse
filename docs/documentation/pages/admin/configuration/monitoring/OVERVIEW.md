@@ -90,7 +90,7 @@ DKP monitoring capabilities:
 
 ## Extended monitoring mode
 
-Deckhouse supports the use of extended monitoring mode, which provides alerts for additional metrics:
+DKP supports the use of extended monitoring mode, which provides alerts for additional metrics:
 
 - free space and inodes on node disks,
 - node utilization,
@@ -100,7 +100,7 @@ Deckhouse supports the use of extended monitoring mode, which provides alerts fo
 
 ### Alerting in extended monitoring mode
 
-Deckhouse provides the ability to flexibly configure alerting for each namespace and specify different severity levels depending on thresholds. You can define multiple thresholds for sending warnings to different namespaces, for example, for the following parameters:
+DKP provides the ability to flexibly configure alerting for each namespace and specify different severity levels depending on thresholds. You can define multiple thresholds for sending warnings to different namespaces, for example, for the following parameters:
 
 - free space and inode values on disk;
 - CPU utilization of nodes and containers;
@@ -109,11 +109,11 @@ Deckhouse provides the ability to flexibly configure alerting for each namespace
 
 ## Alerts
 
-Monitoring in Deckhouse includes event notifications. The standard delivery includes a set of basic warnings covering cluster state and its components. There is also the ability to add custom alerts.
+Monitoring in DKP includes event notifications. The standard delivery includes a set of basic warnings covering cluster state and its components. There is also the ability to add custom alerts.
 
 ### Sending alerts to external systems
 
-Deckhouse supports sending alerts using `Alertmanager`:
+DKP supports sending alerts using `Alertmanager`:
 
 - via SMTP protocol;
 - to PagerDuty;

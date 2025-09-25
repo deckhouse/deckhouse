@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/logging/delivery.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform предусмотрен сбор и доставка логов из узлов и подов кластера во внутреннюю или внешние системы хранения.
+В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера во внутреннюю или внешние системы хранения.
 
 DKP позволяет:
 

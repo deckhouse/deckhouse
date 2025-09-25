@@ -3,7 +3,7 @@ title: Cluster SLA monitoring
 permalink: en/admin/configuration/monitoring/sla.html
 ---
 
-DKP can collect statistics about the availability of cluster components and Deckhouse components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.
+DKP can collect statistics about the availability of cluster components and DKP components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.
 
 Additionally, using the [UpmeterRemoteWrite](/modules/upmeter/cr.html#upmeterremotewrite) custom resource, you can export availability metrics via the Prometheus Remote Write protocol.
 

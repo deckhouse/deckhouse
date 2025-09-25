@@ -9,7 +9,7 @@ lang: ru
 ## Механизм сбора и доставки логов
 
 Для сбора и доставки логов в DKP используется [модуль `log-shipper`](/modules/log-shipper/).
-На каждом узле кластера запускается отдельный экземпляр `log-shipper`, который настраивается на основе ресурсов Deckhouse.
+На каждом узле кластера запускается отдельный экземпляр `log-shipper`, который настраивается на основе ресурсов DKP.
 Модуль `log-shipper` использует [Vector](https://vector.dev/) в качестве агента логирования.
 Комбинация настроек для сбора и доставки логов образует *pipeline*.
 
@@ -17,7 +17,7 @@ lang: ru
 
 <!-- Исходник схемы: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
-1. Deckhouse отслеживает ресурсы ClusterLoggingConfig, ClusterLogDestination и PodLoggingConfig:
+1. DKP отслеживает ресурсы ClusterLoggingConfig, ClusterLogDestination и PodLoggingConfig:
 
    - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) — описывает источник логов на уровне кластера,
      включая правила сбора, фильтрации и парсинга;
@@ -25,7 +25,7 @@ lang: ru
      в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга;
    - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) — задаёт параметры хранилища логов.
 
-1. На основе заданных параметров Deckhouse автоматически создаёт конфигурационный файл и сохраняет его в Secret в Kubernetes.
+1. На основе заданных параметров DKP автоматически создаёт конфигурационный файл и сохраняет его в Secret в Kubernetes.
 1. Secret монтируется на все поды агентов `log-shipper`.
    При изменении конфигурации обновление происходит автоматически с помощью сайдкар-контейнера `reloader`.
 

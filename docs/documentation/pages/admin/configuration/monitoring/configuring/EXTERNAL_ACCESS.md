@@ -69,7 +69,7 @@ As the URL, you need to specify `https://prometheus-api.<your-cluster-domain>`.
 * **Basic authorization** is not a reliable security measure. It is recommended to implement additional security measures, such as specifying the `nginx.ingress.kubernetes.io/whitelist-source-range` annotation.
 
 * Due to the need to create an Ingress resource in the system namespace, this connection method is **not recommended**.
-  Deckhouse **does not guarantee** the preservation of this connection scheme's functionality due to its active continuous updates.
+  DKP **does not guarantee** the preservation of this connection scheme's functionality due to its active continuous updates.
 
 * This Ingress resource can be used to access the Prometheus API not only for Grafana but also for other integrations, such as Prometheus federation.
 
