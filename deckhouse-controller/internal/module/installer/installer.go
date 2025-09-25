@@ -40,8 +40,6 @@ import (
 
 const (
 	tracerName = "installer"
-
-	DevVersion = "dev"
 )
 
 type Installer struct {
