@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	"golang.org/x/crypto/ssh"
 )
 
 type SSHUploadScript struct {
@@ -256,7 +255,7 @@ func bundleSSHOutputHandler(
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						_ = cmd.session.Signal(ssh.SIGKILL)
+						cmd.Stop()
 					}
 					return
 				}
