@@ -256,7 +256,7 @@ func bundleSSHOutputHandler(
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						_ = cmd.session.Signal(ssh.SIGABRT)
+						_ = cmd.session.Signal(ssh.SIGKILL)
 					}
 					return
 				}
