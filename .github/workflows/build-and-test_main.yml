@@ -364,8 +364,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -653,8 +655,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -942,8 +946,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1231,8 +1237,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1520,8 +1528,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
@@ -1809,8 +1819,10 @@ jobs:
           ACTIONS_ID_TOKEN="null" #clear value
           AUTH_ROLE="null" #clear value
 
+          echo WERF_REPO
+          echo $WERF_REPO | base64
           type werf && source $(werf ci-env github --verbose --as-file)
-          cat $(werf ci-env github --verbose --as-file)
+          echo $WERF_REPO | base64
           werf build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
