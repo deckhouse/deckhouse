@@ -1644,16 +1644,6 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		r.activeApplyCount.Add(-1)
 	}()
 
-	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
-		r.exts.DeleteConstraints(release.GetModuleName())
-		// TODO(yalosev): we have to disable module here somehow.
-		// otherwise, hooks from file system will fail
-
-		// restart controller for completely remove module
-		// TODO: we need another solution for remove module from modulemanager
-		r.releaseWasProcessed.Store(true)
-	}
-
 	if release.GetPhase() != v1alpha1.ModuleReleasePhaseTerminating {
 		release.Status.Phase = v1alpha1.ModuleReleasePhaseTerminating
 		if err := r.client.Status().Update(ctx, release); err != nil {
@@ -1665,10 +1655,20 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	if err := r.loader.Installer().Uninstall(ctx, release.GetModuleName()); err != nil {
-		r.log.Error("failed to uninstall release", slog.String("release", release.GetName()), log.Err(err))
+	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == v1alpha1.DeckhouseReleasePhaseDeployed {
+		if err := r.loader.Installer().Uninstall(ctx, release.GetModuleName()); err != nil {
+			r.log.Error("failed to uninstall release", slog.String("release", release.GetName()), log.Err(err))
 
-		return ctrl.Result{}, fmt.Errorf("uninstall module: %w", err)
+			return ctrl.Result{}, fmt.Errorf("uninstall module: %w", err)
+		}
+
+		r.exts.DeleteConstraints(release.GetModuleName())
+		// TODO(yalosev): we have to disable module here somehow.
+		// otherwise, hooks from file system will fail
+
+		// restart controller for completely remove module
+		// TODO: we need another solution for remove module from modulemanager
+		r.releaseWasProcessed.Store(true)
 	}
 
 	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs) {
@@ -1714,7 +1714,7 @@ func (r *reconciler) deleteOutdatedModuleReleases(ctx context.Context, moduleSou
 
 	// sort and delete all outdated releases except for <outdatedReleasesKeepCount> last releases per a module
 	for moduleName, outdated := range outdatedReleases {
-		r.log.Debug("found the following outdated releases formodule", slog.String("module_name", moduleName), slog.Any("releases_list", releases))
+		r.log.Debug("found the following outdated releases for module", slog.String("name", moduleName), slog.Any("releases_list", outdated))
 
 		sort.Slice(outdated, func(i, j int) bool { return outdated[j].version.LessThan(outdated[i].version) })
 
