@@ -9,13 +9,11 @@ This [issue](https://github.com/aquasecurity/trivy-operator/issues/695) covers b
 
 Skip some defseq checks for proper reports result for deckhouse installation.
 
-
 ### 004-scan-job-registry-ca.patch
 
 This patch adds the ability to specify CA for scan jobs via environment variables.
 
 [Issue](https://github.com/deckhouse/deckhouse/issues/4950)
-
 
 ### 005-cis-benchmark-on-startup.patch
 
@@ -50,3 +48,12 @@ The current version of operator does not support kubernetes v1.31+ because of ne
 
 [PR](https://github.com/aquasecurity/trivy-operator/pull/2292)
 [Issue](https://github.com/aquasecurity/trivy-operator/issues/2251)
+
+### 012-proxy-for-jobs-and-security-context-forced.patch
+
+Forced security context on scanning job pods that is similar to `helm_lib_module_container_security_context_pss_restricted_flexible`.
+Passed the trivy-operator's HTTP(S)_PROXY and NO_PROXY environment variables to the scanning pods.
+
+### 013-fix-cve.patch
+
+Updated some operator dependencies.

@@ -76,6 +76,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: caps-controller-manager
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible"  dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "capsControllerManager") }}
         imagePullPolicy: IfNotPresent
         ports:
@@ -86,8 +87,14 @@ spec:
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: cert
             readOnly: true
+          - mountPath: /tmp
+            name: tmp
         args:
           - "--leader-elect"
+          # Todo remove after rewrite caps
+          - "--leader-elect-lease-duration=3m"
+          - "--leader-elect-renew-deadline=2m50s"
+          - "--leader-elect-retry-period=5s"
           - "--sync-period=1m"
         livenessProbe:
           httpGet:
@@ -112,4 +119,6 @@ spec:
           secret:
             defaultMode: 420
             secretName: caps-controller-manager-webhook-tls
+        - name: tmp
+          emptyDir: {}
 {{- end }}

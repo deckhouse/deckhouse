@@ -51,10 +51,17 @@ To enable Dex authentication for your application, follow these steps:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
-      - `NAME` — the value of the `metadata.name` parameter of the `DexAuthenticator` resource;
-      - `NS` — the value of the `metadata.namespace` parameter of the `DexAuthenticator` resource;
+   - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
+      - `SERVICE_NAME` — is the name of the authenticator's Service. Usually, it is `<NAME>-dex-authenticator` (`<NAME>` is the `metadata.name` of the DexAuthenticator).
+      - `NS` — the value of the `metadata.namespace` parameter of the DexAuthenticator.
       - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
+
+   > **Note:** If the DexAuthenticator name (`<NAME>`) is too long, the Service name may be truncated. To find the correct service name, use the following command (specify namespace name and DexAuthenticator name):
+   >
+   > ```shell
+   > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+   > ```
+   >
 
    Below is an example of annotations added to an application's Ingress resource so that it can be connected to Dex:
 
@@ -102,7 +109,7 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
 - Open the `user-authn` module settings (create the moduleConfig `user-authn` resource if there is none):
 
   ```shell
-  kubectl edit mc user-authn
+  d8 k edit mc user-authn
   ```
 
 - Add the following section to the `settings` block and save the changes:

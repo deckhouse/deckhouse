@@ -1204,6 +1204,7 @@ entries:
                 en: Short-term storage
                 ru: Кратковременное хранение
               moduleName: loki
+              featureStatus: preview
               folders:
                 - title:
                     en: Description
@@ -1527,40 +1528,6 @@ entries:
                 ru: FAQ
               url: /modules/admission-policy-engine/faq.html
         - title:
-            en: Audit
-            ru: Аудит
-          moduleName: runtime-audit-engine
-          featureStatus: experimental
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /modules/runtime-audit-engine/
-            - title:
-                en: Reference
-                ru: Справка
-              folders:
-                - title:
-                    en: Configuration
-                    ru: Настройки
-                  url: /modules/runtime-audit-engine/configuration.html
-                - title:
-                    en: Custom Resources
-                    ru: Custom Resources
-                  url: /modules/runtime-audit-engine/cr.html
-            - title:
-                en: Advanced Usage
-                ru: Расширенная конфигурация
-              url: /modules/runtime-audit-engine/advanced_usage.html
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /modules/runtime-audit-engine/examples.html
-            - title:
-                en: FAQ
-                ru: FAQ
-              url: /modules/runtime-audit-engine/faq.html
-        - title:
             en: Other modules
             ru: Другие модули
           folders:
@@ -1626,11 +1593,39 @@ entries:
       - title:
           en: Storage configuration
           ru: Настройка хранилищ
-        url: /storage/admin/supported-storage.html  
+        url: /storage/admin/supported-storage.html
       - title:
           en: SDS
           ru: Программно-определяемые хранилища
         folders:
+          - title:
+              en: Local path provisioner storage
+              ru: Локальное хранилище Local Path Provisioner
+            folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /modules/local-path-provisioner/
+            - title:
+                en: Examples
+                ru: Примеры
+              url: /modules/local-path-provisioner/examples.html
+            - title:
+                en: Reference
+                ru: Справка
+              folders:
+                - title:
+                    en: Configuration
+                    ru: Настройки
+                  url: /modules/local-path-provisioner/configuration.html
+                - title:
+                    en: Custom Resources
+                    ru: Custom Resources
+                  url: /modules/local-path-provisioner/cr.html
+            - title:
+                en: FAQ
+                ru: FAQ
+              url: /modules/local-path-provisioner/faq.html
           - title:
               en: Local storage based on LVM
               ru: Локальное хранилище на основе LVM
@@ -1650,7 +1645,7 @@ entries:
           - title:
               en: vSphere data storage
               ru: Хранилище данных vSphere
-            url: /storage/admin/external/vsphere.html  
+            url: /storage/admin/external/vsphere.html
           - title:
               en: HPE data storage
               ru: Хранилище данных HPE
@@ -1674,7 +1669,7 @@ entries:
           - title:
               en: TATLIN.UNIFIED (Yadro) unified storage
               ru: Унифицированное хранилище TATLIN.UNIFIED (Yadro)
-            url: /storage/admin/external/yadro.html     
+            url: /storage/admin/external/yadro.html
       - title:
          en: Module settings
          ru: Настройки модулей
@@ -1690,7 +1685,7 @@ entries:
           - title:
               en: csi-vsphere
               ru: csi-vsphere
-            url: /reference/mc/csi-vsphere/  
+            url: /reference/mc/csi-vsphere/
           - title:
               en: csi-huawei
               ru: csi-huawei

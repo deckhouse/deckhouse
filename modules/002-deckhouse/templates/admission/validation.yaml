@@ -56,29 +56,6 @@ webhooks:
         namespace: d8-system
         port: 4223
         path: /validate/v1alpha1/module-configs
-  - name: module-sources.deckhouse-webhook.deckhouse.io
-    rules:
-      - apiGroups:
-          - "deckhouse.io"
-        apiVersions:
-          - "v1alpha1"
-        resources:
-          - "modulesources"
-        operations:
-          - CREATE
-          - UPDATE
-    admissionReviewVersions:
-      - v1
-    matchPolicy: Equivalent
-    failurePolicy: Fail
-    sideEffects: None
-    clientConfig:
-      caBundle: {{ .Values.deckhouse.internal.admissionWebhookCert.ca | b64enc }}
-      service:
-        name: deckhouse
-        namespace: d8-system
-        port: 4223
-        path: /validate/v1alpha1/module-sources
   - name: update-policies.deckhouse-webhook.deckhouse.io
     rules:
       - apiGroups:

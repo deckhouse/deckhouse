@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"slices"
 	"time"
 
@@ -35,7 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 )
 
 var (
@@ -101,6 +99,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 		source.ObjectMeta.Annotations = map[string]string{
 			v1alpha1.ModuleSourceAnnotationRegistryChecksum: currentChecksum,
 		}
+
 		return nil
 	}
 
@@ -119,12 +118,6 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 		if release.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed {
 			for _, ref := range release.GetOwnerReferences() {
 				if ref.UID == source.UID && ref.Name == source.Name && ref.Kind == v1alpha1.ModuleSourceGVK.Kind {
-					// update the values.yaml file in downloaded-modules/<module_name>/v<module_version/openapi path
-					modulePath := filepath.Join(r.downloadedModulesDir, release.Spec.ModuleName, fmt.Sprintf("v%s", release.Spec.Version))
-					if err = reginjector.InjectRegistryToModuleValues(modulePath, source); err != nil {
-						return fmt.Errorf("update the '%s' module release registry settings: %w", release.Name, err)
-					}
-
 					if len(release.ObjectMeta.Annotations) == 0 {
 						release.ObjectMeta.Annotations = make(map[string]string)
 					}
@@ -133,6 +126,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 					if err = r.client.Update(ctx, &release); err != nil {
 						return fmt.Errorf("set RegistrySpecChanged annotation to the '%s' module release: %w", release.Name, err)
 					}
+
 					break
 				}
 			}
@@ -199,7 +193,7 @@ func (r *reconciler) needToEnsureRelease(
 			return false
 		}
 
-		if len(module.Properties.AvailableSources) > 1 && !source.IsDefault() {
+		if len(module.Properties.AvailableSources) > 1 && source.Name != "deckhouse" {
 			return false
 		}
 	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
@@ -277,6 +271,7 @@ func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, r
 
 func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source *v1alpha1.ModuleSource, message string) error {
 	err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
 		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.Message = message
 		return true

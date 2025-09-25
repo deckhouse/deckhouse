@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -57,8 +58,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
-func convertStaticClusterConfigurationHandler(input *go_hook.HookInput) error {
-	secret := input.NewSnapshots.Get("static_cluster_configuration")
+func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.HookInput) error {
+	secret := input.Snapshots.Get("static_cluster_configuration")
 
 	if len(secret) == 0 {
 		return nil

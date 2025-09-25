@@ -65,7 +65,15 @@ metadata:
   name: etcd
   namespace: kube-system
 spec:
-  securityContext:
-    runAsNonRoot: false
-    runAsUser: 0
-    runAsGroup: 0
+  containers:
+    - name: etcd
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+        runAsGroup: 0
+        capabilities:
+          drop:
+          - ALL
+        readOnlyRootFilesystem: true
+        seccompProfile:
+          type: RuntimeDefault

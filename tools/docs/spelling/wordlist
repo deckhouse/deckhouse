@@ -33,6 +33,7 @@ allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
 allowVolumeExpansion
+amd
 AMD
 ami
 AMIs
@@ -340,6 +341,7 @@ Daemonsets
 DaemonSets
 dapp
 dappdeps
+darwin
 dashboard
 datacenter
 Datacenter
@@ -369,6 +371,7 @@ DeckhouseRelease
 DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
+defaultCRI
 Defragment
 descheduled
 descheduler
@@ -421,6 +424,7 @@ DRBD
 DRBDv
 dropdown
 DRS
+dryrun
 Dryrun
 DSA
 DSL
@@ -431,6 +435,7 @@ dvp
 DVP
 Dynamix
 DynamiX
+dynDNS
 EarlyAccess
 earlyOOM
 eBPF
@@ -464,6 +469,8 @@ erlier
 ESXi
 ESXis
 etcd
+etcdctl
+etcdutl
 eth
 EuropeClouds
 eventsExporter
@@ -518,6 +525,7 @@ FSID
 fstype
 fulfil
 FullAccess
+fullchain
 GARP
 GateKeeper
 gatewayEE
@@ -719,6 +727,7 @@ JSC
 json
 jsonData
 jsonPath
+JWK
 JWKS
 JWT
 k3d
@@ -899,6 +908,7 @@ MTU
 multicluster
 Multicluster
 multiclustering
+MULTIFACTOR
 multiline
 Multiline
 multimaster
@@ -1011,6 +1021,7 @@ OpenLDAP
 openrc
 OpenShift
 openssh
+OpenSSL
 openstack
 OpenStack
 OpenStackClusterConfiguration
@@ -1157,6 +1168,7 @@ rbac
 RBAC
 RBD
 RBDs
+RDP
 RDS
 readinessProbe
 README
@@ -1169,6 +1181,7 @@ Reddit
 redis
 Redis
 Redoc
+redos
 regex
 Regex
 regexes
@@ -1226,6 +1239,7 @@ SaaSUninstall
 SAML
 SANs
 SASL
+SBOM
 SchedulingDisabled
 schemas
 SCM
@@ -1460,6 +1474,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDI
 ve
 vectoradd
 Venafi
@@ -1553,6 +1568,7 @@ wildcards
 Wildcards
 withCredentials
 WithNAT
+WithNatInstance
 WithNATInstance
 WithoutNAT
 WORKDIR
@@ -1734,8 +1750,12 @@ ZvirtInstanceClass
 Гб
 Гбит
 геораспределенном
+гипервизор
+гипервизора
 гипервизорами
 гипервизорах
+гипервизоре
+гипервизоров
 гипервизором
 гиперконвергентной
 гитерминизм
@@ -1750,7 +1770,9 @@ ZvirtInstanceClass
 дашборд
 дашборда
 дашбордами
+дашбордах
 дашбордов
+дашбордом
 дашборды
 двухфакторная
 Двухфакторная
@@ -1758,6 +1780,10 @@ ZvirtInstanceClass
 деактивации
 деактивировать
 дедуплицировать
+декларативно
+декларативное
+декларативность
+декларативный
 декхауса
 демо
 деплое
@@ -1860,8 +1886,12 @@ ZvirtInstanceClass
 компонентa
 компонента
 конвержа
+консистентного
 консистентности
 консистентность
+консистентный
+консистентными
+консистентных
 контеинер
 контеинеризации
 контеинеризация
@@ -1973,6 +2003,7 @@ ZvirtInstanceClass
 мультимастерный
 мультиплатформенной
 мультитенантности
+МУЛЬТИФАКТОР
 мусорку
 мэтчем
 наблюдаемости
@@ -1987,7 +2018,10 @@ ZvirtInstanceClass
 неинтерактивном
 некоммитнутые
 некоммитнутыми
+неконсистентному
 неконсистентности
+неконсистентный
+неконсистентными
 неконфиденциальный
 неконфиденциальных
 ненагруженные
@@ -2012,6 +2046,8 @@ ZvirtInstanceClass
 ОK
 ов
 оверпровижининг
+оверселлинг
+оверселлинга
 одностраничных
 одноузлового
 ООМ
@@ -2074,6 +2110,7 @@ ZvirtInstanceClass
 Переиспользование
 переиспользовании
 переиспользования
+переиспользовать
 переиспользоваться
 перенаправление
 перенаправления
@@ -2108,7 +2145,7 @@ ZvirtInstanceClass
 пиринговой
 пиринговую
 ПК
-Поддомен
+поддомен
 поддоменам
 поддоменами
 поддомены
@@ -2173,6 +2210,7 @@ ZvirtInstanceClass
 раскопировано
 распарсены
 распарсить
+рассинхронизации
 ребут
 реверт
 Ревью
@@ -2225,6 +2263,8 @@ ZvirtInstanceClass
 ресурcы
 ретраев
 ротирован
+ротировать
+ротируется
 роутер
 роутера
 роутерами
@@ -2294,6 +2334,9 @@ ZvirtInstanceClass
 созависимые
 Создайте
 сокет
+сокетам
+сокетами
+сокете
 сокетов
 сокету
 сокеты
@@ -2339,8 +2382,10 @@ ZvirtInstanceClass
 токена
 токенам
 токенами
+токене
 токенов
 токеном
+токену
 токены
 Токены
 траффик
@@ -2433,6 +2478,7 @@ ZvirtInstanceClass
 эндпоинтами
 эндпоинтах
 эндпоинтов
+эндпоинту
 эндпоинты
 эскалаций
 юзера

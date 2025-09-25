@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"slices"
 
@@ -40,6 +41,12 @@ type IngressControllerWithFinalizer struct {
 	Finalizers []string
 	Name       string
 }
+
+const (
+	admissionWebhookName  = "d8-ingress-nginx-admission"
+	webhookNamePattern    = "%s.validate.d8-ingress-nginx"
+	d8sWebhookNamePattern = "%s.validate.d8-ingress-nginx-deckhouse"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 15},
@@ -86,7 +93,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					{
 						Field:    "metadata.name",
 						Operator: "Equals",
-						Value:    "d8-ingress-nginx-admission",
+						Value:    admissionWebhookName,
 					},
 				},
 			},
@@ -133,17 +140,27 @@ func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hoo
 		return nil, err
 	}
 
-	return wh.Name, nil
+	webhooks := make([]string, 0, len(wh.Webhooks))
+	for _, wh := range wh.Webhooks {
+		webhooks = append(webhooks, wh.Name)
+	}
+
+	return webhooks, nil
 }
 
-func handleFinalizers(input *go_hook.HookInput) error {
+func handleFinalizers(_ context.Context, input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
-	serviceNames := set.NewFromSnapshot(input.NewSnapshots.Get("services"))
-	daemonSetNames := set.NewFromSnapshot(input.NewSnapshots.Get("daemonsetscruise"))
-	validationWebhooks := set.NewFromSnapshot(input.NewSnapshots.Get("valwebhookconfnginx"))
+	serviceNames := set.NewFromSnapshot(input.Snapshots.Get("services"))
+	daemonSetNames := set.NewFromSnapshot(input.Snapshots.Get("daemonsetscruise"))
+	var webhooks []string
+	if len(input.Snapshots.Get("valwebhookconfnginx")) > 0 {
+		if err := input.Snapshots.Get("valwebhookconfnginx")[0].UnmarshalTo(&webhooks); err != nil {
+			return fmt.Errorf("failed to get validating webhooks from the snapshot: %v", err)
+		}
+	}
 
-	for controller, err := range sdkobjectpatch.SnapshotIter[IngressControllerWithFinalizer](input.NewSnapshots.Get("controller")) {
+	for controller, err := range sdkobjectpatch.SnapshotIter[IngressControllerWithFinalizer](input.Snapshots.Get("controller")) {
 		if err != nil {
 			log.Error(fmt.Sprintf("Failed convert shanpshot %s  to IngressControllerWithFinalizer type with error %v", controller.Name, err))
 		}
@@ -160,9 +177,6 @@ func handleFinalizers(input *go_hook.HookInput) error {
 			"controller-" + controllerName,
 			fmt.Sprintf("proxy-%s-failover", controllerName),
 			fmt.Sprintf("controller-%s-failover", controllerName),
-		}
-		expectedValidationWebhooks := []string{
-			"d8-ingress-nginx-admission",
 		}
 
 		found := false
@@ -184,10 +198,12 @@ func handleFinalizers(input *go_hook.HookInput) error {
 		}
 
 		if !found {
-			for _, vw := range expectedValidationWebhooks {
-				if _, v := validationWebhooks[vw]; v {
+		Loop:
+			for _, vw := range webhooks {
+				switch vw {
+				case fmt.Sprintf(webhookNamePattern, controllerName), fmt.Sprintf(d8sWebhookNamePattern, controllerName):
 					found = true
-					break
+					break Loop
 				}
 			}
 		}

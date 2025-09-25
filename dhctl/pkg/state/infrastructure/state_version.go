@@ -34,7 +34,7 @@ type TerraformVersions struct {
 
 var DefaultTerraformVersions = TerraformVersions{
 	Terraform: "0.14.8",
-	OpenTofu:  "1.9.0",
+	OpenTofu:  "1.9.4",
 }
 
 type State struct {

@@ -39,11 +39,14 @@
  - **[docs]** Added the registry module docs. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
  - **[docs]** Updated CAPS resources API version. [#13445](https://github.com/deckhouse/deckhouse/pull/13445)
  - **[node-local-dns]** The `enableLogs' option has been added to the ModuleConfig, which logs all DNS queries when enabled. [#14672](https://github.com/deckhouse/deckhouse/pull/14672)
+ - **[node-manager]** Add and increase lease duration timeouts to CAPS. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Added SSH password auth to CAPS controller manager. [#14811](https://github.com/deckhouse/deckhouse/pull/14811)
  - **[node-manager]** Bumped Cluster API from 1.7.5 to 1.10.4. [#14603](https://github.com/deckhouse/deckhouse/pull/14603)
  - **[node-manager]** Updated go.mod dependencies. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
  - **[registry]** Added a relax registry check mode for switching between deckhouse editions. [#14860](https://github.com/deckhouse/deckhouse/pull/14860)
  - **[registry]** Added the registry module. [#14327](https://github.com/deckhouse/deckhouse/pull/14327)
+ - **[user-authn]** Add documentation examples for PasswordPolicy and 2FA [#15270](https://github.com/deckhouse/deckhouse/pull/15270)
+    Provides administrators with clear examples for configuring password policies, user creation, group management, and enabling two-factor authentication.
  - **[user-authn]** Added implement password policy logic for local user accounts. Now it is possible to set complexity level of passwords, failed attempts number to block the user, keep password history and force renewing the password after specified amount of time. [#14993](https://github.com/deckhouse/deckhouse/pull/14993)
 
 ## Fixes
@@ -53,6 +56,7 @@
  - **[candi]** Fixed default AWS subnets tags for LB controller autodiscovery. [#10138](https://github.com/deckhouse/deckhouse/pull/10138)
  - **[cloud-provider-aws]** Fixed incorrect template id for AWS e2e cluster. [#14605](https://github.com/deckhouse/deckhouse/pull/14605)
  - **[cloud-provider-dvp]** Fixed logic of work with disks and coreFraction validation. [#14284](https://github.com/deckhouse/deckhouse/pull/14284)
+ - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
  - **[cloud-provider-vsphere]** Moved datastore discovery (via vSphere SDK calls) from hook to cloud-data-discovery. [#14519](https://github.com/deckhouse/deckhouse/pull/14519)
  - **[cloud-provider-vsphere]** Fixed main network escaping for names with special symbols. [#14328](https://github.com/deckhouse/deckhouse/pull/14328)
@@ -66,17 +70,27 @@
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Add timeout to ssh client dial and fix stop. [#15539](https://github.com/deckhouse/deckhouse/pull/15539)
+ - **[dhctl]** Fix deadlock while reading dhctl singlethreaded server logs [#15512](https://github.com/deckhouse/deckhouse/pull/15512)
+ - **[dhctl]** Fixed the behaviour of the attach operation when there are no keys in SSHConfig, only a password [#15478](https://github.com/deckhouse/deckhouse/pull/15478)
+ - **[dhctl]** Fix ssh client initialising in Commander Attach and Commander Detach operations [#15380](https://github.com/deckhouse/deckhouse/pull/15380)
  - **[docs]** Added documentation for the new registry configuration in Containerd. [#14790](https://github.com/deckhouse/deckhouse/pull/14790)
  - **[extended-monitoring]** Exclude PVCs with block volume mode from space and inodes monitoring. [#14859](https://github.com/deckhouse/deckhouse/pull/14859)
     free space monitoring for the PVCs in the Block volumeMode is meaningless and will be disabled
+ - **[ingress-nginx]** Fixed nginx segfaults when opentelemetry is enabled. [#15466](https://github.com/deckhouse/deckhouse/pull/15466)
+    The ingress-nginx pods of 1.10 will be restarted.
  - **[ingress-nginx]** Fixed the missing opentelemetry libraries issue. [#14965](https://github.com/deckhouse/deckhouse/pull/14965)
     The pods of Ingress Nginx controllers of 1.10 and 1.12 versions will be restated.
  - **[ingress-nginx]** Re-enabled validation and updated documentation. [#14368](https://github.com/deckhouse/deckhouse/pull/14368)
  - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15236](https://github.com/deckhouse/deckhouse/pull/15236)
  - **[istio]** Added api-proxy support for short-lived ServiceAccount tokens. [#14137](https://github.com/deckhouse/deckhouse/pull/14137)
+ - **[loki]** Change stage to Preview [#15553](https://github.com/deckhouse/deckhouse/pull/15553)
+ - **[metallb]** Fixed the Deckhouse controller queue freezing issue that occurs when Service was deleted, but child resource L2LBService wasn't. [#14966](https://github.com/deckhouse/deckhouse/pull/14966)
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#14315](https://github.com/deckhouse/deckhouse/pull/14315)
  - **[monitoring-deckhouse]** Fixed ModuleRelease alerts by eliminating many-to-many joins; observability alert now evaluates correctly. [#14908](https://github.com/deckhouse/deckhouse/pull/14908)
     Prometheus rules only; no component restarts. Alerts for module manual approval and unmet requirements will start firing as expected.
+ - **[node-manager]** Add rbac permission for getting DaemonSets for CAPI. [#15377](https://github.com/deckhouse/deckhouse/pull/15377)
+ - **[node-manager]** Upgrade CAPI version and increase lease duration timeouts. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Fixed calculation of memory for standby holder. [#14522](https://github.com/deckhouse/deckhouse/pull/14522)
  - **[node-manager]** Correct processing of the NodeUser in the bootstrap configuration. [#14151](https://github.com/deckhouse/deckhouse/pull/14151)
  - **[prometheus]** Fix securityContext indentation in the Prometheus main and longterm resources. [#15102](https://github.com/deckhouse/deckhouse/pull/15102)
@@ -84,6 +98,8 @@
  - **[prometheus]** Suppress Grafana-related alerts when the Grafana is disabled in the ModuleConfig. [#14981](https://github.com/deckhouse/deckhouse/pull/14981)
     default
  - **[prometheus]** Fix remote write dropping valid samples after restart due to missing series from snapshot. [#14849](https://github.com/deckhouse/deckhouse/pull/14849)
+ - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15370](https://github.com/deckhouse/deckhouse/pull/15370)
+ - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15359](https://github.com/deckhouse/deckhouse/pull/15359)
  - **[user-authn]** Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create. [#15269](https://github.com/deckhouse/deckhouse/pull/15269)
     Fixes a bug where creating new User resources failed due to missing oldObject in validation; password immutability is still enforced on update.
  - **[user-authz]** Rewrited user-authz module access hook from bash to Python. [#14695](https://github.com/deckhouse/deckhouse/pull/14695)
@@ -91,6 +107,8 @@
 ## Chore
 
 
+ - **[candi]** Bump patch versions of Kubernetes images. [#14979](https://github.com/deckhouse/deckhouse/pull/14979)
+    Kubernetes control-plane components will restart, kubelet will restart
  - **[candi]** Added support for new patch versions of Kubernetes. [#14834](https://github.com/deckhouse/deckhouse/pull/14834)
     Kubernetes control-plane components will restart, kubelet will restart
  - **[deckhouse]** Remove module weight constraints. [#15131](https://github.com/deckhouse/deckhouse/pull/15131)

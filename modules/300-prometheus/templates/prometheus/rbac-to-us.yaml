@@ -30,27 +30,17 @@ subjects:
 - kind: ServiceAccount
   name: aggregating-proxy
   namespace: d8-monitoring
+{{- /* This group is deprecated and will be removed in the future */}}
 - kind: Group
   name: ingress-nginx:auth
-- kind: Group
-  name: prometheus:auth
 {{- if (.Values.global.enabledModules | has "upmeter") }}
 - kind: ServiceAccount
   name: upmeter-agent
   namespace: d8-upmeter
 {{- end }}
-{{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
-- kind: ServiceAccount
-  name: prometheus-metrics-adapter
-  namespace: d8-monitoring
-{{- end }}
-{{- if (.Values.global.enabledModules | has "flant-integration") }}
+{{- /* Leave this binding for a while to ensure smooth transition from prometheus to the aggregating-proxy in flant-integration module */}}
+{{- if and (.Values.global.enabledModules | has "flant-integration") (.Values.global.enabledModules | has "observability" | not) }}
 - kind: ServiceAccount
   name: pricing
   namespace: d8-flant-integration
-{{- end }}
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-- kind: ServiceAccount
-  name: d8-vertical-pod-autoscaler-recommender
-  namespace: kube-system
 {{- end }}

@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -59,8 +60,8 @@ func applyAutoscalerResourcesFilter(obj *unstructured.Unstructured) (go_hook.Fil
 // removeResourcesLimitsForClusterAutoscaler
 // If there is a Deployment kube-system/cluster-autoscaler in cluster,
 // it must not have section `resources.limits` because extended-monitoring will alert at throttling.
-func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
-	resourcesSnap, err := sdkobjectpatch.UnmarshalToStruct[corev1.ResourceRequirements](input.NewSnapshots, "cluster_autoscaler_resources")
+func removeResourcesLimitsForClusterAutoscaler(_ context.Context, input *go_hook.HookInput) error {
+	resourcesSnap, err := sdkobjectpatch.UnmarshalToStruct[corev1.ResourceRequirements](input.Snapshots, "cluster_autoscaler_resources")
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal cluster_autoscaler_resources snapshot: %w", err)
 	}

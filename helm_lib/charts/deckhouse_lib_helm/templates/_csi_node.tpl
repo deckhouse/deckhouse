@@ -27,16 +27,20 @@ memory: 25Mi
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
+  {{- $setSysAdminCapability := $config.setSysAdminCapability | default false }}
   {{- $additionalContainers := $config.additionalContainers }} 
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
+  {{- $csiNodeLifecycle := $config.csiNodeLifecycle | default false }}
+  {{- $csiNodeDriverRegistrarLifecycle := $config.csiNodeDriverRegistrarLifecycle | default false }}
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
+  {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
   {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
   {{- if $driverRegistrarImage }}
-    {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-scsi-generic") ($context.Values.global.enabledModules | has "csi-hpe") ($context.Values.global.enabledModules | has "csi-s3") ($context.Values.global.enabledModules | has "csi-huawei") }}
+    {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -112,7 +116,7 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
-                {{- if or $forceCsiNodeAndStaticNodesDepoloy (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-scsi-generic") (eq $fullname "csi-hpe") (eq $fullname "csi-s3") (eq $fullname "csi-huawei") }}
+                {{- if $forceCsiNodeAndStaticNodesDepoloy }}
                 - Static
                 {{- end }}
               {{- if $additionalNodeSelectorTerms }}
@@ -128,6 +132,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: {{ $csiNodeHostNetwork }}
+      hostPID: {{ $csiNodeHostPID }}
       {{- if eq $csiNodeHostNetwork "true" }}
       dnsPolicy: ClusterFirstWithHostNet
       {{- end }}
@@ -151,6 +156,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+      {{- if $csiNodeDriverRegistrarLifecycle }}
+        lifecycle:
+          {{- $csiNodeDriverRegistrarLifecycle | toYaml | nindent 10 }}
+      {{- end }}
       {{- if $additionalNodeLivenessProbesCmd }}
         livenessProbe:
           initialDelaySeconds: 3
@@ -173,6 +182,11 @@ spec:
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
+        {{- if $setSysAdminCapability }}
+          capabilities:
+            add:
+            - SYS_ADMIN
+        {{- end }}
         image: {{ $nodeImage }}
         args:
       {{- if $additionalNodeArgs }}
@@ -181,6 +195,10 @@ spec:
       {{- if $additionalNodeEnvs }}
         env:
         {{- $additionalNodeEnvs | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if $csiNodeLifecycle }}
+        lifecycle:
+          {{- $csiNodeLifecycle | toYaml | nindent 10 }}
       {{- end }}
       {{- if $livenessProbePort }}
         livenessProbe:

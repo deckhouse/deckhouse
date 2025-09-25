@@ -76,7 +76,7 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: openstack-cloud-controller-manager
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ $ccmImage }}
           args:
           - --leader-elect=true
@@ -89,8 +89,10 @@ spec:
           - --secure-port=10471
           - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
           - --v=2
-          {{- if .Values.global.clusterConfiguration.cloud.prefix }}
+          {{- if .Values.global.clusterConfiguration.cloud }}
+            {{- if .Values.global.clusterConfiguration.cloud.prefix }}
           - --cluster-name={{ .Values.global.clusterConfiguration.cloud.prefix }}
+            {{- end }}
           {{- end }}
           env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy

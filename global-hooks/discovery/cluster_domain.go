@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 
@@ -122,8 +123,8 @@ func applyClusterDomainFromDNSPodFilter(obj *unstructured.Unstructured) (go_hook
 // So now we just need to check that the `clusterConfiguration` is present in the secrets.
 // And if this is the case, then the `global.discovery.clusterDomain` will be filled.
 
-func discoveryClusterDomain(input *go_hook.HookInput) error {
-	if len(input.NewSnapshots.Get("clusterConfiguration")) > 0 {
+func discoveryClusterDomain(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("clusterConfiguration")) > 0 {
 		return nil
 	}
 
@@ -134,12 +135,12 @@ func discoveryClusterDomain(input *go_hook.HookInput) error {
 
 	clusterDomain := "cluster.local"
 
-	coreCM, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, clusterDomainCoreCMSnapName)
+	coreCM, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterDomainCoreCMSnapName)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterDomainCoreCMSnapName: %w", err)
 	}
 
-	dnsPods, err := sdkobjectpatch.UnmarshalToStruct[string](input.NewSnapshots, clusterDomainDNSPodsSnapName)
+	dnsPods, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, clusterDomainDNSPodsSnapName)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal clusterDomainDNSPodsSnapName: %w", err)
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -60,10 +61,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, removeKubeDNSDeployAndService)
 
-func removeKubeDNSDeployAndService(input *go_hook.HookInput) error {
+func removeKubeDNSDeployAndService(_ context.Context, input *go_hook.HookInput) error {
 	input.PatchCollector.DeleteNonCascading("apps/v1", "Deployment", "kube-system", "coredns")
 
-	kubeDNSSVCIsClusterIPTypeSnap := input.NewSnapshots.Get("kube_dns_svc")
+	kubeDNSSVCIsClusterIPTypeSnap := input.Snapshots.Get("kube_dns_svc")
 	if len(kubeDNSSVCIsClusterIPTypeSnap) > 0 {
 		var startKubeDNSSVCIsClusterIPTypeSnap bool
 		err := kubeDNSSVCIsClusterIPTypeSnap[0].UnmarshalTo(&startKubeDNSSVCIsClusterIPTypeSnap)

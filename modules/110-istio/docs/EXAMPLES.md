@@ -658,7 +658,7 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 To find all Pods with old Istio revision (in the example — version 19), execute the command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x19" \
+d8 k get pods -A -o json | jq --arg revision "v1x19" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```

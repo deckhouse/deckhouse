@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -83,9 +84,9 @@ func filterUseBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 	}, nil
 }
 
-func ensureDictBindings(input *go_hook.HookInput) error {
+func ensureDictBindings(_ context.Context, input *go_hook.HookInput) error {
 	subjects := make(map[string]rbacv1.Subject)
-	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.NewSnapshots.Get("useBindings")) {
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredUseBinding](input.Snapshots.Get("useBindings")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'useBindings' snapshot: %w", err)
 		}
@@ -102,7 +103,7 @@ func ensureDictBindings(input *go_hook.HookInput) error {
 		}
 	}
 
-	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.NewSnapshots.Get("dictBindings")) {
+	for parsed, err := range sdkobjectpatch.SnapshotIter[filteredManageBinding](input.Snapshots.Get("dictBindings")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'dictBindings' snapshot: %w", err)
 		}
