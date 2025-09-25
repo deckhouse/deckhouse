@@ -58,7 +58,7 @@ d8 k get module csi-scsi-generic -w
 
 ### Creating an SCSITarget
 
-To create an SCSITarget, use the [SCSITarget](/products/kubernetes-platform/documentation/v1/modules/csi-scsi-generic/cr.html#scsitarget). An example of commands to create such a resource:
+To create an SCSITarget, use the [SCSITarget](/modules/csi-scsi-generic/stable/cr.html#scsitarget). An example of commands to create such a resource:
 
 ```shell
 d8 k apply -f -<<EOF
@@ -110,7 +110,7 @@ d8 k get scsitargets.storage.deckhouse.io <name-of-scsitarget>
 
 ### Creating a StorageClass
 
-To create a StorageClass, use the [SCSIStorageClass](/products/kubernetes-platform/documentation/v1/modules/csi-scsi-generic/cr.html#scsistorageclass). An example of commands to create such a resource:
+To create a StorageClass, use the [SCSIStorageClass](/modules/csi-scsi-generic/stable/cr.html#scsistorageclass). An example of commands to create such a resource:
 
 ```shell
 d8 k apply -f -<<EOF

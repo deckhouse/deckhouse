@@ -51,7 +51,7 @@ Deckhouse Virtualization Platform (DVP) управляет компонента�
    d8 platform module disable control-plane-manager
    ```
 
-1. Через [веб-интерфейс Deckhouse](/products/kubernetes-platform/modules/console/):
+1. Через [веб-интерфейс Deckhouse](/modules/console/):
 
    - перейдите в раздел «Deckhouse — «Модули»;
    - найдите модуль `control-plane-manager` и нажмите на него;

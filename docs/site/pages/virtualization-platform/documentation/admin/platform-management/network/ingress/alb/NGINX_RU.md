@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](../../../../../modules/ingress-nginx/).
+Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/ + надо дополнить примерами? -->
 
@@ -35,7 +35,7 @@ lang: ru
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.
 
-Также модуль интегрирован с модулем [`cert-manager`](../../../../../modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
+Также модуль интегрирован с модулем [`cert-manager`](/products/kubernetes-platform/documentation/v1/modules/cert-manager/), при взаимодействии с которым возможны автоматический заказ SSL-сертификатов и их дальнейшее использование Ingress-контроллерами.
 
 ## Мониторинг и статистика
 

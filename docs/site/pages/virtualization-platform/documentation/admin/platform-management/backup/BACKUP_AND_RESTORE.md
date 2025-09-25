@@ -124,7 +124,6 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Switch the cluster to single master mode:
 
-   - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
    - In a static cluster, manually remove the additional master nodes.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
@@ -143,7 +142,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 platform queue main
    ```
 
-1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
+1. Switch the cluster back to multi-master mode.
 
 Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 

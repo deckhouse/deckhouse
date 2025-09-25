@@ -106,10 +106,10 @@ d8 k -n d8-sds-local-volume get po -owide
 d8 k get node %node-name% --show-labels
 ```
 
-Если лейблы отсутствуют, проверьте, что на узле нет ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемых ресурсами [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass). Подробнее об этой проверке можно прочитать [в этом разделе](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если лейблы отсутствуют, проверьте, что на узле нет ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), используемых ресурсами [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Подробнее об этой проверке можно прочитать [в этом разделе](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 {% alert level="warning" %}
-Обратите внимание, что для ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup) и [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass), из-за которых не удается вывести узел из-под управления модуля, будет назначен лейбл `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
+Обратите внимание, что для ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup) и [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass), из-за которых не удается вывести узел из-под управления модуля, будет назначен лейбл `storage.deckhouse.io/sds-local-volume-candidate-for-eviction`.
 
 На самом узле будет присутствовать лейбл `storage.deckhouse.io/sds-local-volume-need-manual-eviction`.
 {% endalert %}
@@ -118,21 +118,21 @@ d8 k get node %node-name% --show-labels
 
 Для проверки зависимых ресурсов выполните следующие шаги:
 
-1. Отобразите имеющиеся ресурсы [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass):
+1. Отобразите имеющиеся ресурсы [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass):
 
    ```shell
    d8 k get lsc
    ```
 
-1. Проверьте у каждого из них список используемых ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup).
+1. Проверьте у каждого из них список используемых ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
-   Вы можете сразу отобразить содержимое всех [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass) ресурсов, выполнив команду:
+   Вы можете сразу отобразить содержимое всех [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass) ресурсов, выполнив команду:
 
    ```shell
    d8 k get lsc -oyaml
    ```
 
-   Примерный вид [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass):
+   Примерный вид [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass):
 
    ```yaml
    apiVersion: v1
@@ -155,15 +155,15 @@ d8 k get node %node-name% --show-labels
    kind: List
    ```
 
-   Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно в нем указаны используемые ресурсы [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup).
+   Обратите внимание на поле `spec.lvm.lvmVolumeGroups` — именно в нем указаны используемые ресурсы [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
-1. Отобразите список существующих ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup):
+1. Отобразите список существующих ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup):
 
    ```shell
    d8 k get lvg
    ```
 
-   Примерный вывод [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup):
+   Примерный вывод [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup):
 
    ```text
    NAME              HEALTH        NODE            SIZE       ALLOCATED SIZE   VG        AGE
@@ -175,11 +175,11 @@ d8 k get node %node-name% --show-labels
    lvg-on-worker-5   Operational   node-worker-5   204796Mi   0                test-vg   15d
    ```
 
-1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
+1. Проверьте, что на узле, который вы собираетесь вывести из-под управления модуля, не присутствует какой-либо ресурс [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), используемый в ресурсах [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Во избежание непредвиденной потери контроля за уже созданными с помощью модуля томами вручную удалите зависимые ресурсы, совершив необходимые операции над томом.
 
 ## Оставшийся под sds-local-volume-csi-node после удаления лейблов
 
-Если после удаления лейблов с узла пода `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле ресурсов [LVMVolumeGroup](/products/kubernetes-platform/documentation/v1/modules/sds-node-configurator/cr.html#lvmvolumegroup), которые используются в одном из ресурсов [LocalStorageClass](/products/kubernetes-platform/documentation/v1/modules/sds-local-volume/cr.html#localstorageclass). Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
+Если после удаления лейблов с узла пода `sds-local-volume-csi-node` продолжает работать, это, вероятнее всего, связано с наличием на узле ресурсов [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup), которые используются в одном из ресурсов [LocalStorageClass](/modules/sds-local-volume/stable/cr.html#localstorageclass). Процесс проверки описан [выше](#проверка-зависимых-ресурсов-lvmvolumegroup-на-узле).
 
 ## Отсутствие служебных подов на нужном узле
 

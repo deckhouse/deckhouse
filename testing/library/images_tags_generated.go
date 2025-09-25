@@ -469,12 +469,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
 		"yq4471":                          "imageHash-registrypackages-yq4471",
 	},
-	"runtimeAuditEngine": map[string]interface{}{
-		"falco":            "imageHash-runtimeAuditEngine-falco",
-		"falcosidekick":    "imageHash-runtimeAuditEngine-falcosidekick",
-		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
-		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
-	},
 	"serviceWithHealthchecks": map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",
 		"controller": "imageHash-serviceWithHealthchecks-controller",

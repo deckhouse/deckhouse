@@ -86,69 +86,52 @@ YAML-файл ресурсов установки содержит манифе�
 {% offtopic title="Пример файла ресурсов (resources.yaml)..." %}
 
 ```yaml
-# Создать группу из двух рабочих узлов
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  disruptions:
-    approvalMode: Manual
-  nodeType: Static
-  staticInstances:
-    count: 2
----
-# SSH-ключ, для доступа к рабочим узлам для автоматизированной установки
-apiVersion: deckhouse.io/v1alpha2
-kind: SSHCredentials
-metadata:
-  name: worker-key
-spec:
-  # Имя технического ползователя, созданного на этапе подготовки узлов платформы
-  user: install-user
-  # Закрытый ключ, созданный на этапе подготовки узлов платформы, кодированный в base64 формате
-  privateSSHKey: ZXhhbXBsZQo=
----
-apiVersion: deckhouse.io/v1alpha2
-kind: StaticInstance
-metadata:
-  name: worker-01
-  labels:
-    role: worker
-spec:
-  # Адрес первого рабочего узла
-  address: 192.88.99.10
-  credentialsRef:
-    kind: SSHCredentials
-    name: worker-key
----
-apiVersion: deckhouse.io/v1alpha2
-kind: StaticInstance
-metadata:
-  name: worker-01
-  labels:
-    role: worker
-spec:
-  # Адрес второго рабочего узла
-  address: 192.88.99.20
-  credentialsRef:
-    kind: SSHCredentials
-    name: worker-key
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: virtualization
+  name: global
 spec:
+  version: 1
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          clusterIssuerName: selfsigned
+        mode: CertManager
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
   enabled: true
   settings:
-    dvcr:
-      storage:
-        persistentVolumeClaim:
-          size: 10G
-        type: PersistentVolumeClaim
-    virtualMachineCIDRs:
-      - 192.168.10.0/24
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: secrets-store-integration
+spec:
+  enabled: true
   version: 1
 ---
 apiVersion: deckhouse.io/v1
@@ -186,6 +169,16 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
 ```
 
 {% endofftopic %}
@@ -298,51 +291,33 @@ moduleconfig.deckhouse.io/global patched
 Domain template is '%s.1.2.3.4.sslip.io'.
 ```
 
-## Установка систем хранения
-
-Для корректного функционирования платформы необходимо установить одну или несколько систем хранения. Они предоставляют возможности:
-
-- постоянного хранения системных данных платформы (метрики, логи, образы);
-- хранения дисков и образов виртуальных машин.
-
 ## Установка модуля Сilium
 
 Для получения информации по установке и настройке модуля обратитесь к документации [модуля `cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/).
 
-## Установка модуля виртуализации
+## Установка модуля Strognhold
 
-Для обеспечения возможностей виртуализации (создание виртуальных машин, образов, дисков и так далее), необходимо включить
-модуль виртуализации. Чтобы сделать это, создайте ресурс ModuleConfig `virtualization`, предварительно указав, какой
-StorageClass следует использовать:
+Для обеспечения возможностей хранилища секретов, необходимо включить модуль Stronghold.
+Чтобы сделать это, создайте ресурс ModuleConfig `stronghold`.
 
 ```shell
-# Укажите имя своего ресурса StorageClass.
-STORAGE_CLASS_NAME=replicated-storage-class
 
-# Создайте ModuleConfig `virtualization`.
+# Создайте ModuleConfig `stronghold`.
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
- name: virtualization
+  name: stronghold
 spec:
- enabled: false
- settings:
-   dvcr:
-     storage:
-       type: PersistentVolumeClaim
-       persistentVolumeClaim:
-         size: 50G
-         storageClassName: ${STORAGE_CLASS_NAME}
-   virtualMachineCIDRs:
-     - 10.66.10.0/24
-     - 10.66.20.0/24
-     - 10.66.30.0/24
- version: 1
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
 EOF
 ```
 
-После создания ресурса ModuleConfig `virtualization` дождитесь выполнения заданий из очереди:
+После создания ресурса ModuleConfig `stronghold` дождитесь выполнения заданий из очереди:
 
 ```shell
 d8 p queue main
@@ -350,11 +325,11 @@ d8 p queue main
 # Queue 'main': length 0, status: 'waiting for task 1m1s'
 ```
 
-Если все выполнено правильно, после включения модуля появится Namespase `d8-virtualization`:
+Если все выполнено правильно, после включения модуля появится Namespase `d8-stronghold`:
 
 ```bash
-d8 k get ns d8-virtualization
+d8 k get ns d8-stronghold
 
 # NAME                STATUS   AGE
-# d8-virtualization   Active   1h
+# d8-stronghold   Active   1h
 ```

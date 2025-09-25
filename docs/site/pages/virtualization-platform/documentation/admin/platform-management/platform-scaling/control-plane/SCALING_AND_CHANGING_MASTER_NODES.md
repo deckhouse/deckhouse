@@ -101,7 +101,7 @@ After completing these steps, the node will no longer be considered a master nod
 
 ### Changing the OS image of master nodes in a multi-master cluster
 
-1. Create a [backup of etcd](/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
+1. Create a [backup of etcd](/products/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Make sure there are no alerts in the cluster that could interfere with updating master nodes.
 1. Ensure the DVP queue is empty.

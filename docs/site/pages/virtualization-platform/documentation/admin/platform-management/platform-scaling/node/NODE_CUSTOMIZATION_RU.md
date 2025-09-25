@@ -10,7 +10,6 @@ lang: ru
 
   Примеры:  
   - [установка kubectl-плагина](node-management.html#установка-плагина-cert-manager-для-kubectl-на-master-узлах);
-  - [настройка containerd с поддержкой Nvidia GPU](./#как-использовать-containerd-с-поддержкой-nvidia-gpu).
 
 - Обновление ядра ОС на конкретную версию.
 
