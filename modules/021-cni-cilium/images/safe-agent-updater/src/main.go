@@ -60,6 +60,12 @@ func main() {
 
 	if !isCiliumExistOnNode() {
 		log.Infof("[SafeAgentUpdater] Cilium CNI binary does not exist on node %s.", nodeName)
+		if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+			log.Fatal(err)
+		}
+		if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 
@@ -68,6 +74,9 @@ func main() {
 	} else if ok {
 		log.Infof("[SafeAgentUpdater] Cilium CNI plugin version is not less than 1.17: %s", version)
 		if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+			log.Fatal(err)
+		}
+		if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -80,12 +89,18 @@ func main() {
 	if !isCurrentAgentPodGenerationDesired {
 		if isMigrationSucceeded(kubeClient, nodeName) {
 			log.Infof("[SafeAgentUpdater] The 1.17-migration-disruptive-update already succeeded")
+			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+				log.Fatal(err)
+			}
 			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if isCurrentImageEqUpcoming(desiredAgentImageHash, currentAgentImageHash) {
 			log.Infof("[SafeAgentUpdater] The current agent image is the same as in the upcoming update, so the 1.17-migration-disruptive-update is no needed.")
+			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+				log.Fatal(err)
+			}
 			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
@@ -102,6 +117,9 @@ func main() {
 			}
 		} else {
 			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, but sts pods are not present on node, so the 1.17-migration-disruptive-update is no needed")
+			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
+				log.Fatal(err)
+			}
 			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
