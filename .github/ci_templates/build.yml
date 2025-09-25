@@ -78,18 +78,20 @@ steps:
       DECKHOUSE_STAGE_REGISTRY_HOST: ${{secrets.DECKHOUSE_STAGE_REGISTRY_HOST}}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+{!{- if eq $buildType "release" }!}
       GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
       GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+{!{- end }!}
       COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
       CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
       CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
       CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") (eq $buildType "main") }!}
-      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-{!{- else }!}
+{!{- if eq $buildType "dev" }!}
       CI_COMMIT_REF_SLUG: ${{needs.pull_request_info.outputs.ref_slug}}
+{!{- else }!}
+      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
