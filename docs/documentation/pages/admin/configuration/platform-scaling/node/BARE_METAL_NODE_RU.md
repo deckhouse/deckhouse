@@ -35,6 +35,10 @@ lang: ru
 
 ### Автоматический способ
 
+{% alert level="warning" %}
+Если вы ранее увеличивали количество master-узлов в кластере в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), перед добавлением в кластер узлов автоматическим способом [убедитесь](../control-plane/scaling-and-changing-master-nodes.html#добавление-master-узлов-в-статический-или-гибридный-кластер), что не произойдет их «перехват».
+{% endalert %}
+
 В DKP возможно автоматическое добавление физических (bare-metal) серверов в кластер без ручного запуска установочного скрипта на каждом узле. Для этого необходимо:
 
 1. Подготовить сервер (ОС, сеть):
