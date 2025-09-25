@@ -31,7 +31,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.24
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
