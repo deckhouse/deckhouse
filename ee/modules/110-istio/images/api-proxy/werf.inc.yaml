@@ -1,10 +1,13 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2025-09-25.01"
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /src/api-proxy
   to: /api-proxy
+  owner: "64535"
+  group: "64535"
   after: setup
 imageSpec:
   config:
