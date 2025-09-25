@@ -54,8 +54,8 @@ APIVersion
 app
 apparmor
 AppArmor
-app’s
 apps
+app’s
 Aps
 aren
 argocd
@@ -263,8 +263,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMap’s
 ConfigMaps
+ConfigMap’s
 configOverrides
 configs
 configurator
@@ -406,8 +406,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfile’s
 Dockerfiles
+Dockerfile’s
 dockerignore
 dockersamples
 documentation
@@ -537,6 +537,7 @@ GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
 GeeseFS
+GELF
 Gemfile
 geo
 geohash
@@ -643,6 +644,7 @@ imageRepo
 imagesRepo
 img
 inbox
+indices
 InfrastructureAccident
 InfrastructureMaintenance
 ing
@@ -746,6 +748,7 @@ KeyValue
 Kiali
 KiB
 KLLRCODA
+Klog
 kruise
 Kruise
 kube
@@ -951,6 +954,7 @@ NGINX’s
 NIC
 NICs
 NLB
+Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -959,7 +963,6 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
-Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1228,7 +1231,9 @@ RSA
 rtt
 RTT
 ru
+rulefiles
 RuleGroup
+ruleSelector
 RWO
 RWX
 S3
@@ -1238,6 +1243,7 @@ SAML
 SANs
 SASL
 SBOM
+schedulable
 SchedulingDisabled
 schemas
 SCM
@@ -1385,7 +1391,10 @@ syscall
 syscalls
 sysctl
 sysctls
+syslog
+syslog
 Syslog
+SysLog
 Sysprep
 SysprepRef
 systemd
@@ -1481,6 +1490,7 @@ versioning
 VersionItems
 VerticalPodAutoscaler
 vg
+vhost
 VictoriaMetrics
 VictorOps
 VictorOpsConfig
@@ -1503,6 +1513,7 @@ VK
 VLAN
 vm
 VM
+vmagent
 VMs
 VMware
 VMX
@@ -1590,6 +1601,8 @@ YC
 YCloud
 yml
 YouTube
+zabbix
+Zabbix
 ZFS
 zipkin
 Zipkin
@@ -1686,6 +1699,7 @@ ZvirtInstanceClass
 биндятся
 блокирующе
 блокчейном
+буквенно
 бутстрап
 бутстрапа
 бутстрапится
@@ -1718,6 +1732,7 @@ ZvirtInstanceClass
 версионирования
 версионированной
 версионировать
+визуализированы
 Визуализировать
 визуализируются
 виртуализацией
@@ -1887,6 +1902,7 @@ ZvirtInstanceClass
 контролллер
 контролллера
 конфиг
+конфига
 конфигами
 конфиге
 конфиги
@@ -2053,6 +2069,7 @@ ZvirtInstanceClass
 парсер
 парсера
 парсеров
+парсинг
 парсинга
 парсинге
 парсит
@@ -2129,6 +2146,7 @@ ZvirtInstanceClass
 поддоменами
 поддомены
 подкомандой
+Подмонтирован
 подмонтированы
 подресурс
 подселять
@@ -2158,6 +2176,7 @@ ZvirtInstanceClass
 применятся
 примонтировав
 примонтированные
+примонтированный
 примонтированных
 примонтируем
 приоритизация

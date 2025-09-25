@@ -10,7 +10,7 @@ lang: ru
 
 - Включить модуль `monitoring-custom`, если он не включен.
 
-  Включить мониторинг кластера можно в веб-интерфейсе (Deckhouse Console), или с помощью следующей комнанды:
+  Включить мониторинг кластера можно в веб-интерфейсе (Deckhouse Console), или с помощью следующей команды:
 
   ```shell
   d8 platform module enable monitoring-custom

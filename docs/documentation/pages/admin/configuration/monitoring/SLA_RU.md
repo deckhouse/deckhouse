@@ -16,7 +16,7 @@ d8 platform module enable upmeter
 
 ## Настройка модуля
 
-Модуль `upmeter` настривается с помощью ModuleConfig `upmeter`:
+Модуль `upmeter` настраивается с помощью ModuleConfig `upmeter`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
