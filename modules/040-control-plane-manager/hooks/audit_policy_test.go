@@ -170,7 +170,7 @@ rules:
 		})
 	})
 
-	FContext("Cluster started with basic audit policies", func() {
+	Context("Cluster started with basic audit policies", func() {
 		BeforeEach(func() {
 			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", true)
 			f.BindingContexts.Set(f.KubeStateSet(configmap))
