@@ -75,7 +75,6 @@ steps:
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
 {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      DECKHOUSE_REGISTRY_STAGE_HOST: ${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST}}
       DECKHOUSE_REGISTRY_STAGE_USER: ${{secrets.DECKHOUSE_REGISTRY_STAGE_USER}}
       DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{secrets.DECKHOUSE_REGISTRY_STAGE_PASSWORD}}
 {!{- end }!}
@@ -144,8 +143,8 @@ steps:
       mkdir -p "$TEMP_WORKDIR"
 
     {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      export REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}"
-      export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}"
+      export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+      export WERF_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
