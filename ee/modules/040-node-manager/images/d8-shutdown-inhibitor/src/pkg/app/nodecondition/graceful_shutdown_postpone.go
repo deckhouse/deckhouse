@@ -20,11 +20,6 @@ const (
 	ReasonPendindgState          = "Pending"
 )
 
-var kubeletShutdownReasons = []string{
-	"ShutdownInProgress",
-	"NodeShutdown",
-}
-
 func GracefulShutdownPostpone() *gracefulShutdownPostpone {
 	return &gracefulShutdownPostpone{}
 }
@@ -70,21 +65,20 @@ func patchGracefulShutdownPostponeCondition(nodeName, status, reason string) err
 	return reformatExitError(err)
 }
 
-func nodeShutdownInProgress(k *kubernetes.Kubectl, nodeName string) (bool) {
+func nodeShutdownInProgress(k *kubernetes.Kubectl, nodeName string) (bool, error) {
 	nodeNotReadyCondition, err := k.GetCondition(nodeName, "KubeletNotReady")
 	if err != nil {
-		reformatExitError(err)
+		return false, reformatExitError(err)
 	}
 	if nodeNotReadyCondition != nil &&
 		nodeNotReadyCondition.Status == "False" &&
 		nodeNotReadyCondition.Type == "Ready" &&
 		nodeNotReadyCondition.Message == "node is shutting down" &&
 		nodeNotReadyCondition.Reason == "KubeletNotReady" {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
-
 
 func cordonedByInhibitor(k *kubernetes.Kubectl, nodeName string) (bool, error) {
 	cordonBy, err := k.GetAnnotationCordonedBy(nodeName)
@@ -126,7 +120,10 @@ func uncordonOnStart(nodeName string) (bool, error) {
 	fmt.Printf("uncordonOnStart: start for node %q\n", nodeName)
 	k := kubernetes.NewDefaultKubectl()
 
-	isShutdownInProgress := nodeShutdownInProgress(k, nodeName)
+	isShutdownInProgress, err := nodeShutdownInProgress(k, nodeName)
+	if err != nil {
+		return false, err
+	}
 	fmt.Printf("uncordonOnStart: isShutdownInProgress %t\n", isShutdownInProgress)
 
 	podsPresentCondition, _ := k.GetCondition(nodeName, ReasonPodsArePresent)
@@ -142,7 +139,7 @@ func uncordonOnStart(nodeName string) (bool, error) {
 	isOurCordon, err := cordonedByInhibitor(k, nodeName)
 	fmt.Printf("uncordonOnStart: isOurCordon %t\n", isOurCordon)
 	if err != nil {
-		reformatExitError(err)
+		return false, err
 	}
 
 	if !isOurCordon {
