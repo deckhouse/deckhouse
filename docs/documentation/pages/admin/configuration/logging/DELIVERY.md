@@ -3,7 +3,7 @@ title: Log collection and delivery
 permalink: en/admin/configuration/logging/delivery.html
 ---
 
-Deckhouse provides log collection and delivery from cluster nodes and pods to internal or external storage systems.
+Deckhouse Kubernetes Platform provides log collection and delivery from cluster nodes and pods to internal or external storage systems.
 
 DKP allows you to:
 
@@ -13,7 +13,7 @@ DKP allows you to:
 - Enrich logs with Kubernetes metadata.
 - Use log buffering to improve performance.
 
-The general mechanism of log collection, delivery, and filtering is described in detail in the [Architecture](../../../architecture/logging.html) section.
+The general mechanism of log collection, delivery, and filtering is described in detail in the [Architecture](../../../architecture/logging/delivery.html) section.
 
 DKP administrators can configure log collection and delivery using three custom resources:
 
@@ -29,7 +29,7 @@ A complete list of `log-shipper` module settings is available in the [separate d
 
 ## Configuring log collection and delivery
 
-Below is a basic Deckhouse configuration option
+Below is a basic DKP configuration option
 where logs from all cluster pods are sent to Elasticsearch-based storage.
 
 To configure, follow these steps:
@@ -81,7 +81,7 @@ To configure, follow these steps:
 
 ## Integration with external systems
 
-You can configure Deckhouse to work with external log storage and analysis systems,
+You can configure DKP to work with external log storage and analysis systems,
 such as Elasticsearch, Splunk, Logstash, and others,
 using the [`type` parameter](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-type) of the ClusterLogDestination resource.
 
@@ -174,7 +174,7 @@ To configure sending events to Splunk, follow these steps:
    add a new **HTTP Event Collector** and copy the generated token.
    - Specify the Splunk index for storing logs, for example, `logs`.
 
-1. Configure Deckhouse by adding a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource to send logs to Splunk:
+1. Configure DKP by adding a [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resource to send logs to Splunk:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -293,7 +293,7 @@ spec:
 
 ### CEF
 
-Deckhouse can send logs in CEF format by using `codec: CEF`,
+DKP can send logs in CEF format by using `codec: CEF`,
 with overriding `cef.name` and `cef.severity` based on values from the `message` field of the application log in JSON format.
 
 In the example below, `app` and `log_level` are keys containing values for overriding:
@@ -485,7 +485,7 @@ Transformation result:
 
 ## Log filtering
 
-Deckhouse provides filters to exclude unnecessary messages to optimize the log collection process:
+DKP provides filters to exclude unnecessary messages to optimize the log collection process:
 
 - [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter) — applied to metadata,
   such as container name (`container`), namespace (`namespace`), or pod name (`pod_name`);
@@ -562,9 +562,9 @@ spec:
   - loki-storage
 ```
 
-### Deckhouse system logs
+### DKP system logs
 
-Example configuration for collecting Deckhouse system logs located in the `/var/log/syslog` file.
+Example configuration for collecting DKP system logs located in the `/var/log/syslog` file.
 Message filtering using `labelFilter` allows you to select only those records
 that relate to the following components:
 `d8-kubelet-forker`, `containerd`, `bashible`, and `kernel`.
@@ -779,7 +779,7 @@ del(.test2)
 
 ### Adding support for new source or sink
 
-The `log-shipper` module in Deckhouse is built based on Vector with a limited set of [cargo features](https://doc.rust-lang.org/cargo/reference/features.html),
+The `log-shipper` module in DKP is built based on Vector with a limited set of [cargo features](https://doc.rust-lang.org/cargo/reference/features.html),
 to minimize the size of the executable file and speed up the build.
 
 To view the complete list of supported features, run the `vector list` command.
@@ -813,7 +813,7 @@ spec:
 
 ### Label for excluding pods and namespaces
 
-Deckhouse provides the `log-shipper.deckhouse.io/exclude=true` label for excluding specific pods and namespaces.
+DKP provides the `log-shipper.deckhouse.io/exclude=true` label for excluding specific pods and namespaces.
 It helps stop log collection from pods and namespaces without changing the global configuration.
 
 ```yaml
