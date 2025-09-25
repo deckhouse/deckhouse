@@ -58,30 +58,6 @@ func main() {
 		log.Fatalf("[SafeAgentUpdater] Failed to get env CILIUM_AGENT_DESIRED_IMAGE_HASH.")
 	}
 
-	if !isCiliumExistOnNode() {
-		log.Infof("[SafeAgentUpdater] Cilium CNI binary does not exist on node %s.", nodeName)
-		if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
-			log.Fatal(err)
-		}
-		if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
-	if ok, version, err := isCiliumCNIVersionAlreadyUpToDate(); err != nil {
-		log.Fatal(err)
-	} else if ok {
-		log.Infof("[SafeAgentUpdater] Cilium CNI plugin version is not less than 1.17: %s", version)
-		if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
-			log.Fatal(err)
-		}
-		if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
-			log.Fatal(err)
-		}
-		return
-	}
-
 	currentAgentPodName, currentAgentImageHash, isCurrentAgentPodGenerationDesired, err := checkAgentPodGeneration(kubeClient, nodeName)
 	if err != nil {
 		log.Fatal(err)
@@ -89,20 +65,24 @@ func main() {
 	if !isCurrentAgentPodGenerationDesired {
 		if isMigrationSucceeded(kubeClient, nodeName) {
 			log.Infof("[SafeAgentUpdater] The 1.17-migration-disruptive-update already succeeded")
-			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
-				log.Fatal(err)
-			}
 			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
 				log.Fatal(err)
 			}
 		} else if isCurrentImageEqUpcoming(desiredAgentImageHash, currentAgentImageHash) {
 			log.Infof("[SafeAgentUpdater] The current agent image is the same as in the upcoming update, so the 1.17-migration-disruptive-update is no needed.")
-			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
-				log.Fatal(err)
-			}
 			err = setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false")
 			if err != nil {
+				log.Fatal(err)
+			}
+		} else if !isCiliumExistOnNode() {
+			log.Infof("[SafeAgentUpdater] Cilium CNI binary does not exist on node %s.", nodeName)
+			if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
+				log.Fatal(err)
+			}
+		} else if ok, version := isCiliumCNIVersionAlreadyUpToDate(); ok {
+			log.Infof("[SafeAgentUpdater] Cilium CNI plugin version is not less than 1.17: %s", version)
+			if err := setAnnotationToNode(kubeClient, nodeName, migrationRequiredAnnotation, "false"); err != nil {
 				log.Fatal(err)
 			}
 		} else if areSTSPodsPresentOnNode(kubeClient, nodeName) {
@@ -150,21 +130,23 @@ func isCiliumExistOnNode() bool {
 	return !os.IsNotExist(err)
 }
 
-func isCiliumCNIVersionAlreadyUpToDate() (bool, string, error) {
+func isCiliumCNIVersionAlreadyUpToDate() (bool, string) {
 	cmd := exec.Command(cniCiliumBinaryPath, "VERSION")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v, stderr: %s", err, stderr.String())
+		log.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v, stderr: %s", err, stderr.String())
+		return false, ""
 	}
 
 	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(stderr.String())
 	if version == "" {
-		return false, "", fmt.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
+		log.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
+		return false, ""
 	}
 
-	return semver.Compare("v"+version, "v1.17.0") >= 0, version, nil
+	return semver.Compare("v"+version, "v1.17.0") >= 0, version
 }
 
 func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, currentAgentImageHash string, isCurrentAgentPodGenerationDesired bool, err error) {
