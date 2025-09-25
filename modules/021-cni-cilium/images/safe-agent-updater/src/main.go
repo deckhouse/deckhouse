@@ -136,13 +136,13 @@ func isCiliumCNIVersionAlreadyUpToDate() (bool, string) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v, stderr: %s", err, stderr.String())
+		log.Fatalf("[SafeAgentUpdater] Failed to execute cilium-cni binary: %v, stderr: %s", err, stderr.String())
 		return false, ""
 	}
 
 	version := regexp.MustCompile(`\d+\.\d+\.\d+`).FindString(stderr.String())
 	if version == "" {
-		log.Errorf("[SafeAgentUpdater] Failed to parse cilium-cni version")
+		log.Fatalf("[SafeAgentUpdater] Failed to parse cilium-cni version")
 		return false, ""
 	}
 
