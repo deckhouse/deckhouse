@@ -450,10 +450,14 @@ check_e2e_labels:
   steps:
 {!{ tmpl.Exec "started_at_output" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "checkout_from_event_ref_step" . | strings.Indent 4 }!}
-
 {!{- if coll.Has $ctx "manualRun" }!}
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ if not (has $commanderProviders $provider) }!}
   {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
@@ -797,6 +801,11 @@ check_e2e_labels:
 {!{    tmpl.Exec "update_comment_on_start" $ctx.jobName | strings.Indent 4 }!}
 {!{- end }!}
 
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
