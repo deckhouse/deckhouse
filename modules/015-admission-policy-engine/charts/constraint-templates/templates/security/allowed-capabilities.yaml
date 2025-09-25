@@ -44,36 +44,42 @@ spec:
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.containers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           has_disallowed_capabilities(container)
           msg := sprintf("container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.containers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           missing_drop_capabilities(container)
           msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
         }
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.initContainers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           has_disallowed_capabilities(container)
           msg := sprintf("init container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.initContainers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           missing_drop_capabilities(container)
           msg := sprintf("init container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
         }
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.ephemeralContainers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           has_disallowed_capabilities(container)
           msg := sprintf("ephemeral container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
         }
 
         violation[{"msg": msg}] {
           container := input.review.object.spec.ephemeralContainers[_]
+          not has_skip_label(input.review.object.metadata.labels)
           missing_drop_capabilities(container)
           msg := sprintf("ephemeral container <%v> is not dropping all required capabilities. Container must drop all of %v or \"ALL\"", [container.name, input.parameters.requiredDropCapabilities])
         }
@@ -82,7 +88,6 @@ spec:
           allowed := {c | c := lower(input.parameters.allowedCapabilities[_])}
           not allowed["ALL"]
           capabilities := {c | c := lower(container.securityContext.capabilities.add[_])}
-
           count(capabilities - allowed) > 0
         }
 
@@ -90,7 +95,6 @@ spec:
           must_drop := {c | c := lower(input.parameters.requiredDropCapabilities[_])}
           all := {"all"}
           dropped := {c | c := lower(container.securityContext.capabilities.drop[_])}
-
           count(must_drop - dropped) > 0
           count(all - dropped) > 0
         }
@@ -103,4 +107,8 @@ spec:
           not obj[param]
           not obj[param] == false
           out = _default
+        }
+
+        has_skip_label(labels) {
+          labels["deckhouse.io/skip-pss-check-capabilities"]
         }

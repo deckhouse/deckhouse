@@ -6,7 +6,7 @@ memory: 25Mi
 cpu: 10m
 memory: 25Mi
 {{- end }}
-
+{{ $pss_vars:= dict "caps" (list "SYS_TIME" ) }}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -15,6 +15,7 @@ metadata:
   name: node-exporter
   namespace: d8-monitoring
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-exporter")) | nindent 2 }}
+  {{- include "helm_lib_module_container_security_context_pss_restricted_flexible_labels" $pss_vars | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -73,7 +74,7 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list . "nodeExporter") }}
         name: node-exporter
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "caps" (list "SYS_TIME" )) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" $pss_vars | nindent 8 }}
         args:
         - '--web.listen-address=127.0.0.1:4206'
         - '--path.rootfs=/host/root'
