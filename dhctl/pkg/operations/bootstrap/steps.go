@@ -114,7 +114,7 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string) error {
-	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local")
+	bundleCmd := nodeInterface.UploadScript("bashible.sh", "--local", "--max-retries", "10")
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := tmpDir + "/var/lib"
@@ -312,7 +312,7 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string,  clusterDomain string) error {
+func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData, rppSignCheck string, clusterDomain string) error {
 	cert, err := generateTLSCertificate(clusterDomain)
 	if err != nil {
 		return fmt.Errorf("Failed to generate TLS certificate for registry proxy: %v", err)
@@ -333,8 +333,8 @@ func StartRegistryPackagesProxy(ctx context.Context, config config.RegistryData,
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
 	proxy := proxy.NewProxy(srv, listener, clientConfigGetter, registryPackagesProxyLogger{}, &registry.DefaultClient{})
-	
-    go proxy.Serve(proxyConfig)
+
+	go proxy.Serve(proxyConfig)
 
 	go func() {
 		<-ctx.Done()
@@ -495,7 +495,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		log.Success("Bashible already run! Skip bashible install\n\n")
 		return nil
 	}
-	
+
 	log.DebugLn("Starting registry packages proxy")
 	// we need clusterDomain to generate proper certificate for packages proxy
 	err = StartRegistryPackagesProxy(ctx, cfg.Registry, config.RppSignCheck, clusterDomain)
