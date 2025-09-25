@@ -179,20 +179,14 @@
           "rel": ""
         },
         {
-          "title": "Возможности",
-          "url": "/products/kubernetes-platform/possibilities/",
-          "target": "",
-          "rel": ""
-        },
-        {
           "title": "ФСТЭК-редакция",
           "url": "/products/kubernetes-platform/certified-security-edition/",
           "target": "",
           "rel": ""
         },
         {
-          "title": "Лицензирование",
-          "url": "/products/kubernetes-platform/licensing-dkp/",
+          "title": "Условия и цены",
+          "url": "/products/kubernetes-platform/pricing/",
           "target": "",
           "rel": ""
         },
