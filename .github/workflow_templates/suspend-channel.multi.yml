@@ -71,6 +71,10 @@ env:
 
 # Note: no concurrency section for suspend workflows.
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
 

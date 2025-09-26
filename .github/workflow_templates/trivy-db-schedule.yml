@@ -24,6 +24,10 @@ on:
 concurrency:
   group: trivy-db-download
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 {!{ tmpl.Exec "skip_tests_repos" . | strings.Indent 2 }!}
   download-and-repush-images:

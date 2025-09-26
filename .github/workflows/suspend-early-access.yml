@@ -57,6 +57,10 @@ env:
 
 # Note: no concurrency section for suspend workflows.
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 
   # <template: git_info_job>

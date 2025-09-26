@@ -58,6 +58,10 @@ env:
   # </template: werf_envs>
   DEPLOY_CHANNEL: alpha
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 
   # <template: git_info_job>
