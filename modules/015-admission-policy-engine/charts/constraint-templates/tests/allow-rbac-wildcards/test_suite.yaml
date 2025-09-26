@@ -1,6 +1,14 @@
 template: allow-rbac-wildcards.yaml
 constraint: constraint.yaml
 cases:
+  - name: Role without wildcards (allowed)
+    object: role-valid.yaml
+    assertions:
+      - violations: no
+  - name: Role with wildcard in rules (denied)
+    object: role-invalid-rules.yaml
+    assertions:
+      - violations: yes
   - name: RoleBinding without wildcards (allowed)
     object: rolebinding-valid.yaml
     assertions:
@@ -9,11 +17,3 @@ cases:
     object: rolebinding-invalid-roleref.yaml
     assertions:
       - violations: yes
-  - name: ClusterRoleBinding with wildcard in subject (denied)
-    object: clusterrolebinding-invalid-subject.yaml
-    assertions:
-      - violations: yes
-  - name: ClusterRoleBinding without wildcards (allowed)
-    object: clusterrolebinding-valid.yaml
-    assertions:
-      - violations: no

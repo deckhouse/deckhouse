@@ -560,7 +560,7 @@ spec:
   match:
     kinds:
       - apiGroups: ["rbac.authorization.k8s.io"]
-        kinds: ["RoleBinding", "ClusterRoleBinding"]
+        kinds: ["Role", "RoleBinding"]
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
 {{- end }}

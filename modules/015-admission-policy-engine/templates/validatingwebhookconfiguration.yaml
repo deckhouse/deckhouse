@@ -39,10 +39,8 @@ objectSelector: {}
   - UPDATE
   - DELETE
   resources:
+  - roles
   - rolebindings
-  - rolebindings/status
-  - clusterrolebindings
-  - clusterrolebindings/status
 - apiGroups:
   - constraints.gatekeeper.sh
   apiVersions:

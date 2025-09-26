@@ -7,4 +7,4 @@ spec:
   match:
     kinds:
       - apiGroups: ["rbac.authorization.k8s.io"]
-        kinds: ["RoleBinding", "ClusterRoleBinding"]
+        kinds: ["Role", "RoleBinding"]
