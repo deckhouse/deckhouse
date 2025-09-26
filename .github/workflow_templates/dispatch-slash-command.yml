@@ -20,7 +20,7 @@ on:
 jobs:
   conditions:
     name: Check conditions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       trigger_for_release_issue: ${{steps.check.outputs.trigger_for_release_issue}}
       trigger_for_changelog: ${{steps.check.outputs.trigger_for_changelog}}
@@ -78,7 +78,7 @@ jobs:
 
   trigger_for_release_issue:
     name: Trigger workflow by comment
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - conditions
     if: ${{needs.conditions.outputs.trigger_for_release_issue == 'true'}}
@@ -94,7 +94,7 @@ jobs:
 
   trigger_for_pull_request:
     name: Trigger workflow by comment from pull-request
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
     - conditions
     if: ${{needs.conditions.outputs.trigger_for_pull_request == 'true'}}
@@ -110,7 +110,7 @@ jobs:
 
   trigger_for_changelog:
     name: Dispatch Changelog Event
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - conditions
     if: ${{needs.conditions.outputs.trigger_for_changelog == 'true'}}

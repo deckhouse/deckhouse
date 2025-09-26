@@ -33,7 +33,7 @@ jobs:
   detect_pr_by_label:
     concurrency: source_pr
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.milestone != null && contains(github.event.pull_request.labels.*.name, 'status/backport') }}
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       release_branch: ${{ steps.from_milestone.outputs.release_branch }}
       commit: ${{ steps.from_milestone.outputs.commit }}
@@ -53,7 +53,7 @@ jobs:
   detect_pr_by_comment:
     concurrency: source_pr
     if: ${{ github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.state == 'closed' && github.event.pull_request.user.login != 'deckhouse-BOaTswain' && !contains(github.event.issue.labels.*.name, 'issue/release') }}
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     outputs:
       release_branch: ${{ steps.comment_info.outputs.branch }}
       commit: ${{ steps.pr_info.outputs.commit }}
@@ -86,7 +86,7 @@ jobs:
             core.setOutput('commit', response.data.merge_commit_sha)
 
   backport_to_release_branch:
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: [detect_pr_by_label, detect_pr_by_comment]
     if: always() && (needs.detect_pr_by_label.outputs.release_branch || needs.detect_pr_by_comment.outputs.release_branch)
     steps:

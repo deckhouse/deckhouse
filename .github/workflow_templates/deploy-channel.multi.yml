@@ -75,7 +75,7 @@ env:
 jobs:
 {!{ tmpl.Exec "git_info_job" . | strings.Indent 2 }!}
   check_branch:
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - name: Check if triggered by a tag
         run: |
@@ -86,7 +86,7 @@ jobs:
           fi
   detect_editions:
     name: Detect editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs: check_branch
     outputs:
       DEPLOY_CE: ${{steps.detect_editions.outputs.DEPLOY_CE}}
@@ -129,7 +129,7 @@ Jobs for visual control allowed editions when approving deploy to environments.
     name: Enable {!{$werfEnv}!}
     needs:
       - detect_editions
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
       - run: ": Enable {!{$werfEnv}!}"
 {!{ end }!}
