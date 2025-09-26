@@ -27,7 +27,7 @@ var sensitiveKeywords = []string{
 
 type LogSanitizer struct{}
 
-func (f *LogSanitizer) Filter(args []any) []any {
+func (l *LogSanitizer) Filter(args []any) []any {
 	for i, arg := range args {
 		v, ok := arg.(string)
 		if ok && containsSensitiveSubstring(v) {
@@ -37,12 +37,12 @@ func (f *LogSanitizer) Filter(args []any) []any {
 	return args
 }
 
-func (f *LogSanitizer) FilterF(format string, args []any) (string, []any) {
-	return format, f.Filter(args)
+func (l *LogSanitizer) FilterF(format string, args []any) (string, []any) {
+	return format, l.Filter(args)
 }
 
-func (f *LogSanitizer) FilterS(msg string, keysAndValues []any) (string, []any) {
-	return msg, f.Filter(keysAndValues)
+func (l *LogSanitizer) FilterS(msg string, keysAndValues []any) (string, []any) {
+	return msg, l.Filter(keysAndValues)
 }
 
 func containsSensitiveSubstring(msg string) bool {
