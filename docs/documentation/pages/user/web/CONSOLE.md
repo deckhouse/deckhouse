@@ -352,4 +352,4 @@ To configure log sources, follow these steps:
    - (Optional) Record delimiter character.
    - (Optional) Label and filter rules to retain only specific logs.
 
-![Сбор логов](../../images/console/log_rule.png)
+![Log collection](../../images/console/log_rule.png)
