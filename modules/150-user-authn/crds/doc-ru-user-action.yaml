@@ -1,0 +1,115 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            Содержит информацию о действии над пользователем (смена пароля, сброс 2FA, блокировка/разблокировка).
+          properties:
+            spec:
+              properties:
+                user:
+                  description: |
+                    Имя пользователя (ссылка на ресурс `User`).
+                type:
+                  description: |
+                    Тип действия над пользователем. Возможные значения:  
+                    * `ResetPassword` — сброс пароля,  
+                    * `Reset2FA` — сброс двухфакторной аутентификации,  
+                    * `Lock` — блокировка пользователя,  
+                    * `Unlock` — разблокировка пользователя.
+                initiatorType:
+                  description: |
+                    Указывает, кем инициировано действие. Возможные значения:  
+                    * `admin` — администратором,  
+                    * `system` — автоматически системой,  
+                    * `self` — самим пользователем.
+                resetPassword:
+                  description: |
+                    Параметры действия по сбросу пароля.
+                  properties:
+                    newPasswordHash:
+                      description: |
+                        Новый пароль в виде bcrypt-хэша.  
+                        Хэш должен быть получен заранее и передан в поле CR.
+                lock:
+                  description: |
+                    Параметры действия по блокировке пользователя.
+                  properties:
+                    for:
+                      description: |
+                        Длительность блокировки.  
+                        Указывается в формате: `30s`, `10m`, `1h`, `2h30m`.
+            status:
+              type: object
+              properties:
+                phase:
+                  description: |
+                    Текущий статус выполнения действия. Возможные значения:
+                    * `Succeeded` — действие успешно выполнено,  
+                    * `Failed` — действие завершилось ошибкой.
+                message:
+                  description: |
+                    Дополнительное сообщение о результате выполнения действия или причине ошибки.
+                completedAt:
+                  description: |
+                    Время завершения действия.
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          description: |
+            Содержит информацию о действии над пользователем (смена пароля, сброс 2FA, блокировка/разблокировка).
+          properties:
+            spec:
+              properties:
+                user:
+                  description: |
+                    Имя пользователя (ссылка на ресурс `User`).
+                type:
+                  description: |
+                    Тип действия над пользователем. Возможные значения:  
+                    * `ResetPassword` — сброс пароля,  
+                    * `Reset2FA` — сброс двухфакторной аутентификации,  
+                    * `Lock` — блокировка пользователя,  
+                    * `Unlock` — разблокировка пользователя.
+                initiatorType:
+                  description: |
+                    Указывает, кем инициировано действие. Возможные значения:  
+                    * `admin` — администратором,  
+                    * `system` — автоматически системой,  
+                    * `self` — самим пользователем.
+                resetPassword:
+                  description: |
+                    Параметры действия по сбросу пароля.
+                  properties:
+                    newPasswordHash:
+                      description: |
+                        Новый пароль в виде bcrypt-хэша.  
+                        Хэш должен быть получен заранее и передан в поле CR.
+                lock:
+                  description: |
+                    Параметры действия по блокировке пользователя.
+                  properties:
+                    for:
+                      description: |
+                        Длительность блокировки.  
+                        Указывается в формате: `30s`, `10m`, `1h`, `2h30m`.
+            status:
+              type: object
+              properties:
+                phase:
+                  description: |
+                    Текущий статус выполнения действия. Возможные значения:
+                    * `Succeeded` — действие успешно выполнено,  
+                    * `Failed` — действие завершилось ошибкой.
+                message:
+                  description: |
+                    Дополнительное сообщение о результате выполнения действия или причине ошибки.
+                completedAt:
+                  description: |
+                    Время завершения действия.
