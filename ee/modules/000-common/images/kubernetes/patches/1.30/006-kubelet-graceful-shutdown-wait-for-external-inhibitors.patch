@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
-index baa98d09de6..45024cc7c77 100644
+index da88cb78f2f..741ebf96236 100644
 --- a/pkg/kubelet/kubelet.go
 +++ b/pkg/kubelet/kubelet.go
 @@ -915,6 +915,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
@@ -23,7 +23,7 @@ index aac590f967d..5f3473950c4 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 8469cecdc0e..9468ddf9787 100644
+index 8469cecdc0e..6bbe5e5eb0e 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -108,32 +108,41 @@ index 8469cecdc0e..9468ddf9787 100644
  					close(stop)
  					return
  				}
-@@ -277,6 +310,24 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -277,6 +310,33 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
-+					isPostponed, err := m.conditionChecker.IsPostponed()
++					postponeStatus, err := m.conditionChecker.PostponeStatus()
 +					if err != nil {
-+						m.logger.Error(err, "Read postponed condition", "isPostponed", isPostponed)
++						m.logger.Error(err, "Read postponed condition", "status", postponeStatus)
 +						m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Fail to check GracefulShutdownPostpone condition: %v", err)
 +						break
 +					}
-+					if isPostponed {
-+						m.logger.V(1).Info("Got postponing condition, start monitor and wait for the next shutdown event")
++
++					if isPostponed(postponeStatus) {
++						switch postponeStatus {
++						case v1.ConditionTrue:
++							m.logger.V(1).Info("managerImpl.start: Graceful shutdown postponed, d8-shutdown-inhibitor requested shutdown block", "GracefulShutdownPostpone", postponeStatus)
++							m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed by d8-shutdown-inhibitor (GracefulShutdownPostpone=%s)", postponeStatus)
++						case v1.ConditionUnknown:
++							m.logger.V(1).Info("managerImpl.start: Graceful shutdown postponed, waiting for d8-shutdown-inhibitor response", "GracefulShutdownPostpone", postponeStatus)
++							m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed, waiting for d8-shutdown-inhibitor response (GracefulShutdownPostpone=%s)", postponeStatus)
++						}
++
 +						m.conditionChecker.StartMonitor()
-+						m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown postponed by the condition")
 +						break
 +					}
-+					m.logger.V(1).Info("No postponing condition, pause monitor and proceed with the shutdown sequence")
++
++					m.logger.V(1).Info("managerImpl.start: Graceful shutdown postpone disabled, stopping GracefulShutdownPostpone monitor and proceeding with the shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
 +					m.conditionChecker.PauseMonitor()
 +				}
 +
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -491,3 +542,116 @@ type podShutdownGroup struct {
+@@ -491,3 +551,124 @@ type podShutdownGroup struct {
  	kubeletconfig.ShutdownGracePeriodByPodPriority
  	Pods []*v1.Pod
  }
@@ -205,22 +214,24 @@ index 8469cecdc0e..9468ddf9787 100644
 +		case <-ticker.C():
 +			// Check postpone condition if in the "started" state. If not postponed, send event to unpause shutdown sequence.
 +			if isStarted {
-+				isPostponed, err := c.IsPostponed()
++				postponeStatus, err := c.PostponeStatus()
 +				if err != nil {
 +					c.logger.V(1).Error(err, "Check postpone condition failed, will try later")
 +					break
 +				}
-+				if isPostponed {
++
++				switch {
++				case isPostponed(postponeStatus):
 +					now := time.Now()
 +					if lastLogTime.IsZero() || now.Sub(lastLogTime) > progressLogInterval {
 +						lastLogTime = now
-+						c.logger.V(1).Info("Graceful shutdown is still postponed")
++						c.logger.V(1).Info("conditionChecker.checkLoop: Graceful shutdown postponed", "GracefulShutdownPostpone", postponeStatus)
 +					}
-+				} else {
-+					c.logger.V(1).Info("Graceful shutdown postpone condition is removed, proceed with the shutdown sequence")
-+
++				default:
++					c.logger.V(1).Info("conditionChecker.checkLoop: Graceful shutdown postpone condition cleared, continue with shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
 +					// Send event to unpause shutdown sequence. Self pause to prevent events spamming.
 +					isStarted = false
++					lastLogTime = time.Time{}
 +					c.events <- true
 +				}
 +			}
@@ -230,23 +241,29 @@ index 8469cecdc0e..9468ddf9787 100644
 +	}
 +}
 +
-+// IsPostponed returns whether the Node has a GracefulShutdownPostpone condition.
-+func (c *conditionChecker) IsPostponed() (bool, error) {
++// PostponeStatus returns the raw status of the GracefulShutdownPostpone
++func (c *conditionChecker) PostponeStatus() (v1.ConditionStatus, error) {
 +	node, err := c.getNode()
 +	if err != nil {
 +		c.logger.V(1).Error(err, "Get node on shutdown event failed, will try later")
-+		return false, fmt.Errorf("get node for postpone condition check: %v", err)
++		return v1.ConditionFalse, fmt.Errorf("get node for postpone condition check: %v", err)
 +	}
 +
 +	if node == nil {
-+		return false, fmt.Errorf("get node for postpone condition check: node is nil")
++		return v1.ConditionFalse, fmt.Errorf("get node for postpone condition check: node is nil")
 +	}
 +
++	var status v1.ConditionStatus
 +	for _, cond := range node.Status.Conditions {
-+		if cond.Type == "GracefulShutdownPostpone" && cond.Status == "True" {
-+			return true, nil
++		if cond.Type == "GracefulShutdownPostpone" {
++			status = cond.Status
++			break
 +		}
 +	}
 +
-+	return false, nil
++	return status, nil
++}
++
++func isPostponed(status v1.ConditionStatus) bool {
++	return status == v1.ConditionTrue || status == v1.ConditionUnknown
 +}

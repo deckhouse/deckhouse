@@ -42,5 +42,7 @@ func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
 	}
 
 	err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(n.NodeName)
-	fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
+	if err != nil {
+		fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
+	}
 }
