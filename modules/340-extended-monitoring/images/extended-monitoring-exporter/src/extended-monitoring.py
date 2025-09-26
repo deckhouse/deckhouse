@@ -313,7 +313,6 @@ class GetHandler(BaseHTTPRequestHandler):
     def _try_get_metrics(cls):
         try:
             cls.get_metrics()
-            cls._populated = True
             return True
         except Exception as loop_err:
             logging.info(str(loop_err))
@@ -321,9 +320,9 @@ class GetHandler(BaseHTTPRequestHandler):
 
     @classmethod
     def loop_get_metrics(cls):
-        while not cls._populated:
-            cls._try_get_metrics()
+        while not cls._try_get_metrics():
             sleep(10)
+        cls._populated = True
 
         while True:
             cls._try_get_metrics()
