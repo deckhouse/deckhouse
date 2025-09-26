@@ -28,6 +28,7 @@ shell:
 ---
 image: {{ .ModuleName }}/cni-plugins-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: "2025-09-26.01"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
