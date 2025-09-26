@@ -22,7 +22,8 @@ var sensitiveKeywords = []string{
 	`"name":"d8-cluster-terraform-state"`,
 	`"name":"d8-provider-cluster-configuration"`,
 	`"name":"d8-dhctl-converge-state"`,
-	`DexProvider`,
+	`"kind":"DexProvider"`,
+	`"kind":"ModuleConfig"`,
 }
 
 type LogSanitizer struct{}
