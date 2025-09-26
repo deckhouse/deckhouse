@@ -970,10 +970,14 @@ import:
   - usr/bin/cp
   - usr/bin/tail
   before: install
+- image: tools/libcap
+  add: /usr/sbin/setcap
+  to: /apps/setcap
+  before: install
 git:
 {{- include "image mount points" $ }}
 shell:
-  setup:
+  install:
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
