@@ -51,6 +51,7 @@ shell:
   - go mod vendor && go mod verify
   - export FLAGS='-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
   - |
+    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
     {{- include "image-build.build" (set $ "BuildCommand" `./build_linux.sh -ldflags "${FLAGS}"`) | indent 4 }}
   - mkdir -p /out/linux/amd64/bin
   - cp -f /src/plugins/bin/* /out/linux/amd64/bin

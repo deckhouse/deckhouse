@@ -27,6 +27,7 @@ shell:
   - cd /src/cilium
   - go mod vendor && go mod verify
   - |
+    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
     {{- include "image-build.build" (set $ "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator`) | indent 4 }}
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
   - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
