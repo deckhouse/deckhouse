@@ -101,13 +101,7 @@ func searchHooks(hookModules *[]string, dir, workDir string) error {
 				strings.TrimPrefix(path, trimDir),
 			),
 		)
-		
-		// Consolidate global-hooks subdirectories under main global-hooks 
-		// to eliminate duplicate scanning and logging
-		if strings.HasPrefix(moduleName, deckhouseModuleName+"global-hooks/") {
-			moduleName = deckhouseModuleName + "global-hooks"
-		}
-		
+
 		files[moduleName] = struct{}{}
 		return nil
 	})
