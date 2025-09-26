@@ -739,8 +739,8 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /admin/configuration/storage/external/huawei.html
                     - title:
-                        en: NFS data storage
-                        ru: Хранилище данных NFS
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
                       url: /admin/configuration/storage/external/nfs.html
                     - title:
                         en: S3 object storage
