@@ -246,10 +246,6 @@ entries:
                     ru: Программно-определяемые хранилища (SDS)
                   folders:
                     - title:
-                        en: Local path provisioner storage
-                        ru: Локальное хранилище Local Path Provisioner
-                      url: /virtualization-platform/documentation/admin/platform-management/storage/sds/local-path-provisioner.html
-                    - title:
                         en: Node configuration for software-defined storage (SDS)
                         ru: Настройка узлов для программно-определяемых хранилищ
                       folders:
