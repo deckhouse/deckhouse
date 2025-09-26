@@ -1,11 +1,7 @@
 <div class="feedback-container">
     <div class="feedback-container__separantor"></div>
     <div class="feedback-container__choice">
-        {%- if page.lang == "ru" %}
-            <p class="feedback-container__choice--descr">Была&nbsp;ли страница полезна?</p>
-        {%- else %}
-            <p class="feedback-container__choice--descr">Was the page useful?</p>
-        {%- endif %}
+            <p class="feedback-container__choice--descr">{{ site.data.i18n.feedback.useful[page.lang] }}</p>
         <div class="feedback-container__choice--icon">
             <button class="icon icon__like">
                 <svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -26,11 +22,7 @@
             <path d="M17.8604 31.6275L29.7673 43.1624L50.6045 22.6973" stroke="#B0DA8F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
             <circle cx="32" cy="32" r="30" stroke="#E7F4DD" stroke-width="4"/>
         </svg>
-        {%- if page.lang == "ru" %}
-            <p class="window__feedback--title">Спасибо за&nbsp;оценку!</p>
-        {%- else %}
-            <p class="window__feedback--title">Thanks for the review!</p>
-        {%- endif %}
+            <p class="window__feedback--title">{{ site.data.i18n.feedback.thanks[page.lang] }}</p>
     </div>
 
     <div class="window__feedback window__feedback--later">
@@ -47,11 +39,7 @@
             </clipPath>
             </defs>
         </svg>
-        {%- if page.lang == "ru" %}
-            <p class="window__feedback--title">Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут</p>
-        {%- else %}
-            <p class="window__feedback--title">Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.</p>
-        {%- endif %}
+            <p class="window__feedback--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p>
     </div>
 
     <div class="window__feedback window__feedback--error">
@@ -69,55 +57,29 @@
             </defs>
         </svg>
         <div class="window__feedback--container">
-            {%- if page.lang == "ru" %}
-                <h3 class="window__feedback--title">Произошла ошибка</h3>
-                <p class="window__feedback--descr">Пожалуйста, попробуйте позже</p>
-            {%- else %}
-                <h3 class="window__feedback--title">An&nbsp;error has occurred</h3>
-                <p class="window__feedback--descr">Please try again later</p>
-            {%- endif %}
+                <h3 class="window__feedback--title">{{ site.data.i18n.feedback.error_happened[page.lang] }}</h3>
+                <p class="window__feedback--descr">{{ site.data.i18n.feedback.try_later[page.lang] }}</p>
         </div>
     </div>
 
     <div class="window__feedback window__feedback--form">
         <a href="" class="modal-window__close-btn">✕</a>
-            {%- if page.lang == "ru" %}
-            <h3 class="window__feedback--title">Расскажите, что не&nbsp;понравилось</h3>
+            <h3 class="window__feedback--title">{{ site.data.i18n.feedback.tell_us_what_you_didnt_like[page.lang] }}</h3>
             <div class="checkboxes">
                 <input class="checkbox" type="checkbox" id="fbFew" value="few">
-                <label for="fbFew">Мало полезного</label>
+                <label for="fbFew">{{ site.data.i18n.feedback.not_useful[page.lang] }}</label>
                 <input class="checkbox" type="checkbox" id="fbMistakes" value="mistakes">
-                <label for="fbMistakes">Есть ошибки</label>
+                <label for="fbMistakes">{{ site.data.i18n.feedback.there_are_errors[page.lang] }}</label>
                 <input class="checkbox" type="checkbox" id="fbUnclear" value="unclear">
-                <label for="fbUnclear">Непонятно написано</label>
+                <label for="fbUnclear">{{ site.data.i18n.feedback.written_incomprehensibly[page.lang] }}</label>
                 <input class="checkbox" type="checkbox" id="fbOutdated" value="outdated">
-                <label for="fbOutdated">Устаревшая информация</label>
+                <label for="fbOutdated">{{ site.data.i18n.feedback.outdated_information[page.lang] }}</label>
                 <input class="checkbox" type="checkbox" id="fbOther" value="other">
-                <label for="fbOther">Другое</label>
+                <label for="fbOther">{{ site.data.i18n.feedback.other[page.lang] }}</label>
             </div>
             <div class="window__feedback--form-textfield">
-                <input class="more-detailed" type="text" name="detailed" placeholder="Поделитесь деталями" aria-label="Поделитесь деталями" >
+                <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" >
             </div>
-            <button class="button button_alt button-request" type="submit">Отправить</button>
-        {%- else %}
-            <h3 class="window__feedback--title">Tell&nbsp;us what you didn&rsquo;t like.</h3>
-            <div class="checkboxes">
-                <input class="checkbox" type="checkbox" id="fbFew" value="few">
-                <label for="fbFew">Little useful</label>
-                <input class="checkbox" type="checkbox" id="fbMistakes" value="mistakes">
-                <label for="fbMistakes">There are errors</label>
-                <input class="checkbox" type="checkbox" id="fbUnclear" value="unclear">
-                <label for="fbUnclear">It&rsquo;s written incomprehensibly</label>
-                <input class="checkbox" type="checkbox" id="fbOutdated" value="outdated">
-                <label for="fbOutdated">Outdated information</label>
-                <input class="checkbox" type="checkbox" id="fbOther" value="other">
-                <label for="fbOther">Other</label>
-            </div>
-            <div class="window__feedback--form-textfield">
-                <input class="more-detailed" type="text" name="detailed" placeholder="Share the details" aria-label="Share the details" >
-            </div>
-            <button class="button button_alt button-request" type="submit">Send</button>
-        {%- endif %}
+            <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
     </div>
-
 </div>
