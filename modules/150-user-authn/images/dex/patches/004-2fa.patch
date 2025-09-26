@@ -1,5 +1,5 @@
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
-index aa49a181..c375dd57 100644
+index 527d0754..be5441f9 100644
 --- a/cmd/dex/config.go
 +++ b/cmd/dex/config.go
 @@ -51,6 +51,9 @@ type Config struct {
@@ -10,9 +10,9 @@ index aa49a181..c375dd57 100644
 +	// TOTP represents the configuration for two-factor authentication.
 +	TOTP TOTP `json:"twoFactorAuthn"`
  }
-
+ 
  // Validate the configuration
-@@ -474,3 +477,10 @@ type RefreshToken struct {
+@@ -476,3 +479,10 @@ type RefreshToken struct {
  	AbsoluteLifetime  string `json:"absoluteLifetime"`
  	ValidIfNotUsedFor string `json:"validIfNotUsedFor"`
  }
@@ -30,7 +30,7 @@ index 68abe1f7..004330ce 100644
 @@ -345,6 +345,11 @@ expiry:
    idTokens: "25h"
    authRequests: "25h"
-
+ 
 +twoFactorAuthn:
 +  issuer: dex
 +  connectors:
@@ -51,73 +51,74 @@ index 68abe1f7..004330ce 100644
  			Level:  slog.LevelDebug,
  			Format: "json",
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index 8a69c7ee..168008e5 100644
+index ac715e60..a29ca72e 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -287,21 +287,23 @@ func runServe(options serveOptions) error {
+@@ -291,22 +291,23 @@ func runServe(options serveOptions) error {
  	healthChecker := gosundheit.New()
-
+ 
  	serverConfig := server.Config{
--		AllowedGrantTypes:      c.OAuth2.GrantTypes,
--		SupportedResponseTypes: c.OAuth2.ResponseTypes,
--		SkipApprovalScreen:     c.OAuth2.SkipApprovalScreen,
--		AlwaysShowLoginScreen:  c.OAuth2.AlwaysShowLoginScreen,
--		PasswordConnector:      c.OAuth2.PasswordConnector,
--		Headers:                c.Web.Headers.ToHTTPHeader(),
--		AllowedOrigins:         c.Web.AllowedOrigins,
--		AllowedHeaders:         c.Web.AllowedHeaders,
--		Issuer:                 c.Issuer,
--		Storage:                s,
--		Web:                    c.Frontend,
--		Logger:                 logger,
--		Now:                    now,
--		PrometheusRegistry:     prometheusRegistry,
--		HealthChecker:          healthChecker,
-+		AllowedGrantTypes:          c.OAuth2.GrantTypes,
-+		SupportedResponseTypes:     c.OAuth2.ResponseTypes,
-+		SkipApprovalScreen:         c.OAuth2.SkipApprovalScreen,
-+		AlwaysShowLoginScreen:      c.OAuth2.AlwaysShowLoginScreen,
-+		PasswordConnector:          c.OAuth2.PasswordConnector,
-+		Headers:                    c.Web.Headers.ToHTTPHeader(),
-+		AllowedOrigins:             c.Web.AllowedOrigins,
-+		AllowedHeaders:             c.Web.AllowedHeaders,
-+		Issuer:                     c.Issuer,
-+		Storage:                    s,
-+		Web:                        c.Frontend,
-+		Logger:                     logger,
-+		Now:                        now,
-+		PrometheusRegistry:         prometheusRegistry,
-+		HealthChecker:              healthChecker,
-+		TOTPIssuer:                 c.TOTP.Issuer,
-+		TOTPConnectors:             c.TOTP.Connectors,
+-		AllowedGrantTypes:          c.OAuth2.GrantTypes,
+-		SupportedResponseTypes:     c.OAuth2.ResponseTypes,
+-		SkipApprovalScreen:         c.OAuth2.SkipApprovalScreen,
+-		AlwaysShowLoginScreen:      c.OAuth2.AlwaysShowLoginScreen,
+-		PasswordConnector:          c.OAuth2.PasswordConnector,
+-		Headers:                    c.Web.Headers.ToHTTPHeader(),
+-		AllowedOrigins:             c.Web.AllowedOrigins,
+-		AllowedHeaders:             c.Web.AllowedHeaders,
+-		Issuer:                     c.Issuer,
+-		Storage:                    s,
+-		Web:                        c.Frontend,
+-		Logger:                     logger,
+-		Now:                        now,
+-		PrometheusRegistry:         prometheusRegistry,
+-		HealthChecker:              healthChecker,
+-		ContinueOnConnectorFailure: featureflags.ContinueOnConnectorFailure.Enabled(),
++		AllowedGrantTypes:      c.OAuth2.GrantTypes,
++		SupportedResponseTypes: c.OAuth2.ResponseTypes,
++		SkipApprovalScreen:     c.OAuth2.SkipApprovalScreen,
++		AlwaysShowLoginScreen:  c.OAuth2.AlwaysShowLoginScreen,
++		PasswordConnector:      c.OAuth2.PasswordConnector,
++		Headers:                c.Web.Headers.ToHTTPHeader(),
++		AllowedOrigins:         c.Web.AllowedOrigins,
++		AllowedHeaders:         c.Web.AllowedHeaders,
++		Issuer:                 c.Issuer,
++		Storage:                s,
++		Web:                    c.Frontend,
++		Logger:                 logger,
++		Now:                    now,
++		PrometheusRegistry:     prometheusRegistry,
++		HealthChecker:          healthChecker,
++		TOTPIssuer:             c.TOTP.Issuer,
++		TOTPConnectors:         c.TOTP.Connectors,
  	}
  	if c.Expiry.SigningKeys != "" {
  		signingKeys, err := time.ParseDuration(c.Expiry.SigningKeys)
 diff --git a/go.mod b/go.mod
-index 8404620f..b8e20dd2 100644
+index cf2d5d4d..b62cba5d 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -26,6 +26,7 @@ require (
- 	github.com/mattn/go-sqlite3 v1.14.24
- 	github.com/oklog/run v1.1.0
+ 	github.com/mattn/go-sqlite3 v1.14.32
+ 	github.com/oklog/run v1.2.0
  	github.com/pkg/errors v0.9.1
-+	github.com/pquerna/otp v1.4.0
- 	github.com/prometheus/client_golang v1.20.5
- 	github.com/russellhaering/goxmldsig v1.4.0
++	github.com/pquerna/otp v1.5.0
+ 	github.com/prometheus/client_golang v1.23.0
+ 	github.com/russellhaering/goxmldsig v1.5.0
  	github.com/spf13/cobra v1.9.1
-@@ -55,6 +56,7 @@ require (
+@@ -54,6 +55,7 @@ require (
  	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
  	github.com/beorn7/perks v1.0.1 // indirect
  	github.com/bmatcuk/doublestar v1.3.4 // indirect
 +	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
  	github.com/cespare/xxhash/v2 v2.3.0 // indirect
- 	github.com/coreos/go-semver v0.3.0 // indirect
- 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
+ 	github.com/coreos/go-semver v0.3.1 // indirect
+ 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 diff --git a/go.sum b/go.sum
-index 5ba3d05b..d455a00f 100644
+index 463751ed..a4a1f2cb 100644
 --- a/go.sum
 +++ b/go.sum
-@@ -41,6 +41,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+@@ -38,6 +38,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
  github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
  github.com/bmatcuk/doublestar v1.3.4 h1:gPypJ5xD31uhX6Tf54sDPUOBXTqKH4c9aPY66CyQrS0=
  github.com/bmatcuk/doublestar v1.3.4/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
@@ -125,18 +126,18 @@ index 5ba3d05b..d455a00f 100644
 +github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc/go.mod h1:paBWMcWSl3LHKBqUq+rly7CNSldXjb2rDl3JlRe0mD8=
  github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
  github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
- github.com/coreos/go-oidc/v3 v3.12.0 h1:sJk+8G2qq94rDI6ehZ71Bol3oUHy63qNYmkiSjrc/Jo=
-@@ -168,6 +170,8 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+ github.com/coreos/go-oidc/v3 v3.14.1 h1:9ePWwfdwC4QKRlCXsJGou56adA/owXczOzwKdOumLqk=
+@@ -160,6 +162,8 @@ github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
  github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
  github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
  github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-+github.com/pquerna/otp v1.4.0 h1:wZvl1TIVxKRThZIBiwOOHOGP/1+nZyWBil9Y2XNEDzg=
-+github.com/pquerna/otp v1.4.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
- github.com/prometheus/client_golang v1.20.5 h1:cxppBPuYhUnsO6yo/aoRol4L7q7UFfdm+bR9r+8l63Y=
- github.com/prometheus/client_golang v1.20.5/go.mod h1:PIEt8X02hGcP8JWbeHyeZ53Y/jReSnHgO035n//V5WE=
- github.com/prometheus/client_model v0.6.1 h1:ZKSh/rekM+n3CeS952MLRAdFwIKqeY8b62p8ais2e9E=
++github.com/pquerna/otp v1.5.0 h1:NMMR+WrmaqXU4EzdGJEE1aUUI0AMRzsp96fFFWNPwxs=
++github.com/pquerna/otp v1.5.0/go.mod h1:dkJfzwRKNiegxyNb54X/3fLwhCynbMspSyWKnvi1AEg=
+ github.com/prometheus/client_golang v1.23.0 h1:ust4zpdl9r4trLY/gSjlm07PuiBq2ynaXXlptpfy8Uc=
+ github.com/prometheus/client_golang v1.23.0/go.mod h1:i/o0R9ByOnHX0McrTMTyhYvKE4haaf2mW08I+jGAjEE=
+ github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
 diff --git a/server/handlers.go b/server/handlers.go
-index a00b290b..1698b019 100644
+index 93266b8d..17688448 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -11,7 +11,6 @@ import (
@@ -147,7 +148,7 @@ index a00b290b..1698b019 100644
  	"sort"
  	"strconv"
  	"strings"
-@@ -521,6 +520,11 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -543,6 +542,11 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		a.LoggedIn = true
  		a.Claims = claims
  		a.ConnectorData = identity.ConnectorData
@@ -159,10 +160,10 @@ index a00b290b..1698b019 100644
  		return a, nil
  	}
  	if err := s.storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
-@@ -536,63 +540,81 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -558,63 +562,81 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		"connector_id", authReq.ConnectorID, "username", claims.Username,
  		"preferred_username", claims.PreferredUsername, "email", email, "groups", claims.Groups)
-
+ 
 -	offlineAccessRequested := false
 -	for _, scope := range authReq.Scopes {
 -		if scope == scopeOfflineAccess {
@@ -197,7 +198,7 @@ index a00b290b..1698b019 100644
 -				Refresh:       make(map[string]*storage.RefreshTokenRef),
 -				ConnectorData: identity.ConnectorData,
 -			}
-
+ 
 -			// Create a new OfflineSession object for the user and add a reference object for
 -			// the newly received refreshtoken.
 -			if err := s.storage.CreateOfflineSessions(ctx, offlineSessions); err != nil {
@@ -231,7 +232,7 @@ index a00b290b..1698b019 100644
  			return "", false, err
  		}
  	}
-
+ 
 +	// Update existing OfflineSession obj with new RefreshTokenRef.
 +	if err := s.storage.UpdateOfflineSessions(ctx, identity.UserID, authReq.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 +		if len(identity.ConnectorData) > 0 {
@@ -247,7 +248,7 @@ index a00b290b..1698b019 100644
  	if s.skipApproval && !authReq.ForceApprovalPrompt {
  		return "", true, nil
  	}
-
+ 
 +	// we can skip the redirect to /approval and /totp and go ahead and send code if it's not required
 +	if s.skipApproval && !authReq.ForceApprovalPrompt && !s.totp.enabledForConnector(authReq.ConnectorID) {
 +		return "", true, nil
@@ -258,7 +259,7 @@ index a00b290b..1698b019 100644
  	h := hmac.New(sha256.New, authReq.HMACKey)
  	h.Write([]byte(authReq.ID))
  	mac := h.Sum(nil)
-
+ 
 -	returnURL := path.Join(s.issuerURL.Path, "/approval") + "?req=" + authReq.ID + "&hmac=" + base64.RawURLEncoding.EncodeToString(mac)
 -	return returnURL, false, nil
 +	// Deep copy issuer URL to avoid modifying the global one.
@@ -277,9 +278,9 @@ index a00b290b..1698b019 100644
 +	returnURL.RawQuery = values.Encode()
 +	return returnURL.String(), false, nil
  }
-
+ 
  func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
-@@ -614,7 +636,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+@@ -636,7 +658,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
  		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
  		return
  	}
@@ -289,37 +290,37 @@ index a00b290b..1698b019 100644
  		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
  		return
 diff --git a/server/server.go b/server/server.go
-index 8c046296..3b46ed18 100644
+index 90b1c076..97450af1 100644
 --- a/server/server.go
 +++ b/server/server.go
-@@ -119,6 +119,9 @@ type Config struct {
- 	PrometheusRegistry *prometheus.Registry
-
+@@ -120,6 +120,9 @@ type Config struct {
+ 
  	HealthChecker gosundheit.Health
-+
+ 
 +	TOTPIssuer     string
 +	TOTPConnectors []string
- }
-
- // WebConfig holds the server's frontend templates and asset configuration.
-@@ -196,6 +199,8 @@ type Server struct {
++
+ 	// If enabled, the server will continue starting even if some connectors fail to initialize.
+ 	// This allows the server to operate with a subset of connectors if some are misconfigured.
+ 	ContinueOnConnectorFailure bool
+@@ -200,6 +203,8 @@ type Server struct {
  	refreshTokenPolicy *RefreshTokenPolicy
-
+ 
  	logger *slog.Logger
 +
 +	totp *secondFactorAuthenticator
  }
-
+ 
  // NewServer constructs a server from the provided config.
-@@ -311,6 +316,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+@@ -315,6 +320,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
  		now:                    now,
  		templates:              tmpls,
  		passwordConnector:      c.PasswordConnector,
 +		totp:                   newSecondFactorAuthenticator(c.TOTPIssuer, c.TOTPConnectors),
  		logger:                 c.Logger,
  	}
-
-@@ -486,6 +492,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+ 
+@@ -500,6 +506,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
  	// "authproxy" connector.
  	handleFunc("/callback/{connector}", s.handleConnectorCallback)
  	handleFunc("/approval", s.handleApproval)
@@ -337,7 +338,7 @@ index b77663e1..46bca92e 100644
  	tmplDeviceSuccess = "device_success.html"
 +	tmplTOTPVerify    = "totp_verify.html"
  )
-
+ 
  var requiredTmpls = []string{
 @@ -32,6 +33,7 @@ var requiredTmpls = []string{
  	tmplError,
@@ -345,7 +346,7 @@ index b77663e1..46bca92e 100644
  	tmplDeviceSuccess,
 +	tmplTOTPVerify,
  }
-
+ 
  type templates struct {
 @@ -42,6 +44,7 @@ type templates struct {
  	errorTmpl         *template.Template
@@ -353,7 +354,7 @@ index b77663e1..46bca92e 100644
  	deviceSuccessTmpl *template.Template
 +	tmplTOTPVerify    *template.Template
  }
-
+ 
  type webConfig struct {
 @@ -169,6 +172,7 @@ func loadTemplates(c webConfig, templatesDir string) (*templates, error) {
  		errorTmpl:         tmpls.Lookup(tmplError),
@@ -362,11 +363,11 @@ index b77663e1..46bca92e 100644
 +		tmplTOTPVerify:    tmpls.Lookup(tmplTOTPVerify),
  	}, nil
  }
-
+ 
 @@ -282,6 +286,21 @@ func (t *templates) deviceSuccess(r *http.Request, w http.ResponseWriter, client
  	return renderTemplate(w, t.deviceSuccessTmpl, data)
  }
-
+ 
 +func (t *templates) totpVerify(r *http.Request, w http.ResponseWriter, postURL, issuer, connector, qrCode string, lastWasInvalid bool) error {
 +	if lastWasInvalid {
 +		w.WriteHeader(http.StatusUnauthorized)
@@ -580,10 +581,10 @@ index 00000000..cc79ce3d
 +}
 diff --git a/server/totphandler_test.go b/server/totphandler_test.go
 new file mode 100644
-index 00000000..712400c3
+index 00000000..9ab51ad5
 --- /dev/null
 +++ b/server/totphandler_test.go
-@@ -0,0 +1,308 @@
+@@ -0,0 +1,302 @@
 +package server
 +
 +import (
@@ -750,11 +751,8 @@ index 00000000..712400c3
 +
 +	for _, tc := range tests {
 +		t.Run(tc.testName, func(t *testing.T) {
-+			ctx, cancel := context.WithCancel(context.Background())
-+			defer cancel()
-+
 +			// Setup a dex server.
-+			httpServer, s := newTestServer(ctx, t, func(c *Config) {
++			httpServer, s := newTestServer(t, func(c *Config) {
 +				c.Now = time.Now
 +			})
 +			defer httpServer.Close()
@@ -851,11 +849,8 @@ index 00000000..712400c3
 +
 +	for _, tc := range tests {
 +		t.Run(tc.testName, func(t *testing.T) {
-+			ctx, cancel := context.WithCancel(context.Background())
-+			defer cancel()
-+
 +			// Setup a dex server.
-+			httpServer, s := newTestServer(ctx, t, func(c *Config) {
++			httpServer, s := newTestServer(t, func(c *Config) {
 +				c.Now = time.Now
 +			})
 +			defer httpServer.Close()
@@ -947,7 +942,7 @@ index 397d4d30..81bca0ae 100644
 +		TOTPValidated: a.TotpValidated,
  	}
  }
-
+ 
 @@ -100,6 +101,8 @@ func toStorageOfflineSession(o *db.OfflineSession) storage.OfflineSessions {
  		UserID:        o.UserID,
  		ConnID:        o.ConnID,
@@ -955,10 +950,10 @@ index 397d4d30..81bca0ae 100644
 +		TOTP:          o.Totp,
 +		TOTPConfirmed: o.TotpConfirmed,
  	}
-
+ 
  	if o.Refresh != nil {
 diff --git a/storage/ent/db/authrequest.go b/storage/ent/db/authrequest.go
-index b95592e5..a0f25453 100644
+index ac5b550a..bdd04ba8 100644
 --- a/storage/ent/db/authrequest.go
 +++ b/storage/ent/db/authrequest.go
 @@ -57,8 +57,10 @@ type AuthRequest struct {
@@ -972,7 +967,7 @@ index b95592e5..a0f25453 100644
 +	TotpValidated bool `json:"totp_validated,omitempty"`
 +	selectValues  sql.SelectValues
  }
-
+ 
  // scanValues returns the types for scanning values from sql.Rows.
 @@ -68,7 +70,7 @@ func (*AuthRequest) scanValues(columns []string) ([]any, error) {
  		switch columns[i] {
@@ -983,26 +978,26 @@ index b95592e5..a0f25453 100644
  			values[i] = new(sql.NullBool)
  		case authrequest.FieldID, authrequest.FieldClientID, authrequest.FieldRedirectURI, authrequest.FieldNonce, authrequest.FieldState, authrequest.FieldClaimsUserID, authrequest.FieldClaimsUsername, authrequest.FieldClaimsEmail, authrequest.FieldClaimsPreferredUsername, authrequest.FieldConnectorID, authrequest.FieldCodeChallenge, authrequest.FieldCodeChallengeMethod:
  			values[i] = new(sql.NullString)
-@@ -221,6 +223,12 @@ func (ar *AuthRequest) assignValues(columns []string, values []any) error {
+@@ -221,6 +223,12 @@ func (_m *AuthRequest) assignValues(columns []string, values []any) error {
  			} else if value != nil {
- 				ar.HmacKey = *value
+ 				_m.HmacKey = *value
  			}
 +		case authrequest.FieldTotpValidated:
 +			if value, ok := values[i].(*sql.NullBool); !ok {
 +				return fmt.Errorf("unexpected type %T for field totp_validated", values[i])
 +			} else if value.Valid {
-+				ar.TotpValidated = value.Bool
++				_m.TotpValidated = value.Bool
 +			}
  		default:
- 			ar.selectValues.Set(columns[i], values[i])
+ 			_m.selectValues.Set(columns[i], values[i])
  		}
-@@ -318,6 +326,9 @@ func (ar *AuthRequest) String() string {
+@@ -318,6 +326,9 @@ func (_m *AuthRequest) String() string {
  	builder.WriteString(", ")
  	builder.WriteString("hmac_key=")
- 	builder.WriteString(fmt.Sprintf("%v", ar.HmacKey))
+ 	builder.WriteString(fmt.Sprintf("%v", _m.HmacKey))
 +	builder.WriteString(", ")
 +	builder.WriteString("totp_validated=")
-+	builder.WriteString(fmt.Sprintf("%v", ar.TotpValidated))
++	builder.WriteString(fmt.Sprintf("%v", _m.TotpValidated))
  	builder.WriteByte(')')
  	return builder.String()
  }
@@ -1025,7 +1020,7 @@ index 0998c799..5ed7e4e9 100644
  	FieldHmacKey,
 +	FieldTotpValidated,
  }
-
+ 
  // ValidColumn reports if the column name is valid (part of the table columns).
 @@ -97,6 +100,8 @@ var (
  	DefaultCodeChallenge string
@@ -1052,7 +1047,7 @@ index 4d3a39be..1da8d249 100644
 @@ -149,6 +149,11 @@ func HmacKey(v []byte) predicate.AuthRequest {
  	return predicate.AuthRequest(sql.FieldEQ(FieldHmacKey, v))
  }
-
+ 
 +// TotpValidated applies equality check predicate on the "totp_validated" field. It's identical to TotpValidatedEQ.
 +func TotpValidated(v bool) predicate.AuthRequest {
 +	return predicate.AuthRequest(sql.FieldEQ(FieldTotpValidated, v))
@@ -1064,7 +1059,7 @@ index 4d3a39be..1da8d249 100644
 @@ -1054,6 +1059,16 @@ func HmacKeyLTE(v []byte) predicate.AuthRequest {
  	return predicate.AuthRequest(sql.FieldLTE(FieldHmacKey, v))
  }
-
+ 
 +// TotpValidatedEQ applies the EQ predicate on the "totp_validated" field.
 +func TotpValidatedEQ(v bool) predicate.AuthRequest {
 +	return predicate.AuthRequest(sql.FieldEQ(FieldTotpValidated, v))
@@ -1079,126 +1074,126 @@ index 4d3a39be..1da8d249 100644
  func And(predicates ...predicate.AuthRequest) predicate.AuthRequest {
  	return predicate.AuthRequest(sql.AndPredicates(predicates...))
 diff --git a/storage/ent/db/authrequest_create.go b/storage/ent/db/authrequest_create.go
-index 3fe0c2b1..62085c0b 100644
+index 6224ef8e..21157022 100644
 --- a/storage/ent/db/authrequest_create.go
 +++ b/storage/ent/db/authrequest_create.go
-@@ -164,6 +164,20 @@ func (arc *AuthRequestCreate) SetHmacKey(b []byte) *AuthRequestCreate {
- 	return arc
+@@ -164,6 +164,20 @@ func (_c *AuthRequestCreate) SetHmacKey(v []byte) *AuthRequestCreate {
+ 	return _c
  }
-
+ 
 +// SetTotpValidated sets the "totp_validated" field.
-+func (arc *AuthRequestCreate) SetTotpValidated(b bool) *AuthRequestCreate {
-+	arc.mutation.SetTotpValidated(b)
-+	return arc
++func (_c *AuthRequestCreate) SetTotpValidated(v bool) *AuthRequestCreate {
++	_c.mutation.SetTotpValidated(v)
++	return _c
 +}
 +
 +// SetNillableTotpValidated sets the "totp_validated" field if the given value is not nil.
-+func (arc *AuthRequestCreate) SetNillableTotpValidated(b *bool) *AuthRequestCreate {
-+	if b != nil {
-+		arc.SetTotpValidated(*b)
++func (_c *AuthRequestCreate) SetNillableTotpValidated(v *bool) *AuthRequestCreate {
++	if v != nil {
++		_c.SetTotpValidated(*v)
 +	}
-+	return arc
++	return _c
 +}
 +
  // SetID sets the "id" field.
- func (arc *AuthRequestCreate) SetID(s string) *AuthRequestCreate {
- 	arc.mutation.SetID(s)
-@@ -217,6 +231,10 @@ func (arc *AuthRequestCreate) defaults() {
+ func (_c *AuthRequestCreate) SetID(v string) *AuthRequestCreate {
+ 	_c.mutation.SetID(v)
+@@ -217,6 +231,10 @@ func (_c *AuthRequestCreate) defaults() {
  		v := authrequest.DefaultCodeChallengeMethod
- 		arc.mutation.SetCodeChallengeMethod(v)
+ 		_c.mutation.SetCodeChallengeMethod(v)
  	}
-+	if _, ok := arc.mutation.TotpValidated(); !ok {
++	if _, ok := _c.mutation.TotpValidated(); !ok {
 +		v := authrequest.DefaultTotpValidated
-+		arc.mutation.SetTotpValidated(v)
++		_c.mutation.SetTotpValidated(v)
 +	}
  }
-
+ 
  // check runs all checks and user-defined validators on the builder.
-@@ -269,6 +287,9 @@ func (arc *AuthRequestCreate) check() error {
- 	if _, ok := arc.mutation.HmacKey(); !ok {
+@@ -269,6 +287,9 @@ func (_c *AuthRequestCreate) check() error {
+ 	if _, ok := _c.mutation.HmacKey(); !ok {
  		return &ValidationError{Name: "hmac_key", err: errors.New(`db: missing required field "AuthRequest.hmac_key"`)}
  	}
-+	if _, ok := arc.mutation.TotpValidated(); !ok {
++	if _, ok := _c.mutation.TotpValidated(); !ok {
 +		return &ValidationError{Name: "totp_validated", err: errors.New(`db: missing required field "AuthRequest.totp_validated"`)}
 +	}
- 	if v, ok := arc.mutation.ID(); ok {
+ 	if v, ok := _c.mutation.ID(); ok {
  		if err := authrequest.IDValidator(v); err != nil {
  			return &ValidationError{Name: "id", err: fmt.Errorf(`db: validator failed for field "AuthRequest.id": %w`, err)}
-@@ -389,6 +410,10 @@ func (arc *AuthRequestCreate) createSpec() (*AuthRequest, *sqlgraph.CreateSpec)
+@@ -389,6 +410,10 @@ func (_c *AuthRequestCreate) createSpec() (*AuthRequest, *sqlgraph.CreateSpec) {
  		_spec.SetField(authrequest.FieldHmacKey, field.TypeBytes, value)
  		_node.HmacKey = value
  	}
-+	if value, ok := arc.mutation.TotpValidated(); ok {
++	if value, ok := _c.mutation.TotpValidated(); ok {
 +		_spec.SetField(authrequest.FieldTotpValidated, field.TypeBool, value)
 +		_node.TotpValidated = value
 +	}
  	return _node, _spec
  }
-
+ 
 diff --git a/storage/ent/db/authrequest_update.go b/storage/ent/db/authrequest_update.go
-index 0f314a4f..ab40d5c4 100644
+index e1fa678a..dcf0c750 100644
 --- a/storage/ent/db/authrequest_update.go
 +++ b/storage/ent/db/authrequest_update.go
-@@ -311,6 +311,20 @@ func (aru *AuthRequestUpdate) SetHmacKey(b []byte) *AuthRequestUpdate {
- 	return aru
+@@ -311,6 +311,20 @@ func (_u *AuthRequestUpdate) SetHmacKey(v []byte) *AuthRequestUpdate {
+ 	return _u
  }
-
+ 
 +// SetTotpValidated sets the "totp_validated" field.
-+func (aru *AuthRequestUpdate) SetTotpValidated(b bool) *AuthRequestUpdate {
-+	aru.mutation.SetTotpValidated(b)
-+	return aru
++func (_u *AuthRequestUpdate) SetTotpValidated(v bool) *AuthRequestUpdate {
++	_u.mutation.SetTotpValidated(v)
++	return _u
 +}
 +
 +// SetNillableTotpValidated sets the "totp_validated" field if the given value is not nil.
-+func (aru *AuthRequestUpdate) SetNillableTotpValidated(b *bool) *AuthRequestUpdate {
-+	if b != nil {
-+		aru.SetTotpValidated(*b)
++func (_u *AuthRequestUpdate) SetNillableTotpValidated(v *bool) *AuthRequestUpdate {
++	if v != nil {
++		_u.SetTotpValidated(*v)
 +	}
-+	return aru
++	return _u
 +}
 +
  // Mutation returns the AuthRequestMutation object of the builder.
- func (aru *AuthRequestUpdate) Mutation() *AuthRequestMutation {
- 	return aru.mutation
-@@ -439,6 +453,9 @@ func (aru *AuthRequestUpdate) sqlSave(ctx context.Context) (n int, err error) {
- 	if value, ok := aru.mutation.HmacKey(); ok {
+ func (_u *AuthRequestUpdate) Mutation() *AuthRequestMutation {
+ 	return _u.mutation
+@@ -439,6 +453,9 @@ func (_u *AuthRequestUpdate) sqlSave(ctx context.Context) (_node int, err error)
+ 	if value, ok := _u.mutation.HmacKey(); ok {
  		_spec.SetField(authrequest.FieldHmacKey, field.TypeBytes, value)
  	}
-+	if value, ok := aru.mutation.TotpValidated(); ok {
++	if value, ok := _u.mutation.TotpValidated(); ok {
 +		_spec.SetField(authrequest.FieldTotpValidated, field.TypeBool, value)
 +	}
- 	if n, err = sqlgraph.UpdateNodes(ctx, aru.driver, _spec); err != nil {
+ 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
  		if _, ok := err.(*sqlgraph.NotFoundError); ok {
  			err = &NotFoundError{authrequest.Label}
-@@ -741,6 +758,20 @@ func (aruo *AuthRequestUpdateOne) SetHmacKey(b []byte) *AuthRequestUpdateOne {
- 	return aruo
+@@ -741,6 +758,20 @@ func (_u *AuthRequestUpdateOne) SetHmacKey(v []byte) *AuthRequestUpdateOne {
+ 	return _u
  }
-
+ 
 +// SetTotpValidated sets the "totp_validated" field.
-+func (aruo *AuthRequestUpdateOne) SetTotpValidated(b bool) *AuthRequestUpdateOne {
-+	aruo.mutation.SetTotpValidated(b)
-+	return aruo
++func (_u *AuthRequestUpdateOne) SetTotpValidated(v bool) *AuthRequestUpdateOne {
++	_u.mutation.SetTotpValidated(v)
++	return _u
 +}
 +
 +// SetNillableTotpValidated sets the "totp_validated" field if the given value is not nil.
-+func (aruo *AuthRequestUpdateOne) SetNillableTotpValidated(b *bool) *AuthRequestUpdateOne {
-+	if b != nil {
-+		aruo.SetTotpValidated(*b)
++func (_u *AuthRequestUpdateOne) SetNillableTotpValidated(v *bool) *AuthRequestUpdateOne {
++	if v != nil {
++		_u.SetTotpValidated(*v)
 +	}
-+	return aruo
++	return _u
 +}
 +
  // Mutation returns the AuthRequestMutation object of the builder.
- func (aruo *AuthRequestUpdateOne) Mutation() *AuthRequestMutation {
- 	return aruo.mutation
-@@ -899,6 +930,9 @@ func (aruo *AuthRequestUpdateOne) sqlSave(ctx context.Context) (_node *AuthReque
- 	if value, ok := aruo.mutation.HmacKey(); ok {
+ func (_u *AuthRequestUpdateOne) Mutation() *AuthRequestMutation {
+ 	return _u.mutation
+@@ -899,6 +930,9 @@ func (_u *AuthRequestUpdateOne) sqlSave(ctx context.Context) (_node *AuthRequest
+ 	if value, ok := _u.mutation.HmacKey(); ok {
  		_spec.SetField(authrequest.FieldHmacKey, field.TypeBytes, value)
  	}
-+	if value, ok := aruo.mutation.TotpValidated(); ok {
++	if value, ok := _u.mutation.TotpValidated(); ok {
 +		_spec.SetField(authrequest.FieldTotpValidated, field.TypeBool, value)
 +	}
- 	_node = &AuthRequest{config: aruo.config}
+ 	_node = &AuthRequest{config: _u.config}
  	_spec.Assign = _node.assignValues
  	_spec.ScanValues = _node.scanValues
 diff --git a/storage/ent/db/migrate/schema.go b/storage/ent/db/migrate/schema.go
@@ -1237,7 +1232,7 @@ index 71203574..549c94d3 100644
 @@ -2188,6 +2189,42 @@ func (m *AuthRequestMutation) ResetHmacKey() {
  	m.hmac_key = nil
  }
-
+ 
 +// SetTotpValidated sets the "totp_validated" field.
 +func (m *AuthRequestMutation) SetTotpValidated(b bool) {
 +	m.totp_validated = &b
@@ -1295,7 +1290,7 @@ index 71203574..549c94d3 100644
 +	}
  	return fields
  }
-
+ 
 @@ -2331,6 +2371,8 @@ func (m *AuthRequestMutation) Field(name string) (ent.Value, bool) {
  		return m.CodeChallengeMethod()
  	case authrequest.FieldHmacKey:
@@ -1350,7 +1345,7 @@ index 71203574..549c94d3 100644
 @@ -6072,6 +6128,104 @@ func (m *OfflineSessionMutation) ResetConnectorData() {
  	delete(m.clearedFields, offlinesession.FieldConnectorData)
  }
-
+ 
 +// SetTotp sets the "totp" field.
 +func (m *OfflineSessionMutation) SetTotp(s string) {
 +	m.totp = &s
@@ -1473,7 +1468,7 @@ index 71203574..549c94d3 100644
 +	}
  	return fields
  }
-
+ 
 @@ -6135,6 +6295,10 @@ func (m *OfflineSessionMutation) Field(name string) (ent.Value, bool) {
  		return m.Refresh()
  	case offlinesession.FieldConnectorData:
@@ -1529,7 +1524,7 @@ index 71203574..549c94d3 100644
 +	}
  	return fields
  }
-
+ 
 @@ -6239,6 +6427,12 @@ func (m *OfflineSessionMutation) ClearField(name string) error {
  	case offlinesession.FieldConnectorData:
  		m.ClearConnectorData()
@@ -1557,7 +1552,7 @@ index 71203574..549c94d3 100644
  	return fmt.Errorf("unknown OfflineSession field %s", name)
  }
 diff --git a/storage/ent/db/offlinesession.go b/storage/ent/db/offlinesession.go
-index 7adc3afc..611636cf 100644
+index b19fd9c6..37824267 100644
 --- a/storage/ent/db/offlinesession.go
 +++ b/storage/ent/db/offlinesession.go
 @@ -24,6 +24,10 @@ type OfflineSession struct {
@@ -1570,7 +1565,7 @@ index 7adc3afc..611636cf 100644
 +	TotpConfirmed bool `json:"totp_confirmed,omitempty"`
  	selectValues  sql.SelectValues
  }
-
+ 
 @@ -34,7 +38,9 @@ func (*OfflineSession) scanValues(columns []string) ([]any, error) {
  		switch columns[i] {
  		case offlinesession.FieldRefresh, offlinesession.FieldConnectorData:
@@ -1582,35 +1577,35 @@ index 7adc3afc..611636cf 100644
  			values[i] = new(sql.NullString)
  		default:
  			values[i] = new(sql.UnknownType)
-@@ -81,6 +87,18 @@ func (os *OfflineSession) assignValues(columns []string, values []any) error {
+@@ -81,6 +87,18 @@ func (_m *OfflineSession) assignValues(columns []string, values []any) error {
  			} else if value != nil {
- 				os.ConnectorData = value
+ 				_m.ConnectorData = value
  			}
 +		case offlinesession.FieldTotp:
 +			if value, ok := values[i].(*sql.NullString); !ok {
 +				return fmt.Errorf("unexpected type %T for field totp", values[i])
 +			} else if value.Valid {
-+				os.Totp = value.String
++				_m.Totp = value.String
 +			}
 +		case offlinesession.FieldTotpConfirmed:
 +			if value, ok := values[i].(*sql.NullBool); !ok {
 +				return fmt.Errorf("unexpected type %T for field totp_confirmed", values[i])
 +			} else if value.Valid {
-+				os.TotpConfirmed = value.Bool
++				_m.TotpConfirmed = value.Bool
 +			}
  		default:
- 			os.selectValues.Set(columns[i], values[i])
+ 			_m.selectValues.Set(columns[i], values[i])
  		}
-@@ -130,6 +148,12 @@ func (os *OfflineSession) String() string {
+@@ -130,6 +148,12 @@ func (_m *OfflineSession) String() string {
  		builder.WriteString("connector_data=")
  		builder.WriteString(fmt.Sprintf("%v", *v))
  	}
 +	builder.WriteString(", ")
 +	builder.WriteString("totp=")
-+	builder.WriteString(os.Totp)
++	builder.WriteString(_m.Totp)
 +	builder.WriteString(", ")
 +	builder.WriteString("totp_confirmed=")
-+	builder.WriteString(fmt.Sprintf("%v", os.TotpConfirmed))
++	builder.WriteString(fmt.Sprintf("%v", _m.TotpConfirmed))
  	builder.WriteByte(')')
  	return builder.String()
  }
@@ -1636,7 +1631,7 @@ index e7dbc446..fecf7cca 100644
 +	FieldTotp,
 +	FieldTotpConfirmed,
  }
-
+ 
  // ValidColumn reports if the column name is valid (part of the table columns).
 @@ -47,6 +53,8 @@ var (
  	UserIDValidator func(string) error
@@ -1668,7 +1663,7 @@ index e0f19ab2..d30f0bbb 100644
 @@ -82,6 +82,16 @@ func ConnectorData(v []byte) predicate.OfflineSession {
  	return predicate.OfflineSession(sql.FieldEQ(FieldConnectorData, v))
  }
-
+ 
 +// Totp applies equality check predicate on the "totp" field. It's identical to TotpEQ.
 +func Totp(v string) predicate.OfflineSession {
 +	return predicate.OfflineSession(sql.FieldEQ(FieldTotp, v))
@@ -1685,7 +1680,7 @@ index e0f19ab2..d30f0bbb 100644
 @@ -302,6 +312,101 @@ func ConnectorDataNotNil() predicate.OfflineSession {
  	return predicate.OfflineSession(sql.FieldNotNull(FieldConnectorData))
  }
-
+ 
 +// TotpEQ applies the EQ predicate on the "totp" field.
 +func TotpEQ(v string) predicate.OfflineSession {
 +	return predicate.OfflineSession(sql.FieldEQ(FieldTotp, v))
@@ -1785,224 +1780,224 @@ index e0f19ab2..d30f0bbb 100644
  func And(predicates ...predicate.OfflineSession) predicate.OfflineSession {
  	return predicate.OfflineSession(sql.AndPredicates(predicates...))
 diff --git a/storage/ent/db/offlinesession_create.go b/storage/ent/db/offlinesession_create.go
-index b8250aac..2fa25d31 100644
+index a3ccbbf3..a15904fc 100644
 --- a/storage/ent/db/offlinesession_create.go
 +++ b/storage/ent/db/offlinesession_create.go
-@@ -43,6 +43,34 @@ func (osc *OfflineSessionCreate) SetConnectorData(b []byte) *OfflineSessionCreat
- 	return osc
+@@ -43,6 +43,34 @@ func (_c *OfflineSessionCreate) SetConnectorData(v []byte) *OfflineSessionCreate
+ 	return _c
  }
-
+ 
 +// SetTotp sets the "totp" field.
-+func (osc *OfflineSessionCreate) SetTotp(s string) *OfflineSessionCreate {
-+	osc.mutation.SetTotp(s)
-+	return osc
++func (_c *OfflineSessionCreate) SetTotp(v string) *OfflineSessionCreate {
++	_c.mutation.SetTotp(v)
++	return _c
 +}
 +
 +// SetNillableTotp sets the "totp" field if the given value is not nil.
-+func (osc *OfflineSessionCreate) SetNillableTotp(s *string) *OfflineSessionCreate {
-+	if s != nil {
-+		osc.SetTotp(*s)
++func (_c *OfflineSessionCreate) SetNillableTotp(v *string) *OfflineSessionCreate {
++	if v != nil {
++		_c.SetTotp(*v)
 +	}
-+	return osc
++	return _c
 +}
 +
 +// SetTotpConfirmed sets the "totp_confirmed" field.
-+func (osc *OfflineSessionCreate) SetTotpConfirmed(b bool) *OfflineSessionCreate {
-+	osc.mutation.SetTotpConfirmed(b)
-+	return osc
++func (_c *OfflineSessionCreate) SetTotpConfirmed(v bool) *OfflineSessionCreate {
++	_c.mutation.SetTotpConfirmed(v)
++	return _c
 +}
 +
 +// SetNillableTotpConfirmed sets the "totp_confirmed" field if the given value is not nil.
-+func (osc *OfflineSessionCreate) SetNillableTotpConfirmed(b *bool) *OfflineSessionCreate {
-+	if b != nil {
-+		osc.SetTotpConfirmed(*b)
++func (_c *OfflineSessionCreate) SetNillableTotpConfirmed(v *bool) *OfflineSessionCreate {
++	if v != nil {
++		_c.SetTotpConfirmed(*v)
 +	}
-+	return osc
++	return _c
 +}
 +
  // SetID sets the "id" field.
- func (osc *OfflineSessionCreate) SetID(s string) *OfflineSessionCreate {
- 	osc.mutation.SetID(s)
-@@ -56,6 +84,7 @@ func (osc *OfflineSessionCreate) Mutation() *OfflineSessionMutation {
-
+ func (_c *OfflineSessionCreate) SetID(v string) *OfflineSessionCreate {
+ 	_c.mutation.SetID(v)
+@@ -56,6 +84,7 @@ func (_c *OfflineSessionCreate) Mutation() *OfflineSessionMutation {
+ 
  // Save creates the OfflineSession in the database.
- func (osc *OfflineSessionCreate) Save(ctx context.Context) (*OfflineSession, error) {
-+	osc.defaults()
- 	return withHooks(ctx, osc.sqlSave, osc.mutation, osc.hooks)
+ func (_c *OfflineSessionCreate) Save(ctx context.Context) (*OfflineSession, error) {
++	_c.defaults()
+ 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
  }
-
-@@ -81,6 +110,14 @@ func (osc *OfflineSessionCreate) ExecX(ctx context.Context) {
+ 
+@@ -81,6 +110,14 @@ func (_c *OfflineSessionCreate) ExecX(ctx context.Context) {
  	}
  }
-
+ 
 +// defaults sets the default values of the builder before save.
-+func (osc *OfflineSessionCreate) defaults() {
-+	if _, ok := osc.mutation.TotpConfirmed(); !ok {
++func (_c *OfflineSessionCreate) defaults() {
++	if _, ok := _c.mutation.TotpConfirmed(); !ok {
 +		v := offlinesession.DefaultTotpConfirmed
-+		osc.mutation.SetTotpConfirmed(v)
++		_c.mutation.SetTotpConfirmed(v)
 +	}
 +}
 +
  // check runs all checks and user-defined validators on the builder.
- func (osc *OfflineSessionCreate) check() error {
- 	if _, ok := osc.mutation.UserID(); !ok {
-@@ -158,6 +195,14 @@ func (osc *OfflineSessionCreate) createSpec() (*OfflineSession, *sqlgraph.Create
+ func (_c *OfflineSessionCreate) check() error {
+ 	if _, ok := _c.mutation.UserID(); !ok {
+@@ -158,6 +195,14 @@ func (_c *OfflineSessionCreate) createSpec() (*OfflineSession, *sqlgraph.CreateS
  		_spec.SetField(offlinesession.FieldConnectorData, field.TypeBytes, value)
  		_node.ConnectorData = &value
  	}
-+	if value, ok := osc.mutation.Totp(); ok {
++	if value, ok := _c.mutation.Totp(); ok {
 +		_spec.SetField(offlinesession.FieldTotp, field.TypeString, value)
 +		_node.Totp = value
 +	}
-+	if value, ok := osc.mutation.TotpConfirmed(); ok {
++	if value, ok := _c.mutation.TotpConfirmed(); ok {
 +		_spec.SetField(offlinesession.FieldTotpConfirmed, field.TypeBool, value)
 +		_node.TotpConfirmed = value
 +	}
  	return _node, _spec
  }
-
-@@ -179,6 +224,7 @@ func (oscb *OfflineSessionCreateBulk) Save(ctx context.Context) ([]*OfflineSessi
- 	for i := range oscb.builders {
+ 
+@@ -179,6 +224,7 @@ func (_c *OfflineSessionCreateBulk) Save(ctx context.Context) ([]*OfflineSession
+ 	for i := range _c.builders {
  		func(i int, root context.Context) {
- 			builder := oscb.builders[i]
+ 			builder := _c.builders[i]
 +			builder.defaults()
  			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
  				mutation, ok := m.(*OfflineSessionMutation)
  				if !ok {
 diff --git a/storage/ent/db/offlinesession_update.go b/storage/ent/db/offlinesession_update.go
-index d912acf1..76f77c60 100644
+index 8eca1b76..9710118c 100644
 --- a/storage/ent/db/offlinesession_update.go
 +++ b/storage/ent/db/offlinesession_update.go
-@@ -73,6 +73,46 @@ func (osu *OfflineSessionUpdate) ClearConnectorData() *OfflineSessionUpdate {
- 	return osu
+@@ -73,6 +73,46 @@ func (_u *OfflineSessionUpdate) ClearConnectorData() *OfflineSessionUpdate {
+ 	return _u
  }
-
+ 
 +// SetTotp sets the "totp" field.
-+func (osu *OfflineSessionUpdate) SetTotp(s string) *OfflineSessionUpdate {
-+	osu.mutation.SetTotp(s)
-+	return osu
++func (_u *OfflineSessionUpdate) SetTotp(v string) *OfflineSessionUpdate {
++	_u.mutation.SetTotp(v)
++	return _u
 +}
 +
 +// SetNillableTotp sets the "totp" field if the given value is not nil.
-+func (osu *OfflineSessionUpdate) SetNillableTotp(s *string) *OfflineSessionUpdate {
-+	if s != nil {
-+		osu.SetTotp(*s)
++func (_u *OfflineSessionUpdate) SetNillableTotp(v *string) *OfflineSessionUpdate {
++	if v != nil {
++		_u.SetTotp(*v)
 +	}
-+	return osu
++	return _u
 +}
 +
 +// ClearTotp clears the value of the "totp" field.
-+func (osu *OfflineSessionUpdate) ClearTotp() *OfflineSessionUpdate {
-+	osu.mutation.ClearTotp()
-+	return osu
++func (_u *OfflineSessionUpdate) ClearTotp() *OfflineSessionUpdate {
++	_u.mutation.ClearTotp()
++	return _u
 +}
 +
 +// SetTotpConfirmed sets the "totp_confirmed" field.
-+func (osu *OfflineSessionUpdate) SetTotpConfirmed(b bool) *OfflineSessionUpdate {
-+	osu.mutation.SetTotpConfirmed(b)
-+	return osu
++func (_u *OfflineSessionUpdate) SetTotpConfirmed(v bool) *OfflineSessionUpdate {
++	_u.mutation.SetTotpConfirmed(v)
++	return _u
 +}
 +
 +// SetNillableTotpConfirmed sets the "totp_confirmed" field if the given value is not nil.
-+func (osu *OfflineSessionUpdate) SetNillableTotpConfirmed(b *bool) *OfflineSessionUpdate {
-+	if b != nil {
-+		osu.SetTotpConfirmed(*b)
++func (_u *OfflineSessionUpdate) SetNillableTotpConfirmed(v *bool) *OfflineSessionUpdate {
++	if v != nil {
++		_u.SetTotpConfirmed(*v)
 +	}
-+	return osu
++	return _u
 +}
 +
 +// ClearTotpConfirmed clears the value of the "totp_confirmed" field.
-+func (osu *OfflineSessionUpdate) ClearTotpConfirmed() *OfflineSessionUpdate {
-+	osu.mutation.ClearTotpConfirmed()
-+	return osu
++func (_u *OfflineSessionUpdate) ClearTotpConfirmed() *OfflineSessionUpdate {
++	_u.mutation.ClearTotpConfirmed()
++	return _u
 +}
 +
  // Mutation returns the OfflineSessionMutation object of the builder.
- func (osu *OfflineSessionUpdate) Mutation() *OfflineSessionMutation {
- 	return osu.mutation
-@@ -147,6 +187,18 @@ func (osu *OfflineSessionUpdate) sqlSave(ctx context.Context) (n int, err error)
- 	if osu.mutation.ConnectorDataCleared() {
+ func (_u *OfflineSessionUpdate) Mutation() *OfflineSessionMutation {
+ 	return _u.mutation
+@@ -147,6 +187,18 @@ func (_u *OfflineSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
+ 	if _u.mutation.ConnectorDataCleared() {
  		_spec.ClearField(offlinesession.FieldConnectorData, field.TypeBytes)
  	}
-+	if value, ok := osu.mutation.Totp(); ok {
++	if value, ok := _u.mutation.Totp(); ok {
 +		_spec.SetField(offlinesession.FieldTotp, field.TypeString, value)
 +	}
-+	if osu.mutation.TotpCleared() {
++	if _u.mutation.TotpCleared() {
 +		_spec.ClearField(offlinesession.FieldTotp, field.TypeString)
 +	}
-+	if value, ok := osu.mutation.TotpConfirmed(); ok {
++	if value, ok := _u.mutation.TotpConfirmed(); ok {
 +		_spec.SetField(offlinesession.FieldTotpConfirmed, field.TypeBool, value)
 +	}
-+	if osu.mutation.TotpConfirmedCleared() {
++	if _u.mutation.TotpConfirmedCleared() {
 +		_spec.ClearField(offlinesession.FieldTotpConfirmed, field.TypeBool)
 +	}
- 	if n, err = sqlgraph.UpdateNodes(ctx, osu.driver, _spec); err != nil {
+ 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
  		if _, ok := err.(*sqlgraph.NotFoundError); ok {
  			err = &NotFoundError{offlinesession.Label}
-@@ -213,6 +265,46 @@ func (osuo *OfflineSessionUpdateOne) ClearConnectorData() *OfflineSessionUpdateO
- 	return osuo
+@@ -213,6 +265,46 @@ func (_u *OfflineSessionUpdateOne) ClearConnectorData() *OfflineSessionUpdateOne
+ 	return _u
  }
-
+ 
 +// SetTotp sets the "totp" field.
-+func (osuo *OfflineSessionUpdateOne) SetTotp(s string) *OfflineSessionUpdateOne {
-+	osuo.mutation.SetTotp(s)
-+	return osuo
++func (_u *OfflineSessionUpdateOne) SetTotp(v string) *OfflineSessionUpdateOne {
++	_u.mutation.SetTotp(v)
++	return _u
 +}
 +
 +// SetNillableTotp sets the "totp" field if the given value is not nil.
-+func (osuo *OfflineSessionUpdateOne) SetNillableTotp(s *string) *OfflineSessionUpdateOne {
-+	if s != nil {
-+		osuo.SetTotp(*s)
++func (_u *OfflineSessionUpdateOne) SetNillableTotp(v *string) *OfflineSessionUpdateOne {
++	if v != nil {
++		_u.SetTotp(*v)
 +	}
-+	return osuo
++	return _u
 +}
 +
 +// ClearTotp clears the value of the "totp" field.
-+func (osuo *OfflineSessionUpdateOne) ClearTotp() *OfflineSessionUpdateOne {
-+	osuo.mutation.ClearTotp()
-+	return osuo
++func (_u *OfflineSessionUpdateOne) ClearTotp() *OfflineSessionUpdateOne {
++	_u.mutation.ClearTotp()
++	return _u
 +}
 +
 +// SetTotpConfirmed sets the "totp_confirmed" field.
-+func (osuo *OfflineSessionUpdateOne) SetTotpConfirmed(b bool) *OfflineSessionUpdateOne {
-+	osuo.mutation.SetTotpConfirmed(b)
-+	return osuo
++func (_u *OfflineSessionUpdateOne) SetTotpConfirmed(v bool) *OfflineSessionUpdateOne {
++	_u.mutation.SetTotpConfirmed(v)
++	return _u
 +}
 +
 +// SetNillableTotpConfirmed sets the "totp_confirmed" field if the given value is not nil.
-+func (osuo *OfflineSessionUpdateOne) SetNillableTotpConfirmed(b *bool) *OfflineSessionUpdateOne {
-+	if b != nil {
-+		osuo.SetTotpConfirmed(*b)
++func (_u *OfflineSessionUpdateOne) SetNillableTotpConfirmed(v *bool) *OfflineSessionUpdateOne {
++	if v != nil {
++		_u.SetTotpConfirmed(*v)
 +	}
-+	return osuo
++	return _u
 +}
 +
 +// ClearTotpConfirmed clears the value of the "totp_confirmed" field.
-+func (osuo *OfflineSessionUpdateOne) ClearTotpConfirmed() *OfflineSessionUpdateOne {
-+	osuo.mutation.ClearTotpConfirmed()
-+	return osuo
++func (_u *OfflineSessionUpdateOne) ClearTotpConfirmed() *OfflineSessionUpdateOne {
++	_u.mutation.ClearTotpConfirmed()
++	return _u
 +}
 +
  // Mutation returns the OfflineSessionMutation object of the builder.
- func (osuo *OfflineSessionUpdateOne) Mutation() *OfflineSessionMutation {
- 	return osuo.mutation
-@@ -317,6 +409,18 @@ func (osuo *OfflineSessionUpdateOne) sqlSave(ctx context.Context) (_node *Offlin
- 	if osuo.mutation.ConnectorDataCleared() {
+ func (_u *OfflineSessionUpdateOne) Mutation() *OfflineSessionMutation {
+ 	return _u.mutation
+@@ -317,6 +409,18 @@ func (_u *OfflineSessionUpdateOne) sqlSave(ctx context.Context) (_node *OfflineS
+ 	if _u.mutation.ConnectorDataCleared() {
  		_spec.ClearField(offlinesession.FieldConnectorData, field.TypeBytes)
  	}
-+	if value, ok := osuo.mutation.Totp(); ok {
++	if value, ok := _u.mutation.Totp(); ok {
 +		_spec.SetField(offlinesession.FieldTotp, field.TypeString, value)
 +	}
-+	if osuo.mutation.TotpCleared() {
++	if _u.mutation.TotpCleared() {
 +		_spec.ClearField(offlinesession.FieldTotp, field.TypeString)
 +	}
-+	if value, ok := osuo.mutation.TotpConfirmed(); ok {
++	if value, ok := _u.mutation.TotpConfirmed(); ok {
 +		_spec.SetField(offlinesession.FieldTotpConfirmed, field.TypeBool, value)
 +	}
-+	if osuo.mutation.TotpConfirmedCleared() {
++	if _u.mutation.TotpConfirmedCleared() {
 +		_spec.ClearField(offlinesession.FieldTotpConfirmed, field.TypeBool)
 +	}
- 	_node = &OfflineSession{config: osuo.config}
+ 	_node = &OfflineSession{config: _u.config}
  	_spec.Assign = _node.assignValues
  	_spec.ScanValues = _node.scanValues
 diff --git a/storage/ent/db/runtime.go b/storage/ent/db/runtime.go
@@ -2042,7 +2037,7 @@ index 2b75927b..7cdf3677 100644
 +		field.Bool("totp_validated").Default(false),
  	}
  }
-
+ 
 diff --git a/storage/ent/schema/offlinesession.go b/storage/ent/schema/offlinesession.go
 index e9a166c3..433a7f01 100644
 --- a/storage/ent/schema/offlinesession.go
@@ -2055,19 +2050,19 @@ index e9a166c3..433a7f01 100644
 +		field.Bool("totp_confirmed").Default(false).Optional(),
  	}
  }
-
+ 
 diff --git a/storage/etcd/types.go b/storage/etcd/types.go
 index b3756604..acf1d6a7 100644
 --- a/storage/etcd/types.go
 +++ b/storage/etcd/types.go
 @@ -86,6 +86,8 @@ type AuthRequest struct {
  	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
-
+ 
  	HMACKey []byte `json:"hmac_key"`
 +
 +	TOTPValidated bool `json:"totp_validated,omitempty"`
  }
-
+ 
  func fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
 @@ -106,6 +108,7 @@ func fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
  		CodeChallenge:       a.PKCE.CodeChallenge,
@@ -2076,7 +2071,7 @@ index b3756604..acf1d6a7 100644
 +		TOTPValidated:       a.TOTPValidated,
  	}
  }
-
+ 
 @@ -128,7 +131,8 @@ func toStorageAuthRequest(a AuthRequest) storage.AuthRequest {
  			CodeChallenge:       a.CodeChallenge,
  			CodeChallengeMethod: a.CodeChallengeMethod,
@@ -2086,7 +2081,7 @@ index b3756604..acf1d6a7 100644
 +		TOTPValidated: a.TOTPValidated,
  	}
  }
-
+ 
 @@ -231,6 +235,8 @@ type OfflineSessions struct {
  	ConnID        string                              `json:"conn_id,omitempty"`
  	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
@@ -2094,7 +2089,7 @@ index b3756604..acf1d6a7 100644
 +	TOTP          string                              `json:"totp,omitempty"`
 +	TOTPConfirmed bool                                `json:"totp_confirmed,omitempty"`
  }
-
+ 
  func fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
 @@ -239,6 +245,8 @@ func fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
  		ConnID:        o.ConnID,
@@ -2104,7 +2099,7 @@ index b3756604..acf1d6a7 100644
 +		TOTPConfirmed: o.TOTPConfirmed,
  	}
  }
-
+ 
 @@ -248,6 +256,8 @@ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
  		ConnID:        o.ConnID,
  		Refresh:       o.Refresh,
@@ -2115,19 +2110,19 @@ index b3756604..acf1d6a7 100644
  	if s.Refresh == nil {
  		// Server code assumes this will be non-nil.
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index c126ddc0..79659126 100644
+index c683ed11..c5acc42c 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -358,6 +358,8 @@ type AuthRequest struct {
+@@ -365,6 +365,8 @@ type AuthRequest struct {
  	CodeChallengeMethod string `json:"code_challenge_method,omitempty"`
-
+ 
  	HMACKey []byte `json:"hmac_key"`
 +
 +	TOTPValidated bool `json:"totp_validated,omitempty"`
  }
-
+ 
  // AuthRequestList is a list of AuthRequests.
-@@ -386,7 +388,8 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
+@@ -393,7 +395,8 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
  			CodeChallenge:       req.CodeChallenge,
  			CodeChallengeMethod: req.CodeChallengeMethod,
  		},
@@ -2137,7 +2132,7 @@ index c126ddc0..79659126 100644
  	}
  	return a
  }
-@@ -416,6 +419,7 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
+@@ -423,6 +426,7 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
  		CodeChallenge:       a.PKCE.CodeChallenge,
  		CodeChallengeMethod: a.PKCE.CodeChallengeMethod,
  		HMACKey:             a.HMACKey,
@@ -2145,16 +2140,16 @@ index c126ddc0..79659126 100644
  	}
  	return req
  }
-@@ -665,6 +669,8 @@ type OfflineSessions struct {
+@@ -675,6 +679,8 @@ type OfflineSessions struct {
  	ConnID        string                              `json:"connID,omitempty"`
  	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
  	ConnectorData []byte                              `json:"connectorData,omitempty"`
 +	TOTP          string                              `json:"totp,omitempty"`
 +	TOTPConfirmed bool                                `json:"totpConfirmed,omitempty"`
  }
-
+ 
  func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
-@@ -681,6 +687,8 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
+@@ -691,6 +697,8 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
  		ConnID:        o.ConnID,
  		Refresh:       o.Refresh,
  		ConnectorData: o.ConnectorData,
@@ -2162,8 +2157,8 @@ index c126ddc0..79659126 100644
 +		TOTPConfirmed: o.TOTPConfirmed,
  	}
  }
-
-@@ -690,6 +698,8 @@ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
+ 
+@@ -700,6 +708,8 @@ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
  		ConnID:        o.ConnID,
  		Refresh:       o.Refresh,
  		ConnectorData: o.ConnectorData,
@@ -2173,7 +2168,7 @@ index c126ddc0..79659126 100644
  	if s.Refresh == nil {
  		// Server code assumes this will be non-nil.
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
-index a9ca3816..72161ca3 100644
+index 10a737b8..64961b5d 100644
 --- a/storage/sql/crud.go
 +++ b/storage/sql/crud.go
 @@ -134,10 +134,10 @@ func (c *conn) CreateAuthRequest(ctx context.Context, a storage.AuthRequest) err
@@ -2280,7 +2275,7 @@ index a9ca3816..72161ca3 100644
  		where user_id = $1 AND conn_id = $2;
  		`, userID, connID))
 @@ -753,7 +756,7 @@ func getOfflineSessions(ctx context.Context, q querier, userID string, connID st
-
+ 
  func scanOfflineSessions(s scanner) (o storage.OfflineSessions, err error) {
  	err = s.Scan(
 -		&o.UserID, &o.ConnID, decoder(&o.Refresh), &o.ConnectorData,
@@ -2289,21 +2284,21 @@ index a9ca3816..72161ca3 100644
  	if err != nil {
  		if err == sql.ErrNoRows {
 diff --git a/storage/storage.go b/storage/storage.go
-index 574b0a5a..4ebc2eb4 100644
+index cbfa44b6..783ec7cc 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
-@@ -233,6 +233,9 @@ type AuthRequest struct {
-
+@@ -236,6 +236,9 @@ type AuthRequest struct {
+ 
  	// HMACKey is used when generating an AuthRequest-specific HMAC
  	HMACKey []byte
 +
 +	// TOTPValidated is set to true if the user has validated their second authentication factor.
 +	TOTPValidated bool
  }
-
+ 
  // AuthCode represents a code which can be exchanged for an OAuth2 token response.
-@@ -330,6 +333,11 @@ type OfflineSessions struct {
-
+@@ -333,6 +336,11 @@ type OfflineSessions struct {
+ 
  	// Authentication data provided by an upstream source.
  	ConnectorData []byte
 +
@@ -2312,7 +2307,7 @@ index 574b0a5a..4ebc2eb4 100644
 +	TOTP          string
 +	TOTPConfirmed bool
  }
-
+ 
  // Password is an email to password mapping managed by the storage.
 diff --git a/web/templates/totp_verify.html b/web/templates/totp_verify.html
 new file mode 100644
