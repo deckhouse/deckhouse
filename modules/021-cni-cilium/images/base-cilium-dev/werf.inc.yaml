@@ -32,10 +32,12 @@
 ---
 image: {{ .ModuleName }}/golang-artifact
 fromImage: builder/golang-alpine-1.24
+fromCacheVersion: "2025-09-26.01"
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
 fromImage: builder/alt
+fromCacheVersion: "2025-09-26.01"
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

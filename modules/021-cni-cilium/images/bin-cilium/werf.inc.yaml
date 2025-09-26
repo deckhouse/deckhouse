@@ -26,6 +26,7 @@ shell:
 ---
 image: {{ .ModuleName }}/cilium-artifact
 fromImage: {{ .ModuleName }}/base-cilium-dev
+fromCacheVersion: "2025-09-26.01"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -91,7 +92,7 @@ shell:
   - objcopy --strip-all /tmp/install/usr/bin/cilium-agent
   - objcopy --strip-all /tmp/install/usr/bin/cilium-bugtool
   - objcopy --strip-all /tmp/install/usr/bin/cilium-dbg
-  - objcopy --strip-all /tmp/install/usr/bin/cilium-health 
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health
   - objcopy --strip-all /tmp/install/usr/bin/cilium-health-responder
   - objcopy --strip-all /tmp/install/usr/bin/cilium-mount
   - objcopy --strip-all /tmp/install/usr/bin/cilium-sysctlfix
