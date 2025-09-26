@@ -14,10 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aquasecurity/trivy-operator/pkg/apis/aquasecurity/v1alpha1"
-	admissionv1 "k8s.io/api/admission/v1"
-
 	"report-updater/internal/cache"
+
+	admissionv1 "k8s.io/api/admission/v1"
 )
 
 var _ http.Handler = (*Handler)(nil)
@@ -63,7 +62,7 @@ func (h *Handler) CheckBDU() error {
 
 func (h *Handler) createPatch(req *admissionv1.AdmissionReview) ([]patchOperation, error) {
 	var patches []patchOperation
-	var report v1alpha1.VulnerabilityReport
+	var report VulnerabilityReport
 
 	if err := json.Unmarshal(req.Request.Object.Raw, &report); err != nil {
 		return nil, err
@@ -131,7 +130,7 @@ func (h *Handler) mutateRequest(review *admissionv1.AdmissionReview) (*admission
 
 	h.logger.Println("mutate report", review.Request.Name)
 
-	var admissionReviewResponse = &admissionv1.AdmissionReview{
+	admissionReviewResponse := &admissionv1.AdmissionReview{
 		Response: &admissionv1.AdmissionResponse{
 			UID:       review.Request.UID,
 			Allowed:   true,
