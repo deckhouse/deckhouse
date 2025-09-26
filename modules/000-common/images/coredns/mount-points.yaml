@@ -1,2 +1,3 @@
 dirs:
 - /etc/coredns
+- /tmp

@@ -122,6 +122,7 @@ spec:
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
+            readOnlyRootFilesystem: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
@@ -284,6 +285,8 @@ spec:
           workingDir: /deckhouse
           volumeMounts:
           - mountPath: /tmp
+            name: tmp
+          - mountPath: /run
             name: tmp
 {{- if .Values.deckhouse.internal.chrootMode }}
           - mountPath: /chroot

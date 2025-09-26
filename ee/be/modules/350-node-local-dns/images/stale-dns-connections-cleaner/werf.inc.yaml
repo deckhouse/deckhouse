@@ -14,6 +14,9 @@ git:
     - go.sum
     setup:
     - "**/*.go"
+shell:
+  install:
+  - cd /src
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 fromImage: common/alt-p11-artifact

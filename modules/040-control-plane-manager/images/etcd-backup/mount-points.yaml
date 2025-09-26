@@ -1,0 +1,4 @@
+dirs:
+- /etc/kubernetes/pki/etcd
+- /var/backup
+- /tmp

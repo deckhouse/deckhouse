@@ -192,8 +192,21 @@ spec:
           name: var-log-nginx
         command:
         - /bin/bash
-        - -c
-        - "mkdir /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry /chroot/tmp/nginx -vp && /usr/bin/touch /chroot/var/log/nginx/access.log && echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf{{- if eq $controllerVersion "1.9" }} && ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat && ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat && ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat {{- end }}"
+        - -ec
+        - |
+          mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
+            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
+            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
+            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/tmp/nginx
+          /usr/bin/touch /chroot/var/log/nginx/access.log
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          {{- if eq $controllerVersion "1.9" }}
+          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
+          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
+          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
+          {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -205,6 +218,7 @@ spec:
         name: controller
         {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         securityContext:
+          readOnlyRootFilesystem: true
           runAsNonRoot: false
           runAsUser: 0
           runAsGroup: 0

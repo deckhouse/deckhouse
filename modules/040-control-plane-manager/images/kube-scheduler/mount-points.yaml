@@ -1,0 +1,4 @@
+files:
+ - /etc/kubernetes/scheduler.conf
+dirs:
+ - /etc/kubernetes/deckhouse/extra-files

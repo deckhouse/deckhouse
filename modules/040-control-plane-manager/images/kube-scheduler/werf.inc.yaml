@@ -14,6 +14,8 @@ import:
   add: /src/_output/bin/kube-scheduler
   to: /usr/bin/kube-scheduler
   before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-scheduler"]
