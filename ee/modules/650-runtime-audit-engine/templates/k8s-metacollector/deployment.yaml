@@ -55,8 +55,6 @@ spec:
   {{/* Disable falco VPA until memory leak in falco is fixed. Removing that also requires falco-leak-limit-range.y eaml to be removed.*/}}
   {{/* Also, uncomment the test for VPA template rendering in template_tests/module_test.go */}}
   {{- include "disabled_vpa"  (list "apps/v1" "Deployment" "k8s-metacollector" $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}}
-  resourcePolicy:
-
 {{- end }}
 ---
 apiVersion: policy/v1
