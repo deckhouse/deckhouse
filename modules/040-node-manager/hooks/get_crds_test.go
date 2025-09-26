@@ -808,8 +808,9 @@ metadata:
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 
-			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass.")))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Invalid classReference.kind 'ImproperInstanceClass'. Expected 'D8TestInstanceClass'. Please update the NodeGroup to use the correct instance class kind.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`NodeGroup validation failed: 1 NodeGroups have configuration errors.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`• NodeGroup 'improper': Invalid classReference.kind 'ImproperInstanceClass'. Expected 'D8TestInstanceClass'. Please update the NodeGroup to use the correct instance class kind.`))
 		})
 	})
 
@@ -905,7 +906,7 @@ metadata:
 				]
 				`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Invalid classReference.kind 'ImproperInstanceClass'. Expected 'D8TestInstanceClass'. Please update the NodeGroup to use the correct instance class kind. Using previously stored NodeGroup configuration to prevent cluster disruption."))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
@@ -913,7 +914,7 @@ metadata:
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: Kind ImproperInstanceClass is not allowed, the only allowed kind is D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Invalid classReference.kind 'ImproperInstanceClass'. Expected 'D8TestInstanceClass'. Please update the NodeGroup to use the correct instance class kind. Using previously stored NodeGroup configuration to prevent cluster disruption."))
 		})
 	})
 
@@ -926,8 +927,9 @@ metadata:
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 
-			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.")))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Instance class 'improper' of type 'D8TestInstanceClass' not found. Please create the required instance class or update the NodeGroup to reference an existing one.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`NodeGroup validation failed: 1 NodeGroups have configuration errors.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`• NodeGroup 'improper': Instance class 'improper' of type 'D8TestInstanceClass' not found. Please create the required instance class or update the NodeGroup to reference an existing one.`))
 		})
 	})
 
@@ -940,8 +942,9 @@ metadata:
 		It("Proper NGs must be stored to nodeManager.internal.nodeGroups, hook must warn user about improper NG", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 
-			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass.")))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (2) should be 3 in snapshots. See errors above for additional information`))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Invalid zones specified: [xxx]. Available zones: [a b c]. Please update the NodeGroup to use valid zones.")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`NodeGroup validation failed: 1 NodeGroups have configuration errors.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`• NodeGroup 'improper': Invalid zones specified: [xxx]. Available zones: [a b c]. Please update the NodeGroup to use valid zones.`))
 		})
 	})
 
@@ -1037,7 +1040,7 @@ metadata:
 				]
 			`
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups").String()).To(MatchJSON(expectedJSON))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Instance class 'improper' of type 'D8TestInstanceClass' not found. Please create the required instance class or update the NodeGroup to reference an existing one. Using previously stored NodeGroup configuration to prevent cluster disruption."))
 
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper1").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
@@ -1045,7 +1048,7 @@ metadata:
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.error").Value()).To(Equal(""))
 			Expect(f.KubernetesGlobalResource("NodeGroup", "proper2").Field("status.kubernetesVersion").Value()).To(Equal("1.29"))
 
-			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Wrong classReference: There is no valid instance class improper of type D8TestInstanceClass. Earlier stored version of NG is in use now!"))
+			Expect(f.KubernetesGlobalResource("NodeGroup", "improper").Field("status.error").String()).To(Equal("Instance class 'improper' of type 'D8TestInstanceClass' not found. Please create the required instance class or update the NodeGroup to reference an existing one. Using previously stored NodeGroup configuration to prevent cluster disruption."))
 		})
 	})
 
@@ -1270,8 +1273,9 @@ spec: {}
 		It("NodeGroup values must be valid", func() {
 			Expect(f).NotTo(ExecuteSuccessfully())
 
-			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Calculate capacity failed for: D8TestInstanceClass")))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`incorrect final nodegroups count (0) should be 1 in snapshots. See errors above for additional information`))
+			Expect(bytes.Contains(f.LoggerOutput.Contents(), []byte("Calculate capacity failed")))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`NodeGroup validation failed: 1 NodeGroups have configuration errors.`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`• NodeGroup 'test': Capacity calculation failed for instance class 'D8TestInstanceClass'. The instance type is not found in built-in types and no capacity is set. ScaleFromZero will not work. Please set capacity in the D8TestInstanceClass 'caperror' or use a supported instance type.`))
 		})
 	})
 
