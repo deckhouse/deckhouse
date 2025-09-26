@@ -41,7 +41,7 @@ git:
 {{ $rppSignCheck := ternary "true" "false" (eq .Env "CSE") -}}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -61,8 +61,9 @@ shell:
   setup:
   - cd /src
   - go test ./... -v
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X registry-packages-proxy/internal/app.RppSignCheck={{ $rppSignCheck }}" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
-  - chown 64535:64535 /registry-packages-proxy
+  - |
+    {{- $buildCommand := printf "go build -ldflags=\"-s -w -X registry-packages-proxy/internal/app.RppSignCheck=%s\" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go" $rppSignCheck }}
+    {{- include "image-build.build" (dict "BuildCommand" $buildCommand "ProjectName" $.ProjectName "SVACE_ENABLED" $.SVACE_ENABLED "SVACE_ANALYZE_SSH_USER" $.SVACE_ANALYZE_SSH_USER "SVACE_ANALYZE_HOST" $.SVACE_ANALYZE_HOST "Commit" $.Commit) | indent 8 }}
   - chmod 0755 /registry-packages-proxy
 mount:
 {{ include "mount points for golang builds" . }}

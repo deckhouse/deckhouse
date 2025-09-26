@@ -27,7 +27,7 @@ git:
     - 'go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -47,7 +47,9 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
+  # - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bashible-apiserver .
+  - |
+    {{- include "image-build.build" (dict "BuildCommand" `go build -ldflags="-s -w" -o bashible-apiserver .` "ProjectName" $.ProjectName "SVACE_ENABLED" $.SVACE_ENABLED "SVACE_ANALYZE_SSH_USER" $.SVACE_ANALYZE_SSH_USER "SVACE_ANALYZE_HOST" $.SVACE_ANALYZE_HOST "Commit" $.Commit) | indent 8 }}
   - chown 64535:64535 bashible-apiserver
   - chmod 0700 bashible-apiserver
 ---
