@@ -44,14 +44,17 @@ spec:
   #   containerPolicies:
   #   - containerName: "k8s-metacollector"
   #     minAllowed:
-  #       {{- include "k8s-metacollector_resources" . | nindent 8 }}
+  #      {{/* {{- include "k8s-metacollector_resources" . | nindent 8 }} */}}
   #     maxAllowed:
   #       cpu: 20m
   #       memory: 50Mi
+
   {{/* Disable falco VPA until memory leak in falco is fixed. Removing that also requires falco-leak-limit-range.y eaml to be removed.*/}}
   {{/* Also, uncomment the test for VPA template rendering in template_tests/module_test.go */}}
-  {{- include "disabled_vpa"  (list "apps/v1" "Deployment" "k8s-metacollector" $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}}  
-  {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  {{- include "disabled_vpa"  (list "apps/v1" "Deployment" "k8s-metacollector" $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}}
+  resourcePolicy:
+    containerPolicies:  
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: policy/v1
