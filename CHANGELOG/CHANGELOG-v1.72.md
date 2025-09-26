@@ -58,10 +58,12 @@
  - **[cloud-provider-dvp]** Fixed logic of work with disks and coreFraction validation. [#14284](https://github.com/deckhouse/deckhouse/pull/14284)
  - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
+ - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15507](https://github.com/deckhouse/deckhouse/pull/15507)
  - **[cloud-provider-vsphere]** Moved datastore discovery (via vSphere SDK calls) from hook to cloud-data-discovery. [#14519](https://github.com/deckhouse/deckhouse/pull/14519)
  - **[cloud-provider-vsphere]** Fixed main network escaping for names with special symbols. [#14328](https://github.com/deckhouse/deckhouse/pull/14328)
  - **[cloud-provider-vsphere]** Made internalNetworkCIDR optional. [#14317](https://github.com/deckhouse/deckhouse/pull/14317)
  - **[cloud-provider-zvirt]** Replaced virtio instead of virtio-scsi. [#13984](https://github.com/deckhouse/deckhouse/pull/13984)
+ - **[cni-cilium]** improved migration to 1.17 logic [#15602](https://github.com/deckhouse/deckhouse/pull/15602)
  - **[cni-cilium]** Add a compatibility check for the Cilium version and the kernel version, if WireGuard is installed on the node. [#15228](https://github.com/deckhouse/deckhouse/pull/15228)
     If wireguard interface is present on nodes, then cilium-agent upgrade will stuck. Upgrading the linux kernel to 6.8 is required.
  - **[cni-cilium]** Fixed conversion type bug in discovery cni exclusive hook. [#14995](https://github.com/deckhouse/deckhouse/pull/14995)
