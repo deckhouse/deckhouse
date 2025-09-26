@@ -31,12 +31,7 @@ spec:
       rego: |
         package d8.operation_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg}] {
-          not_delete
           container := input.review.object.spec.containers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)
@@ -44,7 +39,6 @@ spec:
         }
 
         violation[{"msg": msg}] {
-          not_delete
           container := input.review.object.spec.initContainers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)
@@ -52,7 +46,6 @@ spec:
         }
 
         violation[{"msg": msg}] {
-          not_delete
           container := input.review.object.spec.ephemeralContainers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)

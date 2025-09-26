@@ -42,12 +42,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             volume := input_flexvolumes[_]
             not input_flexvolumes_allowed(volume)
             msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])

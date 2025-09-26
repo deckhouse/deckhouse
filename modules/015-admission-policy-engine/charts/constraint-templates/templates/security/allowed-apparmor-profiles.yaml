@@ -38,12 +38,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             container := input_containers[_]
             not input_apparmor_allowed(input.review.object, container)
             msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v", [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles])

@@ -46,13 +46,8 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         # Block if forbidden
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             sysctl := input.review.object.spec.securityContext.sysctls[_].name
             forbidden_sysctl(sysctl)
             msg := sprintf("The sysctl %v is not allowed, pod: %v. Forbidden sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.forbiddenSysctls])
@@ -60,7 +55,6 @@ spec:
 
         # Block if not explicitly allowed
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             sysctl := input.review.object.spec.securityContext.sysctls[_].name
             not allowed_sysctl(sysctl)
             msg := sprintf("The sysctl %v is not explicitly allowed, pod: %v. Allowed sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.allowedSysctls])

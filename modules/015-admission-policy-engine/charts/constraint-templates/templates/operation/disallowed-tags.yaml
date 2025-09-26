@@ -34,12 +34,7 @@ spec:
       rego: |
         package d8.operation_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg}] {
-          not_delete
           container := input_containers[_]
           tags := [forbid | tag = input.parameters.tags[_] ; forbid = endswith(container.image, concat(":", ["", tag]))]
           any(tags)
@@ -47,7 +42,6 @@ spec:
         }
 
         violation[{"msg": msg}] {
-          not_delete
           container := input_containers[_]
           tag := [contains(container.image, ":")]
           not all(tag)

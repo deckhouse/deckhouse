@@ -44,17 +44,11 @@ spec:
       rego: |
         package d8.operation_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg}] {
-          not_delete
           general_violation[{"msg": msg, "field": "containers"}]
         }
 
         violation[{"msg": msg}] {
-          not_delete
           general_violation[{"msg": msg, "field": "initContainers"}]
         }
 

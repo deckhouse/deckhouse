@@ -43,12 +43,7 @@ spec:
       rego: |
         package d8.operation_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {"missing_annotations": missing}}] {
-            not_delete
             provided := {annotation | input.review.object.metadata.annotations[annotation]}
             required := {annotation | annotation := input.parameters.annotations[_].key}
             missing := required - provided
@@ -57,7 +52,6 @@ spec:
         }
 
         violation[{"msg": msg}] {
-          not_delete
           value := input.review.object.metadata.annotations[key]
           expected := input.parameters.annotations[_]
           expected.key == key

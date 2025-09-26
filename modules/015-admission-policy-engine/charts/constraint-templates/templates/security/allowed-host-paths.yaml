@@ -37,12 +37,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             volume := input_hostpath_volumes[_]
             allowedPaths := get_allowed_paths(input)
             input_hostpath_violation(allowedPaths, volume)

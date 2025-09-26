@@ -33,12 +33,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             c := input_containers[_]
             input_read_only_root_fs(c)
             msg := sprintf("only read-only root filesystem container is allowed: %v", [c.name])

@@ -64,10 +64,6 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         container_annotation_key_prefix = "container.seccomp.security.alpha.kubernetes.io/"
 
         pod_annotation_key = "seccomp.security.alpha.kubernetes.io/pod"
@@ -85,7 +81,6 @@ spec:
         }
 
         violation[{"msg": msg}] {
-            not_delete
             not input_wildcard_allowed_profiles
             allowed_profiles := get_allowed_profiles
             container := input_containers[name]

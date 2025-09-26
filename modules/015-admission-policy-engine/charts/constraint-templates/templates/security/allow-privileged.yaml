@@ -31,12 +31,7 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             c := input_containers[_]
             c.securityContext.privileged
             msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])

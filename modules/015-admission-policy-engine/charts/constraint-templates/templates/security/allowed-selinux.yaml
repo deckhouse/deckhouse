@@ -53,20 +53,14 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         # Disallow top level custom SELinux options
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             has_field(input.review.object.spec.securityContext, "seLinuxOptions")
             not input_seLinuxOptions_allowed(input.review.object.spec.securityContext.seLinuxOptions)
             msg := sprintf("SELinux options is not allowed, pod: %v. Allowed options: %v", [input.review.object.metadata.name, input.parameters.allowedSELinuxOptions])
         }
         # Disallow container level custom SELinux options
         violation[{"msg": msg, "details": {}}] {
-            not_delete
             c := input_security_context[_]
             has_field(c.securityContext, "seLinuxOptions")
             not input_seLinuxOptions_allowed(c.securityContext.seLinuxOptions)

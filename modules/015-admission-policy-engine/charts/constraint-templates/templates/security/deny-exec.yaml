@@ -36,19 +36,13 @@ spec:
       rego: |
         package d8.security_policies
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         import future.keywords.every
         violation[{"msg": msg}] {
-          not_delete
           input.review.object.stdin == true
           msg :=  "Interactive exec is not permitted."
         }
 
         violation[{"msg": msg}] {
-          not_delete
           some command in input.review.object.command
             not command in input.parameters.allowedCommands
           msg := sprintf("Only %v commands are allowed.", [input.parameters.allowedCommands])

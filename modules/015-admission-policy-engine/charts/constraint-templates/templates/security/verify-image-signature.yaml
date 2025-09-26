@@ -27,10 +27,6 @@ spec:
     - rego: |
         package d8.verify_image_signatures
 
-        not_delete {
-          input.review.operation != "DELETE"
-        }
-
         # Get data from Ratify
         remote_data := response {
           images := [img | img = retrieve_images[_]]
@@ -53,7 +49,6 @@ spec:
 
         # Base Gatekeeper violation
         violation[{"msg": msg}] {
-          not_delete
           general_violation[{"result": msg}]
         }
 
