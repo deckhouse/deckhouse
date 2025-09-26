@@ -310,17 +310,31 @@ class GetHandler(BaseHTTPRequestHandler):
         cls._last_observe = datetime.now()
 
     @classmethod
+    def _try_get_metrics(cls):
+        try:
+            cls.get_metrics()
+            cls._populated = True
+            return True
+        except Exception as loop_err:
+            logging.info(str(loop_err))
+            return False
+
+    @classmethod
     def loop_get_metrics(cls):
-        while 1:
-            try:
-                cls.get_metrics()
-            except Exception as loop_err:
-                logging.info(str(loop_err))
-            else:
-                cls._populated = True
+        while not cls._populated:
+            cls._try_get_metrics()
+            sleep(10)
+
+        while True:
+            cls._try_get_metrics()
             sleep(30)
 
     def do_GET(self):
+        if self.path == "/startup":
+            self.send_response(200 if self.__class__._populated else 500)
+            self.end_headers()
+            return
+
         if self.path == "/ready":
             apis.get_api_versions()
             # Wait for the first metrics request to succeed
