@@ -3,6 +3,28 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "disabled_vpa" -}}
+  {{- $targetAPIVersion := index . 0 -}}  {{- /* Target API version */ -}}
+  {{- $targetKind       := index . 1 -}}  {{- /* Target Kind */ -}}
+  {{- $targetName       := index . 2 -}}  {{- /* Target Name */ -}}
+  {{- $configuration    := index . 3 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+
+targetRef:
+  apiVersion: {{ $targetAPIVersion }}
+  kind: {{ $targetKind }}
+  name: {{ $targetName }}
+  {{- if eq ($configuration.mode) "VPA" }}
+updatePolicy:
+  updateMode: "Off"
+resourcePolicy:
+  containerPolicies:
+  {{- else }}
+updatePolicy:
+  updateMode: "Off"
+  {{- end }}
+{{- end }}
+
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -10,23 +32,26 @@ kind: VerticalPodAutoscaler
 metadata:
   name: k8s-metacollector
   namespace:  d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "k8s-metacollector")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "k8s-metacollector")) | nindent 2 }}  
 spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: Deployment
-    name: k8s-metacollector
-  updatePolicy:
-    updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: "k8s-metacollector"
-      minAllowed:
-        {{- include "k8s-metacollector_resources" . | nindent 8 }}
-      maxAllowed:
-        cpu: 20m
-        memory: 50Mi
-    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
+  # targetRef:
+  #   apiVersion: "apps/v1"
+  #   kind: Deployment
+  #   name: k8s-metacollector
+  # updatePolicy:
+  #   updateMode: "Auto"
+  # resourcePolicy:
+  #   containerPolicies:
+  #   - containerName: "k8s-metacollector"
+  #     minAllowed:
+  #       {{- include "k8s-metacollector_resources" . | nindent 8 }}
+  #     maxAllowed:
+  #       cpu: 20m
+  #       memory: 50Mi
+  {{/* Disable falco VPA until memory leak in falco is fixed. Removing that also requires falco-leak-limit-range.y eaml to be removed.*/}}
+  {{/* Also, uncomment the test for VPA template rendering in template_tests/module_test.go */}}
+  {{- include "disabled_vpa"  (list "apps/v1" "Deployment" "k8s-metacollector" $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}}  
+  {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
 apiVersion: policy/v1
