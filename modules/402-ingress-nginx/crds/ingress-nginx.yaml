@@ -175,6 +175,8 @@ spec:
                       type: string
                       description: |
                         The LoadBalancer class (it is passed to the `spec.loadBalancerClass` parameter of the provisioned service of the LoadBalancer type).
+
+                        > **Caution.** If this field is changed in the current `IngressNginxController` instance, the service used for balancing external traffic will be recreated and a new external IP address will be allocated, which will result in suspension of your WEB services.
                     behindL7Proxy:
                       type: boolean
                       description: |
