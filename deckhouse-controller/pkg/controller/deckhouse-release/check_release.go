@@ -763,22 +763,16 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 			f.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
 			meta.Changelog = make(map[string]any)
-
-			return meta, nil
+		} else {
+			meta.Changelog = changelog
 		}
-
-		meta.Changelog = changelog
 	}
 
 	if rr.moduleReader.Len() > 0 {
 		var moduleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
 		if err != nil {
-			f.logger.Warn("Unmarshal module yaml failed", log.Err(err))
-
-			meta.ModuleDefinition = nil
-
-			return meta, nil
+			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
 		meta.ModuleDefinition = &moduleDefinition

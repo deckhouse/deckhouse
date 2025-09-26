@@ -154,23 +154,16 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
 			meta.Changelog = make(map[string]any)
-
-			return nil, nil
+		} else {
+			meta.Changelog = changelog
 		}
-
-		meta.Changelog = changelog
 	}
 
 	if rr.moduleReader.Len() > 0 {
 		var ModuleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
 		if err != nil {
-			// if module.yaml decode failed - warn about it but don't fail the release
-			svc.logger.Warn("Unmarshal module yaml failed", log.Err(err))
-
-			meta.ModuleDefinition = nil
-
-			return meta, nil
+			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
