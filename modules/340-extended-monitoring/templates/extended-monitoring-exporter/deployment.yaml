@@ -69,6 +69,15 @@ spec:
         env:
         - name: "PYTHONUNBUFFERED"
           value: "1"
+        startupProbe:
+          httpGet:
+            path: /startup
+            scheme: HTTPS
+            port: 8081
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
         livenessProbe:
           httpGet:
             path: /healthz
@@ -123,6 +132,7 @@ spec:
             excludePaths:
             - /healthz
             - /ready
+            - /startup
             upstreams:
             - upstream: http://127.0.0.1:8080/
               path: /
