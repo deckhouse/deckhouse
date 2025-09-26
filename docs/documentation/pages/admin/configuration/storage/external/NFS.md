@@ -5,7 +5,7 @@ permalink: en/admin/configuration/storage/external/nfs.html
 
 Deckhouse Kubernetes Platform (DKP) supports integration with Network File System (NFS), providing the ability to use network file storage as Kubernetes volumes. The `csi-nfs` module provides a CSI driver for connecting to NFS servers and creating PersistentVolumes based on them.
 
-This page provides instructions for configuring NFS storage in Deckhouse, including connecting to an NFS server, creating StorageClass, configuring RPC-with-TLS security, and verifying system functionality.
+This page provides instructions for configuring NFS storage in DKP, including connecting to an NFS server, creating StorageClass, configuring RPC-with-TLS security, and verifying system functionality.
 
 ## System Requirements
 
@@ -52,7 +52,7 @@ Creating NFS volume snapshots has significant limitations related to the NFS arc
 - The archive is saved in the root folder of the NFS server specified in the `spec.connection.share` parameter.
 
 {% alert level="warning" %}
-- Before creating a snapshot, **mandatory** stop the workload* (pods) using the NFS volume.
+- Before creating a snapshot, **mandatory** stop the workload (pods) using the NFS volume.
 - NFS does not ensure atomicity of operations at the file system level when creating snapshots.
 {% endalert %}
 
