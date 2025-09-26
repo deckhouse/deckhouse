@@ -149,7 +149,6 @@ Creating a virtual machine snapshot will fail if at least one of the following c
 If there are pending VM changes awaiting a restart when the snapshot is created, the snapshot will include the updated VM configuration.
 {% endalert %}
 
-
 When a snapshot is created, the dynamic IP address of the VM is automatically converted to a static IP address and saved for recovery.
 
 If you do not want to convert and use the old IP address of the virtual machine, you can set the corresponding policy to `Never`. In this case, the address type without conversion (`Auto` or `Static`) will be used.
@@ -259,7 +258,8 @@ It is not recommended to cancel the restore operation (delete the `VirtualMachin
 VM cloning is performed using the `VirtualMachineOperation` resource with the `clone` operation type.
 
 {% alert level="warning" %}
-Before cloning, the source VM must be [powered off](#vm-start-and-state-management-policy).
+Before cloning, the source VM must be [powered off](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#virtual-machine-startup-policy-and-virtual-machine-state-management).
+
 It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
 {% endalert %}
 
@@ -298,9 +298,11 @@ spec:
       - to:
           name: <new name>
     customization:
-      namePrefix: <prefix- >
-      nameSuffix: < -suffix>
+      namePrefix: <prefix>
+      nameSuffix: <suffix>
 ```
+
+As a result, a VM named <prefix><new name><suffix> will be created.
 
 One of three modes can be used for the cloning operation:
 - `DryRun`: A test run to check for possible conflicts. The results are displayed in the `status.resources` field of the VirtualMachineOperation resource.
