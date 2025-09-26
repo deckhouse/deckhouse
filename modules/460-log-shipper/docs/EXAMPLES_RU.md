@@ -139,7 +139,7 @@ spec:
 
 Для начала вам потребуется закодировать в base64 ваш токен доступа к Grafana Cloud.
 
-![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
+![Grafana cloud API key](images/grafana_cloud.png)
 
 ```bash
 echo -n "<YOUR-GRAFANACLOUD-TOKEN>" | base64 -w0
