@@ -117,6 +117,126 @@ If you see a message like `alarm:NOSPACE` in the `ERRORS` field, you need to tak
 
 1. Change the [`maxDbSize`](/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) parameter in the `control-plane-manager` settings to match the value specified in the manifest.
 
+## etcd defragmentation
+
+{% alert level="warning" %}
+Before defragmenting, [back up etcd](../../backup/backup-and-restore.html#creating-backups-with-deckhouse-cli).
+{% endalert %}
+
+To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  endpoint status --cluster -w table
+```
+
+Output example (the size of the etcd database on the node is specified in the `DB SIZE` column):
+
+```console
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+|          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+| https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
++-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+```
+
+### How to defragment an etcd node in a single-master cluster
+
+{% alert level="warning" %}
+Defragmenting etcd is a resource-intensive operation that temporarily blocks etcd from running on that node.
+Keep this in mind when choosing a time to perform the operation in a cluster with a single master node.
+{% endalert %}
+
+To defragment etcd in a cluster with a single master node, use the following command (where `NODE_NAME` is the name of the master node):
+
+```bash
+d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+  --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt \
+  --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+```
+
+Example output when the operation is successful:
+
+```console
+Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+```
+
+> If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+
+### How to defragment etcd in a cluster with multiple master nodes
+
+To defragment etcd in a cluster with multiple master nodes:
+
+1. Get a list of etcd pods. To do this, use the following command:
+
+   ```bash
+   d8 k -n kube-system get pod -l component=etcd -o wide
+   ```
+
+   Example output:
+
+   ```console
+   NAME           READY    STATUS    RESTARTS   AGE     IP              NODE        NOMINATED NODE   READINESS GATES
+   etcd-master-0   1/1     Running   0          3d21h   192.168.199.80  master-0    <none>           <none>
+   etcd-master-1   1/1     Running   0          3d21h   192.168.199.81  master-1    <none>           <none>
+   etcd-master-2   1/1     Running   0          3d21h   192.168.199.82  master-2    <none>           <none>
+   ```
+
+1. Identify the leader master node. To do this, contact any etcd pod and get a list of nodes participating in the etcd cluster using the command (where `NODE_NAME` is the name of the master node):
+
+   ```bash
+   d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cert=/etc/kubernetes/pki/etcd/server.crt \
+     --key=/etc/kubernetes/pki/etcd/server.key \
+     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+     endpoint status --cluster -w table
+   ```
+
+   Output example (the leader in the `IS LEADER` column will have the value `true`):
+
+   ```console
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   |          ENDPOINT           |        ID        | VERSION | STORAGE VERSION | DB SIZE | IN USE | PERCENTAGE NOT IN USE | QUOTA  | IS LEADER  | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS | DOWNGRADE TARGET VERSION | DOWNGRADE ENABLED |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.80:2379 | 489a8af1e7acd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |       true |      false |        56 |  258054684 |          258054684 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.81:2379 | 589a8ad1e7ccd7b0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   | https://192.168.199.82:2379 | 229a8cd1e7bcd7a0 |   3.6.1 |           3.6.0 |   76 MB |  62 MB |                   20% | 2.1 GB |      false |      false |        56 |  258054685 |          258054685 |        |                          |             false |
+   +-----------------------------+------------------+---------+-----------------+---------+--------+-----------------------+--------+------------+------------+-----------+------------+--------------------+--------+--------------------------+-------------------+
+   ```
+
+1. Defragment the etcd nodes that are members of the etcd cluster one by one. Use the following command to defragment (where `NODE_NAME` is the name of the master node):
+
+   > Important: Defragment the leader last.
+   >
+   > Restoring etcd on a node after defragmentation may take some time. It is recommended to wait at least a minute before proceeding to defragment the next etcd node.
+
+      ```bash
+   d8 k -n kube-system exec -ti etcd-NODE_NAME -- /usr/bin/etcdctl \
+     --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt \
+     --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ defrag --command-timeout=30s
+   ```
+
+   Example output when the operation is successful:
+
+   ```console
+   Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
+   ```
+
+   > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
+
 ## High availability
 
 If any component of the control plane becomes unavailable, the cluster temporarily maintains its current state but cannot process new events. For example:
