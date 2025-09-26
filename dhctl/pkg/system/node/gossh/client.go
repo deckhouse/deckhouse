@@ -117,12 +117,12 @@ func (s *Client) Start() error {
 			User:            s.Settings.BastionUser,
 			Auth:            AuthMethods,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			Timeout:         5 * time.Second,
+			Timeout:         3 * time.Second,
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		log.DebugF("Connect to bastion host %s\n", bastionAddr)
-		err = retry.NewSilentLoop("Get bastion SSH client", 60, 2*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
 		})
