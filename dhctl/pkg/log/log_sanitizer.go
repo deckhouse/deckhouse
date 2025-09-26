@@ -15,6 +15,7 @@
 package log
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -31,9 +32,12 @@ type LogSanitizer struct{}
 
 func (l *LogSanitizer) Filter(args []any) []any {
 	for i, arg := range args {
-		v, ok := arg.(string)
-		if ok && containsSensitiveSubstring(v) {
-			args[i] = "[FILTERED]"
+		str, ok := arg.(string)
+		if !ok {
+			continue
+		}
+		if matchedKeyword := findSensitiveSubstring(str); matchedKeyword != "" {
+			args[i] = fmt.Sprintf(`[FILTERED - %s]`, matchedKeyword)
 		}
 	}
 	return args
@@ -47,11 +51,11 @@ func (l *LogSanitizer) FilterS(msg string, keysAndValues []any) (string, []any) 
 	return msg, l.Filter(keysAndValues)
 }
 
-func containsSensitiveSubstring(msg string) bool {
+func findSensitiveSubstring(msg string) string {
 	for _, keyword := range sensitiveKeywords {
 		if strings.Contains(msg, keyword) {
-			return true
+			return keyword
 		}
 	}
-	return false
+	return ""
 }
