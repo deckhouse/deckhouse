@@ -56,6 +56,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -129,6 +130,10 @@ func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tm
 
 		if errors.Is(err, frontend.ErrBashibleTimeout) {
 			return frontend.ErrBashibleTimeout
+		}
+
+		if errors.Is(err, gossh.ErrBashibleTimeout) {
+			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -526,7 +531,9 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 	}
 
 	return retry.NewLoop("Execute bundle", 30, 10*time.Second).
-		BreakIf(func(err error) bool { return errors.Is(err, frontend.ErrBashibleTimeout) }).
+		BreakIf(func(err error) bool {
+			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
+		}).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 

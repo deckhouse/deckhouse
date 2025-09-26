@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
+	"golang.org/x/crypto/ssh"
 )
 
 type SSHUploadScript struct {
@@ -251,11 +252,11 @@ func bundleSSHOutputHandler(
 			if *lastStep == stepName {
 				log.ErrorF(strings.Join(stepLogs, "\n"))
 				*failsCounter++
-				if *failsCounter > 10 {
+				if *failsCounter > 3 {
 					*isBashibleTimeout = true
 					if cmd != nil {
 						// Force kill bashible
-						cmd.Stop()
+						_ = cmd.session.Signal(ssh.SIGABRT)
 					}
 					return
 				}
