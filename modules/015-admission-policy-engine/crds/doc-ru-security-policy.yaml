@@ -40,6 +40,13 @@ spec:
                       description: Разрешает контейнерам доступ к PID-пространству имен хоста.
                     allowHostNetwork:
                       description: Разрешает контейнерам доступ к Network-пространству имен хоста.
+                    allowRbacWildcards:
+                      description: |
+                        Разрешает использование wildcard (`*`) в ресурсах Role и RoleBinding (namespace scope).
+
+                        Ресурсы ClusterRole и ClusterRoleBinding политикой SecurityPolicy не валидируются.
+
+                        **По умолчанию** (если значение не указано) — `true`. Это означает, что при отсутствии данного поля или его явного указания, использование wildcard разрешено. Если вы хотите запретить использование wildcard, задайте для данного параметра значение `false`.
                     allowedHostPorts:
                       description: Cписок диапазонов портов хоста (`hostPort`), разрешенных для использования в контейнерах.
                       items:
