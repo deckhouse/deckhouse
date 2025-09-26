@@ -58,6 +58,8 @@ spec:
       control-plane: controller-manager
   template:
     metadata:
+      annotations:
+        node-manager.deckhouse.io/force-rollout-v1-72-5: ""
       labels:
         app: capi-controller-manager
         cluster.x-k8s.io/provider: cluster-api
