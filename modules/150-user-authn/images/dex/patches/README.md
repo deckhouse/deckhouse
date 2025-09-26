@@ -33,3 +33,7 @@ for local user accounts. The following features are added:
 2. Password expiration and forced rotation
 3. Password reuse prevention
 4. Account lockout after failed attempts
+
+### 006-fix-render-error.patch
+
+This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
