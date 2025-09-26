@@ -217,7 +217,7 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
