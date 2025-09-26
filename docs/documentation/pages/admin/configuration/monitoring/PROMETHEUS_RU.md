@@ -21,13 +21,13 @@ Prometheus собирает метрики и выполняет правила:
 
 Prometheus устанавливается модулем `prometheus-operator` DKP, который выполняет следующие функции:
 - определяет следующие кастомные ресурсы:
-  - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*
-  - `ServiceMonitor` — определяет, как собирать метрики с сервисов
-  - `Alertmanager` — определяет кластер *Alertmanager*'ов
-  - `PrometheusRule` — определяет список *Prometheus rules*
+  - `Prometheus` — определяет инсталляцию (кластер) *Prometheus*.
+  - `ServiceMonitor` — определяет, как собирать метрики с сервисов.
+  - `Alertmanager` — определяет кластер *Alertmanager*'ов.
+  - `PrometheusRule` — определяет список *Prometheus rules*.
 - следит за этими ресурсами, а также:
-  - генерирует `StatefulSet` с самим *Prometheus*
-  - создает секреты с необходимыми для работы Prometheus конфигурационными файлами (`prometheus.yaml` — конфигурация Prometheus, и `configmaps.json` — конфигурация для `prometheus-config-reloader`);
+  - генерирует `StatefulSet` с самим *Prometheus*.
+  - создает секреты с необходимыми для работы Prometheus конфигурационными файлами (`prometheus.yaml` — конфигурация Prometheus, и `configmaps.json` — конфигурация для `prometheus-config-reloader`).
   - следит за ресурсами `ServiceMonitor` и `PrometheusRule` и на их основании обновляет конфигурационные файлы *Prometheus* через внесение изменений в секреты.
 
 Включить модуль можно с использованием следующего ModuleConfig:

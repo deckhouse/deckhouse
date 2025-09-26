@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/logging/storage.html
 lang: ru
 ---
 
-Deckhouse предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
+Deckhouse Kubernetes Platform (DKP) предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
 
 Хранилище разворачивается в кластере и интегрируется с системой сбора логов.
 После настройки ресурсов [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination)
@@ -23,7 +23,7 @@ Deckhouse предоставляет встроенное решение для 
 
 ## Интеграция с Grafana Cloud
 
-Чтобы настроить работу Deckhouse с платформой Grafana Cloud, выполните следующие шаги:
+Чтобы настроить работу DKP с платформой Grafana Cloud, выполните следующие шаги:
 
 1. Создайте [ключ доступа к API Grafana Cloud](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 1. Закодируйте токен доступа к Grafana Cloud в формате Base64:
@@ -55,4 +55,4 @@ Deckhouse предоставляет встроенное решение для 
 
 Для миграции с Promtail отредактируйте URL-адрес Loki, убрав из него путь `/loki/api/v1/push`.
 
-Агент логирования Vector, который используется в Deckhouse, автоматически добавит этот путь при отправке данных в Loki.
+Агент логирования Vector, который используется в DKP, автоматически добавит этот путь при отправке данных в Loki.

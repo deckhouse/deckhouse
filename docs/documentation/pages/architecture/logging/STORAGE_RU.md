@@ -4,7 +4,7 @@ permalink: ru/architecture/logging/storage.html
 lang: ru
 ---
 
-Deckhouse предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
+Deckhouse Kubernetes Platform (DKP) предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
 
 Хранилище разворачивается в кластере и интегрируется с системой сбора логов.
 После настройки ресурсов [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination)

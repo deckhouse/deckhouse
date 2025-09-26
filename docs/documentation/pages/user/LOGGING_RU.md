@@ -1,6 +1,6 @@
 ---
 title: "Настройки логирования"
-permalink: ru/user/logging.html
+permalink: ru/user/logging/
 lang: ru
 ---
 
