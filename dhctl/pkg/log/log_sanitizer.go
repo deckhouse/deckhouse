@@ -24,6 +24,7 @@ var sensitiveKeywords = []string{
 	`"name":"d8-dhctl-converge-state"`,
 	`"kind":"DexProvider"`,
 	`"kind":"ModuleConfig"`,
+	`"kind":"Secret"`,
 }
 
 type LogSanitizer struct{}
