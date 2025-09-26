@@ -5,10 +5,13 @@ image: {{ .ModuleName }}/s3-loader
 from: amazon/aws-cli:2.28.16
 import:
 # Static files of embedded modules
-- image: {{ .ModuleName }}/modules-embeded/static-artifact
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /embedded-modules
   before: setup
+  includePaths:
+  - en
+  - ru
 # Static files of documentation
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site

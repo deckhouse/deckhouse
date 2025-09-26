@@ -28,10 +28,13 @@ import:
   - search-index.json
   - '*/sitemap*.xml'
   - '*/robots.txt'
-- image: {{ .ModuleName }}/modules-embeded/static-artifact
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules
   before: setup
+  includePaths:
+  - en
+  - ru
 imageSpec:
   config:
     entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]

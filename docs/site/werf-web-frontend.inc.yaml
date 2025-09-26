@@ -167,10 +167,13 @@ import:
   - en/includes/
   - ru/includes/
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
-- image: {{ .ModuleName }}/modules-embeded/static-artifact
+- image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules
   before: setup
+  includePaths:
+  - en
+  - ru
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /app/dkp-docs

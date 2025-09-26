@@ -29,7 +29,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
   * if `externalTrafficPolicy: Local` is specified in the `Service`, the traffic will be forwarded and balanced only to those target pods running on the same node where the traffic arrived. If the target pod is not running on this node, the traffic will be dropped.
   * if `externalTrafficPolicy: Cluster` is specified in the `Service`, the traffic will be forwarded and balanced to all target pods in the cluster. At the same time, if the target pods are located on other nodes, SNAT will be performed when transmitting traffic to them (the source IP address will be replaced with the InternalIP of the node).
 
-   ![SNAT data flow diagram](../../images/cni-cilium/snat.png)
+   ![SNAT data flow diagram](images/snat.png)
 
 * `DSR` (Direct Server Return) — is a method where all incoming traffic passes through the load balancer, and all outgoing traffic bypasses it. This method is used instead of `SNAT`. Often, responses are much larger than requests, and `DSR` can significantly increase the overall throughput of the scheme:
   * if `externalTrafficPolicy: Local` is specified in the `Service`, its behavior is completely analogous to `kube-proxy` and `bpfLB` in `SNAT` mode.
@@ -39,7 +39,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
     * outgoing traffic will go directly from the node on which the target pod was launched;
     * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
 
-   ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
+   ![DSR data flow diagram](images/dsr.png)
 
 {% alert level="warning" %}
 In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.
