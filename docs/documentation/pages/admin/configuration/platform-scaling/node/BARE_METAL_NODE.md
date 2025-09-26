@@ -34,6 +34,10 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 
 ### Automatic method
 
+{% alert level="warning" %}
+If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding nodes using automatic method, [make sure](../control-plane/scaling-and-changing-master-nodes.html#adding-master-nodes-to-a-static-or-hybrid-cluster) that they will not be "captured".
+{% endalert %}
+
 DKP supports automatic addition of physical (bare-metal) servers to the cluster without the need to manually run an installation script on each node. To enable this:
 
 1. Prepare the server (OS, networking):
