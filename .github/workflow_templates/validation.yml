@@ -165,6 +165,9 @@ jobs:
     needs:
       - discover
       - pull_request_info
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: {!{ index (ds "actions") "actions/checkout" }!}
       - uses: {!{ index (ds "actions") "actions/setup-node" }!}
@@ -270,6 +273,9 @@ needs:
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
 runs-on: ubuntu-24.04
+permissions:
+  contents: read
+  id-token: write
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
   {!{- $secrets := slice -}!}

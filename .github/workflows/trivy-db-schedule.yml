@@ -28,6 +28,10 @@ on:
 concurrency:
   group: trivy-db-download
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
 
   # <template: skip_tests_repos>
