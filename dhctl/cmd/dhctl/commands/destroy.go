@@ -54,8 +54,10 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineTFResourceManagementTimeout(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		if !app.SanityCheck {
-			log.WarnLn(destroyApprovalsMessage)
+			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
@@ -88,10 +90,13 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
+		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
 			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:    cache.Global(),
 			SkipResources: app.SkipResources,
+			Logger:        logger,
+			IsDebug:       app.IsDebug,
+			TmpDir:        app.TmpDirName,
 		})
 		if err != nil {
 			return err

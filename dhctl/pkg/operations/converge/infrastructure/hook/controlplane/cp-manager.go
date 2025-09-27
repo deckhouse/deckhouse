@@ -87,7 +87,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 			return nil
 		}
 
-		return fmt.Errorf(strings.TrimSuffix(message, "\n"))
+		return fmt.Errorf("%s", strings.TrimSuffix(message, "\n"))
 	})
 }
 

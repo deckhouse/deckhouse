@@ -59,6 +59,11 @@ type Params struct {
 	ApproveDestructiveChangeID string
 
 	InfrastructureContext *infrastructure.Context
+	ProviderGetter        infrastructure.CloudProviderGetter
+
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 
 	CheckHasTerraformStateBeforeMigration bool
 }
@@ -188,10 +193,39 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.Params.ProviderGetter,
+			Logger:         c.Logger,
+		}, c.Params.CommanderModeParams)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.Params.ProviderGetter,
+			Logger:         c.Logger,
+		})
 	}
+
+	metaConfig, err := convergeCtx.MetaConfig()
+	if err != nil {
+		return err
+	}
+
+	provider, err := convergeCtx.ProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err := provider.Cleanup()
+		if err != nil {
+			c.Logger.LogErrorF("Error cleaning up provider: %v\n", err)
+		}
+	}()
 
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
 		WithInfrastructureContext(c.Params.InfrastructureContext)
@@ -274,9 +308,20 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	hasTerraformState := false
 
 	if c.CommanderMode {
-		checkRes, err := c.Checker.Check(ctx)
+		checkRes, cleaner, err := c.Checker.Check(ctx)
+		// we cannot use provider cleanup here because we do not have metaconfig here
+		cleanWithLog := func(err error) error {
+			cleanErr := cleaner()
+			if cleanErr != nil {
+				c.Logger.LogWarnF("Cannot cleanup after check: %v; prev error: %v\n", cleanErr, err)
+				return fmt.Errorf("%v: %v", err, cleanErr)
+			}
+			c.Logger.LogDebugF("Cleaning up after check succeeded: %v\n", err)
+			return err
+		}
+
 		if err != nil {
-			return nil, fmt.Errorf("check failed: %w", err)
+			return nil, cleanWithLog(fmt.Errorf("check failed: %w", err))
 		}
 
 		hasTerraformState = checkRes.HasTerraformState
@@ -285,7 +330,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 		if c.Params.OnCheckResult != nil {
 			if err := c.Params.OnCheckResult(checkRes); err != nil {
-				return nil, err
+				return nil, cleanWithLog(err)
 			}
 		}
 
@@ -294,7 +339,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			// No converge needed, exit immediately
 			return &ConvergeResult{
 				Status: ConvergeStatusInSync,
-			}, nil
+			}, cleanWithLog(nil)
 
 		case check.CheckStatusOutOfSync:
 			// Proceed converge operation
@@ -307,7 +352,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 				return &ConvergeResult{
 					Status:      ConvergeStatusNeedApproveForDestructiveChange,
 					CheckResult: checkRes,
-				}, nil
+				}, cleanWithLog(nil)
 			}
 		}
 	}
@@ -322,9 +367,21 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, kubeCl, stateCache, c.Params.CommanderModeParams, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		}, c.Params.CommanderModeParams)
 	} else {
-		convergeCtx = convergectx.NewContext(ctx, kubeCl, stateCache, c.Params.ChangesSettings)
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		})
 	}
 
 	metaConfig, err := convergeCtx.MetaConfig()
@@ -334,7 +391,23 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	needAutomaticTofuMigrationForCommander := false
 
-	if infrastructure.NeedToUseOpentofu(metaConfig) {
+	if c.ProviderGetter == nil {
+		return nil, fmt.Errorf("Provider getter not set")
+	}
+
+	provider, err := c.ProviderGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err := provider.Cleanup()
+		if err != nil {
+			c.Logger.LogWarnF("Cannot cleanup provider after converge: %v\n", err)
+		}
+	}()
+
+	if provider.NeedToUseTofu() {
 		needAutomaticTofuMigrationForCommander = hasTerraformState && c.CommanderMode
 		if !c.CommanderMode {
 			convergeCtx.WithStateChecker(infrastructurestate.AskCanIConvergeTerraformStateWhenWeUseTofu)
@@ -350,7 +423,11 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
 	}
 
-	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)
+	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
+		TmpDir:  c.TmpDir,
+		Logger:  c.Logger,
+		IsDebug: c.IsDebug,
+	})
 
 	phasesToSkip := make([]phases.OperationPhase, 0)
 	if !c.CommanderMode {
@@ -426,14 +503,33 @@ func (c *Converger) AutoConverge() error {
 	}
 
 	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), kubeCl, cache.Global(), c.Params.ChangesSettings)
+	convergeCtx = convergectx.NewContext(context.Background(), convergectx.Params{
+		KubeClient:     kubeCl,
+		Cache:          cache.Global(),
+		ChangeParams:   c.Params.ChangesSettings,
+		Logger:         c.Logger,
+		ProviderGetter: c.ProviderGetter,
+	})
 
 	metaConfig, err := convergeCtx.MetaConfig()
 	if err != nil {
 		return err
 	}
 
-	if infrastructure.NeedToUseOpentofu(metaConfig) {
+	if c.ProviderGetter == nil {
+		return fmt.Errorf("Provider getter not set")
+	}
+
+	// todo flexible autoconverger provider getter
+	providersGetterCtx, cancel := convergeCtx.WithTimeout(10 * time.Second)
+
+	provider, err := c.ProviderGetter(providersGetterCtx, metaConfig)
+	cancel()
+	if err != nil {
+		return err
+	}
+
+	if provider.NeedToUseTofu() {
 		convergeCtx.WithStateChecker(infrastructurestate.CheckCanIConvergeTerraformStateWhenWeUseTofu)
 	}
 
@@ -446,7 +542,11 @@ func (c *Converger) AutoConverge() error {
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner)).
+	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
+		TmpDir:  c.TmpDir,
+		Logger:  c.Logger,
+		IsDebug: c.IsDebug,
+	})).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})

@@ -22,6 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -34,12 +35,25 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		defer restore()
 	}
 
-	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	metaConfig, err := config.ParseConfig(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf(bootstrapPhaseBaseInfraNonCloudMessage)
@@ -64,10 +78,20 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 	metaConfig.UUID = clusterUUID
 
-	return log.Process("bootstrap", "Cloud infrastructure", func() error {
-		baseRunner := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
 
-		_, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
+	defer cleanup()
+
+	return log.Process("bootstrap", "Cloud infrastructure", func() error {
+		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+		if err != nil {
+			return err
+		}
+
+		_, err = infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 		return err
 	})
 }
