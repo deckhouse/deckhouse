@@ -1,0 +1,5 @@
+dhctl:
+  fixes:
+    - summary: Fix start and keep-alive behavior, do not change host if any kube-proxies has been started.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15566
+
