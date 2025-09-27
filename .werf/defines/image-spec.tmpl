@@ -25,6 +25,9 @@
   {{- $_ := set $newContext "work_dirt" (get $context "work_dir") }}
 {{- end }}
 
+{{- fail (printf "FAIL %+v" (include "image_spec_for_final_container" $newContext )) -}}
+
+
 {{ include "image_spec_for_final_container" $newContext }}
 
 {{- end }}
@@ -75,8 +78,6 @@
 {{- if hasKey $context "work_dir" -}}
   {{- $work_dir = get $context "work_dir" }}
 {{- end }}
-
-{{- fail (printf "FAIL %+v" ($entrypoint | toJson )) -}}
 
 imageSpec:
   config:
