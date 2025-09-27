@@ -44,6 +44,11 @@
   {{- fail "user context key should pass" -}}
 {{- end }}
 {{- $user := get $context "user" }}
+
+{{- if not (kindIs "string" $user) }}
+  {{- fail "user context key should be string" -}}
+{{- end }}
+
 {{- if empty $user }}
   {{- fail "user context key should not be empty" -}}
 {{- end }}
