@@ -56,6 +56,11 @@
 {{- $group := $user }}
 {{- if hasKey $context "group" -}}
   {{- $group = get $context "group" }}
+
+  {{- if not (kindIs "string" $group) }}
+    {{- fail "group context key should be string" -}}
+  {{- end }}
+
   {{- if empty $group -}}
     {{- fail "group context key should not be empty" -}}
   {{- end }}
