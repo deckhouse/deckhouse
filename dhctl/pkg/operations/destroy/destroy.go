@@ -247,6 +247,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	d.d8Destroyer.UnlockConverge(false)
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
+	if clusterType == config.CloudClusterType {
+		d.d8Destroyer.sshClient.Stop()
+	}
 
 	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err
