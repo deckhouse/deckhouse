@@ -37,9 +37,8 @@ registry.terraform.io
 {{- end }}
 
 # add image spec for infrastructure manager image
-# . is empty dict
+# . any value. does not use
 
 {{- define "image_spec_for_infrastructure_manager" }}
-
-{{ include "image_spec_with_user_deckhouse" (dict) }}
+{{ include "image_spec_with_user_deckhouse" (dict "entrypoint" (list "/dhctl")) }}
 {{- end }}
