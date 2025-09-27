@@ -25,9 +25,6 @@
   {{- $_ := set $newContext "work_dirt" (get $context "work_dir") }}
 {{- end }}
 
-{{- fail (printf "FAIL %+v" (include "image_spec_for_final_container" $newContext )) -}}
-
-
 {{ include "image_spec_for_final_container" $newContext }}
 
 {{- end }}
