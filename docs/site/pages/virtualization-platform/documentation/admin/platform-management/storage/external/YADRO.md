@@ -1,58 +1,57 @@
 ---
-title: "YADRO Storage"
+title: "TATLIN.UNIFIED (Yadro) unified storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/yadro.html
 d8Revision: ee
 ---
 
-To manage volumes based on the [TATLIN.UNIFIED](https://yadro.com/ru/tatlin/unified) storage system,
-you can use the `csi-yadro` module to create StorageClass resources through custom YadroStorageClass resources.
+Deckhouse Virtualization Platform (DVP) supports integration with the TATLIN.UNIFIED (Yadro) storage system, enabling volume management in Kubernetes. This allows the use of centralized storage for containerized workloads, ensuring high performance and fault tolerance.
 
-## Enable the module
+This page provides instructions on connecting TATLIN.UNIFIED (Yadro) to DVP, configuring the connection, creating a StorageClass, and verifying system functionality.
 
-To enable the `csi-yadro` module, run the following command:
+## Enabling the module
 
-```yaml
+To manage volumes based on the TATLIN.UNIFIED (Yadro) storage system in DVP, the `csi-yadro-tatlin-unified` module is used. It allows the creation of StorageClass resources through custom resources like [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass). To enable the module, run the following command:
+
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: csi-yadro
+  name: csi-yadro-tatlin-unified
 spec:
   enabled: true
   version: 1
 EOF
 ```
 
-Wait until `csi-yadro` is in the `Ready` status.
-To check the status, run the following command:
+Wait until `csi-yadro-tatlin-unified` is in the `Ready` status. To check the status, run the following command:
 
 ```shell
-d8 k get module csi-yadro -w
+d8 k get module csi-yadro-tatlin-unified -w
 ```
 
 In the output, you should see information about the module:
 
 ```console
-NAME        STAGE   SOURCE   PHASE       ENABLED   READY
-csi-yadro                    Available   True      True
+NAME                       STAGE   SOURCE    PHASE       ENABLED    READY
+si-yadro-tatlin-unified            Embedded  Available   True       True
 ```
 
-## Connect to the TATLIN.UNIFIED storage system
+## Connecting to the TATLIN.UNIFIED storage system
 
-To connect to the TATLIN.UNIFIED storage system and enable configuring of StorageClass objects,
-apply the following YadroStorageConnection resource:
+To connect to the `TATLIN.UNIFIED` storage system and enable configuring of StorageClass objects, apply the following [YadroTatlinUnifiedStorageConnection](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageconnection) resource:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
-kind: YadroStorageConnection
+kind: YadroTatlinUnifiedStorageConnection
 metadata:
   name: yad1
 spec:
   controlPlane:
     address: "172.19.28.184"
     username: "admin"
-    password: "cGFzc3dvcmQ=" # Must be encoded in Base64
+    password: "cGFzc3dvcmQ=" # Must be encoded in Base64.
     ca: "base64encoded"
     skipCertificateValidation: true
   dataPlane:
@@ -62,17 +61,16 @@ spec:
 EOF
 ```
 
-## Create a StorageClass
+## Creating a StorageClass
 
-To create a StorageClass, use the YadroStorageClass resource.
-Creating a StorageClass resource manually without using YadroStorageClass can lead to errors.
+To create a StorageClass, use the [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) resource. Creating a StorageClass resource manually without using [YadroTatlinUnifiedStorageClass](/modules/csi-yadro-tatlin-unified/stable/cr.html#yadrotatlinunifiedstorageclass) can lead to errors.
 
-Example command to create a StorageClass based on the TATLIN.UNIFIED storage system:
+Example command to create a StorageClass based on the `TATLIN.UNIFIED` storage system:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
-kind: YadroStorageClass
+kind: YadroTatlinUnifiedStorageClass
 metadata:
   name: yad1
 spec:
@@ -83,14 +81,12 @@ spec:
 EOF
 ```
 
-## Ensure the module works
+## Ensuring the module works
 
-To make sure the `csi-yadro` is working properly, check the pod status in the `d8-csi-yadro` namespace.
-All pods must have the `Running` or `Completed` status.
-The `csi-yadro` pods must be running on all nodes.
+To make sure the `csi-yadro-tatlin-unified` is working properly, check the pod status in the `d8-csi-yadro-tatlin-unified` namespace. All pods must have the `Running` or `Completed` status. The `csi-yadro-tatlin-unified` pods must be running on all nodes.
 
 To check that the module works, run the following command:
 
 ```shell
-d8 k -n d8-csi-yadro get pod -owide -w
+d8 k -n d8-csi-yadro-tatlin-unified get pod -owide -w
 ```

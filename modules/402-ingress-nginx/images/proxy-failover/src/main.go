@@ -32,7 +32,7 @@ import (
 
 const (
 	confTpl              = "/opt/nginx-static/conf/nginx.conf.tpl"
-	confNginx            = "/opt/nginx-static/conf/nginx.conf"
+	confNginx            = "/opt/nginx-static/writable/nginx.conf"
 	binNginx             = "/opt/nginx-static/sbin/nginx"
 	additionalConfigPath = "/opt/nginx-static/additional-conf/accept-requests-from.conf"
 	listenAddr           = "127.0.0.1:10255"
@@ -60,7 +60,7 @@ func prepareConfig() error {
 }
 
 func startNginx() (int, error) {
-	cmd := exec.Command(binNginx, "-c", confNginx)
+	cmd := exec.Command(binNginx, "-c", confNginx, "-e", "stderr")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	// put NGINX in another process group to prevent it
@@ -88,12 +88,12 @@ func isNginxMasterRunning(pid int) error {
 	// check the nginx master process is running
 	fs, err := proc.NewFS("/proc", false)
 	if err != nil {
-		return fmt.Errorf("couldn't read /proc directory: %w", err)
+		return fmt.Errorf("could not read /proc directory: %w", err)
 	}
 
 	_, err = fs.Proc(pid)
 	if err != nil {
-		return fmt.Errorf("couldn't check for NGINX process with PID %v: %w", pid, err)
+		return fmt.Errorf("could not check for NGINX process with PID %v: %w", pid, err)
 	}
 
 	return nil
@@ -110,13 +110,13 @@ func testConfig() (string, error) {
 }
 
 func reloadConfig() (string, error) {
-	output, err := exec.Command(binNginx, "-s", "reload", "-e", "/dev/null").CombinedOutput()
+	output, err := exec.Command(binNginx, "-s", "reload", "-c", confNginx, "-e", "/dev/null").CombinedOutput()
 	return string(output), err
 }
 
 func checker(w http.ResponseWriter, pid int) {
 	if err := isNginxMasterRunning(pid); err != nil {
-		log.Printf("couldn't find nginx master process: %v", err)
+		log.Printf("could not find nginx master process: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("500 - nginx master process not found"))
 		return
@@ -124,14 +124,14 @@ func checker(w http.ResponseWriter, pid int) {
 
 	res, err := http.Get(fmt.Sprintf("http://%s/healthz", nginxListenAddr))
 	if err != nil {
-		log.Printf("couldn't request nginx /healthz: %v", err)
+		log.Printf("could not request nginx /healthz: %v", err)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte("503 - nginx server unavailable"))
 		return
 	}
 
 	if res.StatusCode != http.StatusOK {
-		log.Printf("couldn't get 200 response code from nginx: %v", err)
+		log.Printf("could not get 200 response code from nginx: %v", err)
 		w.WriteHeader(res.StatusCode)
 		w.Write([]byte("fail"))
 		return
@@ -145,30 +145,30 @@ func main() {
 
 	err := prepareConfig()
 	if err != nil {
-		log.Fatal("couldn't prepare nginx config: %v", err)
+		log.Fatalf("could not prepare nginx config: %v", err)
 	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatalf("couldn't create watch: %v", err)
+		log.Fatalf("could not create watch: %v", err)
 	}
 	defer watcher.Close()
 
 	err = watcher.Add(additionalConfigPath)
 	if err != nil {
-		log.Fatalf("couldn't add file to watcher: %v", err)
+		log.Fatalf("could not add file to watcher: %v", err)
 	}
 
 	pid, err := startNginx()
 	if err != nil {
-		log.Fatalf("couldn't start nginx process: %v", err)
+		log.Fatalf("could not start nginx process: %v", err)
 	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request){
+		http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 			checker(w, pid)
 		})
 
@@ -186,7 +186,7 @@ loop:
 			if event.Op == fsnotify.Remove {
 				_ = watcher.Remove(event.Name)
 				if err := watcher.Add(event.Name); err != nil {
-					log.Fatalf("couldn't add file to watcher: %v", err)
+					log.Fatalf("could not add file to watcher: %v", err)
 				}
 
 				switch event.Name {
@@ -197,7 +197,7 @@ loop:
 					} else {
 						output, err := reloadConfig()
 						if err != nil {
-							log.Printf("couldn't reload nginx config: %v", err)
+							log.Printf("could not reload nginx config: %v", err)
 						}
 						if len(output) > 0 {
 							log.Print(output)

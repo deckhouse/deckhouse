@@ -17,10 +17,10 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -517,7 +517,7 @@ spec:
 				Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
 				Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 				Expect(m[1].Name).To(Equal("d8_grafana_dashboards_deprecated_interval"))
 				Expect(m[1].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
@@ -590,7 +590,7 @@ spec:
 					Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
 					Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 						Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
-						Action: "expire",
+						Action: operation.ActionExpireMetrics,
 					}))
 				})
 			})
@@ -977,7 +977,7 @@ spec:
 					Expect(m[0].Group).To(Equal(outdatedGrafanaDashboardsDeprecationMetricGroup))
 					Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 						Group:  outdatedGrafanaDashboardsDeprecationMetricGroup,
-						Action: "expire",
+						Action: operation.ActionExpireMetrics,
 					}))
 				})
 			})

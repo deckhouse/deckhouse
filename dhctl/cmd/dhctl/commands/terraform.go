@@ -44,11 +44,15 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
 			Address:  app.ListenAddress,
 			Path:     app.MetricsPath,
 			Interval: app.CheckInterval,
 			TmpDir:   app.TmpDirName,
+			Logger:   logger,
+			IsDebug:  app.IsDebug,
 		})
 		exporter.Start(context.Background())
 		return nil
@@ -63,7 +67,9 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		log.InfoLn("Check started ...\n")
+		logger := log.GetDefaultLogger()
+
+		logger.LogInfoLn("Check started ...\n")
 
 		var sshClient node.SSHClient
 		var err error
@@ -99,7 +105,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			ctx,
 			kubeCl,
 			infrastructureprovider.MetaConfigPreparatorProvider(
-				infrastructureprovider.NewPreparatorProviderParams(log.GetDefaultLogger()),
+				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
 		)
 		if err != nil {
@@ -114,7 +120,8 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           app.TmpDirName,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           log.GetDefaultLogger(),
+			Logger:           logger,
+			IsDebug:          app.IsDebug,
 		})
 
 		provider, err := providerGetter(ctx, metaConfig)
@@ -123,7 +130,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		statistic, needMigrationToTofu, err := check.CheckState(
-			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter), check.CheckStateOptions{},
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{},
 		)
 		if err != nil {
 			return err
@@ -139,7 +146,8 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		if provider.NeedToUseTofu() && needMigrationToTofu {
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
-		return nil
+
+		return provider.Cleanup()
 	})
 	return cmd
 }

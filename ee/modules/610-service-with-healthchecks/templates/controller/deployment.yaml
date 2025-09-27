@@ -67,15 +67,15 @@ spec:
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
-        - args:
+        - name: controller
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          args:
             - --metrics-bind-address=:8080
             {{- if .Values.serviceWithHealthchecks.debug }}
             - --debugging=true
             {{- end }}
           image: {{ include "helm_lib_module_image" (list . "controller") }}
           imagePullPolicy: IfNotPresent
-          name: controller
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -105,7 +105,7 @@ spec:
               {{- include "controller_resources" . | nindent 14 }}
 {{- end }}
         - name: kube-rbac-proxy
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
           args:
             - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):7475"

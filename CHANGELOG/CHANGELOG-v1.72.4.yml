@@ -1,0 +1,13 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: fix openstack ccm deployment
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15601
+deckhouse:
+  fixes:
+    - summary: Fix maintenance mode label ignore rule.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15576
+ingress-nginx:
+  fixes:
+    - summary: lowers the severity level of the IngressNginxController alert from 3 to 4
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15595
+

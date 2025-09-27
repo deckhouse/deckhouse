@@ -11,6 +11,8 @@
 @use "components/common/_tooltip.scss";
 
 @use "components/_base.scss";
+@use "components/_bage.scss";
+@use "components/_gs_installer_tabs.scss";
 @use "components/_header.scss";
 @use "components/_product-intro.scss";
 @use "components/_clients.scss";
@@ -40,3 +42,4 @@
 @use "components/_tile.scss";
 @use "components/_guides-list.scss";
 @use "components/_filter.scss";
+@use "components/_feedback.scss";

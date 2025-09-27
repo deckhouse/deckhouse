@@ -17,42 +17,20 @@ package infrastructureprovider
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
-type CloudProviderGetterParams struct {
-	TmpDir           string
-	AdditionalParams cloud.ProviderAdditionalParams
-	Logger           log.Logger
-	FSDIParams       *fs.DIParams
-}
-
 func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudProviderGetter {
-	if interfaces.IsNil(params.Logger) {
-		panic(fmt.Errorf("CloudProviderGetterParams must have a non-nil pointer logger"))
-	}
-
-	tmpDir := params.TmpDir
-
-	if tmpDir == "" {
-		tmpDir = app.TmpDirName
-		params.Logger.LogWarnF("CloudProviderGetterParams tmp dir is empty. Using global default %s\n", tmpDir)
-	}
-
-	defaultFSDIParams := &fs.DIParams{
-		InfraVersionsFile: global.GetInfrastructureVersions(),
-		BinariesDir:       filepath.Join(global.GetDhctlPath(), "bin"),
-		CloudProviderDir:  filepath.Join(global.GetDhctlPath(), "deckhouse", "candi", "cloud-providers"),
-		PluginsDir:        filepath.Join(global.GetDhctlPath(), "plugins"),
+	// early panic if log is not provided
+	_, err := params.getLogger()
+	if err != nil {
+		panic(err)
 	}
 
 	return func(ctx context.Context, metaConfig *config.MetaConfig) (infrastructure.CloudProvider, error) {
@@ -60,12 +38,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. metaConfig must not be nil")
 		}
 
-		if metaConfig.ProviderName == "" {
-			params.Logger.LogDebugLn("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster")
-			return infrastructure.NewDummyCloudProvider(params.Logger), nil
-		}
-
-		if interfaces.IsNil(ctx) {
+		if value.IsNil(ctx) {
 			return nil, fmt.Errorf("Cannot get CloudProvider. context must not be nil")
 		}
 
@@ -78,40 +51,77 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 			return nil, fmt.Errorf("Cannot get CloudProvider. clusterUUID must not be empty")
 		}
 
-		diParams := defaultFSDIParams
-		if params.FSDIParams != nil {
-			diParams = params.FSDIParams
+		providersCache, err := params.getProvidersCache()
+		if err != nil {
+			return nil, fmt.Errorf("Cannot get CloudProvider. providers cache get error: %w", err)
 		}
 
-		di, err := fs.GetDi(params.Logger, diParams)
+		logger, err := params.getLogger()
 		if err != nil {
-			return nil, fmt.Errorf("Cannot get fs.DI: %w", err)
+			return nil, fmt.Errorf("Cannot get CloudProvider. logger get error: %w", err)
 		}
 
-		providerName := metaConfig.ProviderName
-
-		set, err := di.SettingsProvider.GetSettings(ctx, providerName, params.AdditionalParams)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, providerName, err)
+		if metaConfig.ProviderName == "" {
+			return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, logger, func(_ context.Context, clusterUUID string, _ *config.MetaConfig, l log.Logger) (infrastructure.CloudProvider, error) {
+				l.LogDebugF("Returns DummyCloudProvider because provider name is empty. Probably it is static cluster: %s\n", clusterUUID)
+				return infrastructure.NewDummyCloudProvider(l), nil
+			})
 		}
 
 		if metaConfig.ClusterPrefix == "" {
-			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, providerName)
+			return nil, fmt.Errorf("Empty ClusterPrefix for cluster %s with provider %s", clusterUUID, metaConfig.ProviderName)
 		}
 
 		if metaConfig.Layout == "" {
-			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, providerName)
+			return nil, fmt.Errorf("Empty Layout in metaconfig for cluster %s/%s with provider %s", clusterUUID, metaConfig.ClusterPrefix, metaConfig.ProviderName)
 		}
 
-		p := cloud.ProviderParams{
-			AdditionalParams: params.AdditionalParams,
-			Settings:         set,
-		}
+		return providersCache.GetOrAdd(ctx, clusterUUID, metaConfig, logger, func(ctx context.Context, clusterUUID string, metaConfig *config.MetaConfig, l log.Logger) (infrastructure.CloudProvider, error) {
+			tmpDir, err := params.getTmpDir()
+			if err != nil {
+				return nil, err
+			}
 
-		provider := cloud.NewProvider(metaConfig, clusterUUID, di, p, tmpDir, params.Logger)
+			additionalParams, err := params.getAdditionalParams()
+			if err != nil {
+				return nil, err
+			}
 
-		params.Logger.LogDebugF("Cloud %s initialized. Root dir is %s\n", provider.String(), provider.RootDir())
+			diParams, err := params.gtFSDIParams()
+			if err != nil {
+				return nil, err
+			}
 
-		return provider, nil
+			di, err := fs.GetDi(l, diParams)
+			if err != nil {
+				return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
+			}
+
+			err = params.setVersionsContentProviderGetter(di)
+			if err != nil {
+				return nil, err
+			}
+
+			set, err := di.SettingsProvider.GetSettings(ctx, metaConfig.ProviderName, params.AdditionalParams)
+			if err != nil {
+				return nil, fmt.Errorf("Cannot get settings for cluster %s with provider %s: %w", clusterUUID, metaConfig.ProviderName, err)
+			}
+
+			p := cloud.ProviderParams{
+				MetaConfig:       metaConfig,
+				UUID:             clusterUUID,
+				Logger:           l,
+				DI:               di,
+				TmpDir:           tmpDir,
+				IsDebug:          params.isDebug(),
+				Settings:         set,
+				AdditionalParams: additionalParams,
+			}
+
+			provider := cloud.NewProvider(p)
+			l.LogDebugF("Cloud %s initialized and added in cache. Root dir is %s\n", provider.String(), provider.RootDir())
+
+			return provider, nil
+		})
 	}
 }

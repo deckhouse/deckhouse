@@ -1,3 +1,8 @@
+{% alert level="warning" %}
+At this stage, an example of configuring software-defined storage based on DRBD is provided.
+If you want to use a different type of storage, refer to the section ["Configuring Storage"](../../documentation/admin/install/steps/storage.html).
+{% endalert %}
+
 At this step, the cluster is deployed in a minimal configuration. Configure the storage that will be used to create storage for metrics of the cluster components and virtual machine disks.
 
 Enable `sds-replicated-volume` module — a module for the software-defined storage. Run the following commands on the **master node**:

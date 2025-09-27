@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -118,6 +119,7 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		dependencyContainer:  dependency.NewDependencyContainer(),
+		registries:           make(map[string]*addonmodules.Registry),
 	}
 }
 
@@ -192,6 +194,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		layersStab     func() ([]crv1.Layer, error)
 		symlinkChanged bool
 		valuesChanged  bool
+		checkValues    bool
 	}
 
 	testCases := []testCase{
@@ -201,36 +204,45 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			filename:       "mpo.yaml",
 			symlinkChanged: false,
 			valuesChanged:  false,
+			checkValues:    true,
 		},
 		{
 			// should set default weight for module
 			name:     "NoWeightNoDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}}, nil
+				return []crv1.Layer{&utils.FakeLayer{
+					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,
+			checkValues:    true,
 		},
 		{
 			// should set mpo`s the weight from module.yaml
 			name:     "NoWeightWithDefinition",
 			filename: "mpo-without-weight.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}}, &utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
+				return []crv1.Layer{&utils.FakeLayer{
+					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}},
+					&utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
 			},
 			symlinkChanged: false,
 			valuesChanged:  false,
+			checkValues:    true,
 		},
 		{
 			// should update deployed-on annotation
 			name:     "WrongDeployedOnAnnotation",
 			filename: "mpo-with-old-deployed-on.yaml",
 			layersStab: func() ([]crv1.Layer, error) {
-				return []crv1.Layer{&utils.FakeLayer{}}, nil
+				return []crv1.Layer{&utils.FakeLayer{
+					FilesContent: map[string]string{"version.json": `{"version": "v1.16.0"}`}},
+					&utils.FakeLayer{FilesContent: map[string]string{"module.yaml": "weight: 900"}}}, nil
 			},
 			symlinkChanged: true,
 			valuesChanged:  true,
+			checkValues:    false,
 		},
 	}
 
@@ -256,13 +268,15 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			suite.setupModuleLoader(string(suite.parseTestdata("overrides", tc.filename)))
 			require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
-			newStatValues, err := os.Stat(module.valuesPath)
-			require.NoError(suite.T(), err)
+			if tc.checkValues {
+				newStatValues, err := os.Stat(module.valuesPath)
+				require.NoError(suite.T(), err)
 
-			if tc.valuesChanged {
-				assert.False(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml must be modified")
-			} else {
-				assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+				if tc.valuesChanged {
+					assert.False(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml must be modified")
+				} else {
+					assert.True(suite.T(), statValues.ModTime().Equal(newStatValues.ModTime()), "values.yaml mustn't be modified")
+				}
 			}
 
 			newStatSymlink, err := os.Lstat(module.symlinkPath)
@@ -332,10 +346,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
 
-		_, err := os.Stat(module.valuesPath)
-		require.NoError(suite.T(), err)
-
-		_, err = os.Lstat(module.symlinkPath)
+		_, err := os.Lstat(module.symlinkPath)
 		require.NoError(suite.T(), err)
 
 		mpo := suite.modulePullOverride(module.name)
@@ -734,10 +745,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
 		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
 
-		_, err := os.Stat(module.valuesPath)
-		require.NoError(suite.T(), err)
-
-		_, err = os.Lstat(module.symlinkPath)
+		_, err := os.Lstat(module.symlinkPath)
 		require.NoError(suite.T(), err)
 
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})

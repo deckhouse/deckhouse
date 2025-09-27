@@ -19,7 +19,6 @@ package hooks
 import (
 	"context"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -50,7 +50,7 @@ var _ = Describe("ingress-nginx :: hooks :: deprecated_geoip_version ::", func()
 				Expect(metrics).To(HaveLen(1))
 				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  "d8_deprecated_geoip_version",
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 			})
 		})
@@ -78,7 +78,7 @@ spec:
 				Expect(metrics).To(HaveLen(1))
 				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  "d8_deprecated_geoip_version",
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 			})
 		})
@@ -123,10 +123,10 @@ spec:
 				Expect(metrics).To(HaveLen(3))
 				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  "d8_deprecated_geoip_version",
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
@@ -135,7 +135,7 @@ spec:
 					"resource_key":       "log-format-upstream",
 				}))
 				Expect(metrics[2].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[2].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[2].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[2].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[2].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
@@ -191,10 +191,10 @@ spec:
 				Expect(metrics).To(HaveLen(5))
 				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  "d8_deprecated_geoip_version",
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
@@ -203,7 +203,7 @@ spec:
 					"resource_key":       "log-format-upstream",
 				}))
 				Expect(metrics[2].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[2].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[2].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[2].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[2].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "IngressNginxController",
@@ -212,7 +212,7 @@ spec:
 					"resource_key":       "geoheader",
 				}))
 				Expect(metrics[3].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[3].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[3].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[3].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[3].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",
@@ -221,7 +221,7 @@ spec:
 					"resource_key":       "nginx.ingress.kubernetes.io/server-snippet",
 				}))
 				Expect(metrics[4].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[4].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[4].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[4].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[4].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",
@@ -265,10 +265,10 @@ spec:
 				Expect(metrics).To(HaveLen(2))
 				Expect(metrics[0]).To(BeEquivalentTo(operation.MetricOperation{
 					Group:  "d8_deprecated_geoip_version",
-					Action: "expire",
+					Action: operation.ActionExpireMetrics,
 				}))
 				Expect(metrics[1].Group).To(BeEquivalentTo("d8_deprecated_geoip_version"))
-				Expect(metrics[1].Action).To(BeEquivalentTo("set"))
+				Expect(metrics[1].Action).To(BeEquivalentTo(operation.ActionGaugeSet))
 				Expect(metrics[1].Value).To(BeEquivalentTo(ptr.To(1.0)))
 				Expect(metrics[1].Labels).To(BeEquivalentTo(map[string]string{
 					"kind":               "Ingress",

@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/admin/standalone/hsm.html
 lang: ru
 ---
 
-Stronghold поддерживает шифрование Root-ключа с помощью аппаратных модулей шифрования, таких как TPM2, Rutoken ЭЦП 3.0, JaCarta и т.д.,
+Stronghold поддерживает шифрование Root-ключа с помощью аппаратных модулей шифрования, таких как TPM2, Рутокен ЭЦП 3.0, JaCarta и т.д.,
 имеющих поддержку PKCS11. Также поддерживаются SoftHSM
 
 Для использования автоматического распечатывания через PKCS11 потребуется создать ключи в HSM и сконфигурировать Stronhold на использование этих ключей.
@@ -100,7 +100,7 @@ export SOFTHSM2_CONF=/home/stronghold/softhsm2.conf
 stronghold server -config config.hcl
 ```
 
-## Использование Rutoken ЭЦП 3.0
+## Использование Рутокен ЭЦП 3.0
 
 Потребуется скачать и установить библиотеку `librtpkcs11ecp.so` с сайта [https://www.rutoken.ru/](https://www.rutoken.ru/support/download/pkcs/)
 

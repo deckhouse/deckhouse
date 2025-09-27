@@ -159,7 +159,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_fe:
@@ -521,7 +521,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_ee:
@@ -885,7 +885,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_se:
@@ -1249,7 +1249,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_se_plus:
@@ -1613,7 +1613,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_be:
@@ -1977,7 +1977,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   build_ce:
@@ -2341,7 +2341,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   doc_web_build:
@@ -3676,7 +3676,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
-          bash ./.github/scripts/send-report.sh
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
   compare_internal_modules:

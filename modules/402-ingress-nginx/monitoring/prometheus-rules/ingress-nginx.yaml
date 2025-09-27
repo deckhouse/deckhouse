@@ -237,7 +237,7 @@
       ingress_nginx_validation_suspended != 0
     for: 3m
     labels:
-      severity_level: "3"
+      severity_level: "4"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
@@ -247,6 +247,11 @@
         Validation is disabled to reduce load on the master nodes, as it requires additional resources.
         To re-enable validation, remove the annotation `network.deckhouse.io/ingress-nginx-validation-suspended`
         from the `ingressnginxcontroller` resource.
+
+        To find which `IngressNginxController` resources have the annotation, use the following command:
+        ```shell
+        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
+        ```
 
   - alert: NginxIngressProfilingIsEnabled
     expr: |
@@ -264,4 +269,24 @@
         This may increase memory consumption, slow down request processing, and the process may run as root.
         It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
         To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
+
+
+  - alert: GeoIPDownloadErrorDetected
+    expr: sum by (controller, reason) (max_over_time(geoip_errors_total{type="download"}[1m])) > 0
+    for: 1m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        GeoIP DB download error in controller `{{ $labels.controller }}`.
+      description: |-
+        The controller `{{ $labels.controller }}` failed to download the GeoIP database.
+
+        **Reason:** `{{ $labels.reason }}`
+
+        **Type:** `{{ $labels.type }}`
+
+        If this issue persists, investigate network connectivity or database availability.
 

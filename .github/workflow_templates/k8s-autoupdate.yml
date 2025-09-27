@@ -103,13 +103,13 @@ jobs:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         PULL_REQUEST_URL="${{ steps.create-pull-request.outputs.pull-request-url }}"
-        bash ./.github/scripts/send-report.sh --custom-message "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
+        bash ./.github/scripts/send-report.sh --webhook "k8s_update" "✅Kubernetes has been automatically updated✅\n[URL]($PULL_REQUEST_URL)"
     - name: Send failure report
       if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
       env:
         LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
       run: |
         WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-        bash ./.github/scripts/send-report.sh --custom-message "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
+        bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Kubernetes failed to update automatically🛑\n[URL]($WORKFLOW_URL)"
 
 

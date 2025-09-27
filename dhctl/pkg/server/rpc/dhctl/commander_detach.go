@@ -147,7 +147,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
 		OutStream:   p.logOptions.DefaultWriter,
 		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DefaultWriter,
+		DebugStream: p.logOptions.DebugWriter,
 	})
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -243,11 +243,13 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 	}
 
 	stateCache := cache.Global()
+	loggerFor := log.GetDefaultLogger()
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           s.params.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
 	})
 
 	checker := check.NewChecker(&check.Params{
@@ -259,7 +261,10 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter),
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
+		TmpDir:                s.params.TmpDir,
+		Logger:                loggerFor,
+		IsDebug:               s.params.IsDebug,
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{

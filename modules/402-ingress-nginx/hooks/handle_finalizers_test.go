@@ -39,7 +39,7 @@ var ingressControllerWithFinalizer = `
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
-  name: main-with
+  name: main
   finalizers:
   - finalizer.ingress-nginx.deckhouse.io
 spec: {}
@@ -138,14 +138,195 @@ status:
   updatedNumberScheduled: 3
 `
 
+var validationMain = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-ingress-nginx-admission
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: Y2EK
+    service:
+      name: main-admission
+      namespace: d8-ingress-nginx
+      path: /networking/v1/ingresses
+      port: 443
+  failurePolicy: Fail
+  matchConditions:
+  - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName
+      == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class'
+      in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class']
+      == 'nginx')
+    name: exclude-ingress-class-name
+  matchPolicy: Equivalent
+  name: main.validate.d8-ingress-nginx
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+      - deckhouse
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: Namespaced
+  sideEffects: None
+  timeoutSeconds: 28
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: Y2EK
+    service:
+      name: main-admission
+      namespace: d8-ingress-nginx
+      path: /networking/v1/ingresses
+      port: 443
+  failurePolicy: Ignore
+  matchConditions:
+  - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName
+      == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class'
+      in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class']
+      == 'nginx')
+    name: exclude-ingress-class-name
+  matchPolicy: Equivalent
+  name: main.validate.d8-ingress-nginx-deckhouse
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: In
+      values:
+      - deckhouse
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: Namespaced
+  sideEffects: None
+  timeoutSeconds: 5
+`
+
+var validationSecond = `
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-ingress-nginx-admission
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: Y2EK
+    service:
+      name: second-admission
+      namespace: d8-ingress-nginx
+      path: /networking/v1/ingresses
+      port: 443
+  failurePolicy: Fail
+  matchConditions:
+  - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName
+      == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class'
+      in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class']
+      == 'nginx')
+    name: exclude-ingress-class-name
+  matchPolicy: Equivalent
+  name: second.validate.d8-ingress-nginx
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: NotIn
+      values:
+      - deckhouse
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: Namespaced
+  sideEffects: None
+  timeoutSeconds: 28
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: Y2EK
+    service:
+      name: second-admission
+      namespace: d8-ingress-nginx
+      path: /networking/v1/ingresses
+      port: 443
+  failurePolicy: Ignore
+  matchConditions:
+  - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName
+      == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class'
+      in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class']
+      == 'nginx')
+    name: exclude-ingress-class-name
+  matchPolicy: Equivalent
+  name: second.validate.d8-ingress-nginx-deckhouse
+  namespaceSelector:
+    matchExpressions:
+    - key: heritage
+      operator: In
+      values:
+      - deckhouse
+  objectSelector: {}
+  rules:
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: Namespaced
+  sideEffects: None
+  timeoutSeconds: 5
+`
+
 var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func() {
 	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.10", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
+	Context("An empty cluster", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set()
+			f.RunGoHook()
+		})
+
+		It("hook must be executed successfully", func() {
+			Expect(f).To(ExecuteSuccessfully())
+		})
+	})
+
 	Context("Given an IngressNginxController with existing child resources, a finalizer must be added.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + loadBalancerServiceController + controllerDaemonSet + admissionService))
+			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + loadBalancerServiceController + controllerDaemonSet + admissionService + validationMain))
 			f.RunGoHook()
 		})
 
@@ -157,11 +338,11 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 
 	Context("Given an IngressNginxController with no child resources, a finalizer must not be added.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer))
+			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + validationSecond))
 			f.RunGoHook()
 		})
 
-		It("should add finalizer 'false'", func() {
+		It("should add finalizer", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("IngressNginxController", "", "main").Field("metadata.finalizers").AsStringSlice()).ShouldNot(ContainElement(finalizer))
 		})
@@ -169,7 +350,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 
 	Context("Given an IngressNginxController with no child resources, its finalizer must be removed.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ingressControllerWithFinalizer))
+			f.BindingContexts.Set(f.KubeStateSet(ingressControllerWithFinalizer + validationSecond))
 			f.RunGoHook()
 		})
 
@@ -185,7 +366,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 			f.RunGoHook()
 		})
 
-		It("should remove only our finalizer 'true'", func() {
+		It("should remove only our ingress nginx finalizer", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesResource("IngressNginxController", "", "main").Field("metadata.finalizers").AsStringSlice()).Should(ContainElement("do.not.touch.this"))
 			Expect(f.KubernetesResource("IngressNginxController", "", "main").Field("metadata.finalizers").AsStringSlice()).ShouldNot(ContainElement(finalizer))
@@ -194,7 +375,7 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 
 	Context("If an IngressNginxController resource has the inlet type HostWithFailover and any child resources exist, then a finalizer should be added to the controller.", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + withFailoverServiceController + controllerDaemonSetWithFailover))
+			f.BindingContexts.Set(f.KubeStateSet(ingressControllerNoFinalizer + withFailoverServiceController + controllerDaemonSetWithFailover + validationMain))
 			f.RunGoHook()
 		})
 

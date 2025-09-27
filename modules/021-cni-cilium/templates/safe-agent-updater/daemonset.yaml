@@ -81,9 +81,18 @@ spec:
         volumeMounts:
         - name: cni-path
           mountPath: /hostbin
-      {{- include "module_init_container_check_linux_kernel" (tuple . .Values.cniCilium.internal.minimalRequiredKernelVersionConstraint) | nindent 6 }}
+      - name: check-linux-kernel
+        image: {{ include "helm_lib_module_common_image" (list . "checkKernelVersion") }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        env:
+          - name: KERNEL_CONSTRAINT
+            value: "{{ .Values.cniCilium.internal.minimalRequiredKernelVersionConstraint }}"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: prepull-image-cilium
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
         command:
         - "/usr/bin/true"
@@ -92,7 +101,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: prepull-image-kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
         command:
         - "/bin/true"
@@ -101,7 +110,7 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: safe-agent-updater
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "safeAgentUpdater") }}
         imagePullPolicy: IfNotPresent
         command:
@@ -122,9 +131,12 @@ spec:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
             {{- include "safe_agent_updater_resources" . | nindent 12 }}
+        volumeMounts:
+          - name: cni-path
+            mountPath: /hostbin
       containers:
       - name: pause-cilium
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
         command:
         - /pause
@@ -134,7 +146,7 @@ spec:
             memory: "1Mi"
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: pause-check-linux-kernel
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "checkKernelVersion") }}
         command:
         - /pause
@@ -144,7 +156,7 @@ spec:
             memory: "1Mi"
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: pause-kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
         command:
         - /pause
@@ -155,7 +167,7 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
       - name: pause-handle-vxlan-offload
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "vxlanOffloadingFixer") }}
         command:
         - /pause

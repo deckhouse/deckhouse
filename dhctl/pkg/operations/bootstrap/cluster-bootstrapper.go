@@ -49,8 +49,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 const (
@@ -102,8 +102,9 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
-	TmpDir string
-	Logger log.Logger
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 
 	*client.KubernetesInitParams
 }
@@ -123,7 +124,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 	}
 
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
@@ -182,6 +183,25 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 	return restoreFunc, nil
 }
 
+func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
+	if b.InfrastructureContext == nil {
+		b.logger.LogDebugF("InfrastructureContext is nil. Skip cleanup.\n")
+		return func() {}, nil
+	}
+
+	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		err = provider.Cleanup()
+		if err != nil {
+			b.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}, nil
+}
+
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if restore, err := b.applyParams(); err != nil {
 		return err
@@ -218,10 +238,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
-		Logger:           log.GetDefaultLogger(),
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
 		log.DebugLn("NodeInterface is nil")
@@ -329,6 +350,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	var nodeIP string
 	var devicePath string
 	var resourcesTemplateData map[string]interface{}
+
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer cleanup()
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		err = preflightChecker.Cloud(ctx)
@@ -706,7 +734,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
-		log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
 

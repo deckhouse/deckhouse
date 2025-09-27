@@ -10,6 +10,9 @@ layout: default
     </div>
     <div class="layout-sidebar__content">
       {{ content }}
+    {% unless site.mode == 'module' %}
+      <!--#include virtual="/includes/feedback.html" -->
+    {% endunless %}
     </div>
     <div class="layout-sidebar__sidebar_right">
       {%- include toc_in_sidebar.html %}

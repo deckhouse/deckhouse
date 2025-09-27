@@ -26,6 +26,17 @@ spec:
 
     desired_sau_ds_generation={{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
 
+    # If it is the first bashible run, there is nothing to do
+    if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
+      exit 0
+    fi
+
+    # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
+    kubeconfig="/etc/kubernetes/kubelet.conf"
+    if [ ! -f "$kubeconfig" ]; then
+      exit 0
+    fi
+
     # If there is no cilium-cni binary on node than node is not bootstrapped and there is nothing to do
     if [ ! -f "/opt/cni/bin/cilium-cni" ]; then
       exit 0
@@ -43,18 +54,16 @@ spec:
 
     if [[ $major -gt 1 || ( $major -eq 1 && $minor -ge 17 ) ]]; then
         echo "Cilium CNI plugin version is not less than 1.17: $version"
+        until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$(bb-d8-node-name)" network.deckhouse.io/cilium-1-17-migration-succeeded=""; do
+          attempt=$(( attempt + 1 ))
+          if [ "$attempt" -gt "$max_attempts" ]; then
+            bb-log-error "failed to annotate node $(bb-d8-node-name) after $max_attempts attempts"
+            exit 1
+          fi
+          echo "Waiting for annotate node $(bb-d8-node-name) (attempt $attempt of $max_attempts)..."
+          sleep 5
+        done
         exit 0
-    fi
-
-    # If it is the first bashible run, there is nothing to do
-    if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
-      exit 0
-    fi
-
-    # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
-    kubeconfig="/etc/kubernetes/kubelet.conf"
-    if [ ! -f "$kubeconfig" ]; then
-      exit 0
     fi
 
     # If the migration has already succeeded, there is nothing to do

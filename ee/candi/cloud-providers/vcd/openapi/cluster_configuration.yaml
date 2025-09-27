@@ -113,7 +113,7 @@ apiVersions:
                   description: |
                     Path of the template OVA that is to be used.
 
-                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -239,7 +239,7 @@ apiVersions:
                     description: |
                       Path of the template OVA that is to be used.
 
-                      Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                      Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                       If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 
@@ -317,7 +317,7 @@ apiVersions:
                   description: |
                     Path of the template OVA that is to be used.
 
-                    Consists of organization (optional), catalog, template name or template identifier. Organization may not match provider.organization (in case of shared templates).
+                    Consists of organization (optional), catalog, template name or template identifier. If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
 
                     If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
 

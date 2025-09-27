@@ -262,6 +262,47 @@ comparison:
     en: "Except for the following parameters:<br />"
     ru: "Кроме следующих параметров:<br />"
 
+feedback:
+  thanks:
+    en: Thanks for the review!
+    ru: Спасибо за&nbsp;оценку!
+  useful:
+    en: Was the page useful?
+    ru: Была&nbsp;ли страница полезна?
+  response_processed:
+    en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
+    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+  error_happened:
+    en: An error has occurred
+    ru: Произошла ошибка
+  try_later:
+    en: Please try again later
+    ru: Пожалуйста, попробуйте позже
+  tell_us_what_you_didnt_like:
+    en: Tell&nbsp;us what you didn&rsquo;t like.
+    ru: Расскажите, что не&nbsp;понравилось
+  not_useful:
+    en: Little useful
+    ru: Мало полезного
+  there_are_errors:
+    en: There are errors
+    ru: Есть ошибки
+  written_incomprehensibly:
+    en: It&rsquo;s written incomprehensibly
+    ru: Непонятно написано
+  outdated_information:
+    en: Outdated information
+    ru: Устаревшая информация
+  other:
+    en: Other
+    ru: Другое
+  share_the_details:
+    en: Share the details
+    ru: Поделитесь деталями
+  send:
+    en: Send
+    ru: Отправить
+
 features:
   experimental:
     en: The functionality of the module might significantly change. Compatibility with future versions is not guaranteed.

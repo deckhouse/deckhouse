@@ -15,6 +15,7 @@
 package cloud
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -25,29 +26,33 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-var versionContentProviders = map[string]versionContentProvider{
+var versionContentProviders = map[string]VersionContentProvider{
 	vcd.ProviderName: vcd.VersionContentProvider,
 }
 
 var contentProviderMutex sync.Mutex
 
-func getVersionContentProvider(s settings.ProviderSettings, provider string, logger log.Logger) versionContentProvider {
+func DefaultVersionContentProvider(s settings.ProviderSettings, provider string, logger log.Logger) VersionContentProvider {
 	contentProviderMutex.Lock()
 	defer contentProviderMutex.Unlock()
 
-	choicer, ok := versionContentProviders[provider]
+	versionContentProvider, ok := versionContentProviders[provider]
 	if ok {
 		logger.LogDebugF("Found custom version choicer for provider %s\n", provider)
-		return choicer
+		return versionContentProvider
 	}
 
 	logger.LogDebugF("No custom version choicer for provider %s. Use default\n", provider)
 
-	return func(settings settings.ProviderSettings, metaConfig *config.MetaConfig, _ log.Logger) ([]byte, error) {
-		if len(settings.Versions()) != 1 {
-			return nil, fmt.Errorf("no one version found for provider %s", provider)
+	return func(_ context.Context, settings settings.ProviderSettings, _ *config.MetaConfig, _ log.Logger) ([]byte, string, error) {
+		versions := settings.Versions()
+		l := len(versions)
+		if l != 1 {
+			return nil, "", fmt.Errorf("No one version (%d) found for provider %s", l, provider)
 		}
 
-		return version.GetVersionContent(s, settings.Versions()[0]), nil
+		v := versions[0]
+
+		return version.GetVersionContent(s, v), v, nil
 	}
 }

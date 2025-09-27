@@ -21,8 +21,9 @@ while [[ "$#" -gt 0 ]]; do
       upload_files=($2)
       shift
       ;;
-    --custom-message)
-      custom_message="$2"
+    --webhook)
+      webhook_type="$2"
+      message="$3"
       shift
       ;;
     --direct-post)
@@ -42,8 +43,10 @@ server_url="${LOOP_SERVICE_NOTIFICATIONS}"
 job_name="${JOB_NAME}"
 workflow_name="${WORKFLOW_NAME}"
 workflow_url="${WORKFLOW_URL}"
-message="${custom_message}"
 
+if [[ -z "$webhook_type" ]]; then
+  webhook_type="ci_fail"
+fi
 if [[ -z "$message" ]]; then
   message="🛑 Workflow: **${workflow_name}** Job: **${job_name}** failed! 🛑\n[URL]($workflow_url)"
 fi
@@ -71,7 +74,7 @@ function send_post_with_webhook() {
   file_ids=$(IFS=,; echo "[${file_id_array[*]}]")
   curl -f -L -X POST $server_url \
     -H "Content-Type: application/json" \
-    --data "{\"type\": \"ci_fail\",\"message\":\"${message}\"}"
+    --data "{\"type\": \"${webhook_type}\",\"message\":\"${message}\"}"
 }
 if [ "$upload" = true ]; then
   for file_path in ${upload_files[@]}; do

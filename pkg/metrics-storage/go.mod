@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/pkg/metrics-storage
 go 1.23.8
 
 require (
-	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250814094423-e9f108b41a1a
+	github.com/deckhouse/deckhouse/pkg/log v0.1.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/onsi/gomega v1.37.0
 	github.com/prometheus/client_golang v1.22.0
@@ -31,5 +31,3 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/deckhouse/deckhouse/pkg/log => ./../../pkg/log

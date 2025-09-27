@@ -1,0 +1,85 @@
+<div class="feedback-container">
+    <div class="feedback-container__separantor"></div>
+    <div class="feedback-container__choice">
+            <p class="feedback-container__choice--descr">{{ site.data.i18n.feedback.useful[page.lang] }}</p>
+        <div class="feedback-container__choice--icon">
+            <button class="icon icon__like">
+                <svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 8V16C5 16.2652 4.89464 16.5196 4.70711 16.7071C4.51957 16.8946 4.26522 17 4 17H2C1.73478 17 1.48043 16.8946 1.29289 16.7071C1.10536 16.5196 1 16.2652 1 16V9C1 8.73478 1.10536 8.48043 1.29289 8.29289C1.48043 8.10536 1.73478 8 2 8H5ZM5 8C6.06087 8 7.07828 7.57857 7.82843 6.82843C8.57857 6.07828 9 5.06087 9 4V3C9 2.46957 9.21071 1.96086 9.58579 1.58579C9.96086 1.21071 10.4696 1 11 1C11.5304 1 12.0391 1.21071 12.4142 1.58579C12.7893 1.96086 13 2.46957 13 3V8H16C16.5304 8 17.0391 8.21071 17.4142 8.58579C17.7893 8.96086 18 9.46957 18 10L17 15C16.8562 15.6135 16.5834 16.1402 16.2227 16.501C15.8619 16.8617 15.4328 17.0368 15 17H8C7.20435 17 6.44129 16.6839 5.87868 16.1213C5.31607 15.5587 5 14.7956 5 14" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <button class="icon icon__dislike">
+                <svg width="19" height="18" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 8V16C5 16.2652 4.89464 16.5196 4.70711 16.7071C4.51957 16.8946 4.26522 17 4 17H2C1.73478 17 1.48043 16.8946 1.29289 16.7071C1.10536 16.5196 1 16.2652 1 16V9C1 8.73478 1.10536 8.48043 1.29289 8.29289C1.48043 8.10536 1.73478 8 2 8H5ZM5 8C6.06087 8 7.07828 7.57857 7.82843 6.82843C8.57857 6.07828 9 5.06087 9 4V3C9 2.46957 9.21071 1.96086 9.58579 1.58579C9.96086 1.21071 10.4696 1 11 1C11.5304 1 12.0391 1.21071 12.4142 1.58579C12.7893 1.96086 13 2.46957 13 3V8H16C16.5304 8 17.0391 8.21071 17.4142 8.58579C17.7893 8.96086 18 9.46957 18 10L17 15C16.8562 15.6135 16.5834 16.1402 16.2227 16.501C15.8619 16.8617 15.4328 17.0368 15 17H8C7.20435 17 6.44129 16.6839 5.87868 16.1213C5.31607 15.5587 5 14.7956 5 14" stroke="#222A5D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="window__feedback window__feedback--access">
+        <a href="" class="modal-window__close-btn">✕</a>
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.8604 31.6275L29.7673 43.1624L50.6045 22.6973" stroke="#B0DA8F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="32" cy="32" r="30" stroke="#E7F4DD" stroke-width="4"/>
+        </svg>
+            <p class="window__feedback--title">{{ site.data.i18n.feedback.thanks[page.lang] }}</p>
+    </div>
+
+    <div class="window__feedback window__feedback--later">
+        <a href="" class="modal-window__close-btn">✕</a>
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" stroke="#F4CFAD" stroke-width="4"/>
+            <g clip-path="url(#clip0_12295_30187)">
+            <path d="M32 48.333V48.3563" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 39.0003V15.667" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <defs>
+            <clipPath id="clip0_12295_30187">
+            <rect width="56" height="56" fill="white" transform="translate(4 4)"/>
+            </clipPath>
+            </defs>
+        </svg>
+            <p class="window__feedback--title">{{ site.data.i18n.feedback.response_processed[page.lang] }}</p>
+    </div>
+
+    <div class="window__feedback window__feedback--error">
+        <a href="" class="modal-window__close-btn">✕</a>
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="30" stroke="#F4CFAD" stroke-width="4"/>
+            <g clip-path="url(#clip0_12295_30187)">
+            <path d="M32 48.333V48.3563" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 39.0003V15.667" stroke="#E8770E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <defs>
+            <clipPath id="clip0_12295_30187">
+            <rect width="56" height="56" fill="white" transform="translate(4 4)"/>
+            </clipPath>
+            </defs>
+        </svg>
+        <div class="window__feedback--container">
+                <h3 class="window__feedback--title">{{ site.data.i18n.feedback.error_happened[page.lang] }}</h3>
+                <p class="window__feedback--descr">{{ site.data.i18n.feedback.try_later[page.lang] }}</p>
+        </div>
+    </div>
+
+    <div class="window__feedback window__feedback--form">
+        <a href="" class="modal-window__close-btn">✕</a>
+            <h3 class="window__feedback--title">{{ site.data.i18n.feedback.tell_us_what_you_didnt_like[page.lang] }}</h3>
+            <div class="checkboxes">
+                <input class="checkbox" type="checkbox" id="fbFew" value="few">
+                <label for="fbFew">{{ site.data.i18n.feedback.not_useful[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbMistakes" value="mistakes">
+                <label for="fbMistakes">{{ site.data.i18n.feedback.there_are_errors[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbUnclear" value="unclear">
+                <label for="fbUnclear">{{ site.data.i18n.feedback.written_incomprehensibly[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbOutdated" value="outdated">
+                <label for="fbOutdated">{{ site.data.i18n.feedback.outdated_information[page.lang] }}</label>
+                <input class="checkbox" type="checkbox" id="fbOther" value="other">
+                <label for="fbOther">{{ site.data.i18n.feedback.other[page.lang] }}</label>
+            </div>
+            <div class="window__feedback--form-textfield">
+                <input class="more-detailed" type="text" name="detailed" placeholder="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" aria-label="{{ site.data.i18n.feedback.share_the_details[page.lang] }}" >
+            </div>
+            <button class="button button_alt button-request" type="submit">{{ site.data.i18n.feedback.send[page.lang] }}</button>
+    </div>
+</div>

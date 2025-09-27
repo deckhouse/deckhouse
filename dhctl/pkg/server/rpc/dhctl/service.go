@@ -52,6 +52,7 @@ type ServiceParams struct {
 	CacheDir    string
 	PodName     string
 	SchemaStore *config.SchemaStore
+	IsDebug     bool
 }
 
 func New(params ServiceParams) *Service {

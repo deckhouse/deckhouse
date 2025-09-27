@@ -53,10 +53,8 @@ import:
     add: /tmp/manager
     to: /manager
     before: setup
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-    add: /tmp/tmp
-    to: /tmp
-    before: setup
+git:
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/manager"]

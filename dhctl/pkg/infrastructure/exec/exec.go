@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -97,7 +98,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	exitCode := cmd.ProcessState.ExitCode() // 2 = exit code, if infrastructure plan has diff
 	if err != nil && exitCode != HasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
-		err = fmt.Errorf(errBuf.String())
+		err = fmt.Errorf("%s", errBuf.String())
 		if app.IsDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
 		}
@@ -107,4 +108,17 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 		err = nil
 	}
 	return exitCode, err
+}
+
+func ReplaceHomeDirEnv(env []string, homeDir string) []string {
+	res := make([]string, 0, len(env))
+	for _, e := range env {
+		v := e
+		if strings.HasPrefix(e, "HOME=") {
+			v = fmt.Sprintf("HOME=%s", homeDir)
+		}
+		res = append(res, v)
+	}
+
+	return res
 }

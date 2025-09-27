@@ -15,13 +15,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/square/go-jose/v3"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -52,7 +52,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 
@@ -69,7 +69,7 @@ var _ = Describe("Istio hooks :: federation_discovery ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 
@@ -373,12 +373,12 @@ status:
 			Expect(m).To(HaveLen(7))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  federationMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
@@ -388,7 +388,7 @@ status:
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-0",
@@ -398,7 +398,7 @@ status:
 			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
@@ -408,7 +408,7 @@ status:
 			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-1",
@@ -418,7 +418,7 @@ status:
 			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
@@ -428,7 +428,7 @@ status:
 			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "proper-federation-2",
@@ -626,12 +626,12 @@ status: {}
 			Expect(m).To(HaveLen(10))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  federationMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
@@ -641,7 +641,7 @@ status: {}
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-bad-json",
@@ -651,7 +651,7 @@ status: {}
 			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
@@ -661,7 +661,7 @@ status: {}
 			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-internal-error",
@@ -671,7 +671,7 @@ status: {}
 			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
@@ -681,7 +681,7 @@ status: {}
 			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "private-wrong-format",
@@ -691,7 +691,7 @@ status: {}
 			Expect(m[7]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-bad-json",
@@ -701,7 +701,7 @@ status: {}
 			Expect(m[8]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-internal-error",
@@ -711,7 +711,7 @@ status: {}
 			Expect(m[9]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   federationMetricName,
 				Group:  federationMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"federation_name": "public-wrong-format",

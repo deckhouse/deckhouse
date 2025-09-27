@@ -15,11 +15,11 @@ The git tag and registry container **always** have a "v" before the version numb
 
 ## Release channels
 
-Release channels allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum update channel to which it can be published.
+Release channels allow you to publish a module version not for all users at once, but for a limited group of users. You define the stability level of the module version and the maximum release channel to which it can be published.
 
 Note that the choice of a specific release channel does not determine how stable the module is. Channels are a delivery tool and are intended to measure the stability level of a particular release.
 
-When publishing a new version of the module to the [update channel](../../deckhouse-release-channels.html), first use the `Alpha` update channel. Then, if module version has no issues, publish the module version sequentially to other update channels, taking their stability into account: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. If the module version requires fixing, the publication of that version should be halted. After releasing a version with fixes, the publication stage must be repeated starting from the `Alpha` update channel.
+When publishing a new version of the module to the [release channel](../../deckhouse-release-channels.html), first use the `Alpha` release channel. Then, if module version has no issues, publish the module version sequentially to other release channels, taking their stability into account: `Alpha` → `Beta` → `Early Access` → `Stable` → `Rock Solid`. If the module version requires fixing, the publication of that version should be halted. After releasing a version with fixes, the publication stage must be repeated starting from the `Alpha` release channel.
 
 ## Module lifecycle
 
@@ -40,7 +40,7 @@ Depending on the stage of the module lifecycle and the release channel from whic
 <thead>
     <tr class="header-row">
       <th rowspan="2">Lifecycle Stage</th>
-      <th colspan="5">Update Channels</th>
+      <th colspan="5">Release Channels</th>
     </tr>
     <tr class="sub-header">
       <th>Alpha</th>

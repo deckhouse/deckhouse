@@ -46,8 +46,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/interfaces"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Destroyer interface {
@@ -69,8 +69,9 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir string
-	Logger log.Logger
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 }
 
 type ClusterDestroyer struct {
@@ -90,15 +91,16 @@ type ClusterDestroyer struct {
 	CommanderMode bool
 	CommanderUUID uuid.UUID
 
-	tmpDir string
-	logger log.Logger
+	tmpDir  string
+	logger  log.Logger
+	isDebug bool
 }
 
 func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
 	state := NewDestroyState(params.StateCache)
 
 	logger := params.Logger
-	if interfaces.IsNil(logger) {
+	if value.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
@@ -148,6 +150,8 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		controller.ClusterInfraOptions{
 			PhasedExecutionContext: pec,
 			TmpDir:                 params.TmpDir,
+			IsDebug:                params.IsDebug,
+			Logger:                 logger,
 		},
 	)
 
@@ -168,8 +172,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		CommanderMode:          params.CommanderMode,
 		CommanderUUID:          params.CommanderUUID,
 
-		tmpDir: params.TmpDir,
-		logger: logger,
+		tmpDir:  params.TmpDir,
+		logger:  logger,
+		isDebug: params.IsDebug,
 	}, nil
 }
 
@@ -272,6 +277,9 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 	d.d8Destroyer.UnlockConverge(false)
 	// Stop proxy because we have already got all info from kubernetes-api
 	d.d8Destroyer.StopProxy()
+	if clusterType == config.CloudClusterType {
+		d.d8Destroyer.sshClient.Stop()
+	}
 
 	if err := infraDestroyer.DestroyCluster(ctx, autoApprove); err != nil {
 		return err

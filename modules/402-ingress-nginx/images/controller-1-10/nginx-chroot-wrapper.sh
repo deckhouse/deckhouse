@@ -16,35 +16,35 @@
 
 cat /etc/resolv.conf > /chroot/etc/resolv.conf
 
-if [[ "$NGINX_PROFILING_ENABLED" == "true" ]]; then
-  echo "Profiling enabled"
-  timestamp=$(date +%Y%m%d_%H%M%S)
-  logfile="/var/log/valgrind/memcheck.${timestamp}.log"
+if [ "$NGINX_PROFILING_ENABLED" == "true" ]; then
+  args="$@"
+  nginxWithCaps="/chroot/usr/local/nginx/sbin/nginx"
+  nginxWOCaps="/chroot/etc/ingress-controller/nginx/nginx"
 
-  echo "Drop NGINX file capabilities as it prevent valgrind from running"
-  nginxchroot="/chroot/usr/local/nginx/sbin/nginx"
-
-  if [ -z "$(getcap $nginxchroot)" ]; then
-    echo "No capabilities set, skipping removal"
-  else
-    setcap -r $nginxchroot
+  if [ ! -f $nginxWOCaps ]; then
+    # copy the nginx binary to drop capabilities (valgrind doesn't want to profile a privileged file)
+    cp -f $nginxWithCaps $nginxWOCaps
   fi
 
-  echo "Mounting proc fs"
-  # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
-  mount -t proc /proc /chroot/proc
+  if [ ! -f /chroot/proc/cmdline ]; then
+    # echo "Mounting proc fs"
+    # unshare --mount-proc -f -p don't work, need use mount -t proc for parent pid
+    mount -t proc /proc /chroot/proc
+  fi
 
-  echo "Run profiling with Valgrind"
-  echo "The log will be written to a file $logfile"
+  logDirInChroot="/var/log/valgrind"
+  timestamp=$(date +%Y%m%d_%H%M%S%N)
+  logfile="${logDirInChroot}/memcheck.${timestamp}.log"
+
+  # echo "Run profiling with Valgrind"
+  # echo "The log will be written to a file $logfile"
   unshare -R /chroot /usr/local/valgrind \
     --trace-children=yes \
     --log-file="$logfile" \
     --tool=memcheck \
     --leak-check=full \
     --show-leak-kinds=all \
-    /usr/local/nginx/sbin/nginx "$@"
-
+    /etc/ingress-controller/nginx/nginx "$@"
 else
-  echo "Regular mode"
-  unshare  -S 101 -R /chroot /usr/local/nginx/sbin/nginx "$@"
+  unshare -S 64535 -R /chroot /usr/local/nginx/sbin/nginx "$@"
 fi

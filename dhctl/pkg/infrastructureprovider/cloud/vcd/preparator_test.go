@@ -25,19 +25,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func newTestPreparator(prepareConfig bool, getter apiVersionGetter) *MetaConfigPreparator {
+func newTestPreparator(prepareConfig bool, client cloudClient) *MetaConfigPreparator {
 	p := NewMetaConfigPreparator(MetaConfigPreparatorParams{
 		PrepareMetaConfig:     prepareConfig,
 		ValidateClusterPrefix: true,
 	}, log.GetDefaultLogger())
 
-	p.getAPI = getter
+	p.clientProvider = func(_ *config.MetaConfig, _ log.Logger) (cloudClient, error) {
+		return client, nil
+	}
 
 	return p
 }
 
 func TestDisableMetaConfigPreparator(t *testing.T) {
-	preparator := newTestPreparator(false, testGetLegacyAPI)
+	preparator := newTestPreparator(false, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
 	err := preparator.Prepare(context.TODO(), cfg)
 
@@ -46,7 +48,7 @@ func TestDisableMetaConfigPreparator(t *testing.T) {
 }
 
 func TestPreparatorWithCurrentAPI(t *testing.T) {
-	preparator := newTestPreparator(false, testGetCurrentAPI)
+	preparator := newTestPreparator(false, testGetCurrentClient())
 	cfg := &config.MetaConfig{}
 	err := preparator.Prepare(context.TODO(), cfg)
 
@@ -66,7 +68,7 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 		require.Equal(t, res, expect)
 	}
 
-	preparator := newTestPreparator(true, testGetLegacyAPI)
+	preparator := newTestPreparator(true, testGetLegacyClient())
 	cfg := &config.MetaConfig{}
 	cfg.ProviderClusterConfig = make(map[string]json.RawMessage)
 	err := preparator.Prepare(context.TODO(), cfg)
@@ -88,10 +90,25 @@ func TestPreparatorWithLegacyAPI(t *testing.T) {
 }
 
 func TestValidateMetaConfig(t *testing.T) {
+	const validServer = "https://myserver:8080/api"
+
+	setServer := func(t *testing.T, server string, cfg *config.MetaConfig) {
+		p, err := json.Marshal(providerConfig{
+			Server: server,
+		})
+		require.NoError(t, err)
+
+		cfg.ProviderClusterConfig = map[string]json.RawMessage{
+			"provider": p,
+		}
+	}
+
 	assertPrefix := func(t *testing.T, prefix string, hasError bool) {
-		preparator := newTestPreparator(true, testGetLegacyAPI)
+		preparator := newTestPreparator(true, testGetLegacyClient())
 
 		cfg := &config.MetaConfig{}
+
+		setServer(t, validServer, cfg)
 
 		cfg.ClusterPrefix = prefix
 		err := preparator.Validate(context.TODO(), cfg)
@@ -108,11 +125,20 @@ func TestValidateMetaConfig(t *testing.T) {
 	assertPrefix(t, "1abc", false)
 	assertPrefix(t, "abc-abc", false)
 
-	preparator := newTestPreparator(false, testGetLegacyAPI)
+	preparator := newTestPreparator(false, testGetLegacyClient())
 	preparator.params.ValidateClusterPrefix = false
 	cfg := &config.MetaConfig{}
 
 	cfg.ClusterPrefix = ""
+	setServer(t, validServer, cfg)
 	err := preparator.Validate(context.TODO(), cfg)
 	require.NoError(t, err)
+
+	// invalid server
+	cfgInvalid := &config.MetaConfig{}
+
+	cfgInvalid.ClusterPrefix = "test"
+	setServer(t, "https://myserver:8080/api/", cfg)
+	err = preparator.Validate(context.TODO(), cfg)
+	require.Error(t, err)
 }

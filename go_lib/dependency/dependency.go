@@ -270,6 +270,8 @@ type MockedContainer struct {
 	CRClientMap   map[string]cr.Client
 	VsphereClient *vsphere.ClientMock
 	clock         clockwork.FakeClock
+
+	mu sync.Mutex
 }
 
 func (c *MockedContainer) GetHelmClient(_ string, _ ...helm.Option) (helm.Client, error) {
@@ -340,7 +342,11 @@ func (c *MockedContainer) SetK8sVersion(ver k8s.FakeClusterVersion) {
 	c.K8sClient = cli
 }
 
-func (c *MockedContainer) GetClock() clockwork.Clock { return c.GetFakeClock() }
+func (c *MockedContainer) GetClock() clockwork.Clock {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.GetFakeClock()
+}
 
 func (c *MockedContainer) GetFakeClock() clockwork.FakeClock {
 	if c.clock != nil {

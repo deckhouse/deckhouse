@@ -1,0 +1,22 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+skinparam componentStyle rectangle
+
+component "<color:navy>Пользовательские правила</color>" as UR #LightBlue
+component "<color:navy>Встроенные правила</color>" as InR #LightBlue
+
+
+
+[Контроль целостности] --> [Контроль целостности\n при запуске контейнеров]
+[Контроль целостности] --> [Контроль целостности\n работающих контейнеров]
+[Контроль целостности\n работающих контейнеров] <.. InR
+[Контроль целостности\n работающих контейнеров] <.. UR
+
+
+
+@enduml

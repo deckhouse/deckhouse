@@ -109,6 +109,7 @@ func Serve(network, address string) error {
 		CacheDir:    cacheDir,
 		SchemaStore: config.NewSchemaStore(),
 		TmpDir:      app.TmpDirName,
+		IsDebug:     false,
 	})
 
 	// register services

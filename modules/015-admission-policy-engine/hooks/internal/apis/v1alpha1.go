@@ -127,9 +127,10 @@ type OperationPolicySpec struct {
 			Limits   []string `json:"limits,omitempty"`
 			Requests []string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
-		DisallowedImageTags []string `json:"disallowedImageTags,omitempty"`
-		RequiredProbes      []string `json:"requiredProbes,omitempty"`
-		RequiredLabels      struct {
+		DisallowedImageTags   []string     `json:"disallowedImageTags,omitempty"`
+		DisallowedTolerations []Toleration `json:"disallowedTolerations,omitempty"`
+		RequiredProbes        []string     `json:"requiredProbes,omitempty"`
+		RequiredLabels        struct {
 			Labels []struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
@@ -169,4 +170,13 @@ type NamespaceSelector struct {
 	ExcludeNames []string `json:"excludeNames,omitempty"`
 
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// Toleration represents a Kubernetes toleration pattern for disallowed tolerations.
+// Only key/operator/value/effect are used for matching.
+type Toleration struct {
+	Key      string `json:"key,omitempty"`
+	Operator string `json:"operator,omitempty"`
+	Value    string `json:"value,omitempty"`
+	Effect   string `json:"effect,omitempty"`
 }

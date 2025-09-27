@@ -1,0 +1,72 @@
+diff --git a/server/handlers.go b/server/handlers.go
+index 0dd2a990..8fb95860 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -7,6 +7,7 @@ import (
+ 	"crypto/subtle"
+ 	"encoding/base64"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"html/template"
+ 	"net/http"
+@@ -473,6 +474,12 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 		redirectURL, canSkipApproval, err := s.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
+ 		if err != nil {
+ 			s.logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
++
++			var nae *NotAllowedError
++			if errors.As(err, &nae) {
++				s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Access denied. %s", nae.Reason))
++				return
++			}
+ 			s.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 			return
+ 		}
+@@ -573,6 +580,11 @@ func (s *Server) handleConnectorCallback(w http.ResponseWriter, r *http.Request)
+ 	redirectURL, canSkipApproval, err := s.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 	if err != nil {
+ 		s.logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
++		var nae *NotAllowedError
++		if errors.As(err, &nae) {
++			s.renderError(r, w, http.StatusUnauthorized, fmt.Sprintf("Access denied. %s", nae.Reason))
++			return
++		}
+ 		s.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 		return
+ 	}
+@@ -591,6 +603,17 @@ func (s *Server) handleConnectorCallback(w http.ResponseWriter, r *http.Request)
+ 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+ }
+ 
++// NotAllowedError is returned when a login attempt is blocked due to
++// restrictions such as allowedEmail or allowedGroup.
++// It contains the specific reason why the user is not allowed.
++type NotAllowedError struct {
++	Reason string
++}
++
++func (e *NotAllowedError) Error() string {
++	return "not allowed: " + e.Reason
++}
++
+ // finalizeLogin associates the user's identity with the current AuthRequest, then returns
+ // the approval page's path.
+ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (string, bool, error) {
+@@ -611,14 +634,14 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+ 	if len(client.AllowedEmails) > 0 {
+ 		allowed := slices.Contains(client.AllowedEmails, claims.Email)
+ 		if !allowed {
+-			return "", false, fmt.Errorf("user %q not in allowed emails: %v", claims.Username, claims.Email)
++			return "", false, &NotAllowedError{Reason: fmt.Sprintf("Email %s not allowed", claims.Email)}
+ 		}
+ 	}
+ 
+ 	if len(client.AllowedGroups) > 0 {
+ 		claims.Groups = groups.Filter(claims.Groups, client.AllowedGroups)
+ 		if len(claims.Groups) == 0 {
+-			return "", false, fmt.Errorf("user %q not in allowed groups: %v", claims.Username, claims.Groups)
++			return "", false, &NotAllowedError{Reason: fmt.Sprintf("Email %s not in allowed groups", claims.Email)}
+ 		}
+ 	}
+ 

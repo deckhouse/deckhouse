@@ -385,7 +385,7 @@ is used if DECKHOUSE_REGISTRY_HOST is not set.
           LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
         run: |
           WORKFLOW_URL="${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
-          bash ./.github/scripts/send-report.sh --custom-message "🛑Deploy to channel {!{ .channel }!} failed!🛑\n[URL]($WORKFLOW_URL)"
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail" "🛑Deploy to channel {!{ .channel }!} failed!🛑\n[URL]($WORKFLOW_URL)"
 
 {!{ tmpl.Exec "update_comment_on_finish" (slice "job,final" $workflowName) | strings.Indent 6 }!}
 

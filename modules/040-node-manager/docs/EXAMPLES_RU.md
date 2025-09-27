@@ -239,6 +239,10 @@ spec:
 
 ### С помощью Cluster API Provider Static
 
+{% alert level="warning" %}
+Если вы ранее увеличивали количество master-узлов в кластере в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), перед добавлением обычных узлов с помощью CAPS [убедитесь](../control-plane-manager/faq.html#как-добавить-master-узел-в-статическом-или-гибридном-кластере), что не произойдет их «перехват».
+{% endalert %}
+
 Простой пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 
 1. Подготовьте необходимые ресурсы.

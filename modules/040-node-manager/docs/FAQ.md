@@ -445,7 +445,7 @@ There are two ways to solve this problem:
 {% alert level="info" %}
 Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedicated` key with any `value` for taints on your dedicated nodes.️
 
-To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the [modules.placement.customTolerationKeys](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
 ## How to allocate nodes to system components?
@@ -1345,7 +1345,7 @@ To add a GPU node to the cluster, perform the following steps:
          effect: NoSchedule
    ```
 
-   > If you use custom taint keys, ensure they are allowed in `global.modules.placement.customTolerationKeys` so workloads can add the corresponding `tolerations`.
+   > If you use custom taint keys, ensure they are allowed in ModuleConfig `global` in the array [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys) so workloads can add the corresponding `tolerations`.
 
    Full field schema: see [NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
 

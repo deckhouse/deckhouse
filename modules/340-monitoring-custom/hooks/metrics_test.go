@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -100,22 +100,22 @@ spec:
 
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_service_monitor_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_pod_monitor_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_prometheus_rules_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_old_prometheus_custom_targets_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 		})
@@ -134,22 +134,22 @@ spec:
 
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_service_monitor_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_pod_monitor_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_unknown_prometheus_rules_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_monitoring_custom_old_prometheus_custom_targets_total",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(2.0),
 			}))
 		})

@@ -58,6 +58,8 @@ spec:
       control-plane: controller-manager
   template:
     metadata:
+      annotations:
+        node-manager.deckhouse.io/force-rollout-v1-72-5: ""
       labels:
         app: capi-controller-manager
         cluster.x-k8s.io/provider: cluster-api
@@ -137,7 +139,7 @@ spec:
           name: cert
           readOnly: true
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4211"

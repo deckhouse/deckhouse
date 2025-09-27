@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -135,10 +136,10 @@ common: {}
 	assertMetricVal := func(f *HookExecutionConfig, val float64) {
 		Expect(f.MetricsCollector.CollectedMetrics()).To(HaveLen(2))
 		Expect(f.MetricsCollector.CollectedMetrics()[0].Group).To(Equal("D8MigrateToTofu"))
-		Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal("expire"))
+		Expect(f.MetricsCollector.CollectedMetrics()[0].Action).To(Equal(operation.ActionExpireMetrics))
 		Expect(f.MetricsCollector.CollectedMetrics()[1].Name).To(Equal("d8_need_migrate_to_tofu"))
 		Expect(f.MetricsCollector.CollectedMetrics()[1].Value).To(Equal(&val))
-		Expect(f.MetricsCollector.CollectedMetrics()[1].Action).To(Equal("set"))
+		Expect(f.MetricsCollector.CollectedMetrics()[1].Action).To(Equal(operation.ActionGaugeSet))
 	}
 
 	assertMetricSetToMigrate := func(f *HookExecutionConfig) {

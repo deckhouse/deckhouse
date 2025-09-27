@@ -56,6 +56,28 @@ const globalValues = `
     kubernetesVersion: "%s.4"
 `
 
+const hybridGlobalValues = `
+  enabledModules: ["vertical-pod-autoscaler"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
+    clusterType: Static
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "%s"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      master: 3
+      worker: 1
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: "%s.4"
+`
+
 const moduleValues = `
   storageClass:
     topologyEnabled: true
@@ -311,6 +333,19 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("Test should fail", func() {
 			Expect(f.RenderError).Should(HaveOccurred())
 			Expect(f.RenderError.Error()).ShouldNot(BeEmpty())
+		})
+	})
+
+	Context("Hybrid Openstack", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.29", "1.29"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Test should NOT fail", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
 

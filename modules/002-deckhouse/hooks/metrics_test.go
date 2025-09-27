@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -107,7 +108,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: metrics ", func() {
 
 		notExpireMetrics := 0
 		for _, m := range metrics {
-			if m.Action != "expire" {
+			if m.Action != operation.ActionExpireMetrics {
 				notExpireMetrics++
 			}
 		}

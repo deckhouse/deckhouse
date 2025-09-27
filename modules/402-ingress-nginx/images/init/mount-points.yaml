@@ -1,0 +1,5 @@
+dirs:
+- /chroot/etc/ingress-controller
+- /chroot/tmp
+- /chroot/var/lib/nginx
+- /chroot/var/log/nginx

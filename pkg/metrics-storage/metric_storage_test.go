@@ -33,14 +33,12 @@ import (
 func TestNewMetricStorage(t *testing.T) {
 	tests := []struct {
 		name     string
-		prefix   string
 		opts     []metricsstorage.Option
 		validate func(t *testing.T, storage *metricsstorage.MetricStorage)
 	}{
 		{
-			name:   "default configuration",
-			prefix: "test",
-			opts:   nil,
+			name: "default configuration",
+			opts: []metricsstorage.Option{metricsstorage.WithPrefix("test")},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
 				assert.Equal(t, "test", storage.Prefix)
@@ -49,45 +47,50 @@ func TestNewMetricStorage(t *testing.T) {
 			},
 		},
 		{
-			name:   "with new registry",
-			prefix: "custom",
-			opts:   []metricsstorage.Option{metricsstorage.WithNewRegistry()},
+			name: "with new registry",
+			opts: []metricsstorage.Option{
+				metricsstorage.WithPrefix("custom"),
+				metricsstorage.WithNewRegistry(),
+			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
 				assert.Equal(t, "custom", storage.Prefix)
 			},
 		},
 		{
-			name:   "with custom registry",
-			prefix: "registry",
-			opts:   []metricsstorage.Option{metricsstorage.WithRegistry(prometheus.NewRegistry())},
+			name: "with custom registry",
+			opts: []metricsstorage.Option{
+				metricsstorage.WithPrefix("registry"),
+				metricsstorage.WithRegistry(prometheus.NewRegistry()),
+			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
 				assert.Equal(t, "registry", storage.Prefix)
 			},
 		},
 		{
-			name:   "with logger",
-			prefix: "logger",
-			opts:   []metricsstorage.Option{metricsstorage.WithLogger(log.NewNop())},
+			name: "with logger",
+			opts: []metricsstorage.Option{
+				metricsstorage.WithPrefix("logger"),
+				metricsstorage.WithLogger(log.NewNop()),
+			},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
 				assert.Equal(t, "logger", storage.Prefix)
 			},
 		},
 		{
-			name:   "empty prefix",
-			prefix: "",
-			opts:   nil,
+			name: "empty prefix",
+			opts: []metricsstorage.Option{metricsstorage.WithPrefix("")},
 			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
 				assert.NotNil(t, storage)
 				assert.Equal(t, "", storage.Prefix)
 			},
 		},
 		{
-			name:   "multiple options",
-			prefix: "multi",
+			name: "multiple options",
 			opts: []metricsstorage.Option{
+				metricsstorage.WithPrefix("multi"),
 				metricsstorage.WithNewRegistry(),
 				metricsstorage.WithLogger(log.NewNop()),
 			},
@@ -96,11 +99,19 @@ func TestNewMetricStorage(t *testing.T) {
 				assert.Equal(t, "multi", storage.Prefix)
 			},
 		},
+		{
+			name: "no prefix option",
+			opts: []metricsstorage.Option{metricsstorage.WithNewRegistry()},
+			validate: func(t *testing.T, storage *metricsstorage.MetricStorage) {
+				assert.NotNil(t, storage)
+				assert.Equal(t, "", storage.Prefix)
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage(tt.prefix, tt.opts...)
+			storage := metricsstorage.NewMetricStorage(tt.opts...)
 			tt.validate(t, storage)
 		})
 	}
@@ -143,7 +154,10 @@ func TestMetricStorage_RegisterCounter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			counter, err := storage.RegisterCounter(tt.metric, tt.labelNames)
 
@@ -190,7 +204,10 @@ func TestMetricStorage_RegisterGauge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			gauge, err := storage.RegisterGauge(tt.metric, tt.labelNames)
 
@@ -248,7 +265,10 @@ func TestMetricStorage_RegisterHistogram(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			histogram, err := storage.RegisterHistogram(tt.metric, tt.labelNames, tt.buckets)
 
@@ -300,7 +320,10 @@ func TestMetricStorage_CounterAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			// Should not panic
 			assert.NotPanics(t, func() {
@@ -339,7 +362,10 @@ func TestMetricStorage_GaugeSet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			// Should not panic
 			assert.NotPanics(t, func() {
@@ -372,7 +398,10 @@ func TestMetricStorage_GaugeAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			// Should not panic
 			assert.NotPanics(t, func() {
@@ -415,7 +444,10 @@ func TestMetricStorage_HistogramObserve(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			// Should not panic
 			assert.NotPanics(t, func() {
@@ -426,7 +458,10 @@ func TestMetricStorage_HistogramObserve(t *testing.T) {
 }
 
 func TestMetricStorage_Counter(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	counter1 := storage.Counter("test_counter", map[string]string{"env": "test"})
 	assert.NotNil(t, counter1)
@@ -437,7 +472,10 @@ func TestMetricStorage_Counter(t *testing.T) {
 }
 
 func TestMetricStorage_Gauge(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	gauge1 := storage.Gauge("test_gauge", map[string]string{"env": "test"})
 	assert.NotNil(t, gauge1)
@@ -448,7 +486,10 @@ func TestMetricStorage_Gauge(t *testing.T) {
 }
 
 func TestMetricStorage_Histogram(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	buckets := []float64{0.1, 0.5, 1.0, 5.0}
 	histogram1 := storage.Histogram("test_histogram", map[string]string{"env": "test"}, buckets)
@@ -567,7 +608,10 @@ func TestMetricStorage_ApplyOperation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			err := storage.ApplyOperation(tt.op, tt.commonLabels)
 
@@ -691,7 +735,10 @@ func TestMetricStorage_ApplyBatchOperations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix("test"),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			err := storage.ApplyBatchOperations(tt.ops, tt.commonLabels)
 
@@ -743,7 +790,7 @@ func TestMetricStorage_Handler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", tt.opts...)
+			storage := metricsstorage.NewMetricStorage(tt.opts...)
 			handler := storage.Handler()
 			tt.validate(t, handler)
 		})
@@ -767,7 +814,7 @@ func TestMetricStorage_Collector(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage("test", tt.opts...)
+			storage := metricsstorage.NewMetricStorage(tt.opts...)
 			collector := storage.Collector()
 			assert.NotNil(t, collector)
 
@@ -798,7 +845,10 @@ func TestMetricStorage_Collector(t *testing.T) {
 }
 
 func TestMetricStorage_Grouped(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 	grouped := storage.Grouped()
 	assert.NotNil(t, grouped)
 
@@ -875,7 +925,10 @@ func TestMetricStorage_PrefixReplacement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			storage := metricsstorage.NewMetricStorage(tt.prefix, metricsstorage.WithNewRegistry())
+			storage := metricsstorage.NewMetricStorage(
+				metricsstorage.WithPrefix(tt.prefix),
+				metricsstorage.WithNewRegistry(),
+			)
 
 			// Register a counter to test prefix replacement
 			counter, err := storage.RegisterCounter(tt.metricName, []string{"status"})
@@ -890,7 +943,10 @@ func TestMetricStorage_PrefixReplacement(t *testing.T) {
 }
 
 func TestMetricStorage_LabelMerging(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	// Test that operation labels and common labels are properly merged
 	op := operation.MetricOperation{
@@ -917,7 +973,10 @@ func TestMetricStorage_LabelMerging(t *testing.T) {
 }
 
 func TestMetricStorage_ConcurrentAccess(_ *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	// Test concurrent access to metrics
 	const numGoroutines = 10
@@ -946,7 +1005,10 @@ func TestMetricStorage_ConcurrentAccess(_ *testing.T) {
 }
 
 func TestMetricStorage_InvalidMetricNames(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	invalidNames := []string{
 		"",                       // empty name
@@ -969,7 +1031,10 @@ func TestMetricStorage_InvalidMetricNames(t *testing.T) {
 }
 
 func TestMetricStorage_ExtremeValues(t *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	extremeValues := []float64{
 		0.0,
@@ -995,7 +1060,10 @@ func TestMetricStorage_ExtremeValues(t *testing.T) {
 }
 
 func TestMetricStorage_ManyLabels(_ *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	// Test with many labels
 	manyLabels := make(map[string]string)
@@ -1009,7 +1077,10 @@ func TestMetricStorage_ManyLabels(_ *testing.T) {
 }
 
 func TestMetricStorage_EmptyAndNilMaps(_ *testing.T) {
-	storage := metricsstorage.NewMetricStorage("test", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("test"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	// Test with nil labels
 	storage.CounterAdd("nil_labels_counter", 1.0, nil)
@@ -1032,7 +1103,10 @@ func floatPtr(f float64) *float64 {
 // Benchmark tests
 
 func BenchmarkMetricStorage_CounterAdd(b *testing.B) {
-	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("bench"),
+		metricsstorage.WithNewRegistry(),
+	)
 	labels := map[string]string{"env": "test", "service": "api"}
 
 	b.ResetTimer()
@@ -1042,7 +1116,10 @@ func BenchmarkMetricStorage_CounterAdd(b *testing.B) {
 }
 
 func BenchmarkMetricStorage_GaugeSet(b *testing.B) {
-	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("bench"),
+		metricsstorage.WithNewRegistry(),
+	)
 	labels := map[string]string{"env": "test", "service": "api"}
 
 	b.ResetTimer()
@@ -1052,7 +1129,10 @@ func BenchmarkMetricStorage_GaugeSet(b *testing.B) {
 }
 
 func BenchmarkMetricStorage_HistogramObserve(b *testing.B) {
-	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("bench"),
+		metricsstorage.WithNewRegistry(),
+	)
 	labels := map[string]string{"env": "test", "service": "api"}
 	buckets := []float64{0.1, 0.5, 1.0, 5.0, 10.0}
 
@@ -1063,7 +1143,10 @@ func BenchmarkMetricStorage_HistogramObserve(b *testing.B) {
 }
 
 func BenchmarkMetricStorage_ApplyBatchOperations(b *testing.B) {
-	storage := metricsstorage.NewMetricStorage("bench", metricsstorage.WithNewRegistry())
+	storage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithPrefix("bench"),
+		metricsstorage.WithNewRegistry(),
+	)
 
 	ops := []operation.MetricOperation{
 		{

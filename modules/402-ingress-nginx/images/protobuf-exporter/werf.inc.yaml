@@ -43,6 +43,7 @@ git:
   stageDependencies:
     install:
       - '**/*.yaml'
+{{- include "image mount points" $ }}
 imageSpec:
   config:
     entrypoint: ["/protobuf_exporter", "-server.telemetry-address", "127.0.0.1:9090", "-server.exporter-address", "127.0.0.1:9091" , "-mappings", "/etc/protobuf_exporter/mappings.yaml"]

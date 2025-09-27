@@ -274,7 +274,7 @@ func (d *LogPrinter) GetPod(ctx context.Context) error {
 
 	message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
 	if pod.Status.Phase != corev1.PodRunning {
-		return fmt.Errorf(message)
+		return fmt.Errorf("%s", message)
 	}
 
 	log.InfoLn(message)

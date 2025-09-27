@@ -21,6 +21,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 )
 
 type RunExecutorParams struct {
@@ -44,11 +46,13 @@ func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string)
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
-	cmd.Env = append(
+	envs := append(
 		cmd.Env,
 		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
 		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),
 	)
+
+	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
 	return cmd
 }

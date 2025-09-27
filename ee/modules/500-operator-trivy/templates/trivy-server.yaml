@@ -86,6 +86,7 @@ spec:
           image: {{ include "helm_lib_module_image" (list . "trivy") }}
           args:
             - server
+            - --no-progress
           envFrom:
             - configMapRef:
                 name: trivy-operator-trivy-config

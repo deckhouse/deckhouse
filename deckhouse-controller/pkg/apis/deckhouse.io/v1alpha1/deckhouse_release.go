@@ -55,8 +55,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
@@ -211,8 +212,7 @@ func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return DeckhouseReleaseGVK
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // DeckhouseReleaseList is a list of DeckhouseRelease resources
 type DeckhouseReleaseList struct {

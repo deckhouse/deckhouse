@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -54,7 +54,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -77,7 +77,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -100,12 +100,12 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.1",
@@ -135,12 +135,12 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.2",
@@ -150,7 +150,7 @@ var _ = Describe("Istio hooks :: versions_monitoring ::", func() {
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_istio_deprecated_version_installed",
 				Group:  versionsMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"version":        "1.3",
