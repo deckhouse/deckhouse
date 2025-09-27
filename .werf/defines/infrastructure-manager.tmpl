@@ -41,5 +41,5 @@ registry.terraform.io
 
 {{- define "image_spec_for_infrastructure_manager" }}
 
-{{ include "image_spec_with_user_deckhouse" (dict "entrypoint" (list "/dhctl") "envs" (dict "PATH" "/root" "BLA" "BLAH")) }}
+{{ include "image_spec_with_user_deckhouse" (dict "entrypoint" (list "/dhctl") "envs" (dict "PATH" "/root" "BLA" "BLAH") "work_dir": "/root") }}
 {{- end }}
