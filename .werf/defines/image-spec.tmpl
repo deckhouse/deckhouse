@@ -7,9 +7,6 @@
 {{- define "image_spec_with_user_deckhouse" }}
 {{- $context := . }}
 
-{{- fail (printf "FAIL %+v" $context) -}}
-
-
 {{- $newContext := dict "user" "64535" }}
 
 {{- if hasKey $context "envs" -}}
@@ -27,6 +24,8 @@
 {{- if hasKey $context "work_dir" -}}
   {{- $_ := set $newContext "work_dirt" (get $context "work_dir") }}
 {{- end }}
+
+{{- fail (printf "FAIL %+v" $newContext) -}}
 
 {{ include "image_spec_for_final_container" $newContext }}
 
