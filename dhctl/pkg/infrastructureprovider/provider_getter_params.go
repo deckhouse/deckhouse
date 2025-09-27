@@ -18,13 +18,14 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type CloudProviderGetterParams struct {
@@ -46,7 +47,7 @@ func (p *CloudProviderGetterParams) getProvidersCache() (CloudProvidersCache, er
 
 	providersCache := p.ProvidersCache
 	providersCacheLogMessage := "Provider cache is not nil. Using custom\n"
-	if value.IsNil(providersCache) {
+	if govalue.IsNil(providersCache) {
 		providersCacheLogMessage = "Provider cache is nil. Using default\n"
 		providersCache = defaultProvidersCache
 	}
@@ -138,7 +139,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 }
 
 func (p *CloudProviderGetterParams) getLogger() (log.Logger, error) {
-	if value.IsNil(p.Logger) {
+	if govalue.IsNil(p.Logger) {
 		return nil, fmt.Errorf("CloudProviderGetterParams must have a non-nil pointer logger")
 	}
 

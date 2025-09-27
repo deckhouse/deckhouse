@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -36,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 const (
@@ -104,7 +104,7 @@ func testCleanup(t *testing.T, testName string, params *CloudProviderGetterParam
 	tmpDir := path.Clean(params.TmpDir)
 	require.NotEmpty(t, tmpDir, testName)
 	require.NotEqual(t, tmpDir, "/", testName)
-	require.False(t, value.IsNil(params.IsDebug))
+	require.False(t, govalue.IsNil(params.IsDebug))
 
 	params.Logger.LogInfoF("Cleanup for test %s. Remove tmp dir %s\n", testName, tmpDir)
 
@@ -1006,7 +1006,7 @@ type testPrepareFakeLayoutForApplyParams struct {
 }
 
 func testPrepareFakeLayoutForApply(t *testing.T, params testPrepareFakeLayoutForApplyParams, cloudParams CloudProviderGetterParams) (string, func(t *testing.T)) {
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.step)
 	require.NotNil(t, cloudParams.FSDIParams)
@@ -1067,7 +1067,7 @@ func getCacheKeyForCluster(metaConfig *config.MetaConfig) string {
 func getTestProvidersCacheEntries(t *testing.T, cache CloudProvidersCache) map[string]infrastructure.CloudProvider {
 	t.Helper()
 
-	require.False(t, value.IsNil(cache))
+	require.False(t, govalue.IsNil(cache))
 
 	entries := make(map[string]infrastructure.CloudProvider)
 
@@ -1092,15 +1092,15 @@ func assertGetProviderFromCache(t *testing.T, params testProviderInCacheParams) 
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, value.IsNil(params.logger))
-	require.False(t, value.IsNil(params.cache))
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.logger))
+	require.False(t, govalue.IsNil(params.cache))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
 	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
 	require.NoError(t, err)
 	require.True(t, exists)
-	require.False(t, value.IsNil(cachedProvider))
+	require.False(t, govalue.IsNil(cachedProvider))
 
 	require.Equal(t, params.provider.String(), cachedProvider.String())
 	require.Equal(t, params.provider, cachedProvider)
@@ -1110,15 +1110,15 @@ func assertDoesNotGetProviderFromCache(t *testing.T, params testProviderInCacheP
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, value.IsNil(params.logger))
-	require.False(t, value.IsNil(params.cache))
-	require.True(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.logger))
+	require.False(t, govalue.IsNil(params.cache))
+	require.True(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.metaConfig.UUID)
 
 	cachedProvider, exists, err := params.cache.Get(params.metaConfig.UUID, params.metaConfig, params.logger)
 	require.NoError(t, err)
 	require.False(t, exists)
-	require.True(t, value.IsNil(cachedProvider))
+	require.True(t, govalue.IsNil(cachedProvider))
 
 	entities := getTestProvidersCacheEntries(t, params.cache)
 	require.Len(t, entities, params.cacheLen)
@@ -1128,9 +1128,9 @@ func assertProviderForClusterInCache(t *testing.T, params testProviderInCachePar
 	t.Helper()
 
 	require.NotNil(t, params.metaConfig)
-	require.False(t, value.IsNil(params.logger))
-	require.False(t, value.IsNil(params.cache))
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.logger))
+	require.False(t, govalue.IsNil(params.cache))
+	require.False(t, govalue.IsNil(params.provider))
 
 	entries := getTestProvidersCacheEntries(t, params.cache)
 	if params.cacheLen >= 0 {
@@ -1141,7 +1141,7 @@ func assertProviderForClusterInCache(t *testing.T, params testProviderInCachePar
 	require.Contains(t, entries, cacheKey)
 
 	providerInCache := entries[cacheKey]
-	require.False(t, value.IsNil(providerInCache))
+	require.False(t, govalue.IsNil(providerInCache))
 
 	require.Equal(t, params.provider.String(), providerInCache.String())
 	require.Equal(t, params.provider, providerInCache)
@@ -1164,7 +1164,7 @@ func assertProvidersCacheHasCountOfKeys(t *testing.T, cache CloudProvidersCache,
 func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, providerName string, useTofu bool) {
 	t.Helper()
 
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(provider))
 	require.IsType(t, &cloud.Provider{}, provider, "provider should be a cloud.Provider for", providerName)
 	require.Equal(t, provider.NeedToUseTofu(), useTofu)
 	require.Equal(t, provider.Name(), providerName)
@@ -1173,8 +1173,8 @@ func assertCloudProvider(t *testing.T, provider infrastructure.CloudProvider, pr
 func assertCorrectExecutorStatesDir(t *testing.T, executor infrastructure.Executor, provider infrastructure.CloudProvider, pluginVersion string) {
 	t.Helper()
 
-	require.False(t, value.IsNil(executor))
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(executor))
+	require.False(t, govalue.IsNil(provider))
 	require.NotEmpty(t, pluginVersion)
 
 	executorStatesDir := executor.GetStatesDir()
@@ -1267,8 +1267,8 @@ func assertFSDIDirsAndFilesExists(t *testing.T, params CloudProviderGetterParams
 func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams) {
 	t.Helper()
 
-	require.False(t, value.IsNil(provider))
-	require.False(t, value.IsNil(params.Logger))
+	require.False(t, govalue.IsNil(provider))
+	require.False(t, govalue.IsNil(params.Logger))
 	require.True(t, params.IsDebug)
 	require.NotNil(t, params.FSDIParams)
 
@@ -1311,7 +1311,7 @@ func assertKeepRootDirWithDebugAndKeepFSDIDirsAndFiles(t *testing.T, provider in
 }
 
 func assertCleanupNotFaultAndKeepFSDIDirsAndFiles(t *testing.T, provider infrastructure.CloudProvider, params CloudProviderGetterParams, cacheParams testProviderInCacheParams) {
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(provider))
 	require.NotNil(t, params.FSDIParams)
 
 	const cleanupGroup = "testAfterCleanup"
@@ -1381,7 +1381,7 @@ type assertAllFilesCopiedToProviderDirParams struct {
 func getProviderInfraUtilBinary(t *testing.T, provider infrastructure.CloudProvider) string {
 	t.Helper()
 
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(provider))
 
 	infraBin := terraformBin
 	if provider.NeedToUseTofu() {
@@ -1423,7 +1423,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 	t.Helper()
 
 	provider := params.provider
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(provider))
 
 	require.NotEmpty(t, params.usedStep)
 	require.NotEmpty(t, params.usedLayout)
@@ -1479,7 +1479,7 @@ func assertAllFilesCopiedToProviderDir(t *testing.T, params assertAllFilesCopied
 func assertAllFilesCopiedToProviderDirForOutputExecutor(t *testing.T, provider infrastructure.CloudProvider, providerParams CloudProviderGetterParams) {
 	t.Helper()
 
-	require.False(t, value.IsNil(provider))
+	require.False(t, govalue.IsNil(provider))
 
 	assertInfraUtilCopied(t, provider, providerParams, "")
 
@@ -1516,7 +1516,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	require.NotEmpty(t, params.testName)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.uuid)
-	require.False(t, value.IsNil(params.logger))
+	require.False(t, govalue.IsNil(params.logger))
 
 	configPath := os.Getenv(params.env)
 
@@ -1616,7 +1616,7 @@ type executorTestInitParams struct {
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
 	t.Helper()
 
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.pluginsDir)
@@ -1676,7 +1676,7 @@ type getTestParamsPlanParams struct {
 func getTestPlanParams(t *testing.T, params getTestParamsPlanParams) infrastructure.PlanOpts {
 	t.Helper()
 
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.pluginVersion)
@@ -1715,7 +1715,7 @@ type execInitAndPlanResultsParams struct {
 func assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t *testing.T, params execInitAndPlanResultsParams) {
 	t.Helper()
 
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotEmpty(t, params.pluginVersion)
 	require.NotEmpty(t, params.pluginsDir)
 	require.NotNil(t, params.params.FSDIParams)
@@ -1767,7 +1767,7 @@ func assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t *testing.T, params
 func assertExecInitAndPlanResults(t *testing.T, params execInitAndPlanResultsParams) (infrastructure.Executor, infrastructure.PlanOpts) {
 	t.Helper()
 
-	require.False(t, value.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.provider))
 	require.NotNil(t, params.configProvider)
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)

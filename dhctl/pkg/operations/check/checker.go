@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -33,7 +34,6 @@ import (
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Params struct {
@@ -62,7 +62,7 @@ type Checker struct {
 
 func NewChecker(params *Params) *Checker {
 	logger := params.Logger
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

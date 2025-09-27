@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/pointer"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 var versionsForTest = []string{legacyVersion, "3.14.1"}
@@ -152,5 +152,5 @@ func TestVCDClientProvider(t *testing.T) {
 	setProviderConfig(t, cfg, "https://my-server:8080")
 	c, err := newVcdCloudClient(cfg, logger)
 	require.NoError(t, err)
-	require.False(t, value.IsNil(c))
+	require.False(t, govalue.IsNil(c))
 }

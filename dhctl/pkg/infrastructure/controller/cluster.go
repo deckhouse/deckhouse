@@ -17,6 +17,8 @@ package controller
 import (
 	"context"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -24,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type StateLoader interface {
@@ -61,7 +62,7 @@ type ClusterInfraOptions struct {
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {
 	logger := opts.Logger
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
