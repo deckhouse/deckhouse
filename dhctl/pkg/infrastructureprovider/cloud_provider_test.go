@@ -32,7 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -63,8 +63,8 @@ var (
 	}
 )
 
-func getTestFSDIParams() *fs.DIParams {
-	return &fs.DIParams{
+func getTestFSDIParams() *fsprovider.DIParams {
+	return &fsprovider.DIParams{
 		InfraVersionsFile: "/deckhouse/candi/terraform_versions.yml",
 		BinariesDir:       "/dhctl-tests/bin",
 		CloudProviderDir:  "/deckhouse/candi/cloud-providers",

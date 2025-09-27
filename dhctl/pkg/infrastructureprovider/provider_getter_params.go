@@ -23,16 +23,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type CloudProviderGetterParams struct {
 	TmpDir           string
 	AdditionalParams cloud.ProviderAdditionalParams
 	Logger           log.Logger
-	FSDIParams       *fs.DIParams
+	FSDIParams       *fsprovider.DIParams
 	IsDebug          bool
 
 	VersionProviderGetter cloud.VersionsContentProviderGetter
@@ -57,7 +57,7 @@ func (p *CloudProviderGetterParams) getProvidersCache() (CloudProvidersCache, er
 	return providersCache, nil
 }
 
-func (p *CloudProviderGetterParams) gtFSDIParams() (*fs.DIParams, error) {
+func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error) {
 	logger, err := p.getLogger()
 	if err != nil {
 		return nil, err
@@ -68,17 +68,17 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fs.DIParams, error) {
 		return p.FSDIParams, nil
 	}
 
-	infraVersionsFile, err := fsstatic.PreparePath(global.GetInfrastructureVersions(), false)
+	infraVersionsFile, err := fsutils.DoAbsolutePath(global.GetInfrastructureVersions(), false)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare infra versions file: %w", err)
 	}
 
-	dhctlPath, err := fsstatic.PreparePath(global.GetDhctlPath(), true)
+	dhctlPath, err := fsutils.DoAbsolutePath(global.GetDhctlPath(), true)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare dhctl path: %w", err)
 	}
 
-	diDefaultParams := &fs.DIParams{
+	diDefaultParams := &fsprovider.DIParams{
 		InfraVersionsFile: infraVersionsFile,
 		BinariesDir:       filepath.Join(dhctlPath, "bin"),
 		CloudProviderDir:  filepath.Join(dhctlPath, "deckhouse", "candi", "cloud-providers"),
@@ -128,7 +128,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		logMsg = "CloudProviderGetterParams tmp dir is empty. Using global default."
 	}
 
-	preparedTmpDir, err := fsstatic.PreparePath(tmpDir, true)
+	preparedTmpDir, err := fsutils.DoAbsolutePath(tmpDir, true)
 	if err != nil {
 		return "", fmt.Errorf("Cannot prepare tmp dir %s: %w", tmpDir, err)
 	}

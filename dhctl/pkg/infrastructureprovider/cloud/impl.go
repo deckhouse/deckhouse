@@ -30,10 +30,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	dhctlfs "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
@@ -225,7 +225,7 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 	}
 
 	stepStr := string(step)
-	stepDir := filepath.Join(modulesDir, fsstatic.LayoutsDir, p.layout, stepStr)
+	stepDir := filepath.Join(modulesDir, fsproviderpath.LayoutsDir, p.layout, stepStr)
 
 	err = p.fillVersionsToModulesAndLayoutStep(versionContent, infraRootDir, stepDir, modulesDir)
 	if err != nil {
@@ -264,12 +264,16 @@ func doNotCheckSourceLink(string) error {
 	return nil
 }
 
+func getVersionsFile(root string) string {
+	return filepath.Join(root, "versions.tf")
+}
+
 func (p *Provider) createLinkToRootVersionsFileInModule(dir, rootVersionFile string) error {
 	p.logger.LogDebugF("Create link to root versions file %s for module %s for %s\n", rootVersionFile, dir, p.String())
 
-	versionsFile := fsstatic.GetVersionsFile(dir)
+	fullPath := getVersionsFile(dir)
 
-	return fsstatic.CreateLinkIfNotExists(rootVersionFile, doNotCheckSourceLink, versionsFile, p.logger)
+	return fsutils.CreateLinkIfNotExists(rootVersionFile, doNotCheckSourceLink, fullPath, p.logger)
 }
 
 func (p *Provider) needNewRootVersionsContentWrite(versionsRootFile, versionsSum string) (bool, error) {
@@ -303,7 +307,7 @@ Versions content SHA sum is %s
 func (p *Provider) fillVersionsToModulesAndLayoutStep(versionContent []byte, infraRoot, stepDir, modulesDir string) error {
 	versionsSum := stringsutil.Sha256EncodeBytes(versionContent)
 
-	versionsRootFile := fsstatic.GetVersionsFile(infraRoot)
+	versionsRootFile := getVersionsFile(infraRoot)
 
 	p.logger.LogDebugF(`Got version content for %s:
 %s
@@ -337,7 +341,7 @@ Root versions file %s
 		return err
 	}
 
-	if !dhctlfs.IsDirExists(modulesDir) {
+	if !fsutils.IsDirExists(modulesDir) {
 		p.logger.LogDebugF("Modules dir %s for %s does not exist. Skip create links to root version file\n", modulesDir, p.String())
 		return nil
 	}
@@ -355,7 +359,7 @@ Root versions file %s
 			return nil
 		}
 
-		if strings.HasSuffix(path, fmt.Sprintf("/%s", fsstatic.LayoutsDir)) {
+		if strings.HasSuffix(path, fmt.Sprintf("/%s", fsproviderpath.LayoutsDir)) {
 			return nil
 		}
 
@@ -410,7 +414,7 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 
 	arch := p.arch()
 
-	destination := fsstatic.GetPluginDir(pluginsDir, p.settings, version, arch)
+	destination := fsproviderpath.GetPluginDir(pluginsDir, p.settings, version, arch)
 	destinationDir := path.Dir(destination)
 	destinationDir = strings.TrimRight(destinationDir, "/")
 	// for windows
@@ -448,7 +452,13 @@ func (p *Provider) downloadPluginVersion(ctx context.Context, rootDir, version s
 }
 
 func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix string) (string, error) {
-	destination := fsstatic.GetInfraUtilPath(rootDir, p.settings)
+	useTofu := p.settings.UseOpenTofu()
+	bin := "terraform"
+	if useTofu {
+		bin = "opentofu"
+	}
+
+	destination := path.Join(rootDir, bin)
 
 	params := InfrastructureUtilProviderParams{
 		Version{
@@ -459,7 +469,7 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 
 	var err error
 
-	if p.settings.UseOpenTofu() {
+	if useTofu {
 		p.logger.LogDebugF("Downloading opentofu %s for %s\n", params.Version.String(), p.String())
 		err = p.di.InfraUtilProvider.DownloadOpenTofu(ctx, params, destination)
 	} else {

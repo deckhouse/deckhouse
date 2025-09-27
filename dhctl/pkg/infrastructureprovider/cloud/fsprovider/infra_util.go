@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fs
+package fsprovider
 
 import (
 	"context"
@@ -20,8 +20,8 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type InfrastructureUtilProvider struct {
@@ -42,12 +42,12 @@ func (p *InfrastructureUtilProvider) DownloadTerraform(_ context.Context, _ clou
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsstatic.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "terraform"), checkIsExecFile, destination, p.logger)
 }
 
 func (p *InfrastructureUtilProvider) DownloadOpenTofu(_ context.Context, _ cloud.InfrastructureUtilProviderParams, destination string) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	return fsstatic.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination, p.logger)
+	return fsutils.CreateLinkIfNotExists(filepath.Join(p.binariesDir, "opentofu"), checkIsExecFile, destination, p.logger)
 }

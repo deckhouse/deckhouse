@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fs
+package fsprovider
 
 import (
 	"context"
@@ -25,8 +25,12 @@ import (
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
+
+const (
+	infraModulesDir = "terraform-modules"
 )
 
 type modulesProvider struct {
@@ -55,11 +59,11 @@ func (p *modulesProvider) DownloadModules(_ context.Context, params cloud.Downlo
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	if err := p.copyDir(fsstatic.LayoutsDir, params, destination); err != nil {
+	if err := p.copyDir(fsproviderpath.LayoutsDir, params, destination); err != nil {
 		return err
 	}
 
-	return p.copyDir(fsstatic.InfraModulesDir, params, destination)
+	return p.copyDir(infraModulesDir, params, destination)
 }
 
 // DownloadSpecs
@@ -82,7 +86,7 @@ func (p *modulesProvider) copyDir(dir string, params cloud.DownloadModulesParams
 
 	stat, err := os.Stat(sourceDir)
 	if err != nil {
-		if os.IsNotExist(err) && dir == fsstatic.InfraModulesDir {
+		if os.IsNotExist(err) && dir == infraModulesDir {
 			p.logger.LogDebugF("Coping loud-providers modules (dir %s) from %s to %s skipped. Not found\n", dir, sourceDir, destinationDir)
 			return nil
 		}
