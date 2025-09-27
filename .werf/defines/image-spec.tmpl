@@ -7,7 +7,7 @@
 {{- define "image_spec_with_user_deckhouse" }}
 {{- $context := . }}
 
-{{- fail  {{- fail (printf "FAIL %+v" $context) }} -}}
+{{- fail (printf "FAIL %+v" $context) -}}
 
 
 {{- $newContext := dict "user" "64535" }}
