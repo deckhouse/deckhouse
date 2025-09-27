@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -47,7 +48,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type Destroyer interface {
@@ -100,7 +100,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	state := NewDestroyState(params.StateCache)
 
 	logger := params.Logger
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

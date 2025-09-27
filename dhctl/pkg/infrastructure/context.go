@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type CloudProviderGetter func(ctx context.Context, metaConfig *config.MetaConfig) (CloudProvider, error)
@@ -36,7 +37,7 @@ type Context struct {
 }
 
 func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Context {
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
@@ -48,7 +49,7 @@ func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Co
 }
 
 func NewContext(logger log.Logger) *Context {
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 

@@ -18,12 +18,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type PreparatorProviderParams struct {
@@ -46,7 +47,7 @@ func NewPreparatorProviderParamsWithoutLogger() PreparatorProviderParams {
 func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaConfigPreparatorProvider {
 	logger := params.logger
 
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.NewSilentLogger()
 	}
 

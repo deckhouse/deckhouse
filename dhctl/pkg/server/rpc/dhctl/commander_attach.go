@@ -19,7 +19,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"log/slog"
@@ -36,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type attachParams struct {
@@ -205,7 +206,7 @@ func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.Comma
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
 
-		if !value.IsNil(sshClient) {
+		if !govalue.IsNil(sshClient) {
 			err = sshClient.Start()
 			if err != nil {
 				return fmt.Errorf("cannot start sshClient: %w", err)
