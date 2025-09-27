@@ -7,21 +7,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (resp) {
             if (resp['channel']) {
-                $(`.releases__menu-item.releases__menu--channel--${resp['channel']}`).addClass("releases__menu-item-block-active");
-                $(`.releases__menu-item-title.releases__menu--channel--${resp['channel']}`).addClass("releases__menu-item-title-active");
+                $(`.releases__menu-item.releases__menu--channel--${resp['channel']}`).addClass("active");
+                $(`.releases__menu-item-title.releases__menu--channel--${resp['channel']}`).addClass("active");
             } else {
+                $(`div#releases__stale__block`).addClass("active");
+                $(`div#releases__mark_note`).css("display", "none");
                 console.log('UpdateChannel is not defined.');
             }
 
-            if (resp['version']) {
-                deckhouseVersionInfo = `${resp['version']}`;
-            }
-
-            if (resp['edition']) {
-                deckhouseVersionInfo = `[${resp['edition']}] ${deckhouseVersionInfo}`;
+            if (resp['version'] || resp['edition']) {
+                deckhouseVersionInfo = `${resp['version'] || ''}${resp['edition'] ? ` (${resp['edition']})` : ''}`;
             }
 
             $(".updatechannel__content").text(deckhouseVersionInfo).removeClass("disable");
+        } else {
+            console.log('data.json is empty or not found.');
         }
     });
 });

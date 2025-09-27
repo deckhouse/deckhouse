@@ -202,12 +202,18 @@ common:
   version:
     en: version
     ru: версия
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
   version_of_module:
     en: Module version
     ru: Версия модуля
+  channel_or_version_of_module:
+    en: Module channel/version
+    ru: Канал/версия модуля
   version_of_schema:
     en: Schema version
     ru: Версия схемы

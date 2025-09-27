@@ -6,6 +6,8 @@ modules2: modules
 module: module
 module_versions: Module versions
 module_version: Module version
+channel_or_version: "Channel/version"
+channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse
 documentation: documentation
 Documentation: Documentation
@@ -76,7 +78,7 @@ of_string: of strings
 boolean: boolean
 of_boolean: of booleans
 version: version
-version_of_module: "Module version"
+version_of_module: "### module version"
 version_of_schema: Schema version
 required_value_sentence: Required value
 parameters: parameters
