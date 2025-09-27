@@ -211,14 +211,7 @@ spec:
             name: router
             port:
               name: http
-      - path: /downloads/deckhouse-cli
-        pathType: Prefix
-        backend:
-          service:
-            name: frontend
-            port:
-              name: http
-      - path: /downloads/deckhouse-cli-trdl
+      - path: /downloads
         pathType: Prefix
         backend:
           service:

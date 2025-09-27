@@ -124,7 +124,13 @@ An optional YAML file of installation resources contains Kubernetes resource man
 {% offtopic title="Example Installation Resources File..." %}
 
 ```yaml
-apiVersion: deckhouse.io/v1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 1apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
   name: main
@@ -134,27 +140,6 @@ spec:
   inlet: "LoadBalancer"
   nodeSelector:
     node.deckhouse.io/group: worker
----
-apiVersion: deckhouse.io/v1
-kind: AzureInstanceClass
-metadata:
-  name: worker
-spec:
-  machineSize: Standard_F4
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: worker
-spec:
-  cloudInstances:
-    classReference:
-      kind: AzureInstanceClass
-      name: worker
-    maxPerZone: 3
-    minPerZone: 1
-    zones: ["1"]
-  nodeType: CloudEphemeral
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
@@ -181,6 +166,92 @@ metadata:
   name: deckhouse-admin
 spec:
   enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
+      https:
+        certManager:
+          clusterIssuerName: selfsigned
+        mode: CertManager
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: FromIngressSecret
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  enabled: true
+  version: 1
+  settings:
+    management:
+      mode: Automatic
+      administrators:
+      - type: Group
+        name: admins
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: secrets-store-integration
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  inlet: HostPort
+  enableIstioSidecar: true
+  ingressClass: nginx
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/master: ''
+  tolerations:
+    - effect: NoSchedule
+      operator: Exists
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  accessLevel: SuperAdmin
+  portForwarding: true
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@deckhouse.io
+  password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
 ```
 
 {% endofftopic %}

@@ -10,6 +10,10 @@ lang: ru
 Страница находится в стадии активной разработки и может содержать неполные данные. Ниже представлена обзорная информация о процессе установки Deckhouse. Для более детального ознакомления рекомендуем перейти в раздел [Быстрый старт](/products/kubernetes-platform/gs/), где доступны пошаговые инструкции.
 {% endalert %}
 
+{% alert %}
+Попробуйте [графический установщик Deckhouse Kubernetes Platform](/products/kubernetes-platform/gs/#попробуйте-графический-установщик-deckhouse-kubernetes-platform)! <span class="beta-badge">Beta</span>
+{% endalert %}
+
 Инсталлятор Deckhouse доступен в виде образа контейнера и основан на утилите [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>), в задачи которой входят:
 
 * Создание и настройка объектов в облачной инфраструктуре с помощью Terraform;

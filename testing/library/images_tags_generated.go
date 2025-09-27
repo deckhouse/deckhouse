@@ -145,10 +145,12 @@ var DefaultImagesDigests = map[string]interface{}{
 		"safeAgentUpdater":    "imageHash-cniCilium-safeAgentUpdater",
 	},
 	"cniFlannel": map[string]interface{}{
-		"flanneld": "imageHash-cniFlannel-flanneld",
+		"flanneld":            "imageHash-cniFlannel-flanneld",
+		"iptablesWrapperInit": "imageHash-cniFlannel-iptablesWrapperInit",
 	},
 	"cniSimpleBridge": map[string]interface{}{
-		"simpleBridge": "imageHash-cniSimpleBridge-simpleBridge",
+		"iptablesWrapperInit": "imageHash-cniSimpleBridge-iptablesWrapperInit",
+		"simpleBridge":        "imageHash-cniSimpleBridge-simpleBridge",
 	},
 	"common": map[string]interface{}{
 		"checkKernelVersion":        "imageHash-common-checkKernelVersion",
@@ -256,6 +258,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller112":         "imageHash-ingressNginx-controller112",
 		"controller19":          "imageHash-ingressNginx-controller19",
 		"failoverCleaner":       "imageHash-ingressNginx-failoverCleaner",
+		"init":                  "imageHash-ingressNginx-init",
+		"iptablesWrapperInit":   "imageHash-ingressNginx-iptablesWrapperInit",
 		"kruise":                "imageHash-ingressNginx-kruise",
 		"kruiseStateMetrics":    "imageHash-ingressNginx-kruiseStateMetrics",
 		"kubeRbacProxy":         "imageHash-ingressNginx-kubeRbacProxy",
@@ -294,12 +298,13 @@ var DefaultImagesDigests = map[string]interface{}{
 		"stsPodsHostsAppenderWebhook":       "imageHash-kubeDns-stsPodsHostsAppenderWebhook",
 	},
 	"kubeProxy": map[string]interface{}{
-		"initContainer": "imageHash-kubeProxy-initContainer",
-		"kubeProxy129":  "imageHash-kubeProxy-kubeProxy129",
-		"kubeProxy130":  "imageHash-kubeProxy-kubeProxy130",
-		"kubeProxy131":  "imageHash-kubeProxy-kubeProxy131",
-		"kubeProxy132":  "imageHash-kubeProxy-kubeProxy132",
-		"kubeProxy133":  "imageHash-kubeProxy-kubeProxy133",
+		"initContainer":       "imageHash-kubeProxy-initContainer",
+		"iptablesWrapperInit": "imageHash-kubeProxy-iptablesWrapperInit",
+		"kubeProxy129":        "imageHash-kubeProxy-kubeProxy129",
+		"kubeProxy130":        "imageHash-kubeProxy-kubeProxy130",
+		"kubeProxy131":        "imageHash-kubeProxy-kubeProxy131",
+		"kubeProxy132":        "imageHash-kubeProxy-kubeProxy132",
+		"kubeProxy133":        "imageHash-kubeProxy-kubeProxy133",
 	},
 	"localPathProvisioner": map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
@@ -330,15 +335,18 @@ var DefaultImagesDigests = map[string]interface{}{
 		"multitenancyManager": "imageHash-multitenancyManager-multitenancyManager",
 	},
 	"networkGateway": map[string]interface{}{
-		"dnsmasq": "imageHash-networkGateway-dnsmasq",
-		"snat":    "imageHash-networkGateway-snat",
+		"dnsmasq":             "imageHash-networkGateway-dnsmasq",
+		"iptablesWrapperInit": "imageHash-networkGateway-iptablesWrapperInit",
+		"snat":                "imageHash-networkGateway-snat",
 	},
 	"networkPolicyEngine": map[string]interface{}{
-		"kubeRouter": "imageHash-networkPolicyEngine-kubeRouter",
+		"iptablesWrapperInit": "imageHash-networkPolicyEngine-iptablesWrapperInit",
+		"kubeRouter":          "imageHash-networkPolicyEngine-kubeRouter",
 	},
 	"nodeLocalDns": map[string]interface{}{
 		"coredns":                    "imageHash-nodeLocalDns-coredns",
 		"iptablesLoop":               "imageHash-nodeLocalDns-iptablesLoop",
+		"iptablesWrapperInit":        "imageHash-nodeLocalDns-iptablesWrapperInit",
 		"staleDnsConnectionsCleaner": "imageHash-nodeLocalDns-staleDnsConnectionsCleaner",
 	},
 	"nodeManager": map[string]interface{}{
@@ -365,10 +373,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nvidiaMigManager133":      "imageHash-nodeManager-nvidiaMigManager133",
 	},
 	"openvpn": map[string]interface{}{
-		"easyrsaMigrator": "imageHash-openvpn-easyrsaMigrator",
-		"openvpn":         "imageHash-openvpn-openvpn",
-		"ovpnAdmin":       "imageHash-openvpn-ovpnAdmin",
-		"pmacct":          "imageHash-openvpn-pmacct",
+		"easyrsaMigrator":     "imageHash-openvpn-easyrsaMigrator",
+		"iptablesWrapperInit": "imageHash-openvpn-iptablesWrapperInit",
+		"openvpn":             "imageHash-openvpn-openvpn",
+		"ovpnAdmin":           "imageHash-openvpn-ovpnAdmin",
+		"pmacct":              "imageHash-openvpn-pmacct",
 	},
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
@@ -458,12 +467,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"virtWhat125":                     "imageHash-registrypackages-virtWhat125",
 		"xfsprogs670":                     "imageHash-registrypackages-xfsprogs670",
 		"yq4471":                          "imageHash-registrypackages-yq4471",
-	},
-	"runtimeAuditEngine": map[string]interface{}{
-		"falco":            "imageHash-runtimeAuditEngine-falco",
-		"falcosidekick":    "imageHash-runtimeAuditEngine-falcosidekick",
-		"k8sMetacollector": "imageHash-runtimeAuditEngine-k8sMetacollector",
-		"rulesLoader":      "imageHash-runtimeAuditEngine-rulesLoader",
 	},
 	"serviceWithHealthchecks": map[string]interface{}{
 		"agent":      "imageHash-serviceWithHealthchecks-agent",

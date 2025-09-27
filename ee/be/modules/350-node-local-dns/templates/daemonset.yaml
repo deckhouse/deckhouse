@@ -6,6 +6,10 @@ memory: 40Mi
 cpu: 10m
 memory: 15Mi
 {{- end }}
+{{- define "iptables_wrapper_init_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -64,6 +68,32 @@ spec:
 {{- end }}
       serviceAccountName: d8-node-local-dns
       automountServiceAccountToken: true
+      initContainers:
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+      {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
+{{- else }}
+      - name: iptables-wrapper-init
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+          runAsGroup: 0
+          runAsNonRoot: false
+          runAsUser: 0
+        image: {{ include "helm_lib_module_image" (list . "iptablesWrapperInit") }}
+        command:
+        - /bin/bash
+        - -c
+        - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+        volumeMounts:
+        - mountPath: /sbin
+          name: sbin
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+      {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "iptables_wrapper_init_resources" . | nindent 12 }}
+      {{- end }}
+{{- end }}
       containers:
       - name: coredns
         {{- /*
@@ -82,6 +112,7 @@ spec:
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "coredns") }}
         command: ["/coredns-helper", "-action=start"]
         env:
@@ -134,6 +165,11 @@ spec:
           mountPath: /etc/coredns
         - name: tmp
           mountPath: /tmp
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+{{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -148,6 +184,7 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP
@@ -158,6 +195,9 @@ spec:
           readOnly: false
         - name: tmp
           mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -220,6 +260,14 @@ spec:
         configMap:
           name: node-local-dns
       - name: tmp
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+{{- end }}
       imagePullSecrets:
       - name: deckhouse-registry

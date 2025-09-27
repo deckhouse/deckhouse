@@ -33,7 +33,7 @@ For testing, you can set the `TEST_EXTENDER_DECKHOUSE_VERSION` environment varia
 
 Deckhouse checks whether the dependency is met in the following cases:
 
-1. **When installing or upgrading a module**  
+1. **When installing or upgrading a module**
    If the DKP version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
 
    Below is an example of the ModuleRelease resource for which the DKP version does not meet the module requirements:
