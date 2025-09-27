@@ -66,14 +66,22 @@
   {{- end }}
 {{- end }}
 
-{{- $envs := list }}
+{{- $envs := dict }}
 {{- if hasKey $context "envs" -}}
   {{- $envs = get $context "envs" }}
+
+  {{- if not (kindIs "map" $envs) }}
+    {{- fail "envs context key should be dict" -}}
+  {{- end }}
 {{- end }}
 
-{{- $labels := list }}
+{{- $labels := dict }}
 {{- if hasKey $context "labels" -}}
   {{- $labels = get $context "labels" }}
+
+  {{- if not (kindIs "map" $labels) }}
+    {{- fail "labels context key should be dict" -}}
+  {{- end }}
 {{- end }}
 
 {{- $entrypoint := list }}
