@@ -15,7 +15,9 @@ layout: default
           {{ content }}
         </div>
       </div>
+      {%- if page.feedback != false %}
        {%- include feedback.html %}
+      {%- endif %}
     </div>
   </div>
 </div>

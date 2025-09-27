@@ -95,6 +95,7 @@ defaults:
       search_bage_enabled: true
       lang: en
       showPrevNextButton: true
+      feedback: true
   - scope:
       path: "pages/includes"
       type: "pages"
