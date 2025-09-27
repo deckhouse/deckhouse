@@ -8,3 +8,11 @@ data:
   channels.yaml: |
     {{- $.Files.Get "channels.yaml" | nindent 4 }}
 {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-s3-ca-bundle
+data:
+  ca.yaml: |
+    {{ pluck .Values.werf.env .Values.s3.ca_bundle | first | default .Values.s3.ca_bundle._default | nindent 4 }}

@@ -3234,27 +3234,27 @@ jobs:
           echo "Use werf_dir $WERF_DIR"
           type werf && source $(werf ci-env github --verbose --as-file)
 
-          echo "werf stage image web-backend:"
+          echo "werf stage image web-router:"
           werf stage image web-backend | tr 'a-z' 'A-Z'
-          docker pull $(werf stage image web-backend) || true
+          docker pull $(werf stage image web-router) || true
 
           echo "werf stage image web-frontend:"
           werf stage image web-frontend | tr 'a-z' 'A-Z'
           docker pull $(werf stage image web-frontend) || true
 
-          echo "Copying files from the web-backend container..."
-          docker cp $(docker create --rm $(werf stage image web-backend)):/app/root ${_TMPDIR}/backend
+          echo "Copying files from the web-router container..."
+          docker cp $(docker create --rm $(werf stage image web-router)):/app/root ${_TMPDIR}/backend
           echo "Copying files from the web-frontend container..."
           docker cp $(docker create --rm $(werf stage image web-frontend)):/app ${_TMPDIR}/frontend
 
           # Extract documentation content to the tmp directory.
           export WERF_DIR=$BASEDIR/documentation
           type werf && source $(werf ci-env github --verbose --as-file)
-          echo "werf stage image docs/web:"
-          werf stage image docs/web | tr 'a-z' 'A-Z'
-          docker pull $(werf stage image docs/web)
-          echo "Copying DKP documentation files from the docs/web container..."
-          docker cp $(docker create --rm $(werf stage image docs/web)):/app ${_TMPDIR}/dkp-documentation
+          echo "werf stage image website-docs/web:"
+          werf stage image website-docs/web | tr 'a-z' 'A-Z'
+          docker pull $(werf stage image website-docs/web)
+          echo "Copying DKP documentation files from the website-docs/web container..."
+          docker cp $(docker create --rm $(werf stage image website-docs/web)):/app ${_TMPDIR}/dkp-documentation
 
           # Create EN site structure.
           echo "Create site structure in ${_TMPDIR}"
