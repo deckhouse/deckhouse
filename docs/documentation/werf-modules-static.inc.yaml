@@ -131,7 +131,7 @@ shell:
 {{ end }}
         echo "Moving images to be accessible as local from the module pages (like in Hugo)..."
         cd /app/_site/
-        find modules_en modules_ru -type d -path "*/docs/images" -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rfv "$0" "$lang/modules/$module" ; ' {} \;
+        find modules_en modules_ru -type d -path "*/docs/images" -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
         rm -rf modules_en modules_ru
 git:
 - add: /{{ .ModulePath }}docs

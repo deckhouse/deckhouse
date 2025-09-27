@@ -15,11 +15,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log('UpdateChannel is not defined.');
             }
 
-            if (resp['version'] || resp['edition']) {
-                deckhouseVersionInfo = `${resp['version'] || ''}${resp['edition'] ? ` (${resp['edition']})` : ''}`;
+            if (resp['version'] || resp['edition'] || resp['channel']) {
+                deckhouseVersionInfo = `${resp['version'] || 'unknown'}${resp['edition'] ? ` ${resp['edition']}` : ''}`;
             }
 
-            $(".updatechannel__content").text(deckhouseVersionInfo).removeClass("disable");
+            $("#doc-versions-menu").append(`<span>${deckhouseVersionInfo}</span>`);
         } else {
             console.log('data.json is empty or not found.');
         }
