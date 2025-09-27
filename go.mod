@@ -98,7 +98,7 @@ require k8s.io/klog v1.0.0 // indirect
 require (
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.20.0 // indirect
-	github.com/name212/govalue v1.0.0 // indirect
+	github.com/name212/govalue v1.0.1 // indirect
 	github.com/sigstore/sigstore v1.8.8 // indirect
 	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.8.8 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
