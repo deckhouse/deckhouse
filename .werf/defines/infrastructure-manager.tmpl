@@ -40,5 +40,5 @@ registry.terraform.io
 # . any value. does not use
 
 {{- define "image_spec_for_infrastructure_manager" }}
-{{ include "image_spec_for_final_container" (dict "user" "1111" "entrypoint" (list "/dhctl") "labels" (dict "a" "b")) }}
+{{ include "image_spec_for_final_container" (dict "user" "1111" "entrypoint" (list "/dhctl") "labels" (list "a" "b")) }}
 {{- end }}
