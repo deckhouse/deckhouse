@@ -1,4 +1,4 @@
-2481
+2506
 1GB
 2GB
 5XX
@@ -34,6 +34,7 @@ allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
 allowVolumeExpansion
+amd
 AMD
 ami
 AMIs
@@ -55,8 +56,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 aren
 argocd
@@ -264,8 +265,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -341,6 +342,7 @@ Daemonsets
 DaemonSets
 dapp
 dappdeps
+darwin
 dashboard
 datacenter
 Datacenter
@@ -407,8 +409,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -955,7 +957,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -964,6 +965,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1578,6 +1580,7 @@ wildcards
 Wildcards
 withCredentials
 WithNAT
+WithNatInstance
 WithNATInstance
 WithoutNAT
 WORKDIR
@@ -1763,8 +1766,12 @@ ZvirtInstanceClass
 Гб
 Гбит
 геораспределенном
+гипервизор
+гипервизора
 гипервизорами
 гипервизорах
+гипервизоре
+гипервизоров
 гипервизором
 гиперконвергентной
 гитерминизм
@@ -1789,6 +1796,10 @@ ZvirtInstanceClass
 деактивации
 деактивировать
 дедуплицировать
+декларативно
+декларативное
+декларативность
+декларативный
 декхауса
 демо
 деплое
@@ -1892,8 +1903,12 @@ ZvirtInstanceClass
 компонентa
 компонента
 конвержа
+консистентного
 консистентности
 консистентность
+консистентный
+консистентными
+консистентных
 контеинер
 контеинеризации
 контеинеризация
@@ -2021,7 +2036,10 @@ ZvirtInstanceClass
 неинтерактивном
 некоммитнутые
 некоммитнутыми
+неконсистентному
 неконсистентности
+неконсистентный
+неконсистентными
 неконфиденциальный
 неконфиденциальных
 ненагруженные
@@ -2046,6 +2064,8 @@ ZvirtInstanceClass
 ОK
 ов
 оверпровижининг
+оверселлинг
+оверселлинга
 одностраничных
 одноузлового
 ООМ
@@ -2109,6 +2129,7 @@ ZvirtInstanceClass
 Переиспользование
 переиспользовании
 переиспользования
+переиспользовать
 переиспользоваться
 перенаправление
 перенаправления
@@ -2210,6 +2231,7 @@ ZvirtInstanceClass
 раскопировано
 распарсены
 распарсить
+рассинхронизации
 ребут
 реверт
 Ревью
@@ -2333,6 +2355,9 @@ ZvirtInstanceClass
 созависимые
 Создайте
 сокет
+сокетам
+сокетами
+сокете
 сокетов
 сокету
 сокеты
