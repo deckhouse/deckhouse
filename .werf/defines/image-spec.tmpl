@@ -96,6 +96,10 @@
 {{- $work_dir := "" }}
 {{- if hasKey $context "work_dir" -}}
   {{- $work_dir = get $context "work_dir" }}
+
+  {{- if not (kindIs "string" $work_dir) }}
+    {{- fail "work_dir context key should be string" -}}
+  {{- end }}
 {{- end }}
 
 imageSpec:
