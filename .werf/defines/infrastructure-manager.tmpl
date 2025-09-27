@@ -40,5 +40,4 @@ registry.terraform.io
 # . is empty dict
 
 {{- define "image_spec_for_infrastructure_manager" }}
-{{ include "image_spec_with_user_deckhouse" (dict "entrypoint" (list "/dhctl")) }}
 {{- end }}
