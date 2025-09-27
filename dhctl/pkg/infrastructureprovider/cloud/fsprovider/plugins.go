@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fs
+package fsprovider
 
 import (
 	"context"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsstatic"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsproviderpath"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	fsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type pluginsProvider struct {
@@ -41,6 +42,6 @@ func (p *pluginsProvider) DownloadPlugin(_ context.Context, params cloud.Infrast
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	source := fsstatic.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
-	return fsstatic.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
+	source := fsproviderpath.GetPluginDir(p.pluginsDir, params.Settings, params.Version.Version, params.Version.Arch)
+	return fsutils.CreateLinkIfNotExists(source, checkIsExecFile, destination, p.logger)
 }
