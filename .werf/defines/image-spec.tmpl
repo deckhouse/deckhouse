@@ -68,7 +68,7 @@
 
 {{- $entrypoint := list }}
 {{- if hasKey $context "entrypoint" -}}
-  {{- $labels := get $context "entrypoint" }}
+  {{- $entrypoint := get $context "entrypoint" }}
 {{- end }}
 
 {{- $work_dir := "" }}
@@ -76,7 +76,6 @@
   {{- $work_dir :=  get $context "work_dir" }}
 {{- end }}
 
-{{- fail (printf "FAIL %+v" $entrypoint) -}}
 imageSpec:
   config:
     user: "{{ printf "%s:%s" $user $group }}"
