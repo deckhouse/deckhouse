@@ -40,8 +40,6 @@
 {{- define "image_spec_for_final_container" }}
 {{- $context := . }}
 
-{{- fail (printf "FAIL %+v" $context) -}}
-
 {{- if not (hasKey $context "user") -}}
   {{- fail "user context key should pass" -}}
 {{- end }}
