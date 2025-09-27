@@ -10,7 +10,6 @@ import:
   before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
