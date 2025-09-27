@@ -77,6 +77,8 @@
 {{- if hasKey $context "work_dir" -}}
   {{- $work_dir :=  get $context "work_dir" }}
 {{- end }}
+
+{{- fail (printf "FAIL %+v" $entrypoint) -}}
 imageSpec:
   config:
     user: "{{ printf "%s:%s" $user $group }}"
