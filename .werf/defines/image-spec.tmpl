@@ -82,16 +82,16 @@
 imageSpec:
   config:
     user: "{{ printf "%s:%s" $user $group }}"
-  {{- if not (empty $envs) -}}
+  {{ if not (empty $envs) -}}
     env: {{ $envs | toJson }}
-  {{- end }}
-  {{- if not (empty $labels) -}}
+  {{ end }}
+  {{ if not (empty $labels) -}}
     labels: {{ $labels | toJson }}
-  {{- end }}
-  {{- if not (empty $entrypoint) -}}
+  {{ end }}
+  {{ if not (empty $entrypoint) -}}
     entrypoint: {{ $entrypoint | toJson }}
-  {{- end }}
-  {{- if not (empty $work_dir) -}}
+  {{ end }}
+  {{ if not (empty $work_dir) -}}
     workingDir: {{ $work_dir }}
-  {{- end }}
+  {{ end }}
 {{- end }}
