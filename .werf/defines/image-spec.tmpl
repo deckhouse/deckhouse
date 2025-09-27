@@ -76,6 +76,8 @@
   {{- $work_dir = get $context "work_dir" }}
 {{- end }}
 
+ {{- fail (printf "FAIL %s" $work_dir) -}}
+
 imageSpec:
   config:
     user: "{{ printf "%s:%s" $user $group }}"
