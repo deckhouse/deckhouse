@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 var defaultProvidersCache = newCloudProvidersMapCache()
@@ -80,7 +81,7 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 			return nil, err
 		}
 
-		if value.IsNil(provider) {
+		if govalue.IsNil(provider) {
 			return nil, fmt.Errorf("Do not store nil provider for cluster %s in cache", clusterUUID)
 		}
 
@@ -162,7 +163,7 @@ func (c *cloudProvidersMapCache) Get(clusterUUID string, metaConfig *config.Meta
 		return nil, false, nil
 	}
 
-	if value.IsNil(provider) {
+	if govalue.IsNil(provider) {
 		logger.LogDebugF("Provider with key %s is nil.\n", cacheKey)
 		return nil, false, nil
 	}

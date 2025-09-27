@@ -22,6 +22,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -42,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type checkParams struct {
@@ -248,7 +248,7 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	if !value.IsNil(sshClient) {
+	if !govalue.IsNil(sshClient) {
 		err = sshClient.Start()
 		if err != nil {
 			return &pb.CheckResult{Err: err.Error()}

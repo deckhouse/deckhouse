@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
@@ -29,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 var terraformProviders = []string{
@@ -135,7 +135,7 @@ func TestProviderSettingsLoadedAndStoreInCache(t *testing.T) {
 	// get settings for existing provider
 	settingsYandex, err := sFirst.GetSettings(context.TODO(), yandex.ProviderName, cloud.ProviderAdditionalParams{})
 	require.NoError(t, err)
-	require.False(t, value.IsNil(settingsYandex))
+	require.False(t, govalue.IsNil(settingsYandex))
 	require.Equal(t, settingsYandex.CloudName(), yandex.ProviderName)
 	assertGettingDoesNotAffectStores(t, sFirst)
 

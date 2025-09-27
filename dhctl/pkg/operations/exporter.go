@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/name212/govalue"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/value"
 )
 
 type previouslyExistedEntities struct {
@@ -125,7 +125,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 	}
 
 	logger := params.Logger
-	if value.IsNil(logger) {
+	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
 	}
 
