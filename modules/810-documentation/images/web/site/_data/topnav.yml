@@ -3,13 +3,17 @@ topnav:
   en:
   - title: Topnav
     items:
+    - title: Modules
+      url: /modules/
     - title: Release channels
-      url: /deckhouse-release-channels.html
+      url: /reference/release-channels.html
   ru:
   - title: Topnav
     items:
+    - title: Модули
+      url: /modules/
     - title: Каналы обновлений
-      url: /deckhouse-release-channels.html
+      url: /reference/release-channels.html
     - title: Лицензионное соглашение
       external_url: https://deckhouse.ru/license/
       ee_only: true

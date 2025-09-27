@@ -50,7 +50,7 @@ CRI requests to the registry are redirected based on its configuration, which is
 For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the in-cluster proxy located on the master nodes.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![direct](../../images/registry-module/direct-en.png)
+![direct](images/direct-en.png)
 
 <!-- ### Proxy Mode
 This mode allows the registry to act as an intermediate proxy server between the client and the remote registry, optimizing access to frequently used images and reducing network load.

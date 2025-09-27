@@ -20,9 +20,19 @@ lang: ru
 
 Deckhouse использует **пять каналов обновлений**. *Мягко* переключаться между ними можно с помощью модуля [deckhouse](/modules/deckhouse/): достаточно указать желаемый канал обновлений в [конфигурации](/modules/deckhouse/configuration.html#parameters-releasechannel) модуля.
 
-<div id="releases__stale__block" class="releases__info releases__stale__warning" >
-  <strong>Внимание!</strong> В этом кластере не используется какой-либо канал обновлений.
+{% if site.mode == 'module' %}
+<div id="releases__mark_note">
+{%- alert %}
+Используемый в этом кластере канал обновлений выделен в списке ниже.
+{%- endalert %}
 </div>
+
+<div id="releases__stale__block">
+{%- alert level="warning" %}
+В этом кластере не используется какой-либо канал обновлений. Установить канал обновлений можно с помощью параметра [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) конфигурации модуля `deckhouse`.
+{%- endalert %}
+</div>
+{% endif %}
 
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
@@ -33,7 +43,7 @@ Deckhouse использует **пять каналов обновлений**.
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
         <div class="releases__menu-item-header">
             <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
-                {{ channel.title }}
+                {{- channel.title -}}
             </div>
         </div>
         <div class="releases__menu-item-description">

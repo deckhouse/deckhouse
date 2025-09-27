@@ -3,7 +3,7 @@
   {%- if page.product_code == kubernetes-platform %}
     <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
         {%- unless site.mode == 'module' %}
-        <div><strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
+        <div><strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
         <!-- module-version-badge -->
         <div id="doc-versions-menu" class="channel-menu submenu-parent">
           <!--#include virtual="/includes/channel-menu-v2.html" -->

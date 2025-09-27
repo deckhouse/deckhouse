@@ -12,7 +12,7 @@ In this scheme, an internal cluster network is created with a gateway to the pub
 > **Caution!**
 > If the provider does not support SecurityGroups, all applications running on nodes with Floating IPs assigned will be available at a public IP. For example, `kube-apiserver` on master nodes will be available on port 6443. To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) placement strategy or [Standard](#standard) strategy with bastion host.
 
-![resources](../../images/cloud-provider-openstack/openstack-standard.png)
+![resources](images/openstack-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
@@ -111,7 +111,7 @@ An internal cluster network is created that does not have access to the public n
 > **Caution!**
 > In this strategy, it is necessary to explicitly specify the name of the internal network in `additionalNetworks` when creating an `OpenStackInstanceClass` in the cluster.
 
-![resources](../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
+![resources](images/openstack-standardwithnorouter.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
@@ -190,7 +190,7 @@ The master node and cluster nodes are connected to the existing network. This pl
 > **Caution!**
 > This strategy does not support a LoadBalancer since a Floating IP is not available for the router-less network. Thus, you cannot provision a load balancer with the Floating IP. An internal load balancer with the virtual IP in the public network is only accessible to cluster nodes.
 
-![resources](../../images/cloud-provider-openstack/openstack-simple.png)
+![resources](images/openstack-simple.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:
@@ -266,7 +266,7 @@ The master node and cluster nodes are connected to the existing network. This pl
 > This placement strategy does not involve the management of `SecurityGroups` (it is assumed they were created beforehand).
 > To configure security policies, you must explicitly specify both `additionalSecurityGroups` in the `OpenStackClusterConfiguration` for the masterNodeGroup and other nodeGroups, and `additionalSecurityGroups` when creating `OpenStackInstanceClass` in the cluster.
 
-![resources](../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
+![resources](images/openstack-simplewithinternalnetwork.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10917&t=IvETjbByf1MSQzcm-0 --->
 
 Example of the layout configuration:

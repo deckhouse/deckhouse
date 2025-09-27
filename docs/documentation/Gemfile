@@ -1,0 +1,11 @@
+source 'https://rubygems.org'
+
+gem 'jekyll'
+gem 'html-proofer'
+gem 'jekyll-regex-replace'
+gem 'kramdown-parser-gfm'
+gem 'jekyll_include_plugin'
+gem "jekyll_asset_pipeline"
+gem "sass"
+gem 'cssminify2'
+gem "octicons"

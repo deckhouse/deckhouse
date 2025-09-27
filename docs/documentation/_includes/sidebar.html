@@ -7,9 +7,9 @@
       <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
           <div>
           {%- if page.sidebar == 'embedded-modules' %}
-            <strong>{{ site.data.i18n.common['version_of_module'][page.lang] | capitalize }}: </strong></div>
+            <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
           {%- else %}
-            <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
+            <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
           {%- endif %}
 
           {%- unless site.mode == 'module' %}

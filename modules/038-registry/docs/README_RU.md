@@ -50,7 +50,7 @@ Bootstrap кластера DKP поддерживается только в не
 В случае таких компонентов, как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к registry напрямую, запросы будут идти через in-cluster proxy, расположенный на master-узлах.
 
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
-![direct](../../images/registry-module/direct-ru.png)
+![direct](images/direct-ru.png)
 
 <!-- ### Proxy режим
 Данный режим позволяет registry выступать в качестве промежуточного прокси-сервера между клиентом и удалённым реестром, оптимизируя доступ к часто используемым образам и уменьшая нагрузку на сеть.

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   documentation:
     image: $WERF_WEBSITE_DOCS_WEB_DOCKER_IMAGE_NAME

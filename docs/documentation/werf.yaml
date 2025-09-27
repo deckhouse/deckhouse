@@ -9,6 +9,7 @@
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
 project: deckhouse-web
 configVersion: 1
 ---
@@ -22,7 +23,4 @@ configVersion: 1
 {{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "ModulePath" "../../" }}
-{{- $_ := set $context "BuildModules" false }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
----
-{{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}

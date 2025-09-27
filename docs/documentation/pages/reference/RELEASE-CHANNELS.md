@@ -19,9 +19,19 @@ A production cluster, unlike a development one, has higher requirements for reli
 
 Deckhouse uses **five release channels** which you can *soft-switch* between using the [deckhouse](/modules/deckhouse/) module: just specify the desired release channel in the module [configuration](/modules/deckhouse/configuration.html#parameters-releasechannel).
 
-<div id="releases__stale__block" class="releases__info releases__stale__warning" >
-  <strong>Note!</strong> The cluster does not use any release channel.
+{% if site.mode == 'module' %}
+<div id="releases__mark_note">
+{%- alert %}
+The update channel used in this cluster is highlighted in the list below.
+{%- endalert %}
 </div>
+
+<div id="releases__stale__block">
+{%- alert level="warning" %}
+The cluster does not use any release channel. You can set the update channel by using [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter of the `deckhouse` module configuration.
+{%- endalert %}
+</div>
+{% endif %}
 
 {%- assign channels_sorted = site.data.releases.channels | sort: "stability" %}
 {%- assign channels_sorted_reverse = site.data.releases.channels | sort: "stability" | reverse  %}
@@ -32,7 +42,7 @@ Deckhouse uses **five release channels** which you can *soft-switch* between usi
     <div class="releases__menu-item releases__menu--channel--{{ channel.name }}">
         <div class="releases__menu-item-header">
             <div class="releases__menu-item-title releases__menu--channel--{{ channel.name }}">
-                {{ channel.title }}
+                {{- channel.title -}}
             </div>
         </div>
         <div class="releases__menu-item-description">

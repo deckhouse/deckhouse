@@ -43,12 +43,14 @@
 
   <div style="display: flex; justify-content: start; padding-top: 12px; padding-bottom: 35px; gap: 25px;">
     <div>
-      <strong>{{ T "module_version" }}: </strong>
+      <strong>{{ T "channel_or_version" }}:</strong>
     </div>
 
     <div id="doc-versions-menu" class="channel-menu submenu-parent">
       {{- if $.IsPage }}
-        {{- "<!--#include virtual=\"/includes/channel-menu-module.html\" -->"  | safeHTML }}
+        {{- if and $currentModuleName $currentModuleChannel }}
+          {{- partial "module-version-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel ) }}
+        {{- end }}
       {{- end }}
     </div>
   </div>

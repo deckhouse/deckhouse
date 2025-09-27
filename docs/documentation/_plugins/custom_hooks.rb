@@ -4,12 +4,12 @@ def doc_links_for_module(moduleName)
     data = {
       'overview' => {
           'internal' => {
-            'en' => "/en/platform/modules/%s/" % moduleName,
-            'ru' => "/ru/platform/modules/%s/" % moduleName
+            'en' => "/en/modules/%s/" % moduleName,
+            'ru' => "/ru/modules/%s/" % moduleName
           },
           'external' => {
-            'en' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName,
-            'ru' => "/products/kubernetes-platform/documentation/v1/modules/%s/" % moduleName
+            'en' => "/modules/%s/" % moduleName,
+            'ru' => "/modules/%s/" % moduleName
           }
         },
       'crds' => []

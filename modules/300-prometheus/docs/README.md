@@ -90,7 +90,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 
 ## Architecture
 
-![The scheme of interaction](../../images/prometheus/prometheus_monitoring_new.svg)
+![The scheme of interaction](images/prometheus_monitoring.svg)
 
 ### Basic monitoring components
 

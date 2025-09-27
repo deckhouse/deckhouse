@@ -26,16 +26,16 @@ Docs Builder handles the complete documentation lifecycle:
 
 ## Operating Modes
 
-### 1. Frontend Mode 
-**Purpose:** Public-facing documentation website  
-**Example:** [Deckhouse documentation site](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-overview.html)  
+### 1. Frontend Mode
+**Purpose:** Public-facing documentation website
+**Example:** [Deckhouse documentation site](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-overview.html)
 **Features:**
 - Full module documentation across all channels
 - Public internet accessibility
 - Complete feature documentation
 
 ### 2. Cluster Documentation Mode
-**Purpose:** Internal cluster documentation  
+**Purpose:** Internal cluster documentation
 **Features:**
 - Kubernetes cluster-internal access only
 - Documentation limited to installed modules
@@ -126,7 +126,7 @@ The service expects tar archives with the following structure:
 module-archive.tar
 ├── docs/                       # Content files → content/modules/{module}/{channel}/
 │   ├── README.md              # Module documentation
-│   ├── FAQ.md                 # FAQ documentation  
+│   ├── FAQ.md                 # FAQ documentation
 │   └── configuration.md       # Configuration docs
 ├── openapi/                   # API specs → data/modules/{module}/{channel}/
 │   ├── config-values.yaml     # Configuration schema
@@ -149,9 +149,9 @@ module-archive.tar
 When `--highAvailability` is enabled:
 
 1. **Leader Election:** Uses Kubernetes coordination leases
-2. **Lease Management:** 
+2. **Lease Management:**
    - Lease duration: 35 seconds
-   - Renew period: 30 seconds  
+   - Renew period: 30 seconds
    - Garbage collection: 90 seconds
 3. **Service Discovery:** Automatic pod address registration
 4. **Graceful Shutdown:** Lease cleanup on termination
@@ -172,12 +172,12 @@ When `--highAvailability` is enabled:
 ## Dependencies
 
 ### Core Dependencies
-- **Hugo:** v0.147.7 - Static site generator
+- **Hugo:** v0.150.1 - Static site generator
 - **Kubernetes Client:** v0.28.3 - K8s API integration
 - **Deckhouse Logger:** Custom structured logging
 - **Afero/Fsync:** File system operations
 
 ### Key Features from Dependencies
 - **Hugo Extensions:** Goldmark, i18n, asset processing
-- **File Operations:** Atomic file syncing, overlay filesystems  
+- **File Operations:** Atomic file syncing, overlay filesystems
 - **Kubernetes Integration:** Lease-based coordination, service discovery

@@ -95,7 +95,7 @@ Deckhouse поддерживает отправку алертов с помощ
 
 ## Архитектура
 
-![Схема взаимодействия](../../images/prometheus/prometheus_monitoring_new.svg)
+![Схема взаимодействия](images/prometheus_monitoring.svg)
 
 ### Базовые компоненты мониторинга
 
