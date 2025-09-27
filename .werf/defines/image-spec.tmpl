@@ -79,6 +79,10 @@
 {{- $entrypoint := list }}
 {{- if hasKey $context "entrypoint" -}}
   {{- $entrypoint = get $context "entrypoint" }}
+
+  {{- if not (kindIs "slice" $entrypoint) }}
+    {{- fail "entrypoint context key should be slice" -}}
+  {{- end }}
 {{- end }}
 
 {{- $work_dir := "" }}
