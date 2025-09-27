@@ -89,6 +89,6 @@ imageSpec:
     entrypoint: {{ $entrypoint | toJson }}
   {{ end }}
   {{ if not (empty $work_dir) }}
-    workingDir: {{ $work_dir }}
+    workingDir: "{{ $work_dir }}"
   {{ end }}
 {{- end }}
