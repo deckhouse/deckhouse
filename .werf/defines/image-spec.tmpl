@@ -25,6 +25,8 @@
   {{- $_ := set $newContext "work_dirt" (get $context "work_dir") }}
 {{- end }}
 
+{{- fail (printf "FAIL %+v" $newContext) -}}
+
 {{ include "image_spec_for_final_container" $newContext }}
 
 {{- end }}
@@ -76,7 +78,6 @@
   {{- $work_dir :=  get $context "work_dir" }}
 {{- end }}
 
-{{- fail (printf "FAIL %+v" $entrypoint) -}}
 imageSpec:
   config:
     user: "{{ printf "%s:%s" $user $group }}"
