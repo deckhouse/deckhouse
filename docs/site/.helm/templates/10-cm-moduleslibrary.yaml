@@ -99,16 +99,14 @@ data:
         location ~* ^/modules/search-embedded-modules-index.json$  {
             set $module "$1";
             set $module_doc "$2";
+            # $channel_name is mapped to $channel_version (see map above)
             set $channel_name "stable";
 
-            rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/${channel_name}/modules/$lang/search-embedded-modules-index.json break;
+            rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/search-embedded-modules-index.json break;
 
             limit_except GET {
                 deny all;
             }
-
-            rewrite ^/modules/[^/]+/stable/$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/stable/(.+)$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;

@@ -106,6 +106,8 @@ git:
     - '**/.helm'
     - documentation/pages/internal
     - documentation/config
+    - documentation/search-embedded-modules-*
+    - documentation/pages/drafts
 {{ if ne .ModuleName "website-docs" }}
     - site/pages/*.html
     - site/_includes/footer.html
