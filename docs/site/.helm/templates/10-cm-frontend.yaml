@@ -170,9 +170,9 @@ data:
             set $doc_path "$1";
 
             # Serve doc for the stable channel.
-            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/${doc_path} break;
-            rewrite /$    /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path}index.html break;
-            rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path} break;
+            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/${doc_path} break;
+            rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path}index.html break;
+            rewrite [^/]$ /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path} break;
 
             limit_except GET {
                 deny all;
@@ -205,9 +205,9 @@ data:
                 deny all;
             }
 
-            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/${doc_path} break;
-            rewrite /$    /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path}index.html break;
-            rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path} break;
+            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/${doc_path} break;
+            rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path}index.html break;
+            rewrite [^/]$ /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path} break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;

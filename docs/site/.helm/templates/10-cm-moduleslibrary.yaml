@@ -102,7 +102,7 @@ data:
             # $channel_name is mapped to $channel_version (see map above)
             set $channel_name "stable";
 
-            rewrite ^/modules/search-embedded-modules-index.json$ /modules-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/search-embedded-modules-index.json break;
+            rewrite ^/modules/search-embedded-modules-index.json$ /deckhouse-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/search-embedded-modules-index.json break;
 
             limit_except GET {
                 deny all;
@@ -158,8 +158,8 @@ data:
             }
 
             # Serve doc for the stable channel. Don't redirect as it shoud be SEO friendly.
-            rewrite /$    /modules-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/${module_doc}index.html break;
-            rewrite [^/]$ /modules-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/$module_doc break;
+            rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/${module_doc}index.html break;
+            rewrite [^/]$ /deckhouse-{{ $.Values.werf.env }}/$channel_version/modules/$lang/modules/$module/$module_doc break;
 
             limit_except GET {
                 deny all;
@@ -194,8 +194,8 @@ data:
             set $module_version "$2";
             set $module_doc "$3";
 
-            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /modules-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/index.html break;
-            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /modules-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/$module_doc break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/$ /deckhouse-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/index.html break;
+            rewrite ^/modules/[^/]+/(latest|v1\.[0-9]+)/(.+)$ /deckhouse-{{ $.Values.werf.env }}/${module_version}/modules/$lang/modules/$module/$module_doc break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;

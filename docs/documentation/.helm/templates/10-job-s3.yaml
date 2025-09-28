@@ -26,7 +26,7 @@ spec:
           - s3
           - sync
           - /embedded-modules
-          - s3://{{ .Values.global.doc_s3_bucket }}/modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/modules/
+          - s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/modules/
           - --ca-bundle
           - /.aws/s3-root.crt
           - --delete
@@ -74,7 +74,7 @@ spec:
           - s3
           - sync
           - /documentation
-          - s3://{{ .Values.global.doc_s3_bucket }}/modules-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/docs-dkp/
+          - s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/docs-dkp/
           - --ca-bundle
           - /.aws/s3-root.crt
           - --delete
