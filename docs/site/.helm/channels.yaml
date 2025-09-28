@@ -8,7 +8,7 @@ groups:
         - name: ea
           version: v1.72
         - name: stable
-          version: v1.71
+          version: v1.72
         - name: rock-solid
-          version: v1.70
+          version: v1.71
 

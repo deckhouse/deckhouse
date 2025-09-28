@@ -83,10 +83,6 @@ shell:
         yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 {{ if eq .ModuleName "documentation" }}
-        # Syncing file from the documentation to the main site...
-        #cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb,navigation_helper.rb} /srv/jekyll-data/site/_plugins/
-        #cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
-
         # "Converting public documentation links to modules to the internal relative..."
         grep -rl '](https://deckhouse.\(io\|ru\)' /srv/jekyll-data/documentation/_data/schemas/ | \
           xargs sed -Ei 's$\]\(https?://deckhouse.(ru|io)/(/ru|/en)?(products/kubernetes-platform/)?documentation/(v[0-9]+/|v[0-9]+\.[0-9]+/)?(modules/)$](/\5$'
@@ -97,9 +93,6 @@ shell:
         cat <<'EOD' > /srv/jekyll-data/documentation/_data/topnav.yml
         {{- .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8 }}
         EOD
-        #cat <<'EOD' > /srv/jekyll-data/site/_data/topnav.yml
-        #{ { - .Files.Get (printf "%smodules/810-documentation/images/web/site/_data/topnav.yml" .ModulePath) | nindent 8  } }
-        #EOD
 {{ end }}
         # Creating additional config...
         echo -e "\nd8Revision: {{ .Edition }}" >> /tmp/_config_additional.yml
@@ -109,18 +102,6 @@ shell:
         mkdir -m 777 -p /app/_site/
 {{ if eq .ModuleName "documentation" }}
         JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
-        #JEKYLL_ENV=production jekyll build -d /app/_site/documentation/ --config _config.yml,/tmp/_config_additional.yml
-
-        #echo '[] Generating static files of the main part...'
-        #cd /srv/jekyll-data/site/
-        #JEKYLL_ENV=production jekyll build -d /app/_site/site/ --config _config.yml,/tmp/_config_additional.yml
-
-        #cp -Rf /app/_site/site/assets /app/_site/documentation/
-        #cp -Rf /app/_site/site/images /app/_site/documentation/
-        #cp -Rf /app/_site/site/ru/includes /app/_site/documentation/ru
-        #cp -Rf /app/_site/site/en/includes /app/_site/documentation/en
-        #cp -Rf /app/_site/site/ru /app/_site/documentation/
-        #cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
 {{ else }}
         {{- if eq .Mode "development" }}
@@ -139,17 +120,10 @@ git:
   owner: jekyll
   group: jekyll
   includePaths:
-  # if eq .ModuleName "documentation"
-    #- site/_config.yml
     - site/_includes/head.html
 {{ if eq .ModuleName "documentation" }}
     - site/_includes/header.html
 {{ end }}
-    #- site/Gemfile
-    #- site/Gemfile.lock
-#{ else
-#    - site
-# end
     - documentation
   excludePaths:
     - '**/werf*.yaml'
@@ -167,17 +141,6 @@ git:
     - documentation/*.svg
     - documentation/browserconfig.xml
     - documentation/site.webmanifest
-#{ { if eq .ModuleName "documentation" } }
-#    - site/pages/*.html
-#    - site/_includes/footer.html
-#    - site/_data/topnav.*
-#    - site/backends
-#    - site/_plugins/gs_generator.rb
-#    - site/_plugins/dvp_resource_generator.rb
-#    - site/pages/virtualization-platform
-#    - site/pages/code
-#    - site/pages/stronghold
-#{ { end } }
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
