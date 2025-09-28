@@ -23,7 +23,9 @@
       "ru": "Может потребоваться отдельная лицензия"
     },
     "tags": [
-      "managing"
+      "managing",
+      "application",
+      "web-interface"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/commander/stable/"
@@ -40,6 +42,21 @@
     "tags": [
       "helper"
     ]
+  },
+  "code": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "application",
+      "web-interface"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/code/stable/"
   },
   "console": {
     "editions": [
@@ -117,6 +134,20 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
   },
+  "csi-netapp": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
+  },
   "csi-s3": {
     "editions": [
       "ee"
@@ -172,6 +203,16 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
   },
+  "managed-memcached": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-memcached/stable/"
+  },
   "neuvector": {
     "editions": [
       "ee"
@@ -213,7 +254,9 @@
       "ru": "Требуется отдельная лицензия"
     },
     "tags": [
-      "observability"
+      "observability",
+      "web-interface",
+      "application"
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
@@ -229,6 +272,9 @@
     "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
   },
   "pod-reloader": {
+    "tags": [
+      "core"
+    ],
     "editions": [
       "ce",
       "be",
@@ -238,6 +284,28 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
+  },
+  "runtime-audit-engine": {
+    "tags": [
+      "security"
+    ],
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/runtime-audit-engine/stable/"
+  },
+  "sdn": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "network"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sdn/stable/"
   },
   "sds-local-volume": {
     "editions": [
@@ -329,6 +397,20 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "storage"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/storage-volume-data-manager/stable/"
   },
   "static-routing-manager": {
     "editions": [

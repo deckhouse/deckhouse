@@ -44,6 +44,17 @@
       }
     }
   },
+  "code": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/code/stable/"
+  },
   "commander": {
     "editions": [
       "ce",
@@ -148,6 +159,17 @@
     "external": "true",
     "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
   },
+  "csi-netapp": {
+    "editions": [
+      "ce",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
+  },
   "csi-s3": {
     "editions": [
       "ee"
@@ -212,6 +234,20 @@
     },
     "path": "modules/metallb/"
   },
+  "managed-memcached": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-memcached/stable/"
+  },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+  },
   "neuvector": {
     "editions": [
       "ee"
@@ -262,6 +298,22 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
+  },
+  "runtime-audit-engine": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/runtime-audit-engine/stable/"
+  },
+  "sdn": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/sdn/stable/"
   },
   "sds-local-volume": {
     "editions": [
@@ -337,6 +389,17 @@
     ],
     "external": "true",
     "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
+  },
+  "storage-volume-data-manager": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/products/kubernetes-platform/modules/storage-volume-data-manager/stable/"
   },
   "static-routing-manager": {
     "editions": [
