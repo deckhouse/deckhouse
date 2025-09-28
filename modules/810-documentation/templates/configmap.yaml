@@ -139,12 +139,12 @@ data:
 
         # Search index for modules from sources
         location ~* ^/(?<lang>ru|en)/modules/search-external-modules-index.json$  {
-            try_files /$lang/search-external-modules-index/search.json =404;
+            try_files /search-external-modules-index/$lang/search.json =404;
         }
 
         # Search index for embedder modules
         location ~* ^/(?<lang>ru|en)/modules/search-embedded-modules-index.json$  {
-            try_files /docs-dkp/$lang/search-embedded-modules-index.json =404;
+            try_files /embedded-modules/$lang/search-embedded-modules-index.json =404;
         }
 
         # Modules from source index page

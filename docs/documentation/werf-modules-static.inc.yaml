@@ -129,9 +129,9 @@ shell:
         JEKYLL_ENV=production jekyll build -d /app/_site/ --config _config.yml,/tmp/_config_additional.yml
         {{- end }}
 {{ end }}
-        echo "Moving images to be accessible as local from the module pages (like in Hugo)..."
+        echo "Moving images and presentations to be accessible as local from the module pages (like in Hugo)..."
         cd /app/_site/
-        find modules_en modules_ru -type d -path "*/docs/images" -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
+        find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
         rm -rf modules_en modules_ru
 git:
 - add: /{{ .ModulePath }}docs
@@ -160,6 +160,13 @@ git:
     - documentation/pages
     - documentation/config
     - documentation/assets
+    - documentation/search.json
+    - documentation/search-ru.json
+    - documentation/*.png
+    - documentation/*.ico
+    - documentation/*.svg
+    - documentation/browserconfig.xml
+    - documentation/site.webmanifest
 #{ { if eq .ModuleName "documentation" } }
 #    - site/pages/*.html
 #    - site/_includes/footer.html
