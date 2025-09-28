@@ -99,7 +99,7 @@ func (s *Client) Start() error {
 		log.DebugLn("Initialize bastion connection...")
 
 		if len(s.privateKeys) == 0 && len(app.SSHBastionPass) == 0 {
-			return fmt.Errorf("no credentials present to connect to bastion host")
+			return fmt.Errorf("No credentials present to connect to bastion host")
 		}
 
 		AuthMethods := []ssh.AuthMethod{ssh.PublicKeys(signers...)}
@@ -121,13 +121,14 @@ func (s *Client) Start() error {
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
-		log.DebugF("Connect to bastion host %s\n", bastionAddr)
+		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
 		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
+			log.InfoF("Connect to %s\n", fullHost)
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("could not connect to bastion host")
+			return fmt.Errorf("Сould not connect to %s", fullHost)
 		}
 		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
@@ -189,11 +190,13 @@ func (s *Client) Start() error {
 			}
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
+			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
 			client, err = ssh.Dial("tcp", addr, config)
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("failed to connect to host: %w", err)
+			lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
+			return fmt.Errorf("Failed to connect to master host (last %s): %w", lastHost, err)
 		}
 
 		s.sshClient = client
@@ -222,6 +225,7 @@ func (s *Client) Start() error {
 			s.Settings.ChoiceNewHost()
 		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
+		log.InfoF("Connect to target host '%s' with user '%s' through bastion host\n", addr, s.Settings.User)
 		targetConn, err = bastionClient.Dial("tcp", addr)
 		if err != nil {
 			return err
@@ -230,7 +234,8 @@ func (s *Client) Start() error {
 		return err
 	})
 	if err != nil {
-		return fmt.Errorf("failed to connect to target host through bastion host: %w", err)
+		lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
+		return fmt.Errorf("Failed to connect to target host through bastion host (last %s): %w", lastHost, err)
 	}
 
 	clientConn = targetClientConn
