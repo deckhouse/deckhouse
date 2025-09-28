@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -27,6 +28,7 @@ type CloudProvider interface {
 	NeedToUseTofu() bool
 	OutputExecutor(ctx context.Context, logger log.Logger) (OutputExecutor, error)
 	Executor(ctx context.Context, step Step, logger log.Logger) (Executor, error)
+	// AddAfterCleanupFunc provider should sort groups before execution
 	AddAfterCleanupFunc(group string, f AfterCleanupProviderFunc)
 	Cleanup() error
 	Name() string
@@ -119,13 +121,26 @@ func (r *AfterCleanupProviderRunner) Cleanup(logger log.Logger) {
 	r.afterCleanupMutex.Lock()
 	defer r.afterCleanupMutex.Unlock()
 
-	logger.LogDebugF("Call AfterCleanupProviderRunner on %s. AfterCleanup functions groups %d\n", r.providerName, len(r.afterCleanup))
-	for name, funcs := range r.afterCleanup {
-		logger.LogDebugF("Call cleanup functions %d on %s for group %s\n", len(funcs), r.providerName, name)
-		for _, f := range funcs {
+	groups := make([]string, 0, len(r.afterCleanup))
+	for group := range r.afterCleanup {
+		groups = append(groups, group)
+	}
+
+	sort.Strings(groups)
+
+	logger.LogDebugF("Call AfterCleanupProviderRunner on %s. AfterCleanup functions groups %d %v in sorted order\n", r.providerName, len(r.afterCleanup), groups)
+	for _, group := range groups {
+		funcs := r.afterCleanup[group]
+		logger.LogDebugF("Call cleanup functions %d on %s for group %s\n", len(funcs), r.providerName, group)
+		for i, f := range funcs {
+			logger.LogDebugF("Call cleanup function %d on %s for group %s\n", i, r.providerName, group)
 			f(logger)
+			logger.LogDebugF("Cleanup function %d on %s for group %s called\n", i, r.providerName, group)
 		}
+
+		logger.LogDebugF("Cleanup functions on %s for group %s called\n", r.providerName, group)
 	}
 
 	r.afterCleanup = make(map[string][]AfterCleanupProviderFunc)
+	logger.LogDebugF("Call AfterCleanupProviderRunner on %s. AfterCleanup map was cleaned\n", r.providerName)
 }

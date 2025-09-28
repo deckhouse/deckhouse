@@ -137,10 +137,11 @@ func applyAutomaticApproveSettings(r *Runner, settings AutoApproveSettings, stat
 	return r
 }
 
-func providerAfterCleanupFuncForRunner(r RunnerInterface) AfterCleanupProviderFunc {
-	return func(log.Logger) {
+func addProviderAfterCleanupFuncForRunner(cloudProvider CloudProvider, group string, r RunnerInterface) {
+	targetGroup := fmt.Sprintf("stopExecutorFor:%s", group)
+	cloudProvider.AddAfterCleanupFunc(targetGroup, func(log.Logger) {
 		r.Stop()
-	}
+	})
 }
 
 func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *config.MetaConfig, opts BaseInfraRunnerOptions) (RunnerInterface, error) {
@@ -162,7 +163,7 @@ func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *confi
 
 		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-		cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+		addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
@@ -172,7 +173,7 @@ func (f *Context) GetCheckBaseInfraRunner(ctx context.Context, metaConfig *confi
 		r.WithState(opts.ClusterState)
 	}
 
-	cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+	addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
@@ -197,7 +198,7 @@ func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.Met
 
 		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-		cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+		addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
@@ -206,7 +207,7 @@ func (f *Context) GetCheckNodeRunner(ctx context.Context, metaConfig *config.Met
 		WithState(opts.NodeState).
 		WithName(opts.NodeName)
 
-	cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+	addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
@@ -231,7 +232,7 @@ func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *conf
 
 		r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-		cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+		addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 		return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 	}
 
@@ -240,7 +241,7 @@ func (f *Context) GetCheckNodeDeleteRunner(ctx context.Context, metaConfig *conf
 		WithName(opts.NodeName).
 		WithState(opts.NodeState)
 
-	cloudProvider.AddAfterCleanupFunc(group, providerAfterCleanupFuncForRunner(r))
+	addProviderAfterCleanupFuncForRunner(cloudProvider, group, r)
 	return applyAutomaticSettingsForChangesRunner(r, f.stateChecker), nil
 }
 
@@ -271,8 +272,7 @@ func (f *Context) GetConvergeBaseInfraRunner(ctx context.Context, metaConfig *co
 
 	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-	cloudProvider.AddAfterCleanupFunc("base-infrastructure", providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, "base-infrastructure", r)
 	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
@@ -313,8 +313,7 @@ func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.
 
 	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-	cloudProvider.AddAfterCleanupFunc(opts.NodeName, providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
 	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
@@ -356,8 +355,7 @@ func (f *Context) GetConvergeNodeDeleteRunner(ctx context.Context, metaConfig *c
 
 	r.WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
-	cloudProvider.AddAfterCleanupFunc(opts.NodeName, providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
 	return applyAutomaticSettings(r, automaticSettings, f.stateChecker), nil
 }
 
@@ -375,7 +373,7 @@ func (f *Context) GetBootstrapBaseInfraRunner(ctx context.Context, metaConfig *c
 	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
 		WithVariables(metaConfig.MarshalConfig())
 
-	cloudProvider.AddAfterCleanupFunc("base-infrastructure", providerAfterCleanupFuncForRunner(r))
+	addProviderAfterCleanupFuncForRunner(cloudProvider, "base-infrastructure", r)
 
 	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil
 }
@@ -408,8 +406,7 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 		WithName(opts.NodeName).
 		WithLogger(opts.RunnerLogger)
 
-	cloudProvider.AddAfterCleanupFunc(opts.NodeName, providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
 	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil
 }
 
@@ -432,8 +429,7 @@ func (f *Context) GetDestroyBaseInfraRunner(ctx context.Context, metaConfig *con
 		WithVariables(metaConfig.MarshalConfig()).
 		WithAllowedCachedState(true)
 
-	cloudProvider.AddAfterCleanupFunc("base-infrastructure", providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, "base-infrastructure", r)
 	return applyAutomaticApproveSettings(r, opts.AutoApproveSettings, f.stateChecker), nil
 }
 
@@ -462,7 +458,6 @@ func (f *Context) GetDestroyNodeRunner(ctx context.Context, metaConfig *config.M
 		WithName(opts.NodeName).
 		WithAllowedCachedState(true)
 
-	cloudProvider.AddAfterCleanupFunc(opts.NodeName, providerAfterCleanupFuncForRunner(r))
-
+	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
 	return applyAutomaticApproveSettings(r, opts.AutoApproveSettings, f.stateChecker), nil
 }

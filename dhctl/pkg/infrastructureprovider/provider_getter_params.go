@@ -133,7 +133,7 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		return "", fmt.Errorf("Cannot prepare tmp dir %s: %w", tmpDir, err)
 	}
 
-	logger.LogDebugF("%s Bofore prepare '%s' Absolute path '%s'\n", logMsg, tmpDir, preparedTmpDir)
+	logger.LogDebugF("%s Before prepare '%s' Absolute path '%s'\n", logMsg, tmpDir, preparedTmpDir)
 
 	return preparedTmpDir, nil
 }

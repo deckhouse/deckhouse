@@ -18,8 +18,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
+
+	terminal "golang.org/x/term"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -170,6 +173,16 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	// Wait for the second signal to kill the main process immediately.
 	go func() {
 		<-interruptCh
+
+		// collect stacktrace for debug
+		buf := make([]byte, 20971520) // 20 mb
+		l := runtime.Stack(buf, true)
+		buf = buf[:l]
+		fd := int(os.Stdin.Fd())
+		if terminal.IsTerminal(fd) {
+			log.InfoF("\nKilled by signal twice. Probably dhctl have problems. Gorutines stack for debug:\n%s\n", string(buf))
+		}
+
 		log.ErrorLn("Killed by signal twice.")
 		os.Exit(1)
 	}()
