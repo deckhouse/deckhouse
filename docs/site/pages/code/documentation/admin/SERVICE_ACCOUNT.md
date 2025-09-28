@@ -14,7 +14,7 @@ A service account is a user account intended for use in automated scripts. These
 
 ### Rails console
 
-To create a service account, use the Rails console provided in the [Toolbox](https://deckhouse.io/products/kubernetes-platform/modules/code/stable/maintenance.html#toolbox) utility set.
+To create a service account, use the Rails console provided in the [Toolbox](/modules/code/stable/maintenance.html#toolbox) utility set.
 Open the console by running the following command:
 
 ```shell

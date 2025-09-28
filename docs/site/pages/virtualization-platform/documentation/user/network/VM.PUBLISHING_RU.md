@@ -245,7 +245,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
 
 Чтобы включить аутентификацию через `Dex` для приложения, выполните следующие шаги:
 
-1. Создайте кастомный ресурс [DexAuthenticator](../../../reference/cr/dexauthenticator.html). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
+1. Создайте кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
    Пример ресурса `DexAuthenticator`:
 

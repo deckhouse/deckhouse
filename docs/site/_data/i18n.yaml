@@ -176,6 +176,9 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_modules:
+    en: Search by modules documentation...
+    ru: Поиск по документации модулей...
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -194,6 +197,9 @@ common:
   all_namespaces:
     en: All namespaces
     ru: Все пространства имен
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии

@@ -1,0 +1,8 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: en/virtualization-platform/documentation/search.json
+---
+
+{% include search4product.liquid productCode=page.product_code %}
