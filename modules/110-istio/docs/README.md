@@ -178,12 +178,12 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 
 #### Application with Istio turned off
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_disabled_en.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_disabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1BtvvtETQENVaWkEpF00zpi7xjFxfWu3ddZmvCF3f2LQ/ --->
 
 #### Application with Istio turned on
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_enabled_en.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_enabled_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fg_3eVA9JLizZaiN8W5vpkzOE6y9eD-4Iu10At4LN9U/ --->
 
 ## Activating Istio to work with the application
@@ -259,7 +259,7 @@ Below are their fundamental differences:
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
 - You also need to share information about government services to use the federation. You can do that using ServiceEntry. A service entry defines the public ingress-gateway address of the B cluster so that services of the A cluster can communicate with the bar service in the B cluster.
 
-<div data-presentation="../../presentations/istio/federation_common_principles_en.pdf"></div>
+<div data-presentation="presentations/federation_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1klrLIXqe-zl9Dspbsu9nTI1a1nD3v7HHQqIN4iqF00s/ --->
 
 #### Enabling the federation
@@ -274,7 +274,7 @@ Enabling federation (via the `istio.federation.enabled = true` module parameter)
 
 #### Managing the federation
 
-<div data-presentation="../../presentations/istio/federation_istio_federation_en.pdf"></div>
+<div data-presentation="presentations/federation_istio_federation_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1dYOeYKGaGOsgskWCDDcVJfXcMC9iQ4cvaCkhyqrDKgg/ --->
 
 To establish a federation, you must:
@@ -307,7 +307,7 @@ In the `.spec.ports` section of `services`, each port must have the `name` field
 
 #### General principles
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_en.pdf"></div>
+<div data-presentation="presentations/multicluster_common_principles_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fmVDf-6yDSCEHhg_2vSvZcRkLSkQtUYrE6MISjZdb8Q/ --->
 
 - Multicluster requires mutual trust between clusters. Thereby, to use multiclustering, you have to make sure that both clusters (say, A and B) trust each other. From a technical point of view, this is achieved by a mutual exchange of root certificates.
@@ -328,7 +328,7 @@ Enabling the multicluster (via the `istio.multicluster.enabled = true` module pa
 
 #### Managing the multicluster
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_en.pdf"></div>
+<div data-presentation="presentations/multicluster_istio_multicluster_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1fy3jIynIPTrJ5Whn4eqQxeLk7ORtipDxBWP3By4buoc/ --->
 
 To create a multicluster, you need to create a set of `IstioMulticluster` resources in each cluster that describe all the other clusters.

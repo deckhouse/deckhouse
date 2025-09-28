@@ -184,12 +184,12 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Приложение с выключенным Istio
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_disabled_ru.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_disabled_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1_lw3EyDNTFTYNirqEfrRANnEAVjGhrOCdFJc-zCOuvs/ --->
 
 #### Приложение с включенным Istio
 
-<div data-presentation="../../presentations/istio/request_lifecycle_istio_enabled_ru.pdf"></div>
+<div data-presentation="presentations/request_lifecycle_istio_enabled_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1gQfX9ge2vhp74yF5LOfpdK2nY47l_4DIvk6px_tAMPU/ --->
 
 ## Как активировать Istio для приложения
@@ -260,7 +260,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 - Федерация требует установления взаимного доверия между кластерами. Соответственно, для установления федерации нужно в кластере A сделать кластер Б доверенным и аналогично в кластере Б сделать кластер А доверенным. Это достигается взаимным обменом корневыми сертификатами.
 - Для прикладной эксплуатации федерации необходимо также обменяться информацией о публичных сервисах. Чтобы опубликовать сервис bar из кластера Б в кластере А, необходимо в кластере А создать ресурс ServiceEntry, который описывает публичный адрес ingress-gateway кластера Б.
 
-<div data-presentation="../../presentations/istio/federation_common_principles_ru.pdf"></div>
+<div data-presentation="presentations/federation_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1EI2MQMuVCGACnLNBXMGVDNJVhwU3vJYtVcHhrWfjLDc/ --->
 
 #### Включение федерации
@@ -275,7 +275,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление федерацией
 
-<div data-presentation="../../presentations/istio/federation_istio_federation_ru.pdf"></div>
+<div data-presentation="presentations/federation_istio_federation_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1MpmtwJwvSL32EdwOUNpJ6GjgWt0gplzjqL8OOprNqvc/ --->
 
 Для построения федерации необходимо сделать следующее:
@@ -307,7 +307,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Общие принципы
 
-<div data-presentation="../../presentations/istio/multicluster_common_principles_ru.pdf"></div>
+<div data-presentation="presentations/multicluster_common_principles_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1WeNrp0Ni2Tz3_Az0f45rkWRUZxZUDx93Om5MB3sEod8/ --->
 
 - Мультикластер требует установления взаимного доверия между кластерами. Соответственно, для построения мультикластера нужно в кластере A сделать кластер Б доверенным и в кластере Б сделать кластер А доверенным. Технически это достигается взаимным обменом корневыми сертификатами.
@@ -328,7 +328,7 @@ Istio позволяет осуществлять сбор трейсов с п�
 
 #### Управление мультикластером
 
-<div data-presentation="../../presentations/istio/multicluster_istio_multicluster_ru.pdf"></div>
+<div data-presentation="presentations/multicluster_istio_multicluster_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1D3nuoC0okJQRCOY4teJ6p598Bd4JwPXZT5cdG0hW8Hc/ --->
 
 Для сборки мультикластера необходимо в каждом кластере создать набор ресурсов `IstioMulticluster`, которые описывают все остальные кластеры.
