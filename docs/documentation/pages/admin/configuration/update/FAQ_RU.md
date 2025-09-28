@@ -83,8 +83,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](https://deckhouse.ru/tech-support/).
-- Попросите помощи у [сообщества](https://deckhouse.ru/community/).
+- Соберите отладочную информацию и свяжитесь с [технической поддержкой DKP](/tech-support/).
+- Попросите помощи у [сообщества](/community/).
 
 ## Как узнать, что для кластера доступна новая версия DKP?
 

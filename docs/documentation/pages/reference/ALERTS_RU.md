@@ -4,9 +4,11 @@ permalink: ru/reference/alerts.html
 lang: ru
 ---
 
-<!-- mirrored on /admin/configuration/monitoring/alert-settings.html  -->
+На странице приведен список алертов мониторинга в Deckhouse Kubernetes Platform.
 
-На странице приведен список всех алертов мониторинга в Deckhouse Kubernetes Platform.
+{% alert %}
+Список не содержит алертов подключаемых модулей.
+{% endalert %}
 
 Алерты сгруппированы по модулям. Справа от названия алерта указаны иконки минимальной редакции DKP в которой доступен алерт и уровня критичности алерта (severity).
 

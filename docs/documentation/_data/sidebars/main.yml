@@ -1221,14 +1221,6 @@ entries:
                 en: Architecture of security event audit
                 ru: Архитектура аудита событий безопасности
               url: /architecture/security/runtime-audit.html
-            - title:
-                en: Common settings
-                ru: Общие настройки
-              url: /architecture/security/used_directories.html
-            - title:
-                en: Sysctl parameters
-                ru: Параметры sysctl
-              url: /architecture/security/sysctl.html
         - title:
             en: Direct mode architecture (registry)
             ru: Архитектура режима Direct (registry)
@@ -1266,9 +1258,17 @@ entries:
             ru: Алерты
           url: /reference/alerts.html
         - title:
+            en: Sysctl parameters
+            ru: Параметры sysctl
+          url: /reference/sysctl.html
+        - title:
             en: Used software
             ru: Используемое ПО
           url: /reference/oss_info.html
+        - title:
+            en: Used directors
+            ru: Используемые директории
+          url: /reference/used_directories.html
     - title:
         en: Console utilities
         ru: Консольные утилиты

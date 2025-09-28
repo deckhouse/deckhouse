@@ -17,7 +17,7 @@ When switching to this module from the`ceph-csi` module, an automatic migration 
 1. Restore operators to a working state.
    If the CephCSIDriver resource has a `spec.cephfs.storageClasses.pool` field set to a value other than `cephfs_data`, the migration will fail with an error.
    If a Ceph StorageClass was created manually and not via the CephCSIDriver resource, manual migration is required.
-   In these cases, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+   In these cases, contact the [Deckhouse technical support](/tech-support/).
 {% endalert %}
 
 ## Enabling the module

@@ -7,7 +7,7 @@ Deckhouse provides support for Huawei Dorado storage systems, enabling volume ma
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.huawei.com` CSI driver is not allowed.  
-Only Huawei Dorado storage systems are supported. For other Huawei storage systems, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+Only Huawei Dorado storage systems are supported. For other Huawei storage systems, contact the [Deckhouse technical support](/tech-support/).
 {% endalert %}
 
 This page provides instructions on connecting Huawei Dorado to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.

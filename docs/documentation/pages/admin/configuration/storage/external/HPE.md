@@ -7,7 +7,7 @@ Deckhouse includes support for HPE 3PAR storage systems, enabling volume managem
 
 {% alert level="warning" %}
 User-created StorageClass for the `csi.hpe.com` CSI driver is not allowed.  
-Only HPE 3PAR storage systems are supported. For other HPE storage systems, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+Only HPE 3PAR storage systems are supported. For other HPE storage systems, contact the [Deckhouse technical support](/tech-support/).
 {% endalert %}
 
 This page provides instructions on connecting HPE 3PAR to Deckhouse, configuring the connection, creating StorageClass, and verifying storage functionality.

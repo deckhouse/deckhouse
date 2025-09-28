@@ -300,5 +300,5 @@ When a block in a thin volume is freed via `discard` by the guest operating syst
 
 ## System requirements and recommendations
 
-- Use stock kernels provided with [supported distributions](https://deckhouse.io/documentation/v1/supported_versions.html#linux).
+- Use stock kernels provided with [supported distributions](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux).
 - Do not use another SDS (Software Defined Storage) to provide disks for SDS Deckhouse.

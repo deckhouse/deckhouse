@@ -8,7 +8,7 @@ lang: ru
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.huawei.com` пользователем запрещено.
-Модулем поддерживаются только СХД Huawei Dorado. Для использования других СХД Huawei свяжитесь [с технической поддержкой Deckhouse](https://deckhouse.ru/tech-support/).
+Модулем поддерживаются только СХД Huawei Dorado. Для использования других СХД Huawei свяжитесь [с технической поддержкой Deckhouse](/tech-support/).
 {% endalert %}
 
 На этой странице представлены инструкции по подключению Huawei Dorado к Deckhouse, настройке соединения, созданию StorageClass, а также проверке работоспособности хранилища.

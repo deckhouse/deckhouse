@@ -1,6 +1,7 @@
 ---
-title: Параметры sysctl
-permalink: ru/architecture/security/sysctl.html
+title: Параметры sysctl, настраиваемые платформой
+description: "Список параметров sysctl, которые DKP настраивает и поддерживает на узлах кластера."
+permalink: ru/reference/sysctl.html
 lang: ru
 ---
 

@@ -5,7 +5,7 @@ permalink: en/admin/configuration/registry/switching-editions.html
 
 ## Switching DKP from CE to EE
 
-A valid license key is required. If needed, you can [request a temporary license](https://deckhouse.io/products/enterprise_edition.html).
+A valid license key is required. If needed, you can [request a temporary license](/products/enterprise_edition.html).
 
 {% alert level="warning" %}
 This instruction assumes the use of the public container registry: `registry.deckhouse.ru`.
@@ -954,7 +954,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/exampl
 
 {% alert level="warning" %}
 - The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
-- For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](https://deckhouse.io/products/enterprise_edition.html).
+- For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](/products/enterprise_edition.html).
 - The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](../third-party.html).
 - The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules.
 - All commands are executed on the master node of the existing cluster with `root` user.

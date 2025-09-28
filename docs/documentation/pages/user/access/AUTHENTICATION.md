@@ -117,7 +117,7 @@ Applications that can handle authentication requests on their own and act as OID
 
 To enable authentication for such an application, follow these steps:
 
-1. Create a [DexClient](https://deckhouse.io/documentation/v1/modules/user-authn/cr.html#dexclient) object in the application's namespace.
+1. Create a [DexClient](/modules/user-authn/cr.html#dexclient) object in the application's namespace.
 
    After the DexClient object is created, Deckhouse will perform the following:
 

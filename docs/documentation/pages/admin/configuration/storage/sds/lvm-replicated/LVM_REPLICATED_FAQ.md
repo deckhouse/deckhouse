@@ -711,7 +711,7 @@ If no faulty resources are found, migration was successful.
 
 > **Warning.** DRBDStoragePool and DRBDStorageClass resources will be automatically migrated to ReplicatedStoragePool and ReplicatedStorageClass. No user action is required.
 
-The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain. If they do, contact the [Deckhouse technical support](https://deckhouse.io/tech-support/).
+The logic of these resources remains unchanged. However, verify that no DRBDStoragePool or DRBDStorageClass resources remain. If they do, contact the [Deckhouse technical support](/tech-support/).
 
 ## Reasons to avoid RAID with sds-replicated-volume
 

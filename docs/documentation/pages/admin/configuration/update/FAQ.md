@@ -87,8 +87,8 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
   d8 k -n d8-system logs -f -l app=deckhouse | jq -Rr 'fromjson? | .msg'
   ```
 
-- Collect debug information and contact [DKP technical support](https://deckhouse.ru/tech-support/).
-- Ask for help from the [community](https://deckhouse.io/community/).
+- Collect debug information and contact [DKP technical support](/tech-support/).
+- Ask for help from the [community](/community/).
 
 ## How can I know when a new DKP version is available for the cluster?
 

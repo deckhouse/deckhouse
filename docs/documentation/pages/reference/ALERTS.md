@@ -2,9 +2,12 @@
 title: "The list of alerts"
 permalink: en/reference/alerts.html
 ---
-<!-- mirrored on /admin/configuration/monitoring/alert-settings.html  -->
 
 The page displays a list of all alerts of monitoring in the Deckhouse Kubernetes Platform.
+
+{% alert %}
+The list does not contain alerts of modules from a source.
+{% endalert %}
 
 Alerts are grouped by modules. To the right of the alert name, there are icons indicating the minimum DKP edition in which the alert is available, and the alert severity.
 
