@@ -28,7 +28,7 @@
       "web-interface"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/commander/stable/"
+    "path": "/modules/commander/stable/"
   },
   "commander-agent": {
     "editions": [
@@ -56,7 +56,7 @@
       "web-interface"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/code/stable/"
+    "path": "/modules/code/stable/"
   },
   "console": {
     "editions": [
@@ -84,7 +84,7 @@
       "web-interface"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/console/stable/"
+    "path": "/modules/console/stable/"
   },
   "csi-ceph": {
     "editions": [
@@ -98,7 +98,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-ceph/stable/"
+    "path": "/modules/csi-ceph/stable/"
   },
   "csi-hpe": {
     "editions": [
@@ -108,7 +108,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-hpe/stable/"
+    "path": "/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
     "editions": [
@@ -118,7 +118,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-huawei/stable/"
+    "path": "/modules/csi-huawei/stable/"
   },
   "csi-nfs": {
     "editions": [
@@ -132,7 +132,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-nfs/stable/"
+    "path": "/modules/csi-nfs/stable/"
   },
   "csi-netapp": {
     "editions": [
@@ -146,7 +146,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-netapp/stable/"
+    "path": "/modules/csi-netapp/stable/"
   },
   "csi-s3": {
     "editions": [
@@ -156,7 +156,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-s3/stable/"
+    "path": "/modules/csi-s3/stable/"
   },
   "csi-scsi-generic": {
     "editions": [
@@ -166,7 +166,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-scsi-generic/stable/"
+    "path": "/modules/csi-scsi-generic/stable/"
   },
   "csi-yadro-tatlin-unified": {
     "editions": [
@@ -176,7 +176,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/csi-yadro-tatlin-unified/stable/"
+    "path": "/modules/csi-yadro-tatlin-unified/stable/"
   },
   "delivery-kit": {
     "editions": [
@@ -191,7 +191,7 @@
       "delivery"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/delivery-kit/stable/"
+    "path": "/modules/delivery-kit/stable/"
   },
   "managed-postgres": {
     "editions": [
@@ -201,7 +201,7 @@
       "database"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/managed-postgres/stable/"
+    "path": "/modules/managed-postgres/stable/"
   },
   "managed-memcached": {
     "editions": [
@@ -211,7 +211,7 @@
       "database"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/managed-memcached/stable/"
+    "path": "/modules/managed-memcached/stable/"
   },
   "neuvector": {
     "editions": [
@@ -221,7 +221,7 @@
       "security"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/neuvector/stable/"
+    "path": "/modules/neuvector/stable/"
   },
   "observability": {
     "editions": [
@@ -259,7 +259,7 @@
       "application"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/observability-platform/stable/"
+    "path": "/modules/observability-platform/stable/"
   },
   "operator-argo": {
     "editions": [
@@ -269,7 +269,7 @@
       "delivery"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/operator-argo/stable/"
+    "path": "/modules/operator-argo/stable/"
   },
   "pod-reloader": {
     "tags": [
@@ -283,7 +283,7 @@
       "ee"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/pod-reloader/stable/"
+    "path": "/modules/pod-reloader/stable/"
   },
   "runtime-audit-engine": {
     "tags": [
@@ -295,7 +295,7 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/runtime-audit-engine/stable/"
+    "path": "/modules/runtime-audit-engine/stable/"
   },
   "sdn": {
     "editions": [
@@ -305,7 +305,7 @@
       "network"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sdn/stable/"
+    "path": "/modules/sdn/stable/"
   },
   "sds-local-volume": {
     "editions": [
@@ -328,7 +328,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-local-volume/stable/"
+    "path": "/modules/sds-local-volume/stable/"
   },
   "sds-node-configurator": {
     "editions": [
@@ -342,7 +342,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-node-configurator/stable/"
+    "path": "/modules/sds-node-configurator/stable/"
   },
   "sds-replicated-volume": {
     "editions": [
@@ -364,7 +364,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/sds-replicated-volume/stable/"
+    "path": "/modules/sds-replicated-volume/stable/"
   },
   "secrets-store-integration": {
     "editions": [
@@ -380,7 +380,7 @@
       "security"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/secrets-store-integration/stable/"
+    "path": "/modules/secrets-store-integration/stable/"
   },
   "snapshot-controller": {
     "editions": [
@@ -396,7 +396,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/snapshot-controller/stable/"
+    "path": "/modules/snapshot-controller/stable/"
   },
   "storage-volume-data-manager": {
     "editions": [
@@ -410,7 +410,7 @@
       "storage"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/storage-volume-data-manager/stable/"
+    "path": "/modules/storage-volume-data-manager/stable/"
   },
   "static-routing-manager": {
     "editions": [
@@ -420,7 +420,7 @@
       "network"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/static-routing-manager/early-access/"
+    "path": "/modules/static-routing-manager/early-access/"
   },
   "stronghold": {
     "editionsWithRestrictions": [
@@ -446,7 +446,7 @@
       "web-interface"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/stronghold/stable/"
+    "path": "/modules/stronghold/stable/"
   },
   "virtualization": {
     "editions": [
@@ -461,6 +461,6 @@
       "virtualization"
     ],
     "external": "true",
-    "path": "/products/kubernetes-platform/modules/virtualization/stable/"
+    "path": "/modules/virtualization/stable/"
   }
 }

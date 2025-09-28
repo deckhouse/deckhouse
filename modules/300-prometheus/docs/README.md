@@ -67,7 +67,7 @@ Deckhouse allows you to flexibly configure alerts for each namespace and specify
 
 ## Monitoring Management as code (IaC approach)
 
-The capabilities of the DKP monitoring system can be expanded by using the [Observability module](/products/kubernetes-platform/modules/observability/stable/). It is used to implement:
+The capabilities of the DKP monitoring system can be expanded by using the [Observability module](/modules/observability/stable/). It is used to implement:
 
 - managing alerts;
 - differentiation of access rights to settings and monitoring data;
