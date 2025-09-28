@@ -137,7 +137,7 @@ image: web-frontend
 imageSpec:
   config:
     workingDir: "/app"
-# TODO use the common image fro nginx
+# TODO use the common image for nginx
 fromImage: builder/alpine-3.20
 shell:
   beforeInstall:

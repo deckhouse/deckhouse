@@ -64,11 +64,6 @@ for page in ${pages}; do
     module_original_name=$(echo $page | cut -d\/ -f1)
     module_name=$(echo $module_original_name | sed -E 's#^[0-9]+-##')
 
-    # Skip modules, which are listed in modules_menu_skip file
-    # TODO: Use docs/documentation/_data/modules/excludedModules.json instead
-    #if grep -Fxq "$module_name" _tools/modules_menu_skip; then
-    #    continue
-    #fi
     if jq -e --arg name "$module_name" '.[] | select(. == $name)' _tools/modules_excluded.json &>/dev/null; then
         continue
     fi
