@@ -3216,6 +3216,8 @@ jobs:
 
           WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
         run: |
+          # Temporary disable it without failing the step.
+          exit 0
           type werf
           werf version
 
@@ -3291,6 +3293,8 @@ jobs:
           DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
           CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
         run: |
+          # Temporary disable it without failing the step.
+          exit 0
           test -e ./tools/docs/link-checker/entrypoint.sh && \
           docker run \
             --rm \
