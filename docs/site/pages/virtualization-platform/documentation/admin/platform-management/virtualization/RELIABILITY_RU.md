@@ -125,7 +125,7 @@ ColdStandby обеспечивает механизм восстановлени
 Для работы данного механизма необходимо выполнить следующие требования:
 
 - Для политики запуска виртуальной машины (`.spec.runPolicy`) должно быть установлено одно из следующих значений: `AlwaysOnUnlessStoppedManually`, `AlwaysOn`;
-- На узлах, где запущены виртуальные машины, должен быть включён механизм [Fencing](../../../../reference/cr/nodegroup.html#nodegroup-v1-spec-fencing-mode).
+- На узлах, где запущены виртуальные машины, должен быть включён механизм [Fencing](/modules/node-manager/cr.html#nodegroup#nodegroup-v1-spec-fencing-mode).
 
 Рассмотрим как это работает на примере:
 

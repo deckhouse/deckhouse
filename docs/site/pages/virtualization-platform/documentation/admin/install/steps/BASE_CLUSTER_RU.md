@@ -12,11 +12,11 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
 
   > Использовать ресурс ClusterConfiguration в конфигурации необходимо только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом ClusterConfiguration, ресурс StaticClusterConfiguration не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
