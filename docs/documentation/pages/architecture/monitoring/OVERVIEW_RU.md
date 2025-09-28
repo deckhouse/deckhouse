@@ -6,7 +6,7 @@ lang: ru
 
 ## Состав и схема взаимодействия компонентов мониторинга
 
-![Схема взаимодействия](../../images/prometheus/prometheus_monitoring_new.svg)
+![Схема взаимодействия](../../images/prometheus/prometheus_monitoring.svg)
 
 ### Компоненты, устанавливаемые DKP
 

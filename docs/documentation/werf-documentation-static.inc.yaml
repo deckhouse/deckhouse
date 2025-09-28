@@ -20,67 +20,6 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-{{ if .BuildModules }}
-        #echo '[] Creating modules.yml ...'
-        #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
-        ## Creating list of ALL the modules...
-        #cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
-
-        ## The list of modules, which documentation should be excluded from the site...
-        ## TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
-        #cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
-
-        echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
-        for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
-
-        echo '[] Preparing modules structure...'
-        export MODULES_SRC_DIR=/src/modules
-        export MODULES_DST_EN=/srv/jekyll-data/documentation/modules_en
-        export MODULES_DST_RU=/srv/jekyll-data/documentation/modules_ru
-        bash _tools/modules_prepare.sh
-
-        echo '[] Adding permalinks for modules...'
-        for file in $(find . -regex '.*modules_\(ru\|en\)/\([0-9]\+-\)\?[^/]\+/docs/[^/]\+\.\(md\|MD\)' -print | grep -i '\.md$'); do
-          ## Has frontmatter in the file
-          if $(awk 'BEGIN { in_fm = 0; has_fm = 0 }
-                    NR == 1 && /^---$/ { in_fm = 1; next }
-                    in_fm == 1 && /^---$/ { if (NR > 2) { has_fm = 1 } ; exit }
-                    END { exit !has_fm }' "${file}"); then
-          #  #if cat $file | tr -d '\n' | grep -qv "^---.*permalink: .*---"; then
-          # Remove existing permalink if it exists
-          sed -i '0,/^permalink: .*$/ {/^permalink: .*$/d;}' "${file}"
-          # Add permalink
-          PERMALINK="/$(echo "${file}" | sed -E 's#(.*/)?modules_(en|ru)/([0-9]+-)?([^/]+)/docs/(.+)\.md#\2/modules/\4/\5.html#I' | tr '[:upper:]' '[:lower:]' | sed 's#readme\.html$##I')"
-          sed -i "1apermalink: ${PERMALINK}" "${file}"
-          fi
-        done
-
-        echo '[] Generating configuration schemas...'
-        export MODULES_DIR=/src/modules
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash _tools/modules_generate_configuration.sh
-
-        echo
-        echo '[] Generating cluster configuration schemas...'
-        export MODULES_DIR=modules_en
-        bash _tools/generate_cluster_configuration.sh
-        export MODULES_DIR=modules_ru MODULES_LANG=ru
-        bash _tools/generate_cluster_configuration.sh
-
-        echo
-        echo "[] Generating CR schemas..."
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_cr.sh
-        export MODULES_DIR=modules_ru
-        bash _tools/modules_generate_cr.sh
-
-        mkdir -p _data/schemas/crds/
-        find "/src/modules" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "_data/schemas/crds/" \;
-
-{{ else }}{{/* .BuildModules */}}
-
         echo
         echo '[] Preparing OSS license info...'
         export OSS_SOURCE_DIR=/src/modules-metadata
@@ -89,7 +28,6 @@ shell:
 
         echo "Render global OpenAPI DKP schemas..."
         bash _tools/prepare_resources.sh
-{{ end }}{{/* .BuildModules */}}
 
         echo '[] Extracting the default Kubernetes version...'
         echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
@@ -155,10 +93,7 @@ git:
   group: jekyll
   includePaths:
 {{ if eq .ModuleName "website-docs" }}
-    - site/_config.yml
     - site/_includes/head.html
-    - site/Gemfile
-    - site/Gemfile.lock
 {{ else }}
     - site
 {{ end }}
@@ -171,6 +106,8 @@ git:
     - '**/.helm'
     - documentation/pages/internal
     - documentation/config
+    - documentation/search-embedded-modules-*
+    - documentation/pages/drafts
 {{ if ne .ModuleName "website-docs" }}
     - site/pages/*.html
     - site/_includes/footer.html
@@ -194,6 +131,3 @@ git:
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules-bundles.inc.yaml" .ModulePath)) . }}
-{{ if .BuildModules }}
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules.inc.yaml" .ModulePath)) . }}
-{{ end }}

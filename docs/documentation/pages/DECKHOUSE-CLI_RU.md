@@ -25,7 +25,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 
   - [ручная загрузка образов в изолированный приватный registry](./installing/#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-dkp-в-приватный-registry).
 
-* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
+* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
     <div markdown="0">

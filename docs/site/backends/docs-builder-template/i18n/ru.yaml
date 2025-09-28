@@ -6,6 +6,8 @@ modules2: модулей
 module: модуль
 module_versions: Версии модуля
 module_version: Версия модуля
+channel_or_version: "Канал/версия"
+channel_or_version_of_module: "Канал/версия модуля"
 deckhouse: deckhouse
 documentation: документация
 Documentation: Документация
@@ -76,7 +78,7 @@ of_string: строк
 boolean: булевый
 of_boolean: булевых значений
 version: версия
-version_of_module: "Версия модуля"
+version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
 parameters: параметры

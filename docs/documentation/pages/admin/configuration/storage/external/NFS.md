@@ -21,7 +21,7 @@ The following conditions must be met for the `csi-nfs` module to work:
 
 For optimal module operation, it is recommended to:
 
-- For automatic pod restarts when TLS parameters change, enable the [pod-reloader](/products/kubernetes-platform/modules/pod-reloader/stable/) module (enabled by default).
+- For automatic pod restarts when TLS parameters change, enable the [pod-reloader](/modules/pod-reloader/stable/) module (enabled by default).
 - Use stable versions of NFS servers with support for required protocols.
 
 {% alert level="warning" %}

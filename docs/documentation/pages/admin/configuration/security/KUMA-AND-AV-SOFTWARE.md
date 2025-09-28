@@ -189,7 +189,7 @@ On the KUMA side, configure the appropriate resources for receiving events.
 If antivirus software is installed on DKP cluster nodes (for example, Kaspersky Endpoint Security for Linux, KESL),
 you may need to exclude Deckhouse service directories from scanning to avoid false positives.
 
-List of Deckhouse service directories (also available [CSV format](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-directories.csv)):
+List of Deckhouse service directories (also available [CSV format](/products/kubernetes-platform/documentation/v1/deckhouse-directories.csv)):
 
 | Directory | Purpose |
 | --------- | ------- |
@@ -223,7 +223,7 @@ To ensure DKP functions correctly with KESL installed, follow these steps:
 
 1. Make sure node resources meet the requirements of:
 
-   - [DKP](https://deckhouse.io/products/kubernetes-platform/guides/production.html#resource-requirements)
+   - [DKP](/products/kubernetes-platform/guides/production.html#resource-requirements)
    - [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm)
 
 1. For performance optimization, follow the [official Kaspersky recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).

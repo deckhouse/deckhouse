@@ -10,7 +10,9 @@ layout: default
       {%- include toc.html %}
       {%- endunless %}
       {{ content }}
-      {%- include feedback.html %}
+      {%- if page.feedback != false %}
+       {%- include feedback.html %}
+      {%- endif %}
     </div>
   </div>
 </div>

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   router:
     image: $WERF_WEB_ROUTER_DOCKER_IMAGE_NAME

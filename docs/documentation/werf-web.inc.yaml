@@ -1,5 +1,8 @@
+{{ if or (eq $.Env "development") (eq $.Env "local") }}
+---
+# Nginx for serving documentation static files
+# Image website-docs/web (for local running and development)
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if eq .ModuleName "website-docs" }}
 fromImage: builder/alpine-3.20
 shell:
   beforeSetup:
@@ -7,7 +10,7 @@ shell:
   setup:
   - |
       cat <<"EOD" > /etc/nginx/nginx.conf
-      {{- .Files.Get ".werf/nginx.conf" | nindent 6 }}
+      {{ .Files.Get ".werf/nginx.conf" | nindent 6 }}
       EOD
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
@@ -17,24 +20,9 @@ import:
 imageSpec:
   config:
     entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
-{{ else }}
-fromImage: common/nginx-static
-git:
-{{- include "image mount points" . }}
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
-  add: /app/_site/documentation
-  to: /app/platform
-  before: setup
-  excludePaths:
-  - '*/gs/'
-  - '*/guides/'
-  - search-index.json
-  - '*/sitemap*.xml'
-  - '*/robots.txt'
-imageSpec:
-  config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+---
 {{ end }}
 ---
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
+{{ tpl (.Files.Get "werf-s3-loader.inc.yaml") $ }}
+{{ tpl (.Files.Get "werf-documentation-static.inc.yaml") $ }}
+{{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}

@@ -710,7 +710,7 @@ StorageClass в данном модуле управляются через ре
 
 > **Внимание.** Ресурсы DRBDStoragePool и DRBDStorageClass в процессе будут автоматически мигрированы на ReplicatedStoragePool и ReplicatedStorageClass. Ручное вмешательство при этом не требуется.
 
-Логика работы этих ресурсов не изменится. Однако, стоит проверить, не осталось ли в кластере ресурсов DRBDStoragePool или DRBDStorageClass. Если после миграции они существуют, обратитесь [в техническую поддержку Deckhouse](https://deckhouse.ru/tech-support/).
+Логика работы этих ресурсов не изменится. Однако, стоит проверить, не осталось ли в кластере ресурсов DRBDStoragePool или DRBDStorageClass. Если после миграции они существуют, обратитесь [в техническую поддержку Deckhouse](/tech-support/).
 
 ## Причины отказа от RAID с sds-replicated-volume
 

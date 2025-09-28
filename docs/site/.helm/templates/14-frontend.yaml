@@ -6,6 +6,7 @@ metadata:
   name: frontend
   annotations:
     "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
   labels:
     service: frontend
     app.kubernetes.io/part-of: deckhouse-docs
@@ -24,6 +25,26 @@ spec:
         - name: deckhouse-registry-site
       priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
       serviceAccountName: docs-builder
+      initContainers:
+        - name: init
+          image: {{ index .Values.werf.image "web-frontend" }}
+          command: ["sh"]
+          args: ["/scripts/channels-convert.sh"]
+          env:
+            - name: CHANNELS_CONF_PATH
+              value: "/app/channels-data/channels.conf"
+            - name: CHANNELS_YAML_PATH
+              value: "/app/channels.yaml"
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 65534
+            runAsUser: 65534
+          volumeMounts:
+            - name: channels-yaml
+              mountPath: /app/channels.yaml
+              subPath: channels.yaml
+            - name: channels-data
+              mountPath: /app/channels-data
       containers:
         - name: web
           command: ["nginx", "-g", "daemon off;"]
@@ -55,6 +76,11 @@ spec:
           volumeMounts:
             - mountPath: /cache
               name: download-cache
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: channels-data
+              mountPath: /app/channels-data
         - name: router
           command: ["/app/server"]
           image: {{ index .Values.werf.image "web-router" }}
@@ -83,16 +109,21 @@ spec:
               port: 8082
             {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
-            - name: release-channels
+            - name: channels-yaml
               mountPath: /app/root/en/includes/release-channels
-            - name: release-channels
+            - name: channels-yaml
               mountPath: /app/root/ru/includes/release-channels
       volumes:
+        - name: nginx-config
+          configMap:
+            name: doc-nginx-config
         - name: download-cache
           emptyDir: {}
-        - name: release-channels
+        - name: channels-yaml
           configMap:
             name: release-channels-data
+        - name: channels-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

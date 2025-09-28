@@ -197,6 +197,9 @@ common:
   all_namespaces:
     en: All namespaces
     ru: Все пространства имен
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
