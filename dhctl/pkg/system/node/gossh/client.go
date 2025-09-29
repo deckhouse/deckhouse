@@ -128,7 +128,7 @@ func (s *Client) Start() error {
 			return err
 		})
 		if err != nil {
-			return fmt.Errorf("Сould not connect to %s", fullHost)
+			return fmt.Errorf("Could not connect to %s", fullHost)
 		}
 		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
