@@ -61,7 +61,7 @@ steps:
       WERF_ENV: "EE"
       DECKHOUSE_REGISTRY_READ_HOST: "${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}"
       CHECKER_IMAGE: "${{vars.DOC_LINK_CHECKER_IMAGE}}"
-  {!{ if eq $mode "release" }!}
+{!{ if eq $mode "release" }!}
       WEB_REGISTRY_PATH: ${{steps.check_rw_registry.outputs.web_registry_path}}
 {!{- else }!}
       WEB_REGISTRY_PATH: ${{steps.check_dev_registry.outputs.web_registry_path}}
@@ -237,7 +237,9 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+{!{- if eq $env "production" }!}
     WERF_REQUIRE_BUILT_IMAGES: "true"
+{!{- end }!}
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -302,7 +304,9 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+{!{- if eq $env "production" }!}
     WERF_REQUIRE_BUILT_IMAGES: "true"
+{!{- end }!}
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
