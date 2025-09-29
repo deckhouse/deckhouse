@@ -414,7 +414,7 @@ dhctl bootstrap \
 1. Проверки для установки облачного кластера:
    - Конфигурация виртуальной машины master-узла удовлетворяет минимальным требованиям.
    - API облачного провайдера доступно с узлов кластера.
-   - Проверка конфигурации [Yandex Cloud с NAT Instance](../modules/cloud-provider-yandex/layouts.html#withnatinstance).
+   - Проверка конфигурации [Yandex Cloud с NAT Instance](/modules/cloud-provider-yandex/layouts.html#withnatinstance).
 
 {% offtopic title="Список флагов пропуска проверок..." %}
 
