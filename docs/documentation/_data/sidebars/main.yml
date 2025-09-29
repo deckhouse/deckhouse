@@ -619,17 +619,9 @@ entries:
                         ru: Федерация
                       url: /admin/configuration/network/alliance/federation.html
                 - title:
-                    en: Network policies
-                    ru: Сетевые политики
-                  folders:
-                    - title:
-                        en: Network infrastructure
-                        ru: Сетевая инфраструктура
-                      url: /admin/configuration/network/policy/
-                    - title:
-                        en: Network policy configuration
-                        ru: Настройка сетевых политик
-                      url: /admin/configuration/network/policy/configuration.html
+                     en: Network policy configuration
+                     ru: Настройка сетевых политик
+                  url: /admin/configuration/network/policy/configuration.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -1253,6 +1245,10 @@ entries:
             en: Revision comparison
             ru: Сравнение редакций
           url: /reference/revision-comparison.html
+        - title:
+            en: Network interaction
+            ru: Сетевое взаимодействие
+          url: /reference/network_interaction.html
         - title:
             en: Alerts
             ru: Алерты
