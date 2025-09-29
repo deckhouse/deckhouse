@@ -16,3 +16,4 @@ func CreateImage(ctx context.Context, modulePath, imagePath string) error { //no
 func CreateImageByTar(ctx context.Context, rc io.ReadCloser, imagePath string) error { //nolint:revive,unused
 	return nil
 }
+

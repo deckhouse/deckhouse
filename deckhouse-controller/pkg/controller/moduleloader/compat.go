@@ -11,3 +11,4 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
 	return l.restoreModulesByReleases(ctx)
 }
+

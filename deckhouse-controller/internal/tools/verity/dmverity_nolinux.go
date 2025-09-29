@@ -25,3 +25,4 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) { //
 func VerifyImage(ctx context.Context, imagePath, rootHash string) error { //nolint:revive,unused
 	return nil
 }
+

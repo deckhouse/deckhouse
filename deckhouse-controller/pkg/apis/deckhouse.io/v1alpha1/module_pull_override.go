@@ -34,8 +34,7 @@ const (
 	ModulePullOverrideMessageSourceNotFound = "The source not found"
 	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
 
-	ModulePullOverrideAnnotationRenew      = "renew"
-	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
+	ModulePullOverrideAnnotationRenew = "renew"
 )
 
 var (

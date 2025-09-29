@@ -291,7 +291,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			}
 
 			mpo := suite.modulePullOverride(module.name)
-			assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
 			assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
 			suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
@@ -326,7 +325,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		require.NoError(suite.T(), err)
 
 		mpo := suite.modulePullOverride(module.name)
-		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
@@ -352,7 +350,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		require.NoError(suite.T(), err)
 
 		mpo := suite.modulePullOverride(module.name)
-		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
@@ -404,7 +401,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		assert.True(suite.T(), os.IsNotExist(err), "Extra symlink mustn't exist")
 
 		mpo := suite.modulePullOverride(module.name)
-		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
 		suite.cleanupPaths([]string{module.downloadedPath, module.symlinkPath})
@@ -446,7 +442,6 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		assert.False(suite.T(), statSymlink.ModTime().Equal(newStatSymlink.ModTime()), "Module's symlink must be modified")
 
 		mpo := suite.modulePullOverride(module.name)
-		assert.Equal(suite.T(), mpo.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn], "dev-master-0", "deployedOn must be set to dev-master-0")
 		assert.Equal(suite.T(), mpo.Status.Weight, uint32(module.weight), "ModulePullOverride weight must equal to module's weight")
 
 		suite.cleanupPaths([]string{symlink, module.downloadedPath, module.symlinkPath})
