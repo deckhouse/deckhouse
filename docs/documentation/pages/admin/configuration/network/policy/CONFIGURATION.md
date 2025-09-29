@@ -12,7 +12,7 @@ If there are requirements to restrict network interaction between servers at the
 * If there is integration with external systems (such as LDAP, SMTP, or other external APIs), it is required to allow network communication with them.
 * Local network communication is fully allowed within each individual cluster node.
 * Inter-node communication is allowed on the ports shown in the [platform component network interaction list](../../../../reference/network_interaction.html). Note that most ports are in the 4200-4299 range. When new platform components are added, they will be assigned ports from this range (if it is possible).
- 
+
 ## Configuring network policies via standard Kubernetes means
 
 ### Example network policy configuration
