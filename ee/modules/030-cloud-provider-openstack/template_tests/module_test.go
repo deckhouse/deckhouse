@@ -338,7 +338,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Hybrid Openstack", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.HelmRender()
