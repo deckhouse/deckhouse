@@ -2344,6 +2344,94 @@ jobs:
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
+  doc_web_build:
+    name: Doc web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+    # <template: web_build_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+
+      - name: Run doc web build
+        uses: werf/actions/build@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+        env:
+          WERF_DIR: "docs/documentation"
+          WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          WERF_SECONDARY_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+
+    # </template: web_build_template>
+
   main_web_build:
     name: Main web build
     if: ${{ github.repository == 'deckhouse/deckhouse' }}
@@ -3012,7 +3100,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -3088,6 +3176,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -3110,7 +3199,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -3186,6 +3275,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-stage
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -3263,6 +3353,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
@@ -3286,7 +3377,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -3341,6 +3432,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_PROD_25 }}"
           env: web-production
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_readonly_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"

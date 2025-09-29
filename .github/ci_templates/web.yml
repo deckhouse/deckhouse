@@ -237,6 +237,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+    WERF_REQUIRE_BUILT_IMAGES: "true"
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/documentation"
     WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"
@@ -301,6 +302,7 @@ steps:
     kube-config-base64-data: "{!{ $kubeConfig }!}"
     env: {!{ $webEnv }!}
   env:
+    WERF_REQUIRE_BUILT_IMAGES: "true"
     WERF_REPO: {!{ $repo }!}
     WERF_DIR: "docs/site"
     WERF_RELEASE: "deckhouse-site"
