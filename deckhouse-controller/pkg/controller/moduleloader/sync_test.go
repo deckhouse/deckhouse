@@ -176,7 +176,7 @@ func (suite *ModuleLoaderTestSuite) SetupSuite() {
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
 }
 
-func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
+func (suite *ModuleLoaderTestSuite) TestrestoreModulesByOverrides() {
 	module := moduleSuite{
 		name:          "echo",
 		version:       downloader.DefaultDevVersion,
@@ -268,7 +268,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 			time.Sleep(50 * time.Millisecond)
 
 			suite.setupModuleLoader(string(suite.parseTestdata("overrides", tc.filename)))
-			require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+			require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 			if tc.checkValues {
 				newStatValues, err := os.Stat(module.valuesPath)
@@ -314,7 +314,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -344,7 +344,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		_, err := os.Lstat(module.symlinkPath)
 		require.NoError(suite.T(), err)
@@ -384,7 +384,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -431,7 +431,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "mpo.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -448,7 +448,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverrides() {
 	})
 }
 
-func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMultipleReleases() {
+func (suite *ModuleLoaderTestSuite) TestrestoreModulesByOverridesWithMultipleReleases() {
 	require.NoError(suite.T(), os.Setenv("DECKHOUSE_NODE_NAME", "dev-master-0"))
 	defer os.Unsetenv("DECKHOUSE_NODE_NAME")
 
@@ -467,7 +467,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 
 	// Test case 1: Multiple releases, all in Deployed status
 	// Expected: MPO should set module version but not change release statuses
-	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// This test verifies that restoreModulesByOverrides correctly handles MPO
 	// without affecting the existing ModuleRelease statuses
 	suite.Run("MultipleReleasesAllDeployed", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
@@ -480,7 +480,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), module.prepare(true, true))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-all-deployed.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(module.symlinkPath)
@@ -527,7 +527,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 
 	// Test case 2: Multiple releases, all Superseded except last in Deployed
 	// Expected: MPO should set module version but not change release statuses
-	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// This test verifies that restoreModulesByOverrides correctly handles MPO
 	// with mixed release statuses without affecting them
 	suite.Run("MultipleReleasesSupersededExceptLast", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
@@ -540,7 +540,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), module.prepare(true, true))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-superseded-except-last.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(module.symlinkPath)
@@ -590,7 +590,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 
 	// Test case 3: Multiple releases, first Superseded, several Deployed
 	// Expected: MPO should set module version but not change release statuses
-	// This test verifies that restoreAbsentModulesFromOverrides correctly handles MPO
+	// This test verifies that restoreModulesByOverrides correctly handles MPO
 	// with complex release status patterns without affecting them
 	suite.Run("MultipleReleasesMixedStatus", func() {
 		dependency.TestDC.CRClient.ImageMock.Return(&crfake.FakeImage{
@@ -603,7 +603,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 		require.NoError(suite.T(), module.prepare(true, true))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-mixed-status.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(module.symlinkPath)
@@ -666,7 +666,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 
 		// Test with multiple deployed releases - MPO should override all
 		suite.setupModuleLoader(string(suite.parseTestdata("overrides", "multiple-releases-all-deployed.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromOverrides(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByOverrides(context.TODO()))
 
 		// Check symlink exists
 		_, err := os.Lstat(module.symlinkPath)
@@ -682,7 +682,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromOverridesWithMul
 	})
 }
 
-func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
+func (suite *ModuleLoaderTestSuite) TestrestoreModulesByReleases() {
 	module := moduleSuite{
 		name:          "echo",
 		weight:        900,
@@ -713,7 +713,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -740,7 +740,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		_, err := os.Lstat(module.symlinkPath)
 		require.NoError(suite.T(), err)
@@ -777,7 +777,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -816,7 +816,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		symlinkTarget, err := filepath.EvalSymlinks(symlink)
 		require.NoError(suite.T(), err)
@@ -850,7 +850,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		time.Sleep(50 * time.Millisecond)
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "release.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		newStatValues, err := os.Stat(module.valuesPath)
 		require.NoError(suite.T(), err)
@@ -865,7 +865,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 
 	// Test case 1: Multiple releases, all in Deployed status
 	// Expected: only the latest version should remain deployed, older versions should become superseded
-	// This test verifies that restoreAbsentModulesFromReleases correctly handles multiple deployed releases
+	// This test verifies that restoreModulesByReleases correctly handles multiple deployed releases
 	// by keeping only the latest version deployed and marking older versions as superseded
 	suite.Run("MultipleReleasesAllDeployed", func() {
 		testModule := moduleSuite{
@@ -895,7 +895,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 				"Initial state: %s should be Deployed", release.GetModuleVersion())
 		}
 
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(testModule.symlinkPath)
@@ -961,7 +961,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), testModule.prepare(true, false))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-superseded-except-last.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(testModule.symlinkPath)
@@ -1029,7 +1029,7 @@ func (suite *ModuleLoaderTestSuite) TestRestoreAbsentModulesFromReleases() {
 		require.NoError(suite.T(), testModule.prepare(true, false))
 
 		suite.setupModuleLoader(string(suite.parseTestdata("releases", "multiple-releases-mixed-status.yaml")))
-		require.NoError(suite.T(), suite.loader.restoreAbsentModulesFromReleases(context.TODO()))
+		require.NoError(suite.T(), suite.loader.restoreModulesByReleases(context.TODO()))
 
 		// Check that the module symlink was created
 		_, err := os.Lstat(testModule.symlinkPath)
