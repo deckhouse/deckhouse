@@ -244,7 +244,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	// clear conflict metrics
-	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroup, module.Name)
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
@@ -397,11 +397,11 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroup, moduleConfig.Name)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// clear conflict metrics
-	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroup, moduleConfig.Name)
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})

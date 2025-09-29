@@ -75,7 +75,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
-	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroup, configName)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)

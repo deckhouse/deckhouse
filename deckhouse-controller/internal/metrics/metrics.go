@@ -76,15 +76,18 @@ const (
 )
 
 // ============================================================================
-// Metric Group Templates
+// Metric Groups
 // ============================================================================
-// Group templates for dynamic metric names using fmt.Sprintf
 const (
 	MigratedModuleNotFoundGroup = "migrated_module_not_found"
 	D8Updating                  = "d8_updating"
 	D8ModuleUpdatingGroup       = "d8_module_updating_group"
-	ObsoleteConfigMetricGroup   = "obsoleteVersion_%s"
-	ModuleConflictMetricGroup   = "module_%s_at_conflict"
+)
+
+// Group templates for dynamic metric names using fmt.Sprintf
+const (
+	ObsoleteConfigMetricGroupTemplate = "obsoleteVersion_%s"
+	ModuleConflictMetricGroupTemplate = "module_%s_at_conflict"
 )
 
 // ============================================================================
