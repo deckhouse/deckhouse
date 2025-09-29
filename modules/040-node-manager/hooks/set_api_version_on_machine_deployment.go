@@ -17,7 +17,6 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 
@@ -88,8 +87,8 @@ func capiInfrastructureRefFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func handleSetInfrastructureAPIVersion(_ context.Context, input *go_hook.HookInput) error {
-	snaps := input.Snapshots.Get("capi_mds")
+func handleSetInfrastructureAPIVersion(input *go_hook.HookInput) error {
+	snaps := input.NewSnapshots.Get("capi_mds")
 
 	for md, err := range sdkobjectpatch.SnapshotIter[machineDeploymentInfrastructureRef](snaps) {
 		if err != nil {
