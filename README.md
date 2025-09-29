@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-small-logo.png"/>
-</p>
+![Deckhouse_sign](docs/documentation/images/Deckhouse_sign@2x.png)
 
 <p align="center">
   <a href="https://t.me/deckhouse"><img src="https://img.shields.io/badge/telegram-chat-179cde.svg?logo=telegram" alt="Telegram chat"></a>
