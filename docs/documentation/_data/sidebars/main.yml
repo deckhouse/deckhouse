@@ -161,11 +161,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/vk/сonnection-and-authorization.html
+                          url: /admin/integrations/public/vk/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/public/vk/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with Selectel Cloud
                         ru: Интеграция с Selectel Cloud
@@ -173,11 +173,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/selectel/сonnection-and-authorization.html
+                          url: /admin/integrations/public/selectel/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/public/selectel/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with OVH Cloud
                         ru: Интеграция с OVH Cloud
@@ -185,11 +185,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/ovh/сonnection-and-authorization.html
+                          url: /admin/integrations/public/ovh/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/ovh/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/public/ovh/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with OpenStack-based clouds
                         ru: Интеграция с облаками на базе OpenStack
@@ -197,11 +197,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/openstack/сonnection-and-authorization.html
+                          url: /admin/integrations/public/openstack/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/openstack/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/public/openstack/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with Amazon Web Services (AWS)
                         ru: Интеграция с Amazon Web Services (AWS)
@@ -249,11 +249,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/public/gcp/сonnection-and-authorization.html
+                          url: /admin/integrations/public/gcp/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/public/gcp/configuration-and-layout-scheme.html
                 - title:
                     en: Private cloud providers
                     ru: Частные облака
@@ -269,11 +269,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/private/vk/сonnection-and-authorization.html
+                          url: /admin/integrations/private/vk/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/private/vk/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with OpenStack
                         ru: Интеграция с OpenStack
@@ -281,11 +281,11 @@ entries:
                         - title:
                             en: Connection and authorization
                             ru: Подключение и авторизация
-                          url: /admin/integrations/private/openstack/сonnection-and-authorization.html
+                          url: /admin/integrations/private/openstack/connection-and-authorization.html
                         - title:
                             en: Layouts and configuration
                             ru: Схемы размещения и настройка
-                          url: /admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+                          url: /admin/integrations/private/openstack/configuration-and-layout-scheme.html
                     - title:
                         en: Integration with Huawei Cloud
                         ru: Интеграция с Huawei Cloud

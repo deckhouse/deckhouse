@@ -840,7 +840,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 1. Перезапустите master-узел.
 
-<div id='восстановление-кластерa-multi-master'></div>
+<div id='восстановление-кластера-multi-master'></div>
 
 #### Восстановление мультимастерного кластера
 

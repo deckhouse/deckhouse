@@ -184,6 +184,9 @@
   "prometheus-pushgateway": [
     "observability"
   ],
+  "registry": [
+    "core"
+  ],
   "runtime-audit-engine": [
     "security"
   ],

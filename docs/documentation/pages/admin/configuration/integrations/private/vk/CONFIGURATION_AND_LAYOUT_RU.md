@@ -1,6 +1,6 @@
 ---
 title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/private/vk/сonfiguration-and-layout-scheme.html
+permalink: ru/admin/integrations/private/vk/configuration-and-layout-scheme.html
 cloud_type: vk-private
 lang: ru
 ---

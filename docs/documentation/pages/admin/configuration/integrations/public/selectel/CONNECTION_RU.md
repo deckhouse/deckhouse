@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/selectel/сonnection-and-authorization.html
+permalink: ru/admin/integrations/public/selectel/connection-and-authorization.html
 cloud_type: selectel
 lang: ru
 ---

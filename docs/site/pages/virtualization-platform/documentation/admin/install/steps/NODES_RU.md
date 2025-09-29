@@ -98,7 +98,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 sudo -i pdpl-user -i 63 caps
 ```
 
-Создайте ресурcы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
+Создайте ресурсы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
 ```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.

@@ -216,7 +216,7 @@ layout: sidebar-guides
 
 ### Примеры конфигураций
 
-Для развертывания Deckhouse Kubernetes Platform в редакции [Еnterprise Edition](../pricing/#revisions) с набором модулей [Default](..//documentation/v1/modules/deckhouse/configuration.html#parameters-bundle) необходима следующая конфигурация узлов:
+Для развертывания Deckhouse Kubernetes Platform в редакции [Enterprise Edition](../pricing/#revisions) с набором модулей [Default](..//documentation/v1/modules/deckhouse/configuration.html#parameters-bundle) необходима следующая конфигурация узлов:
 
 * **master-узлы** — 1 шт, 4 CPU, 8 ГБ RAM;
 * **frontend-узлы** — 1 шт, 2 CPU, 4 ГБ RAM;
