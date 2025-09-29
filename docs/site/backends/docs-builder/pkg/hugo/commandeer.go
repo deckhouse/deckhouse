@@ -48,13 +48,14 @@ import (
 func (c *command) Run() error {
 	b := newHugoBuilder(c, c.logger)
 
-	if err := b.loadConfig(); err != nil {
-		return err
+	err := b.loadConfig()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
 	}
 
-	err := b.build()
+	err = b.build()
 	if err != nil {
-		return err
+		return fmt.Errorf("build: %w", err)
 	}
 
 	return nil
@@ -90,7 +91,7 @@ func (c *command) PreRun() error {
 	return nil
 }
 
-func Build(flags Flags, logger *log.Logger) error {
+func Build(flags *Flags, logger *log.Logger) error {
 	cmd := &command{flags: flags, logger: logger}
 
 	err := cmd.PreRun()
@@ -98,7 +99,12 @@ func Build(flags Flags, logger *log.Logger) error {
 		return fmt.Errorf("pre run: %w", err)
 	}
 
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+
+	return nil
 }
 
 type commonConfig struct {
@@ -112,12 +118,15 @@ func (c *commonConfig) validate() error {
 	if c == nil {
 		return errors.New("commonConfig is nil")
 	}
+
 	if c.fs == nil {
 		return errors.New("commonConfig: no fs provided")
 	}
+
 	if c.configs == nil {
 		return errors.New("commonConfig: no config provided")
 	}
+
 	return nil
 }
 
@@ -137,7 +146,7 @@ type command struct {
 	commonConfigs *lazycache.Cache[int32, *commonConfig]
 	hugoSites     *lazycache.Cache[int32, *hugolib.HugoSites]
 
-	flags Flags
+	flags *Flags
 
 	logger *log.Logger
 }
@@ -181,6 +190,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 		if !cfg.IsSet("renderToDisk") {
 			cfg.Set("renderToDisk", true)
 		}
+
 		if !cfg.IsSet("workingDir") {
 			cfg.Set("workingDir", dir)
 		} else {
@@ -278,15 +288,17 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 }
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
-	if err := conf.validate(); err != nil {
-		return nil, err
+	err := conf.validate()
+	if err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
 	}
+
 	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(_ int32) (*hugolib.HugoSites, error) {
 		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("HugFromConfig: %w", err)
+		return nil, fmt.Errorf("get or create: %w", err)
 	}
 
 	h.Log = c.hugologger

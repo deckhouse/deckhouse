@@ -83,7 +83,7 @@ func (svc *Service) Build() error {
 }
 
 func (svc *Service) buildHugo() error {
-	flags := hugo.Flags{
+	flags := &hugo.Flags{
 		LogLevel: "debug",
 		Source:   svc.baseDir,
 		CfgDir:   filepath.Join(svc.baseDir, "config"),
