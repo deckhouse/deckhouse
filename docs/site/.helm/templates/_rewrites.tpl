@@ -1,4 +1,7 @@
 {{- define "rewrites" }}
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-cli/(?<path>.*)$ /products/kubernetes-platform/documentation$2/cli/d8/$path redirect;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/revision-comparison.html$ /products/kubernetes-platform/documentation$2/reference/revision-comparison.html redirect;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/alerts.html$ /products/kubernetes-platform/documentation$2/reference/alerts.html redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-configure-global.html$ /products/kubernetes-platform/documentation$2/reference/api/global.html redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-faq.html$ /products/kubernetes-platform/documentation$2/admin/configuration/ redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-overview.html$ /products/kubernetes-platform/documentation$2/admin/configuration/ redirect;
