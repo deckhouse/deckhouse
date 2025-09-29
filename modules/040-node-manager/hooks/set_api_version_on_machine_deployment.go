@@ -34,7 +34,7 @@ import (
 
 const (
 	capiMachineDeploymentAPIVersion = "cluster.x-k8s.io/v1beta1"
-	capiInfrastructureAPIGroup     = "infrastructure.cluster.x-k8s.io/"
+	capiInfrastructureAPIGroup      = "infrastructure.cluster.x-k8s.io/"
 )
 
 var capiMachineTemplateVersions = map[string]string{
