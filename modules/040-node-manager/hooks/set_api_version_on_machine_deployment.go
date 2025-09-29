@@ -34,7 +34,7 @@ import (
 
 const (
 	capiMachineDeploymentAPIVersion = "cluster.x-k8s.io/v1beta1"
-	capiInfrastructureAPIPrefix     = "infrastructure.cluster.x-k8s.io/"
+	capiInfrastructureAPIGroup     = "infrastructure.cluster.x-k8s.io/"
 )
 
 var capiMachineTemplateVersions = map[string]string{
@@ -43,6 +43,7 @@ var capiMachineTemplateVersions = map[string]string{
 	"VCDMachineTemplate":         "v1beta2",
 	"ZvirtMachineTemplate":       "v1",
 	"DeckhouseMachineTemplate":   "v1alpha1",
+	"StaticMachineTemplate":      "v1alpha1",
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -96,13 +97,13 @@ func handleSetInfrastructureAPIVersion(_ context.Context, input *go_hook.HookInp
 			return fmt.Errorf("failed to iterate over MachineDeployment snapshots: %w", err)
 		}
 
-		wantedVersion, ok := capiMachineTemplateVersions[md.Kind]
+		apiVersion, ok := capiMachineTemplateVersions[md.Kind]
 		if !ok {
 			input.Logger.Warn("unknown infrastructure template kind", slog.String("machinedeployment", md.Name), slog.String("kind", md.Kind))
 			continue
 		}
 
-		expectedAPIVersion := capiInfrastructureAPIPrefix + wantedVersion
+		expectedAPIVersion := capiInfrastructureAPIGroup + apiVersion
 
 		if md.APIVersion == expectedAPIVersion {
 			continue
