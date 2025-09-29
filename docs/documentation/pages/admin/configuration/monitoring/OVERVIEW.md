@@ -8,12 +8,15 @@ The module automatically configures metrics collection from nodes, pods, and key
 
 All components operate in a fault-tolerant mode, including Prometheus and Alertmanager, and are adapted for both cloud and bare metal environments.
 
-The principles of operation and Prometheus configuration are covered in the [article](docs/documentation/pages/admin/monitoring/prometheus.html).
+The principles of operation and Prometheus configuration are covered in the [article](./prometheus.html).
 
 Several types of monitoring are implemented:
 - [Hardware resource monitoring](#hardware-resource-monitoring);
 - [Kubernetes monitoring](#kubernetes-monitoring);
-- [Ingress monitoring](#ingress-monitoring).
+- [Ingress monitoring](#ingress-monitoring);
+- [Network interaction monitoring](./configuring/network-and-pods.html);
+- [Extended monitoring](#extended-monitoring-mode);
+- [Cluster SLA monitoring](#cluster-sla-monitoring).
 
 [Extended monitoring mode](#extended-monitoring-mode) and [alerting](#alerts) are provided, including [sending alerts to external systems](#sending-alerts-to-external-systems). Dashboard monitoring is available, and there is cluster SLA monitoring.
 
@@ -51,7 +54,7 @@ It provides secure metrics collection and offers a basic set of rules for monito
 ## Ingress monitoring
 
 Statistics collection for ingress-nginx in Prometheus is implemented with detailed metrics (response time, codes, geography, etc.), available in different dimensions (namespace, vhost, ingress). Data is visualized in Grafana with interactive dashboards.
-Detailed description is in the [Ingress monitoring](../../../admin/network/alb-nginx.html#monitoring-and-statistics) section.
+Detailed description is in the [Ingress monitoring](../network/ingress/alb/nginx.html#monitoring-and-statistics) section.
 
 ## Control plane monitoring
 
@@ -83,10 +86,6 @@ DKP monitoring capabilities:
 - monitoring Conntrack table state on nodes;
 - monitoring pods with incorrect state (as a possible consequence of kubelet issues);
 - monitoring control plane components (implemented by the `monitoring-kubernetes-control-plane` module);
-- monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them (implemented by the `extended-monitoring` module);
-- collecting Kubernetes cluster events as metrics (implemented by the `extended-monitoring` module);
-- monitoring container image availability in registry used by controllers (Deployments, StatefulSets, DaemonSets, CronJobs) (implemented by the `extended-monitoring` module);
-- monitoring objects in namespaces that have the `extended-monitoring.deckhouse.io/enabled=""` label (implemented by the `extended-monitoring` module).
 
 ## Extended monitoring mode
 
@@ -97,6 +96,13 @@ DKP supports the use of extended monitoring mode, which provides alerts for addi
 - pod and container image availability,
 - certificate expiration,
 - other cluster events.
+
+It also allows you to configure:
+
+- monitoring secrets in the cluster (Secret objects) and TLS certificate expiration in them (implemented by the `extended-monitoring` module);
+- collecting Kubernetes cluster events as metrics (implemented by the `extended-monitoring` module);
+- monitoring container image availability in registry used by controllers (Deployments, StatefulSets, DaemonSets, CronJobs) (implemented by the `extended-monitoring` module);
+- monitoring objects in namespaces that have the `extended-monitoring.deckhouse.io/enabled=""` label (implemented by the `extended-monitoring` module).
 
 ### Alerting in extended monitoring mode
 
@@ -122,7 +128,7 @@ DKP supports sending alerts using `Alertmanager`:
 - via Webhook;
 - through any other channels supported in Alertmanager.
 
-## Availability assessment
+## Cluster SLA monitoring
 
 Availability assessment in DKP is performed by the `upmeter` module.
 
