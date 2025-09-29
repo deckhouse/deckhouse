@@ -13,6 +13,27 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- define "disabled_vpa_spec" -}}
+  {{- $targetAPIVersion := index . 0 -}}  {{- /* Target API version */ -}}
+  {{- $targetKind       := index . 1 -}}  {{- /* Target Kind */ -}}
+  {{- $targetName       := index . 2 -}}  {{- /* Target Name */ -}}
+  {{- $configuration    := index . 3 -}}  {{- /* VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) */ -}}
+
+targetRef:
+  apiVersion: {{ $targetAPIVersion }}
+  kind: {{ $targetKind }}
+  name: {{ $targetName }}
+  {{- if eq ($configuration.mode) "VPA" }}
+updatePolicy:
+  updateMode: "Off"
+resourcePolicy:
+  containerPolicies:
+  {{- else }}
+updatePolicy:
+  updateMode: "Off"
+  {{- end }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -22,7 +43,11 @@ metadata:
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
-    {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name "falco" $.Values.runtimeAuditEngine.resourcesRequests ) | nindent 2}}
+    {{/* Disable falco VPA until memory leak in falco is fixed. Removing that also requires falco-leak-limit-range.y eaml to be removed.*/}}
+    {{/* Also, uncomment the test for VPA template rendering in template_tests/module_test.go */}}
+    {{/* {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name "falco" $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}} */}}
+    {{- include "disabled_vpa_spec"  (list "apps/v1" "DaemonSet" $.Chart.Name $.Values.runtimeAuditEngine.resourcesRequests) | nindent 2}}
+
     {{- if eq (.Values.runtimeAuditEngine.resourcesRequests.mode) "VPA" }}
     - containerName: "falcosidekick"
       minAllowed:
