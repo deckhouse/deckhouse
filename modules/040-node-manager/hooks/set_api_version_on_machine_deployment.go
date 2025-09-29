@@ -50,11 +50,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/set_api_version_on_machine_deployment",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                         "capi_mds",
-			ApiVersion:                   capiMachineDeploymentAPIVersion,
-			Kind:                         "MachineDeployment",
-			WaitForSynchronization:       ptr.To(false),
-			ExecuteHookOnSynchronization: ptr.To(true),
+			Name:                   "capi_mds",
+			ApiVersion:             capiMachineDeploymentAPIVersion,
+			Kind:                   "MachineDeployment",
+			WaitForSynchronization: ptr.To(false),
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"d8-cloud-instance-manager"},
