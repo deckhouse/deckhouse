@@ -1,6 +1,6 @@
 ---
-title: Настройка сетевых политик для работы Deckhouse
-permalink: ru/network_security_setup.html
+title: Сетевое взаимодействие компонентов платформы
+permalink: ru/reference/network_interaction.html
 description: |
   Подробная информация о настройке сетевых политик для Deckhouse Kubernetes Platform, в частно в средах с ограничениями на сетевое взаимодействие между узлами. Описывает необходимые условия для включения режимов туннелирования для трафика подов с использованием CNI Cilium и Flannel.
 lang: ru

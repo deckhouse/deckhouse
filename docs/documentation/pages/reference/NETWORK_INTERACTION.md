@@ -1,6 +1,6 @@
 ---
-title: Configuring network policies for Deckhouse
-permalink: en/network_security_setup.html
+title: Network interaction of the platform components
+permalink: en/reference/network_security_setup.html
 description: |
   Detailed information on configuring network policies for the Deckhouse Kubernetes Platform, particularly in environments with constraints on host-to-host network communications. Outlines the necessary conditions to enable tunneling modes for pod traffic using CNI Cilium and Flannel.
 lang: en
