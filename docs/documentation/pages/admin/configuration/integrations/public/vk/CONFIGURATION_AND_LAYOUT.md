@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/vk/сonfiguration-and-layout-scheme.html
+permalink: en/admin/integrations/public/vk/configuration-and-layout-scheme.html
 cloud_type: vk
 lang: en
 ---

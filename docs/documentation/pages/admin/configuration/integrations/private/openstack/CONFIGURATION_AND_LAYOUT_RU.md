@@ -1,6 +1,6 @@
 ---
 title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+permalink: ru/admin/integrations/private/openstack/configuration-and-layout-scheme.html
 cloud_type: openstack
 lang: ru
 ---

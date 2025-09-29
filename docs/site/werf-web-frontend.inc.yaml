@@ -28,7 +28,7 @@ shell:
   - |
     jq '.header | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else ( . | {"topnav": { "en": [{"items": .en}], "ru": [ {"items": .ru}  ]}}) end ' /tmp/menus.json > /data/topnav.json
   - |
-    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end | (.ru[] | select(.url == "/products/kubernetes-platform/").items) += [{"title":"Модули","url":"/modules/","target":"","rel":""}] | (.en[] | select(.url == "/products/kubernetes-platform/").items) += [{"title":"Modules","url":"/modules/","target":"","rel":""}]' /tmp/menus.json > /data/topnav-l2-products.json
+    jq '."header-products" | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty header array!") else . end' /tmp/menus.json > /data/topnav-l2-products.json
   - |
     jq '.footer | if ( ( .en | length) < 1 ) or ( ( .ru | length) < 1 ) then error("Got empty footer array!") else ( . | {"columns": . }) end ' /tmp/menus.json > /data/footer.json
   - |
