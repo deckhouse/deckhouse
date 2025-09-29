@@ -145,3 +145,4 @@ subjects:
 - kind: ServiceAccount
   name: cloud-controller-manager
   namespace: d8-cloud-provider-huaweicloud
+
