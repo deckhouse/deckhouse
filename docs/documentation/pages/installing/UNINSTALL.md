@@ -110,7 +110,7 @@ The installer will then connect to the cluster, retrieve the necessary data, and
 
 Follow the steps below to delete a cluster that has been manually installed (e.g., on bare metal):
 
-1. [Delete](../modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the extra nodes from the cluster.
+1. [Delete](/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the extra nodes from the cluster.
 
 2. Find out the release channel set in the cluster. To do this, run the command:
 
