@@ -22,13 +22,13 @@
     - baremetal
     - production
 - name:
-    ru: "Обновление Deckhouse Kubernetes Platform в закрытом окружении"
-    en: "Update Deckhouse Kubernetes Platform in airgapped enviroment"
+    ru: "Обновление DKP в закрытом окружении"
+    en: "Updating DKP in air-gapped environment"
   link: "./airgapped-update.html"
   #minutesToRead: 30
   description:
-    ru: Инструкция по обновлению Deckhouse Kubernetes Platform в закрытом окружении.
-    en: Guide for update Deckhouse Kubernetes Platform in airgapped enviroment.
+    ru: Руководство по обновлению Deckhouse Kubernetes Platform в закрытом окружении.
+    en: A guide for updating Deckhouse Kubernetes Platform in an air-gapped environment.
   tags:
     - baremetal
     - production
