@@ -468,7 +468,6 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids
                               type: string
                           type: object
-                          x-kubernetes-map-type: atomic
                         nodeDeletionTimeout:
                           description: |-
                             nodeDeletionTimeout defines how long the controller will attempt to delete the Node that the Machine
