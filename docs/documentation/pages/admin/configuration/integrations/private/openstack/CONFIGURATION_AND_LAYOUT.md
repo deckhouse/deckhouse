@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/private/openstack/сonfiguration-and-layout-scheme.html
+permalink: en/admin/integrations/private/openstack/configuration-and-layout-scheme.html
 cloud_type: openstack
 lang: en
 ---

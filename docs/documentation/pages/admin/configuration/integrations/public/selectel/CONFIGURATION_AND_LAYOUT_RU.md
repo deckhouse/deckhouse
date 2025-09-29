@@ -1,6 +1,6 @@
 ---
 title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/public/selectel/сonfiguration-and-layout-scheme.html
+permalink: ru/admin/integrations/public/selectel/configuration-and-layout-scheme.html
 cloud_type: selectel
 lang: ru
 ---

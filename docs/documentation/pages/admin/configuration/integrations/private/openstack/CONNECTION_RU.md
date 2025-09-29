@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/private/openstack/сonnection-and-authorization.html
+permalink: ru/admin/integrations/private/openstack/connection-and-authorization.html
 cloud_type: openstack
 lang: ru
 ---

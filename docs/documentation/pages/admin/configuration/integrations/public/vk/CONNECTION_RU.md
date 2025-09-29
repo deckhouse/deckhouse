@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/vk/сonnection-and-authorization.html
+permalink: ru/admin/integrations/public/vk/connection-and-authorization.html
 cloud_type: vk
 lang: ru
 ---

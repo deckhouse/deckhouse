@@ -1,6 +1,11 @@
 {{- define "rewrites" }}
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-configure-global.html$ /products/kubernetes-platform/documentation$2/reference/api/global.html redirect;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-faq.html$ /products/kubernetes-platform/documentation$2/admin/configuration/ redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-overview.html$ /products/kubernetes-platform/documentation$2/admin/configuration/ redirect;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/supported_versions.html$ /products/kubernetes-platform/documentation$2/reference/supported_versions.html redirect;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/installing/configuration.html$ /products/kubernetes-platform/documentation$2/installing/ redirect;
 rewrite ^/documentation/(.*)$ /products/kubernetes-platform/documentation/$1 permanent;
+rewrite ^/products/kubernetes-platform/documentation/(?<doc_path>(?!v[0-9]+/|v[0-9]+\.[0-9]+/|latest/).*)$ /products/kubernetes-platform/documentation/v1/$doc_path redirect;
 rewrite ^/gs/(.*)$ /products/kubernetes-platform/gs/$1 permanent;
 rewrite ^/guides/(.*)$ /products/kubernetes-platform/guides/$1 permanent;
 rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platform/documentation/ permanent;
@@ -8,6 +13,7 @@ rewrite ^/products/kubernetes-platform/gs$ /products/kubernetes-platform/gs/ per
 rewrite ^/products/kubernetes-platform/guides$ /products/kubernetes-platform/guides/ permanent;
 rewrite ^/products/kubernetes-platform/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
 rewrite ^/products/kubernetes-platform/modules/(.*)$ /modules/$1 redirect;
+rewrite ^/products/kubernetes-platform/documentation/v1/modules/(.*)$ /modules/$1 redirect;
 #rewrite ^/modules/(.*)$ /products/kubernetes-platform/modules/$1 permanent;
 #rewrite ^/source/modules/(.*)$ /modules/$1 redirect;
 rewrite ^/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
@@ -16,7 +22,6 @@ rewrite ^.*/documentation/v1/modules/490-virtualization/.*$ /modules/virtualizat
 #rewrite ^/products/kubernetes-platform/modules/csi-yadro/(.*)?$ /products/kubernetes-platform/modules/csi-yadro-tatlin-unified/$1 permanent;
 #rewrite ^/products/kubernetes-platform/modules/sds-drbd/(.*)?$ /products/kubernetes-platform/modules/sds-replicated-volume/$1 permanent;
 #rewrite ^/modules/([^./]+)/?$ /modules/$1/stable/ permanent;
-#rewrite ^/modules/([^./]+)/((?!(alpha|beta|early-access|stable|rock-solid)).+)$ /modules/$1/stable/$2 permanent;
 rewrite ^(/en|/ru)?(/documentation/v1\.[0-9]+)\.[0-9]+(/.*)$ /products/kubernetes-platform$2$3 permanent;
 rewrite ^/ru/terms-of-service\.html /ru/security-policy.html permanent;
 rewrite ^/ru/cookie-policy\.html /ru/security-policy.html permanent;

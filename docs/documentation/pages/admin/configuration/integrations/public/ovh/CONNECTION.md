@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/ovh/сonnection-and-authorization.html
+permalink: en/admin/integrations/public/ovh/connection-and-authorization.html
 cloud_type: ovh
 ---
 
