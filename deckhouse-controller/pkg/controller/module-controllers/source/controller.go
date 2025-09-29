@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/iancoleman/strcase"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -55,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -80,7 +80,7 @@ func RegisterController(
 	mm moduleManager,
 	edition *d8edition.Edition,
 	dc dependency.Container,
-	metricStorage metric.Storage,
+	metricStorage metricsstorage.Storage,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	logger *log.Logger,
 ) error {
@@ -158,7 +158,7 @@ type reconciler struct {
 	dc     dependency.Container
 	logger *log.Logger
 
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
@@ -228,6 +228,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 		// error can occur on wrong auth only, we don't want to requeue the source until auth is fixed
@@ -238,6 +239,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
 		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
 			return ctrl.Result{}, uerr
 		}
 

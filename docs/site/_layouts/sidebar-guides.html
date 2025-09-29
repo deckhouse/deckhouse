@@ -11,10 +11,13 @@ layout: default
     <div class="layout-sidebar__content layout-sidebar__content--guides">
       <div class="docs">
         <h1>{{ page.title }}</h1>
-            <div class="post-content">
-              {{ content }}
-            </div>
+        <div class="post-content">
+          {{ content }}
+        </div>
       </div>
+      {%- if page.feedback != false %}
+       {%- include feedback.html %}
+      {%- endif %}
     </div>
   </div>
 </div>

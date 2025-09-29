@@ -44,7 +44,11 @@ layout: sidebar
         {%- if site.disqus %}
     {%- include disqus.html %}
         {%- endif %}
-
+        
     </div>
+
+    {%- if page.showPrevNextButton %}
+      {%- include navigation.html -%}
+    {%- endif %}
 
 </div>

@@ -76,7 +76,7 @@ spec:
       serviceAccountName: {{ $context.Chart.Name }}
       containers:
       - name: local-path-provisioner
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "localPathProvisioner") }}
         imagePullPolicy: IfNotPresent
         command:

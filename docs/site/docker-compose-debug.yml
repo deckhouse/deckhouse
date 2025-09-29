@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   site:
-    image: $WERF_WEB_BACKEND_DOCKER_IMAGE_NAME
+    image: $WERF_WEB_ROUTER_DOCKER_IMAGE_NAME
 #    command: "/app/server"
     command: "dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./server"
     environment:
@@ -31,7 +31,7 @@ services:
   front:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
     volumes:
-      - ".werf/nginx-dev.conf:/etc/nginx/nginx.conf:ro"
+      - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
       - "./backends/docs-builder-template/public/en:/app/en:ro"
       - "./backends/docs-builder-template/public/ru:/app/ru:ro"
     ports:

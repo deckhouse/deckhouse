@@ -19,4 +19,5 @@ type ClientConfig struct {
 	Scheme     string
 	CA         string
 	Auth       string
+	SignCheck  bool
 }

@@ -137,7 +137,7 @@ Path `/loki/api/v1/push` has to be removed from the previously used Loki URL.
 
 This documentation expects that you have [created API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
+![Grafana cloud API key](images/grafana_cloud.png)
 
 Firstly you should encode your token with base64.
 

@@ -213,7 +213,7 @@ EOF
 
   if [[ ${has_missing_taints} -eq 1 ]]; then
     cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"it is forbidden to create a NodeGroup resource with taints not specified in global.modules.placement.customTolerationKeys in Deckhouse ConfigMap, add:${missing_taints} to customTolerationKeys."}
+{"allowed":false, "message":"it is forbidden to create a NodeGroup resource with taints not specified in ModuleConfig \"global\" in the array .spec.settings.modules.placement.customTolerationKeys, add:${missing_taints} to customTolerationKeys."}
 EOF
     return 0
   fi
