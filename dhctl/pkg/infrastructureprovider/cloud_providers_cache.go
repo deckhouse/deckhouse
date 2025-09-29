@@ -131,7 +131,10 @@ func (c *cloudProvidersMapCache) GetOrAdd(ctx context.Context, clusterUUID strin
 		p = nil
 	}
 
-	provider.AddAfterCleanupFunc("cloudProviderCacheCleaner", afterCleanup)
+	// add 'z' letter for calling cleanup after all cleanup groups
+	// because we can have deps in another groups for provider, for example in
+	// stop executor in Runner
+	provider.AddAfterCleanupFunc("zCloudProviderCacheCleaner", afterCleanup)
 
 	c.cloudProvidersCache[cacheKey] = provider
 	logger.LogDebugF("Store %s in cache with key %s\n", provider.String(), cacheKey)

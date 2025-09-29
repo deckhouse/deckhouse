@@ -23,7 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fs"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -93,7 +93,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				return nil, err
 			}
 
-			di, err := fs.GetDi(l, diParams)
+			di, err := fsprovider.GetDi(l, diParams)
 			if err != nil {
 				return nil, fmt.Errorf("Cannot get fs.GetDI: %w", err)
 			}

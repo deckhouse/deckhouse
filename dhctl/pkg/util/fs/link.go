@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fsstatic
+package fs
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -60,27 +58,4 @@ func CreateLinkIfNotExists(source string, check CheckLinkSource, destination str
 	}
 
 	return nil
-}
-
-func PreparePath(p string, shouldBeDir bool) (string, error) {
-	p = strings.TrimSpace(p)
-	if p == "" {
-		p = "/"
-	}
-
-	p, err := filepath.Abs(p)
-	if err != nil {
-		return "", fmt.Errorf("Cannot get absolute path for %s: %w", p, err)
-	}
-
-	stat, err := os.Stat(p)
-	if err != nil {
-		return "", fmt.Errorf("Cannot get stat for %s: %w", p, err)
-	}
-
-	if shouldBeDir && !stat.IsDir() {
-		return "", fmt.Errorf("%s is not a directory", p)
-	}
-
-	return p, nil
 }

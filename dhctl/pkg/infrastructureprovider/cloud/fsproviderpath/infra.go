@@ -12,18 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package fs
+package fsproviderpath
 
 import (
-	"fmt"
-	"os/exec"
+	"path"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 )
 
-func checkIsExecFile(path string) error {
-	_, err := exec.LookPath(path)
-	if err != nil {
-		return fmt.Errorf("Failed to check %s of file %s. Is not executable", path, err)
+const (
+	LayoutsDir = "layouts"
+)
+
+func GetPluginDir(root string, settings settings.ProviderSettings, version string, arch string) string {
+	registry := "registry.terraform.io"
+	if settings.UseOpenTofu() {
+		registry = "registry.opentofu.org"
 	}
 
-	return nil
+	// /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
+	return path.Join(root, registry, settings.Namespace(), settings.Type(), version, arch, settings.DestinationBinary())
 }
