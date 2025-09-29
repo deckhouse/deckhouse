@@ -229,7 +229,7 @@ Available options include "Create based on" (to clone a configuration) and "Dele
 
 Click **Add** to choose a new inlet type for the controller. Available options:
 - HostPort,
-- HostPort with Proxy Protocol, 
+- HostPort with Proxy Protocol,
 - HostPort with a backup controller,
 - LoadBalancer,
 - LoadBalancer with Proxy Protocol.
