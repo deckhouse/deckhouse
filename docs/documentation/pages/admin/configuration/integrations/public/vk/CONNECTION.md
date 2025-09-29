@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/public/vk/сonnection-and-authorization.html
+permalink: en/admin/integrations/public/vk/connection-and-authorization.html
 cloud_type: vk
 ---
 

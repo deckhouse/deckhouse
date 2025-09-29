@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/gcp/сonnection-and-authorization.html
+permalink: ru/admin/integrations/public/gcp/connection-and-authorization.html
 lang: ru
 ---
 

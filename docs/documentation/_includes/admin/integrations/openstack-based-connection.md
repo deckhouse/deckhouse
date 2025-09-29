@@ -2,7 +2,7 @@ To manage resources in {{ site.data.admin.cloud-types.types[page.cloud_type].nam
 you must connect to the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API.
 
 The list of {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API services required for deployment
-is available in the [Configuration](./сonfiguration-and-layout-scheme.html#list-of-required-services) section.
+is available in the [Configuration](./configuration-and-layout-scheme.html#list-of-required-services) section.
 
 The user credentials required to access the {{ site.data.admin.cloud-types.types[page.cloud_type].name }} API
 are provided in the OpenStack RC file (openrc file).

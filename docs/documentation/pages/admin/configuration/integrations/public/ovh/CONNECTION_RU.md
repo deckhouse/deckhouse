@@ -1,6 +1,6 @@
 ---
 title: Подключение и авторизация
-permalink: ru/admin/integrations/public/ovh/сonnection-and-authorization.html
+permalink: ru/admin/integrations/public/ovh/connection-and-authorization.html
 cloud_type: ovh
 lang: ru
 ---
