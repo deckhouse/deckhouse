@@ -2528,6 +2528,66 @@ jobs:
           svacer_import_password: "${{ secrets.SVACER_IMPORT_PASSWORD }}"
           svace_analyze_ssh_private_key: "${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
+  doc_web_build:
+    name: Doc web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+      - pull_request_info
+    # <template: web_build_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+
+      - name: Run doc web build
+        uses: werf/actions/build@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+        env:
+          WERF_DIR: "docs/documentation"
+          WERF_LOG_VERBOSE: "on"
+          WERF_ENV: "EE"
+          WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
+
+    # </template: web_build_template>
+
   main_web_build:
     name: Main web build
     if: ${{ github.repository == 'deckhouse/deckhouse' }}

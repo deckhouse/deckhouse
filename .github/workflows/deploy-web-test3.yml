@@ -260,6 +260,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-test3
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/site"
           WERF_RELEASE: "deckhouse-site"
@@ -292,6 +293,7 @@ jobs:
           kube-config-base64-data: "${{ secrets.KUBECONFIG_BASE64_DEV }}"
           env: web-test3
         env:
+          WERF_REQUIRE_BUILT_IMAGES: "true"
           WERF_REPO: ${{ steps.check_dev_registry.outputs.web_registry_path }}
           WERF_DIR: "docs/documentation"
           WERF_RELEASE: "deckhouse-doc-${{ env.DOC_VERSION }}"

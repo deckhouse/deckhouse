@@ -106,6 +106,14 @@ jobs:
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
+  doc_web_build:
+    name: Doc web build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    # Wait for success build of modules.
+    needs:
+      - git_info
+{!{ tmpl.Exec "web_build_template" (slice $ctx "doc" "release") | strings.Indent 4 }!}
+
   main_web_build:
     name: Main web build
     if: ${{ github.repository == 'deckhouse/deckhouse' }}
@@ -175,7 +183,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -192,7 +200,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
@@ -225,7 +233,7 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - main_web_build
+      - doc_web_build
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:
