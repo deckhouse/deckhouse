@@ -56,4 +56,4 @@ EOF
 
 ## Generating a kubeconfig
 
-To generate a kubeconfig, follow the instructions in the [ServiceAccount authentication guide](../../../authorization/#service-account-authentication).
+To generate a kubeconfig, follow the [instruction](/modules/user-authn/faq.html#how-to-generate-a-kubeconfig-and-access-kubernetes-api).
