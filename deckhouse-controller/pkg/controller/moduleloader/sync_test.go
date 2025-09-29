@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
@@ -123,6 +124,9 @@ func (suite *ModuleLoaderTestSuite) setupModuleLoader(raw string) {
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		registries:           make(map[string]*addonmodules.Registry),
 	}
+
+	// ensure installer for direct restore calls in tests
+	suite.loader.installer = installer.New("", suite.loader.dependencyContainer, suite.loader.logger)
 }
 
 func (suite *ModuleLoaderTestSuite) parseKubernetesObject(raw []byte) client.Object {
