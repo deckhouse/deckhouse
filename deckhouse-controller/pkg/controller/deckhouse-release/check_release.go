@@ -754,20 +754,6 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			// if changelog build failed - warn about it but don't fail the release
-			f.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			meta.Changelog = make(map[string]any)
-		} else {
-			meta.Changelog = changelog
-		}
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var moduleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
@@ -782,6 +768,20 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 			}
 			meta.Requirements["kubernetes"] = moduleDefinition.Requirements.Kubernetes
 		}
+	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			// if changelog build failed - warn about it but don't fail the release
+			f.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
+
+			changelog = make(map[string]any)
+		}
+		
+		meta.Changelog = changelog
 	}
 
 	cooldown := f.fetchCooldown(img)

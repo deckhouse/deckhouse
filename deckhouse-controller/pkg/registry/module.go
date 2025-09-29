@@ -145,20 +145,6 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			// if changelog build failed - warn about it but don't fail the release
-			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			meta.Changelog = make(map[string]any)
-		} else {
-			meta.Changelog = changelog
-		}
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var ModuleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
@@ -167,6 +153,20 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
+	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			// if changelog build failed - warn about it but don't fail the release
+			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
+
+			changelog = make(map[string]any)
+		}
+		
+		meta.Changelog = changelog
 	}
 
 	return meta, nil

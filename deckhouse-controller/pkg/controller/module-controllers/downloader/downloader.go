@@ -494,16 +494,6 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			meta.Changelog = make(map[string]any)
-		} else {
-			meta.Changelog = changelog
-		}
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var ModuleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
@@ -512,6 +502,16 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
+	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			changelog = make(map[string]any)
+		}
+		
+		meta.Changelog = changelog
 	}
 
 	return meta, err
