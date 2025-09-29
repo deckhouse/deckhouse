@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -178,6 +179,11 @@ func (suite *ModuleLoaderTestSuite) SetupSuite() {
 	suite.tmpDir = suite.T().TempDir()
 	suite.T().Setenv(d8env.DownloadedModulesDir, suite.tmpDir)
 	_ = os.MkdirAll(filepath.Join(suite.tmpDir, "modules"), 0777)
+
+	// Skip if verity tooling is unavailable on this runner
+	if _, err := exec.LookPath("veritysetup"); err != nil {
+		suite.T().Skip("requires veritysetup on linux runner; skipping")
+	}
 }
 
 func (suite *ModuleLoaderTestSuite) TestrestoreModulesByOverrides() {
