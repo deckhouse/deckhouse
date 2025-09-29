@@ -2,6 +2,8 @@ module github.com/deckhouse/deckhouse
 
 go 1.24
 
+toolchain go1.24.3
+
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig/v3 v3.2.3
