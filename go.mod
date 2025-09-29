@@ -2,8 +2,6 @@ module github.com/deckhouse/deckhouse
 
 go 1.24
 
-toolchain go1.24.3
-
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/Masterminds/sprig/v3 v3.2.3
@@ -14,7 +12,7 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/flant/addon-operator v1.15.0
 	github.com/flant/kube-client v1.3.1
-	github.com/flant/shell-operator v1.11.1-0.20250929092433-a2f650c5f9bc
+	github.com/flant/shell-operator v1.11.1
 	github.com/go-openapi/spec v0.19.8
 	github.com/gojuno/minimock/v3 v3.4.5
 	github.com/google/go-cmp v0.7.0
