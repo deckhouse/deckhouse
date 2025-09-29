@@ -93,7 +93,7 @@ spec:
 
 ## Настройка внешних провайдеров
 
-Для настройки внешниx провайдеров используется ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider).
+Для настройки внешних провайдеров используется ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 ### GitHub
 
