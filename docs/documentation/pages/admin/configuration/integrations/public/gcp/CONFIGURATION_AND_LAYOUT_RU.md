@@ -1,6 +1,6 @@
 ---
 title: Конфигурация и схема размещения
-permalink: ru/admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
+permalink: ru/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 lang: ru
 ---
 

@@ -140,7 +140,7 @@ For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components.
-The [NodeGroup](/products/kubernetes-platform/documentation/v1/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
+The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
 
 In high-load clusters, where many alerts are generated and many metrics are collected,
 we recommend allocating dedicated nodes for monitoring.

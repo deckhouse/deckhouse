@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/public/gcp/сonfiguration-and-layout-scheme.html
+permalink: en/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 ---
 
 ## Layouts

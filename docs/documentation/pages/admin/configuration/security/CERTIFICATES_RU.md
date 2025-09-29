@@ -173,9 +173,9 @@ DKP экспортирует метрики в Prometheus, что позволя
     version: 1
 ```
 
-### Добавление Issuer и ClusterIssuer, использующих HashiСorp Vault для заказа сертификатов
+### Добавление Issuer и ClusterIssuer, использующих HashiCorp Vault для заказа сертификатов
 
-Для настройки заказа сертификатов с помощью Vault используйте [документацию HashiСorp](https://developer.hashicorp.com/vault/tutorials/archive/kubernetes-cert-manager?in=vault%2Fkubernetes).
+Для настройки заказа сертификатов с помощью Vault используйте [документацию HashiCorp](https://developer.hashicorp.com/vault/tutorials/archive/kubernetes-cert-manager?in=vault%2Fkubernetes).
 
 После настройки PKI и [включения авторизации в Kubernetes](../access/authorization/), выполните следующее:
 
