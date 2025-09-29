@@ -165,7 +165,7 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 
 			changelog = make(map[string]any)
 		}
-		
+
 		meta.Changelog = changelog
 	}
 

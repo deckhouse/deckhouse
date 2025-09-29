@@ -143,7 +143,7 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 
 			changelog = make(map[string]any)
 		}
-		
+
 		meta.Changelog = changelog
 	}
 

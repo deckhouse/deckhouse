@@ -510,7 +510,7 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		if err != nil {
 			changelog = make(map[string]any)
 		}
-		
+
 		meta.Changelog = changelog
 	}
 

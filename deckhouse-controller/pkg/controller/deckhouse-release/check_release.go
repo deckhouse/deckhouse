@@ -780,7 +780,7 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 
 			changelog = make(map[string]any)
 		}
-		
+
 		meta.Changelog = changelog
 	}
 
