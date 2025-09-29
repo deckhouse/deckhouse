@@ -1,15 +1,33 @@
 ---
-title: "NFS Storage"
+title: "NFS data storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
 ---
 
-To manage volumes based on the NFS (Network File System) protocol, you can use the `csi-nfs` module, which allows the creation of a StorageClass through the creation of custom `NFSStorageClass` resources.
+Deckhouse Virtualization Platform (DVP) supports Network File System (NFS), enabling the connection and management of network file storage in Kubernetes. This helps organize centralized data storage and shared file usage between containers.
+
+This page provides instructions for connecting NFS storage in DVP, configuring the connection, creating a StorageClass, and verifying system operability.
+
+## System Requirements and Recommendations
+
+### Requirements
+
+- Use stock kernels shipped with the [supported distributions](/products/virtualization-platform/documentation/about/requirements.html);
+- Ensure that an NFS server is deployed and properly configured;
+- To support RPC-with-TLS, enable the `CONFIG_TLS` and `CONFIG_NET_HANDSHAKE` options in the Linux kernel.
+
+{% alert level="warning" %}
+To use NFS as storage for virtual disks in DVP, configure the NFS server with the `no_root_squash` option.
+{% endalert %}
+
+### Recommendations
+
+To ensure that the module pods restart when the `tlsParameters` setting in the module configuration changes, the [pod-reloader](/products/kubernetes-platform/documentation/v1/modules/pod-reloader) module must be enabled (it is enabled by default).
 
 ## Enabling the module
 
-To enable the `csi-nfs` module, apply the following resource:
+The `csi-nfs` module manages volumes based on the NFS protocol and supports StorageClass creation through custom [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources. To enable the module, execute the command:
 
-```yaml
+```shell
 d8 k apply -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -21,8 +39,7 @@ spec:
 EOF
 ```
 
-Wait until the `csi-nfs` module transitions to the `Ready` status.
-To check the status, run the following command:
+Wait until the `csi-nfs` module transitions to the `Ready` status. To check the status, run the following command:
 
 ```shell
 d8 k get module csi-nfs -w
@@ -31,17 +48,19 @@ d8 k get module csi-nfs -w
 In the output, you should see information about the `csi-nfs` module:
 
 ```console
-NAME      STAGE   SOURCE   PHASE       ENABLED   READY
-csi-nfs                    Available   True      True
+NAME      STAGE   SOURCE    PHASE       ENABLED    READY
+csi-nfs           Embedded  Available   True       True
 ```
 
-## Creating the StorageClass
+## Creating a StorageClass
 
-To create a StorageClass, you need to use the `NFSStorageClass` resource. Manually creating a StorageClass without `NFSStorageClass` may lead to errors.
+To create a StorageClass, use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource. Creating a StorageClass manually without using [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) can lead to errors.
 
-Example of creating a StorageClass based on NFS:
+The NFS server address and mount point path must be explicitly specified. You must also specify the NFS server version (for example, `"4.1"`).
 
-```yaml
+Example command to create an NFS-based StorageClass:
+
+```shell
 d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: NFSStorageClass
@@ -49,32 +68,21 @@ metadata:
   name: nfs-storage-class
 spec:
   connection:
-    # Address of the NFS server.
     host: 10.223.187.3
-    # Path to the mount point on the NFS server.
     share: /
-    # Version of the NFS server.
     nfsVersion: "4.1"
-  # Reclaim policy when deleting PVC.
-  # Allowed values:
-  # - Delete (PVC deletion will also delete PV and data on the NFS server).
-  # - Retain (PVC deletion will not delete PV or data on the NFS server, requiring manual removal by the user).
-  # [Learn more...](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#reclaiming)
   reclaimPolicy: Delete
-  # Volume creation mode.
-  # Allowed values: "Immediate", "WaitForFirstConsumer".
-  # [Learn more...](https://kubernetes.io/docs/concepts/storage/storage-classes/#volume-binding-mode)
   volumeBindingMode: WaitForFirstConsumer
 EOF
 ```
 
-Check that the created `NFSStorageClass` resource has transitioned to the `Created` phase by running the following command:
+Check that the created [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource has transitioned to the `Created` phase by running the following command:
 
 ```shell
 d8 k get NFSStorageClass nfs-storage-class -w
 ```
 
-In the output, you should see information about the created `NFSStorageClass` resource:
+In the output, you should see information about the created [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource:
 
 ```console
 NAME                PHASE     AGE
@@ -94,22 +102,17 @@ NAME                PROVISIONER      RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLO
 nfs-storage-class   nfs.csi.k8s.io   Delete          WaitForFirstConsumer   true                   1h
 ```
 
-If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` module has been configured successfully. Users can now create PersistentVolumes by specifying the `nfs-storage-class` StorageClass.
+If the StorageClass named `nfs-storage-class` appears, it means the `csi-nfs` module has been configured successfully. Users can now create PersistentVolumes by specifying the `nfs-storage-class` StorageClass. For each PersistentVolume resource, a directory `<share-directory>/<PersistentVolume-name>` will be created.
 
-For each `PersistentVolume` resource, a directory `<share-directory>/<PersistentVolume-name>` will be created.
+## Module health check
 
-## Checking module functionality
-
-To check the functionality of the `csi-nfs` module, you need to verify the pod statuses in the `d8-csi-nfs` namespace.
-All pods should be in the `Running` or `Completed` state, and the `csi-nfs` pods should be running on all nodes.
-
-You can check the module's functionality with the following command:
+To verify the health of the module, ensure that all pods in the `d8-csi-nfs` namespace are in the `Running` or `Completed` state and are running on every node in the cluster:
 
 ```shell
 d8 k -n d8-csi-nfs get pod -owide -w
 ```
 
-In the output, you should see a list of all pods in the `d8-csi-nfs` namespace.
+As a result, the list of all pods in the `d8-csi-nfs` namespace will be displayed:
 
 ```console
 NAME                             READY   STATUS    RESTARTS   AGE   IP             NODE       NOMINATED NODE   READINESS GATES
@@ -119,3 +122,71 @@ webhooks-7b5bf9dbdb-m5wxb        1/1     Running   0          1h    10.111.0.16 
 csi-nfs-8mpcd                    2/2     Running   0          1h    172.18.18.50   master     <none>           <none>
 csi-nfs-n6sks                    2/2     Running   0          1h    172.18.18.51   worker-1   <none>           <none>
 ```
+
+## Changing NFS server parameters for existing PVs
+
+It is not possible to change NFS server connection parameters for already created PersistentVolumes. These parameters are stored directly in the PV manifest and cannot be modified. Changing the StorageClass will not update connection settings in existing PVs.
+
+## Creating volume snapshots
+
+In DVP, snapshots are created by archiving the volume’s folder. The archive is saved in the root directory of the NFS server specified in the `spec.connection.share` parameter. To create snapshots:
+
+1. Enable the `snapshot-controller` module:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: snapshot-controller
+   spec:
+     enabled: true
+     version: 1
+   EOF
+   ```
+
+1. Create a volume snapshot by specifying the required parameters:
+
+   ```shell
+   d8 k apply -f -<<EOF
+   apiVersion: snapshot.storage.k8s.io/v1
+   kind: VolumeSnapshot
+   metadata:
+     name: my-snapshot
+     namespace: <the namespace in which the PVC is located>
+   spec:
+     volumeSnapshotClassName: csi-nfs-snapshot-class
+     source:
+       persistentVolumeClaimName: <the namespace for which the snapshot needs to be created>
+   EOF
+   ```
+
+1. Check the snapshot status using the following command:
+
+   ```shell
+   d8 k get volumesnapshot
+   ```
+
+This command will display a list of all snapshots and their current statuses.
+
+## Deleting PVs with RPC-with-TLS enabled
+
+If the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) is configured with RPC-with-TLS support, it may be impossible to delete PVs. This can happen if the secret storing mount parameters is deleted (for example, after deleting the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass)). As a result, the controller is unable to mount the NFS path to delete the `<PV name>` directory.
+
+## Adding multiple CAs to tlsParameters.ca in ModuleConfig
+
+To add multiple CA certificates to the `tlsParameters.ca` parameter, concatenate them into a single file and encode it using Base64:
+
+- For two CAs:
+
+```shell
+cat CA1.crt CA2.crt | base64 -w0
+```
+
+- For three CAs:
+
+```shell
+cat CA1.crt CA2.crt CA3.crt | base64 -w0
+```
+
+- And so on.

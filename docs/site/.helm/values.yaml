@@ -24,6 +24,8 @@ moduleWatcher:
       - registry.flant.com/team/foxtrot/docs-example
     web-production:
       - registry.deckhouse.io/deckhouse/fe/modules
+    web-test:
+      - registry.deckhouse.io/deckhouse/fe/modules
   scanInterval:
     _default: 15s
     web-production: 5m
@@ -58,10 +60,9 @@ vrouter:
   pathStatic:
     _default: root
   pathChannelsFile:
-    _default: /app/release-channels/channels.yaml
+    _default: /app/root/en/includes/release-channels/channels.yaml
   pathTpls:
     _default: /includes
   urlValidation:
     _default: false
     web-production: true
-

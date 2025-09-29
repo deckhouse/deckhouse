@@ -68,6 +68,45 @@ securityContext:
     type: RuntimeDefault
 {{- end }}
 
+
+{{- /* SecurityContext for Deckhouse UID/GID 64535, PSS Restricted */ -}}
+{{- /* Optional keys: */ -}}
+{{- /* .ro   – bool, read-only root FS (default true) */ -}}
+{{- /* .caps – []string, capabilities.add (default empty) */ -}}
+{{- /* .uid  – int, runAsUser/runAsGroup (default 64535) */ -}}
+{{- /* .seccompProfile  – bool, disable seccompProfile when false (default true) */ -}}
+{{- /* Usage: include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) */ -}}
+{{- define "helm_lib_module_container_security_context_pss_restricted_flexible" -}}
+{{- $ro := true -}}
+{{- if hasKey . "ro" -}}
+  {{- $ro = .ro -}}
+{{- end -}}
+{{- $seccompProfile := true -}}
+{{- if hasKey . "seccompProfile" -}}
+  {{- $seccompProfile = .seccompProfile -}}
+{{- end -}}
+{{- $caps := default (list) .caps -}}
+{{- $uid  := default 64535 .uid  -}}
+
+securityContext:
+  readOnlyRootFilesystem: {{ $ro }}
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+{{- if $caps }}
+    add: {{ $caps | toJson }}
+{{- end }}
+  runAsUser:   {{ $uid }}
+  runAsGroup:  {{ $uid }}
+  runAsNonRoot: true
+{{- if $seccompProfile }}
+  seccompProfile:
+    type: RuntimeDefault
+{{- end }}
+{{- end }}
+
+
 {{- /* Usage: {{ include "helm_lib_module_pod_security_context_run_as_user_root" . }} */ -}}
 {{- /* returns PodSecurityContext parameters for Pod with user and group 0 */ -}}
 {{- define "helm_lib_module_pod_security_context_run_as_user_root" -}}
@@ -127,6 +166,7 @@ securityContext:
 {{- define "helm_lib_module_container_security_context_escalated_sys_admin_privileged" -}}
 securityContext:
   allowPrivilegeEscalation: true
+  readOnlyRootFilesystem: true
   capabilities:
     add:
     - SYS_ADMIN
@@ -196,6 +236,8 @@ securityContext:
   capabilities:
     drop:
     - ALL
+  seccompProfile:
+    type: RuntimeDefault
 {{- end }}
 
 {{- /* Usage: {{ include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} */ -}}

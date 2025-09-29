@@ -129,10 +129,6 @@ entries:
                         en: Master nodes
                         ru: Мастер узлы
                       url: /stronghold/documentation/admin/platform-management/control-plane-settings/masters.html
-                    - title:
-                        en: Components placement
-                        ru: Размещение компонентов
-                      url: /stronghold/documentation/admin/platform-management/control-plane-settings/placement-management.html
                 - title:
                     en: Network management
                     ru: Управление сетью

@@ -103,6 +103,10 @@
     margin-left: 5px;
 }
 
+.channel-menu {
+    white-space: nowrap;
+}
+
 .channel-menu > a {
     color: #bbb;
     font-size: 14px;
@@ -413,12 +417,6 @@
 .layout-sidebar__content {
     width: calc(1000px - 260px - 40px);
     flex: 1;
-
-    @media screen and (width < 1500px) {
-      &:not(.layout-sidebar__content--guides) {
-        max-width: 720px;
-      }
-    }
 
     @media screen and (max-width: 1000px) {
         background: #fff;

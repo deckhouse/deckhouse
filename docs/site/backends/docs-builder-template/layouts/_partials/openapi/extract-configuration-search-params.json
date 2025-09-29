@@ -1,0 +1,62 @@
+{{/* Recursively extracts search parameters from OpenAPI configuration schema */}}
+
+{{- $data := .data }}
+{{- $langData := .langData }}
+{{- $moduleName := .moduleName }}
+{{- $moduleChannel := .moduleChannel }}
+{{- $ancestors := .ancestors }}
+{{- $resourceName := .resourceName }}
+{{- $apiVersion := .apiVersion }}
+{{- $searchParams := slice }}
+
+{{- if reflect.IsMap $data }}
+  {{- if $data.properties }}
+    {{- range $paramName, $paramData := $data.properties }}
+      {{- $paramLangData := index $langData.properties $paramName }}
+      {{- $currentAncestors := $ancestors | append $paramName }}
+      {{- $paramPath := delimit $currentAncestors "." }}
+
+      {{- $description := "" }}
+      {{- if $paramLangData.description }}
+        {{- $description = $paramLangData.description | plainify }}
+      {{- else if $paramData.description }}
+        {{- $description = $paramData.description | plainify }}
+      {{- end }}
+
+
+      {{- $searchParam := dict
+        "name" $paramName
+        "module" $moduleName
+        "moduletype" "source"
+        "url" (printf "/modules/%s/%s/configuration.html#parameters-%s" $moduleName $moduleChannel (delimit $currentAncestors "-" | lower))
+        "path" $paramPath
+        "content" $description }}
+
+      {{- if $resourceName }}
+        {{- $searchParam = merge $searchParam (dict "resName" $resourceName) }}
+      {{- end }}
+
+      {{- if $apiVersion }}
+        {{- $searchParam = merge $searchParam (dict "apiVersion" $apiVersion) }}
+      {{- end }}
+
+
+
+      {{- $searchParams = $searchParams | append $searchParam }}
+
+      {{- /* Recursively process nested properties */}}
+      {{- if $paramData.properties }}
+        {{- $nestedParams := partial "openapi/extract-configuration-search-params.json" (dict "data" $paramData "langData" $paramLangData "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" $currentAncestors "resourceName" $resourceName "apiVersion" $apiVersion) }}
+        {{- $searchParams = $searchParams | append $nestedParams }}
+      {{- end }}
+
+      {{- /* Process array items if they have properties */}}
+      {{- if and $paramData.items $paramData.items.properties }}
+        {{- $nestedParams := partial "openapi/extract-configuration-search-params.json" (dict "data" $paramData.items "langData" $paramLangData.items "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" $currentAncestors "resourceName" $resourceName "apiVersion" $apiVersion) }}
+        {{- $searchParams = $searchParams | append $nestedParams }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- return $searchParams }}
