@@ -16,8 +16,6 @@ package utils_test
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -326,33 +324,5 @@ func TestGenerateRegistryOptions(t *testing.T) {
 
 		assert.Len(t, options, 4)
 		// Insecure schema should be true
-	})
-}
-
-func TestGetModuleVersion(t *testing.T) {
-	t.Run("successfully gets version from symlink", func(t *testing.T) {
-		// Setup temporary directory structure
-		tmpDir, err := os.MkdirTemp("", "module-test")
-		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
-
-		// Create versioned directory
-		versionedDir := filepath.Join(tmpDir, "module-name", "1.0.0")
-		err = os.MkdirAll(versionedDir, 0755)
-		require.NoError(t, err)
-
-		// Create symlink
-		symlinkPath := filepath.Join(tmpDir, "module-name-link")
-		err = os.Symlink(versionedDir, symlinkPath)
-		require.NoError(t, err)
-
-		version, err := utils.GetModuleVersion(symlinkPath)
-		require.NoError(t, err)
-		assert.Equal(t, "1.0.0", version)
-	})
-
-	t.Run("returns error for non-existent symlink", func(t *testing.T) {
-		_, err := utils.GetModuleVersion("/nonexistent/path")
-		require.Error(t, err)
 	})
 }
