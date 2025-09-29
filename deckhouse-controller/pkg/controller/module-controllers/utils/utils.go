@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -363,27 +361,4 @@ func buildDockerCfg(repo, dockercfg string) string {
 	}
 
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"auths": {"%s": {}}}`, registry)))
-}
-
-// GetModuleVersion resolves a symlink to a versioned directory and returns its version (the last path segment).
-func GetModuleVersion(symlinkPath string) (string, error) {
-	info, err := os.Lstat(symlinkPath)
-	if err != nil {
-		return "", err
-	}
-
-	if info.Mode()&os.ModeSymlink == 0 {
-		return "", fmt.Errorf("path is not a symlink: %s", symlinkPath)
-	}
-
-	target, err := os.Readlink(symlinkPath)
-	if err != nil {
-		return "", err
-	}
-
-	if !filepath.IsAbs(target) {
-		target = filepath.Join(filepath.Dir(symlinkPath), target)
-	}
-
-	return filepath.Base(target), nil
 }
