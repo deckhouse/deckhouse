@@ -44,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -55,7 +56,6 @@ import (
 )
 
 const (
-	metricUpdatingFailedGroup   = "d8_updating_is_failed"
 	serviceName                 = "check-release"
 	ltsChannelName              = "lts"
 	checkDeckhouseReleasePeriod = 3 * time.Minute
@@ -258,7 +258,7 @@ func (f *DeckhouseReleaseFetcher) fetchDeckhouseRelease(ctx context.Context) err
 		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
 	}
 
-	f.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingFailedGroup)
+	f.metricStorage.Grouped().ExpireGroupMetrics(metrics.D8UpdatingIsFailed)
 
 	// sort releases before
 	sort.Sort(releaseUpdater.ByVersion[*v1alpha1.DeckhouseRelease](releasesInCluster))
@@ -517,12 +517,12 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
-		f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 1, metricLabels)
+		f.metricStorage.Grouped().GaugeSet(metrics.D8UpdatingIsFailed, metrics.D8UpdatingIsFailed, 1, metricLabels)
 
 		return nil, fmt.Errorf("get new releases metadata: %w", err)
 	}
 
-	f.metricStorage.Grouped().GaugeSet(metricUpdatingFailedGroup, metricUpdatingFailedGroup, 0, metricLabels)
+	f.metricStorage.Grouped().GaugeSet(metrics.D8UpdatingIsFailed, metrics.D8UpdatingIsFailed, 0, metricLabels)
 
 	for _, meta := range metas {
 		releaseMetadata = &meta
