@@ -17,7 +17,7 @@ module ReferenceGenerator
   class ReferenceD8Page < Jekyll::Page
     def initialize(site, lang)
       @site = site
-      @baseUrl = '/deckhouse-cli/reference/'
+      @baseUrl = '/cli/d8/reference/'
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
       @lang = lang

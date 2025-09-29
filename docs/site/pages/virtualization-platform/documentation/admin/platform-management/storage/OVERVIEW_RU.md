@@ -20,7 +20,6 @@ DVP предлагает широкий спектр решений, котор�
 ### Программно-определяемые хранилища
 
 - [Управление логическими томами на узлах кластера](../storage/sds/node-configurator/about.html)
-- [Локальное хранилище Local Path Provisioner](../storage/sds/local-path-provisioner.html)
 - [Локальное хранилище на основе LVM (Logical Volume Manager)](../storage/sds/lvm-local.html)
 - [Реплицируемое хранилище на основе DRBD (Distributed Replicated Block Device)](../storage/sds/lvm-replicated.html)
 

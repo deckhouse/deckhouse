@@ -92,6 +92,7 @@ func initKlog(logger Logger) {
 	// (logs will out in standalone installer and dhctl-server)
 	flags := &flag.FlagSet{}
 	klog.InitFlags(flags)
+	klog.SetLogFilter(&LogSanitizer{}) // filter sensitive keywords
 	flags.Set("logtostderr", "false")
 	flags.Set("v", "10")
 

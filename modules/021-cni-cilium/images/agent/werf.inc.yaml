@@ -399,7 +399,7 @@ import:
   - libedit.so.0
   - libedit.so.0.0.75
   - libedit.so.3
-- image: libs/ncurses-v6.5
+- image: libs/ncurses-v6_5_20250920
   add: /usr/lib
   to: /usr/lib64
   before: setup

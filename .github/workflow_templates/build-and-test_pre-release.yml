@@ -170,16 +170,6 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "security_scan_template" (slice $ctx "main") | strings.Indent 4 }!}
 
-  web_links_test:
-    name: Web links test
-    if: ${{ github.repository == 'deckhouse/deckhouse' }}
-    needs:
-      - git_info
-      - doc_web_build
-      - main_web_build
-    continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" (slice $ctx "release") | strings.Indent 4 }!}
-
   validators:
     name: Validators
     needs:
@@ -227,7 +217,6 @@ jobs:
     continue-on-error: true
     needs:
       - git_info
-      - doc_web_build
       - main_web_build
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
@@ -245,7 +234,6 @@ jobs:
     needs:
       - git_info
       - doc_web_build
-      - main_web_build
     if: ${{ needs.git_info.outputs.ci_commit_ref_name == 'main' && github.repository == 'deckhouse/deckhouse' }}
     runs-on: [self-hosted, regular]
     steps:

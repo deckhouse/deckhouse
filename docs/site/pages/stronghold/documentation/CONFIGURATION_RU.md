@@ -50,7 +50,7 @@ d8 p module disable stronghold
 ## Управление доступами
 
 В автоматическом режиме `Automatic` в Stronghold после инициализации хранилища создается роль `deckhouse_administrators`, для которой включается доступ к веб-интерфейсу через OIDC аутентификацию [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/).
-Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [`secrets-store-integration`](/products/kubernetes-platform/modules/secrets-store-integration/stable/).
+Также настраивается автоматическое подключение текущего кластера Deckhouse к Stronghold для работы модуля [`secrets-store-integration`](/modules/secrets-store-integration/stable/).
 
 Для того, чтоб выдать пользователям, находящимся в группе `admins` (членство в группе передаётся из используемого IdP или LDAP с помощью [Dex](/products/kubernetes-platform/documentation/v1/modules/user-authn/)), нужно указать эту группу в массиве `administrators` в `ModuleConfig`:
 

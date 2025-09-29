@@ -79,9 +79,9 @@ Role-based model subsystems composition table.
 
 Features:
 - Manages user and group access control using Kubernetes RBAC;
-- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](../../../../reference/cr/authorizationrule.html#authorizationrule-v1alpha1-spec-allowscale)) Custom Resource);
-- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule]([AuthorizationRule](../../../../reference/cr/authorizationrule.html#authorizationrule-v1alpha1-spec-portforwarding) Custom Resource);
-- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html#clusterauthorizationrule-v1-spec-namespaceselector) Custom Resource);
+- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-allowscale)) Custom Resource);
+- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule]([AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-portforwarding) Custom Resource);
+- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector) Custom Resource);
 
 In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User` — has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding;
@@ -96,7 +96,7 @@ In addition to the RBAC, you can use a set of high-level roles in the module:
 Currently, the multi-tenancy mode (namespace-based authorization) is implemented according to a temporary scheme and **isn't guaranteed to be entirely safe and secure**!
 {% endalert %}
 
-If a [ClusterAuthorizationRule](../../../../reference/cr/clusterauthorizationrule.html) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
+If a [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
 
 The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the custom resource will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
 
@@ -110,7 +110,7 @@ The module creates special aggregated cluster roles (`ClusterRole`). By using th
   For example, you can use the `d8:manage:networking:manager` role in `ClusterRoleBinding` to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within the namespace.
 
-  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](../../../../reference/cr/podloggingconfig.html) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](../../../../reference/cr/clusterloggingconfig.html) and [ClusterLogDestination](../../../../reference/cr/clusterlogdestination.html) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
+  For example, the `d8:use:role:manager` role in `RoleBinding` enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
 
 ### Default access list for each role
 
