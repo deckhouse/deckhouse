@@ -4,8 +4,7 @@ permalink: en/user/web/ui.html
 search: web UI, web interface
 ---
 
-The `console` module's web UI is designed for managing the cluster.
-It provides access to monitoring, configuration, node management, modules, security, and network settings.
+The `console` module's web UI provides access to cluster management, including monitoring, parameter configuration, node and pod management, and security and network configuration. Most operations available on the command line via the d8 (Deckhouse CLI) or kubectl utilities are also performed through the web interface.
 
 ## Accessing the console web UI
 
@@ -116,10 +115,17 @@ This subsection lets you manage the configurations of machines used in the clust
 ![Machine classes](../../images/console/mashine_class.png)
 
 The “Add machine class” menu lets you define parameters for a new machine configuration.
-The configuration section includes the class name, while the resource block allows you to set a number of virtual CPUs,
-CPU architecture, memory size, baseline performance, number of GPUs, and image ID.
+The configuration section includes the class name, while the resource block allows you to set:
+- number of virtual CPUs,
+- CPU architecture,
+- memory size,
+- baseline performance,
+- number of GPUs,
+- image ID.
+
 You can also enable support for preemptible VMs, configure disk size and type, select the primary subnet and network type,
 and assign a public IP if needed.
+
 Additional subnets and labels can also be added for more flexible infrastructure setup.
 
 ![Add machine class](../../images/console/add_class.png)
@@ -127,8 +133,17 @@ Additional subnets and labels can also be added for more flexible infrastructure
 ### “All group nodes” subsection
 
 This subsection provides a summary view of all cluster nodes, with filtering and sorting by various characteristics.
-Each node card displays: current state, node group, date and time, availability zone, internal and external IP addresses,
-container runtime (CRI), kernel version, kubelet version, and operating system.
+Each node card displays:
+- current state,
+- node group,
+- date and time,
+- availability zone,
+- internal and external IP addresses,
+- container runtime (CRI),
+- kernel version,
+- kubelet version,
+- operating system.
+
 Graphs for CPU, memory, disk, and network usage are also available to help assess node performance.
 The **Cordon** and **Cordon+Drain** buttons let you manage node availability in the cluster.
 
@@ -137,7 +152,9 @@ The **Cordon** and **Cordon+Drain** buttons let you manage node availability in 
 ### “Static machines” subsection
 
 This subsection lets you manage static nodes in the cluster via two tabs:
-"Machines" for working with static nodes, and "SSH Access" for managing authorization.
+- "Machines" for working with static nodes,
+- "SSH Access" for managing authorization.
+
 This interface enables fast discovery and control of static machines in your infrastructure.
 
 The **Add machine** button in the "Machines" tab is used to add a new machine to the cluster.
@@ -164,8 +181,9 @@ To add a new template, click **Create project template**.
 ![Templates](../../images/console/examples.png)
 
 The "New project template" form lets you specify the project name, as well as add labels and annotations for identification.
-It has two tabs: "OpenAPI schema" for describing value specifications in JSON format
-and "Project resource template" for defining Helm-compatible resources to manage the project's environment.
+It has two tabs:
+- "OpenAPI schema" for describing value specifications in JSON format,
+- "Project resource template" for defining Helm-compatible resources to manage the project's environment.
 
 ![New project template](../../images/console/examples_new.png)
 
@@ -183,8 +201,10 @@ allowing secure and manageable environments in namespaces.
 To create a project, click **Create project**.
 
 The "New project" form allows the user to create a project based on a preconfigured template.
-The user enters the project name, along with optional labels and annotations.
+Set the project name, along with optional labels and annotations.
+
 The middle section lets you select the project template and leave a comment.
+
 The lower section contains input fields for required parameters and a preview of the template structure.
 
 ![Create project](../../images/console/projects_new.png)
@@ -196,15 +216,23 @@ The lower section contains input fields for required parameters and a preview of
 This subsection displays information about current Ingress controllers used to route traffic within the cluster.
 
 The list can be sorted, and new controllers can be added.
-The card for the "nginx" controller includes main parameters, such as inlet type (for example, LoadBalancer), IP address,
-Ingress class (for example, nginx) access level to the load balancer, and node selector indicating which nodes run the controller.
+The card for the "nginx" controller includes main parameters:
+- inlet type (for example, LoadBalancer),
+- IP address,
+- Ingress class (for example, nginx) access level to the load balancer,
+- node selector indicating which nodes run the controller.
+
 The lower part includes monitoring graphs for CPU, memory, network traffic, and requests per second (RPS),
 allowing you to assess the controller's performance.
 
 Available options include "Create based on" (to clone a configuration) and "Delete" (to remove an Ingress controller).
 
-Click **Add** to choose a new inlet type for the controller. Available options: HostPort, HostPort with Proxy Protocol,
-HostPort with a backup controller, LoadBalancer, and LoadBalancer with Proxy Protocol.
+Click **Add** to choose a new inlet type for the controller. Available options:
+- HostPort,
+- HostPort with Proxy Protocol, 
+- HostPort with a backup controller,
+- LoadBalancer,
+- LoadBalancer with Proxy Protocol.
 
 ![Ingress](../../images/console/ingress.png)
 
@@ -252,7 +280,7 @@ This interface supports real-time metric tracking and fine-tuning integration wi
 This section lets you create and manage rules for processing metrics.
 When adding a rule, specify a name and processing group to organize and modify incoming metrics before they are forwarded.
 
-![Metrics processing](../../images/console/metrics processing.png)
+![Metrics processing](../../images/console/metrics_processing.png)
 
 ### Metrics export
 
