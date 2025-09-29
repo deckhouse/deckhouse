@@ -47,6 +47,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -255,6 +256,11 @@ func NewDeckhouseController(
 		},
 		ReleaseChannel: "Stable",
 	})
+
+	err = metrics.RegisterDeckhouseControllerMetrics(operator.MetricStorage)
+	if err != nil {
+		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
+	}
 
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
