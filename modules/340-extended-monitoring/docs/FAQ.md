@@ -9,8 +9,8 @@ search: extended monitoring, image-availability-exporter
 
 ## How to switch to HTTP instead of HTTPS checks of my registry?
 
-To change the protocol used for checking your container registry from HTTPS to HTTP, you need to adjust the `scheme` parameter in the module's configuration.
+To change the protocol used for checking your container registry from HTTPS to HTTP, change the `settings.imageAvailability.registry.scheme` parameter in the module configuration.
 
-For detailed instructions, please refer to the [module configuration documentation](../configuration.html#parameters-imageavailability-registry-scheme).
+For detailed instructions, please refer to the [module configuration documentation](./configuration.html#parameters-imageavailability-registry-scheme).
 
 {% endraw %}

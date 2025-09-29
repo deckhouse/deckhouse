@@ -9,8 +9,8 @@ search: extended monitoring, image-availability-exporter
 
 ## Как переключиться на HTTP вместо HTTPS для проверки образов из собственного registry?
 
-Чтобы изменить протокол проверки вашего контейнерного реджестри с HTTPS на HTTP, необходимо изменить параметр модуль конфига extended-monitoring `settings.imageAvailability.registry.scheme` в конфигурации модуля.
+Чтобы изменить протокол проверки вашего registry с HTTPS на HTTP, измените параметр `settings.imageAvailability.registry.scheme` в конфигурации модуля.
 
-Подробные инструкции смотрите в [документации по настройке модуля](../configuration.html#parameters-imageavailability-registry-scheme).
+Подробные инструкции смотрите в [документации по настройке модуля](./configuration.html#parameters-imageavailability-registry-scheme).
 
 {% endraw %}
