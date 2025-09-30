@@ -131,15 +131,17 @@ properties:
                     type: integer
               volumeTypeMap:
                 description: |
-                  A dictionary of disk types for storing etcd data and Kubernetes configuration files.
+                  A dictionary mapping availability zones to disk types for the group’s worker nodes.
 
                   Format of dictionary elements: `<AVAILABILITY ZONE>: <DISK TYPE>` (see the example).
 
-                  If the `rootDiskSize` parameter is specified, the same disk type will be used for the VM's boot drive.
+                  If the `rootDiskSize` parameter is specified, the same disk type is used for the VM’s boot disk.
 
-                  We recommend using the fastest disks provided by the provider in all cases.
+                  We recommend using the fastest disk type offered by the provider whenever possible.
 
-                  If the value specified in `replicas` exceeds the number of elements in the dictionary, the master nodes whose number exceeds the length of the dictionary get the values starting from the beginning of the dictionary. For example, if `replicas: 5`, then master-0, master-2, master-4 will have the `fast-eu-1a` disk type, while master-1, master-3 will have the `fast-eu-1b` disk type.
+                  If `volumeTypeMap` is not specified for a node group, the `masterNodeGroup`’s `volumeTypeMap` is used as a fallback for that group.
+
+                  If the replicas value exceeds the number of entries in the dictionary, assignment wraps around from the beginning. For example, if `replicas: 5` for the `front` group and the dictionary lists `fast-eu-1a` first and `fast-eu-1b` second, then front-0, front-2, front-4 will use `fast-eu-1a`, while front-1, front-3 will use `fast-eu-1b`.
                 x-examples:
                   - eu-1a: fast-eu-1a
                     eu-1b: fast-eu-1b
