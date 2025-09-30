@@ -18,8 +18,6 @@
 
 if [ -d /src/global ]; then
   mkdir -p /srv/jekyll-data/documentation/_data/schemas/modules/global/crds /srv/jekyll-data/documentation/_data/schemas/crds
-  # Conversions
-  cp -fr /src/global/conversions _data/schemas/modules/global/
   # OpenAPI spec for Deckhouse global config
   cp -f /src/global/config-values.yaml _data/schemas/modules/global/
   echo -e "\ni18n:\n  ru:" >>_data/schemas/modules/global/config-values.yaml
