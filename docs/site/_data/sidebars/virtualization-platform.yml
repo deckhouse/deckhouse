@@ -24,6 +24,10 @@ entries:
             en: Requirements
             ru: Требования
           url: /virtualization-platform/documentation/about/requirements.html
+        - title:
+            en: Concepts
+            ru: Концепции
+          url: /virtualization-platform/documentation/about/concepts.html
     - title:
         en: Administration
         ru: Администрирование

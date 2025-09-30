@@ -18,6 +18,20 @@ The platform supports the following configuration:
 
 The platform has no other restrictions and is compatible with any hardware that is supported by [operating systems](#supported-os-for-platform-nodes) on which it can be installed.
 
+## Minimum platform requirements
+
+Depending on the architecture, the following minimum resources are required for the platform to operate correctly:
+
+| Architecture                                                            | Workload placement     | Master node           | Worker node          | System node          | Frontend node       |
+|-------------------------------------------------------------------------|------------------------|-----------------------|----------------------|----------------------|---------------------|
+| Single-Node Platform<br/>(Single Node / Edge)                           | On a single node       | 3 vCPU<br/>10 GB RAM  | —                    | —                    | —                   |
+| Multi-Node Platform<br/>(1 master node + worker nodes)                  | On all nodes           | 6 vCPU<br/>6 GB RAM   | 2 vCPU<br/>4 GB RAM  | —                    | —                   |
+| Three-Master Platform<br/>(3 master nodes, High Availability)           | On all nodes           | 6 vCPU<br/>14 GB RAM  | —                    | —                    | —                   |
+| Platform with Dedicated Worker Nodes<br/>(3 master nodes + worker nodes)| On worker nodes only   | 5 vCPU<br/>11 GB RAM  | 2 vCPU<br/>5 GB RAM  | —                    | —                   |
+| Distributed Architecture                                                | On worker nodes only   | 4 vCPU<br/>9 GB RAM   | 1 vCPU<br/>2 GB RAM  | 4 vCPU<br/>10 GB RAM | 1 vCPU<br/>2 GB RAM |
+
+The choice of platform architecture is described in detail in the [Concepts](/products/virtualization-platform/documentation/about/concepts.html) section.
+
 ## Hardware Requirements
 
 1. A dedicated **machine for installation**.
