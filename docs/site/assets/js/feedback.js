@@ -214,8 +214,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     showLaterModal();
                     return;
                 }
+            } else {
+                await sendFeedback(true, []);
             }
-            await sendFeedback(true, []);
+            
         })
     }
 
@@ -230,8 +232,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     showLaterModal();
                     return;
                 }
+            } else {
+                showFormModal();
             }
-            showFormModal();
+            
         })
     }
 
