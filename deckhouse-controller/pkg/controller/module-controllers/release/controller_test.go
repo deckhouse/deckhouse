@@ -44,7 +44,6 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -1026,7 +1025,7 @@ func skipNotSpecErrors(errs []error) []error {
 func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) client.Object {
 	raw := []byte(strObj)
 
-	metaType := new(k8sruntime.TypeMeta)
+	metaType := new(metav1.TypeMeta)
 	err := yaml.Unmarshal(raw, metaType)
 	require.NoError(suite.T(), err)
 
