@@ -1,6 +1,6 @@
 ---
 title: Автоматическое назначение лейблов и аннотаций пространствам имён
-permalink: ru/admin/configuration/label-assignment.html
+permalink: ru/admin/multitenancy/label-assignment.html
 lang: ru
 ---
 
