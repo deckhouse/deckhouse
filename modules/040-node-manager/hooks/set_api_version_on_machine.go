@@ -44,7 +44,6 @@ var capiMachineVersions = map[string]string{
 	"StaticMachine":      "v1alpha1",
 }
 
-
 type machineInfrastructureRef struct {
 	Name       string
 	Namespace  string
