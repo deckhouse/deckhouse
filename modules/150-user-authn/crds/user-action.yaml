@@ -34,34 +34,49 @@ spec:
               properties:
                 user:
                   type: string
-                  description: "The name (username) of the target User resource."
+                  description: "Name (username) of the target User resource."
                   x-doc-examples: ['jane.doe']
                 type:
                   type: string
-                  description: "The type of user action (ResetPassword, Reset2FA, Lock, Unlock)."
+                  description: |
+                    Type of the user action. Possible values:
+                    
+                    * `ResetPassword`: Password reset.
+                    * `Reset2FA`: Two-factor authentication reset.
+                    * `Lock`: User lock.
+                    * `Unlock`: User unlock.
                 initiatorType:
                   type: string
-                  description: "Indicates who initiated this action (admin/system/self)."
+                  description: |
+                    Indicates who initiated the action. Possible values:
+
+                    * `admin`: By an administrator.
+                    * `system`: Automatically by the system.
+                    * `self`: By the user.
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
                   properties:
                     newPasswordHash:
                       type: string
-                      description: "The bcrypt hash of the new password."
+                      description: "Bcrypt hash of the new password."
                 lock:
                   type: object
                   description: "Parameters for locking the user."
                   properties:
                     for:
                       type: string
-                      description: "Lock duration, e.g. 30s, 10m, 1h."
+                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
             status:
               type: object
               properties:
                 phase:
                   type: string
-                  description: "The current phase of the action."
+                  description: |
+                    Current phase of the action. Possible values:
+
+                    * `Succeeded`: Action completed successfully.
+                    * `Failed`: Action failed.
                   enum:
                     - "Succeeded"
                     - "Failed"
@@ -70,7 +85,7 @@ spec:
                   description: "Optional message about the result or failure of the action."
                 completedAt:
                   type: string
-                  description: "The time when the action was completed."
+                  description: "Time when the action was completed."
       subresources: &subresources
         status: {}
       additionalPrinterColumns: &additionalPrinterColumns
@@ -105,34 +120,49 @@ spec:
               properties:
                 user:
                   type: string
-                  description: "The name (username) of the target User resource."
+                  description: "Name (username) of the target User resource."
                   x-doc-examples: ['jane.doe']
                 type:
                   type: string
-                  description: "The type of user action (ResetPassword, Reset2FA, Lock, Unlock)."
+                  description: |
+                    Type of the user action. Possible values:
+                    
+                    * `ResetPassword`: Password reset.
+                    * `Reset2FA`: Two-factor authentication reset.
+                    * `Lock`: User lock.
+                    * `Unlock`: User unlock.
                 initiatorType:
                   type: string
-                  description: "Indicates who initiated this action (admin/system/self)."
+                  description: |
+                    Indicates who initiated the action. Possible values:
+
+                    * `admin`: By an administrator.
+                    * `system`: Automatically by the system.
+                    * `self`: By the user.
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
                   properties:
                     newPasswordHash:
                       type: string
-                      description: "The bcrypt hash of the new password."
+                      description: "Bcrypt hash of the new password."
                 lock:
                   type: object
                   description: "Parameters for locking the user."
                   properties:
                     for:
                       type: string
-                      description: "Lock duration, e.g. 30s, 10m, 1h."
+                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
             status:
               type: object
               properties:
                 phase:
                   type: string
-                  description: "The current phase of the action."
+                  description: |
+                    Current phase of the action. Possible values:
+
+                    * `Succeeded`: Action was completed successfully.
+                    * `Failed`: Action failed.
                   enum:
                     - "Succeeded"
                     - "Failed"
@@ -141,6 +171,6 @@ spec:
                   description: "Optional message about the result or failure of the action."
                 completedAt:
                   type: string
-                  description: "The time when the action was completed."
+                  description: "Time when the action was completed."
       subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns
