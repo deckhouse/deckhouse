@@ -212,7 +212,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(timeSinceLastFeedback < blockingFeedback) {
                     hideAccessModal();
                     showLaterModal();
-                    return;
                 } else {
                     await sendFeedback(true, []);
                 }
@@ -229,7 +228,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if(timeSinceLastFeedback < blockingFeedback) {
                     hideAccessModal();
                     showLaterModal();
-                    return;
                 } else {
                     showFormModal();
                 }
