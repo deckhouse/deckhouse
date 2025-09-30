@@ -1,6 +1,6 @@
 ---
 title: "Configuring network interaction and cluster node monitoring"
-permalink: en/admin/configuration/monitoring/configuring/network-and-pods.html
+permalink: en/admin/configuration/monitoring/configuring/network-and-nodes.html
 ---
 
 ## Network interaction monitoring
