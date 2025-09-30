@@ -95,6 +95,9 @@ spec:
         ISTIO_META_DNS_AUTO_ALLOCATE: "true"
         PROXY_CONFIG_XDS_AGENT: "true"
         ISTIO_META_IDLE_TIMEOUT: {{ $.Values.istio.dataPlane.proxyConfig.idleTimeout }}
+        PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION: "true"
+        PILOT_ENABLE_CROSS_CLUSTER_WORKLOAD_ENTRY: "true"
+        ISTIO_META_ENABLE_ENVOY_ACCESS_LOG_SERVICE: "true"
       holdApplicationUntilProxyStarts: {{ $.Values.istio.dataPlane.proxyConfig.holdApplicationUntilProxyStarts }}
   {{- if $.Values.istio.tracing.enabled }}
       tracing:
@@ -102,6 +105,18 @@ spec:
         zipkin:
           address: {{ $.Values.istio.tracing.collector.zipkin.address }}
   {{- end }}
+
+    extensionProviders:
+    - name: default
+      envoyFileAccessLog:
+        path: "/dev/stdout"
+        logFormat:
+          text: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% \"DOWNSTREAM_PEER_SUBJECT: %DOWNSTREAM_PEER_SUBJECT%\" \"UPSTREAM_PEER_SUBJECT: %UPSTREAM_PEER_SUBJECT%\" \"DOWNSTREAM_REMOTE_ADDRESS: %DOWNSTREAM_REMOTE_ADDRESS%\" %RESPONSE_CODE_DETAILS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\" %ROUTE_NAME%\n"
+    - name: default-with-client
+      envoyFileAccessLog:
+        path: "/dev/stdout"
+        logFormat:
+          text: "[%START_TIME%] \"SRC_PRINCIPAL: %DOWNSTREAM_PEER_URI_SAN%\" \"DST_PRINCIPAL: %REQUESTED_SERVER_NAME%\" \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% \"SRC_IP: %DOWNSTREAM_REMOTE_ADDRESS%\" \"DST_IP: %UPSTREAM_HOST%\" %RESPONSE_CODE_DETAILS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% \"USER_AGENT: %REQ(USER-AGENT)%\" \"AUTHORITY: %REQ(:AUTHORITY)%\""
 
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
