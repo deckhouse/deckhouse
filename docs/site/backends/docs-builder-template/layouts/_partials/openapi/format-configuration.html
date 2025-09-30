@@ -22,7 +22,7 @@
   {{- if and $conversions (gt (len $conversions) 0) }}
       <h2>{{ T "conversions_title" }}</h2>
 
-      <p>{{ T "conversion_action_message" }}:</p>
+      <p>{{ T "conversion_action_message" | markdownify }}:</p>
 
       {{- range $conversion := $conversions }}
         {{- if $conversion }}
