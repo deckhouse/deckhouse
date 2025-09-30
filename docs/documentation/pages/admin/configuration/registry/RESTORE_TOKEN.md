@@ -1,5 +1,5 @@
 ---
-title: Restoring registry access after an expired or invalid license token
+title: Restoring registry access when license token is expired or invalid
 permalink: en/admin/configuration/registry/restore-token.html
 ---
 
@@ -35,25 +35,25 @@ If, after the license token expired, the Deckhouse Kubernetes Platform (DKP) pod
 1. Import the updated configuration:
 
    ```shell
-   d8 kl -n d8-system apply -f /tmp/deckhouse-registry.yaml
+   d8 k -n d8-system apply -f /tmp/deckhouse-registry.yaml
    ```
 
-1. Find the problematic `deckhouse` pod on the current master node and delete it:
+1. Find the problematic `deckhouse` Pod on the current master node and delete it:
 
    ```shell
    d8 k get pods -n d8-system -o wide
    d8 k delete pod -n d8-system -o deckhouse-<id>
    ```
 
-1. Make sure the new `deckhouse` pod has started successfully:
+1. Make sure the new `deckhouse` Pod has started successfully:
 
    ```shell
    d8 k get pods -n d8-system
    ```
 
-1. If necessary, delete any remaining `deckhouse` pods that are in an incorrect state.
+1. If necessary, delete any remaining `deckhouse` Pods that are in an incorrect state.
 
-1. Repeat the [standard procedure](./third-party.html) for changing the registry, substituting your token, the required registry address, and the edition instead of example:
+1. Repeat the [standard procedure](./third-party.html) for changing the registry, substituting your token, the required registry address, and the edition instead of `example`:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user licence-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example

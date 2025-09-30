@@ -36,7 +36,7 @@ lang: ru
 1. Импортируйте обновленную конфигурацию:
 
    ```shell
-   d8 kl -n d8-system apply -f /tmp/deckhouse-registry.yaml
+   d8 k -n d8-system apply -f /tmp/deckhouse-registry.yaml
    ```
 
 1. Найдите проблемный под `deckhouse` на текущем master-узле и удалите его:
