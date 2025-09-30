@@ -1,5 +1,3 @@
-//go:build linux
-
 // Copyright 2024 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -920,6 +919,23 @@ type: Opaque
 
 	for _, option := range options {
 		option(rec)
+	}
+
+	// initialize module loader to avoid nil dereference in deploy flow
+	{
+		ldr := moduleloader.New(
+			suite.Suite.Client(),
+			"v1.0.0",
+			"",
+			"",
+			dependency.TestDC,
+			rec.exts,
+			rec.embeddedPolicy,
+			logger.Named("module-loader"),
+		)
+		// call Sync to initialize internal installer instance
+		_ = ldr.Sync(context.TODO())
+		rec.loader = ldr
 	}
 
 	c := suite.Client()
