@@ -23,11 +23,12 @@ import (
 
 const bootstrapDir = "/bootstrap"
 
-func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig) error {
+func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, commanderMode bool) error {
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
+	bashibleData["commanderMode"] = commanderMode
 	saveInfo := []saveFromTo{
 		{
 			from: filepath.Join(candiBashibleDir, "bootstrap"),
