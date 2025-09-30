@@ -8,3 +8,4 @@ dirs:
  - /usr/share/ca-certificates
  - /etc/ca-certificates
  - /usr/local/share/ca-certificates
+ - /etc/pki/ca-trust
