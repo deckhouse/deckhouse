@@ -139,9 +139,22 @@ func WithoutInterruptions(fn func()) {
 	fn()
 }
 
+func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
+	// collect stacktrace for debug
+	buf := make([]byte, 20971520) // 20 mb
+	l := runtime.Stack(buf, true)
+	buf = buf[:l]
+	fd := int(os.Stdin.Fd())
+	if shouldAlwaysPrint || terminal.IsTerminal(fd) {
+		log.InfoF("\n%sGorutines stack for debug:\n%s\n", msg, string(buf))
+	}
+
+	buf = nil
+}
+
 func WaitForProcessInterruption() {
 	interruptCh := make(chan os.Signal, 1)
-	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	for {
 		s, ok := <-interruptCh
@@ -151,6 +164,9 @@ func WaitForProcessInterruption() {
 
 		var exitCode int
 		switch s {
+		case syscall.SIGUSR2:
+			printGorutinesStackTrace(true, "")
+			continue
 		case syscall.SIGUSR1:
 			exitCode = 1
 		case syscall.SIGTERM, syscall.SIGINT:
@@ -174,14 +190,7 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	go func() {
 		<-interruptCh
 
-		// collect stacktrace for debug
-		buf := make([]byte, 20971520) // 20 mb
-		l := runtime.Stack(buf, true)
-		buf = buf[:l]
-		fd := int(os.Stdin.Fd())
-		if terminal.IsTerminal(fd) {
-			log.InfoF("\nKilled by signal twice. Probably dhctl have problems. Gorutines stack for debug:\n%s\n", string(buf))
-		}
+		printGorutinesStackTrace(false, "Killed by signal twice. Probably dhctl have problems. ")
 
 		log.ErrorLn("Killed by signal twice.")
 		os.Exit(1)
