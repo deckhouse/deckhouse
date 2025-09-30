@@ -213,11 +213,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     hideAccessModal();
                     showLaterModal();
                     return;
+                } else {
+                    await sendFeedback(true, []);
                 }
-            } else {
-                await sendFeedback(true, []);
-            }
-            
+            } 
         })
     }
 
@@ -231,11 +230,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     hideAccessModal();
                     showLaterModal();
                     return;
+                } else {
+                    showFormModal();
                 }
-            } else {
-                showFormModal();
             }
-            
         })
     }
 
