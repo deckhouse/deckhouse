@@ -105,4 +105,19 @@ toc: false
       document.getElementById(installTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
   }
+
+  function getHashValue() {
+      const hash = window.location.hash;
+      return hash.substring(1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      const hashValue = getHashValue();
+      if (hashValue == "gui-install") {
+        document.getElementById("tab-manual-install").classList.remove("active");
+        document.getElementById("tab-gui-install").classList.add("active");
+        document.getElementById("tab-button-manual-install").classList.remove("active");
+        document.getElementById("tab-button-gui-install").classList.add("active");
+      }
+  });
 </script>
