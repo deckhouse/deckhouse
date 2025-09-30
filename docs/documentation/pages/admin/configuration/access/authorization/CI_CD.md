@@ -42,7 +42,7 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
    spec:
      subjects:
      - kind: ServiceAccount
-       name: gitlab-runner-deploy-token
+       name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
      portForwarding: true
@@ -57,9 +57,8 @@ To set up access to the Kubernetes cluster API for a CI/CD system, follow these 
      name: gitlab-admin-access
    subjects:
    - kind: ServiceAccount
-     name: gitlab-runner-deploy-token
+     name: gitlab-runner-deploy
      namespace: d8-service-accounts
-     apiGroup: rbac.authorization.k8s.io
    roleRef:
      kind: ClusterRole
      name: d8:manage:all:manager

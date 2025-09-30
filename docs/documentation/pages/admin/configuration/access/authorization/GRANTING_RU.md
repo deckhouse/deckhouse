@@ -49,10 +49,13 @@ apiVersion: deckhouse.io/v1
 kind: AuthorizationRule
 metadata:
   name: dev-access
+  namespace: dev-namespace
 spec:
   subjects:
-  - kind: User
-    name: dev-user@example.com
+    - kind: User
+      name: dev-user@example.com
+  accessLevel: Admin
+  portForwarding: true
 ```
 
 ### Предоставление прав пользователю во всех пространствах имен
@@ -290,7 +293,7 @@ roleRef:
 - Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
   - DexAuthenticator;
   - DexClient;
-  - PodLogginConfig.
+  - PodLoggingConfig.
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
   - `kubectl exec`;

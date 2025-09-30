@@ -52,10 +52,13 @@ apiVersion: deckhouse.io/v1
 kind: AuthorizationRule
 metadata:
   name: dev-access
+  namespace: dev-namespace
 spec:
   subjects:
-  - kind: User
-    name: dev-user@example.com
+    - kind: User
+      name: dev-user@example.com
+  accessLevel: Admin
+  portForwarding: true
 ```
 
 ### Granting permissions to a user in all namespaces
@@ -313,7 +316,7 @@ The user’s permissions will be limited to the following within the `myapp` nam
 
   - DexAuthenticator
   - DexClient
-  - PodLogginConfig
+  - PodLoggingConfig
 
 - Run the following commands on Pods and Services:
 
