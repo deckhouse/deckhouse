@@ -96,7 +96,7 @@ func handleSetMachineInfrastructureAPIVersion(input *go_hook.HookInput) error {
 
 		apiVersion, ok := capiMachineVersions[machine.Kind]
 		if !ok {
-			input.Logger.Warn("unknown infrastructure template kind", slog.String("machine", machine.Name), slog.String("kind", machine.Kind))
+			input.Logger.Warn("unknown infrastructure machine kind", slog.String("machine", machine.Name), slog.String("kind", machine.Kind))
 			continue
 		}
 
