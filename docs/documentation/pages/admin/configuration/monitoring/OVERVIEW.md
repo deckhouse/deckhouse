@@ -16,7 +16,7 @@ Several types of monitoring are implemented:
 - [Hardware resource monitoring](#hardware-resource-monitoring);
 - [Kubernetes monitoring](#kubernetes-monitoring);
 - [Ingress monitoring](#ingress-monitoring);
-- [Network interaction monitoring](./configuring/network-and-pods.html);
+- [Network interaction monitoring](./configuring/network-and-nodes.html);
 - [Extended monitoring](#extended-monitoring-mode);
 - [Cluster SLA monitoring](#cluster-sla-monitoring).
 

@@ -800,7 +800,7 @@ entries:
                     - title:
                         en: Configuring monitoring of network interaction and cluster nodes
                         ru: Настройка мониторинга сетевого взаимодействия и узлов кластера
-                      url: /admin/configuration/monitoring/configuring/network-and-pods.html
+                      url: /admin/configuration/monitoring/configuring/network-and-nodes.html
                     - title:
                         en: Writing Prometheus data to longterm storage
                         ru: Запись данных Prometheus в долговременное хранилище
