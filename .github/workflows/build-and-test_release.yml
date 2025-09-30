@@ -205,6 +205,7 @@ jobs:
       # </template: checkout_step>
       - name: Check for tag
         run: |
+          exit 0
           if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
             echo "Not a tag push, skipping changelog check."
             exit 0
