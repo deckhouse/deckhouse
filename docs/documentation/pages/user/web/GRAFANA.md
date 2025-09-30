@@ -229,24 +229,24 @@ The relevant dashboards are grouped under the "Security" folder:
   including a number of denied actions due to policy violations, breakdown of denials by type, and event logs.
   The event log for policy-related security violations is available in the OPA Violations panel.
 
-  Example of the Admission policy engine dashboard.
+  ![Admission policy engine](../../images/grafana/admission-policy-engine.png)
 
 - CIS Kubernetes Benchmark. A dashboard with the results of a configuration audit for compliance with established best practices.
   It provides summary information with no detailed view.
   This dashboard is available when the `operator-trivy` module is enabled.
 
-  Example of the CIS Kubernetes Benchmark dashboard.
+  ![CIS Kubernetes Benchmark](../../images/grafana/cis-kubernetes-benchmark.png)
 
 - Kubernetes audit logs. Includes logs of all interactions with the Kubernetes API server.
   Records are presented in JSON format.
 
-  Example of the Kubernetes audit logs dashboard.
+  ![Kubernetes audit logs](../../images/grafana/kubernetes-audit-logs.png)
 
 - Runtime audit engine logs. Includes logs of Linux kernel and cluster API server security audit events.
 
-  Example of the Runtime audit engine logs dashboard.
+  ![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
 
 - Trivy Image Vulnerability Overview. A dashboard with summary and detailed information on vulnerability scans
   of container images in namespaces annotated with `security-scanning.deckhouse.io/enabled`.
 
-  Example of the Trivy Image Vulnerability Overview dashboard.
+  ![Trivy Image Vulnerability Overview](../../images/grafana/trivy-image-vulnerability-overview.png)

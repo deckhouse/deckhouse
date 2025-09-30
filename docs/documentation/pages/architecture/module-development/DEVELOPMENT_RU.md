@@ -4,7 +4,7 @@ permalink: ru/architecture/module-development/development/
 lang: ru
 ---
 
-При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride).
+При разработке модулей может возникнуть необходимость загрузить и развернуть модуль в обход каналов обновления. Для этого используется ресурс [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride).
 
 {% alert level="warning" %}
 Ресурс ModulePullOverride предназначен **только для использования в средах разработки и отладки**.
@@ -197,11 +197,11 @@ status:
   phase: Ready
 ```
 
-После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
+После удаления ModulePullOverride модуль продолжит работать. Но, если для модуля существует [ModuleUpdatePolicy](../../../reference/api/cr.html#moduleupdatepolicy), то загрузятся новые релизы модуля (ModuleRelease), которые заменят текущую "версию разработчика".
 
 ### Пример
 
-1. В [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
+1. В [ModuleSource](../../../reference/api/cr.html#modulesource) присутствуют два модуля `echo` и `hello-world`. Для них определена политика обновления, они загружаются и устанавливаются в DKP:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -223,7 +223,7 @@ status:
      modulesCount: 2
    ```
 
-1. Включите модуль и создайте [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) для модуля `echo`:
+1. Включите модуль и создайте [ModulePullOverride](../../../reference/api/cr.html#modulepulloverride) для модуля `echo`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -300,7 +300,7 @@ status:
    - Используется та же версия, которая была задеплоена ранее (ModuleRelease v1.0.0).
    - Проверяются новые релизы.
    - При их наличии они загружаются (например, v1.1.0, v1.1.1).
-   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../deckhouse-release-channels.html) (Update). [Подробнее](../../modules/deckhouse/configuration.html#parameters-update).
+   - Далее модуль обновляется в соответствии [с обычными правилами обновления](../../../reference/deckhouse-release-channels.html) (Update). [Подробнее](/modules/deckhouse/configuration.html#parameters-update).
 
    Если модуль включён позже 72 часов:
    - Старая версия удаляется (`delete ModuleRelease v1.0.0`).
@@ -324,7 +324,7 @@ update:
       to:   "2.0" # Переход между основными версиями задаётся форматом X.0.
 ```
 
-> Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](../../cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
+> Релиз с ограничениями (constrained release) — это релиз модуля, в чьём `module.yaml` задана секция [`update.versions`](../../../reference/api/cr.html#modulerelease-v1alpha1-spec-update). Механизм `from-to` работает только с такими релизами.
 
 Условия применения `from-to`:
 
@@ -333,9 +333,9 @@ update:
 - Если одновременно подходят несколько релизов, выбирается вариант с наибольшим `to` (правила могут находиться в разных объектах ModuleRelease одного модуля).
 - Если ни один релиз не подходит под эти условия, обновление выполняется как обычно — без пропуска промежуточных версий.
 
-Если в кластер попадает релиз с [update.versions](../../cr.html#modulerelease-v1alpha1-spec-update), DKP не требует обновляться по порядку — такой релиз появляется в списке «как есть», DKP автоматически выбирает подходящий вариант и, при необходимости, ждёт подтверждения. Вы можете сразу подтвердить установку последней доступной версии в пределах `to`. После подтверждения промежуточные релизы между `from` и `to` получат статус `Skipped` после реконсиляции (не сразу); какое-то время между `Superseded` и `Deployed` возможны релизы в статусе `Pending`.
+Если в кластер попадает релиз с [update.versions](../../../reference/api/cr.html#modulerelease-v1alpha1-spec-update), DKP не требует обновляться по порядку — такой релиз появляется в списке «как есть», DKP автоматически выбирает подходящий вариант и, при необходимости, ждёт подтверждения. Вы можете сразу подтвердить установку последней доступной версии в пределах `to`. После подтверждения промежуточные релизы между `from` и `to` получат статус `Skipped` после реконсиляции (не сразу); какое-то время между `Superseded` и `Deployed` возможны релизы в статусе `Pending`.
 
-![Логика механизма `from-to`](../../images/architecture/module-development/from_to_ru.png)
+![Логика механизма `from-to`](../../../images/architecture/module-development/from_to_ru.png)
 
 Проверить доступные релизы (ModuleRelease) можно с помощью команды:
 
@@ -460,7 +460,7 @@ update:
 
 ## Артефакты модуля в container registry
 
-После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource).
+После сборки модуля его артефакты должны быть загружены в container registry по пути, который является *источником* для загрузки и запуска модулей в DKP. Путь, по которому загружаются артефакты модулей в registry, указывается в ресурсе [ModuleSource](../../../reference/api/cr.html#modulesource).
 
 Пример иерархии образов контейнеров после загрузки артефактов модулей `module-1` и `modules-2` в registry:
 

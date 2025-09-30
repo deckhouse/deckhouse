@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/hybrid/overview.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html) и [vSphere](../public/vsphere/vsphere-authorization.html).
+Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html) и [vSphere](../virtualization/vsphere/vsphere-authorization.html).
 
 Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы провайдера. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
@@ -76,7 +76,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 - Рабочий кластер с параметром `clusterType: Static`.
 - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html).
+- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/).
 
 ### Шаги по настройке
 
@@ -246,7 +246,7 @@ volumeBindingMode: WaitForFirstConsumer
 - **Инфраструктура**:
   - Установлен bare-metal кластер DKP.
   - Настроен тенант в VCD [с выделенными ресурсами](../virtualization/vcd/connection-and-authorization.html).
-  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html)).
+  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/)).
   - Настроена рабочая сеть в VCD с включённым DHCP-сервером.
   - Создан пользователь со статичным паролем и правами администратора VCD.
 

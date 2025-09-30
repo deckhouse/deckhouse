@@ -78,7 +78,7 @@ All nodes placed in different zones must have access to shared datastores with m
 ## List of required privileges
 
 {% alert level="info" %}
-Read [the documentation](environment.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
+Read [the documentation](vsphere-authorization.html#creating-and-assigning-a-role) on how to create and assign a role to a user.
 {% endalert %}
 
 **A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:**

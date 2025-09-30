@@ -228,7 +228,7 @@ apiVersions:
           description: |
             Название схемы размещения.
 
-            [Подробнее о возможных схемах размещения провайдера](../cloud-provider-dvp/layouts.html).
+            [Подробнее о возможных схемах размещения провайдера](/modules/cloud-provider-dvp/layouts.html).
         region:
           description: |
             Название региона.
