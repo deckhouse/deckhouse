@@ -71,7 +71,10 @@
  - **[control-plane-manager]** Promoted etcd member if needed. [#14661](https://github.com/deckhouse/deckhouse/pull/14661)
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
+ - **[deckhouse-controller]** Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook execution [#15724](https://github.com/deckhouse/deckhouse/pull/15724)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Fixing bashible steps when it does not respond to the limit on the number of attempts [#15633](https://github.com/deckhouse/deckhouse/pull/15633)
+ - **[dhctl]** Fix start and keep-alive behavior, do not change host if any kube-proxies has been started. [#15566](https://github.com/deckhouse/deckhouse/pull/15566)
  - **[dhctl]** Add timeout to ssh client dial and fix stop. [#15539](https://github.com/deckhouse/deckhouse/pull/15539)
  - **[dhctl]** Fix deadlock while reading dhctl singlethreaded server logs [#15512](https://github.com/deckhouse/deckhouse/pull/15512)
  - **[dhctl]** Fixed the behaviour of the attach operation when there are no keys in SSHConfig, only a password [#15478](https://github.com/deckhouse/deckhouse/pull/15478)
@@ -91,6 +94,7 @@
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#14315](https://github.com/deckhouse/deckhouse/pull/14315)
  - **[monitoring-deckhouse]** Fixed ModuleRelease alerts by eliminating many-to-many joins; observability alert now evaluates correctly. [#14908](https://github.com/deckhouse/deckhouse/pull/14908)
     Prometheus rules only; no component restarts. Alerts for module manual approval and unmet requirements will start firing as expected.
+ - **[node-manager]** CAPI crd served version fix [#15706](https://github.com/deckhouse/deckhouse/pull/15706)
  - **[node-manager]** Add rbac permission for getting DaemonSets for CAPI. [#15377](https://github.com/deckhouse/deckhouse/pull/15377)
  - **[node-manager]** Upgrade CAPI version and increase lease duration timeouts. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Fixed calculation of memory for standby holder. [#14522](https://github.com/deckhouse/deckhouse/pull/14522)
@@ -105,6 +109,7 @@
  - **[user-authn]** Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create. [#15269](https://github.com/deckhouse/deckhouse/pull/15269)
     Fixes a bug where creating new User resources failed due to missing oldObject in validation; password immutability is still enforced on update.
  - **[user-authz]** Rewrited user-authz module access hook from bash to Python. [#14695](https://github.com/deckhouse/deckhouse/pull/14695)
+ - **[vertical-pod-autoscaler]** Disable vpa for k8s-metacollector in module runtime-audit-engine [#15659](https://github.com/deckhouse/deckhouse/pull/15659)
 
 ## Chore
 
