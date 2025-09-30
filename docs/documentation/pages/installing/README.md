@@ -628,7 +628,7 @@ You can check the current status of versions in the release channels at [release
    - `--no-modules` — skip downloading module packages (`module-*.tar`);
    - `--no-security-db` — skip downloading the vulnerability scanner database package (`security.tar`);
    - `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
-   
+
      The following syntax options are supported for specifying module versions:
      - `module-name@1.3.0` — pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1;
      - `module-name@~1.3.0` — pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3;
