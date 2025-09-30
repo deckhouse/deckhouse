@@ -38,6 +38,10 @@ entries:
                     ru: Внутренний registry
                   url: /admin/configuration/registry/internal.html
                 - title:
+                    en: Restoring registry access
+                    ru: Восстановление подключения к registry
+                  url: /admin/configuration/registry/restore-token.html  
+                - title:
                     en: Switching editions
                     ru: Переключение редакций
                   url: /admin/configuration/registry/switching-editions.html
