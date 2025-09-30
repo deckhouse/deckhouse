@@ -141,6 +141,8 @@ func (b *hugoBuilder) copyStaticTo(sourceFs *filesystems.SourceFilesystem) (uint
 	fs := &countingStatFs{Fs: sourceFs.Fs}
 
 	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+
 	b.withConf(func(conf *commonConfig) {
 		syncer.NoTimes = conf.configs.Base.NoTimes
 		syncer.NoChmod = conf.configs.Base.NoChmod
