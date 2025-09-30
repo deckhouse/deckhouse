@@ -26,7 +26,7 @@ Deckhouse CLI — это интерфейс командной строки дл
 
   - [ручная загрузка образов в изолированный приватный registry](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#ручная-загрузка-образов-deckhouse-kubernetes-platform-бд-сканера-уязвимостей-и-модулей-deckhouse-в-приватный-registry).
 
-* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
+* `d8 v` — команды, отвечающие за работу с виртуальными машинами, созданными [Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).  
     Например, команда `d8 virtualization console` подключает к консоли виртуальной машины.
 
     <div markdown="0">
@@ -97,7 +97,3 @@ Deckhouse CLI — это интерфейс командной строки дл
 Если вы не хотите вызывать `. $(trdl use d8 0 stable)` перед каждым использованием Deckhouse CLI, добавьте строку `alias d8='trdl exec d8 0 stable -- "$@"'` в RC-файл вашей командной оболочки.
 
 Готово, вы установили Deckhouse CLI.
-
-### Установка исполняемого файла
-
-{% include d8-cli-install/main.liquid %}

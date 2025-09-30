@@ -13,7 +13,7 @@ shell:
   - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -33,7 +33,8 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - go build -ldflags="-s -w" -o check-wg-kernel-compat .
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o check-wg-kernel-compat .`) | indent 4 }}
   - chown 64535:64535 /src/check-wg-kernel-compat
   - chmod 0755 /src/check-wg-kernel-compat
 ---
@@ -44,6 +45,8 @@ import:
   add: /src/check-wg-kernel-compat
   to: /check-wg-kernel-compat
   before: install
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/check-wg-kernel-compat"]

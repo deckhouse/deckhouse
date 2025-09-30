@@ -117,19 +117,19 @@ func (s *Client) Start() error {
 			User:            s.Settings.BastionUser,
 			Auth:            AuthMethods,
 			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-			Timeout:         5 * time.Second,
+			Timeout:         3 * time.Second,
 		}
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		log.DebugF("Connect to bastion host %s\n", bastionAddr)
-		err = retry.NewSilentLoop("Get bastion SSH client", 60, 2*time.Second).Run(func() error {
+		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).Run(func() error {
 			bastionClient, err = ssh.Dial("tcp", bastionAddr, bastionConfig)
 			return err
 		})
 		if err != nil {
 			return fmt.Errorf("could not connect to bastion host")
 		}
-		log.DebugF("Connected successfully to bastion host %s", bastionAddr)
+		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
 
 	var becomePass string
@@ -168,7 +168,6 @@ func (s *Client) Start() error {
 	var targetConn net.Conn
 	var clientConn ssh.Conn
 
-	config.Timeout = 30 * time.Second
 	config.BannerCallback = func(message string) error {
 		return nil
 	}
@@ -185,7 +184,10 @@ func (s *Client) Start() error {
 
 		var err error
 		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
-			s.Settings.ChoiceNewHost()
+			if len(s.kubeProxies) == 0 {
+				s.Settings.ChoiceNewHost()
+			}
+
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			client, err = ssh.Dial("tcp", addr, config)
 			return err
@@ -215,8 +217,10 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).Run(func() error {
-		s.Settings.ChoiceNewHost()
+	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).BreakIf(noAuthMethodsRemain).Run(func() error {
+		if len(s.kubeProxies) == 0 {
+			s.Settings.ChoiceNewHost()
+		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 		targetConn, err = bastionClient.Dial("tcp", addr)
 		if err != nil {
@@ -259,7 +263,7 @@ func (s *Client) keepAlive() {
 		default:
 			session, err := s.sshClient.NewSession()
 			if err != nil {
-				log.DebugF("Keep-alive to %s failed: %v", s.Settings.Host(), err)
+				log.DebugF("Keep-alive to %s failed: %v\n", s.Settings.Host(), err)
 				s.live = false
 				s.stopChan = nil
 				s.Start()
@@ -267,16 +271,10 @@ func (s *Client) keepAlive() {
 				return
 			}
 			if _, err := session.SendRequest("keepalive", false, nil); err != nil {
-				log.DebugF("Keep-alive failed: %v", err)
+				log.DebugF("Keep-alive failed: %v\n", err)
 				s.live = false
 				s.stopChan = nil
 				s.Start()
-				for _, sess := range s.sessionList {
-					if sess != nil {
-						sess.Signal(ssh.SIGKILL)
-						sess.Close()
-					}
-				}
 				s.sessionList = nil
 				return
 			}

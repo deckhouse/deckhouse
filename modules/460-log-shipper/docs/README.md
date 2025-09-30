@@ -11,7 +11,7 @@ Module features:
 - filters, transforms, and enriches logs before sending;
 - configures routing of logs between different sources and receivers.
 
-![log-shipper architecture](../../images/log-shipper/log_shipper_architecture.svg)
+![log-shipper architecture](images/log_shipper_architecture.svg)
 <!-- Source: https://docs.google.com/drawings/d/1cOm5emdfPqWp9NT1UrB__TTL31lw7oCgh0VicQH-ouc/edit -->
 
 1. Deckhouse is watching [ClusterLoggingConfig](cr.html#clusterloggingconfig), [ClusterLogDestination](cr.html#clusterlogdestination) and [PodLoggingConfig](cr.html#podloggingconfig) custom resources.
@@ -27,7 +27,7 @@ This module deploys only agents on nodes. It is implied that logs are sent from 
 
 Agents send logs directly to the storage, e.g., Loki, Elasticsearch.
 
-![log-shipper distributed](../../images/log-shipper/log_shipper_distributed.svg)
+![log-shipper distributed](images/log_shipper_distributed.svg)
 <!-- Source: https://docs.google.com/drawings/d/1FFuPgpDHUGRdkMgpVWXxUXvfZTsasUhEh8XNz7JuCTQ/edit -->
 
 * Less complicated scheme to use.
@@ -40,7 +40,7 @@ All logs are aggregated by one of the available aggregation destinations, e.g., 
 Agents on nodes do minimal transformations and try to send logs from nodes faster with less resource consumption.
 Complicated mappings are applied on the aggregator's side.
 
-![log-shipper centralized](../../images/log-shipper/log_shipper_centralized.svg)
+![log-shipper centralized](images/log_shipper_centralized.svg)
 <!-- Source: https://docs.google.com/drawings/d/1TL-YUBk0CKSJuKtRVV44M9bnYMq6G8FpNRjxGxfeAhQ/edit -->
 
 * Lower resource consumption for applications on nodes.
@@ -51,7 +51,7 @@ Complicated mappings are applied on the aggregator's side.
 
 The main goal of this architecture is to send messages to the queue system as quickly as possible, then other workers will read them and deliver them to the long-term storage for later analysis.
 
-![log-shipper stream](../../images/log-shipper/log_shipper_stream.svg)
+![log-shipper stream](images/log_shipper_stream.svg)
 <!-- Source: https://docs.google.com/drawings/d/1R7vbJPl93DZPdrkSWNGfUOh0sWEAKnCfGkXOvRvK3mQ/edit -->
 
 * The same pros and cons as for centralized architecture, yet one more middle layer storage is added.
@@ -92,7 +92,7 @@ The `host` label is the only label that contains the server's hostname.
 
 There are two filters for reducing the number of messages sent to storage, `log filter` and `label filter`.
 
-![log-shipper pipeline](../../images/log-shipper/log_shipper_pipeline.svg)
+![log-shipper pipeline](images/log_shipper_pipeline.svg)
 <!-- Source: https://docs.google.com/drawings/d/1SnC29zf4Tse4vlW_wfzhggAeTDY2o9wx9nWAZa_A6RM/edit -->
 
 They are executed right after concatenating lines together with the multiline log parser.

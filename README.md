@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/d8-small-logo.png"/>
+  <img src="docs/documentation/images/Deckhouse_sign@2x.png"/>
 </p>
 
 <p align="center">
