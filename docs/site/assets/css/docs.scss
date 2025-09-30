@@ -397,6 +397,7 @@
 .sidebar__wrapper-inner {
   position: -webkit-sticky;
   position: sticky;
+  box-sizing: border-box;
   //width: 260px;
   height: calc(100vh - 135.5px);
   overflow-x: hidden;
