@@ -112,7 +112,7 @@ spec:
           name: prometheus-pp-envs
 {{- end }}
   - name: kube-rbac-proxy
-    {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 4 }}
+    {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 4 }}
     image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
     args:
     - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):9090"
@@ -309,9 +309,13 @@ spec:
     {{- $alertmanagers_internal = true }}
   {{- end }}
 {{- end }}
-{{- if or $alertmanagers_byservice $alertmanagers_internal }}
   alerting:
     alertmanagers:
+    - name: alerts-receiver
+      namespace: d8-monitoring
+      pathPrefix: /
+      port: http
+      resourceName: alerts-receiver
   {{- if $alertmanagers_byservice }}
     {{- range .Values.prometheus.internal.alertmanagers.byService }}
     - namespace: {{ .namespace }}
@@ -332,7 +336,6 @@ spec:
         insecureSkipVerify: true
     {{- end }}
   {{- end }}
-{{- end }}
 {{- if .Values.global.modules.publicDomainTemplate }}
   externalUrl: {{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/prometheus/
 {{- end }}
@@ -356,9 +359,7 @@ spec:
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 6 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
       {{- include "prometheus_resources" . | nindent 6 }}
-{{- end }}
   volumes:
   - name: kube-rbac-proxy-ca
     configMap:

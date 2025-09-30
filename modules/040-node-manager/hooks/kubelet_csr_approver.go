@@ -118,12 +118,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(csrHandler))
 
-func csrHandler(input *go_hook.HookInput, dc dependency.Container) error {
+func csrHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
-	snaps := input.NewSnapshots.Get("csr")
+	snaps := input.Snapshots.Get("csr")
 	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
 		if err != nil {
 			return fmt.Errorf("failted to iterate over 'csr' snapshots: %w", err)

@@ -3,7 +3,7 @@ severity:
     en: "Likelihood"
     ru: "Вероятность"
     certain:
-      en: "Сertain"
+      en: "Certain"
       ru: "Неизбежно"
       note:
         en: "the incident <b>has already</b> occurred"

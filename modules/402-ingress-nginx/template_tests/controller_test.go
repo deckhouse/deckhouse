@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -28,18 +29,24 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// Set to true to update golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
-var golden bool
+// Set to true to update golden files with: `make FOCUS=ingress-nginx CGO_ENABLED=1 GOLDEN=true tests-modules`
+var (
+	golden             bool
+	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
+)
 
 func init() {
 	if env := os.Getenv("GOLDEN"); env != "" {
 		golden, _ = strconv.ParseBool(env)
 	}
+	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func Test(t *testing.T) {
@@ -75,6 +82,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 			data, err := os.ReadFile(filepath.Join("testdata", fileName))
 			Expect(err).ShouldNot(HaveOccurred())
 
+			if strings.HasSuffix(fileName, "with-istio.yaml") {
+				hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus", "control-plane-manager", "istio"})
+			}
+
 			err = yaml.Unmarshal(data, &ctrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
@@ -97,6 +108,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
 			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 			// Assert DaemonSet exists
 			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
@@ -135,6 +147,14 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 					expectedContent, err := os.ReadFile(filePath)
 					Expect(err).ShouldNot(HaveOccurred())
 					Expect(content).Should(MatchYAML(expectedContent))
+
+					exp := splitManifests(expectedContent)
+					got := splitManifests([]byte(content))
+					Expect(got).To(HaveLen(len(exp)))
+
+					for i := range got {
+						Expect(got[i]).Should(MatchYAML(exp[i]))
+					}
 				}
 			}
 		},
@@ -146,6 +166,11 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		table.Entry("LoadBalancerWithProxyProtocol inlet", "lb-with-pp.yaml"),
 		table.Entry("LoadBalancer inlet with custom terminating time", "lb-with-terminating.yaml"),
 		table.Entry("LoadBalancer without hpa deployment", "lb-without-hpa.yaml"),
+		table.Entry("LoadBalancer inlet with istio", "lb-with-istio.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers", "lb-with-hide-headers.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and istio", "lb-with-hide-headers-and-with-istio.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and envoy header added", "lb-with-hide-headers-and-envoy-header-added.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and envoy header added and istio", "lb-with-hide-headers-and-envoy-header-added-and-with-istio.yaml"),
 	)
 })
 
@@ -170,4 +195,17 @@ func (ing *ingressNginxController) UnmarshalJSON(data []byte) error {
 	ing.Name = aux.Metadata.Name
 	ing.Spec = aux.Spec
 	return nil
+}
+
+func splitManifests(doc []byte) []string {
+	splits := manifestsDelimiter.Split(string(doc), -1)
+
+	result := make([]string, 0, len(splits))
+	for i := range splits {
+		if splits[i] != "" {
+			result = append(result, splits[i])
+		}
+	}
+
+	return result
 }

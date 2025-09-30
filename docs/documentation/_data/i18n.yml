@@ -126,6 +126,13 @@ common:
     ru: |
       Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии.
       При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+  conversion_global_action_message:
+    en: |
+      Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number.
+      When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
+    ru: |
+      Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии.
+      При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
   conversion_from_version:
     en: "updates from version"
     ru: "обновление из версии"
@@ -174,6 +181,9 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_modules:
+    en: Search by modules documentation...
+    ru: Поиск по документации модулей...
   module_available_editions_prefix:
     en: Available in editions
     ru: Доступно в редакциях
@@ -192,9 +202,18 @@ common:
   version:
     en: version
     ru: версия
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
+  version_of_module:
+    en: Module version
+    ru: Версия модуля
+  channel_or_version_of_module:
+    en: Module channel/version
+    ru: Канал/версия модуля
   version_of_schema:
     en: Schema version
     ru: Версия схемы
@@ -318,6 +337,12 @@ common:
   d8_cli_reference_description:
     en: List of commands and parameters for Deckhouse CLI (d8)
     ru: Список команд и параметров Deckhouse CLI (d8)
+  crd_has_no_parameters:
+    en: The CRD has no fields for configuration.
+    ru: У CRD нет полей для настройки.
+  show_more:
+    en: Show more
+    ru: Показать ещё
 
 comparison:
   except_parameters:

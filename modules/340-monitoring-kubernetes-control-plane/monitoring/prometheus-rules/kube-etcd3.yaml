@@ -20,13 +20,13 @@
         1. Check the status of the etcd Pods:
         
            ```bash
-           kubectl -n kube-system get pod -l component=etcd
+           d8 k -n kube-system get pod -l component=etcd
            ```
 
         1. Review Prometheus logs:
         
            ```bash
-           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
            ```
 
   - alert: KubeEtcdTargetAbsent
@@ -48,13 +48,13 @@
         1. Check the status of the etcd Pods:
         
            ```bash
-           kubectl -n kube-system get pod -l component=etcd
+           d8 k -n kube-system get pod -l component=etcd
            ```
 
         1. Review Prometheus logs:
         
            ```bash
-           kubectl -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
+           d8 k -n d8-monitoring logs -l app.kubernetes.io/name=prometheus -c prometheus
            ```
 
   - alert: KubeEtcdNoLeader
@@ -73,7 +73,7 @@
         To resolve this issue, check the status of the etcd Pods:
         
         ```bash
-        kubectl -n kube-system get pod -l component=etcd | grep {{ $labels.node }}
+        d8 k -n kube-system get pod -l component=etcd | grep {{ $labels.node }}
         ```
 
 - name: d8.control-plane.etcd.malfunctioning
@@ -118,7 +118,7 @@
         To resolve this issue, check the status of etcd Pods:
         
         ```bash
-        kubectl -n kube-system get pod -l component=etcd
+        d8 k -n kube-system get pod -l component=etcd
         ```
 
   - alert: KubeEtcdHighFsyncDurations

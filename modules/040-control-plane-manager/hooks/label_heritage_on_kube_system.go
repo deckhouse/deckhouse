@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -49,7 +50,7 @@ func filterResource(unstructured *unstructured.Unstructured) (go_hook.FilterResu
 	return unstructured.GetName(), nil
 }
 
-func labelHeritage(input *go_hook.HookInput) error {
+func labelHeritage(_ context.Context, input *go_hook.HookInput) error {
 	nsPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
@@ -58,7 +59,7 @@ func labelHeritage(input *go_hook.HookInput) error {
 		},
 	}
 
-	snaps := input.NewSnapshots.Get("ns")
+	snaps := input.Snapshots.Get("ns")
 
 	if len(snaps) == 1 {
 		var name string

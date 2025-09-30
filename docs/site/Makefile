@@ -25,7 +25,7 @@ clean:
 		werf cleanup --env local --repo localhost:4999/docs --without-kube
 
 down:
-		docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 2>/dev/null; docker network rm deckhouse
+		docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null; docker network rm deckhouse
 
 dev: network
 		werf compose up --follow --docker-compose-command-options='-d --force-recreate' --dev --env development --repo localhost:4999/docs

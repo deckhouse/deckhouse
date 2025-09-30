@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -56,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, assignMachineClassChecksum)
 
-func assignMachineClassChecksum(input *go_hook.HookInput) error {
+func assignMachineClassChecksum(_ context.Context, input *go_hook.HookInput) error {
 	jsonValues := input.Values.Get(machineDeploymentsInternalValuesPath)
 	if len(jsonValues.Map()) == 0 {
 		return nil

@@ -87,6 +87,10 @@ build:
 
 # goproxy  settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
+
+# registry auth
+{{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
+{{- $_ := set . "RegistryPassword" (env "REGISTRY_PASSWORD" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
@@ -95,7 +99,7 @@ build:
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---
-{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion ) }}
+{{ include "dhctl_artifact" (dict "GOPROXY" .GOPROXY "CI_COMMIT_TAG" .CI_COMMIT_TAG "DEFAULT_KUBERNETES_VERSION" .defaultKubernetesVersion "Env" .Env ) }}
 ---
 # render images and artifact from .werf
 # WARNING! new images and artifacts should be placed in .werf/werf-YOUR-MAGIC-IMAGES-GROUP.yaml

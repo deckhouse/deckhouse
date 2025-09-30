@@ -22,7 +22,7 @@ The prometheus operator:
 ### What does Prometheus do?
 
 Generally, the Prometheus server does two key things: it **collects metrics** and **evaluates rules**:
-* For each monitoring *target*, after each `scrape_interval`, it sends an HTTP request to this *target*. In response, it gets [custom-formatted](https://github.com/prometheus/docs/blob/master/content/docs/instrumenting/exposition_formats.md#text-format-details) metrics and saves them to a database.
+* For each monitoring *target*, after each `scrape_interval`, it sends an HTTP request to this *target*. In response, it gets [custom-formatted](https://github.com/prometheus/docs/blob/main/docs/instrumenting/exposition_formats.md#text-format-details) metrics and saves them to a database.
 * At each `evaluation_interval`, it evaluates *rules* and either:
   * sends alerts, or
   * saves (to its own database) new metrics (the result of executing the *rule*).
@@ -46,7 +46,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 * The Prometheus workflow looks as follows:
 
-  ![The Prometheus workflow](../../images/operator-prometheus/targets.png)
+  ![The Prometheus workflow](images/targets.png)
 
   * **(1)** Prometheus reads the `scrape_configs` section and uses it to configure its internal Service Discovery mechanism;
   * **(2)** The Service Discovery mechanism interacts with the Kubernetes API (mostly, it gets endpoints);
@@ -132,7 +132,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 ### What does the Prometheus Pod contain?
 
-![What does the Prometheus Pod contain](../../images/operator-prometheus/pod.png)
+![What does the Prometheus Pod contain](images/pod.png)
 
 * The Prometheus Pod has three containers inside:
   * `prometheus` —  the container with the Prometheus itself;
@@ -147,7 +147,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 ### How are Service Monitors handled?
 
-![How are Service Monitors handled](../../images/operator-prometheus/servicemonitors.png)
+![How are Service Monitors handled](images/servicemonitors.png)
 
 * **(1)** Prometheus Operator reads Service Monitors (and tracks their addition/removal/modification). The list of Service Monitors to follow is specified in the `prometheus`; see the [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api-reference/api.md#prometheusspec)) for more details.
 * **(2)** For each Service Monitor (if it doesn't have a specific list of namespaces, i.e., `any: true` is set), Prometheus Operator determines (using the Kubernetes API) a list of namespaces where Services matching the Service Monitor's labels are running.
@@ -158,7 +158,7 @@ Generally, the Prometheus server does two key things: it **collects metrics** an
 
 ### How are Custom Resources with *rules* processed?
 
-![How are Custom Resources with rules processed](../../images/operator-prometheus/rules.png)
+![How are Custom Resources with rules processed](images/rules.png)
 
 * **(1)** Prometheus Operator monitors PrometheusRules that match the `ruleSelector` defined in the `prometheus` resource.
 * **(2)** If a new PrometheusRule is created (or the existing one is deleted), Prometheus Operator updates `prometheus.yaml` (and then the logic for Service Monitors described above comes into play).

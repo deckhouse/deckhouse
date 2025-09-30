@@ -255,8 +255,12 @@ func bundleSSHOutputHandler(
 				if *failsCounter > 10 {
 					*isBashibleTimeout = true
 					if cmd != nil {
-						// Force kill bashible
+						// Force kill bashible and close session/streams to unblock Wait/readers
 						_ = cmd.session.Signal(ssh.SIGABRT)
+						if cmd.Stdin != nil {
+							_ = cmd.Stdin.Close()
+						}
+						_ = cmd.session.Close()
 					}
 					return
 				}

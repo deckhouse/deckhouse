@@ -150,8 +150,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(copierHandler))
 
-func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
-	secrets, err := sdkobjectpatch.UnmarshalToStruct[Secret](input.NewSnapshots, "secrets")
+func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[Secret](input.Snapshots, "secrets")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal secrets snapshot: %w", err)
 	}
@@ -160,7 +160,7 @@ func copierHandler(input *go_hook.HookInput, dc dependency.Container) error {
 		return nil
 	}
 
-	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.NewSnapshots, "namespaces")
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.Snapshots, "namespaces")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
 	}

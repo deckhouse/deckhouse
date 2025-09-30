@@ -28,6 +28,7 @@ import (
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	cp "github.com/otiai10/copy"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -188,7 +189,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// module must be enabled
-	if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+	if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
@@ -228,20 +229,6 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer) {
 		controllerutil.AddFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
-		needUpdate = true
-	}
-
-	// check if RegistrySpecChanged annotation is set and process it
-	if _, set := mpo.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
-		// if module is enabled - push runModule task in the main queue
-		r.log.Info("apply new registry settings to the module", slog.String("name", mpo.Name))
-		modulePath := filepath.Join(r.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(mpo.Name, module.Properties.Source, modulePath); err != nil {
-			r.log.Error("failed to run the module with new OpenAPI schema", slog.String("name", mpo.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
-		}
-		// delete annotation and requeue
-		delete(mpo.ObjectMeta.Annotations, v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged)
 		needUpdate = true
 	}
 

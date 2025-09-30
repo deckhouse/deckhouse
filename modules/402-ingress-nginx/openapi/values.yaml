@@ -306,6 +306,11 @@ properties:
                 controllerLogLevel:
                   type: string
                   description: "Defines the verbosity level for the ingress controller logs."
+                nginxProfilingEnabled:
+                  type: boolean
+                  default: false
+                  description: |
+                    Enables nginx memory profiling.
       externalIngressClasses:
         type: array
         default: []

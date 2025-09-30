@@ -58,6 +58,8 @@ spec:
       control-plane: controller-manager
   template:
     metadata:
+      annotations:
+        node-manager.deckhouse.io/force-rollout-v1-72-5: ""
       labels:
         app: capi-controller-manager
         cluster.x-k8s.io/provider: cluster-api
@@ -83,12 +85,17 @@ spec:
         - /capi-controller-manager
         args:
         - --leader-elect
+        # Todo remove after rewrite caps
+        - --leader-elect-lease-duration=1m
+        - --leader-elect-renew-deadline=50s
+        - --leader-elect-retry-period=5s
         - --diagnostics-address=127.0.0.1:4211
         - --insecure-diagnostics
         - --feature-gates=MachinePool=true,ClusterResourceSet=false,ClusterTopology=false,RuntimeSDK=false
         - --health-addr=127.0.0.1:9442
         - --webhook-port=4200
         - --skip-crd-migration-phases=StorageVersionMigration,CleanupManagedFields # disabled for now
+        - -v=3
         livenessProbe:
           httpGet:
             path: /healthz
@@ -132,7 +139,7 @@ spec:
           name: cert
           readOnly: true
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4211"

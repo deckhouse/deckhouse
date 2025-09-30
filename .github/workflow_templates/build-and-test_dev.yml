@@ -117,7 +117,7 @@ jobs:
     steps:
       - uses: deckhouse/modules-actions/svace_analyze@v4
         with:
-          project_group: ${{ github.event.repository.name }}
+          project_group: "DKP"
           ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
           ci_commit_hash: ${{ github.event.pull_request.head.sha }}
           svace_analyze_host: "${{ secrets.SVACE_ANALYZE_HOST }}"
@@ -204,17 +204,6 @@ jobs:
       - pull_request_info
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
-
-  web_links_test:
-    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' && github.repository == 'deckhouse/deckhouse' }}
-    name: Web links test
-    needs:
-      - git_info
-      - pull_request_info
-      - doc_web_build
-      - main_web_build
-    continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

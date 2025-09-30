@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -71,8 +72,8 @@ func applyKubernetesAPIEndpointsFilter(obj *unstructured.Unstructured) (go_hook.
 	return mh, nil
 }
 
-func discoverAPIEndpointsHandler(input *go_hook.HookInput) error {
-	endpoints, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.NewSnapshots, "kube_api_ep")
+func discoverAPIEndpointsHandler(_ context.Context, input *go_hook.HookInput) error {
+	endpoints, err := sdkobjectpatch.UnmarshalToStruct[KubernetesAPIEndpoints](input.Snapshots, "kube_api_ep")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal kube_api_ep snapshot: %w", err)
 	}

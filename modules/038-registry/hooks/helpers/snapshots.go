@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var (
@@ -31,17 +33,13 @@ var (
 func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name string) (map[TKey]TValue, error) {
 	ret := make(map[TKey]TValue)
 
-	snapshot := input.Snapshots[name]
-	for _, val := range snapshot {
-		if val == nil {
-			continue
+	snapshot := input.Snapshots.Get(name)
+	for val, err := range sdkobjectpatch.SnapshotIter[KeyValue[TKey, TValue]](snapshot) {
+		if err != nil {
+			return ret, fmt.Errorf("value of type %T not convertible to KeyValue: %w", val, err)
 		}
 
-		if kv, ok := val.(KeyValue[TKey, TValue]); ok {
-			ret[kv.Key] = kv.Value
-		} else {
-			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", val, kv, ErrSnapshotTypeError)
-		}
+		ret[val.Key] = val.Value
 	}
 
 	return ret, nil
@@ -50,7 +48,7 @@ func SnapshotToMap[TKey comparable, TValue any](input *go_hook.HookInput, name s
 func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue, error) {
 	var value TValue
 
-	snapshot := input.Snapshots[name]
+	snapshot := input.Snapshots.Get(name)
 	snapLen := len(snapshot)
 
 	if snapLen != 1 {
@@ -58,9 +56,9 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 	}
 
 	snapValue := snapshot[0]
-	value, ok := snapValue.(TValue)
+	err := snapValue.UnmarshalTo(&value)
 
-	if !ok {
+	if err != nil {
 		return value, fmt.Errorf("value of type %T not convertible to %T: %w", snapValue, value, ErrSnapshotTypeError)
 	}
 
@@ -68,20 +66,14 @@ func SnapshotToSingle[TValue any](input *go_hook.HookInput, name string) (TValue
 }
 
 func SnapshotToList[TValue any](input *go_hook.HookInput, name string) ([]TValue, error) {
-	snapshot := input.Snapshots[name]
+	snapshot := input.Snapshots.Get(name)
 	ret := make([]TValue, 0, len(snapshot))
-	for _, snap := range snapshot {
-		if snap == nil {
-			continue
+	for snap, err := range sdkobjectpatch.SnapshotIter[TValue](snapshot) {
+		if err != nil {
+			return ret, fmt.Errorf("failed to convert snapshot value: %w", err)
 		}
 
-		value, ok := snap.(TValue)
-
-		if !ok {
-			return ret, fmt.Errorf("value of type %T not convertible to %T: %w", snap, value, ErrSnapshotTypeError)
-		}
-
-		ret = append(ret, value)
+		ret = append(ret, snap)
 	}
 
 	return ret, nil

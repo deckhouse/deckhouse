@@ -1,0 +1,100 @@
+{{- $_ := set . "Version" ( splitList "/" .Values.global.doc_version | last ) }}
+{{- $_ := set . "VersionURLNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" ) }}
+{{- $_ := set . "VersionDNSNormalized" ( printf "%s" .Version | lower | replace "+" "-plus-" | replace "_" "-u-" | replace "." "-dot-" ) }}
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-s3-modules-upload-{{ .VersionDNSNormalized }}
+  annotations:
+    werf.io/skip-logs: "false"
+    werf.io/show-logs-only-for-containers: "s3-loader"
+    werf.io/show-service-messages: "true"
+spec:
+  ttlSecondsAfterFinished: 1
+  template:
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      containers:
+      - name: s3-loader
+        image: {{ index .Values.werf.image "website-docs/s3-loader" }}
+        command:
+          - aws
+        args:
+          - s3
+          - sync
+          - /embedded-modules
+          - s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/modules/
+          - --ca-bundle
+          - /.aws/s3-root.crt
+          - --delete
+          - --endpoint-url
+          - https://{{ .Values.global.doc_s3_ep }}
+          - --region
+          - {{ .Values.global.doc_s3_region }}
+        env:
+          - name: AWS_ACCESS_KEY_ID
+            value: {{ .Values.global.doc_s3_access_key_id }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: {{ .Values.global.doc_s3_secret_access_key }}
+        volumeMounts:
+          - name: s3-ca-bundle
+            mountPath: /.aws/s3-root.crt
+            subPath: ca.yaml
+      volumes:
+        - name: s3-ca-bundle
+          configMap:
+            name: doc-s3-ca-bundle
+      restartPolicy: Never
+  backoffLimit: 2
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-s3-dkpdoc-upload-{{ .VersionDNSNormalized }}
+  annotations:
+    werf.io/skip-logs: "false"
+    werf.io/show-logs-only-for-containers: "s3-loader"
+    werf.io/show-service-messages: "true"
+spec:
+  ttlSecondsAfterFinished: 1
+  template:
+    spec:
+      imagePullSecrets:
+        - name: deckhouse-registry-site
+      priorityClassName: {{ pluck .Values.werf.env .Values.priorityClassName | first | default .Values.priorityClassName._default }}
+      containers:
+      - name: s3-loader
+        image: {{ index .Values.werf.image "website-docs/s3-loader" }}
+        command:
+          - aws
+        args:
+          - s3
+          - sync
+          - /documentation
+          - s3://{{ .Values.global.doc_s3_bucket }}/deckhouse-{{ $.Values.werf.env }}/{{ .VersionURLNormalized }}/docs-dkp/
+          - --ca-bundle
+          - /.aws/s3-root.crt
+          - --delete
+          - --endpoint-url
+          - https://{{ .Values.global.doc_s3_ep }}
+          - --region
+          - {{ .Values.global.doc_s3_region }}
+        env:
+          - name: AWS_ACCESS_KEY_ID
+            value: {{ .Values.global.doc_s3_access_key_id }}
+          - name: AWS_SECRET_ACCESS_KEY
+            value: {{ .Values.global.doc_s3_secret_access_key }}
+        volumeMounts:
+          - name: s3-ca-bundle
+            mountPath: /.aws/s3-root.crt
+            subPath: ca.yaml
+      volumes:
+        - name: s3-ca-bundle
+          configMap:
+            name: doc-s3-ca-bundle
+      restartPolicy: Never
+  backoffLimit: 2
+---

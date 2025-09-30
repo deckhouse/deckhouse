@@ -1,4 +1,4 @@
-{{- $gitCommit := "a2c41756a56eeb7c09a270700672a4154645cbc6" }}
+{{- $gitCommit := "e5bf819db34227cc739963059d72582a73ea1613" }}
 {{- $binaries := "/bin/bash" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
@@ -9,6 +9,7 @@ git:
   stageDependencies:
     install:
       - '**/*'
+{{- include "image mount points" . }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-artifact
   add: /src/ovpn-admin

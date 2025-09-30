@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ac
 
 ## Description
 
-DVP projects (the [Project](../../../../reference/cr/project.html) resource) provide isolated environments for creating user resources.
+Deckhouse Virtualization Platform (DVP) projects (the [Project](/modules/multitenancy-manager/cr.html#project) resource) provide isolated environments for creating user resources.
 
 Project settings let you set resource quotas and restrict network communication both within and outside DVP.
 
-You can create a project using a template (the [ProjectTemplate](../../../../reference/cr/projecttemplate.html) resource).
+You can create a project using a template (the [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) resource).
 
 {% alert level="warning" %}
 If you modify a project template, all projects created from it will be updated to match the modified template.
@@ -17,100 +17,140 @@ If you modify a project template, all projects created from it will be updated t
 
 ## Default project templates
 
-DVP provides the following set of project templates:
+The following project templates are included in the DVP:
 
-- `empty`: A blank template without predefined resources.
+- `default` — a template that covers basic project use cases:
+  * resource limitation;
+  * network isolation;
+  * automatic alerts and log collection;
+  * choice of security profile;
+  * project administrators setup.
 
-- `default`: A template for main project use cases:
-  - Resource restrictions
-  - Network isolation
-  - Automated alerts and logging
-  - Security profile selection
-  - Project administration setup
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
-- `secure`: Includes all features of the `default` template and some additional features:
-  - Audit rules for project Linux users accessing the kernel
+- `secure` — includes all the capabilities of the `default` template and additional features:
+  * setting up permissible UID/GID for the project;
+  * audit rules for project users' access to the Linux kernel;
+  * scanning of launched container images for CVE presence.
 
-To get a list of all available project template parameters, run the following command:
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
+
+- `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
+  * defining the node selector for all the VMs in the project: if a VM is created, the node selector VM will be **substituted** with the project's node selector automatically;
+  * defining the default toleration for all the VMs in the project: if a VM is created, the default toleration will be **added** to the VM automatically.
+
+  Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
+
+To list all available parameters for a project template, execute the command:
 
 ```shell
 d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parametersSchema.openAPIV3Schema}' | jq
 ```
 
-## Create a project
+## Creating a project
 
-1. For a new project, create a [Project](../../../../reference/cr/project.html) resource, specifying the project template name in the `.spec.projectTemplateName` field.
-1. In the `.spec.parameters` parameter of the [Project](../../../../reference/cr/project.html) resource, specify values for parameters from the `.spec.parametersSchema.openAPIV3Schema` section of the [ProjectTemplate](../../../../reference/cr/projecttemplate.html) resource.
+1. To create a project, create the [Project](/modules/multitenancy-manager/cr.html#project#project) resource by specifying the name of the project template in [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-projecttemplatename) field.
+2. In the [.spec.parameters](/modules/multitenancy-manager/cr.html#project#project-v1alpha2-spec-parameters) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
 
-    Example of creating a project using the Project resource based on the `default` project template:
+   Example of creating a project using the [Project](/modules/multitenancy-manager/cr.html#project) resource from the `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate):
 
-    ```yaml
-    apiVersion: deckhouse.io/v1alpha2
-    kind: Project
-    metadata:
-      name: my-project
-    spec:
-      description: This is an example from the Deckhouse documentation.
-      projectTemplateName: default
-      parameters:
-        resourceQuota:
-          requests:
-            cpu: 5
-            memory: 5Gi
-            storage: 1Gi
-          limits:
-            cpu: 5
-            memory: 5Gi
-        networkPolicy: Isolated
-        podSecurityProfile: Restricted
-        extendedMonitoringEnabled: true
-        administrators:
-        - subject: Group
-          name: k8s-admins
-    ```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha2
+   kind: Project
+   metadata:
+     name: my-project
+   spec:
+     description: This is an example from the Deckhouse documentation.
+     projectTemplateName: default
+     parameters:
+       resourceQuota:
+         requests:
+           cpu: 5
+           memory: 5Gi
+           storage: 1Gi
+         limits:
+           cpu: 5
+           memory: 5Gi
+       networkPolicy: Isolated
+       podSecurityProfile: Restricted
+       extendedMonitoringEnabled: true
+       administrators:
+       - subject: Group
+         name: k8s-admins
+   ```
 
-1. To check the project status, run the following command:
+3. To check the status of the project, execute the command:
 
-    ```shell
-    d8 k get projects my-project
-    ```
+   ```shell
+   d8 k get projects my-project
+   ```
 
-    A properly created project has the `Deployed` (synchronized) status.
-    If the displayed status is `Error` and you want to see error details,
-    add the `-o yaml` argument to the command:
+   A successfully created project should be in the `Deployed` state. If the state equals `Error`, add the `-o yaml` argument to the command (e.g., `d8 k get projects my-project -o yaml`) to get more detailed information about the error.
 
-    ```shell
-    d8 k get projects my-project -o yaml
-    ```
+### Creating a project automatically for a namespace
 
-## Create a custom project template
+You can create a new project for a namespace. To do this, add the `projects.deckhouse.io/adopt` annotation to the namespace. For example:
 
-The default project templates cover main project use cases and demonstrate template capabilities.
+1. Create a new namespace:
 
-To create a project template of your own, follow these steps:
+   ```shell
+   d8 k create ns test
+   ```
 
-1. Select one of the default templates, such as `default`.
-1. Make a copy to a separate file (for example, to `my-project-template.yaml`) using the following command:
+1. Add the annotation:
 
-    ```shell
-    d8 k get projecttemplates default -o yaml > my-project-template.yaml
-    ```
+   ```shell
+   d8 k annotate ns test projects.deckhouse.io/adopt=""
+   ```
 
-1. Open and edit `my-project-template.yaml` to customize the template.
+1. Make sure that the project was created:
 
-    > Make sure to modify not only the template, but also the corresponding parameter schema.
-    >
-    > Project templates support all [Helm template functions](https://helm.sh/docs/chart_template_guide/function_list/).
+   ```shell
+   d8 k get projects
+   ```
 
-1. Change template name in the `.metadata.name` field.
-1. Apply the customized template using the following command:
+   A new project corresponding to the namespace will appear in the project list:
 
-    ```shell
-    d8 k apply -f my-project-template.yaml
-    ```
+   ```shell
+   NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
+   deckhouse   Deployed   virtual            This is a virtual project                              181d
+   default     Deployed   virtual            This is a virtual project                              181d
+   test        Deployed   empty                                                                     1m
+   ```
 
-1. To ensure the modified template is available, run the following command:
+You can change the template of the created project to the existing one.
 
-    ```shell
-    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
-    ```
+{% alert level="warning" %}
+Note that changing the template may cause a resource conflict. If the template chart contains resources that are already present in the namespace, you will not be able to apply the template.
+{% endalert %}
+
+## Creating your own project template
+
+Default templates cover basic project use cases and serve as a good example of template capabilities.
+
+To create your own template:
+1. Take one of the default templates as a basis, for example, `default`.
+1. Copy it to a separate file, for example, `my-project-template.yaml` using the command:
+
+   ```shell
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
+   ```
+
+1. Edit the `my-project-template.yaml` file, make the necessary changes.
+
+   > It is necessary to change not only the template, but also the scheme of input parameters for it.
+   >
+   > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
+
+1. Change the template name in the `.metadata.name` field.
+1. Apply your new template with the command:
+
+   ```shell
+   d8 k apply -f my-project-template.yaml
+   ```
+
+1. Check the availability of the new template with the command:
+
+   ```shell
+   d8 k get projecttemplates <NEW_TEMPLATE_NAME>
+   ```

@@ -22,10 +22,10 @@ index 2cce1650..9adc4575 100644
  // +kubebuilder:object:root=true
  // +kubebuilder:subresource:status
 diff --git a/apis/apps/v1alpha1/zz_generated.deepcopy.go b/apis/apps/v1alpha1/zz_generated.deepcopy.go
-index 9440ee27..4fff94ae 100644
+index 7eb70819..b90aab37 100644
 --- a/apis/apps/v1alpha1/zz_generated.deepcopy.go
 +++ b/apis/apps/v1alpha1/zz_generated.deepcopy.go
-@@ -947,6 +947,11 @@ func (in *DaemonSetSpec) DeepCopyInto(out *DaemonSetSpec) {
+@@ -972,6 +972,11 @@ func (in *DaemonSetSpec) DeepCopyInto(out *DaemonSetSpec) {
  		*out = new(intstr.IntOrString)
  		**out = **in
  	}
@@ -147,7 +147,7 @@ index 1dfee83a..c90de296 100644
 +	return obj.(*autoscalingv1.Scale), err
 +}
 diff --git a/pkg/controller/daemonset/daemonset_controller.go b/pkg/controller/daemonset/daemonset_controller.go
-index 86f2333f..8d6d450c 100644
+index d54e78cd..332a5de4 100644
 --- a/pkg/controller/daemonset/daemonset_controller.go
 +++ b/pkg/controller/daemonset/daemonset_controller.go
 @@ -508,7 +508,7 @@ func NewPod(ds *appsv1alpha1.DaemonSet, nodeName string) *corev1.Pod {
@@ -277,13 +277,13 @@ index 86f2333f..8d6d450c 100644
  
  	switch {
 diff --git a/pkg/controller/daemonset/daemonset_event_handler.go b/pkg/controller/daemonset/daemonset_event_handler.go
-index 7dd52e14..f2a22bfa 100644
+index 961e2abd..de7796ad 100644
 --- a/pkg/controller/daemonset/daemonset_event_handler.go
 +++ b/pkg/controller/daemonset/daemonset_event_handler.go
-@@ -286,6 +286,23 @@ func (e *nodeEventHandler) Update(ctx context.Context, evt event.UpdateEvent, q
+@@ -283,6 +283,23 @@ func (e *nodeEventHandler) Update(ctx context.Context, evt event.TypedUpdateEven
  }
  
- func (e *nodeEventHandler) Delete(ctx context.Context, evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+ func (e *nodeEventHandler) Delete(ctx context.Context, evt event.TypedDeleteEvent[*v1.Node], q workqueue.RateLimitingInterface) {
 +	dsList := &appsv1alpha1.DaemonSetList{}
 +	err := e.reader.List(context.TODO(), dsList)
 +	if err != nil {
@@ -291,7 +291,7 @@ index 7dd52e14..f2a22bfa 100644
 +		return
 +	}
 +
-+	node := evt.Object.(*v1.Node)
++	node := evt.Object
 +	for i := range dsList.Items {
 +		ds := &dsList.Items[i]
 +		if shouldSchedule, _ := nodeShouldRunDaemonPod(node, ds); shouldSchedule {
@@ -303,7 +303,7 @@ index 7dd52e14..f2a22bfa 100644
 +	}
  }
  
- func (e *nodeEventHandler) Generic(ctx context.Context, evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+ func (e *nodeEventHandler) Generic(ctx context.Context, evt event.TypedGenericEvent[*v1.Node], q workqueue.RateLimitingInterface) {
 diff --git a/pkg/controller/daemonset/daemonset_util.go b/pkg/controller/daemonset/daemonset_util.go
 index 420188f0..fb72ddaa 100644
 --- a/pkg/controller/daemonset/daemonset_util.go
