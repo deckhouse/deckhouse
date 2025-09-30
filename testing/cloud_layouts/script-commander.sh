@@ -497,6 +497,7 @@ if [ "\$dh_major" = "\$initial_major" ] && [ "\$dh_minor" -eq "\$((initial_minor
     crane auth login "${D8_MIRROR_HOST}" -u "${D8_MIRROR_USER}" -p "${D8_MIRROR_PASSWORD}"
     crane auth login "${E2E_REGISTRY_HOST}" -u "${E2E_REGISTRY_USER}" -p "${E2E_REGISTRY_PASSWORD}"
     crane copy "${D8_MIRROR_HOST}/sys/deckhouse-oss/release-channel:beta" "${IMAGES_REPO}/release-channel:beta"
+    crane copy "${IMAGES_REPO}/install:${DECKHOUSE_IMAGE_TAG}" "${IMAGES_REPO}/install:${SWITCH_TO_IMAGE_TAG}"
     crane copy "${IMAGES_REPO}:${DECKHOUSE_IMAGE_TAG}" "${IMAGES_REPO}:${SWITCH_TO_IMAGE_TAG}"
     crane auth logout "${D8_MIRROR_HOST}"
     crane auth logout "${E2E_REGISTRY_HOST}"
