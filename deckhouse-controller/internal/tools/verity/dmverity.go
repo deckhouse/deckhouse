@@ -181,6 +181,8 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
 	return hash, nil
 }
 
+
+
 // VerifyImage performs verification of the erofs image against its hash tree using veritysetup.
 // Equivalent shell command:
 // veritysetup verify <imagePath> <hashPath> <root_hash>

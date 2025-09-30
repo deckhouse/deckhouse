@@ -22,8 +22,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,7 +44,7 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	validationerrors "k8s.io/kube-openapi/pkg/validation/errors"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -85,6 +87,14 @@ func init() {
 
 func TestReleaseControllerTestSuite(t *testing.T) {
 	suite.Run(t, new(ReleaseControllerTestSuite))
+}
+
+func hasVerity() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	_, err := exec.LookPath("veritysetup")
+	return err == nil
 }
 
 type ReleaseControllerTestSuite struct {
@@ -217,6 +227,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
 		suite.updateModuleReleasesStatuses()
@@ -228,6 +241,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
 		suite.updateModuleReleasesStatuses()
@@ -261,6 +277,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("AutoPatch", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("install new module in manual mode with module release approval annotation", func() {
 			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-approved.yaml"))
 
@@ -281,6 +300,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("AutoPatch", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("patch update respect window", func() {
 			mup := &v1alpha2.ModuleUpdatePolicySpec{
 				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -388,6 +410,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Patch awaits update window", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01", Days: update.Everyday()}}
 
@@ -403,6 +428,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Reinstall", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 				Mode:    "AutoPatch",
@@ -422,6 +450,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process force release", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
 
 		repeatTest(func() {
@@ -436,6 +467,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Sequential processing", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("sequential processing with patch release", func() {
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
 			suite.setupReleaseController(testData)
@@ -519,6 +553,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process pending releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
 
@@ -543,6 +580,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process major releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("major release from 0 to 1 must be allowed", func() {
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
@@ -578,6 +618,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	// LTS Channel Module Release Tests
 	suite.Run("LTS Channel Module Release Tests", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// 1) LTS channel minor version jump (+20)
 		suite.Run("LTS channel minor version jump +20", func() {
 			testData := suite.fetchTestFileData("lts-channel-minor-jump.yaml")
@@ -624,6 +667,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	// Module Release Skip Feature (from to)
 	suite.Run("Module Release Skip Feature (from to)", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// 1) Sequential - should skip intermediate versions when constraint allows jump
 		suite.Run("Sequential", func() {
 			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0 (with constraint from 1.67 to 1.70)
@@ -980,7 +1026,7 @@ func skipNotSpecErrors(errs []error) []error {
 func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) client.Object {
 	raw := []byte(strObj)
 
-	metaType := new(runtime.TypeMeta)
+	metaType := new(k8sruntime.TypeMeta)
 	err := yaml.Unmarshal(raw, metaType)
 	require.NoError(suite.T(), err)
 

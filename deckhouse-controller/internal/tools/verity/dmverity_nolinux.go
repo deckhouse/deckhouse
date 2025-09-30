@@ -26,3 +26,7 @@ func VerifyImage(ctx context.Context, imagePath, rootHash string) error { //noli
 	return nil
 }
 
+// Available always false on non-Linux platforms.
+func Available() bool { //nolint:revive,unused
+	return false
+}
