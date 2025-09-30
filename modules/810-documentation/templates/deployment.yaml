@@ -113,7 +113,7 @@ spec:
             name: tmp
           - mountPath: /app/hugo/data/modules
             name: data-modules
-          - mountPath: /app/hugo/content/modules/
+          - mountPath: /app/hugo/content/modules
             name: content-modules
           - mountPath: "/mount/public/en/modules"
             name: modules-docs-en
