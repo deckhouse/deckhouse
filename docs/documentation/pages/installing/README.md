@@ -627,7 +627,14 @@ You can check the current status of versions in the release channels at [release
    - `--no-platform` — skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`);
    - `--no-modules` — skip downloading module packages (`module-*.tar`);
    - `--no-security-db` — skip downloading the vulnerability scanner database package (`security.tar`);
-   - `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`;
+   - `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
+   
+     The following syntax options are supported for specifying module versions:
+     - `module-name@1.3.0` — pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1;
+     - `module-name@~1.3.0` — pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3;
+     - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
+     - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
+     - `module-name@=v1.3.0+stable` — pulls exact tag v1.3.0 and publishes specifically to stable channel;
    - `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
    - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.ru/deckhouse/EDITION/modules`);
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
@@ -697,6 +704,31 @@ You can check the current status of versions in the release channels at [release
    --no-platform --no-security-db \
    --include-module stronghold \
    --include-module secrets-store-integration \
+   /home/user/d8-bundle
+   ```
+
+   Examples using the new module filter syntax:
+
+   ```shell
+   # Download stronghold module with semver ^ constraint from version 1.2.0
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@1.2.0 \
+   /home/user/d8-bundle
+
+   # Download secrets-store-integration module with semver ~ constraint from version 1.1.0
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module secrets-store-integration@~1.1.0 \
+   /home/user/d8-bundle
+
+   # Download exact version of stronghold module v1.2.5 and publish to stable channel
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@=v1.2.5+stable \
    /home/user/d8-bundle
    ```
 
