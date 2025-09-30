@@ -37,9 +37,6 @@ const (
 
 // Mount ensures the mount path and mounts the device mapper to it
 func Mount(ctx context.Context, module, mountPath string) error {
-	if !Available() {
-		return nil
-	}
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Mount")
 	defer span.End()
 
@@ -61,9 +58,6 @@ func Mount(ctx context.Context, module, mountPath string) error {
 
 // Unmount unmounts image and remove mount path
 func Unmount(ctx context.Context, mountPath string) error {
-	if !Available() {
-		return nil
-	}
 	_, span := otel.Tracer(tracerName).Start(ctx, "Unmount")
 	defer span.End()
 
