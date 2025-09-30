@@ -306,8 +306,8 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
                     - title:
-                        en: NFS data storage
-                        ru: Хранилище данных NFS
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                     - title:
                         en: SCSI-based data storage
