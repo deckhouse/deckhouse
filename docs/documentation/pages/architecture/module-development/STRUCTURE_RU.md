@@ -519,7 +519,7 @@ dependencies:
 
 Файл `module.yaml` в корне папки модуля содержит метаданные модуля.
 
-Файл может отсутствовать, но рекомендуется его заполнить. Большинство метаданных будут доступны в объекте [Module](/reference/api/cr.html#module) в кластере. Объект Module будет создан автоматически после настройки источника модулей (ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)) и успешной синхронизации.
+Файл может отсутствовать, но рекомендуется его заполнить. Большинство метаданных будут доступны в объекте [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource)) и успешной синхронизации.
 
 Параметры, которые можно использовать в `module.yaml`:
 
