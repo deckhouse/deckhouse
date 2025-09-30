@@ -25,8 +25,3 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) { //
 func VerifyImage(ctx context.Context, imagePath, rootHash string) error { //nolint:revive,unused
 	return nil
 }
-
-// Available always false on non-Linux platforms.
-func Available() bool { //nolint:revive,unused
-	return false
-}

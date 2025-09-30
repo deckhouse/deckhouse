@@ -104,7 +104,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 
 	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
 
-    logger.Debug("install module")
+	logger.Debug("install module")
 
 	// mounts should not be executed simultaneously
 	i.mtx.Lock()
@@ -176,7 +176,7 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger := i.logger.With(slog.String("name", module))
 
-    logger.Debug("uninstall module")
+	logger.Debug("uninstall module")
 
 	// clear module dir
 	defer func() {
