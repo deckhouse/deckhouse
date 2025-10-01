@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -93,8 +94,15 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		BoolVar(&DryRun)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		// Load deckhouse config
-		metaConfig, err := config.ParseConfig(app.ConfigPaths)
+		metaConfig, err := config.ParseConfig(
+			context.TODO(),
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			))
 		if err != nil {
 			return err
 		}
