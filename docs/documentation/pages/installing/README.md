@@ -634,7 +634,6 @@ You can check the current status of versions in the release channels at [release
      - `module-name@~1.3.0` — pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3;
      - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
      - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
-     - `module-name@=v1.3.0+stable` — pulls exact tag v1.3.0 and publishes specifically to stable channel;
    - `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
    - `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.ru/deckhouse/EDITION/modules`);
    - `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid update channel. Cannot be used with `--deckhouse-tag`;
@@ -724,11 +723,11 @@ You can check the current status of versions in the release channels at [release
    --include-module secrets-store-integration@~1.1.0 \
    /home/user/d8-bundle
 
-   # Download exact version of stronghold module v1.2.5 and publish to stable channel
+   # Download exact version of stronghold module v1.2.5 and publish to all release channels
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
-   --include-module stronghold@=v1.2.5+stable \
+   --include-module stronghold@=v1.2.5 \
    /home/user/d8-bundle
    ```
 
