@@ -143,6 +143,23 @@ import:
     to: /srv/jekyll-data/site/_data/copyright.json
     before: setup
 {{- end }}
+{{- if and (ne $.Env "development") (ne $.Env "local") }}
+---
+image: web-frontend-init
+fromImage: builder/alpine-3.22
+git:
+- add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
+  to: /scripts/channels-convert.sh
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+{{- end }}
 ---
 image: web-frontend
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
@@ -157,19 +174,11 @@ shell:
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
   beforeInstall:
   - apk add --no-cache nginx
-{{- end }}
 git:
 - add: /{{ .ModulePath }}docs/site/.werf/channels-convert.sh
   to: /scripts/channels-convert.sh
+{{- end }}
 import:
-- image: tools/jq
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: setup
-- image: tools/yq
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: setup
 - image: web-frontend-artifact
   add: /app/_site
   to: /app
@@ -178,6 +187,14 @@ import:
   - en/includes/
   - ru/includes/
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 - image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules
