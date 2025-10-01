@@ -1,10 +1,6 @@
 ## Patches
 
-### 001-go-mod.patch
-
-This patch updates dependencies' versions to meet security concerns.
-
-### 002-cve.patch
+### 001-cve.patch
 
 Fixes:
 CVE-2025-46569
