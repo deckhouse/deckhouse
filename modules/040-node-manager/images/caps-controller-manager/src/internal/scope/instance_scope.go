@@ -105,6 +105,9 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	}
 
 	i.Credentials = credentials
+	if len(i.Credentials.Spec.PrivateSSHKey) > 0 {
+		i.SSHLegacyMode = true
+	}
 
 	return nil
 }
