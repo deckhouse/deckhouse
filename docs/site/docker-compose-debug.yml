@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   site:
     image: $WERF_WEB_ROUTER_DOCKER_IMAGE_NAME
@@ -18,8 +16,6 @@ services:
       VROUTER_I18N_TYPE: "separate-domain"
       VROUTER_LOCATION_VERSIONS: "/products/kubernetes-platform/documentation"
       VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
-    networks:
-      - deckhouse
     cap_add:
       - ALL
     security_opt:
