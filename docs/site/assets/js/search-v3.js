@@ -541,13 +541,13 @@ class ModuleSearch {
 
     // Create Fuse.js index for fuzzy search
     this.fuseIndex = new Fuse(this.searchDictionary, {
-      threshold: 0.8, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
+      threshold: 0.4, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
       distance: 100,  // Maximum distance for fuzzy matching
       includeScore: true,
       minMatchCharLength: 2,
       // Better support for Cyrillic characters
       ignoreLocation: true,
-      findAllMatches: true,
+      findAllMatches: false,
       useExtendedSearch: false
     });
 
@@ -815,7 +815,7 @@ class ModuleSearch {
           const nameLower = (doc.name || '').toLowerCase();
           const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
           const contentLower = (doc.content || '').toLowerCase();
-          
+
           // Priority 1: Name field matches (highest priority)
           if (nameLower) {
             if (nameLower === queryLower) {
@@ -824,12 +824,12 @@ class ModuleSearch {
               boost *= 3.5; // High boost for partial name matches
             }
           }
-          
+
           // Priority 2: Keywords field matches
           if (keywordsLower && keywordsLower.includes(queryLower)) {
             boost *= 2.0; // Moderate boost for keyword matches
           }
-          
+
           // Priority 3: Content field matches (lowest priority for parameters)
           if (contentLower && contentLower.includes(queryLower)) {
             boost *= 1.2; // Low boost for content matches
@@ -839,7 +839,7 @@ class ModuleSearch {
           const titleLower = (doc.title || '').toLowerCase();
           const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
           const contentLower = (doc.content || '').toLowerCase();
-          
+
           // Priority 1: Title field matches (highest priority)
           if (titleLower) {
             if (titleLower === queryLower) {
@@ -848,12 +848,12 @@ class ModuleSearch {
               boost *= 3.5; // High boost for partial title matches
             }
           }
-          
+
           // Priority 2: Keywords field matches
           if (keywordsLower && keywordsLower.includes(queryLower)) {
             boost *= 2.0; // Moderate boost for keyword matches
           }
-          
+
           // Priority 3: Content field matches (lowest priority for documents)
           if (contentLower && contentLower.includes(queryLower)) {
             boost *= 1.2; // Low boost for content matches
@@ -952,7 +952,8 @@ class ModuleSearch {
   }
 
   displayResults() {
-    if (this.currentResults.isResourceNameMatch.length === 0 && this.currentResults.nameMatch.length === 0 && this.currentResults.isResourceOther.length === 0 && this.currentResults.parameterOther.length === 0 && this.currentResults.document.length === 0) {
+    // Dynamically check all keys in currentResults, so new groups are automatically included
+    if (Object.values(this.currentResults).every(arr => arr.length === 0)) {
       this.showNoResults(this.lastQuery);
       return;
     }
