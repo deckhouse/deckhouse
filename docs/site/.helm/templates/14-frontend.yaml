@@ -76,7 +76,7 @@ spec:
             - mountPath: /cache
               name: download-cache
             - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
+              mountPath: /usr/conf/nginx.conf
               subPath: nginx.conf
             - name: channels-data
               mountPath: /app/channels-data

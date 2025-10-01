@@ -82,7 +82,7 @@ spec:
             - mountPath: /cache
               name: download-cache
             - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
+              mountPath: /usr/conf/nginx.conf
               subPath: nginx.conf
             - mountPath: /tmp
               name: web-tmp
