@@ -4,7 +4,6 @@
 {{- $langData := .langData }}
 {{- $moduleName := .moduleName }}
 {{- $moduleChannel := .moduleChannel }}
-{{- $crdName := .crdName }}
 {{- $searchParams := slice }}
 
 {{- $kind := $crdData.spec.names.kind }}
@@ -85,7 +84,7 @@
     "name" $kind
     "module" $moduleName
     "moduletype" "source"
-    "url" (printf "/modules/%s/%s/cr.html#%s" $moduleName $moduleChannel ( $crdName | lower))
+    "url" (printf "/modules/%s/%s/cr.html#%s" $moduleName $moduleChannel ( $kind | lower))
     "path" (printf "%s-%s" ($kind | lower) $versionName)
     "content" $description
     "resName" $kind
