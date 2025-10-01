@@ -190,7 +190,7 @@ deckhouse:
   registryScheme: HTTP
 `, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress, test.registryDockerCfg)
 
-		metaConfig, err := config.ParseConfigFromData(clusterConfig)
+		metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig, config.DummyPreparatorProvider())
 		s.NoError(err)
 
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)

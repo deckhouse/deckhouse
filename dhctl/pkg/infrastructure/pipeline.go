@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -50,7 +51,7 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor Executor) (string, error) {
+func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (string, error) {
 	result, err := executor.Output(ctx, statePath, "master_ip_address_for_ssh")
 
 	if err != nil {
@@ -111,9 +112,9 @@ func CheckPipeline(
 	r RunnerInterface,
 	name string,
 	destroy bool,
-) (int, Plan, *PlanDestructiveChanges, error) {
-	isChange := PlanHasNoChanges
-	var destructiveChanges *PlanDestructiveChanges
+) (int, plan.Plan, *plan.DestructiveChanges, error) {
+	isChange := plan.HasNoChanges
+	var destructiveChanges *plan.DestructiveChanges
 	var infrastructurePlan map[string]any
 
 	pipelineFunc := func() error {
@@ -130,14 +131,9 @@ func CheckPipeline(
 		isChange = r.GetChangesInPlan()
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
-		executor := r.GetExecutorProvider()(r.WorkerDir(), r.GetLogger())
-		rawPlan, err := executor.Show(ctx, r.GetPlanPath())
+		rawPlan, err := r.ShowPlan(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
-			}
-			return fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+			return err
 		}
 
 		err = json.Unmarshal(rawPlan, &infrastructurePlan)
@@ -152,17 +148,17 @@ func CheckPipeline(
 }
 
 type BaseInfrastructureDestructiveChanges struct {
-	PlanDestructiveChanges
-	OutputBrokenReason string      `json:"output_broken_reason,omitempty"`
-	OutputZonesChanged ValueChange `json:"output_zones_changed,omitempty"`
+	plan.DestructiveChanges
+	OutputBrokenReason string           `json:"output_broken_reason,omitempty"`
+	OutputZonesChanged plan.ValueChange `json:"output_zones_changed,omitempty"`
 }
 
 func CheckBaseInfrastructurePipeline(
 	ctx context.Context,
 	r RunnerInterface,
 	name string,
-) (int, Plan, *BaseInfrastructureDestructiveChanges, error) {
-	isChange := PlanHasNoChanges
+) (int, plan.Plan, *BaseInfrastructureDestructiveChanges, error) {
+	isChange := plan.HasNoChanges
 
 	var destructiveChanges *BaseInfrastructureDestructiveChanges
 	getOrCreateDestructiveChanges := func() *BaseInfrastructureDestructiveChanges {
@@ -171,7 +167,7 @@ func CheckBaseInfrastructurePipeline(
 		}
 		return destructiveChanges
 	}
-	var plan map[string]any
+	var pl map[string]any
 
 	pipelineFunc := func() error {
 		err := r.Init(ctx)
@@ -186,15 +182,15 @@ func CheckBaseInfrastructurePipeline(
 
 		isChange = r.GetChangesInPlan()
 		if pdc := r.GetPlanDestructiveChanges(); pdc != nil {
-			getOrCreateDestructiveChanges().PlanDestructiveChanges = *pdc
+			getOrCreateDestructiveChanges().DestructiveChanges = *pdc
 		}
-		if isChange > PlanHasChanges {
+		if isChange > plan.HasChanges {
 			return nil
 		}
 
 		info, err := GetBaseInfraResult(ctx, r)
 		if err != nil {
-			isChange = PlanHasDestructiveChanges
+			isChange = plan.HasDestructiveChanges
 			getOrCreateDestructiveChanges().OutputBrokenReason = err.Error()
 			return err
 		}
@@ -218,15 +214,9 @@ func CheckBaseInfrastructurePipeline(
 			} `json:"output_changes"`
 		}
 
-		executor := r.GetExecutorProvider()(r.WorkerDir(), r.GetLogger())
-
-		rawPlan, err := executor.Show(ctx, r.GetPlanPath())
+		rawPlan, err := r.ShowPlan(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
-				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
-			}
-			return fmt.Errorf("can't get infrastructure plan for %q\n%v", r.GetPlanPath(), err)
+			return err
 		}
 
 		err = json.Unmarshal(rawPlan, &changes)
@@ -234,7 +224,7 @@ func CheckBaseInfrastructurePipeline(
 			return err
 		}
 
-		err = json.Unmarshal(rawPlan, &plan)
+		err = json.Unmarshal(rawPlan, &pl)
 		if err != nil {
 			return err
 		}
@@ -243,8 +233,8 @@ func CheckBaseInfrastructurePipeline(
 		sort.Strings(data.Zones)
 
 		if !equalArray(data.Zones, changes.Output.Data.After.Zones) {
-			isChange = PlanHasDestructiveChanges
-			getOrCreateDestructiveChanges().OutputZonesChanged = ValueChange{
+			isChange = plan.HasDestructiveChanges
+			getOrCreateDestructiveChanges().OutputZonesChanged = plan.ValueChange{
 				CurrentValue: data.Zones,
 				NextValue:    changes.Output.Data.After.Zones,
 			}
@@ -253,7 +243,7 @@ func CheckBaseInfrastructurePipeline(
 		return nil
 	}
 	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
-	return isChange, plan, destructiveChanges, err
+	return isChange, pl, destructiveChanges, err
 }
 
 func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error {
