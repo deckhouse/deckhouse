@@ -141,7 +141,6 @@ status:
 		It("Hook should not fail with errors", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.GoHookError).Should(BeNil())
-			Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
 			Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
 [
   {
@@ -175,9 +174,61 @@ status:
 		It("Hook should not fail with errors and get rules from VCDInstanceClass", func() {
 			Expect(c).To(ExecuteSuccessfully())
 			Expect(c.GoHookError).Should(BeNil())
-			Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
 			Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
 [
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-one"
+  },
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-two"
+  },
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-three"
+  },
+  {
+    "polarity": "AntiAffinity",
+    "required": false,
+    "nodeGroupName": "ng-six"
+  }
+]
+`))
+		})
+	})
+
+	d := HookExecutionConfigInit(initValuesWithRules, "{}")
+	d.RegisterCRD("deckhouse.io", "v1", "VCDInstanceClass", false)
+	Context("Affinity rules are defined in both values and VCDInstanceClass", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(vcdInstanceClasses))
+			d.RunHook()
+		})
+
+		It("Hook should not fail with errors and merge rules from values and VCDInstanceClass", func() {
+			Expect(d).To(ExecuteSuccessfully())
+			Expect(d.GoHookError).Should(BeNil())
+			Expect(d.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
+[
+  {
+    "polarity": "AntiAffinity",
+    "required": true,
+    "nodeGroupName": "master"
+  },
+  {
+    "polarity": "AntiAffinity",
+    "required": false,
+    "nodeGroupName": "front"
+  },
+  {
+    "polarity": "Affinity",
+    "required": false,
+    "nodeGroupName": "worker"
+  },
   {
     "polarity": "Affinity",
     "required": true,
