@@ -350,6 +350,34 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	return releaseImageInfo, nil
 }
 
+// FetchModuleReleaseDigestFromReleaseChannel gets only digest from release channel without downloading full image
+// This is optimized version that uses cr.Get instead of cr.Image
+func (md *ModuleDownloader) FetchModuleReleaseDigestFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseDigestFromReleaseChannel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+
+	md.logger.Debug("fetching module release digest",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("release_channel", releaseChannel),
+	)
+
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return "", fmt.Errorf("fetch release image error: %w", err)
+	}
+
+	// Use cr.Get instead of cr.Image to get only descriptor
+	desc, err := regCli.Get(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		return "", fmt.Errorf("get descriptor: %w", err)
+	}
+
+	return desc.Digest.String(), nil
+}
+
 // fetchModuleReleaseMetadataByVersion get Image, Digest and release metadata by version
 // return error if version.json not found in metadata
 // Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$moduleVersion

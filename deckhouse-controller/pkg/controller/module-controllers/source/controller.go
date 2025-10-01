@@ -397,12 +397,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
-		logger.Debug("download module meta from release channel")
+		logger.Debug("check module digest from release channel")
 
-		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
+		// First, get only digest using cr.Get (optimized)
+		newDigest, err := md.FetchModuleReleaseDigestFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
-				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				errorsExist = true
 
@@ -421,8 +422,16 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		// Check if checksum changed (optimized check without downloading full image)
+		if availableModule.Checksum == newDigest {
+			// No changes, just update the available module with current info
+			availableModule.Checksum = newDigest
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// Check if release exists with new checksum
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, newDigest)
 		if err != nil {
 			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
@@ -432,6 +441,26 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
+		// If release exists and checksum is the same, no need to download full metadata
+		if exists {
+			availableModule.Checksum = newDigest
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// Only now download full metadata when we know we need to process the module
+		logger.Debug("download full module metadata from release channel")
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			logger.Error("failed to download full module metadata", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// Final check with full metadata
 		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
 			logger.Debug("ensure release")
 
@@ -476,6 +505,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
+		// Update checksum and version from metadata
 		availableModule.Checksum = meta.Checksum
 		availableModule.Version = meta.ModuleVersion
 
