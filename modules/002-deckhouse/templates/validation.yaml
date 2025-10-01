@@ -89,7 +89,7 @@ spec:
         resources:   ["*"]
   matchConditions:
     - name: 'exclude-groups'
-      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
     # exclude SA from namespaces prefixed with `d8-managed-`
