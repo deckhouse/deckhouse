@@ -1,6 +1,7 @@
 ---
 title: "Переключение редакций"
 permalink: ru/admin/configuration/registry/switching-editions.html
+description: "Переключение между редакциями Deckhouse Kubernetes Platform. Миграция с Community Edition на Enterprise Edition и управление лицензиями."
 lang: ru
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Обзор
 permalink: ru/admin/configuration/update/
+description: "Управление обновлениями платформы Deckhouse Kubernetes Platform. Безопасные обновления, уведомления и управление конфигурацией для платформы и компонентов кластера."
 lang: ru
 search: update overview, update management, platform updates, управление обновлениями, каналы обновлений, конфигурация обновлений, обновления платформы
 ---

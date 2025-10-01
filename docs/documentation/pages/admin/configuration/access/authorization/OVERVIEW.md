@@ -1,6 +1,8 @@
 ---
 title: "Overview"
 permalink: en/admin/configuration/access/authorization/
+description: "Configure authorization and access control for Deckhouse Kubernetes Platform using RBAC. Manage user permissions, roles, and service accounts for secure cluster access."
+lang: en
 ---
 
 In Deckhouse Kubernetes Platform (DKP),

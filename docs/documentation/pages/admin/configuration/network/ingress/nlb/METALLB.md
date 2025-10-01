@@ -1,6 +1,8 @@
 ---
 title: "Balancing with MetalLB"
 permalink: en/admin/configuration/network/ingress/nlb/metallb.html
+description: "Configure MetalLB load balancing in Deckhouse Kubernetes Platform for bare-metal and cloud environments. LoadBalancer service support and IP address management."
+lang: en
 ---
 
 The [`metallb`](/modules/metallb/) module implements support for

@@ -1,6 +1,8 @@
 ---
 title: "ALB with NGINX Ingress controller"
 permalink: en/admin/configuration/network/ingress/alb/nginx.html
+description: "Configure Application Load Balancer with NGINX Ingress controller in Deckhouse Kubernetes Platform. High availability setup, SSL termination, and traffic routing configuration."
+lang: en
 ---
 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx).

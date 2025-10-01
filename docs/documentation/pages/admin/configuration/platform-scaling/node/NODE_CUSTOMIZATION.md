@@ -1,6 +1,8 @@
 ---
 title: "Custom node configuration"
 permalink: en/admin/configuration/platform-scaling/node/node-customization.html
+description: "Configure custom node settings in Deckhouse Kubernetes Platform. NodeGroupConfiguration setup, bash script automation, and node customization for cluster infrastructure."
+lang: en
 ---
 
 To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:

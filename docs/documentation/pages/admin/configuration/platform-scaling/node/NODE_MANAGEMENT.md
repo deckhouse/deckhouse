@@ -1,6 +1,8 @@
 ---
 title: "Node management basics in Deckhouse"
 permalink: en/admin/configuration/platform-scaling/node/node-management.html
+description: "Manage Kubernetes nodes in Deckhouse Kubernetes Platform with automatic scaling, updates, and maintenance. NodeGroup CRD configuration and node lifecycle management."
+lang: en
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports the full lifecycle of node management:

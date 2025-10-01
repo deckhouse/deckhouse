@@ -1,6 +1,8 @@
 ---
 title: "Vertical pod autoscaling"
 permalink: en/admin/configuration/app-scaling/vpa.html
+description: "Configure Vertical Pod Autoscaler (VPA) in Deckhouse Kubernetes Platform. Automatic container resource management and optimization based on usage metrics for improved efficiency."
+lang: en
 ---
 
 ## How Vertical Scaling (VPA) works

@@ -1,6 +1,8 @@
 ---
 title: "How to configure?"
 permalink: en/admin/configuration/
+description: "Learn how to configure Deckhouse Kubernetes Platform using global settings, module configurations, and custom resources."
+lang: en
 ---
 
 ## Deckhouse configuration

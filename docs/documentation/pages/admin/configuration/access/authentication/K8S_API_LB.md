@@ -1,6 +1,8 @@
 ---
 title: "Accessing the Kubernetes API via load balancer"
 permalink: en/admin/configuration/access/authentication/k8s-api-lb.html
+description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Kubernetes Platform. Secure kubectl access via Ingress controller with authentication."
+lang: en
 ---
 
 DKP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DKP kubeconfig web interface to securely access the Kubernetes API through a traffic balancer (Ingress controller).

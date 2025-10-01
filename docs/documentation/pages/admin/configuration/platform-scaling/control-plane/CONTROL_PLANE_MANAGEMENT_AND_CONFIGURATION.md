@@ -1,6 +1,8 @@
 ---
 title: "General management and configuration of the control plane"
 permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+description: "Configure and manage Kubernetes control plane in Deckhouse Kubernetes Platform. High availability, certificate management, and control plane component configuration."
+lang: en
 ---
 
 ## Main features

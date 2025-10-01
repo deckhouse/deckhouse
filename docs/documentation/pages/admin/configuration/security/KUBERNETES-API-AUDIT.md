@@ -1,6 +1,8 @@
 ---
 title: Kubernetes API event audit
 permalink: en/admin/configuration/security/events/kubernetes-api-audit.html
+description: "Configure Kubernetes API audit logging in Deckhouse Kubernetes Platform. API server event tracking, audit policy configuration, and security event analysis."
+lang: en
 ---
 
 The [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) feature allows you to track requests

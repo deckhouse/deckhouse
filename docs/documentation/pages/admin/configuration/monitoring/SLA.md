@@ -1,6 +1,8 @@
 ---
 title: Cluster SLA monitoring
 permalink: en/admin/configuration/monitoring/sla.html
+description: "Configure SLA monitoring in Deckhouse Kubernetes Platform. Cluster availability tracking, SLA compliance monitoring, and uptime statistics collection for platform components."
+lang: en
 ---
 
 DKP can collect statistics about the availability of cluster components and DKP components themselves. This data allows evaluating SLA compliance and provides availability information in the web interface.

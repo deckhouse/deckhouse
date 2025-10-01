@@ -1,6 +1,8 @@
 ---
 title: "Scheduler"
-permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html 
+permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html
+description: "Configure Kubernetes scheduler in Deckhouse Kubernetes Platform. Pod scheduling policies, node selection, resource allocation, and cluster workload distribution optimization."
+lang: en
 ---
 
 ## Pod scheduling

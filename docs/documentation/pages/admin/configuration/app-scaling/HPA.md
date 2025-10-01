@@ -1,6 +1,8 @@
 ---
 title: "Horizontal pod autoscaling"
 permalink: en/admin/configuration/app-scaling/hpa.html
+description: "Configure Horizontal Pod Autoscaler (HPA) in Deckhouse Kubernetes Platform. Automatic pod scaling based on CPU, memory, and custom metrics for optimal resource utilization."
+lang: en
 ---
 
 ## How Horizontal Scaling (HPA) works

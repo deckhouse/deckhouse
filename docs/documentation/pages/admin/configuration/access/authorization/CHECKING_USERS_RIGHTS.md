@@ -1,6 +1,8 @@
 ---
 title: "Checking user permissions"
 permalink: en/admin/configuration/access/authorization/check.html
+description: "Check user permissions and access rights in Deckhouse Kubernetes Platform. RBAC permission verification, user access testing, and authorization debugging tools."
+lang: en
 ---
 
 To check whether a user has the necessary permissions, run the following command, which includes:

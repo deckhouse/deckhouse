@@ -1,6 +1,7 @@
 ---
 title: Работа с container registries и редакциями
 permalink: ru/admin/configuration/registry/
+description: "Настройка и управление container registry в Deckhouse Kubernetes Platform. Внутренний registry, интеграция с внешними registry и переключение редакций."
 lang: ru
 search: container registry, registry configuration, edition management, registry management, container images, управление редакциями
 ---

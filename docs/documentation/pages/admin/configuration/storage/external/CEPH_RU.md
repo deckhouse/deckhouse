@@ -1,6 +1,7 @@
 ---
 title: "Распределённое хранилище Ceph"
 permalink: ru/admin/configuration/storage/external/ceph.html
+description: "Настройка интеграции с распределённым хранилищем Ceph в Deckhouse Kubernetes Platform. Настройка RBD и CephFS, конфигурация аутентификации и управление высокодоступным хранилищем."
 lang: ru
 ---
 

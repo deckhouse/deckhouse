@@ -1,6 +1,7 @@
 ---
 title: Сканирование контейнерных образов на уязвимости
 permalink: ru/admin/configuration/security/scanning.html
+description: "Настройка сканирования контейнерных образов на уязвимости в Deckhouse Kubernetes Platform с использованием Trivy. Автоматическое сканирование безопасности, обнаружение уязвимостей и применение политик безопасности."
 lang: ru
 ---
 
