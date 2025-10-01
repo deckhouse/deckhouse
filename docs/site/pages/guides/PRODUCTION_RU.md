@@ -14,7 +14,7 @@ layout: sidebar-guides
 Используйте канал обновлений `Early Access` или `Stable`. Установите [окно автоматических обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#конфигурация-окон-обновлений) или [ручной режим](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#ручное-подтверждение-обновлений).
 {% endalert %}
 
-Выберите [канал обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/deckhouse-release-channels.html) и [режим обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-releasechannel), который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже до него доходит новая функциональность.
+Выберите [канал обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/release-channels.html) и [режим обновлений](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-releasechannel), который соответствует вашим ожиданиям. Чем стабильнее канал обновлений, тем позже до него доходит новая функциональность.
 
 По возможности используйте разные каналы обновлений для кластеров. Для кластера разработки используйте менее стабильный канал обновлений, нежели для тестового или stage-кластера (pre-production-кластер).
 
@@ -74,7 +74,8 @@ layout: sidebar-guides
 Конфигурация мастер-узлов для облачных кластеров настраивается в параметре [masterNodeGroup](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup).
 
 Может быть полезно:
-- [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html#как-добавить-master-узлы-в-облачном-кластере).
+
+- [Как добавить мастер-узлы в облачном кластере...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#добавление-master-узлов-в-облачном-кластере).
 - [Работа со статическими узлами...](https://deckhouse.ru/products/kubernetes-platform/documentation/modules/node-manager/#работа-со-статическими-узлами).
 
 ### Frontend-узлы

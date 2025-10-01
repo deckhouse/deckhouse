@@ -19,7 +19,7 @@ The Deckhouse installer is available as a container image and is based on the [d
 
 Deckhouse installation options:
 
-* **In a supported cloud.** The `dhctl` utility automatically creates and configures all necessary resources, including virtual machines, deploys the Kubernetes cluster, and installs Deckhouse. A full list of supported cloud providers is available in the [Kubernetes Cluster](../kubernetes.html) section.
+* **In a supported cloud.** The `dhctl` utility automatically creates and configures all necessary resources, including virtual machines, deploys the Kubernetes cluster, and installs Deckhouse. A full list of supported cloud providers is available in the [Platform integration with infrastructure](../admin/integrations/integrations-overview.html) section.
 
 * **On bare-metal servers or in unsupported clouds.** In this option, `dhctl` configures the server or virtual machine, deploys the Kubernetes cluster with a single master node, and installs Deckhouse. Additional nodes can be added to the cluster using pre-existing setup scripts.
 
@@ -597,7 +597,7 @@ The `d8 mirror` utility is not available for use with the Community Edition (CE)
 You can check the current status of versions in the release channels at [releases.deckhouse.ru](https://releases.deckhouse.ru).
 {% endalert %}
 
-1. [Download and install the Deckhouse CLI utility](deckhouse-cli/).
+1. [Download and install the Deckhouse CLI utility](../cli/d8/).
 
 1. Download DKP images to a dedicated directory using the `d8 mirror pull` command.
 
@@ -700,9 +700,9 @@ You can check the current status of versions in the release channels at [release
    /home/user/d8-bundle
    ```
 
-1. On the host with access to the registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/).
+1. On the host with access to the registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](../cli/d8/).
 
-1. Copy the downloaded DKP image bundle and install the [Deckhouse CLI](deckhouse-cli/) on the host that has access to the target image registry.
+1. Copy the downloaded DKP image bundle and install the [Deckhouse CLI](../cli/d8/) on the host that has access to the target image registry.
 
 1. Upload the DKP images to the registry using the `d8 mirror push` command.
 

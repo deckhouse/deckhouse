@@ -13,7 +13,7 @@ The following recommendations may be of less importance for a test or developmen
 Use `Early Access` or `Stable` release channel. Configure [auto-update window](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
-Select the [release channel](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/deckhouse-release-channels.html) and [update mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-releasechannel) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
+Select the [release channel](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/release-channels.html) and [update mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html#parameters-releasechannel) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
 
 If possible, use different release channels for clusters. Use a less stable update channel for a development cluster than for a testing cluster or stage (pre-production) cluster.
 
@@ -75,7 +75,7 @@ Use three master nodes in all cases, as they are sufficient for fault tolerance.
 The master node configuration for cloud clusters can be configured using the [masterNodeGroup](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
 Reference:
-- [How do I add a master node to a cluster...](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html##how-to-add-master-nodes-to-a-cloud-cluster)
+- [How do I add a master node to a cluster...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#adding-master-nodes-in-a-cloud-cluster)
 - [Working with static nodes...](https://deckhouse.io/products/kubernetes-platform/documentation/modules/node-manager/#working-with-static-nodes)
 
 ### Frontend nodes
