@@ -96,6 +96,14 @@ toc: false
 
 <script>
   function openInstallTab(evt, installTabName) {
+      const url = new URL(window.location.href);
+      if (installTabName == 'tab-manual-install') {
+        url.hash = '';
+      }
+      if (installTabName == 'tab-gui-install') {
+        url.hash = 'gui-install';
+      }
+      window.history.replaceState(null, '', url.toString());
       document.getElementById("tab-manual-install").classList.remove("active");
       document.getElementById("tab-gui-install").classList.remove("active");
 
