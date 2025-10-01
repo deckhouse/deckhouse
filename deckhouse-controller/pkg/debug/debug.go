@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -58,7 +59,7 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func createTarball() *bytes.Buffer {
+func createTarball(excludeFiles []string) *bytes.Buffer {
 	var buf bytes.Buffer
 
 	gzipWriter := gzip.NewWriter(&buf)
@@ -66,6 +67,12 @@ func createTarball() *bytes.Buffer {
 
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
+
+	// Create a map for faster lookup of excluded files
+	excludeMap := make(map[string]bool)
+	for _, file := range excludeFiles {
+		excludeMap[file] = true
+	}
 
 	debugCommands := []Command{
 		{
@@ -281,6 +288,11 @@ func createTarball() *bytes.Buffer {
 	}
 
 	for _, cmd := range debugCommands {
+		// Skip excluded files
+		if excludeMap[cmd.File] {
+			continue
+		}
+
 		if err := cmd.Save(tarWriter); err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 		}
@@ -291,8 +303,20 @@ func createTarball() *bytes.Buffer {
 
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
+	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can specify multiple files separated by spaces.").String()
+
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
-		res := createTarball()
+		var excludeList []string
+		if *excludeFiles != "" {
+			// Split by spaces and filter out empty strings
+			parts := strings.Fields(*excludeFiles)
+			for _, part := range parts {
+				if part != "" {
+					excludeList = append(excludeList, part)
+				}
+			}
+		}
+		res := createTarball(excludeList)
 		_, err := io.Copy(os.Stdout, res)
 		return err
 	})
