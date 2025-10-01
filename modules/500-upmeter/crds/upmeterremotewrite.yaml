@@ -74,6 +74,20 @@ spec:
                           description: The CA certificate used when verifying the API server certificate.
                           type: string
                           x-doc-default: ""
+                    headers:
+                      type: object
+                      description: Additional HTTP headers to send with each remote write request.
+                      properties:
+                        X-Scope-OrgID:
+                          description: |
+                            The `X-Scope-OrgID` header specifying the tenant ID.
+                          type: string
+                        X-Auth-Token:
+                          description: |
+                            The `X-Auth-Token` header specifying the authentication token.
+                          type: string
+                      oneOf:
+                        - required: ["X-Scope-OrgID", "X-Auth-Token"]
                 additionalLabels:
                   type: object
                   description: Additional labels to add to all metrics.

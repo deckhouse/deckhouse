@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/jonboulle/clockwork"
 	"go.opentelemetry.io/otel"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,12 +33,14 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -60,7 +61,7 @@ type ModuleReleaseFetcherConfig struct {
 	UpdatePolicyName string
 	ReleaseChannel   string
 
-	MetricStorage     metric.Storage
+	MetricStorage     metricsstorage.Storage
 	MetricModuleGroup string
 
 	Logger *log.Logger
@@ -96,7 +97,7 @@ type ModuleReleaseFetcher struct {
 	updatePolicyName string
 	releaseChannel   string
 
-	metricStorage   metric.Storage
+	metricStorage   metricsstorage.Storage
 	metricGroupName string
 
 	logger *log.Logger
@@ -181,6 +182,11 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	if err != nil {
 		// TODO: maybe set something like v1.0.0-{meta.Version} for developing purpose
 		return fmt.Errorf("parse semver: %w", err)
+	}
+
+	// forbid pre-release versions
+	if newSemver.Prerelease() != "" {
+		return fmt.Errorf("pre-release versions are not supported: %s", newSemver.Original())
 	}
 
 	imageInfo, err := f.moduleDownloader.DownloadReleaseImageInfoByVersion(ctx, f.moduleName, f.targetReleaseMeta.ModuleVersion)
@@ -373,9 +379,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 			metricLabels["version"] = "v" + ver.String()
 
 			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingModuleIsNotValid, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			} else {
-				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metricUpdatingFailedBrokenSequence, 1, metricLabels)
+				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingBrokenSequence, 1, metricLabels)
 			}
 		}
 

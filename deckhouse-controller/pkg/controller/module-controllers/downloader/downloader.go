@@ -421,10 +421,7 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *modu
 
 	defPath := filepath.Join(path, moduletypes.DefinitionFile)
 
-	if _, err := os.Stat(defPath); err != nil {
-		return def
-	}
-
+	// do not add os.Stat check, because os.Open will return error if file does not exist
 	f, err := os.Open(defPath)
 	if err != nil {
 		return def
@@ -497,25 +494,24 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 		}
 	}
 
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			meta.Changelog = make(map[string]any)
-			return meta, nil
-		}
-		meta.Changelog = changelog
-	}
-
 	if rr.moduleReader.Len() > 0 {
 		var ModuleDefinition moduletypes.Definition
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
 		if err != nil {
-			meta.ModuleDefinition = nil
-			return meta, nil
+			return meta, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
 		meta.ModuleDefinition = &ModuleDefinition
+	}
+
+	if rr.changelogReader.Len() > 0 {
+		var changelog map[string]any
+		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
+		if err != nil {
+			changelog = make(map[string]any)
+		}
+
+		meta.Changelog = changelog
 	}
 
 	return meta, err

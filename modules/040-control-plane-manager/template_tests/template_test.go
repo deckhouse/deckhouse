@@ -494,7 +494,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
 				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(8))
+				Expect(documents).To(HaveLen(7))
 				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{
@@ -536,7 +536,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
 				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(8))
+				Expect(documents).To(HaveLen(7))
 				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{
@@ -581,7 +581,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
 				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(8))
+				Expect(documents).To(HaveLen(7))
 				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{
@@ -626,7 +626,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
 				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(8))
+				Expect(documents).To(HaveLen(7))
 				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{
@@ -669,7 +669,7 @@ resources:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
 				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(8))
+				Expect(documents).To(HaveLen(7))
 				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
 				expectedServiceAccountIssuers := []string{

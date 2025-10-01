@@ -4,6 +4,8 @@
 
 
  - #13874 unknown section "pod-reloader"
+ - #14160 unknown section "runtime-audit-engine"
+ - #14673 unknown section "runtime-audit-engine"
 
 ## Know before update
 
@@ -56,6 +58,8 @@
 ## Fixes
 
 
+ - **[candi]** Fix arg `encryption-provider-config ` for kubeadm configuration. [#15521](https://github.com/deckhouse/deckhouse/pull/15521)
+ - **[candi]** Disable immutable flag on erofs files in cleanup node stage. [#15520](https://github.com/deckhouse/deckhouse/pull/15520)
  - **[candi]** containerd migration fix [#14622](https://github.com/deckhouse/deckhouse/pull/14622)
  - **[candi]** Resolved the issue with downloading packages for external modules using ctr for bb-rp-fetch. [#14236](https://github.com/deckhouse/deckhouse/pull/14236)
  - **[candi]** Fixed double preview version in candi/version_map. [#13670](https://github.com/deckhouse/deckhouse/pull/13670)
@@ -130,8 +134,6 @@
  - **[prometheus]** Fixed CVEs vulnerabilities  alerts receiver. [#13740](https://github.com/deckhouse/deckhouse/pull/13740)
  - **[prometheus]** Fixed CVEs vulnerabilities alertmanager. [#13739](https://github.com/deckhouse/deckhouse/pull/13739)
  - **[prometheus-metrics-adapter]** Fixed CVEs vulnerabilities prometheus-metrics-adapter. [#13794](https://github.com/deckhouse/deckhouse/pull/13794)
- - **[runtime-audit-engine]** Improve memory footprint by switching to the stdlib memory allocator instead of jemalloc [#14673](https://github.com/deckhouse/deckhouse/pull/14673)
- - **[runtime-audit-engine]** Added falco build fixes for CSE. [#14160](https://github.com/deckhouse/deckhouse/pull/14160)
  - **[service-with-healthchecks]** Added probes for `kube-rbac-proxy`. [#13877](https://github.com/deckhouse/deckhouse/pull/13877)
  - **[service-with-healthchecks]** Fixed handling of pods without IP addresses and corrected initial readiness threshold evaluation. [#12390](https://github.com/deckhouse/deckhouse/pull/12390)
  - **[user-authn]** fix dex oidc connector insecureSkipVerify and rootCAData options [#14524](https://github.com/deckhouse/deckhouse/pull/14524)
@@ -140,6 +142,7 @@
  - **[user-authn]** Fixed Dex CVE vulnerabilities. [#13309](https://github.com/deckhouse/deckhouse/pull/13309)
  - **[user-authz]** Fixed user-authz hook, rolebinding empty subject namespace. [#13756](https://github.com/deckhouse/deckhouse/pull/13756)
     low
+ - **[vertical-pod-autoscaler]** Disable vpa for k8s-metacollector [#15672](https://github.com/deckhouse/deckhouse/pull/15672)
 
 ## Chore
 

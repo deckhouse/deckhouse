@@ -10,16 +10,16 @@ The example uses the [experimental role-based](./#experimental-role-based-model)
 
 To grant access to a cluster administrator, use the role `d8:manage:all:manager` in `ClusterRoleBinding`.
 
-Example of assigning rights to a cluster administrator (User `joe`):
+Example of assigning rights to a cluster administrator (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -54,10 +54,10 @@ Example of assigning rights to a network administrator (User `joe`):
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -171,7 +171,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

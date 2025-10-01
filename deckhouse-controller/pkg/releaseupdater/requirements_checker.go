@@ -24,7 +24,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric"
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,6 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -121,7 +121,7 @@ func (c *Checker[T]) MetRequirements(ctx context.Context, v *T) []NotMetReason {
 // 4) migrated modules check
 //
 // for more checks information - look at extenders
-func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, metricStorage metric.Storage, options ...CheckerOption) (*Checker[v1alpha1.DeckhouseRelease], error) {
+func NewDeckhouseReleaseRequirementsChecker(k8sclient client.Client, enabledModules []string, exts *extenders.ExtendersStack, metricStorage metricsstorage.Storage, options ...CheckerOption) (*Checker[v1alpha1.DeckhouseRelease], error) {
 	config := applyOptions(options)
 
 	if config.logger == nil {
@@ -387,11 +387,11 @@ type migratedModulesCheck struct {
 	name string
 
 	k8sclient     client.Client
-	metricStorage metric.Storage
+	metricStorage metricsstorage.Storage
 	logger        *log.Logger
 }
 
-func newMigratedModulesCheck(k8sclient client.Client, metricStorage metric.Storage, logger *log.Logger) *migratedModulesCheck {
+func newMigratedModulesCheck(k8sclient client.Client, metricStorage metricsstorage.Storage, logger *log.Logger) *migratedModulesCheck {
 	return &migratedModulesCheck{
 		name:          "migrated modules check",
 		k8sclient:     k8sclient,

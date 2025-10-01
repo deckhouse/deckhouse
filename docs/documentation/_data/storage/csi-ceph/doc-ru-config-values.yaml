@@ -1,8 +1,0 @@
-type: object
-properties:
-  cephfsEnabled:
-    description: Состояние драйвера CephFS.
-  rbdEnabled:
-    description: Состояние драйвера RBD.
-  logLevel:
-    description: Уровень логирования модуля.

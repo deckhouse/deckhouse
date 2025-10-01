@@ -215,9 +215,9 @@ Adding a static node can be done manually or using the Cluster API Provider Stat
 Follow the steps below to add a new static node (e.g., VM or bare metal server) to the cluster:
 
 1. For [CloudStatic nodes](../node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
-   - [For AWS](../cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-   - [For GCP](../cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
-   - [For YC](../cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For AWS](/modules/cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For GCP](/modules/cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
+   - [For YC](/modules/cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
 1. Use the existing one or create a new [NodeGroup](cr.html#nodegroup) custom resource (see the [example](#static-nodes) for the `NodeGroup` called `worker`). The [nodeType](cr.html#nodegroup-v1-spec-nodetype) parameter for static nodes in the NodeGroup must be `Static` or `CloudStatic`.
 1. Get the Base64-encoded script code to add and configure the node.
 
@@ -239,6 +239,10 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
    ```
 
 ### Using the Cluster API Provider Static
+
+{% alert level="warning" %}
+If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding regular nodes using CAPS, [make sure](../control-plane-manager/faq.html#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) that they will not be "captured".
+{% endalert %}
 
 A brief example of adding a static node to a cluster using [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):
 

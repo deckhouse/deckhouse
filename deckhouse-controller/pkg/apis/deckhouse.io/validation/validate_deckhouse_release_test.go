@@ -18,14 +18,12 @@ package validation_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	metricstorage "github.com/flant/shell-operator/pkg/metric_storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -40,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 // moduleManager implements deckhouseReleaseModuleManager interface for testing
@@ -381,7 +380,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 
 			// Create dependencies
 			modManager := &moduleManager{enabledModules: tt.enabledModules}
-			metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
+			metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 
 			// Create extenders stack
 			logger := log.NewNop()
@@ -503,7 +502,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 
 			// Create dependencies
 			modManager := &moduleManager{enabledModules: tt.enabledModules}
-			metricStorage := metricstorage.NewMetricStorage(context.Background(), "", true, log.NewNop())
+			metricStorage := metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop()))
 
 			// Create extenders stack
 			logger := log.NewNop()
