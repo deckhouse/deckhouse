@@ -205,6 +205,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("deckhouse unsuitable version", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.setupReleaseController(suite.fetchTestFileData("dVersion-unsuitable.yaml"))
 
 		repeatTest(func() {
@@ -228,6 +231,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("kubernetes unsuitable version", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.setupReleaseController(suite.fetchTestFileData("kVersion-unsuitable.yaml"))
 
 		repeatTest(func() {
@@ -238,6 +244,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("deploy with outdated module releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-when-deploy.yaml"))
 		suite.updateModuleReleasesStatuses()
@@ -249,6 +258,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("clean up for a deployed module release with outdated module releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{}, nil)
 		suite.setupReleaseController(suite.fetchTestFileData("clean-up-outdated-module-releases-for-deployed.yaml"))
 		suite.updateModuleReleasesStatuses()
@@ -283,6 +295,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("AutoPatch", func() {
 		suite.Run("install new module in manual mode with module release approval annotation", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-approved.yaml"))
 
 			repeatTest(func() {
@@ -292,6 +307,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("install new module in manual mode with module release without approval annotation", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			suite.setupReleaseController(suite.fetchTestFileData("manual-mode-release-not-approved.yaml"))
 
 			repeatTest(func() {
@@ -443,6 +461,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process force release", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.setupReleaseController(suite.fetchTestFileData("apply-force-release.yaml"))
 
 		repeatTest(func() {
@@ -458,6 +479,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Sequential processing", func() {
 		suite.Run("sequential processing with patch release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-patch.yaml")
 			suite.setupReleaseController(testData)
 
@@ -470,6 +494,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-minor.yaml")
 			suite.setupReleaseController(testData)
 
@@ -482,6 +509,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor pending release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-minor-pending.yaml")
 			suite.setupReleaseController(testData)
 
@@ -496,6 +526,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor auto release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-minor-auto.yaml")
 			suite.setupReleaseController(testData)
 
@@ -510,6 +543,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with minor notready release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-minor-notready.yaml")
 			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
 
@@ -524,6 +560,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("sequential processing with pending releases", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("sequential-processing-pending.yaml")
 			suite.setupReleaseController(testData, withBasicModulePhase(addonmodules.Startup))
 
@@ -540,6 +579,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process pending releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// Setup initial state
 		suite.setupReleaseController(suite.fetchTestFileData("apply-pending-releases.yaml"))
 
@@ -565,6 +607,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("Process major releases", func() {
 		suite.Run("major release from 0 to 1 must be allowed", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-0-1.yaml"))
 
@@ -581,6 +626,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		})
 
 		suite.Run("major release from 1 to 2 must be not allowed", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			// Setup initial state
 			suite.setupReleaseController(suite.fetchTestFileData("update-major-version-1-2.yaml"))
 
@@ -601,6 +649,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("LTS Channel Module Release Tests", func() {
 		// 1) LTS channel minor version jump (+20)
 		suite.Run("LTS channel minor version jump +20", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("lts-channel-minor-jump.yaml")
 			suite.setupReleaseController(testData)
 
@@ -615,6 +666,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 2) LTS channel major version jump (+1)
 		suite.Run("LTS channel major version jump +1", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("lts-channel-major-jump.yaml")
 			suite.setupReleaseController(testData)
 
@@ -629,6 +683,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 3) LTS channel multiple intermediate versions - should process only latest
 		suite.Run("LTS channel multiple intermediate versions - should process only latest", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("lts-channel-multiple-versions.yaml")
 			suite.setupReleaseController(testData)
 
@@ -647,6 +704,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	suite.Run("Module Release Skip Feature (from to)", func() {
 		// 1) Sequential - should skip intermediate versions when constraint allows jump
 		suite.Run("Sequential", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			// deployed 1.67.0, pendings: 1.68.0, 1.69.0, 1.70.0 (with constraint from 1.67 to 1.70)
 			testData := suite.fetchTestFileData("from-to-sequential.yaml")
 			suite.setupReleaseController(testData)
@@ -665,6 +725,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 2) Jump through n versions
 		suite.Run("Jump through n versions", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-jump.yaml")
 			suite.setupReleaseController(testData)
 
@@ -684,6 +747,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 2.1) Jump through n versions, but approved not latest
 		suite.Run("Jump through n versions", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-jump-approved-not-latest.yaml")
 			suite.setupReleaseController(testData)
 
@@ -703,6 +769,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 3) Jump when deployed is above 'from'
 		suite.Run("Jump when deployed is above 'from'", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-deployed-above-from.yaml")
 			suite.setupReleaseController(testData)
 
@@ -721,6 +790,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 4) No jump when deployed is below 'from'
 		suite.Run("No jump when deployed is below 'from'", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-below-from.yaml")
 			suite.setupReleaseController(testData)
 
@@ -739,6 +811,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 5) No backward jump if 'to' is less than deployed
 		suite.Run("No backward jump if 'to' is less than deployed", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-to-less-than-deployed.yaml")
 			suite.setupReleaseController(testData)
 
@@ -757,6 +832,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 6) Several update specs (approved version in second constraint)
 		suite.Run("Several update specs, must choose jump to constrainted release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-several-update-specs-must-choose-constrainted-release.yaml")
 			suite.setupReleaseController(testData)
 
@@ -776,6 +854,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 7) Several update specs (different from maximum leap release is approved and matches constraint)
 		suite.Run("Different from constrainted release is approved and matches constraint", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-several-update-specs-different-release.yaml")
 			suite.setupReleaseController(testData)
 
@@ -795,6 +876,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 		// 8) Update specis not for constrainted release
 		suite.Run("Different from constrainted release is approved and not matches to constrainted release", func() {
+			if !hasVerity() {
+				suite.T().Skip("requires veritysetup (installer path)")
+			}
 			testData := suite.fetchTestFileData("from-to-update-spec-not-for-constrainted-release.yaml")
 			suite.setupReleaseController(testData)
 
