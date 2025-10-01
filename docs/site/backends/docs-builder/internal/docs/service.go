@@ -72,6 +72,10 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 	syncer := fsync.NewSyncer()
 	syncer.NoChmod = true
 	syncer.NoTimes = true
+	// do not delete files in baseDir
+	syncer.DeleteFilter = func(_ fsync.FileInfo) bool {
+		return false
+	}
 
 	oldLocation := filepath.Join(hugoInitDir)
 	newLocation := filepath.Join(svc.baseDir)
