@@ -752,17 +752,25 @@ alerts:
       module: monitoring-deckhouse
       edition: ce
       description: |
-        Steps to troubleshoot:
+        This happened because there were several sources for configuring CNI parameters in the cluster, and ModuleConfig did not have the highest priority previously.
 
-        1. Find the desired settings in the ConfigMap `d8-system/desired-cni-moduleconfig` by running the following command:
+        To resolve this issue, the following steps should be taken:
+
+        1. Find the ConfigMap `d8-system/desired-cni-moduleconfig` in the cluster, which contains the actual ModuleConfig settings.
 
            ```bash
            d8 k -n d8-system get configmap desired-cni-moduleconfig -o yaml
            ```
 
-        1. Update the conflicting settings in the CNI `{{ $labels.cni }}` ModuleConfig to match the desired configuration.
+        2. Apply this prepared ModuleConfig to the cluster. This will not cause any actual reconfigurations in the cluster and is completely safe.
+
+        3. Once the parameters in "ModuleConfig" match those used in the cluster:
+             - this alert will be resolved,
+             - and the priority of the sources for configuring CNI will change, and ModuleConfig will become the main source of truth.
+
+        4. After that, you can add the desired parameters to the ModuleConfig CNI and they will be applied immediately.
       summary: |
-        Settings in the secret d8-cni-configuration conflict with the ModuleConfig.
+        The parameters specified in ModuleConfig of {{ $labels.cni }} do not match the ones that are actually being used in the cluster.
       severity: "5"
       markupFormat: markdown
     - name: D8ControlPlaneManagerPodNotRunning
@@ -2696,31 +2704,6 @@ alerts:
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
       severity: "6"
-      markupFormat: markdown
-    - name: D8RuntimeAuditEngineNotScheduledInCluster
-      sourceFile: ee/modules/650-runtime-audit-engine/monitoring/prometheus-rules/runtime-audit-engine.yaml
-      moduleUrl: 650-runtime-audit-engine
-      module: runtime-audit-engine
-      edition: ee
-      description: |
-        Some `runtime-audit-engine` Pods are not scheduled, meaning the security audit is not fully operational.
-
-        Troubleshooting steps:
-
-        1. Check the status of the DaemonSet `d8-runtime-audit-engine/runtime-audit-engine`:
-
-           ```shell
-           d8 k -n d8-runtime-audit-engine get daemonset,pod --selector=app=runtime-audit-engine
-           ```
-
-        2. Get a list of nodes where Pods are not in the Ready state:
-
-           ```shell
-           d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
-           ```
-      summary: |
-        Runtime-audit-engine Pods cannot be scheduled.
-      severity: "4"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml
@@ -5028,6 +5011,17 @@ alerts:
         Module {{ $labels.moduleName }} is matched by the deprecated update policy {{ $labels.updatePolicy }}.
       severity: "4"
       markupFormat: markdown
+    - name: ModuleIsDeprecated
+      sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
+      moduleUrl: 340-monitoring-deckhouse
+      module: monitoring-deckhouse
+      edition: ce
+      description: |
+        The module `{{ $labels.module }}` is deprecated and will not receive new updates. The module may be removed in the future, so please disable it in a controlled manner.
+      summary: |
+        Module {{ $labels.module }} is deprecated.
+      severity: "9"
+      markupFormat: markdown
     - name: ModuleIsInMaintenanceMode
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 340-monitoring-deckhouse
@@ -5415,7 +5409,7 @@ alerts:
         ```
       summary: |
         Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
-      severity: "3"
+      severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
       sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/node.yaml
@@ -6620,7 +6614,6 @@ modules-having-alerts:
     - openvpn
     - operator-prometheus
     - prometheus
-    - runtime-audit-engine
     - secret-copier
     - terraform-manager
     - upmeter

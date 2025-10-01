@@ -1,0 +1,4 @@
+global:
+  linters-settings:
+    documentation:
+      impact: warn

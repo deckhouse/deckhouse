@@ -34,6 +34,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
@@ -74,7 +75,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
-	metricGroup := fmt.Sprintf(obsoleteConfigMetricGroup, configName)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
@@ -99,7 +100,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 				converter := conversion.Store().Get(moduleConfig.Name)
 				// fire alert at obsolete version
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-					r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
+					r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleConfigObsoleteVersion, 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
 						"latest":  strconv.Itoa(converter.LatestVersion()),

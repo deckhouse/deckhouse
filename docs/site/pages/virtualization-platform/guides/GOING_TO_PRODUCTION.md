@@ -52,7 +52,7 @@ If the Kubernetes version in the [kubernetesVersion](/products/kubernetes-platfo
 Deckhouse may refuse to upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 If your application uses outdated resource versions or depends on a particular version of Kubernetes for some other reason,
-check whether it's [supported](/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
+check whether it's [supported](/products/virtualization-platform/documentation/about/requirements.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
 
 ## Resource requirements
 
@@ -140,7 +140,7 @@ For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components.
-The [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
+The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
 
 In high-load clusters, where many alerts are generated and many metrics are collected,
 we recommend allocating dedicated nodes for monitoring.
@@ -162,7 +162,7 @@ Use two system nodes.
 {% endalert %}
 
 System nodes are used to run Deckhouse modules.
-Their [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
+Their [NodeGroup](/products/kubernetes-platform/documentation/v1/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
 Allocate two system nodes.
 This way, Deckhouse modules will run on them without interfering with user applications in the cluster.
@@ -202,11 +202,11 @@ Related guides:
 ## Backups
 
 {% alert %}
-Set up [etcd backups](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html).
+Set up [etcd backups](/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
 Write up a recovery plan.
 {% endalert %}
 
-We strongly recommend that you set up [etcd backups](/products/virtualization-platform/documentation/admin/platform-management/control-plane-settings/etcd.html).
+We strongly recommend that you set up [etcd backups](/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
 This will be your last chance to restore the cluster should things go awry.
 Keep these backups as *far away* from your cluster as possible.
 
@@ -222,7 +222,7 @@ This plan should be periodically updated and tested in drills.
 Follow the project channel on [Telegram](https://t.me/deckhouse) for news and updates.
 {% endalert %}
 
-To keep up with important news and updates, join the [community](/community/about.html).
+To keep up with important news and updates, join the [community](/community/).
 This will help you share experience with people who are doing the same thing as you are and avoid typical mistakes.
 
 The Deckhouse team understands the challenges of managing a production cluster in Kubernetes.

@@ -1,0 +1,3 @@
+dirs:
+- /opt/nginx-static/additional-conf
+- /opt/nginx-static/writable

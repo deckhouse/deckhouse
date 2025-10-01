@@ -37,11 +37,11 @@ description: "Управление облачными ресурсами в Deck
 
 1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
-   ![Группа безопасности по умолчанию](../../images/cloud-provider-yandex/sg-ru-default.png)
+   ![Группа безопасности по умолчанию](images/sg-ru-default.png)
 
 1. Создайте правила согласно [инструкции Yandex Cloud](https://cloud.yandex.ru/ru/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
 
-   ![Правила для группы безопасности](../../images/cloud-provider-yandex/sg-ru-rules.png)
+   ![Правила для группы безопасности](images/sg-ru-rules.png)
 
 1. Удалите правило, разрешающее любой **входящий** трафик (на скриншоте выше оно уже удалено), и сохраните изменения.
 

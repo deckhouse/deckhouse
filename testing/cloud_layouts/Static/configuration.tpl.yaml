@@ -33,6 +33,8 @@ metadata:
 spec:
   version: 1
   enabled: true
+  settings:
+    tunnelMode: VXLAN
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

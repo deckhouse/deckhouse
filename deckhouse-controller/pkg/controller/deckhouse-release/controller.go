@@ -30,7 +30,6 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	aoapp "github.com/flant/addon-operator/pkg/app"
-	"github.com/flant/shell-operator/pkg/metric"
 	"github.com/gofrs/uuid/v5"
 	gcr "github.com/google/go-containerregistry/pkg/name"
 	"go.opentelemetry.io/otel"
@@ -47,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -57,12 +57,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
-	metricUpdatingGroup = "d8_updating"
-	metricUpdatingName  = "d8_is_updating"
-
 	deckhouseNamespace          = "d8-system"
 	deckhouseDeployment         = "deckhouse"
 	deckhouseRegistrySecretName = "deckhouse-registry"
@@ -109,7 +107,7 @@ type deckhouseReleaseReconciler struct {
 	moduleManager moduleManager
 
 	updateSettings *helpers.DeckhouseSettingsContainer
-	metricStorage  metric.Storage
+	metricStorage  metricsstorage.Storage
 
 	preflightCountDown      *sync.WaitGroup
 	clusterUUID             string
@@ -123,7 +121,7 @@ type deckhouseReleaseReconciler struct {
 }
 
 func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc dependency.Container, exts *extenders.ExtendersStack,
-	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metric.Storage,
+	moduleManager moduleManager, updateSettings *helpers.DeckhouseSettingsContainer, metricStorage metricsstorage.Storage,
 	preflightCountDown *sync.WaitGroup, deckhouseVersion string, logger *log.Logger,
 ) error {
 	parsedVersion, err := semver.NewVersion(deckhouseVersion)
@@ -965,16 +963,16 @@ func (r *deckhouseReleaseReconciler) tagUpdate(ctx context.Context, leaderPod *c
 		return fmt.Errorf("registry (%s) client init failed: %s", repo, err)
 	}
 
-	r.metricStorage.CounterAdd("deckhouse_registry_check_total", 1, map[string]string{})
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_total", 1, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckTotal, 1, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseKubeImageDigestCheckTotal, 1, map[string]string{})
 
 	repoDigest, err := regClient.Digest(ctx, tag)
 	if err != nil {
-		r.metricStorage.CounterAdd("deckhouse_registry_check_errors_total", 1, map[string]string{})
+		r.metricStorage.CounterAdd(metrics.DeckhouseRegistryCheckErrorsTotal, 1, map[string]string{})
 		return fmt.Errorf("registry (%s) get digest failed: %s", repo, err)
 	}
 
-	r.metricStorage.CounterAdd("deckhouse_kube_image_digest_check_success", 1.0, map[string]string{})
+	r.metricStorage.CounterAdd(metrics.DeckhouseKubeImageDigestCheckSuccess, 1.0, map[string]string{})
 
 	if strings.TrimSpace(repoDigest) == strings.TrimSpace(imageHash) {
 		return nil
@@ -1090,7 +1088,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationIsUpdating] = "false"
 			dr.Annotations[v1alpha1.DeckhouseReleaseAnnotationNotified] = "true"
-			r.metricStorage.Grouped().ExpireGroupMetrics(metricUpdatingGroup)
+			r.metricStorage.Grouped().ExpireGroupMetrics(metrics.D8Updating)
 
 			return nil
 		})
@@ -1112,7 +1110,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 	}
 
 	if dr.GetIsUpdating() {
-		r.metricStorage.Grouped().GaugeSet(metricUpdatingGroup, metricUpdatingName, 1, map[string]string{"deployingRelease": dr.GetName()})
+		r.metricStorage.Grouped().GaugeSet(metrics.D8Updating, metrics.D8IsUpdating, 1, map[string]string{"deployingRelease": dr.GetName()})
 
 		return ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}

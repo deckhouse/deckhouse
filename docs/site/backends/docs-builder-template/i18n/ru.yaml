@@ -1,13 +1,25 @@
 allowed_values: допустимые значения
-search-placeholder: Поиск...
+search_placeholder_text: Поиск...
+search_placeholder_text_modules: Поиск по документации модулей...
 modules: модули
+modules2: модулей
 module: модуль
+module_versions: Версии модуля
+module_version: Версия модуля
+channel_or_version: "Канал/версия"
+channel_or_version_of_module: "Канал/версия модуля"
 deckhouse: deckhouse
 documentation: документация
+Documentation: Документация
 modules_documentation: Документация модулей
+modules_list: Список модулей
+category: категория
 core: ядро
+community_edition_en: community edition
+commercial_editions_en: commercial editions
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
+conversion_global_action_message: Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
 conversion_from_version: Обновление из версии
 conversion_to: в
 conversion_expressions: Преобразования, выполняемые конверсией (синтаксис jq)
@@ -19,6 +31,7 @@ default_value: по умолчанию
 platform: платформа
 example: пример
 examples: примеры
+found: найдено
 pattern: шаблон
 length: длина
 min_length: минимальная длина
@@ -44,8 +57,11 @@ module_alert_experimental_long: Экспериментальная версия.
 module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
 module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
 module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
+reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.
+show_more: Показать ещё
+show_more_pattern: "Показать ещё %s"
 element_of_array: элемент массива
 x-kubernetes-int-or-string: строка или число
 of_x-kubernetes-int-or-string: строк или чисел
@@ -66,4 +82,5 @@ version_of_module: "Версия модуля ###"
 version_of_schema: Версия схемы
 required_value_sentence: Обязательный параметр
 parameters: параметры
+api: API
 no_custom_configuration: У модуля нет параметров для настройки.

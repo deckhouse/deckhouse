@@ -1,0 +1,4 @@
+files:
+  - /secrets/ca.crt
+  - /secrets/client.crt
+  - /secrets/client.key

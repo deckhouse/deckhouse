@@ -33,6 +33,17 @@ resource "kubernetes_secret" "cloudinit-secret" {
 }
 
 locals {
+  additional_block_refs = tolist([
+    for d in var.additional_disks : {
+      "kind" = "VirtualDisk"
+      "name" = d.name
+    }
+  ])
+
+  additional_disks_hashes = [
+    for d in var.additional_disks : d.hash
+  ]
+
   spec = merge(
     {
       "terminationGracePeriodSeconds" = 90
@@ -56,12 +67,15 @@ locals {
         "size" = var.memory_size
       }
 
-      "blockDeviceRefs" = [
+      "blockDeviceRefs" = concat(
+        [
         {
           "kind" = "VirtualDisk"
           "name" = var.root_disk.name
-        },
-      ]
+        }
+        ],
+        local.additional_block_refs
+      )
 
       "provisioning" = {
         "type" = "UserDataRef"

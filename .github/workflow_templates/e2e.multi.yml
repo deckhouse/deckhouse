@@ -34,7 +34,7 @@ $CI_COMMIT_REF_SLUG is a tag of published deckhouse images. It has a form
 
 {!{- $providerNames := slice "AWS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "EKS" -}!}
 {!{- $criNames := slice "Containerd" "ContainerdV2" -}!}
-{!{- $kubernetesVersions := slice "1.29" "1.30" "1.31" "1.32" "1.33" "Automatic" -}!}
+{!{- $kubernetesVersions := slice "1.29" "1.30" "1.31" "1.32" "1.33" "1.34" "Automatic" -}!}
 
 {!{- range $providerName := $providerNames -}!}
 {!{-   $provider := $providerName | replaceAll "." "-" | toLower -}!}
@@ -108,6 +108,10 @@ env:
 # Note: no concurrency section for e2e workflows.
 # Usually you run e2e and wait until it ends.
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   started_at:
     name: Save start timestamp
@@ -155,6 +159,3 @@ jobs:
 {!{ tmpl.Exec "set_e2e_requirement_status" slice | strings.Indent 6 }!}
 # </template: e2e_workflow_template>
 {!{ end -}!}
-
-
-

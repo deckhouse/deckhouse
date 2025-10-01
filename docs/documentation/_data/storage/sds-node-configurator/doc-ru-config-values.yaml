@@ -1,8 +1,0 @@
-type: object
-properties:
-  disableDs:
-    description: Выключить sds-node-configurator daemonset.
-  logLevel:
-    description: Уровень логирования для приложений модуля.
-  enableThinProvisioning:
-    description: Включить поддержку thin LVM томов.

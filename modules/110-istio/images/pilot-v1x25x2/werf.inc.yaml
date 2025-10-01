@@ -18,6 +18,8 @@ import:
   owner: 1337
   group: 1337
   after: setup
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     user: "1337:1337"
