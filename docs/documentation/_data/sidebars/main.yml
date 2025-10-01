@@ -40,7 +40,7 @@ entries:
                 - title:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
-                  url: /admin/configuration/registry/restore-token.html  
+                  url: /admin/configuration/registry/restore-token.html
                 - title:
                     en: Switching editions
                     ru: Переключение редакций
@@ -1293,7 +1293,6 @@ entries:
     - title:
         en: Projects (WIP)
         ru: Проекты (WIP)
-      draft: true
       folders:
         - title:
             en: Concepts
