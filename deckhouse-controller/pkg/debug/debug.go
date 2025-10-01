@@ -289,7 +289,7 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 			File: "audit-policy.json",
 			Cmd:  "kubectl",
 			Args: []string{"-n", "kube-system", "get", "secrets", "audit-policy", "-o", "json", "--ignore-not-found=true"},
-		,
+		},
 	}
 
 	for _, cmd := range debugCommands {
