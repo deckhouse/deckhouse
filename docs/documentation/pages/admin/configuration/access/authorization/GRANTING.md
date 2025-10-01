@@ -55,8 +55,8 @@ metadata:
   namespace: dev-namespace
 spec:
   subjects:
-    - kind: User
-      name: dev-user@example.com
+  - kind: User
+    name: dev-user@example.com
   accessLevel: Admin
   portForwarding: true
 ```
