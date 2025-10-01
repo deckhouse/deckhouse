@@ -1,4 +1,4 @@
-# version=v0.5.28
+# version=v0.5.29
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:6181c0922d240f806ed69842e0c35b2881db7e28f936b00241969fbe39545cde" # fromImage: builder/scratch
@@ -206,8 +206,8 @@ tools/e2fsprogs: "sha256:fb6afb48192b5e954c3805fe970f99deb82e87e85376791491d1ebf
 tools/e2fsprogs-v1.47.2: "sha256:fb6afb48192b5e954c3805fe970f99deb82e87e85376791491d1ebf0ba5a9394" # fromImage: builder/scratch
 tools/elfutils: "sha256:e5668e842048a2fd7efabd6c3e7235496f1fcdbfe88fdd6591bed6d028f618c7" # fromImage: builder/scratch
 tools/elfutils-elfutils-0.193: "sha256:e5668e842048a2fd7efabd6c3e7235496f1fcdbfe88fdd6591bed6d028f618c7" # fromImage: builder/scratch
-tools/erofs-utils: "sha256:941e51d8f5c0e05a957f241360cb9ff149f64e423066d33a908510c0b891a6b5" # fromImage: builder/scratch
-tools/erofs-utils-v1.8.10: "sha256:941e51d8f5c0e05a957f241360cb9ff149f64e423066d33a908510c0b891a6b5" # fromImage: builder/scratch
+tools/erofs-utils: "sha256:c3e0e2df2d7ff3c5e1f29e7bc9e46286ced50f13987f3e4ad2d730e1c5f6d1f9" # fromImage: builder/scratch
+tools/erofs-utils-v1.8.10: "sha256:c3e0e2df2d7ff3c5e1f29e7bc9e46286ced50f13987f3e4ad2d730e1c5f6d1f9" # fromImage: builder/scratch
 tools/ethtool: "sha256:7cd440a56caeaf24b63f3e9945d8964a1370ff2e66bc3e19e61a2fa570526573" # fromImage: builder/scratch
 tools/ethtool-v6.15: "sha256:7cd440a56caeaf24b63f3e9945d8964a1370ff2e66bc3e19e61a2fa570526573" # fromImage: builder/scratch
 tools/findutils: "sha256:2da1da4150b5169ff38b2131aabcee5a9aaf62128e8864fdc7eec59218ef2942" # fromImage: builder/scratch
