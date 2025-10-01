@@ -285,15 +285,17 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and .metadata.name == "cni-cilium") | "kubectl -n d8-cni-cilium exec -it $(kubectl -n d8-cni-cilium get pod -o name | grep agent | head -n 1) -c cilium-agent -- cilium-health status"' | bash`},
 		},
+		{
+			File: "audit-policy.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "get", "secrets", "audit-policy", "-o", "json", "--ignore-not-found=true"},
+		,
 	}
 
 	for _, cmd := range debugCommands {
-		// Skip excluded files - check both exact match and without extension
 		if excludeMap[cmd.File] {
 			continue
 		}
-
-		// Check if file should be excluded by name without extension
 		fileNameWithoutExt := strings.TrimSuffix(cmd.File, ".json")
 		fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
 		if excludeMap[fileNameWithoutExt] {
@@ -354,6 +356,7 @@ func printExcludableFiles() {
 		"d8-istio-ingress-logs",
 		"d8-istio-users-logs",
 		"cilium-health-status",
+		"audit-policy",
 	}
 
 	for _, fileName := range excludableFiles {
@@ -374,7 +377,6 @@ func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 
 		var excludeList []string
 		if *excludeFiles != "" {
-			// Split by spaces and filter out empty strings
 			parts := strings.Fields(*excludeFiles)
 			for _, part := range parts {
 				if part != "" {
