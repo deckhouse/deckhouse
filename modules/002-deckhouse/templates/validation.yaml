@@ -97,7 +97,7 @@ spec:
       expression: '!(["system:serviceaccount:d8-managed-"].exists(e, (request.userInfo.username.startsWith(e))))'
     # exclude SA from any namespace which name's starting with `d8ms-`
     - name: 'exclude-managed-serviceaccounts'
-      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:") && contains(request.userInfo.username, ":d8ms-"))'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:") && request.userInfo.username.contains(":d8ms-"))'
   validations:
     # deny all operations with any objects with `d8ms-` prefix, except for Pods deletions
     - expression: |
