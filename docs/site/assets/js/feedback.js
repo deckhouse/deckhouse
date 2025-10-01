@@ -215,7 +215,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     await sendFeedback(true, []);
                 }
-            } 
+            } else  {
+                await sendFeedback(true, []);
+            }
         })
     }
 
@@ -231,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     showFormModal();
                 }
+            } else {
+                showFormModal();
             }
         })
     }
