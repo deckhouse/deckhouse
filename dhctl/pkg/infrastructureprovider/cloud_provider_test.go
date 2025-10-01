@@ -36,6 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
@@ -1190,10 +1191,11 @@ func assertFileExistsAndSymlink(t *testing.T, source string, destination string)
 
 	stat, err := os.Lstat(destination)
 	require.NoError(t, err, destination)
-	require.True(t, stat.Mode()&os.ModeSymlink != 0, destination)
 
-	realPath, err := os.Readlink(destination)
+	isLink, realPath, err := fs.IsSymlinkFromInfo(destination, stat)
+
 	require.NoError(t, err, destination)
+	require.True(t, isLink, destination)
 	require.Equal(t, source, realPath)
 }
 
@@ -1203,7 +1205,10 @@ func assertFileExists(t *testing.T, filePath string) {
 	stat, err := os.Stat(filePath)
 	require.NoError(t, err, filePath)
 
-	require.True(t, stat.Mode()&os.ModeSymlink == 0, filePath)
+	isLink, _, err := fs.IsSymlinkFromInfo(filePath, stat)
+
+	require.NoError(t, err, filePath)
+	require.False(t, isLink, filePath)
 	require.False(t, stat.IsDir(), filePath)
 }
 

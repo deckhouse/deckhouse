@@ -232,6 +232,8 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		return nil, err
 	}
 
+	p.logRootDir()
+
 	if !p.settings.UseOpenTofu() {
 		p.logger.LogDebugF("Create terraform executor for %s with step %s\n", p.String(), step)
 		return terraform.NewExecutor(terraform.ExecutorParams{
@@ -258,6 +260,43 @@ func (p *Provider) Executor(ctx context.Context, step infrastructure.Step, logge
 		Step:           step,
 		VMChangeTester: p.IsVMChange,
 	}, logger), nil
+}
+
+func (p *Provider) logRootDir() {
+	var entries []string
+	err := filepath.WalkDir(p.rootDir, func(fullPath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if fullPath == p.rootDir {
+			return nil
+		}
+
+		isLink, source, err := fsutils.IsSymlinkFromDirEntry(fullPath, d)
+		if err != nil {
+			return err
+		}
+
+		msg := "is file"
+		if d.IsDir() {
+			msg = "is dir"
+		}
+		if isLink {
+			msg = fmt.Sprintf("is symlink with source %s", source)
+		}
+
+		entries = append(entries, fmt.Sprintf("%s: %s", strings.TrimPrefix(fullPath, p.rootDir), msg))
+
+		return nil
+	})
+
+	if err != nil {
+		p.logger.LogDebugF("Failed to fully log root dir '%s' for %s: %v\n", p.rootDir, p.String(), err)
+		return
+	}
+
+	p.logger.LogDebugF("Entries (%d) which root dir %s have: %s\n", len(entries), p.rootDir, strings.Join(entries, ", "))
 }
 
 func doNotCheckSourceLink(string) error {

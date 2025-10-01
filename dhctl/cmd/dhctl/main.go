@@ -23,6 +23,7 @@ import (
 	"runtime/trace"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	terminal "golang.org/x/term"
@@ -319,7 +320,16 @@ func main() {
 	runApplication(kpApp)
 }
 
-func initLogger(c *kingpin.ParseContext) error {
+type initer struct {
+	logFileMutex sync.Mutex
+	logFile      string
+}
+
+func newIniter() *initer {
+	return &initer{}
+}
+
+func (i *initer) initLogger(c *kingpin.ParseContext) error {
 	log.InitLogger(app.LoggerType)
 	if app.DoNotWriteDebugLogFile {
 		return nil
@@ -356,12 +366,26 @@ func initLogger(c *kingpin.ParseContext) error {
 		}
 	})
 
+	i.logFileMutex.Lock()
+	defer i.logFileMutex.Unlock()
+
+	i.logFile = logPath
+
 	return nil
 }
 
+func (i *initer) getLoggerPath() string {
+	i.logFileMutex.Lock()
+	defer i.logFileMutex.Unlock()
+
+	return i.logFile
+}
+
 func runApplication(kpApp *kingpin.Application) {
+	init := newIniter()
+
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		if err := initLogger(c); err != nil {
+		if err := init.initLogger(c); err != nil {
 			return err
 		}
 
@@ -379,7 +403,14 @@ func runApplication(kpApp *kingpin.Application) {
 		errorCode := 0
 		if err != nil {
 			log.DebugLn(command)
-			log.ErrorLn(err)
+
+			msg := err.Error()
+
+			if logFile := init.getLoggerPath(); logFile != "" {
+				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
+			}
+
+			log.ErrorLn(msg)
 			errorCode = 1
 		}
 		tomb.Shutdown(errorCode)

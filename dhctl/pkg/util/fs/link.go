@@ -16,6 +16,7 @@ package fs
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -58,4 +59,26 @@ func CreateLinkIfNotExists(source string, check CheckLinkSource, destination str
 	}
 
 	return nil
+}
+
+func IsSymlinkFromInfo(fullPath string, stat fs.FileInfo) (bool, string, error) {
+	if stat.Mode()&os.ModeSymlink != 0 {
+		source, err := os.Readlink(fullPath)
+		if err != nil {
+			return false, "", fmt.Errorf("Failed to read link from file info for %s: %w", fullPath, err)
+		}
+
+		return true, source, nil
+	}
+
+	return false, "", nil
+}
+
+func IsSymlinkFromDirEntry(fullPath string, e fs.DirEntry) (bool, string, error) {
+	info, err := e.Info()
+	if err != nil {
+		return false, "", fmt.Errorf("Failed to read fileinfo from dir entry for %s: %w", fullPath, err)
+	}
+
+	return IsSymlinkFromInfo(fullPath, info)
 }
