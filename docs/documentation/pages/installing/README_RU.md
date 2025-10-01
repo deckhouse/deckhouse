@@ -4,6 +4,7 @@ permalink: ru/installing/
 description: |
  Информация по установке Deckhouse Kubernetes Platform, включая подготовку инфраструктуры, конфигурацию и запуск инсталлятора.
 lang: ru
+search: deckhouse installation, kubernetes installation, platform setup, infrastructure preparation, installer configuration, установка Deckhouse, установка Kubernetes, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора
 ---
 
 {% alert level="warning" %}

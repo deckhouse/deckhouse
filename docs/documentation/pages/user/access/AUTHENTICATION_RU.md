@@ -3,6 +3,7 @@ title: "Аутентификация"
 permalink: ru/user/access/authentication.html
 lang: ru
 description: "Deckhouse Kubernetes Platform. Использование аутентификации."
+search: user authentication, authentication methods, user access control, user management, login methods, аутентификация пользователей, методы аутентификации пользователей, контроль доступа, управление пользователями, методы входа
 ---
 
 ## Обзор

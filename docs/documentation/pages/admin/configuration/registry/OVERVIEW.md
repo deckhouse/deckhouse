@@ -1,6 +1,7 @@
 ---
 title: Working with the image registry
 permalink: en/admin/configuration/registry/
+description: "Configure and manage container image registries in Deckhouse Kubernetes Platform. Internal registry setup, third-party registry integration, and edition switching."
 ---
 
 This section describes how to work with image registries and editions in Deckhouse Kubernetes Platform.

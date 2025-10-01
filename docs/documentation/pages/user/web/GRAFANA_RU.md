@@ -2,6 +2,7 @@
 title: "Grafana"
 permalink: ru/user/web/grafana.html
 lang: ru
+search: grafana, monitoring interface, dashboards, metrics visualization, web interface, grafana, интерфейс мониторинга, дашборды, визуализация метрик, веб-интерфейс
 ---
 
 ## Веб-интерфейс системы мониторинга

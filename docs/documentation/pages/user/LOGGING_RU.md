@@ -2,6 +2,7 @@
 title: "Настройки логирования"
 permalink: ru/user/logging/
 lang: ru
+search: logging configuration, log collection, log filtering, log shipping, centralized logging, настройка логирования, сбор логов, фильтрация логов, отправка логов, централизованное логирование
 ---
 
 В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера

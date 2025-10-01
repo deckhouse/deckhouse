@@ -1,6 +1,7 @@
 ---
 title: "Granting permissions to users and service accounts"
 permalink: en/admin/configuration/access/authorization/granting.html
+description: "Grant RBAC permissions to users and service accounts in Deckhouse Kubernetes Platform. Role and ClusterRole binding configuration for secure access control."
 ---
 
 To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a `subjects` block in custom resources.

@@ -1,6 +1,7 @@
 ---
 title: "Setting up local storage based on LVM"
 permalink: en/admin/configuration/storage/sds/lvm-local.html
+description: "Configure local LVM-based storage in Deckhouse Kubernetes Platform. High-performance local storage setup for test environments and EDGE clusters with reduced network latency."
 ---
 
 Local storage reduces network latency and provides higher performance compared to remote storage accessed over a network. This approach is particularly effective in test environments and EDGE clusters. This functionality is provided by the `sds-local-volume` module.

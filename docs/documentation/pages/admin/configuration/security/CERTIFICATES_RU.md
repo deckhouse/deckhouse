@@ -1,7 +1,9 @@
 ---
 title: Управление сертификатами
 permalink: ru/admin/configuration/security/certificates.html
+description: "Управление TLS-сертификатами в Deckhouse Kubernetes Platform с интеграцией Let's Encrypt, HashiCorp Vault и Venafi. Автоматическое обновление, мониторинг и управление жизненным циклом сертификатов."
 lang: ru
+search: certificate management, TLS certificates, SSL certificates, certificate automation, Let's Encrypt, управление сертификатами, TLS сертификаты, SSL сертификаты, автоматизация сертификатов
 ---
 
 Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства управления TLS-сертификатами в кластере

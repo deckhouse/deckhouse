@@ -2,6 +2,7 @@
 title: "Удаление"
 permalink: ru/uninstalling/
 lang: ru
+search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, cluster deletion, удаление Deckhouse, удаление кластера, удаление платформы, очистка, удаление кластера
 ---
 
 ## Удаление кластера, развёрнутого в облачном провайдере

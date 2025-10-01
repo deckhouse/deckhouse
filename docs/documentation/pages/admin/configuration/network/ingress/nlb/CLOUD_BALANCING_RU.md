@@ -1,6 +1,7 @@
 ---
 title: "Балансировка в кластерах на облачных платформах"
 permalink: ru/admin/configuration/network/ingress/nlb/cloud-balancing.html
+description: "Настройка балансировки нагрузки в облачных кластерах для платформы Deckhouse Kubernetes Platform. Интеграция с балансировщиками AWS, GCP, Azure и настройка облачной балансировки нагрузки."
 lang: ru
 ---
 

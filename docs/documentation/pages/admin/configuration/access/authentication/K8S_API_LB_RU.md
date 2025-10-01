@@ -1,6 +1,7 @@
 ---
 title: "Доступ к Kubernetes API через балансировщик трафика"
 permalink: ru/admin/configuration/access/authentication/k8s-api-lb.html
+description: "Настройка аутентифицированного доступа к Kubernetes API через балансировщик трафика в Deckhouse Kubernetes Platform. Безопасный доступ kubectl через Ingress-контроллер с аутентификацией."
 lang: ru
 ---
 
