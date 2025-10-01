@@ -2,7 +2,6 @@
 title: "Configuring integrations"
 permalink: en/admin/configuration/monitoring/alerts-integrations.html
 description: "Configure alert integrations in Deckhouse Kubernetes Platform with Zabbix, Slack, Telegram, and other systems. Alert routing, notification setup, and monitoring system integration."
-lang: en
 ---
 
 {% raw %}

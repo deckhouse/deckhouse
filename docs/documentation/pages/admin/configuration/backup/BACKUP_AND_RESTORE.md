@@ -2,7 +2,6 @@
 title: Backup and restore
 permalink: en/admin/configuration/backup/backup-and-restore.html
 description: "Setting up backup and recovery in the Deckhouse Kubernetes Platform. Manual cluster recovery, disaster recovery. Data protection strategies."
-lang: en
 ---
 
 ## Manual cluster restore

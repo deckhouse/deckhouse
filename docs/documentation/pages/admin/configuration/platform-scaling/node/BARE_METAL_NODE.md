@@ -2,7 +2,6 @@
 title: "Adding and managing bare-metal nodes"
 permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 description: "Manage bare-metal nodes in Deckhouse Kubernetes Platform. Node addition, configuration, and lifecycle management."
-lang: en
 ---
 
 ## Adding nodes to a bare-metal cluster

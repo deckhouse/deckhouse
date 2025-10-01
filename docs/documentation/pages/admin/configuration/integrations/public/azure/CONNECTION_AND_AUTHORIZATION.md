@@ -2,7 +2,6 @@
 title: Connection and authorization
 permalink: en/admin/integrations/public/azure/azure-authorization.html
 description: "Configure Azure connection and authorization for Deckhouse Kubernetes Platform. Service principal setup, credentials configuration, and Azure integration requirements for cloud deployment."
-lang: en
 ---
 
 ## Requirements

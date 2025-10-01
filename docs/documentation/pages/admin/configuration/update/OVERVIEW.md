@@ -2,7 +2,6 @@
 title: Overview
 permalink: en/admin/configuration/update/
 description: "Manage updates for Deckhouse Kubernetes Platform. Safe rolling updates, notifications, and configuration management for platform and cluster components."
-lang: en
 ---
 
 Deckhouse Kubernetes Platform (DKP) includes a built-in update management mechanism

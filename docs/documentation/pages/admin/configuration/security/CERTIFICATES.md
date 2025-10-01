@@ -2,7 +2,6 @@
 title: Certificate management
 permalink: en/admin/configuration/security/certificates.html
 description: "Manage TLS certificates in Deckhouse Kubernetes Platform with Let's Encrypt, HashiCorp Vault, Venafi integration. Automatic renewal, monitoring, and certificate lifecycle management."
-lang: en
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates in the cluster and supports:

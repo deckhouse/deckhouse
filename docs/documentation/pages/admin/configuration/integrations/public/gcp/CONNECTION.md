@@ -2,7 +2,6 @@
 title: Connection and authorization
 permalink: en/admin/integrations/public/gcp/connection-and-authorization.html
 description: "Configure GCP connection and authorization for Deckhouse Kubernetes Platform. Service Account setup, credentials configuration, and Google Cloud integration requirements for cloud deployment."
-lang: en
 ---
 
 To manage Google Cloud resources using Deckhouse Kubernetes Platform, you need to create a Service Account.

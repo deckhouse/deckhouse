@@ -2,7 +2,6 @@
 title: "Overview"
 permalink: en/admin/configuration/network/ingress/
 description: "Configure ingress load balancing in Deckhouse Kubernetes Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
-lang: en
 ---
 
 This section describes the approaches to balancing incoming traffic in Deckhouse Kubernetes Platform (DKP):

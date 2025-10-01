@@ -2,7 +2,6 @@
 title: Configuring updates
 permalink: en/admin/configuration/update/configuration.html
 description: "Configure update settings for Deckhouse Kubernetes Platform including release channels, update modes, and update policies. Automatic and manual update configuration guide."
-lang: en
 ---
 
 Deckhouse Kubernetes Platform (DKP) supports a flexible update mechanism,

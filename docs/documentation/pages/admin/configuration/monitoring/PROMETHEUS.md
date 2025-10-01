@@ -2,7 +2,6 @@
 title: "Configuring a system for collecting and storing metrics"
 permalink: en/admin/configuration/monitoring/prometheus.html
 description: "Configure Prometheus metrics collection and storage in Deckhouse Kubernetes Platform. Deckhouse Prom++ setup, metrics configuration, and monitoring system management."
-lang: en
 ---
 
 {% alert %}

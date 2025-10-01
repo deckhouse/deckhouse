@@ -2,7 +2,6 @@
 title: FAQ
 permalink: en/admin/configuration/update/faq.html
 description: "Frequently asked questions about Deckhouse Kubernetes Platform updates. Update troubleshooting, configuration, and best practices for platform maintenance."
-lang: en
 ---
 
 ## How can I apply an update immediately, bypassing update windows, canary releases, and manual update mode?

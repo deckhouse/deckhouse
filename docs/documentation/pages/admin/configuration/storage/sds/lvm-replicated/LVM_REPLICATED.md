@@ -2,7 +2,6 @@
 title: "Setting up replicated storage based on DRBD"
 permalink: en/admin/configuration/storage/sds/lvm-replicated.html
 description: "Configure replicated storage based on DRBD in Deckhouse Kubernetes Platform. High availability storage with LINSTOR backend for fault tolerance and data replication across nodes."
-lang: en
 ---
 
 Data replication across multiple nodes ensures fault tolerance and data availability, even if a hardware or software failure occurs on one of the nodes. This guarantees data preservation on other nodes, maintaining continuous access. Such a model is essential for critical data and distributed infrastructures requiring high availability and minimizing data loss during failures.

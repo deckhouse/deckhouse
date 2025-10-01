@@ -2,7 +2,6 @@
 title: "Adding and managing cloud nodes"
 permalink: en/admin/configuration/platform-scaling/node/cloud-node.html
 description: "Manage cloud nodes in Deckhouse Kubernetes Platform including CloudEphemeral, CloudPermanent, and CloudStatic nodes. Auto-scaling, node lifecycle management, and cloud provider integration."
-lang: en
 ---
 
 In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following types:

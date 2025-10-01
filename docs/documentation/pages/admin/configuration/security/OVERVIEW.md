@@ -2,7 +2,6 @@
 title: Overview
 permalink: en/admin/configuration/security/
 description: "Configure security features in Deckhouse Kubernetes Platform including certificates, audit logging, runtime security, scanning, and security policies. Complete security hardening guide."
-lang: en
 ---
 
 The "Security" section covers security features in Deckhouse Kubernetes Platform.

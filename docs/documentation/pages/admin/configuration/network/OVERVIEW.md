@@ -2,7 +2,6 @@
 title: "Overview"
 permalink: en/admin/configuration/network/
 description: "Configure networking in Deckhouse Kubernetes Platform with CNI, ingress, egress, load balancing, and network policies. Complete network configuration and management guide."
-lang: en
 ---
 
 Unlike basic Kubernetes installations,

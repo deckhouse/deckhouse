@@ -2,7 +2,6 @@
 title: "Ensuring high availability and fault tolerance (keepalived)"
 permalink: en/admin/configuration/network/ingress/keepalived.html
 description: "Configure keepalived for high availability in Deckhouse Kubernetes Platform. Failover configuration, and network redundancy setup for cluster infrastructure."
-lang: en
 ---
 
 In Deckhouse Kubernetes Platform,

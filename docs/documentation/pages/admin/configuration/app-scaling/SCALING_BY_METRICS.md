@@ -2,7 +2,6 @@
 title: "Scaling by metrics"
 permalink: en/admin/configuration/app-scaling/scaling-by-metrics.html
 description: "Configure metric-based scaling in Deckhouse Kubernetes Platform. Custom metrics scaling, Prometheus integration, and HPA configuration for dynamic resource adjustment."
-lang: en
 ---
 
 ## Scaling based on metrics
