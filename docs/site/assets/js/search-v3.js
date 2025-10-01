@@ -9,12 +9,18 @@ class ModuleSearch {
     this.searchDictionary = [];
     this.lastQuery = '';
     this.currentResults = {
-      config: [],
-      other: []
+      isResourceNameMatch: [],
+      nameMatch: [],
+      isResourceOther: [],
+      parameterOther: [],
+      document: []
     };
     this.displayedCounts = {
-      config: 5,
-      other: 5
+      isResourceNameMatch: 5,
+      nameMatch: 5,
+      isResourceOther: 5,
+      parameterOther: 5,
+      document: 5
     };
     this.isDataLoaded = false;
 
@@ -535,13 +541,13 @@ class ModuleSearch {
 
     // Create Fuse.js index for fuzzy search
     this.fuseIndex = new Fuse(this.searchDictionary, {
-      threshold: 0.8, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
+      threshold: 0.4, // Higher threshold = more lenient matching (0.0 = exact, 1.0 = match anything)
       distance: 100,  // Maximum distance for fuzzy matching
       includeScore: true,
       minMatchCharLength: 2,
       // Better support for Cyrillic characters
       ignoreLocation: true,
-      findAllMatches: true,
+      findAllMatches: false,
       useExtendedSearch: false
     });
 
@@ -804,11 +810,66 @@ class ModuleSearch {
           boost *= 1.8; // Strong boost for module name matches
         }
 
+        // Check for parameter field matches with specific priority order
+        if (doc.type === 'parameter') {
+          const nameLower = (doc.name || '').toLowerCase();
+          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const contentLower = (doc.content || '').toLowerCase();
+
+          // Priority 1: Name field matches (highest priority)
+          if (nameLower) {
+            if (nameLower === queryLower) {
+              boost *= 4.0; // Very high boost for exact name matches
+            } else if (nameLower.includes(queryLower)) {
+              boost *= 3.5; // High boost for partial name matches
+            }
+          }
+
+          // Priority 2: Keywords field matches
+          if (keywordsLower && keywordsLower.includes(queryLower)) {
+            boost *= 2.0; // Moderate boost for keyword matches
+          }
+
+          // Priority 3: Content field matches (lowest priority for parameters)
+          if (contentLower && contentLower.includes(queryLower)) {
+            boost *= 1.2; // Low boost for content matches
+          }
+        } else {
+          // For non-parameters (documents), use document field priority order
+          const titleLower = (doc.title || '').toLowerCase();
+          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const contentLower = (doc.content || '').toLowerCase();
+
+          // Priority 1: Title field matches (highest priority)
+          if (titleLower) {
+            if (titleLower === queryLower) {
+              boost *= 4.0; // Very high boost for exact title matches
+            } else if (titleLower.includes(queryLower)) {
+              boost *= 3.5; // High boost for partial title matches
+            }
+          }
+
+          // Priority 2: Keywords field matches
+          if (keywordsLower && keywordsLower.includes(queryLower)) {
+            boost *= 2.0; // Moderate boost for keyword matches
+          }
+
+          // Priority 3: Content field matches (lowest priority for documents)
+          if (contentLower && contentLower.includes(queryLower)) {
+            boost *= 1.2; // Low boost for content matches
+          }
+        }
+
         // Apply existing parameter boosting logic
         if (doc.type === 'parameter' && doc.content && doc.content.includes('resources__prop_name')) {
           boost *= 1.5; // Additional boost for parameters with properties
         } else if (doc.type === 'parameter') {
           boost *= 1.2; // Moderate boost for parameters
+        }
+
+        // Apply additional boost for isResource parameters
+        if (doc.type === 'parameter' && doc.isResource === "true") {
+          boost *= 2.0; // High boost for isResource parameters to prioritize them
         }
 
         return {
@@ -832,8 +893,11 @@ class ModuleSearch {
   }
 
   groupResults(results) {
-    const configResults = [];
-    const otherResults = [];
+    const isResourceNameMatchResults = [];
+    const nameMatchResults = [];
+    const isResourceOtherResults = [];
+    const parameterOtherResults = [];
+    const documentResults = [];
 
     results.forEach(result => {
       const docId = result.ref;
@@ -851,46 +915,70 @@ class ModuleSearch {
       }
 
       if (doc) {
-        // Configuration results come from parameters array
+        // Check for name matches first
+        const nameLower = (doc.name || doc.title || '').toLowerCase();
+        const queryLower = this.lastQuery.toLowerCase();
+        const hasNameMatch = nameLower && (nameLower === queryLower || nameLower.includes(queryLower));
+
         if (doc.type === 'parameter') {
-          configResults.push(result);
+          // Check if this parameter has isResource: "true"
+          if (doc.isResource === "true") {
+            if (hasNameMatch) {
+              isResourceNameMatchResults.push(result);
+            } else {
+              isResourceOtherResults.push(result);
+            }
+          } else {
+            if (hasNameMatch) {
+              nameMatchResults.push(result);
+            } else {
+              parameterOtherResults.push(result);
+            }
+          }
         } else {
-          // Other documentation comes from documents array
-          otherResults.push(result);
+          // Documents always go to document group
+          documentResults.push(result);
         }
       }
     });
 
     return {
-      config: configResults,
-      other: otherResults
+      isResourceNameMatch: isResourceNameMatchResults,
+      nameMatch: nameMatchResults,
+      isResourceOther: isResourceOtherResults,
+      parameterOther: parameterOtherResults,
+      document: documentResults
     };
   }
 
   displayResults() {
-    if (this.currentResults.config.length === 0 && this.currentResults.other.length === 0) {
+    // Dynamically check all keys in currentResults, so new groups are automatically included
+    if (Object.values(this.currentResults).every(arr => arr.length === 0)) {
       this.showNoResults(this.lastQuery);
       return;
     }
 
     let resultsHtml = '';
 
-    // Display configuration results first
-    if (this.currentResults.config.length > 0) {
+    // Display API results in priority order
+    if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.renderResultGroup(this.currentResults.config, this.currentHighlightQuery || this.lastQuery, 'config')}
+          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, this.currentHighlightQuery || this.lastQuery, 'isResourceNameMatch') : ''}
+          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, this.currentHighlightQuery || this.lastQuery, 'nameMatch') : ''}
+          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, this.currentHighlightQuery || this.lastQuery, 'isResourceOther') : ''}
+          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, this.currentHighlightQuery || this.lastQuery, 'parameterOther') : ''}
         </div>
       `;
     }
 
-    // Display other results
-    if (this.currentResults.other.length > 0) {
+    // Display documentation results (only from documents array)
+    if (this.currentResults.document.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.other, this.currentHighlightQuery || this.lastQuery, 'other')}
+          ${this.renderResultGroup(this.currentResults.document, this.currentHighlightQuery || this.lastQuery, 'document')}
         </div>
       `;
     }
@@ -922,8 +1010,8 @@ class ModuleSearch {
 
       let title, summary, module, description;
 
-      if (groupType === 'config') {
-        // For configuration results (parameters)
+      if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
+        // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', query);
         // summary = this.highlightText(doc.resName || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
@@ -966,7 +1054,7 @@ class ModuleSearch {
   }
 
   loadMore(groupType) {
-    if (groupType === 'config' || groupType === 'other') {
+    if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther' || groupType === 'document') {
       this.displayedCounts[groupType] += 5;
       this.displayResults();
     }
@@ -974,8 +1062,11 @@ class ModuleSearch {
 
   resetPagination() {
     this.displayedCounts = {
-      config: 5,
-      other: 5
+      isResourceNameMatch: 5,
+      nameMatch: 5,
+      isResourceOther: 5,
+      parameterOther: 5,
+      document: 5
     };
   }
 
