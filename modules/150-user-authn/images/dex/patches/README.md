@@ -37,3 +37,10 @@ for local user accounts. The following features are added:
 ### 006-fix-render-error.patch
 
 This patch changes the Internal Error message to a human-readable 'Access Denied' when login with a local user is restricted by group or email.
+
+### 007-reset-pass-feat-2fa-fix.patch
+
+This patch implements logic with forced password change flag, which can be set externally by some controlller.
+User will be forced to change his password after successfull login. 
+
+Also fixes a 2FA bug where a user’s local account could become broken if they had no TOTP keys configured and Dex had 2FA enabled (users were created before this feature turned active).
