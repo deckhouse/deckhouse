@@ -92,12 +92,17 @@ spec:
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
-    - name: 'exclude-managed-operators'
+    # exclude SA from namespaces prefixed with `d8-managed-`
+    - name: 'exclude-managed-namespaces'
       expression: '!(["system:serviceaccount:d8-managed-"].exists(e, (request.userInfo.username.startsWith(e))))'
+    # exclude SA from any namespace which name's starting with `d8ms-`
+    - name: 'exclude-managed-serviceaccounts'
+      expression: '!(request.userInfo.username.startsWith("system:serviceaccount:") && contains(request.userInfo.username, ":d8ms-"))'
   validations:
+    # deny all operations with any objects with `d8ms-` prefix, except for Pods deletions
     - expression: |
         !(
-          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-")) ||
+          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-") && (operation == "DELETE" && object.kind == "Pod")) ||
           (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8ms-"))
         )
       messageExpression: "'Creating, updating and deleting objects with an managed services prefix is forbidden'"
