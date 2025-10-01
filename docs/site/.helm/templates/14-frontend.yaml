@@ -27,7 +27,7 @@ spec:
       serviceAccountName: docs-builder
       initContainers:
         - name: init
-          image: {{ index .Values.werf.image "web-frontend" }}
+          image: {{ index .Values.werf.image "web-frontend-init" }}
           command: ["sh"]
           args: ["/scripts/channels-convert.sh"]
           env:
@@ -47,7 +47,6 @@ spec:
               mountPath: /app/channels-data
       containers:
         - name: web
-          command: ["nginx", "-g", "daemon off;"]
           image: {{ index .Values.werf.image "web-frontend" }}
           {{- include "resources" . | nindent 10 }}
           ports:
@@ -74,11 +73,11 @@ spec:
               port: 8080
             {{- include "readiness_probe" . | indent 12 }}
           volumeMounts:
-            - mountPath: /cache
-              name: download-cache
             - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
+              mountPath: /usr/conf/nginx.conf
               subPath: nginx.conf
+            - mountPath: /tmp
+              name: web-tmp
             - name: channels-data
               mountPath: /app/channels-data
         - name: router
@@ -117,11 +116,11 @@ spec:
         - name: nginx-config
           configMap:
             name: doc-nginx-config
-        - name: download-cache
-          emptyDir: {}
         - name: channels-yaml
           configMap:
             name: release-channels-data
+        - name: web-tmp
+          emptyDir: {}
         - name: channels-data
           emptyDir: {}
 ---
