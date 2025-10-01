@@ -272,6 +272,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("loop until deploy: canary", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(&crfake.FakeImage{LayersStub: func() ([]crv1.Layer, error) {
 			return []crv1.Layer{&utils.FakeLayer{}}, nil
@@ -294,6 +297,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("AutoPatch", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("install new module in manual mode with module release approval annotation", func() {
 			if !hasVerity() {
 				suite.T().Skip("requires veritysetup (installer path)")
@@ -320,6 +326,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("AutoPatch", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("patch update respect window", func() {
 			mup := &v1alpha2.ModuleUpdatePolicySpec{
 				Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
@@ -427,6 +436,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Patch awaits update window", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		mup := embeddedMUP.DeepCopy()
 		mup.Update.Windows = update.Windows{{From: "8:00", To: "8:01", Days: update.Everyday()}}
 
@@ -442,6 +454,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Reinstall", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		mup := &v1alpha2.ModuleUpdatePolicySpec{
 			Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 				Mode:    "AutoPatch",
@@ -478,6 +493,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Sequential processing", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("sequential processing with patch release", func() {
 			if !hasVerity() {
 				suite.T().Skip("requires veritysetup (installer path)")
@@ -606,6 +624,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 	})
 
 	suite.Run("Process major releases", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		suite.Run("major release from 0 to 1 must be allowed", func() {
 			if !hasVerity() {
 				suite.T().Skip("requires veritysetup (installer path)")
@@ -647,6 +668,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	// LTS Channel Module Release Tests
 	suite.Run("LTS Channel Module Release Tests", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// 1) LTS channel minor version jump (+20)
 		suite.Run("LTS channel minor version jump +20", func() {
 			if !hasVerity() {
@@ -702,6 +726,9 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 
 	// Module Release Skip Feature (from to)
 	suite.Run("Module Release Skip Feature (from to)", func() {
+		if !hasVerity() {
+			suite.T().Skip("requires veritysetup (installer path)")
+		}
 		// 1) Sequential - should skip intermediate versions when constraint allows jump
 		suite.Run("Sequential", func() {
 			if !hasVerity() {
