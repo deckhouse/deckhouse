@@ -288,8 +288,15 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 	}
 
 	for _, cmd := range debugCommands {
-		// Skip excluded files
+		// Skip excluded files - check both exact match and without extension
 		if excludeMap[cmd.File] {
+			continue
+		}
+
+		// Check if file should be excluded by name without extension
+		fileNameWithoutExt := strings.TrimSuffix(cmd.File, ".json")
+		fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
+		if excludeMap[fileNameWithoutExt] {
 			continue
 		}
 
@@ -301,11 +308,70 @@ func createTarball(excludeFiles []string) *bytes.Buffer {
 	return &buf
 }
 
+func printExcludableFiles() {
+	fmt.Println("List of possible data to exclude:")
+
+	excludableFiles := []string{
+		"queue",
+		"global-values",
+		"deckhouse-enabled-modules",
+		"deckhouse-module-sources",
+		"deckhouse-module-pull-overrides",
+		"deckhouse-maintenance-modules",
+		"events",
+		"d8-all",
+		"node-groups",
+		"node-group-configuration",
+		"nodes",
+		"machines",
+		"instances",
+		"staticinstances",
+		"cloud-machine-deployment",
+		"static-machine-deployment",
+		"deckhouse-version",
+		"deckhouse-releases",
+		"deckhouse-logs",
+		"capi-controller-manager",
+		"caps-controller-manager",
+		"machine-controller-manager",
+		"mcm-logs",
+		"ccm-logs",
+		"csi-controller-logs",
+		"cluster-autoscaler-logs",
+		"vpa-admission-controller-logs",
+		"vpa-recommender-logs",
+		"vpa-updater-logs",
+		"prometheus-logs",
+		"alerts",
+		"bad-pods",
+		"cluster-authorization-rules",
+		"authorization-rules",
+		"module-configs",
+		"d8-istio-resources",
+		"d8-istio-custom-resources",
+		"d8-istio-envoy-config",
+		"d8-istio-system-logs",
+		"d8-istio-ingress-logs",
+		"d8-istio-users-logs",
+		"cilium-health-status",
+	}
+
+	for _, fileName := range excludableFiles {
+		fmt.Println(fileName)
+	}
+}
+
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
 	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can specify multiple files separated by spaces.").String()
+	listFiles := collectDebug.Flag("list-exclude", "List all files that can be excluded from the debug archive.").Bool()
 
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
+		if *listFiles {
+			printExcludableFiles()
+			return nil
+		}
+
 		var excludeList []string
 		if *excludeFiles != "" {
 			// Split by spaces and filter out empty strings
