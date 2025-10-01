@@ -2,6 +2,7 @@
 title: Обзор
 permalink: ru/admin/integrations/virtualization/overview.html
 lang: ru
+search: virtualization integration, virtualization systems, hypervisor integration, интеграция с виртуализацией
 ---
 
 В Deckhouse Kubernetes Platform (DKP) поддерживаются следующие системы виртуализации:

@@ -2,6 +2,7 @@
 title: Политики безопасности
 permalink: ru/admin/configuration/security/policies.html
 lang: ru
+search: security policies, pod security standards, gatekeeper, security enforcement, policy management, политики безопасности
 ---
 
 Deckhouse Kubernetes Platform (DKP) позволяет управлять безопасностью приложений в кластере с помощью набора политик,

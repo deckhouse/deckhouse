@@ -2,6 +2,7 @@
 title: Контроль целостности
 permalink: ru/architecture/security/integrity-control.html
 lang: ru
+search: integrity control, container integrity, security verification, container validation, integrity checking, контроль целостности, проверка безопасности, валидация контейнеров, проверка целостности
 ---
 
 Контроль целостности — совокупность механизмов проверки контейнеров для обеспечения безопасности и их соответствия заданной конфигурации.

@@ -2,6 +2,7 @@
 title: Обзор
 permalink: ru/admin/integrations/public/overview.html
 lang: ru
+search: public cloud integration, cloud providers, cloud deployment, cloud infrastructure, public cloud support, интеграция с публичными облаками, облачные провайдеры, развертывание в облаке, облачная инфраструктура, поддержка публичных облаков
 ---
 
 Deckhouse Kubernetes Platform (DKP) может быть развёрнута в различных публичных облаках, что позволяет использовать преимущества масштабируемой инфраструктуры и гибкой интеграции с облачными сервисами.
