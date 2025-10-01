@@ -57,6 +57,7 @@ func (svc *Service) Build() error {
 
 		syncer := fsync.NewSyncer()
 		syncer.NoChmod = true
+		syncer.NoTimes = true
 
 		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
 		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
