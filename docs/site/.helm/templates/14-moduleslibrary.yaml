@@ -25,7 +25,7 @@ spec:
       serviceAccountName: docs-builder
       initContainers:
         - name: init
-          image: {{ index .Values.werf.image "web-frontend" }}
+          image: {{ index .Values.werf.image "web-frontend-init" }}
           command: ["sh"]
           args: ["/scripts/channels-convert.sh"]
           env:
@@ -45,7 +45,6 @@ spec:
               mountPath: /app/channels-data
       containers:
         - name: web
-          command: ["nginx", "-g", "daemon off;"]
           image: {{ index .Values.werf.image "web-frontend" }}
           {{- include "resources" . | nindent 10 }}
           ports:

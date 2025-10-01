@@ -166,10 +166,11 @@ image: web-frontend
 fromImage: builder/alpine-3.22
 {{- else }}
 fromImage: base/nginx
-{{- end }}
 imageSpec:
   config:
     workingDir: "/app"
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
+{{- end }}
 shell:
 {{- if or (eq $.Env "development") (eq $.Env "local") }}
   beforeInstall:
