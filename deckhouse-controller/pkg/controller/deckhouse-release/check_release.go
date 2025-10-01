@@ -643,21 +643,18 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewImageInfo")
 	defer span.End()
 
-	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
-	if err != nil {
-		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
-	}
-
-	imageDigest, err := image.Digest()
+	imageDigest, err := f.registryClient.Get(ctx, f.GetReleaseChannel())
 	if err != nil {
 		return nil, fmt.Errorf("get image digest: %w", err)
 	}
 
-	if previousImageHash == imageDigest.String() {
-		return &ReleaseImageInfo{
-			Image:  image,
-			Digest: imageDigest,
-		}, ErrImageNotChanged
+	if previousImageHash == imageDigest.Digest.String() {
+		return nil, ErrImageNotChanged
+	}
+
+	image, err := f.registryClient.Image(ctx, f.GetReleaseChannel())
+	if err != nil {
+		return nil, fmt.Errorf("get image from channel '%s': %w", f.GetReleaseChannel(), err)
 	}
 
 	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
@@ -671,7 +668,7 @@ func (f *DeckhouseReleaseFetcher) GetReleaseImageInfo(ctx context.Context, previ
 
 	return &ReleaseImageInfo{
 		Image:    image,
-		Digest:   imageDigest,
+		Digest:   imageDigest.Digest,
 		Metadata: releaseMeta,
 	}, nil
 }

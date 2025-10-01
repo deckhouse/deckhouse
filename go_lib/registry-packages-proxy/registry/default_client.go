@@ -69,7 +69,7 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 			log.Error("verify image signature failed: %w", err)
 		}
 	}
-
+	// TODO: why we need to check the error here if error is already checked and is 100% nil here?
 	if err != nil {
 		e := &transport.Error{}
 		if errors.As(err, &e) {

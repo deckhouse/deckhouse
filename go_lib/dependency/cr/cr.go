@@ -52,6 +52,7 @@ type Client interface {
 	Image(ctx context.Context, tag string) (crv1.Image, error)
 	Digest(ctx context.Context, tag string) (string, error)
 	ListTags(ctx context.Context) ([]string, error)
+	Get(ctx context.Context, tag string) (*remote.Descriptor, error)
 }
 
 type client struct {
@@ -141,6 +142,47 @@ func (r *client) Image(ctx context.Context, tag string) (crv1.Image, error) {
 	return image, nil
 }
 
+func (r *client) Get(ctx context.Context, tag string) (*remote.Descriptor, error) {
+	imageURL := r.registryURL + ":" + tag
+
+	var nameOpts []name.Option
+	if r.options.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	ref, err := name.ParseReference(imageURL, nameOpts...) // parse options available: weak validation, etc.
+	if err != nil {
+		return nil, fmt.Errorf("parse reference: %w", err)
+	}
+
+	remoteOptions := make([]remote.Option, 0)
+	remoteOptions = append(remoteOptions, remote.WithUserAgent(r.options.userAgent))
+	if !r.options.withoutAuth {
+		remoteOptions = append(remoteOptions, remote.WithAuth(authn.FromConfig(r.authConfig)))
+	}
+
+	if r.options.ca != "" {
+		remoteOptions = append(remoteOptions, remote.WithTransport(GetHTTPTransport(r.options.ca)))
+	}
+
+	if r.options.timeout > 0 {
+		// add default timeout to prevent endless request
+		ctxWTO, cancel := context.WithTimeout(ctx, r.options.timeout)
+		_ = cancel
+
+		remoteOptions = append(remoteOptions, remote.WithContext(ctxWTO))
+	} else {
+		remoteOptions = append(remoteOptions, remote.WithContext(ctx))
+	}
+
+	desc, err := remote.Get(ref, remoteOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("get descriptor: %w", err)
+	}
+
+	return desc, nil
+}
+
 func (r *client) ListTags(ctx context.Context) ([]string, error) {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "ListTags")
 	defer span.End()
@@ -183,17 +225,12 @@ func (r *client) ListTags(ctx context.Context) ([]string, error) {
 }
 
 func (r *client) Digest(ctx context.Context, tag string) (string, error) {
-	image, err := r.Image(ctx, tag)
+	desc, err := r.Get(ctx, tag)
 	if err != nil {
-		return "", fmt.Errorf("image: %w", err)
+		return "", fmt.Errorf("get descriptor: %w", err)
 	}
 
-	d, err := image.Digest()
-	if err != nil {
-		return "", fmt.Errorf("extract digest: %w", err)
-	}
-
-	return d.String(), nil
+	return desc.Digest.String(), nil
 }
 
 func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
