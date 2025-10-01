@@ -6,41 +6,114 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+  // "fmt"
 
-	. "github.com/deckhouse/deckhouse/testing/hooks"
+  . "github.com/onsi/ginkgo"
+  . "github.com/onsi/gomega"
+
+  . "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: cloud-provider-vcd :: hooks :: affinity rules from vcdinstanceclass ::", func() {
-	initValues := `cloudProviderVcd:
+  initValuesWithNoRules := `
+cloudProviderVcd:
   internal:
     providerClusterConfiguration:
       masterNodeGroup:
-        affinityRule:
-          polarity: AntiAffinity
-          required: true
+        instanceClass:
+          rootDiskSizeGb: 20
+          etcdDiskSizeGb: 20
+          sizingPolicy: 4cpu8ram
+          storageProfile: nvme
+          template: Templates/ubuntu-focal-20.04
       nodeGroups:
       - name: front
-        affinityRule:
-          polarity: AntiAffinity
-          required: false
+        instanceClass:
+          rootDiskSizeGb: 20
+          sizingPolicy: 16cpu32ram
+          template: Templates/ubuntu-focal-20.04
       - name: worker
-        affinityRule:
-          polarity: Affinity
+        instanceClass:
+          rootDiskSizeGb: 20
+          sizingPolicy: 16cpu32ram
+          template: Templates/ubuntu-focal-20.04
 `
-	abc := HookExecutionConfigInit(initValues, `{}`)
-	Context("Cluster has empty state", func() {
-		BeforeEach(func() {
-			abc.BindingContexts.Set(abc.KubeStateSet(""))
-			abc.RunHook()
-		})
 
-		It("Hook should not fail with errors", func() {
-			Expect(abc).To(ExecuteSuccessfully())
-			Expect(abc.GoHookError).Should(BeNil())
-			Expect(abc.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
-		})
+  initValuesWithRules := `
+cloudProviderVcd:
+  internal:
+    providerClusterConfiguration:
+      masterNodeGroup:
+        instanceClass:
+          affinityRule:
+            polarity: AntiAffinity
+            required: true
+          rootDiskSizeGb: 20
+          etcdDiskSizeGb: 20
+          sizingPolicy: 4cpu8ram
+          storageProfile: nvme
+          template: Templates/ubuntu-focal-20.04
+      nodeGroups:
+      - name: front
+        instanceClass:
+          rootDiskSizeGb: 20
+          sizingPolicy: 16cpu32ram
+          template: Templates/ubuntu-focal-20.04
+          affinityRule:
+            polarity: AntiAffinity
+            required: false
+      - name: worker
+        instanceClass:
+          rootDiskSizeGb: 20
+          sizingPolicy: 16cpu32ram
+          template: Templates/ubuntu-focal-20.04
+          affinityRule:
+            polarity: Affinity
+`
 
-	})
+  a := HookExecutionConfigInit(initValuesWithNoRules, "{}")
+  Context("No affinity rules are defined", func() {
+    BeforeEach(func() {
+      a.RunHook()
+    })
+
+    It("Hook should not fail with errors", func() {
+      Expect(a).To(ExecuteSuccessfully())
+      Expect(a.GoHookError).Should(BeNil())
+      Expect(a.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON("[]"))
+    })
+
+  })
+  
+  b := HookExecutionConfigInit(initValuesWithRules, "{}")
+  Context("Affinity rules are defined", func() {
+    BeforeEach(func() {
+      b.RunHook()
+    })
+
+    It("Hook should not fail with errors", func() {
+      Expect(b).To(ExecuteSuccessfully())
+      Expect(b.GoHookError).Should(BeNil())
+      Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
+      Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
+[
+  {
+    "polarity": "AntiAffinity",
+    "required": true,
+    "nodeGroupName": "master"
+  },
+  {
+    "polarity": "AntiAffinity",
+    "required": false,
+    "nodeGroupName": "front"
+  },
+  {
+    "polarity": "Affinity",
+    "required": false,
+    "nodeGroupName": "worker"
+  }
+]
+`))
+    })
+  })
 })
