@@ -71,6 +71,55 @@ cloudProviderVcd:
             polarity: Affinity
 `
 
+  vcdInstanceClasses := `
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: one
+spec:
+  rootDiskSizeGb: 90
+  sizingPolicy: c2m4
+  storageProfile: vSAN-LAB-PLATFORM-MSK-1-R5
+  template: DSS-LIBRARY/ubuntu-22.04-dkp
+  affinityRule:
+    polarity: Affinity
+    required: true
+status:
+  nodeGroupConsumers:
+  - ng-one
+  - ng-two
+  - ng-three
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: two
+spec:
+  rootDiskSizeGb: 90
+  sizingPolicy: c2m4
+  storageProfile: vSAN-LAB-PLATFORM-MSK-1-R5
+  template: DSS-LIBRARY/ubuntu-22.04-dkp
+status:
+  nodeGroupConsumers:
+  - ng-four
+  - ng-five
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: three
+spec:
+  rootDiskSizeGb: 90
+  sizingPolicy: c2m4
+  storageProfile: vSAN-LAB-PLATFORM-MSK-1-R5
+  template: DSS-LIBRARY/ubuntu-22.04-dkp
+  affinityRule:
+    polarity: AntiAffinity
+status:
+  nodeGroupConsumers:
+  - ng-six
+`
   a := HookExecutionConfigInit(initValuesWithNoRules, "{}")
   Context("No affinity rules are defined", func() {
     BeforeEach(func() {
@@ -111,6 +160,45 @@ cloudProviderVcd:
     "polarity": "Affinity",
     "required": false,
     "nodeGroupName": "worker"
+  }
+]
+`))
+    })
+  })
+
+  c := HookExecutionConfigInit(initValuesWithNoRules, "{}")
+  c.RegisterCRD("deckhouse.io", "v1", "VCDInstanceClass", false)
+  Context("Affinity rules are defined in VCDInstanceClass", func() {
+    BeforeEach(func() {
+      c.BindingContexts.Set(c.KubeStateSet(vcdInstanceClasses))
+      c.RunHook()
+    })
+
+    It("Hook should not fail with errors and get rules from VCDInstanceClass", func() {
+      Expect(c).To(ExecuteSuccessfully())
+      Expect(c.GoHookError).Should(BeNil())
+      Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
+      Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
+[
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-one"
+  },
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-two"
+  },
+  {
+    "polarity": "Affinity",
+    "required": true,
+    "nodeGroupName": "ng-three"
+  },
+  {
+    "polarity": "AntiAffinity",
+    "required": false,
+    "nodeGroupName": "ng-six"
   }
 ]
 `))
