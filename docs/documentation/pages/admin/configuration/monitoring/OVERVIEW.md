@@ -1,6 +1,7 @@
 ---
 title: "Monitoring in Deckhouse Kubernetes Platform"
 permalink: en/admin/configuration/monitoring/
+description: "Configure comprehensive monitoring for Deckhouse Kubernetes Platform with Prometheus and Grafana. Metrics collection, alerting, dashboards, and SLA monitoring for cluster health."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.

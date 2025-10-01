@@ -1,6 +1,7 @@
 ---
 title: "Выдача прав пользователям и сервисным аккаунтам"
 permalink: ru/admin/configuration/access/authorization/granting.html
+description: "Настройка RBAC для пользователей и сервисных аккаунтов в Deckhouse Kubernetes Platform. Настройка привязки ролей и кластерных ролей для безопасного контроля доступа."
 lang: ru
 ---
 

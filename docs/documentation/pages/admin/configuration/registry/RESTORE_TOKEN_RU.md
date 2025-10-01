@@ -1,6 +1,7 @@
 ---
 title: Восстановление подключения к registry при истекшем и неверном лицензионном токене
 permalink: ru/admin/configuration/registry/restore-token.html
+description: "Восстановление подключения к registry в Deckhouse Kubernetes Platform при проблемах с лицензионным токеном. Восстановление доступа к registry."
 lang: ru
 ---
 

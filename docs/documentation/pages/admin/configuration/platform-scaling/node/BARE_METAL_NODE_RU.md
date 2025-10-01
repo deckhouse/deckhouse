@@ -1,6 +1,7 @@
 ---
 title: "Добавление и управление bare-metal узлами"
 permalink: ru/admin/configuration/platform-scaling/node/bare-metal-node.html
+description: "Управление узлами в кластере bare-metal. Добавление узлов, их конфигурация и управление жизненным циклом."
 lang: ru
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Резервное копирование и восстановление
 permalink: ru/admin/configuration/backup/backup-and-restore.html
+description: Настройка резервного копирования и восстановления в Deckhouse Kubernetes Platform. Ручное восстановление кластера, восстановление после катастроф. Стратегии защиты данных.
 lang: ru
 ---
 

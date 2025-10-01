@@ -40,7 +40,7 @@ entries:
                 - title:
                     en: Restoring registry access
                     ru: Восстановление подключения к registry
-                  url: /admin/configuration/registry/restore-token.html  
+                  url: /admin/configuration/registry/restore-token.html
                 - title:
                     en: Switching editions
                     ru: Переключение редакций
@@ -830,10 +830,6 @@ entries:
                         en: Configuring integrations
                         ru: Настройка интеграций
                       url: /admin/configuration/monitoring/alerts-integrations.html
-                    - title:
-                        en: List of preset alerts
-                        ru: Список предустановленных алертов
-                      url: /admin/configuration/monitoring/alerts-list.html
             - title:
                 en: Logging
                 ru: Логирование

@@ -2,6 +2,7 @@
 title: "Архитектура мониторинга в Deckhouse Kubernetes Platform"
 permalink: ru/architecture/monitoring/
 lang: ru
+search: monitoring architecture, prometheus architecture, monitoring components, observability architecture, архитектура мониторинга, компоненты мониторинга
 ---
 
 ## Состав и схема взаимодействия компонентов мониторинга

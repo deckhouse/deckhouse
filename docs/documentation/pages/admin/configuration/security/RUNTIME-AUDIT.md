@@ -1,6 +1,7 @@
 ---
 title: Security event audit
 permalink: en/admin/configuration/security/events/runtime-audit.html
+description: "Configure security event auditing in Deckhouse Kubernetes Platform. Runtime security monitoring, threat detection, and audit logging for cluster security analysis."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for detecting security threats

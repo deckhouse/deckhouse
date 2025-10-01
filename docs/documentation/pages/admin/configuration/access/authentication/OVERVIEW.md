@@ -1,6 +1,7 @@
 ---
 title: "Authentication"
 permalink: en/admin/configuration/access/authentication/
+description: "Configure authentication for Deckhouse Kubernetes Platform with local and external providers. Support for LDAP, OIDC, GitHub, GitLab, and more. Complete authentication setup guide."
 ---
 
 **Authentication** is the process of verifying a user's identity, providing access control to all interfaces of the Deckhouse Kubernetes Platform (DKP) and cluster resources.  

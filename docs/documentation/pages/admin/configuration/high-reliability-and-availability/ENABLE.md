@@ -2,7 +2,6 @@
 title: Managing HA mode
 permalink: en/admin/configuration/high-reliability-and-availability/enable.html
 description: Managing HA mode
-lang: en
 ---
 
 {% alert level="info" %}

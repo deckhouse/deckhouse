@@ -1,6 +1,7 @@
 ---
 title: "Локальная аутентификация"
 permalink: ru/admin/configuration/access/authentication/local.html
+description: "Настройка локальной аутентификации для платформы Deckhouse Kubernetes Platform с парольными политиками, поддержкой 2FA и управлением группами. Реализация безопасности, соответствующая требованиям OWASP."
 lang: ru
 ---
 

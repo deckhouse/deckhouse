@@ -1,6 +1,7 @@
 ---
 title: "Обзор"
 permalink: ru/admin/configuration/network/ingress/
+description: "Настройка балансировки входящего трафика в Deckhouse Kubernetes Platform с NLB и ALB. Маршрутизация трафика, SSL-терминация и настройка балансировки на уровне приложений."
 lang: ru
 ---
 

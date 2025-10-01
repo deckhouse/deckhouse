@@ -1,6 +1,7 @@
 ---
 title: "Проверка наличия прав у пользователя"
 permalink: ru/admin/configuration/access/authorization/check.html
+description: "Проверка прав доступа пользователей в Deckhouse Kubernetes Platform. Верификация RBAC разрешений, тестирование доступа пользователей и инструменты отладки авторизации."
 lang: ru
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: "Local authentication"
 permalink: en/admin/configuration/access/authentication/local.html
+description: "Configure local authentication for Deckhouse Kubernetes Platform with password policies, 2FA support, and group management. OWASP-compliant security implementation."
 ---
 
 In addition to external authentication providers, DKP also supports local authentication.

@@ -2,6 +2,7 @@
 title: "Кэширующий DNS-сервер в кластере"
 permalink: ru/architecture/network/dns-caching.html
 lang: ru
+search: DNS caching, cluster DNS, DNS performance, DNS optimization, кэширование DNS, DNS в кластере, оптимизация DNS
 ---
 
 <!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-local-dns/ -->

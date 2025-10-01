@@ -1,6 +1,7 @@
 ---
 title: "Планировщик"
-permalink: ru/admin/configuration/app-scaling/pod-eviction/scheduler.html 
+permalink: ru/admin/configuration/app-scaling/pod-eviction/scheduler.html
+description: "Настройка планировщика Kubernetes в Deckhouse Kubernetes Platform. Политики планирования подов, выбор узлов, распределение ресурсов и оптимизация распределения нагрузки кластера."
 lang: ru
 ---
 

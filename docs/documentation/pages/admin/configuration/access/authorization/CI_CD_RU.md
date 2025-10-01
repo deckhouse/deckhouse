@@ -1,6 +1,7 @@
 ---
 title: "Доступ для CI/CD"
 permalink: ru/admin/configuration/access/authorization/ci_cd.html
+description: "Настройка доступа CI/CD к кластеру Kubernetes в Deckhouse Kubernetes Platform. Настройка ServiceAccount, генерация kubeconfig и конфигурация доступа для CI/CD."
 lang: ru
 ---
 

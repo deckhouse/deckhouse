@@ -1,6 +1,7 @@
 ---
 title: "Access for CI/CD"
 permalink: en/admin/configuration/access/authorization/ci_cd.html
+description: "Configure CI/CD access to Kubernetes cluster in Deckhouse Kubernetes Platform. ServiceAccount setup, kubeconfig generation, and automated deployment access configuration."
 ---
 
 To grant access to the Kubernetes cluster API for CI/CD systems such as GitLab Runner, Jenkins, and others,

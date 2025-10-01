@@ -1,6 +1,7 @@
 ---
 title: "Мониторинг в Deckhouse Kubernetes Platform"
 permalink: ru/admin/configuration/monitoring/
+description: "Настройка комплексного мониторинга для платформы Deckhouse Kubernetes Platform с Prometheus и Grafana. Сбор метрик, алертинг, дашборды и мониторинг SLA для здоровья кластера."
 lang: ru
 ---
 
