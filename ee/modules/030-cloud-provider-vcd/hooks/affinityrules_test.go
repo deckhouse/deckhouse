@@ -6,16 +6,14 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
-  // "fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
-  . "github.com/onsi/ginkgo"
-  . "github.com/onsi/gomega"
-
-  . "github.com/deckhouse/deckhouse/testing/hooks"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: cloud-provider-vcd :: hooks :: affinity rules from vcdinstanceclass ::", func() {
-  initValuesWithNoRules := `
+	initValuesWithNoRules := `
 cloudProviderVcd:
   internal:
     providerClusterConfiguration:
@@ -39,7 +37,7 @@ cloudProviderVcd:
           template: Templates/ubuntu-focal-20.04
 `
 
-  initValuesWithRules := `
+	initValuesWithRules := `
 cloudProviderVcd:
   internal:
     providerClusterConfiguration:
@@ -71,7 +69,7 @@ cloudProviderVcd:
             polarity: Affinity
 `
 
-  vcdInstanceClasses := `
+	vcdInstanceClasses := `
 ---
 apiVersion: deckhouse.io/v1
 kind: VCDInstanceClass
@@ -120,31 +118,31 @@ status:
   nodeGroupConsumers:
   - ng-six
 `
-  a := HookExecutionConfigInit(initValuesWithNoRules, "{}")
-  Context("No affinity rules are defined", func() {
-    BeforeEach(func() {
-      a.RunHook()
-    })
+	a := HookExecutionConfigInit(initValuesWithNoRules, "{}")
+	Context("No affinity rules are defined", func() {
+		BeforeEach(func() {
+			a.RunHook()
+		})
 
-    It("Hook should not fail with errors", func() {
-      Expect(a).To(ExecuteSuccessfully())
-      Expect(a.GoHookError).Should(BeNil())
-      Expect(a.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON("[]"))
-    })
+		It("Hook should not fail with errors", func() {
+			Expect(a).To(ExecuteSuccessfully())
+			Expect(a.GoHookError).Should(BeNil())
+			Expect(a.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON("[]"))
+		})
 
-  })
-  
-  b := HookExecutionConfigInit(initValuesWithRules, "{}")
-  Context("Affinity rules are defined", func() {
-    BeforeEach(func() {
-      b.RunHook()
-    })
+	})
 
-    It("Hook should not fail with errors", func() {
-      Expect(b).To(ExecuteSuccessfully())
-      Expect(b.GoHookError).Should(BeNil())
-      Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
-      Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
+	b := HookExecutionConfigInit(initValuesWithRules, "{}")
+	Context("Affinity rules are defined", func() {
+		BeforeEach(func() {
+			b.RunHook()
+		})
+
+		It("Hook should not fail with errors", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.GoHookError).Should(BeNil())
+			Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
+			Expect(b.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
 [
   {
     "polarity": "AntiAffinity",
@@ -163,22 +161,22 @@ status:
   }
 ]
 `))
-    })
-  })
+		})
+	})
 
-  c := HookExecutionConfigInit(initValuesWithNoRules, "{}")
-  c.RegisterCRD("deckhouse.io", "v1", "VCDInstanceClass", false)
-  Context("Affinity rules are defined in VCDInstanceClass", func() {
-    BeforeEach(func() {
-      c.BindingContexts.Set(c.KubeStateSet(vcdInstanceClasses))
-      c.RunHook()
-    })
+	c := HookExecutionConfigInit(initValuesWithNoRules, "{}")
+	c.RegisterCRD("deckhouse.io", "v1", "VCDInstanceClass", false)
+	Context("Affinity rules are defined in VCDInstanceClass", func() {
+		BeforeEach(func() {
+			c.BindingContexts.Set(c.KubeStateSet(vcdInstanceClasses))
+			c.RunHook()
+		})
 
-    It("Hook should not fail with errors and get rules from VCDInstanceClass", func() {
-      Expect(c).To(ExecuteSuccessfully())
-      Expect(c.GoHookError).Should(BeNil())
-      Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
-      Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
+		It("Hook should not fail with errors and get rules from VCDInstanceClass", func() {
+			Expect(c).To(ExecuteSuccessfully())
+			Expect(c.GoHookError).Should(BeNil())
+			Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").Exists()).To(BeTrue())
+			Expect(c.ValuesGet("cloudProviderVcd.internal.affinityRules").String()).To(MatchJSON(`
 [
   {
     "polarity": "Affinity",
@@ -202,6 +200,6 @@ status:
   }
 ]
 `))
-    })
-  })
+		})
+	})
 })
