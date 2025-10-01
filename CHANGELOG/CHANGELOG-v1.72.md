@@ -56,6 +56,7 @@
  - **[candi]** Fixed default AWS subnets tags for LB controller autodiscovery. [#10138](https://github.com/deckhouse/deckhouse/pull/10138)
  - **[cloud-provider-aws]** Fixed incorrect template id for AWS e2e cluster. [#14605](https://github.com/deckhouse/deckhouse/pull/14605)
  - **[cloud-provider-dvp]** Fixed logic of work with disks and coreFraction validation. [#14284](https://github.com/deckhouse/deckhouse/pull/14284)
+ - **[cloud-provider-huaweicloud]** add rule to d8:cloud-provider-huaweicloud:cloud-controller-manager account for list pods as needed [#15678](https://github.com/deckhouse/deckhouse/pull/15678)
  - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15507](https://github.com/deckhouse/deckhouse/pull/15507)
@@ -94,6 +95,8 @@
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#14315](https://github.com/deckhouse/deckhouse/pull/14315)
  - **[monitoring-deckhouse]** Fixed ModuleRelease alerts by eliminating many-to-many joins; observability alert now evaluates correctly. [#14908](https://github.com/deckhouse/deckhouse/pull/14908)
     Prometheus rules only; no component restarts. Alerts for module manual approval and unmet requirements will start firing as expected.
+ - **[node-manager]** CAPI crd served version fix [#15731](https://github.com/deckhouse/deckhouse/pull/15731)
+ - **[node-manager]** shutdown inhibitor use three-state GracefulShutdownPostpone condition so kubelet waits for the final decision before ending pods [#15575](https://github.com/deckhouse/deckhouse/pull/15575)
  - **[node-manager]** CAPI crd served version fix [#15706](https://github.com/deckhouse/deckhouse/pull/15706)
  - **[node-manager]** Add rbac permission for getting DaemonSets for CAPI. [#15377](https://github.com/deckhouse/deckhouse/pull/15377)
  - **[node-manager]** Upgrade CAPI version and increase lease duration timeouts. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
