@@ -24,6 +24,10 @@ entries:
             en: Requirements
             ru: Требования
           url: /virtualization-platform/documentation/about/requirements.html
+        - title:
+            en: Architecture options
+            ru: Архитектурные решения
+          url: /virtualization-platform/documentation/about/architecture-options.html
     - title:
         en: Administration
         ru: Администрирование
