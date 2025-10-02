@@ -83,6 +83,8 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
+git:
+{{- include "image mount points" . }}
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
