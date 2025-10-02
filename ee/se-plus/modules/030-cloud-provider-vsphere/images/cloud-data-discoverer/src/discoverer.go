@@ -42,6 +42,7 @@ type Discoverer struct {
 	govmomiClient        *govmomi.Client
 	cnsClient            *cns.Client
 	vsphereClient        vsphere.Client
+	vmFolderPath         string
 }
 
 func NewDiscoverer(logger *log.Logger) *Discoverer {
@@ -123,6 +124,11 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatalf("Cannot get ZONE_TAG_CATEGORY env")
 	}
 
+	vmFolderPath := os.Getenv("VM_FOLDER_PATH")
+	if vmFolderPath == "" {
+		logger.Fatal("Cannot get VM_FOLDER_PATH env")
+	}
+
 	config := &vsphere.ProviderClusterConfiguration{
 		Region:            region,
 		RegionTagCategory: regionTagCategory,
@@ -147,6 +153,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		govmomiClient:        govmomiClient,
 		cnsClient:            cnsClient,
 		vsphereClient:        vc,
+		vmFolderPath:         vmFolderPath,
 	}
 }
 
@@ -178,6 +185,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 	discoveryData.Datacenter = zonesDatastores.Datacenter
 	discoveryData.Zones = mergeZones(discoveryData.Zones, zonesDatastores.Zones)
 	discoveryData.Datastores = mergeDatastores(discoveryData.Datastores, zonesDatastores.ZonedDataStores)
+	discoveryData.VMFolderPath = d.vmFolderPath
 
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
