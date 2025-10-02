@@ -1,6 +1,7 @@
 ---
 title: "Выдача прав пользователям и сервисным аккаунтам"
 permalink: ru/admin/configuration/access/authorization/granting.html
+description: "Настройка RBAC для пользователей и сервисных аккаунтов в Deckhouse Kubernetes Platform. Настройка привязки ролей и кластерных ролей для безопасного контроля доступа."
 lang: ru
 ---
 
@@ -49,10 +50,13 @@ apiVersion: deckhouse.io/v1
 kind: AuthorizationRule
 metadata:
   name: dev-access
+  namespace: dev-namespace
 spec:
   subjects:
   - kind: User
     name: dev-user@example.com
+  accessLevel: Admin
+  portForwarding: true
 ```
 
 ### Предоставление прав пользователю во всех пространствах имен
@@ -290,7 +294,7 @@ roleRef:
 - Просмотр, изменение, удаление и создание следующих ресурсов модулей DKP:
   - DexAuthenticator;
   - DexClient;
-  - PodLogginConfig.
+  - PodLoggingConfig.
 - Выполнение следующих команд к подам и сервисам:
   - `kubectl attach`;
   - `kubectl exec`;

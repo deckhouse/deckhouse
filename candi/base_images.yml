@@ -1,4 +1,4 @@
-# version=v0.5.28
+# version=v0.5.30
 # REGISTRY_PATH is a special key which is concatenated with other base images
 REGISTRY_PATH: registry.deckhouse.io/base_images
 base/distroless: "sha256:6181c0922d240f806ed69842e0c35b2881db7e28f936b00241969fbe39545cde" # fromImage: builder/scratch
@@ -21,26 +21,30 @@ builder/alpine-3.21: "sha256:3e3839bf9b487f8ce9cb9296be3f610707b56b2eef3caa66016
 builder/alpine-3.22: "sha256:590dc522ebb14efc901a9f232fa285d04808bfeb834b9dfeddcbec0a6e45a6bd" # from: alpine:3.22.1
 builder/alt: "sha256:0062fa0400ce621ee65f7bbfcb314937068a218d0e744f6c6212e5d184df2d1d" # from: registry.altlinux.org/p11/alt:20250625
 builder/alt-2025-09-24: "sha256:0062fa0400ce621ee65f7bbfcb314937068a218d0e744f6c6212e5d184df2d1d" # from: registry.altlinux.org/p11/alt:20250625
-builder/alt-go-svace: "sha256:37c1a41e90b61e15db4d3548e8759dd1722771346367090f348ac6f071df8701" # fromImage: builder/alt
-builder/alt-go-svace-2025-09-24: "sha256:37c1a41e90b61e15db4d3548e8759dd1722771346367090f348ac6f071df8701" # fromImage: builder/alt
+builder/alt-go: "sha256:9f9210375d8e929e76002ce3331cb17088fba4d3838b17c9925b091299167995" # fromImage: builder/alt
+builder/alt-go-1.24.7: "sha256:ba2d22c17e1d20b4adfc2cfdfa8378e354bec17ab7510af5adbe2b53c3181635" # fromImage: builder/alt
+builder/alt-go-1.25.1: "sha256:9f9210375d8e929e76002ce3331cb17088fba4d3838b17c9925b091299167995" # fromImage: builder/alt
+builder/alt-go-svace: "sha256:c45ffd10eed7ba0807788c51ae6a102fc2a08591a6c104861e19736c1bb0b58b" # fromImage: builder/alt-go-1.25.1
+builder/alt-go-svace-1.24.7: "sha256:a7815cc6b40534d1ab6ffd2540e1c0ae759f1d37aba10a42fed949f61bdfc86b" # fromImage: builder/alt-go-1.24.7
+builder/alt-go-svace-1.25.1: "sha256:c45ffd10eed7ba0807788c51ae6a102fc2a08591a6c104861e19736c1bb0b58b" # fromImage: builder/alt-go-1.25.1
 builder/debian: "sha256:6a9d02298c6d4727c4e985983226d3363dd0e877e4cdd4564101716a040ab292" # from: debian:trixie-slim
 builder/debian-12.11-slim: "sha256:ceb764d8e68cb03b3dc703dc2a567c59538112062e08a2a34bac8c004fab0a1b" # from: debian:12.11-slim
-builder/debian-svace: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian
-builder/debian-svace-12.11-slim: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian
-builder/debian-svace-trixie-slim: "sha256:e75d92c491040432e746fe9afb11b2ed140efa56922b3ae2a5c040d660fc90bb" # fromImage: builder/debian
+builder/debian-svace: "sha256:80d5f56e256be3a2df8a2721a874976100a331b882667cbb7495e5c01f4252b8" # fromImage: builder/debian
+builder/debian-svace-12.11-slim: "sha256:80d5f56e256be3a2df8a2721a874976100a331b882667cbb7495e5c01f4252b8" # fromImage: builder/debian
+builder/debian-svace-trixie-slim: "sha256:80d5f56e256be3a2df8a2721a874976100a331b882667cbb7495e5c01f4252b8" # fromImage: builder/debian
 builder/debian-trixie-slim: "sha256:6a9d02298c6d4727c4e985983226d3363dd0e877e4cdd4564101716a040ab292" # from: debian:trixie-slim
 builder/golang-alpine: "sha256:d72f4762bdbcd4ae2a4be9de3cd586351d424ce63f335b0aef236838e4c08770" # from: golang:1.25.1-alpine3.21
 builder/golang-alpine-1.24: "sha256:f51927e5b76561f2c918ab0df9d5b9b90bfbd11f563226e91bdb6d0a934f6108" # from: golang:1.24.7-alpine3.21
 builder/golang-alpine-1.25: "sha256:d72f4762bdbcd4ae2a4be9de3cd586351d424ce63f335b0aef236838e4c08770" # from: golang:1.25.1-alpine3.21
-builder/golang-alpine-svace: "sha256:2a5d370680bdf53ae5604d8c81d09f990430d8095a79ce24c2eb752861bdb69d" # fromImage: builder/golang-alpine-1.25
-builder/golang-alpine-svace-1.24: "sha256:e8dda73fbd1383875617cdf71d3a91698bea272b0bdfd4c824c7ba01352897b3" # fromImage: builder/golang-alpine-1.24
-builder/golang-alpine-svace-1.25: "sha256:2a5d370680bdf53ae5604d8c81d09f990430d8095a79ce24c2eb752861bdb69d" # fromImage: builder/golang-alpine-1.25
+builder/golang-alpine-svace: "sha256:71421da1149375316b3be468befdcea12d97e978a061ae462a7e2fdf935a6d56" # fromImage: builder/golang-alpine-1.25
+builder/golang-alpine-svace-1.24: "sha256:aecc69b50dd99441b8a535f38d8b472a721a44fcbeddc8aafcbc3178bcabfd72" # fromImage: builder/golang-alpine-1.24
+builder/golang-alpine-svace-1.25: "sha256:71421da1149375316b3be468befdcea12d97e978a061ae462a7e2fdf935a6d56" # fromImage: builder/golang-alpine-1.25
 builder/golang-bookworm: "sha256:971efb36d1caa09a51848ff4c9d68c623151c7224127cfa83d042467ced590cb" # from: golang:1.25.1-bookworm
 builder/golang-bookworm-1.24: "sha256:7d9d20a9bb129a16dfec00921e2534119fea3f9e8287f7e2d662d3b4a9117d7c" # from: golang:1.24.7-bookworm
 builder/golang-bookworm-1.25: "sha256:971efb36d1caa09a51848ff4c9d68c623151c7224127cfa83d042467ced590cb" # from: golang:1.25.1-bookworm
-builder/golang-bookworm-svace: "sha256:6042f2d71cfad7a928215667111f4994ec535d2f1c6c48230ce7537ad33a76a7" # fromImage: builder/golang-bookworm
-builder/golang-bookworm-svace-1.24: "sha256:6042f2d71cfad7a928215667111f4994ec535d2f1c6c48230ce7537ad33a76a7" # fromImage: builder/golang-bookworm
-builder/golang-bookworm-svace-1.25: "sha256:6042f2d71cfad7a928215667111f4994ec535d2f1c6c48230ce7537ad33a76a7" # fromImage: builder/golang-bookworm
+builder/golang-bookworm-svace: "sha256:29a0b22e5fd885c3a34095ce857a7e5dbd34859b4b05d7e2ed0ec49ab3d85e2a" # fromImage: builder/golang-bookworm-1.25
+builder/golang-bookworm-svace-1.24: "sha256:6ede0a36dba0a01b8f1ea436050d046fa9e9cd49c03e45269fed8eb336181420" # fromImage: builder/golang-bookworm-1.24
+builder/golang-bookworm-svace-1.25: "sha256:29a0b22e5fd885c3a34095ce857a7e5dbd34859b4b05d7e2ed0ec49ab3d85e2a" # fromImage: builder/golang-bookworm-1.25
 builder/golang-bullseye: "sha256:6a0a9bd1c0dd1e6f103d7c7f5db83641ab90b1dd27b46ddb609e10cae02a07af" # from: golang:1.24.6-bullseye
 builder/golang-bullseye-1.24: "sha256:6a0a9bd1c0dd1e6f103d7c7f5db83641ab90b1dd27b46ddb609e10cae02a07af" # from: golang:1.24.6-bullseye
 builder/node-alpine: "sha256:50b63131adf3d93744e7d29d46f6fdda2006ff8d3b7a44bfc29d11ad64c2fe83" # from: node:22.16.0-alpine3.20
@@ -206,8 +210,8 @@ tools/e2fsprogs: "sha256:fb6afb48192b5e954c3805fe970f99deb82e87e85376791491d1ebf
 tools/e2fsprogs-v1.47.2: "sha256:fb6afb48192b5e954c3805fe970f99deb82e87e85376791491d1ebf0ba5a9394" # fromImage: builder/scratch
 tools/elfutils: "sha256:e5668e842048a2fd7efabd6c3e7235496f1fcdbfe88fdd6591bed6d028f618c7" # fromImage: builder/scratch
 tools/elfutils-elfutils-0.193: "sha256:e5668e842048a2fd7efabd6c3e7235496f1fcdbfe88fdd6591bed6d028f618c7" # fromImage: builder/scratch
-tools/erofs-utils: "sha256:941e51d8f5c0e05a957f241360cb9ff149f64e423066d33a908510c0b891a6b5" # fromImage: builder/scratch
-tools/erofs-utils-v1.8.10: "sha256:941e51d8f5c0e05a957f241360cb9ff149f64e423066d33a908510c0b891a6b5" # fromImage: builder/scratch
+tools/erofs-utils: "sha256:c3e0e2df2d7ff3c5e1f29e7bc9e46286ced50f13987f3e4ad2d730e1c5f6d1f9" # fromImage: builder/scratch
+tools/erofs-utils-v1.8.10: "sha256:c3e0e2df2d7ff3c5e1f29e7bc9e46286ced50f13987f3e4ad2d730e1c5f6d1f9" # fromImage: builder/scratch
 tools/ethtool: "sha256:7cd440a56caeaf24b63f3e9945d8964a1370ff2e66bc3e19e61a2fa570526573" # fromImage: builder/scratch
 tools/ethtool-v6.15: "sha256:7cd440a56caeaf24b63f3e9945d8964a1370ff2e66bc3e19e61a2fa570526573" # fromImage: builder/scratch
 tools/findutils: "sha256:2da1da4150b5169ff38b2131aabcee5a9aaf62128e8864fdc7eec59218ef2942" # fromImage: builder/scratch

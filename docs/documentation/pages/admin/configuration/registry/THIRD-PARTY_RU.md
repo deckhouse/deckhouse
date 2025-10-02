@@ -1,6 +1,7 @@
 ---
 title: Переключение работающего кластера DKP на использование стороннего registry
 permalink: ru/admin/configuration/registry/third-party.html
+description: "Переключение Deckhouse Kubernetes Platform на использование стороннего container registry. Настройка внешних registry и миграция с официального registry."
 lang: ru
 ---
 

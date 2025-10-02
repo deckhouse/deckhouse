@@ -9,3 +9,4 @@ dirs:
  - /etc/ca-certificates
  - /usr/local/share/ca-certificates
  - /etc/pki/ca-trust
+ - /etc/pki/tls/certs

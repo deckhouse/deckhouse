@@ -4,11 +4,11 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию запускаются только системные компоненты. Для полноценной работы платформы виртуализации необходимо добавить в кластер хотя бы один worker-узел.
 
-Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/node-management/adding-node.html)):
+Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере)):
 
 - Подготовьте сервер, который будет worker-узлом кластера.
 
-- Создайте [NodeGroup](../../reference/cr/nodegroup.html) `worker`. Для этого выполните на **master-узле** следующую команду:
+- Создайте [NodeGroup](/modules/node-manager/cr.html#nodegroup) `worker`. Для этого выполните на **master-узле** следующую команду:
 
   ```shell
   sudo -i d8 k create -f - << EOF
@@ -32,7 +32,7 @@
   ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
   ```
 
-- Создайте в кластере ресурс [SSHCredentials](../../reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
+- Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на **master-узле** следующую команду:
 
   ```shell
   sudo -i d8 k create -f - <<EOF
@@ -72,7 +72,7 @@
   pdpl-user -i 63 caps
   ```
 
-- Создайте [StaticInstance](../../reference/cr/staticinstance.html) для добавляемого узла. Для этого выполните на **master-узле** следующую команду, указав IP-адрес добавляемого узла:
+- Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на **master-узле** следующую команду, указав IP-адрес добавляемого узла:
 
   ```shell
   export NODE=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.

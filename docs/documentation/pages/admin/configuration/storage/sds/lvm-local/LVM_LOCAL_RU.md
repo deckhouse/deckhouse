@@ -1,6 +1,7 @@
 ---
 title: "Настройка локального хранилища на основе LVM"
 permalink: ru/admin/configuration/storage/sds/lvm-local.html
+description: "Настройка локального хранилища на основе LVM в Deckhouse Kubernetes Platform. Высокопроизводительное локальное хранилище для тестовых сред и EDGE-кластеров с уменьшенными сетевыми задержками."
 lang: ru
 ---
 

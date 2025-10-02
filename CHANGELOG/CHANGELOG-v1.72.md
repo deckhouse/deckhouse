@@ -55,9 +55,12 @@
  - **[candi]** Fixed deletion of NodeUsers. [#13240](https://github.com/deckhouse/deckhouse/pull/13240)
  - **[candi]** Fixed default AWS subnets tags for LB controller autodiscovery. [#10138](https://github.com/deckhouse/deckhouse/pull/10138)
  - **[cloud-provider-aws]** Fixed incorrect template id for AWS e2e cluster. [#14605](https://github.com/deckhouse/deckhouse/pull/14605)
+ - **[cloud-provider-dvp]** fix single-node LoadBalancer bug and add multi-LB per node support [#14883](https://github.com/deckhouse/deckhouse/pull/14883)
  - **[cloud-provider-dvp]** Fixed logic of work with disks and coreFraction validation. [#14284](https://github.com/deckhouse/deckhouse/pull/14284)
+ - **[cloud-provider-huaweicloud]** add rule to d8:cloud-provider-huaweicloud:cloud-controller-manager account for list pods as needed [#15678](https://github.com/deckhouse/deckhouse/pull/15678)
  - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
+ - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15775](https://github.com/deckhouse/deckhouse/pull/15775)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15507](https://github.com/deckhouse/deckhouse/pull/15507)
  - **[cloud-provider-vsphere]** Moved datastore discovery (via vSphere SDK calls) from hook to cloud-data-discovery. [#14519](https://github.com/deckhouse/deckhouse/pull/14519)
  - **[cloud-provider-vsphere]** Fixed main network escaping for names with special symbols. [#14328](https://github.com/deckhouse/deckhouse/pull/14328)
@@ -71,7 +74,10 @@
  - **[control-plane-manager]** Promoted etcd member if needed. [#14661](https://github.com/deckhouse/deckhouse/pull/14661)
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
+ - **[deckhouse-controller]** Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook execution [#15724](https://github.com/deckhouse/deckhouse/pull/15724)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Fixing bashible steps when it does not respond to the limit on the number of attempts [#15633](https://github.com/deckhouse/deckhouse/pull/15633)
+ - **[dhctl]** Fix start and keep-alive behavior, do not change host if any kube-proxies has been started. [#15566](https://github.com/deckhouse/deckhouse/pull/15566)
  - **[dhctl]** Add timeout to ssh client dial and fix stop. [#15539](https://github.com/deckhouse/deckhouse/pull/15539)
  - **[dhctl]** Fix deadlock while reading dhctl singlethreaded server logs [#15512](https://github.com/deckhouse/deckhouse/pull/15512)
  - **[dhctl]** Fixed the behaviour of the attach operation when there are no keys in SSHConfig, only a password [#15478](https://github.com/deckhouse/deckhouse/pull/15478)
@@ -91,6 +97,10 @@
  - **[metallb]** Fixed IP pool exhaustion on LoadBalancer deletion. [#14315](https://github.com/deckhouse/deckhouse/pull/14315)
  - **[monitoring-deckhouse]** Fixed ModuleRelease alerts by eliminating many-to-many joins; observability alert now evaluates correctly. [#14908](https://github.com/deckhouse/deckhouse/pull/14908)
     Prometheus rules only; no component restarts. Alerts for module manual approval and unmet requirements will start firing as expected.
+ - **[node-manager]** Enable SSHLegacyMode if SSHPrivateKey is not empty and fix gossh panic. [#15763](https://github.com/deckhouse/deckhouse/pull/15763)
+ - **[node-manager]** CAPI crd served version fix [#15731](https://github.com/deckhouse/deckhouse/pull/15731)
+ - **[node-manager]** shutdown inhibitor use three-state GracefulShutdownPostpone condition so kubelet waits for the final decision before ending pods [#15575](https://github.com/deckhouse/deckhouse/pull/15575)
+ - **[node-manager]** CAPI crd served version fix [#15706](https://github.com/deckhouse/deckhouse/pull/15706)
  - **[node-manager]** Add rbac permission for getting DaemonSets for CAPI. [#15377](https://github.com/deckhouse/deckhouse/pull/15377)
  - **[node-manager]** Upgrade CAPI version and increase lease duration timeouts. [#15349](https://github.com/deckhouse/deckhouse/pull/15349)
  - **[node-manager]** Fixed calculation of memory for standby holder. [#14522](https://github.com/deckhouse/deckhouse/pull/14522)
@@ -105,6 +115,7 @@
  - **[user-authn]** Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create. [#15269](https://github.com/deckhouse/deckhouse/pull/15269)
     Fixes a bug where creating new User resources failed due to missing oldObject in validation; password immutability is still enforced on update.
  - **[user-authz]** Rewrited user-authz module access hook from bash to Python. [#14695](https://github.com/deckhouse/deckhouse/pull/14695)
+ - **[vertical-pod-autoscaler]** Disable vpa for k8s-metacollector in module runtime-audit-engine [#15659](https://github.com/deckhouse/deckhouse/pull/15659)
 
 ## Chore
 

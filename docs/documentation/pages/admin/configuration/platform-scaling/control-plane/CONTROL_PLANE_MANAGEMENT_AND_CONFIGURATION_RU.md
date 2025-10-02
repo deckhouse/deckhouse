@@ -1,6 +1,7 @@
 ---
 title: "Общее управление и конфигурация control plane"
 permalink: ru/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+description: "Настройка и управление Kubernetes control plane в Deckhouse Kubernetes Platform. Высокая доступность, управление сертификатами и конфигурация компонентов control plane."
 lang: ru
 ---
 

@@ -45,10 +45,6 @@
   },
   "code": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [
@@ -197,6 +193,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
     "tags": [
       "database"
     ],
@@ -207,6 +212,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
     "tags": [
       "database"
     ],

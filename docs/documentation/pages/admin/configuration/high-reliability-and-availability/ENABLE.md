@@ -2,7 +2,6 @@
 title: Managing HA mode
 permalink: en/admin/configuration/high-reliability-and-availability/enable.html
 description: Managing HA mode
-lang: en
 ---
 
 {% alert level="info" %}
@@ -48,7 +47,7 @@ You can enable HA mode globally for DKP in one of the following ways.
 
 ### Using Deckhouse web UI
 
-If the [`console`](/modules/console) module is enabled in the cluster,
+If the [`console`](/modules/console/) module is enabled in the cluster,
 open the Deckhouse web UI, navigate to **Deckhouse** — **Global settings** — **Global module settings**,
 and switch the **HA mode** toggle to **Yes**.
 

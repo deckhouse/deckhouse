@@ -203,6 +203,10 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.15.0 h1:KUec7kHxFDrd9t9yMkwd7/Tx3BLoK3eZk4ukx8Hr1m0=
 github.com/flant/addon-operator v1.15.0/go.mod h1:ELZAE4FXEjWDmA6hN+KB7r8/9jbWt+KeCi9xYU3zLts=
+github.com/flant/addon-operator v1.15.1-0.20250926124948-69fd4909fb7b h1:hdHnQo0Zol2CAXCWy09TmnT8nDZIbBuyD4isv2dZxS0=
+github.com/flant/addon-operator v1.15.1-0.20250926124948-69fd4909fb7b/go.mod h1:ELZAE4FXEjWDmA6hN+KB7r8/9jbWt+KeCi9xYU3zLts=
+github.com/flant/addon-operator v1.15.2 h1:1pkMAeEt7GxmO7npg4mpX3GNwChg0bCR88fyWJqL28c=
+github.com/flant/addon-operator v1.15.2/go.mod h1:ELZAE4FXEjWDmA6hN+KB7r8/9jbWt+KeCi9xYU3zLts=
 github.com/flant/go-openapi-validate v0.19.12-flant.1 h1:GuB9XEfiLHq3M7fafRLq1AWkndSY/+/5MX7ad1xJ/8A=
 github.com/flant/go-openapi-validate v0.19.12-flant.1/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.3.1 h1:1SdD799sujXNg2F6Z27le/+qkcKQaKf9Z492YGEhVhc=
@@ -603,6 +607,8 @@ github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9 h1:62uLwA3l2JMH
 github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9/go.mod h1:MvMXoufZAtqExNexqi4cjrNYE9MefKddKylxjS+//n0=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
+github.com/name212/govalue v1.0.1 h1:DcDFSX/xntOpp7E3V0OdsJQw88CLUSgd7Wi+ZlvUGHI=
+github.com/name212/govalue v1.0.1/go.mod h1:yNc7imLY96j59vm95XHw2eRPipSAfENkNHSZjbPguTE=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 h1:zYyBkD/k9seD2A7fsi6Oo2LfFZAehjjQMERAvZLEDnQ=
 github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646/go.mod h1:jpp1/29i3P1S/RLdc7JQKbRpFeM1dOBd8T9ki5s+AY8=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
@@ -764,8 +770,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
+github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/sylabs/oci-tools v0.16.0 h1:4pdwS7HtNT9Y+3jpwNQo590Vj5218vbsestGilgSVtA=
 github.com/sylabs/oci-tools v0.16.0/go.mod h1:278n9ttZ0B9vTwbQ4896HCwwgZf3DvU82XD5wS+fZwI=
 github.com/sylabs/sif/v2 v2.19.1 h1:1eeMmFc8elqJe60ZiWwXgL3gMheb0IP4GmNZ4q0IEA0=

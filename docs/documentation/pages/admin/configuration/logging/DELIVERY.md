@@ -1,6 +1,7 @@
 ---
 title: Log collection and delivery
 permalink: en/admin/configuration/logging/delivery.html
+description: "Configure log collection and delivery in Deckhouse Kubernetes Platform. Centralized logging from pods and nodes to internal or external storage systems with filtering and routing."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides log collection and delivery from cluster nodes and pods to internal or external storage systems.

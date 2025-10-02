@@ -1,6 +1,7 @@
 ---
 title: Мониторинг SLA кластера
 permalink: ru/admin/configuration/monitoring/sla.html
+description: "Настройка мониторинга SLA в Deckhouse Kubernetes Platform. Отслеживание доступности кластера, мониторинг соответствия SLA и сбор статистики времени работы компонентов платформы."
 lang: ru
 ---
 

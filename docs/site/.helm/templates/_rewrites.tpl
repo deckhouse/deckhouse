@@ -1,4 +1,5 @@
 {{- define "rewrites" }}
+rewrite ^/modules/[0-9]+-(?<module_doc>[^/]+/.*)$ /modules/$module_doc permanent;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/security/kuma.html$ /products/kubernetes-platform/documentation$2/admin/configuration/security/kuma-and-av-software.html redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/oss_info.html$ /products/kubernetes-platform/documentation$2/reference/oss_info.html redirect;
 rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/deckhouse-cli/(?<path>.*)$ /products/kubernetes-platform/documentation$2/cli/d8/$path redirect;

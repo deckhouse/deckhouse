@@ -155,6 +155,8 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 		// podNetworkMode
 		if value := cniConfigurationSecrets[0].CniConfigFromSecret.PodNetworkMode; value != "" {
 			input.Values.Set("cniFlannel.internal.podNetworkMode", value)
+		} else {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
 		}
 
 		return nil
@@ -178,6 +180,8 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 			case "VXLAN":
 				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
 			}
+		} else {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
 		}
 
 		return nil
@@ -192,11 +196,12 @@ func setPodNetworkMode(_ context.Context, input *go_hook.HookInput) error {
 			case "VXLAN":
 				input.Values.Set("cniFlannel.internal.podNetworkMode", "vxlan")
 			}
+		} else {
+			input.Values.Set("cniFlannel.internal.podNetworkMode", "host-gw")
 		}
 
 		return nil
 	}
 
-	// default_podNetworkMode = HostGW
 	// return nil
 }

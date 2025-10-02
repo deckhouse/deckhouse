@@ -1,7 +1,6 @@
 ---
 title: "Configuration"
 permalink: en/admin/configuration/access/connection/openvpn/configuration.html
-lang: en
 ---
 
 ## External access to OpenVPN
@@ -100,7 +99,7 @@ After connecting to the VPN, the following parameters are pushed to the user's c
 ## Auditing user connections
 
 To monitor user connections, you can enable logging of VPN activity in JSON format. Traffic is grouped by the following fields: `src_ip`, `dst_ip`, `src_port`, `dst_port`, `ip_proto`.  
-Using [log-shipper](/modules/log-shipper), you can collect and store container logs for later auditing.
+Using [log-shipper](/modules/log-shipper/), you can collect and store container logs for later auditing.
 
 ## Why automatic DNS configuration doesn’t work on macOS and Linux with the OpenVPN client
 

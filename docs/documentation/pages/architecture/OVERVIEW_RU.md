@@ -2,6 +2,7 @@
 title: Обзор
 permalink: ru/architecture/
 lang: ru
+search: architecture overview, архитектура Deckhouse
 ---
 
 Deckhouse отвечает за то, чтобы кластер **одинаково** работал на **любой поддерживаемой инфраструктуре**:
