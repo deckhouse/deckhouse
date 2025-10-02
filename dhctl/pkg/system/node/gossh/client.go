@@ -182,7 +182,7 @@ func (s *Client) Start() error {
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = ssh.Dial("tcp", addr, config)
+			client, err = DialTimeout("tcp", addr, config)
 			return err
 		})
 		if err != nil {
