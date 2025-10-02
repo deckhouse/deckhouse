@@ -32,7 +32,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifactc
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
