@@ -134,6 +134,14 @@ function prepare_environment() {
       DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
     fi
 
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+      echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+      REGISTRY_ID="59134bc7-f73b-4584-a6e7-beae786ccce" # e2e-deckhouse-dev
+    else
+      echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+      REGISTRY_ID="9697b7a2-4f38-4ca2-bbd8-efda5cafbe14" # e2e-deckhouse-stage
+    fi
+
   case "$PROVIDER" in
   "Yandex.Cloud")
     CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
@@ -567,6 +575,7 @@ function run-test() {
 
   payload="{
     \"name\": \"${PREFIX}\",
+    \"registry_id\": \"${REGISTRY_ID}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": ${values}
   }"

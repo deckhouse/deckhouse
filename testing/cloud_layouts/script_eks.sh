@@ -83,6 +83,13 @@ function prepare_environment() {
   fi
   export DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  else
+    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  fi
+
   if [[ -n "$INITIAL_IMAGE_TAG" && "${INITIAL_IMAGE_TAG}" != "${DECKHOUSE_IMAGE_TAG}" ]]; then
     # Use initial image tag as devBranch setting in InitConfiguration.
     # Then update cluster to DECKHOUSE_IMAGE_TAG.

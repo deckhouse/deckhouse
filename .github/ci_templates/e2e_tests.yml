@@ -100,6 +100,7 @@
   REPOSITORY: ${{ github.repository }}
 {!{- if not (has $commanderProviders $provider) }!}
   DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+  STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
 {!{- end }!}
   GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
 {!{- if has $commanderProviders $provider }!}

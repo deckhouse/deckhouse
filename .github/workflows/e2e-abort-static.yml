@@ -296,6 +296,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -584,6 +585,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -872,6 +874,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1160,6 +1163,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1448,6 +1452,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -1736,6 +1741,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2024,6 +2030,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2312,6 +2319,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2600,6 +2608,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -2888,6 +2897,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -3176,6 +3186,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
@@ -3464,6 +3475,7 @@ jobs:
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{secrets.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script.sh cleanup' via 'docker run', using environment:
