@@ -1,6 +1,8 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+git:
+{{- include "image mount points" . }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dvp-csi-driver
@@ -83,8 +85,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
-git:
-{{- include "image mount points" . }}
 fromImage: common/relocate-artifact
 shell:
   beforeInstall:
