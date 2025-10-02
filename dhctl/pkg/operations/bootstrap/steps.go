@@ -115,7 +115,7 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
-	args := []string{"--local", "--max-retries", "5"}
+	args := []string{"--local", "--max-retries", "1"}
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", args...)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
@@ -530,7 +530,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 		return err
 	}
 
-	return retry.NewLoop("Execute bundle", 5, 10*time.Second).
+	return retry.NewLoop("Execute bundle", 10, 10*time.Second).
 		BreakIf(func(err error) bool {
 			return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 		}).
