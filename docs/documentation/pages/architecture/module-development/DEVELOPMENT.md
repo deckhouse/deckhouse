@@ -557,7 +557,7 @@ $ crane export registry.example.io/modules-source/module-1:v1.23.1 -  | tar -Oxf
 }
 ```
 
-### Extra images configuration
+### Configuring extra images
 
 Modules can include additional images (such as vulnerability databases or other supplementary data) by adding an `extra_images.json` file. This file specifies extra images that need to be manually pushed to the registry and are separate from the main module images.
 
@@ -577,9 +577,9 @@ An example of `extra_images.json` for neuvector vulnerability database:
 
 Important notes:
 
-- Extra images must be manually pushed to the module registry under the `extra/` path
-- Use the `d8 mirror pull --only-extra-images` command to pull only extra images
-- Extra images are stored in the registry as `<module-name>/extra/<image-name>`
+- Extra images must be manually pushed to the module registry under the `extra/` path.
+- Use the `d8 mirror pull --only-extra-images` command to pull only extra images.
+- Extra images are stored in the registry as `<module-name>/extra/<image-name>`.
 
 ### Print the list of releases
 
