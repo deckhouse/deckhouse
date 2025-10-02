@@ -1,0 +1,13 @@
+dirs:
+  - /var/run/secrets/workload-spiffe-uds
+  - /var/run/secrets/credential-uds
+  - /var/run/secrets/workload-spiffe-credentials
+  - /etc/istio/proxy
+  - /etc/istio/config
+  - /var/run/secrets/istio
+  - /var/lib/istio/data
+  - /etc/istio/pod
+  - /etc/istio/ingressgateway-certs
+  - /etc/istio/ingressgateway-ca-certs
+  - /var/run/secrets/tokens
+  - /var/run/secrets/kubernetes.io/serviceaccount
