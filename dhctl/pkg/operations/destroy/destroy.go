@@ -43,9 +43,9 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -525,14 +525,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 		BecomePass:     d.userCredentials.Password,
 	})
 
-	var newSSHClient node.SSHClient
-	if app.SSHLegacyMode {
-		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-		// Avoid starting a new ssh agent
-		newSSHClient.(*clissh.Client).InitializeNewAgent = false
-	} else {
-		newSSHClient = gossh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-	}
+	newSSHClient := sshclient.NewClient(sess, []session.AgentPrivateKey{privateKey})
 
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()

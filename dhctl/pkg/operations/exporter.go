@@ -33,10 +33,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -108,13 +106,7 @@ type ExporterParams struct {
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	var sshClient node.SSHClient
-	var err error
-	if app.SSHLegacyMode {
-		sshClient, err = clissh.NewInitClientFromFlags(true)
-	} else {
-		sshClient, err = gossh.NewInitClientFromFlags(true)
-	}
+	sshClient, err := sshclient.NewInitClientFromFlags()
 	if err != nil {
 		panic(err)
 	}

@@ -31,11 +31,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeClientSwitcher struct {
@@ -211,15 +210,13 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		BecomePass:     convergeState.NodeUserCredentials.Password,
 	})
 
-	var newSSHClient node.SSHClient
+	var pkeys []session.AgentPrivateKey
 	if app.SSHLegacyMode {
-		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-		// Avoid starting a new ssh agent
-		newSSHClient.(*clissh.Client).InitializeNewAgent = false
+		pkeys = append(pkeys, session.AgentPrivateKey(privateKey))
 	} else {
-		pkeys := append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
-		newSSHClient = gossh.NewClient(sess, pkeys)
+		pkeys = append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
 	}
+	newSSHClient := sshclient.NewClient(sess, pkeys)
 
 	err = newSSHClient.Start()
 	if err != nil {

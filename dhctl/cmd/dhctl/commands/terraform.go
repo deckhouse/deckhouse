@@ -30,10 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -71,9 +69,6 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 
 		logger.LogInfoLn("Check started ...\n")
 
-		var sshClient node.SSHClient
-		var err error
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -81,11 +76,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags()
 		if err != nil {
 			return err
 		}
