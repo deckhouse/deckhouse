@@ -192,7 +192,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	kubeCl.KubeProxy.StopAll()
 
-	if !app.SSHLegacyMode {
+	if app.SSHModernMode || len(app.SSHPrivateKeys) > 0 {
 		s.logger.LogDebugF("Old SSH Client: %-v\n", sshCl)
 		sshCl.Stop()
 	}
@@ -211,7 +211,8 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	})
 
 	var pkeys []session.AgentPrivateKey
-	if app.SSHLegacyMode {
+
+	if app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 		pkeys = append(pkeys, session.AgentPrivateKey(privateKey))
 	} else {
 		pkeys = append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
@@ -226,7 +227,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	s.logger.LogDebugLn("ssh client started for replacing kube client")
 
 	// adding keys to agent is actual only in legacy mode
-	if app.SSHLegacyMode {
+	if app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)

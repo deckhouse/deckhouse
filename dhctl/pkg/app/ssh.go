@@ -49,6 +49,7 @@ var (
 	AskBastionPass = false
 
 	SSHLegacyMode = false
+	SSHModernMode = false
 )
 
 type connectionConfigParser interface {
@@ -97,9 +98,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
-	cmd.Flag("ssh-legacy-mode", "Switch to legacy SSH mode").
+	cmd.Flag("ssh-legacy-mode", "Force use legacy SSH mode").
 		Envar(configEnvName("SSH_LEGACY_MODE")).
 		BoolVar(&SSHLegacyMode)
+	cmd.Flag("ssh-modern-mode", "Force use modern SSH mode").
+		Envar(configEnvName("SSH_MODERN_MODE")).
+		BoolVar(&SSHModernMode)
 	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
 		Envar(configEnvName("ASK_BASTION_PASS")).
 		BoolVar(&AskBastionPass)

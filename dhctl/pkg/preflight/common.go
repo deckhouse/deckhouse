@@ -49,7 +49,7 @@ func setupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tu
 		}
 	}
 	var tunnel string
-	if app.SSHLegacyMode {
+	if app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 		tunnel = strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	} else {
 		tunnel = strings.Join([]string{proxyUrl.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")

@@ -24,11 +24,21 @@ import (
 )
 
 func NewInitClientFromFlags(askPassword bool) (node.SSHClient, error) {
-	if len(app.SSHPrivateKeys) > 0 {
+
+	switch {
+	case app.SSHLegacyMode:
+		// if set --ssh-legacy-mode
 		return clissh.NewInitClientFromFlags(askPassword)
+	case app.SSHModernMode:
+		// if set --ssh-modern-mode
+		return gossh.NewInitClientFromFlags(askPassword)
+	case len(app.SSHPrivateKeys) > 0:
+		// if ssh-mode flags don't set, but ssh-private-keys is set
+		return clissh.NewInitClientFromFlags(askPassword)
+	default:
+		return gossh.NewInitClientFromFlags(askPassword)
 	}
 
-	return gossh.NewInitClientFromFlags(askPassword)
 }
 
 func NewInitClientFromFlagsWithHosts(askPassword bool) (node.SSHClient, error) {
@@ -40,18 +50,36 @@ func NewInitClientFromFlagsWithHosts(askPassword bool) (node.SSHClient, error) {
 }
 
 func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) node.SSHClient {
-	// if have privateKeys, we should use legacy
-	client := clissh.NewClient(sess, privateKeys)
-	client.InitializeNewAgent = false
-	return client
+
+	switch {
+	case app.SSHLegacyMode:
+		// if set --ssh-legacy-mode
+		client := clissh.NewClient(sess, privateKeys)
+		client.InitializeNewAgent = false
+		return client
+	case app.SSHModernMode:
+		// if set --ssh-modern-mode
+		return gossh.NewClient(sess, privateKeys)
+	case len(app.SSHPrivateKeys) > 0:
+		client := clissh.NewClient(sess, privateKeys)
+		client.InitializeNewAgent = false
+		return client
+	default:
+		return gossh.NewClient(sess, privateKeys)
+	}
 }
 
 func NewClientFromFlags() (node.SSHClient, error) {
-	if len(app.SSHPrivateKeys) > 0 {
+	switch {
+	case app.SSHLegacyMode:
 		return clissh.NewClientFromFlags(), nil
+	case app.SSHModernMode:
+		return gossh.NewClientFromFlags()
+	case len(app.SSHPrivateKeys) > 0:
+		return clissh.NewClientFromFlags(), nil
+	default:
+		return gossh.NewClientFromFlags()
 	}
-
-	return gossh.NewClientFromFlags()
 }
 
 func NewClientFromFlagsWithHosts() (node.SSHClient, error) {

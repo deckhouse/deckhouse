@@ -199,7 +199,7 @@ deckhouse:
 		bootstrapState := &testState{}
 
 		var sshCl node.SSHClient
-		if app.SSHLegacyMode {
+		if app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 			sshCl = &gossh.Client{}
 		} else {
 			sshCl = &clissh.Client{}

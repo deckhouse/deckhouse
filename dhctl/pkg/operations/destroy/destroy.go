@@ -505,7 +505,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 
 	log.DebugLn("Private key written")
 
-	if !app.SSHLegacyMode {
+	if app.SSHModernMode {
 		log.DebugF("Old SSH Client: %-v\n", d.SSHClient)
 		log.DebugLn("Stopping old SSH client")
 		d.SSHClient.Stop()
