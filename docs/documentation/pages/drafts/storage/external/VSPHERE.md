@@ -1,6 +1,6 @@
 ---
 title: "vSphere data storage"
-permalink: en/storage/admin/external/vsphere.html
+permalink: en/admin/configuration/storage/external/vsphere.html
 ---
 
 The `csi-vsphere` module is designed for provisioning disks in static clusters based on VMware vSphere, where it is not possible to use the [`cloud-provider-vsphere`](../../../modules/cloud-provider-vsphere/) module.
