@@ -1,2 +1,4 @@
 dirs:
   - /csi
+  - /dev
+  - /var/run/secrets/kubernetes.io/serviceaccount
