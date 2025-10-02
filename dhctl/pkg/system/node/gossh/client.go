@@ -221,8 +221,22 @@ func (s *Client) Start() error {
 		if err != nil {
 			return err
 		}
+		timeFactor := time.Duration(3)
+		err = targetConn.SetDeadline(time.Now().Add(config.Timeout * timeFactor))
+		if err != nil {
+			targetConn.Close()
+			return err
+		}
 		targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
-		return err
+		if err != nil {
+			return err
+		}
+		err = targetConn.SetDeadline(time.Time{})
+		if err != nil {
+			targetConn.Close()
+			return err
+		}
+		return nil
 	})
 	if err != nil {
 		lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
