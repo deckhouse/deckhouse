@@ -423,7 +423,7 @@ func (w *Watcher) deleteIngress(ing *networkingv1.Ingress) {
 	log.Printf("[ING DELETE] %s/%s", ing.Namespace, ing.Name)
 }
 
-// ---------------- СronJob Watcher ----------------
+// ---------------- CronJob Watcher ----------------
 
 func (w *Watcher) StartCronJobWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(

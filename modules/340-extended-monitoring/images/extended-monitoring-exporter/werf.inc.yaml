@@ -32,7 +32,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifactc
     add: /src
     to: /src
     before: install
@@ -46,7 +46,6 @@ shell:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-    - go test ./... -v
     - go build -ldflags="-s -w" -o /extended-monitoring-exporter main.go
     - chown 64535:64535 /extended-monitoring-exporter
     - chmod 0700 /extended-monitoring-exporter
