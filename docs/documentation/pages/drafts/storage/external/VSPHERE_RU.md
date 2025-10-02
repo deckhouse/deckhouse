@@ -1,6 +1,6 @@
 ---
 title: "Хранилище данных vSphere"
-permalink: ru/storage/admin/external/vsphere.html
+permalink: ru/admin/configuration/storage/external/vsphere.html
 lang: ru
 ---
 
