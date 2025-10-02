@@ -328,11 +328,11 @@ func (w *Watcher) StartStatefulSetWatcher(ctx context.Context, namespace string)
 
 func (w *Watcher) updateStatefulSet(ds *appsv1.StatefulSet) {
 	enabled := enabledLabel(ds.Labels)
-	w.metrics.DaemonSetEnabled.WithLabelValues(ds.Namespace, ds.Name).Set(enabled)
+	w.metrics.StatefulSetEnabled.WithLabelValues(ds.Namespace, ds.Name).Set(enabled)
 
 	if enabled == 1 {
 		for key, def := range statefulSetThresholdMap {
-			w.metrics.DaemonSetThreshold.WithLabelValues(ds.Namespace, ds.Name, key).
+			w.metrics.StatefulSetThreshold.WithLabelValues(ds.Namespace, ds.Name, key).
 				Set(thresholdLabel(ds.Labels, key, def))
 		}
 	}
@@ -341,9 +341,9 @@ func (w *Watcher) updateStatefulSet(ds *appsv1.StatefulSet) {
 }
 
 func (w *Watcher) deleteStatefulSet(ds *appsv1.StatefulSet) {
-	w.metrics.DaemonSetEnabled.DeleteLabelValues(ds.Namespace, ds.Name)
+	w.metrics.StatefulSetEnabled.DeleteLabelValues(ds.Namespace, ds.Name)
 	for key := range statefulSetThresholdMap {
-		w.metrics.DaemonSetThreshold.DeleteLabelValues(ds.Namespace, ds.Name, key)
+		w.metrics.StatefulSetThreshold.DeleteLabelValues(ds.Namespace, ds.Name, key)
 	}
 	log.Printf("[STS DELETE] %s/%s", ds.Namespace, ds.Name)
 	lastObserved = time.Now()
