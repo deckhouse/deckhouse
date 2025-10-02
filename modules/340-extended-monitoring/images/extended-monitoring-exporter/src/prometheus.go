@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -41,7 +42,14 @@ type PrometheusExporterMetrics struct {
 	IngressEnabled       *prometheus.GaugeVec
 	IngressThreshold     *prometheus.GaugeVec
 	CronJobEnabled    	 *prometheus.GaugeVec
+	lastObserved         time.Time
+	mu                   sync.RWMutex
 }
+
+var(
+	lastObserved time.Time
+	timeOutHealthz = 15 * time.Minute
+)
 
 func RegisterMetrics(reg prometheus.Registerer) *PrometheusExporterMetrics {
 	m := &PrometheusExporterMetrics{
@@ -170,10 +178,19 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		if time.Since(lastObserved) > timeOutHealthz {
+			log.Printf("Fail if metrics were last collected more than %v", timeOutHealthz)
+			http.Error(w, "metrics stale", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
-	mux.HandleFunc("/ready", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/startup", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})

@@ -23,6 +23,7 @@ import (
 	"log"
 	"strconv"
 	"sync"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -107,6 +108,7 @@ func (w *Watcher) updateNode(node *v1.Node) {
 		w.metrics.NodeThreshold.WithLabelValues(node.Name, key).Set(thresholdLabel(node.Labels, key, def))
 	}
 	log.Printf("[NODE UPDATE] %s", node.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deleteNode(node *v1.Node) {
@@ -115,6 +117,7 @@ func (w *Watcher) deleteNode(node *v1.Node) {
 		w.metrics.NodeThreshold.DeleteLabelValues(node.Name, key)
 	}
 	log.Printf("[NODE DELETE] %s", node.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- Namespace Watcher ----------------
@@ -151,6 +154,7 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 		go w.StartIngressWatcher(nsCtx, ns.Name)
 		go w.StartCronJobWatcher(nsCtx, ns.Name)
 	}
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
@@ -185,6 +189,7 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 
 		log.Printf("[NS ENABLED] %s watchers started", ns.Name)
 	}
+	lastObserved = time.Now()
 }
 
 
@@ -195,6 +200,7 @@ func (w *Watcher) deleteNamespace(ns *v1.Namespace) {
 		cancel()
 		delete(w.nsWatchers, ns.Name)
 		log.Printf("[NS DELETE] %s watchers stopped", ns.Name)
+		lastObserved = time.Now()
 	}
 	w.mu.Unlock()
 }
@@ -229,6 +235,7 @@ func (w *Watcher) StartPodWatcher(ctx context.Context, namespace string) {
 func (w *Watcher) updatePod(pod *v1.Pod) {
 	enabled := enabledLabel(pod.Labels)
 	w.metrics.PodEnabled.WithLabelValues(pod.Namespace, pod.Name).Set(enabled)
+	lastObserved = time.Now()
 
 	if enabled == 1 {
 		for key, def := range podThresholdMap {
@@ -236,6 +243,7 @@ func (w *Watcher) updatePod(pod *v1.Pod) {
 		}
 	}
 	log.Printf("[POD UPDATE] %s/%s", pod.Namespace, pod.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deletePod(pod *v1.Pod) {
@@ -244,6 +252,7 @@ func (w *Watcher) deletePod(pod *v1.Pod) {
 		w.metrics.PodThreshold.DeleteLabelValues(pod.Namespace, pod.Name, key)
 	}
 	log.Printf("[POD DELETE] %s/%s", pod.Namespace, pod.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- Daemon Set Watcher ----------------
@@ -281,6 +290,7 @@ func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet) {
 		}
 	}
 	log.Printf("[DS UPDATE] %s/%s", ds.Namespace, ds.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deleteDaemonSet(ds *appsv1.DaemonSet) {
@@ -289,6 +299,7 @@ func (w *Watcher) deleteDaemonSet(ds *appsv1.DaemonSet) {
 		w.metrics.DaemonSetThreshold.DeleteLabelValues(ds.Namespace, ds.Name, key)
 	}
 	log.Printf("[DS DELETE] %s/%s", ds.Namespace, ds.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- Stateful Set Watcher ----------------
@@ -326,6 +337,7 @@ func (w *Watcher) updateStatefulSet(ds *appsv1.StatefulSet) {
 		}
 	}
 	log.Printf("[STS UPDATE] %s/%s", ds.Namespace, ds.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deleteStatefulSet(ds *appsv1.StatefulSet) {
@@ -334,6 +346,7 @@ func (w *Watcher) deleteStatefulSet(ds *appsv1.StatefulSet) {
 		w.metrics.DaemonSetThreshold.DeleteLabelValues(ds.Namespace, ds.Name, key)
 	}
 	log.Printf("[STS DELETE] %s/%s", ds.Namespace, ds.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- Deployment Watcher ----------------
@@ -369,6 +382,7 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment) {
 		}
 	}
 	log.Printf("[DEP UPDATE] %s/%s", dep.Namespace, dep.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deleteDeployment(dep *appsv1.Deployment) {
@@ -377,6 +391,7 @@ func (w *Watcher) deleteDeployment(dep *appsv1.Deployment) {
 		w.metrics.DeploymentThreshold.DeleteLabelValues(dep.Namespace, dep.Name, key)
 	}
 	log.Printf("[DEP DELETE] %s/%s", dep.Namespace, dep.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- Ingress Watcher ----------------
@@ -413,6 +428,7 @@ func (w *Watcher) updateIngress(ing *networkingv1.Ingress) {
 		}
 	}
 	log.Printf("[ING UPDATE] %s/%s", ing.Namespace, ing.Name)
+	lastObserved = time.Now()
 }
 
 func (w *Watcher) deleteIngress(ing *networkingv1.Ingress) {
@@ -421,6 +437,7 @@ func (w *Watcher) deleteIngress(ing *networkingv1.Ingress) {
 		w.metrics.IngressThreshold.DeleteLabelValues(ing.Namespace, ing.Name, key)
 	}
 	log.Printf("[ING DELETE] %s/%s", ing.Namespace, ing.Name)
+	lastObserved = time.Now()
 }
 
 // ---------------- CronJob Watcher ----------------
@@ -447,10 +464,12 @@ func (w *Watcher) updateCronJob(job *batchv1.CronJob) {
 	enabled := enabledLabel(job.Labels)
 	w.metrics.CronJobEnabled.WithLabelValues(job.Namespace, job.Name).Set(enabled)
 	log.Printf("[CRONJOB UPDATE] %s/%s", job.Namespace, job.Name)
+	lastObserved = time.Now()
 }
 
 
 func (w *Watcher) deleteCronJob(job *batchv1.CronJob) {
 	w.metrics.CronJobEnabled.DeleteLabelValues(job.Namespace, job.Name)
 	log.Printf("[CRONJOB DELETE] %s/%s", job.Namespace, job.Name)
+	lastObserved = time.Now()
 }
