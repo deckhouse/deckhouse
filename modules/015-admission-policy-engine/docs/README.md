@@ -45,7 +45,7 @@ The policies define by the module can be expanded. Examples of policy extensions
 ### Operation policies
 
 The module provides a set of operating policies and best practices for the secure operation of your applications.
-Operational policies are described using a custom resource [`OperationPolicy`](admission-policy-engine/cr.html#operationpolicy).
+Operational policies are described using a custom resource [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy).
 
 We recommend you deploy the following minimum set of operating policies:
 
