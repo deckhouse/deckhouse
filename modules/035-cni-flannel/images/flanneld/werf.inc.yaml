@@ -2,6 +2,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 fromImage: builder/golang-alpine
+cacheVersion: "2025-10-02"
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
