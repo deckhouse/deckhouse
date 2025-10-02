@@ -2,6 +2,7 @@
 title: "Administration"
 ---
 
+{% raw %}
 ## Commander internals
 
 ![Diagram](images/diagram.svg)
@@ -142,3 +143,4 @@ spec:
 ```
 
 For more detailed configuration information, see the documentation of the [log-shipper](../../../platform/modules/log-shipper/) module.
+{% endraw %}

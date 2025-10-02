@@ -2,6 +2,8 @@
 title: "Руководство администратора"
 ---
 
+
+{% raw %}
 ## Как устроен Deckhouse Commander
 
 ### Компоненты Deckhouse Commander
@@ -141,3 +143,4 @@ spec:
 ```
 
 Более подробную информацию по настройке смотрите в документации модуля [log-shipper](../../../platform/modules/log-shipper/).
+{% endraw %}

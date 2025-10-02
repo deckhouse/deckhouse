@@ -560,7 +560,7 @@ module JSONSchemaRenderer
 
         result.push(format_attribute(name, attributes, parent, primaryLanguage, fallbackLanguage)) if attributes.is_a?(Hash)
 
-        if (@moduleName != '') and attributes.has_key?('x-doc-d8Revision')
+        if !@moduleName.nil? and !@moduleName.empty? and attributes.has_key?('x-doc-d8Revision')
           case attributes['x-doc-d8Revision']
           when "ee"
             addRevisionParameter(@moduleName, 'ee', @resourceType, resourceName, name, linkAnchor)

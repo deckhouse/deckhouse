@@ -4,7 +4,7 @@
 {%- for page in searchedpages %}
 {%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' %}{% continue %}{% endif %}
 {"title": "{{ page.title | escape }}",
-"url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' | regex_replace_once: '\/$', '/index.html' }}",
 "keywords": {{ page.search | jsonify }},
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
 }
@@ -13,7 +13,7 @@
 ],
 "parameters":[
 {%- for item in site.data.search.searchItems[page.lang] %}
-{%- assign page_canonical_url = item.url | relative_url %}
+{%- assign page_canonical_url = item.url | relative_url | regex_replace_once: '\/$', '/index.html' %}
 {%- assign keywords = "" %}
 {%- if item.search.size > 0 %}
   {%- if keywords.size > 0 %}

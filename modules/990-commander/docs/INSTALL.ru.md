@@ -2,6 +2,7 @@
 title: "Установка"
 ---
 
+
 ## Системные требования
 
 Чтобы начать пользоваться Deckhouse Commander, необходим кластер на базе Deckhouse Kubernetes

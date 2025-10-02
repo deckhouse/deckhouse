@@ -72,21 +72,21 @@ for page in ${pages}; do
     mkdir -p $(echo "${MODULES_DST_EN}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|') $(echo "${MODULES_DST_RU}/${page_dst}" | sed -E 's|^(.+)/[^\/]+$|\1|')
     if [[ -f "${absolute_path}.md" ]] && page::has_frontmatter "${absolute_path}.md"; then
         cp -f "${absolute_path}.md" "${MODULES_DST_EN}/${page_dst}.md"
-    else
-        cp -f "${absolute_path}_RU.md" "${MODULES_DST_EN}/${page_dst}.md"
-        sed -i "1alayout: page-another-lang" "${MODULES_DST_EN}/${page_dst}.md"
-        sed -i "/^lang:/{s#lang: ru#lang: en#}" "${MODULES_DST_EN}/${page_dst}.md"
-        sed -Ei "/^title:/{s/title: ([\"\']?)Модуль ([-a-zA-Z0-9]+)(: .+)?([\"\']?)/title: \1The \2 module\3\4/}; /title:/{s/: настройки/: configuration/}; /title:/{s/: примеры конфигурации/: usage/}" "${MODULES_DST_EN}/${page_dst}.md"
-        echo "INFO: ${absolute_path}.md is absent and has been replaced by the doc from the other lang."
+    #else
+    #    cp -f "${absolute_path}_RU.md" "${MODULES_DST_EN}/${page_dst}.md"
+    #    sed -i "1alayout: page-another-lang" "${MODULES_DST_EN}/${page_dst}.md"
+    #    sed -i "/^lang:/{s#lang: ru#lang: en#}" "${MODULES_DST_EN}/${page_dst}.md"
+    #    sed -Ei "/^title:/{s/title: ([\"\']?)Модуль ([-a-zA-Z0-9]+)(: .+)?([\"\']?)/title: \1The \2 module\3\4/}; /title:/{s/: настройки/: configuration/}; /title:/{s/: примеры конфигурации/: usage/}" "${MODULES_DST_EN}/${page_dst}.md"
+    #    echo "INFO: ${absolute_path}.md is absent and has been replaced by the doc from the other lang."
     fi
     if [[ -f "${absolute_path}_RU.md" ]] && page::has_frontmatter "${absolute_path}_RU.md"; then
         cp -f "${absolute_path}_RU.md" "${MODULES_DST_RU}/${page_dst}.md"
         sed -i "1alang: ru" "${MODULES_DST_RU}/${page_dst}.md"
-    else
-        cp -f "${absolute_path}.md" "${MODULES_DST_RU}/${page_dst}.md"
-        sed -i "1alayout: page-another-lang" "${MODULES_DST_RU}/${page_dst}.md"
-        sed -i "1alang: ru" "${MODULES_DST_RU}/${page_dst}.md"
-        echo "INFO: ${absolute_path}_RU.md is absent and has been replaced by the doc from the other lang."
+    #else
+    #    cp -f "${absolute_path}.md" "${MODULES_DST_RU}/${page_dst}.md"
+    #    sed -i "1alayout: page-another-lang" "${MODULES_DST_RU}/${page_dst}.md"
+    #    sed -i "1alang: ru" "${MODULES_DST_RU}/${page_dst}.md"
+    #    echo "INFO: ${absolute_path}_RU.md is absent and has been replaced by the doc from the other lang."
     fi
 
     rsync -a --exclude='*.md' ${MODULES_SRC_DIR}/${module_original_name}/ ${MODULES_DST_EN}/${module_name}/

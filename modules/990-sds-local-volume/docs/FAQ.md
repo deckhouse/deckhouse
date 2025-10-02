@@ -131,7 +131,7 @@ If the labels from `nodeSelector` are not present on the node, ensure that this 
 {% alert level="warning" %}
 On the `LVMVolumeGroup` and `LocalStorageClass` resources, which prevent the node from being taken out of the module's control, the label `storage.deckhouse.io/sds-local-volume-candidate-for-eviction` will be displayed.
 On the node itself, the label `storage.deckhouse.io/sds-local-volume-need-manual-eviction` will be present.
-{{< /alert  >}}
+{{< /alert >}}
 
 ## How to check if there are dependent resources `LVMVolumeGroup` on the node?
 

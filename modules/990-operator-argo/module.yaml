@@ -1,9 +1,0 @@
-name: operator-argo
-namespace: d8-operator-argo
-stage: General Availability
-descriptions:
-  en: operator-argo is a module of the Deckhouse Kubernetes Platform for deploying ArgoCD installations.
-  ru: operator-argo — модуль Deckhouse Kubernetes Platform для развертывания инсталляций ArgoCD.
-requirements:
-  bootstrapped: true
-  deckhouse: ">= 1.68.0"

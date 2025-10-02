@@ -2,6 +2,7 @@
 title: "Templating clusters"
 ---
 
+{% raw %}
 To manually install the Deckhouse Kubernetes Platform, the `dhctl` utility is used. It takes three
 sets of data as input:
 
@@ -872,3 +873,4 @@ not necessary to mark a selection from a catalog with this flag.
   title: Subnet CIDR
   unique: true
 ```
+{% endraw %}

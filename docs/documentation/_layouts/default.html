@@ -16,8 +16,8 @@
   {% include head.html mode='documentation' %}
   {%- if site.mode == 'module' %}
   {% include head-local.html %}
+  {% include head-site.html %}
   {%- endif %}
-  <!--#include virtual="/includes/head-site.html" -->
 </head>
 
 <body>
@@ -29,7 +29,7 @@
     {%- endif %}
     {{ content }}
   </div>
-     <!--#include virtual="/includes/footer.html" -->
+    {% include footer.html %}
 </body>
 
 {%- if page.sidebar == 'embedded-modules' or site.mode == 'module' %}
