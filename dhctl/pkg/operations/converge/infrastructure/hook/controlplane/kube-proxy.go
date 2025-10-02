@@ -90,7 +90,7 @@ func (c *KubeProxyChecker) IsReady(ctx context.Context, nodeName string) (bool, 
 	if c.input != nil {
 		sshClient = sshclient.NewClient(session.NewSession(*c.input), c.privateKeys)
 	} else {
-		if sshClient, err = sshclient.NewClientFromFlagsWithHosts(); err != nil {
+		if sshClient, err = sshclient.NewClientFromFlags(); err != nil {
 			return false, err
 		}
 	}

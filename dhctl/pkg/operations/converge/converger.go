@@ -142,7 +142,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
+		sshClient, err := sshclient.NewInitClientFromFlags(false)
 		if err != nil {
 			return err
 		}
@@ -482,7 +482,7 @@ func (c *Converger) AutoConverge() error {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
+		sshClient, err := sshclient.NewInitClientFromFlags(false)
 		if err != nil {
 			return err
 		}

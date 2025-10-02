@@ -249,7 +249,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			sshClient, err := sshclient.NewClientFromFlagsWithHosts()
+			sshClient, err := sshclient.NewClientFromFlags()
 			if err != nil {
 				return err
 			}

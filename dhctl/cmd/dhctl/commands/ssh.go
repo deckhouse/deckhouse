@@ -162,7 +162,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}
@@ -208,7 +208,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts()
 		if err != nil {
 			return err
 		}

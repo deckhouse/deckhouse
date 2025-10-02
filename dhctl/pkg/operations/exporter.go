@@ -106,7 +106,7 @@ type ExporterParams struct {
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	sshClient, err := sshclient.NewInitClientFromFlags()
+	sshClient, err := sshclient.NewInitClientFromFlags(true)
 	if err != nil {
 		panic(err)
 	}

@@ -14,6 +14,8 @@
 package sshclient
 
 import (
+	"fmt"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
@@ -21,19 +23,20 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
-func NewInitClientFromFlags() (node.SSHClient, error) {
+func NewInitClientFromFlags(askPassword bool) (node.SSHClient, error) {
 	if len(app.SSHPrivateKeys) > 0 {
-		return clissh.NewInitClientFromFlags(true)
+		return clissh.NewInitClientFromFlags(askPassword)
 	}
 
-	return gossh.NewInitClientFromFlags(true)
+	return gossh.NewInitClientFromFlags(askPassword)
 }
-func NewClientFromFlagsWithHosts() (node.SSHClient, error) {
-	if len(app.SSHPrivateKeys) > 0 {
-		return clissh.NewClientFromFlagsWithHosts()
+
+func NewInitClientFromFlagsWithHosts() (node.SSHClient, error) {
+	if len(app.SSHHosts) == 0 {
+		return nil, fmt.Errorf("Hosts not passed")
 	}
 
-	return gossh.NewClientFromFlagsWithHosts()
+	return NewInitClientFromFlags(true)
 }
 
 func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) node.SSHClient {
@@ -49,4 +52,12 @@ func NewClientFromFlags() (node.SSHClient, error) {
 	}
 
 	return gossh.NewClientFromFlags()
+}
+
+func NewClientFromFlagsWithHosts() (node.SSHClient, error) {
+	if len(app.SSHHosts) == 0 {
+		return nil, fmt.Errorf("Hosts not passed")
+	}
+
+	return NewClientFromFlags()
 }
