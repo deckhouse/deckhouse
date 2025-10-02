@@ -137,6 +137,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		}
 		return processConnectionConfigFlags()
 	})
+	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+		if SSHLegacyMode && AskBecomePass {
+			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
+		}
+		return nil
+	})
 }
 
 func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
