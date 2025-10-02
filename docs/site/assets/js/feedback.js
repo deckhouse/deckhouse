@@ -172,8 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 reasons: jsonReasons
             };
 
-            let url = 'https://deckhouse.ru/wp-json/articles-feedback/v1/feedback';
-            // let url = '/wp-json/articles-feedback/v1/feedback';
+            let url = '/wp-json/articles-feedback/v1/feedback';
             url = url + '?user_ip=' + cookieUserData.cookieUserIp + '&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons;
             const response = await fetch(url, {
                 method: 'POST',
