@@ -706,24 +706,29 @@ You can check the current status of versions in the release channels at [release
    /home/user/d8-bundle
    ```
 
-   Examples using the new module filter syntax:
+   Example command to download `stronghold` module with semver `^` constraint from version 1.2.0:
 
    ```shell
-   # Download stronghold module with semver ^ constraint from version 1.2.0
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
    --include-module stronghold@1.2.0 \
    /home/user/d8-bundle
+   ```
 
-   # Download secrets-store-integration module with semver ~ constraint from version 1.1.0
+   Example command to download `secrets-store-integration` module with semver `~` constraint from version 1.1.0:
+
+   ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
    --include-module secrets-store-integration@~1.1.0 \
    /home/user/d8-bundle
+   ```
 
-   # Download exact version of stronghold module v1.2.5 and publish to all release channels
+   Example command to download exact version of `stronghold` module 1.2.5 and publish to all release channels:
+
+   ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \

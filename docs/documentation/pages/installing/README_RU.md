@@ -715,24 +715,29 @@ echo "$MYRESULTSTRING"
    /home/user/d8-bundle
    ```
 
-   Примеры команд с использованием нового синтаксиса фильтров модулей:
+   Пример команды для загрузки модуля `stronghold` с semver `^` ограничением от версии 1.2.0:
 
    ```shell
-   # Загрузка модуля stronghold с semver ^ ограничением от версии 1.2.0
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
    --include-module stronghold@1.2.0 \
    /home/user/d8-bundle
+   ```
 
-   # Загрузка модуля secrets-store-integration с semver ~ ограничением от версии 1.1.0
+   Пример команды для загрузки модуля `secrets-store-integration` с semver `~` ограничением от версии 1.1.0:
+
+   ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
    --include-module secrets-store-integration@~1.1.0 \
    /home/user/d8-bundle
+   ```
 
-   # Загрузка точной версии модуля stronghold v1.2.5 с публикацией во все каналы релизов
+   Пример команды для загрузки точной версии модуля `stronghold` 1.2.5 с публикацией во все каналы релизов:
+
+   ```shell
    d8 mirror pull \
    --license='<LICENSE_KEY>' \
    --no-platform --no-security-db \
