@@ -115,7 +115,7 @@ func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaCon
 }
 
 func ExecuteBashibleBundle(ctx context.Context, nodeInterface node.Interface, tmpDir string, commanderMode bool) error {
-	args := []string{"--local", "--max-retries", "3"}
+	args := []string{"--local", "--max-retries", "5"}
 	bundleCmd := nodeInterface.UploadScript("bashible.sh", args...)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
