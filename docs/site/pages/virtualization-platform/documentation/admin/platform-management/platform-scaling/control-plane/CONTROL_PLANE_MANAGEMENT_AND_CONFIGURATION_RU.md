@@ -20,7 +20,7 @@ Deckhouse Virtualization Platform (DVP) управляет компонента�
 
 - Настройка kubeconfig — DVP формирует актуальный конфигурационный файл (с правами `cluster-admin`), автоматическое продление и обновление, а также создание `symlink` для пользователя `root`.
 
-> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration).
+> Некоторые параметры, влияющие на работу control plane, берутся из ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
 
 ## Включение, отключение и настройка модуля
 

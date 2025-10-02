@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{{- $lang := .Language.Lang }}
+<html lang="{{- $lang }}">
+  <head>
+    <meta name="page:module:type" content="source">
+  {{- partial "head" . }}
+  {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
+  </head>
+  <body>
+    <div class="content">
+     {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+
+     {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     <div class="container">
+       {{- block "main" . }}
+       {{- end }}
+     </div>
+
+     </div>
+     {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+
+  <script type="text/javascript">
+    $(document).ready(function () {
+      let url;
+      let changes = false;
+
+      try {
+        url = new URL($('a.language-button').attr("href"));
+      } catch {
+        url = new URL(window.location);
+      }
+
+{{- if eq site.Params.mode "module" }}
+      if (window.location.pathname.match(/^\/ru\//)) {
+        url.pathname = window.location.pathname.replace(/^\/ru\//, '/en/');
+        changes = true;
+      } else if (window.location.pathname.match(/^\/en\//)) {
+        url.pathname = window.location.pathname.replace(/^\/en\//, '/ru/');
+        changes = true;
+      }
+{{- else }}
+      switch (window.location.host) {
+        case 'localhost':
+          url.host = 'ru.localhost';
+          url.protocol = 'http:';
+          changes = true;
+          break;
+        case 'ru.localhost':
+          url.host = 'localhost';
+          url.protocol = 'http:';
+          changes = true;
+          break;
+      }
+      if (window.location.host.match(/^deckhouse\.ru\..+\.flant.com$/)) {
+        url.host = window.location.host.replace('deckhouse.ru.', 'deckhouse.');
+        changes = true;
+      } else if (window.location.host.match(/^deckhouse\..+\.flant.com$/)) {
+        url.host = window.location.host.replace('deckhouse.', 'deckhouse.ru.');
+        changes = true;
+      }
+{{- end }}
+
+      if (url.pathname === '/') {
+        url.pathname = window.location.pathname;
+        changes = true;
+      }
+
+      if (changes) {
+        $('a.language-button').attr("href", url.href);
+      }
+
+    });
+
+  </script>
+{{ if .Store.Get "hasMermaid" }}
+  <script src="/assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
+{{ end }}
+  </body>
+<script type="text/javascript">
+  // Fix second level topnav menu for GS and guides sections.
+  let subUrls = ['/modules/'];
+  subUrls.forEach(function (element) {
+    if (window.location.pathname.toLowerCase().includes(element)) {
+      $('.header.header__product-menu ul.nav li, .header__content.container ul.nav li').each(function () {
+        const href = $(this).find('a').attr('href')?.toLowerCase() || '';
+        const isActive = href.includes(element);
+        $(this).toggleClass('active', isActive);
+      });
+    }
+  });
+</script>
+</html>

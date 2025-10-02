@@ -1,6 +1,0 @@
-type: object
-properties:
-  nodeSelector:
-    description: |
-      Указывает, на каких узлах могут использоваться ресурсы СХД. Работает так же, как параметр `spec.nodeSelector` в Kubernetes Pods.
-      Если этот параметр не указан, ресурсы HPE могут быть смонтированы на любом узле кластера с ОС `Linux`.

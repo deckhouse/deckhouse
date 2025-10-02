@@ -47,15 +47,46 @@ data:
       port_in_redirect off;
       absolute_redirect off;
 
-      map $http_accept_language $preferred_browser_lang {
-        default       "en";
-        "~^ru"        "ru";
-      }
+     # Validation map for lang from cookie - only accept "ru" or "en"
+     map $cookie_lang $valid_cookie_lang {
+         "~^(ru|en)$" $cookie_lang;  # Only accept exact "ru" or "en"
+         default "";                 # Treat any other value as invalid/empty
+     }
 
-      map $uri $lang {
+     # Extract the language from URI
+      map $uri $uri_lang {
         "~^/ru/"      "ru";
         "~^/en/"      "en";
         default       "en";
+      }
+
+      # Parse Accept-Language header to get browser preference
+      map $http_accept_language $preferred_browser_lang {
+        default       "en";
+        "~*ru"        "ru";
+      }
+
+      # Lang map 3 (final decision): Determine the final language priority: Cookie > URI > Browser > Default
+      map $valid_cookie_lang $redirection_lang {
+          # Priority 1: Use valid cookie if available
+          "ru" "ru";
+          "en" "en";
+
+          # If cookie is not set, use browser language
+          default $preferred_browser_lang;
+      }
+
+      # Handle case where lang still is not acceptable
+      #map $actual_lang $lang {
+      #    "ru" "ru";
+      #    "en" "en";
+      #    default "en";  # Fallback to "en" if still empty or invalid
+      #}
+
+      # Set cookie only if not present
+      map $cookie_lang $set_lang_cookie {
+          "" "lang=$uri_lang; Path=/; Max-Age=31536000";
+          default "";
       }
 
       server {
@@ -69,22 +100,14 @@ data:
         charset utf-8;
         access_log     /dev/stdout json_combined;
 
+        add_header Set-Cookie $set_lang_cookie;
 
-        location ~* ^(/|/documentation/.+|/products/kubernetes-platform/documentation/.+)$ {
-            # Use the browser language as the default language
-            set $cookie_lang $preferred_browser_lang;
-
-            # Get language from cookie if it is present
-            if ($http_cookie ~* "lang=([a-z]{2})") {
-                set $cookie_lang $1;
-            }
-
-            rewrite ^/$ /$cookie_lang/platform/$is_args$args redirect;
-            rewrite ^/modules/(.+)$ /$cookie_lang/modules/$1$is_args$args redirect;
-            rewrite ^/platform/(.+)$ /$cookie_lang/platform/$1$is_args$args redirect;
-            rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ /$cookie_lang/platform/$2$is_args$args redirect;
-            rewrite ^/(ru/|en/)?(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(.*)?$ /$cookie_lang/platform/$2$is_args$args redirect;
-        }
+        rewrite ^/$ /$redirection_lang/$is_args$args redirect;
+        rewrite ^/?!(ru/|en/|assets/|css/|js/|images/|presentations/|includes/|[a-z0-9]+\.[a-z0-9]+).*$ /$redirection_lang/$uri$is_args$args redirect;
+        rewrite ^/modules/.+$ /$redirection_lang$uri$is_args$args redirect;
+        rewrite ^/(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
+        rewrite ^/(ru/|en/)?(products/kubernetes-platform/)?documentation/v[\d]+[^\/]*/(?<path>.*)?$ /$redirection_lang/$path$is_args$args redirect;
+        rewrite ^/(ru/|en/)?platform/(?<path>.+)$ /$redirection_lang/$path$is_args$args redirect;
 
         location /link_test_report.txt {
             deny all;
@@ -101,13 +124,27 @@ data:
         }
 
         # Common assets
-        location ~* ^(/ru|/en)?/(platform/)?((presentations|assets|images|js|css)/.+)$ {
-            alias /app/platform/$3;
+        location ~* ^(/ru|/en)?/((assets|css|js|images|presentations)/.+)$ {
+            set $doc_path $2;
+            try_files /docs-dkp/$doc_path /embedded-modules/$doc_path =404;
         }
 
         # Includes
-        location ~* ^(/ru|/en)?/(platform/)?(includes/.+)$ {
-            alias /app/platform/$lang/$3;
+        location ~* ^/(ru|en)/includes/.+$ {
+            try_files /docs-dkp/$uri =404;
+        }
+        location ~* ^/includes/.+$ {
+            try_files /docs-dkp/$redirection_lang/$uri =404;
+        }
+
+        # Search index for modules from sources
+        location ~* ^/(?<lang>ru|en)/modules/search-external-modules-index.json$  {
+            try_files /search-external-modules-index/$lang/search.json =404;
+        }
+
+        # Search index for embedder modules
+        location ~* ^/(?<lang>ru|en)/modules/search-embedded-modules-index.json$  {
+            try_files /embedded-modules/$lang/search-embedded-modules-index.json =404;
         }
 
         # Modules from source index page
@@ -115,57 +152,42 @@ data:
             try_files /modules/$1/index.html =404;
         }
 
-        # Redirects for modules folders
-        location ~* ^/(ru|en)/modules/([^/.]+)$ {
-            set $platform_module_folder_path "platform/$1/modules/$2";
-            set $platform_module_url "/$1/platform/modules/$2/";
-            set $ext_module_folder_path "modules/$1/$2";
-            set $ext_module_url "/$1/modules/$2/";
+        location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>.*)$ {
+            set $embedded_module_path "embedded-modules/$lang/modules/$module";
+            set $embedded_module_url "/embedded-modules/$lang/modules/$module/$doc_path";
+            set $external_module_path "modules/$lang/$module";
+            set $external_module_url "/external-modules/$lang/$module/$doc_path";
 
-            if (-d $document_root/$platform_module_folder_path) {
-                return 301 $platform_module_url$is_args$args;
+            # Redirect to stable version for module from source TODO
+            #location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>(?!v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest).*)$ {
+            #rewrite ^ /$lang/modules/$module/stable/$doc_path redirect;
+            #}
+
+            if (-d $document_root/$external_module_path) {
+               # Use internal redirect to serve modules from source
+               rewrite ^ $external_module_url last;
             }
 
-            if (-d $document_root/$ext_module_folder_path) {
-                return 301 $ext_module_url$is_args$args;
+            if (-d $document_root/$embedded_module_path) {
+               # Use internal redirect to serve embedded modules
+               rewrite ^ $embedded_module_url last;
             }
         }
 
-        location ~* ^/(ru|en)/modules/([^/]+)/(.*)$ {
-            set $platform_module_folder_path "platform/$1/modules/$2";
-            set $platform_module_url "/$1/platform/modules/$2/$3";
-            set $lang "$1";
-            set $module "$2";
-            set $module_doc "$3";
-
-            if (-d $document_root/$platform_module_folder_path) {
-               return 301 $platform_module_url$is_args$args;
-            }
-
-            # Redirect to stable version for module from source (doc for such modules is always has URL /LANG/modules/NAME/stable/DOC_URL).
-            rewrite ^/(ru|en)/modules/([^/]+)/(?!(rock-solid|stable|early-access|beta|alpha))(.*)$ /$1/modules/$2/stable/$3$is_args$args redirect;
-
-            # Serve modules from sources
-            try_files /modules/$lang/$module/$module_doc /modules/$lang/$module/$module_doc/ =404;
-        }
-
-        # Internal modules
-        location ~* ^/(ru|en)/platform/(.*) {
-            try_files /platform/$1/$2 /platform/$1/$2/index.html =404;
-        }
-
-        location ~* ^/platform/(ru|en)/(.*) {
+        # Internal location for modules from source
+        location ~* ^/external-modules/(?<doc_path>.*) {
             internal;
-            try_files $uri $uri/ =404;
+            try_files /modules/$doc_path /modules/$doc_path/readme.html /modules/$doc_path/ =404;
         }
 
-        location ~* ^/modules/(ru|en)/([^0-9]+[^/]+)/(.*)$ {
+        # Internal location for embedded modules
+        location ~* ^/embedded-modules/(ru|en)/modules/.*$ {
             internal;
-            try_files $uri $uri/ =404;
+            try_files $uri $uri/index.html $uri/ =404;
         }
 
         location / {
-            try_files /platform$uri /platform$uri/ =404;
+            try_files /docs-dkp${uri}index.html /docs-dkp$uri /docs-dkp$uri/ =404;
         }
       }
     }

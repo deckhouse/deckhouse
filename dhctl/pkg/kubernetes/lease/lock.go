@@ -294,7 +294,7 @@ func now() *metav1.MicroTime {
 
 func getCurrentLockerError(lease *coordinationv1.Lease) error {
 	info, _ := LockInfo(lease)
-	return fmt.Errorf(info)
+	return fmt.Errorf("%s", info)
 }
 
 func LockInfo(lease *coordinationv1.Lease) (string, *LockUserInfo) {

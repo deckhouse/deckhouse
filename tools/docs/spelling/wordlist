@@ -539,6 +539,7 @@ GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
 GeeseFS
+GELF
 Gemfile
 geo
 geohash
@@ -581,7 +582,7 @@ Habr
 hardcoded
 HardPodAntiAffinity
 HashiCorp
-HashiСorp
+HashiCorp
 hasn
 hdd
 healthcheck
@@ -645,6 +646,7 @@ imageRepo
 imagesRepo
 img
 inbox
+indices
 InfrastructureAccident
 InfrastructureMaintenance
 ing
@@ -748,6 +750,7 @@ KeyValue
 Kiali
 KiB
 KLLRCODA
+Klog
 kruise
 Kruise
 kube
@@ -1230,7 +1233,9 @@ RSA
 rtt
 RTT
 ru
+rulefiles
 RuleGroup
+ruleSelector
 RWO
 RWX
 S3
@@ -1240,6 +1245,7 @@ SAML
 SANs
 SASL
 SBOM
+schedulable
 SchedulingDisabled
 schemas
 SCM
@@ -1387,7 +1393,10 @@ syscall
 syscalls
 sysctl
 sysctls
+syslog
+syslog
 Syslog
+SysLog
 Sysprep
 SysprepRef
 systemd
@@ -1483,6 +1492,7 @@ versioning
 VersionItems
 VerticalPodAutoscaler
 vg
+vhost
 VictoriaMetrics
 VictorOps
 VictorOpsConfig
@@ -1505,6 +1515,7 @@ VK
 VLAN
 vm
 VM
+vmagent
 VMs
 VMware
 VMX
@@ -1593,6 +1604,8 @@ YC
 YCloud
 yml
 YouTube
+zabbix
+Zabbix
 ZFS
 zipkin
 Zipkin
@@ -1689,6 +1702,7 @@ ZvirtInstanceClass
 биндятся
 блокирующе
 блокчейном
+буквенно
 бутстрап
 бутстрапа
 бутстрапится
@@ -1721,6 +1735,7 @@ ZvirtInstanceClass
 версионирования
 версионированной
 версионировать
+визуализированы
 Визуализировать
 визуализируются
 виртуализацией
@@ -1809,6 +1824,7 @@ ZvirtInstanceClass
 журналирования
 журналировать
 зависимостоей
+задействуются
 задеплоенное
 задеплоенных
 задеплоим
@@ -1902,6 +1918,7 @@ ZvirtInstanceClass
 контролллер
 контролллера
 конфиг
+конфига
 конфигами
 конфиге
 конфиги
@@ -2049,6 +2066,7 @@ ZvirtInstanceClass
 оверселлинг
 оверселлинга
 одностраничных
+однострочник
 одноузлового
 ООМ
 опциональные
@@ -2073,6 +2091,7 @@ ZvirtInstanceClass
 парсер
 парсера
 парсеров
+парсинг
 парсинга
 парсинге
 парсит
@@ -2086,6 +2105,7 @@ ZvirtInstanceClass
 патча
 патчем
 патчи
+патчится
 патчить
 Перебалансировке
 Перевыкат
@@ -2150,6 +2170,7 @@ ZvirtInstanceClass
 поддоменами
 поддомены
 подкомандой
+Подмонтирован
 подмонтированы
 подресурс
 подселять
@@ -2179,6 +2200,7 @@ ZvirtInstanceClass
 применятся
 примонтировав
 примонтированные
+примонтированный
 примонтированных
 примонтируем
 приоритизация
@@ -2341,7 +2363,7 @@ ZvirtInstanceClass
 сокету
 сокеты
 соотвествущая
-соответcтвующий
+соответствующий
 соответствующий
 Сохраняеем
 спецзаголовки

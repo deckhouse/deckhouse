@@ -53,7 +53,7 @@ Project image two storage types are supported:
 Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
 {% endalert %}
 
-A full description of the `VirtualImage` resource configuration settings can be found at [link](/products/virtualization-platform/reference/cr/virtualimage.html).
+A full description of the `VirtualImage` resource configuration settings can be found at [link](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Creating image from HTTP server
 

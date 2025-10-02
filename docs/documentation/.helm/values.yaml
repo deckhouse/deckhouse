@@ -15,4 +15,3 @@ resources:
     memory:
       _default: 100M
       web-production: 500M
-

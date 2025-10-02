@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -43,11 +42,6 @@ type InstanceScope struct {
 	SSHLegacyMode bool
 }
 
-const (
-	sshLegacySecretName      = "d8-caps-use-legacy-ssh"
-	sshLegacySecretNamespace = "d8-cloud-instance-manager"
-)
-
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
@@ -67,22 +61,11 @@ func NewInstanceScope(
 	}
 
 	scope.PatchHelper = patchHelper
-	secret := &v1.Secret{}
-	legasyMode := true
-	secretKey := k8sClient.ObjectKey{
-		Name:      sshLegacySecretName,
-		Namespace: sshLegacySecretNamespace,
-	}
-
-	err = scope.Client.Get(ctx, secretKey, secret)
-	if err != nil {
-		legasyMode = false
-	}
 
 	return &InstanceScope{
 		Scope:         scope,
 		Instance:      staticInstance,
-		SSHLegacyMode: legasyMode,
+		SSHLegacyMode: true,
 	}, nil
 }
 
@@ -105,6 +88,9 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	}
 
 	i.Credentials = credentials
+	if len(i.Credentials.Spec.PrivateSSHKey) == 0 {
+		i.SSHLegacyMode = false
+	}
 
 	return nil
 }

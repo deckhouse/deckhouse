@@ -1,0 +1,217 @@
+{
+  "admission-policy-engine": [
+    "security",
+    "policy"
+  ],
+  "basic-auth": [
+    "security"
+  ],
+  "cert-manager": [
+    "core"
+  ],
+  "chrony": [
+    "core"
+  ],
+  "cilium-hubble": [
+    "network",
+    "observability",
+    "web-interface"
+  ],
+  "cloud-provider-aws": [
+    "cloud"
+  ],
+  "cloud-provider-azure": [
+    "cloud"
+  ],
+  "cloud-provider-dvp": [
+    "virtualization"
+  ],
+  "cloud-provider-dynamix": [
+    "bare-metal"
+  ],
+  "cloud-provider-gcp": [
+    "cloud"
+  ],
+  "cloud-provider-huaweicloud": [
+    "cloud"
+  ],
+  "cloud-provider-openstack": [
+    "cloud"
+  ],
+  "cloud-provider-vcd": [
+    "cloud"
+  ],
+  "cloud-provider-vsphere": [
+    "cloud",
+    "bare-metal"
+  ],
+  "cloud-provider-yandex": [
+    "cloud"
+  ],
+  "cloud-provider-zvirt": [
+    "cloud",
+    "bare-metal"
+  ],
+  "cni-cilium": [
+    "network",
+    "security"
+  ],
+  "cni-flannel": [
+    "network"
+  ],
+  "cni-simple-bridge": [
+    "network"
+  ],
+  "control-plane-manager": [
+    "core"
+  ],
+  "dashboard": [
+    "observability",
+    "web-interface"
+  ],
+  "deckhouse": [
+    "core"
+  ],
+  "deckhouse-tools": [
+    "web-interface",
+    "tools"
+  ],
+  "descheduler": [
+    "scheduling"
+  ],
+  "documentation": [
+    "web-interface"
+  ],
+  "extended-monitoring": [
+    "observability"
+  ],
+  "ingress-nginx": [
+    "network",
+    "balancing"
+  ],
+  "istio": [
+    "network",
+    "security",
+    "balancing"
+  ],
+  "keepalived": [
+    "network",
+    "balancing",
+    "bare-metal"
+  ],
+  "kube-dns": [
+    "network"
+  ],
+  "kube-proxy": [
+    "core"
+  ],
+  "local-path-provisioner": [
+    "storage"
+  ],
+  "log-shipper": [
+    "observability",
+    "logging"
+  ],
+  "loki": [
+    "observability",
+    "logging"
+  ],
+  "metallb": [
+    "network",
+    "balancing",
+    "bare-metal"
+  ],
+  "monitoring-applications": [
+    "observability"
+  ],
+  "monitoring-custom": [
+    "observability"
+  ],
+  "monitoring-kubernetes": [
+    "observability"
+  ],
+  "monitoring-kubernetes-control-plane": [
+    "observability"
+  ],
+  "monitoring-ping": [
+    "observability",
+    "network"
+  ],
+  "multitenancy-manager": [
+    "multitenancy",
+    "security"
+  ],
+  "namespace-configurator": [
+    "core"
+  ],
+  "network-gateway": [
+    "network"
+  ],
+  "network-policy-engine": [
+    "network",
+    "security"
+  ],
+  "node-local-dns": [
+    "network"
+  ],
+  "node-manager": [
+    "core",
+    "scaling"
+  ],
+  "okmeter": [
+    "observability",
+    "proprietary"
+  ],
+  "openvpn": [
+    "network",
+    "security"
+  ],
+  "operator-prometheus": [
+    "observability"
+  ],
+  "operator-trivy": [
+    "security"
+  ],
+  "pod-reloader": [
+    "core"
+  ],
+  "prometheus": [
+    "observability"
+  ],
+  "prometheus-metrics-adapter": [
+    "observability"
+  ],
+  "prometheus-pushgateway": [
+    "observability"
+  ],
+  "registry": [
+    "core"
+  ],
+  "runtime-audit-engine": [
+    "security"
+  ],
+  "secret-copier": [
+    "core"
+  ],
+  "service-with-healthchecks": [
+    "network",
+    "balancing"
+  ],
+  "terraform-manager": [
+    "core",
+    "cloud",
+    "scaling"
+  ],
+  "upmeter": [
+    "observability"
+  ],
+  "user-authn": [
+    "security"
+  ],
+  "user-authz": [
+    "security"
+  ],
+  "vertical-pod-autoscaler": [
+    "scaling"
+  ]
+}

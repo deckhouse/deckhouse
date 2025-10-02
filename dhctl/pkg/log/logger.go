@@ -92,6 +92,7 @@ func initKlog(logger Logger) {
 	// (logs will out in standalone installer and dhctl-server)
 	flags := &flag.FlagSet{}
 	klog.InitFlags(flags)
+	klog.SetLogFilter(&LogSanitizer{}) // filter sensitive keywords
 	flags.Set("logtostderr", "false")
 	flags.Set("v", "10")
 
@@ -467,7 +468,7 @@ func (d *SimpleLogger) LogJSON(content []byte) {
 }
 
 func (d *SimpleLogger) Write(content []byte) (int, error) {
-	d.logger.Infof(string(content))
+	d.logger.Infof("%s", string(content))
 	return len(content), nil
 }
 
@@ -628,6 +629,12 @@ func GetSilentLogger() Logger {
 
 type SilentLogger struct {
 	t *TeeLogger
+}
+
+func NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: nil,
+	}
 }
 
 func (d *SilentLogger) ProcessLogger() ProcessLogger {

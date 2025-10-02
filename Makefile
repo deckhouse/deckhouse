@@ -243,7 +243,6 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
@@ -252,7 +251,6 @@ docs-dev: bin/werf ## Run containers with the documentation in the dev mode (all
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
 	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
@@ -483,7 +481,7 @@ controller-gen-generate: controller-gen
 
 ## Generate clientset
 .PHONY: client-gen-generate
-client-gen-generate: client-gen 
+client-gen-generate: client-gen
 	$(CLIENT_GEN) \
 		--clientset-name "versioned" \
 		--input-base "" \
@@ -494,7 +492,7 @@ client-gen-generate: client-gen
 
 ## Generate listers (required for informers)
 .PHONY: lister-gen-generate
-lister-gen-generate: lister-gen 
+lister-gen-generate: lister-gen
 	$(LISTER_GEN) \
 		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
 		--output-dir "./deckhouse-controller/pkg/client/listers" \
@@ -536,7 +534,7 @@ $(INFORMER_GEN): $(LOCALBIN)
 
 ## Download controller-gen locally if necessary.
 .PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) 
+controller-gen: $(CONTROLLER_GEN)
 $(CONTROLLER_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
 

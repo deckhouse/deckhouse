@@ -95,7 +95,7 @@ Any extra master nodes aren't necessary, and using 2 nodes (or any other even nu
 
 Related guides:
 
-- [Working with static nodes...](/products/kubernetes-platform/documentation/latest/modules/node-manager/#working-with-static-nodes)
+- [Working with static nodes...](/products/kubernetes-platform/documentation/v1/architecture/node.html#working-with-static-nodes)
 
 ### Frontend nodes
 
@@ -140,7 +140,7 @@ For high-load clusters, use two monitoring nodes equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components.
-The [NodeGroup](/products/kubernetes-platform/documentation/v1/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
+The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label.
 
 In high-load clusters, where many alerts are generated and many metrics are collected,
 we recommend allocating dedicated nodes for monitoring.
@@ -162,7 +162,7 @@ Use two system nodes.
 {% endalert %}
 
 System nodes are used to run Deckhouse modules.
-Their [NodeGroup](/products/kubernetes-platform/documentation/v1/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
+Their [NodeGroup](modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
 Allocate two system nodes.
 This way, Deckhouse modules will run on them without interfering with user applications in the cluster.
@@ -202,11 +202,11 @@ Related guides:
 ## Backups
 
 {% alert %}
-Set up [etcd backups](/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
+Set up [etcd backups](/products/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
 Write up a recovery plan.
 {% endalert %}
 
-We strongly recommend that you set up [etcd backups](/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
+We strongly recommend that you set up [etcd backups](/products/virtualization-platform/documentation/admin/backup-and-restore.html#backing-up-etcd).
 This will be your last chance to restore the cluster should things go awry.
 Keep these backups as *far away* from your cluster as possible.
 
