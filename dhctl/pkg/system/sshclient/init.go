@@ -31,12 +31,12 @@ func NewInitClientFromFlags(askPassword bool) (node.SSHClient, error) {
 	return gossh.NewInitClientFromFlags(askPassword)
 }
 
-func NewInitClientFromFlagsWithHosts() (node.SSHClient, error) {
+func NewInitClientFromFlagsWithHosts(askPassword bool) (node.SSHClient, error) {
 	if len(app.SSHHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
-	return NewInitClientFromFlags(true)
+	return NewInitClientFromFlags(askPassword)
 }
 
 func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) node.SSHClient {
