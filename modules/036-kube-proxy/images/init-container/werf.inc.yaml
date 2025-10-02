@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+cacheVersion: "2025-10-02"
 final: false
 git:
   - add: /{{ $.ModulePath }}/modules/036-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
