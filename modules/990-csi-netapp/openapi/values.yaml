@@ -1,0 +1,66 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      pythonVersions:
+        type: array
+        default: []
+        items:
+          type: string
+      customWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      tridentCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - aeskey
+          - cakey
+          - cacert
+          - serverkey
+          - servercert
+          - clientkey
+          - clientcert
+        properties:
+          aeskey:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          cakey:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          cacert:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          serverkey:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          servercert:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          clientkey:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          clientcert:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+  registry:
+    type: object
+    description: "System field, overwritten by Deckhouse. Don't use"

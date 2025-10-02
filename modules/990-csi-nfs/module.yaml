@@ -1,0 +1,11 @@
+name: csi-nfs
+stage: "General Availability"
+weight: 910
+descriptions:
+  en: "CSI NFS module"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+  modules:
+    snapshot-controller: ">= 0.0.0"
+namespace: "d8-csi-nfs"

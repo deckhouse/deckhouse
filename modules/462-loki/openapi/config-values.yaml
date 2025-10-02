@@ -38,7 +38,7 @@ properties:
 
       This parameter does not affect the log retention depth, since Loki only deletes old data when the disk is full.
 
-      If Loki deletes data that has not yet reached the specified retention period, you will receive a `LokiInsufficientDiskForRetention` alert. In this case, you should either increase the disk size or decrease the value of this parameter.
+      If Loki deletes data that has not yet reached the specified retention period, you will receive a `LokiRetentionPerionViolation` alert. In this case, you should either increase the disk size or decrease the value of this parameter.
     x-doc-default: 168
     default: 168
   storeSystemLogs:
@@ -310,8 +310,3 @@ properties:
                   - type: number
                 description: |
                   Configuring memory limits.
-  allowDeleteLogs:
-    type: boolean
-    default: false
-    description: |
-      Allow logs deletion using /loki/api/v1/delete endpoints.

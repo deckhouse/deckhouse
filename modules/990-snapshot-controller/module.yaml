@@ -1,0 +1,19 @@
+name: snapshot-controller
+stage: "General Availability"
+weight: 900
+subsystems:
+  - storage
+  - infrastructure
+namespace: d8-snapshot-controller
+descriptions:
+  en: |
+    This module enables snapshot support for compatible CSI-drivers in the Kubernetes cluster.
+requirements:
+  deckhouse: ">= 1.67"
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

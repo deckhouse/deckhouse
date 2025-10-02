@@ -1,0 +1,65 @@
+type: object
+required:
+  - commanderUrl
+properties:
+  commanderUrl:
+    type: string
+    description: |
+      The URL of the commander server.
+    x-examples:
+      - https://commander.dev/agent_api/00000000-0000-0000-0000-000000000000
+  insecureSkipVerify:
+    type: boolean
+    description: |
+      Skip verification of the certificate used by the commander server.
+
+      This parameter is ignored if the HTTP protocol is used to connect to the commander.
+    default: false
+    x-examples:
+      - true
+  ca:
+    type: string
+    description: |
+      The certificate authority public key of the certificate used by the commander server.
+
+      This parameter is ignored if the HTTP protocol is used to connect to the commander.
+    default: ""
+  logLevel:
+    type: string
+    description: |
+      Log level.
+    enum:
+      - error
+      - warn
+      - info
+      - debug
+      - trace
+    default: info
+  nodeSelector:
+    type: object
+    additionalProperties:
+      type: string
+    description: |
+      The same as in the Pods' `spec.nodeSelector` parameter in Kubernetes.
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).
+  tolerations:
+    type: array
+    description: |
+      The same as in the Pods' `spec.tolerations` parameter in Kubernetes;
+
+      If the parameter is omitted or `false`, it will be determined [automatically](../../../platform/#advanced-scheduling).
+    items:
+      type: object
+      properties:
+        effect:
+          type: string
+        key:
+          type: string
+        operator:
+          type: string
+        tolerationSeconds:
+          type: integer
+          format: int64
+        value:
+          type: string

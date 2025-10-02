@@ -1,0 +1,65 @@
+spec:
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс обеспечивает возможность «горячего» подключения диска к виртуальной машине (ВМ).
+          properties:
+            spec:
+              properties:
+                blockDeviceRef:
+                  description: |
+                    Блочное устройство, которое будет подключено к ВМ в качестве hot-plug-диска.
+                  properties:
+                    kind:
+                      description: |
+                        Тип блочного устройства. Возможные типы:
+                        * `VirtualDisk` — использовать `VirtualDisk` в качестве диска. Этот тип всегда монтируется в режиме RW.
+                        * `VirtualImage` — использовать `VirtualImage` в качестве диска. Этот тип всегда монтируется в режиме RO.
+                        * `ClusterVirtualImage` - использовать `ClusterVirtualImage` в качестве диска. Этот тип всегда монтируется в режиме RO.
+                    name:
+                      description: |
+                        Имя блочного устройства.
+                virtualMachineName:
+                  description: |
+                    Имя виртуальной машины, к которой подключен диск.
+            status:
+              properties:
+                conditions:
+                  description: |
+                    Последнее подтверждённое состояние данного ресурса.
+                  items:
+                    description: |
+                      Подробные сведения об одном аспекте текущего состояния этого API-ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: Время перехода условия из одного состояния в другое.
+                      message:
+                        description: Удобочитаемое сообщение с подробной информацией о последнем переходе.
+                      observedGeneration:
+                        description: |
+                          `.metadata.generation`, на основе которого было установлено условие.
+                          Например, если `.metadata.generation` в настоящее время имеет значение `12`, а `.status.conditions[x].observedgeneration` имеет значение `9`, то условие устарело.
+                      reason:
+                        description: Краткая причина последнего перехода состояния.
+                      status:
+                        description: |
+                          Статус условия. Возможные значения: `True`, `False`, `Unknown`.
+                      type:
+                        description: Тип условия.
+                phase:
+                  description: |
+                    Текущее состояние ресурса:
+
+                    * `Pending` — ресурс был создан и находится в очереди ожидания;
+                    * `InProgress` — диск находится в процессе подключения к ВМ;
+                    * `Attached` — диск подключен к ВМ;
+                    * `Failed` — при подключении диска произошла ошибка;
+                    * `Terminating` — ресурс находится в процессе удаления.
+                virtualMachineName:
+                  description: |
+                    Имя виртуальной машины, к которой подключен данный диск.
+                observedGeneration:
+                  description: |
+                    Поколение ресурса, которое в последний раз обрабатывалось контроллером.

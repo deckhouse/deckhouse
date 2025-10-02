@@ -98,6 +98,7 @@ git:
     - site
 {{ end }}
     - documentation
+    - site/_assets
   excludePaths:
     - '**/werf*.yaml'
     - '**/docker-compose.yml'

@@ -1,0 +1,11 @@
+name: secrets-store-integration
+namespace: d8-secrets-store-integration
+stage: General Availability
+weight: 930
+descriptions:
+  en: |
+    Secrets store integration module is designed
+    to add secrets from a Vault-compatible store to containers
+requirements:
+  bootstrapped: true
+  deckhouse:  ">= 1.68"

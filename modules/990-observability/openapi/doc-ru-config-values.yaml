@@ -1,0 +1,66 @@
+properties:
+  externalMetricsAccess:
+    description: |
+      Настройки доступа к метрикам извне кластера.
+    properties:
+      enabled:
+        description: |
+          Разрешить доступ к метрикам извне кластера.
+
+          Если параметр включен, модуль observability будет предоставлять метрики через Ingress для чтения.
+          Метрики можно читать с помощью Prometheus-совместимого API. Обязательно предоставление действительного токена ServiceAccount через заголовок `Authorization: Bearer`.
+          Подробнее см. в [документации](faq.html#как-предоставить-внешний-доступ-к-метрикам).
+      whitelistSourceRanges:
+        description: |
+          Список адресов в формате CIDR, которым разрешено проходить аутентификацию. Если параметр не указан, аутентификацию разрешено проходить без ограничения по IP-адресу.
+  https:
+    description: |
+      Тип сертификата, используемого для модуля observability.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `Disabled` — Модуль observability будет работать только по HTTP;
+          - `CertManager` — Модуль observability будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — Модуль observability будет работать по HTTPS, используя сертификат из namespace `d8-system`;
+          - `OnlyInURI` — Модуль observability будет работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для модуля observability.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для модуля observability.
+
+              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  grafana:
+    description: Настройки для Grafana.
+    properties:
+      customPlugins:
+        description: |
+          Список дополнительных [plug-in'ов](https://grafana.com/grafana/plugins) для Grafana.
+
+          Необходимо указать в качестве значения список имен плагинов из официального репозитория.
+
+          Пример добавления plug-in'ов для возможности указания clickhouse в качестве datasource и панели flow-chart:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - agenty-flowcharting-panel
+            - vertamedia-clickhouse-datasource
+          ```
+
+          Вы также можете устанавливать плагины из других источников передав ссылку на zip-архив плагина в формате `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel

@@ -563,8 +563,6 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
-
 Cluster A:
 
 ```yaml
@@ -669,8 +667,6 @@ d8 k get pods -A -o json | jq --arg revision "v1x19" \
 {% alert level="warning" %}Обновление до версии Istio 1.25 возможно только с версии 1.21.{% endalert %}
 
 ### Автоматическое обновление data plane Istio
-
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 

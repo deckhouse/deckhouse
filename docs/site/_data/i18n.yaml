@@ -17,7 +17,7 @@ ce: Community Edition
 be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
-ee: Enterprise Edition
+ee: Certified Security Edition
 kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
@@ -332,8 +332,8 @@ features:
     en: This feature requires an <a href="https://okmeter.io">Okmeter</a> license.
     ru: Для этого компонента требуется лицензия <a href="https://okmeter.io">Okmeter</a>.
   ee:
-    en: This feature is available in Enterprise Edition only.
-    ru: Доступно только в Enterprise Edition.
+    en: This feature is available in Deckhouse Platform Certified Security Edition.
+    ru: Доступно в Deckhouse Platform Certified Security Edition.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DKP license cost.
     ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.

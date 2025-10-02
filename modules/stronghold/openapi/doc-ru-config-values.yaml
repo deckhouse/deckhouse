@@ -1,0 +1,58 @@
+type: object
+properties:
+  management:
+    properties:
+      mode:
+        description: |
+          Automatic - включить автоинициализацию и автораспечатывание Stronghold. Токен root будет сохранен в Kubernetes-секрете `stronghold-keys`
+      administrators:
+        description: |
+          Список пользователей и групп, которые могут получить доступ к Stronghold как администраторы.
+          Другие аутентифицированные пользователи будут получать доступ к Stronghold с политикой по умолчанию.
+  inlet:
+    description: |
+      Способ реализации подключения к Stronghold.
+
+      Поддерживаются следующие типы инлетов:
+      * `Ingress` — доступ через контроллер ingress-nginx.
+  ingress:
+    properties:
+      class:
+        description: |
+          Класс Ingress-контроллера, используемый для Stronghold.
+
+          Необязательный параметр. По умолчанию используется глобальное значение `modules.ingressClass`.
+  enableUserInterface:
+    description: |
+      Включает пользовательский интерфейс.
+  enableAuditLog:
+    description: |
+      Включает журнал аудита (функция доступнна только в EE).
+  https:
+    description: |
+      Тип сертификата, используемого для Stronghold.
+
+      При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — Stronghold будет работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`;
+          - `CustomCertificate` — Stronghold будет работать по HTTPS, используя сертификат из namespace `d8-system`;
+      certManager:
+        properties:
+          clusterIssuerName:
+            description: |
+              ClusterIssuer, используемый для Stronghold.
+
+              Доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но вы можете определить свои.
+      customCertificate:
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для Stronghold.
+
+              Secret должен быть в формате [TLS](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  license:
+    description: |
+      Лицензионный ключ Stronghold EE. Оставьте пустым, чтобы использовать Stronghold CE

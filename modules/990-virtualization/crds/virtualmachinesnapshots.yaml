@@ -1,0 +1,215 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  labels:
+    heritage: deckhouse
+    module: virtualization
+  name: virtualmachinesnapshots.virtualization.deckhouse.io
+spec:
+  group: virtualization.deckhouse.io
+  names:
+    categories:
+      - all
+      - virtualization
+    kind: VirtualMachineSnapshot
+    listKind: VirtualMachineSnapshotList
+    plural: virtualmachinesnapshots
+    shortNames:
+      - vmsnapshot
+      - vmsnapshots
+    singular: virtualmachinesnapshot
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - description: VirtualMachineSnapshot phase.
+          jsonPath: .status.phase
+          name: Phase
+          type: string
+        - description: VirtualMachineSnapshot consistency.
+          jsonPath: .status.consistent
+          name: Consistent
+          type: boolean
+        - description: VirtualMachineSnapshot age.
+          jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description:
+            VirtualMachineSnapshot provides a resource for creating snapshots
+            of virtual machines.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                keepIPAddress:
+                  default: Always
+                  description: |-
+                    KeepIPAddress defines whether to keep the IP address of a virtual machine or not:
+
+                    * `Always`: When creating a snapshot, the virtual machine's IP address will be converted from `Auto` to `Static` and saved.
+                    * `Never`: When creating a snapshot, the virtual machine's IP address will not be converted.
+                  enum:
+                    - Always
+                    - Never
+                  type: string
+                requiredConsistency:
+                  default: true
+                  description: |-
+                    Create a snapshot of a virtual machine only if it is possible to freeze the machine through the agent.
+
+                    If set to `true`, the virtual machine snapshot will be created only in the following cases:
+                    - When the virtual machine is powered off.
+                    - When the virtual machine has an agent, and the freeze operation was successful.
+                  type: boolean
+                virtualMachineName:
+                  description: Name of the virtual machine to take a snapshot of.
+                  minLength: 1
+                  type: string
+              required:
+                - keepIPAddress
+                - requiredConsistency
+                - virtualMachineName
+              type: object
+            status:
+              properties:
+                conditions:
+                  description:
+                    The latest detailed observations of the VirtualMachineSnapshot
+                    resource.
+                  items:
+                    description:
+                      Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                consistent:
+                  description: Whether a virtual machine snapshot is consistent.
+                  type: boolean
+                observedGeneration:
+                  description: Resource generation last processed by the controller.
+                  format: int64
+                  type: integer
+                phase:
+                  description: |-
+                    VirtualMachineSnapshotPhase defines the current status of a resource:
+
+                    * `Pending`: The resource has been created and is on a waiting queue.
+                    * `InProgress`: A virtual machine snapshot is being created.
+                    * `Ready`: A snapshot has been created successfully, and now it's available to use.
+                    * `Failed`: An error occurred when creating a virtual machine snapshot.
+                    * `Terminating`: The resource is being deleted.
+                  enum:
+                    - Pending
+                    - InProgress
+                    - Ready
+                    - Failed
+                    - Terminating
+                  type: string
+                resources:
+                  description: List of snapshot resources.
+                  items:
+                    properties:
+                      apiVersion:
+                        description: API version of the resource.
+                        type: string
+                      kind:
+                        description: Kind of the resource.
+                        type: string
+                      name:
+                        description: Name of the resource.
+                        type: string
+                    type: object
+                  type: array
+                virtualDiskSnapshotNames:
+                  description:
+                    List of VirtualDiskSnapshot names for the snapshots taken
+                    from the virtual disks of the associated virtual machine.
+                  items:
+                    type: string
+                  type: array
+                virtualMachineSnapshotSecretName:
+                  description:
+                    Name of the underlying `Secret` created for virtual machine
+                    snapshotting.
+                  type: string
+              required:
+                - phase
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

@@ -1,0 +1,122 @@
+- name: kubernetes.replicated.storage_class
+  rules:
+    - alert: StorageClassNewCephClusterConnectionCreated
+      expr: sum(kube_storageclass_info{provisioner=~"cephfs.csi.ceph.com|rbd.csi.ceph.com"} * on(storageclass) group_left() kube_storageclass_labels{storage.deckhouse.io/migratedFromCephClusterAuthenticationWarning="true"}) > 0
+      for: 5m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: There are new Ceph cluster connections custom resources created for storage classes
+        description: |
+          During the migration process, several CephClusterAuthentication resources were discovered. For each of them, a separate CephClusterConnection resource was created.
+          This does not require any additional actions, but you may need to make changes to your IaC repositories.
+          If no changes are needed or you have already made the necessary adjustments, remove the label storage.deckhouse.io/migratedFromCephClusterAuthenticationWarning from the CephStorageClass resources:
+
+          `kubectl label storageclass --all storage.deckhouse.io/migratedFromCephClusterAuthenticationWarning-`
+
+    - alert: StorageClassCephClusterAuthenticationNotMigrated
+      expr: sum(kube_storageclass_info{provisioner=~"cephfs.csi.ceph.com|rbd.csi.ceph.com"} * on(storageclass) group_left() kube_storageclass_labels{storage.deckhouse.io/migratedFromCephClusterAuthentication="false"}) > 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: There are non-migrated Ceph cluster authentication custom resources for storage classes
+        description: |
+          Migration from CephClusterAuthentication resources in some Storage Classes failed. You can get a list of StorageClasses with issues using the following command:
+
+          `kubectl get storageclasses.storage.k8s.io -l storage.deckhouse.io/migratedFromCephClusterAuthentication=false`
+
+          Check the Deckhouse logs and address the existing issues.
+
+    - alert: StorageClassPossibleProblemWithAllowVolumeExpansion
+      expr: sum(kube_storageclass_info{provisioner=~"cephfs.csi.ceph.com|rbd.csi.ceph.com"} * on(storageclass) group_left() kube_storageclass_labels{storage.deckhouse.io/allow-volume-expansion="false"}) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: There are possible AllowVolumeExpansion misconfiguration for storage classes
+        description: |
+          During the migration from the ceph-csi module to csi-ceph, the AllowVolumeExpansion parameter was changed from false to true.
+
+          Currently, modifying this parameter is not allowed in the module.
+
+          If it is critical for you to use AllowVolumeExpansion set to false, please contact technical support.
+
+          You can inspect StorageClasses with this parameter using the following command:
+
+          `kubectl get storageclasses.storage.k8s.io -l storage.deckhouse.io/allow-volume-expansion=false`
+
+          If it't no matter for you, you can remove the label from the StorageClass resources:
+
+          `kubectl label storageclass --all storage.deckhouse.io/allow-volume-expansion-`
+
+    - alert: StorageClassPossibleProblemWithMountOptions
+      expr: sum(kube_storageclass_info{provisioner=~"cephfs.csi.ceph.com|rbd.csi.ceph.com"} * on(storageclass) group_left() kube_storageclass_labels{storage.deckhouse.io/mount-options!=""}) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: There are possible mount-options parameter misconfiguration for storage classes
+        description: |
+          During the migration from the ceph-csi module to csi-ceph, the mount-options parameter was modified.
+
+          (For RBD, discard is specified; for CephFS, no parameter is specified.)
+
+          Currently, specifying this parameter is not allowed in the module.
+
+          If it is critical for you to use mount-options settings different from those specified, please contact technical support.
+
+          You can inspect StorageClasses with this parameter using the following command:
+
+          `kubectl get storageclasses.storage.k8s.io -l storage.deckhouse.io/mount-options`
+
+          If it't no matter for you, you can remove the label from the StorageClass resources:
+
+          `kubectl label storageclass --all storage.deckhouse.io/mount-options-`
+
+    - alert: StorageClassPossibleProblemWithCephfsPool
+      expr: sum(kube_storageclass_info{provisioner=~"cephfs.csi.ceph.com|rbd.csi.ceph.com"} * on(storageclass) group_left() kube_storageclass_labels{storage.deckhouse.io/cephfs-pool!=""}) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__csi_ceph_storage_class_health: "D8CsiCephStorageClassProblem,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: There are possible cephfs-pool parameter misconfiguration for storage classes
+        description: |
+          During the migration from the ceph-csi module to csi-ceph, the cephfs-pool parameter was removed (its previous value was cephfs_data).
+
+          Currently, specifying this parameter is not allowed in the module.
+
+          If it is critical for you to explicitly specify cephfs-pool, please contact technical support.
+
+          You can inspect StorageClasses with this parameter using the following command:
+
+          `kubectl get storageclasses.storage.k8s.io -l storage.deckhouse.io/cephfs-pool`
+
+          If it't no matter for you, you can remove the label from the StorageClass resources:
+
+          `kubectl label storageclass --all storage.deckhouse.io/cephfs-pool-`

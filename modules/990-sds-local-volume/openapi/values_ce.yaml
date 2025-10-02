@@ -1,0 +1,53 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      featureSnapshotsEnabled:
+        type: boolean
+        default: false
+      pythonVersions:
+        type: array
+        default: []
+        items:
+          type: string
+      customWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          key:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+          ca:
+            type: string
+            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+      customSchedulerExtenderCert:
+         type: object
+         default: {}
+         x-required-for-helm:
+           - crt
+           - key
+           - ca
+         properties:
+           crt:
+             type: string
+             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+           key:
+             type: string
+             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+           ca:
+             type: string
+             x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+  registry:
+    type: object
+    description: "System field, overwritten by Deckhouse. Don't use"

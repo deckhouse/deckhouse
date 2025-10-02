@@ -1,0 +1,52 @@
+- name: kubernetes.internal.virtualization.virt_handler_state
+  rules:
+    - alert: D8InternalVirtualizationVirtHandlerPodIsNotReady
+      expr: min by (pod) (avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_ready{condition="true", namespace="d8-virtualization", pod=~"virt-handler-.*"}) != 1
+      for: 10m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_labels_as_annotations: "pod"
+        plk_create_group_if_not_exists__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The virt-handler Pod is NOT Ready.
+        description: |
+          The recommended course of action:
+          1. Retrieve details of the Deployment: `kubectl -n d8-virtualization describe daemonset virt-handler`
+          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-virtualization describe pod --field-selector=spec.nodeName={{ $labels.node }} -l kubevirt.internal.virtualization.deckhouse.io=virt-handler`
+
+    - alert: D8InternalVirtualizationVirtHandlerPodIsNotRunning
+      expr: absent(avg by(node,pod,namespace)(kube_pod_info{}) * on(pod, namespace) group_right(node) kube_pod_status_phase{namespace="d8-virtualization",phase="Running",pod=~"virt-handler-.*"})
+      for: 2m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: The virt-handler Pod is NOT Running.
+        description: |
+          The recommended course of action:
+          1. Retrieve details of the Deployment: `kubectl -n d8-virtualization describe daemonset virt-handler`
+          2. View the status of the Pod and try to figure out why it is not running: `kubectl -n d8-virtualization describe pod --field-selector=spec.nodeName={{ $labels.node }} -l kubevirt.internal.virtualization.deckhouse.io=virt-handler`
+
+    - alert: D8InternalVirtualizationVirtHandlerPodsAbsent
+      expr: absent(kube_pod_info{namespace="d8-virtualization", pod=~"virt-handler-.+"})
+      for: 10m
+      labels:
+        severity_level: "6"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_internal_virtualization_virt_handler_health: "D8InternalVirtualizationVirtHandlerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: "No virt-handler pods found in d8-virtualization namespace"
+        description: |
+          There are currently no virt-handler pods (matching 'virt-handler-.*') in the 'd8-virtualization' namespace.
+          Make sure that kvm is enabled on the cluster nodes intended for virtualization and at least one node is assigned to start virtual machines.

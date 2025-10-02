@@ -1,0 +1,7 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс, сохраняющий состояние lvmvolumegroups ресурсов для совершения миграции kind с LvmVolumeGroup до LVMVolumeGroup.

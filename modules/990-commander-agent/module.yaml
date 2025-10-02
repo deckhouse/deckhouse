@@ -1,0 +1,12 @@
+name: commander-agent
+weight: 911
+stage: General Availability
+tags: []
+namespace: d8-commander-agent
+descriptions:
+  en: |
+    Agent for communication with Deckhouse Commander
+disable:
+  message: |
+    Disabling this module manually is not recommended if this cluster is under control of a Commander instance.
+  confirmation: true

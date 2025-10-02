@@ -1,0 +1,510 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.4
+  labels:
+    backup.deckhouse.io/cluster-config: "true"
+    heritage: deckhouse
+    module: virtualization
+  name: virtualmachineclasses.virtualization.deckhouse.io
+spec:
+  group: virtualization.deckhouse.io
+  names:
+    categories:
+      - virtualization
+    kind: VirtualMachineClass
+    listKind: VirtualMachineClassList
+    plural: virtualmachineclasses
+    shortNames:
+      - vmc
+      - vmcs
+      - vmclass
+      - vmclasses
+    singular: virtualmachineclass
+  scope: Cluster
+  versions:
+    - additionalPrinterColumns:
+        - description: VirtualMachineClass phase.
+          jsonPath: .status.phase
+          name: Phase
+          type: string
+        - description: Time of resource creation.
+          jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |-
+            VirtualMachineClass resource describes CPU requirements, node placement, and sizing policy for VM resources.
+            A resource cannot be deleted as long as it is used in one of the VMs.
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                cpu:
+                  description: CPU defines the requirements for the virtual CPU model.
+                  properties:
+                    discovery:
+                      description:
+                        Create a CPU model based on intersecting CPU features
+                        for selected nodes.
+                      properties:
+                        nodeSelector:
+                          description:
+                            A selection of nodes to be used as the basis
+                            for creating a universal CPU model.
+                          properties:
+                            matchExpressions:
+                              description:
+                                matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description:
+                                      key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                  - key
+                                  - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      type: object
+                    features:
+                      description: |-
+                        List of CPU instructions (features) required when type=Features.
+                        For more information about CPU features, refer to the [libvirt docs](https://libvirt.org/formatdomain.html#cpu-model-and-topology).
+                      example:
+                        - mmx
+                        - vmx
+                        - sse2
+                      items:
+                        type: string
+                      minItems: 1
+                      type: array
+                    model:
+                      description:
+                        CPU model name. For more information about CPU models
+                        and topology, refer to the [libvirt docs](https://libvirt.org/formatdomain.html#cpu-model-and-topology).
+                      example: IvyBridge
+                      minLength: 1
+                      type: string
+                    type:
+                      description: |-
+                        CPUType defines the CPU type, the following options are supported:
+                        * `Host`: Uses a virtual CPU with an instruction set closely matching the platform node's CPU.
+                        This provides high performance and functionality, as well as compatibility with "live" migration for nodes with similar processor types.
+                        For example, VM migration between nodes with Intel and AMD processors will not work.
+                        This is also true for different CPU generations, as their instruction set is different.
+                        * `HostPassthrough`: Uses the platform node's physical CPU directly, without any modifications.
+                        When using this class, the guest VM can only be transferred to a target node with a CPU exactly matching the source node's CPU.
+                        * `Discovery`: Create a virtual CPU based on instruction sets of physical CPUs for a selected set of nodes.
+                        * `Model`: CPU model. A CPU model is a named and previously defined set of supported CPU instructions.
+                        * `Features`: A required set of supported instructions for the CPU.
+                      enum:
+                        - Host
+                        - HostPassthrough
+                        - Discovery
+                        - Model
+                        - Features
+                      type: string
+                  required:
+                    - type
+                  type: object
+                  x-kubernetes-validations:
+                    - message: .spec.cpu is immutable
+                      rule: self == oldSelf
+                    - message:
+                        HostPassthrough and Host cannot have model, features or
+                        discovery
+                      rule:
+                        "self.type == 'HostPassthrough' || self.type == 'Host'
+                        ? !has(self.model) && !has(self.features) && !has(self.discovery)
+                        : true"
+                    - message: Discovery cannot have model or features
+                      rule:
+                        "self.type == 'Discovery' ? !has(self.model) && !has(self.features)
+                        : true"
+                    - message: Model requires model and cannot have features or discovery
+                      rule:
+                        "self.type == 'Model' ? has(self.model) && !has(self.features)
+                        && !has(self.discovery) : true"
+                    - message: Features requires features and cannot have model or discovery
+                      rule:
+                        "self.type == 'Features' ? has(self.features) && !has(self.model)
+                        && !has(self.discovery): true"
+                nodeSelector:
+                  description: NodeSelector defines the nodes targeted for VM scheduling.
+                  properties:
+                    matchExpressions:
+                      description: A list of node selector requirements by node's labels.
+                      items:
+                        description: |-
+                          A node selector requirement is a selector that contains values, a key, and an operator
+                          that relates the key and values.
+                        properties:
+                          key:
+                            description: The label key that the selector applies to.
+                            type: string
+                          operator:
+                            description: |-
+                              Represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                            type: string
+                          values:
+                            description: |-
+                              An array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. If the operator is Gt or Lt, the values
+                              array must have a single element, which will be interpreted as an integer.
+                              This array is replaced during a strategic merge patch.
+                            items:
+                              type: string
+                            type: array
+                        required:
+                          - key
+                          - operator
+                        type: object
+                      type: array
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        A map of {key,value} pairs.
+                        A single {key,value} pair in the matchLabels map is equivalent to an element of matchExpressions whose key field is "key", operator is "In", and the value array contains only "value".
+                        The requirements are ANDed.
+                      type: object
+                  type: object
+                sizingPolicies:
+                  items:
+                    description: |-
+                      SizingPolicy defines a policy for allocating computational resources to VMs.
+                      It is represented as a list.
+                      The cores.min - cores.max ranges for different elements of the list must not overlap.
+                    properties:
+                      coreFractions:
+                        description: Allowed values of the `coreFraction` parameter.
+                        items:
+                          maximum: 100
+                          minimum: 1
+                          type: integer
+                        type: array
+                      cores:
+                        description:
+                          The policy applies for a specified range of the
+                          number of CPU cores.
+                        properties:
+                          max:
+                            description: Maximum number of CPU cores.
+                            example: 10
+                            maximum: 1024
+                            type: integer
+                          min:
+                            description: Minimum number of CPU cores.
+                            example: 1
+                            minimum: 1
+                            type: integer
+                          step:
+                            description:
+                              Discretization step for the CPU core number.
+                              For example, the combination of `min=2`, `max=10`, and
+                              `step=4` allows to set the number of virtual machine CPU
+                              cores to 2, 6, or 10.
+                            example: 1
+                            minimum: 1
+                            type: integer
+                        required:
+                          - max
+                          - min
+                        type: object
+                        x-kubernetes-validations:
+                          - message: The maximum must be greater than the minimum
+                            rule: self.max > self.min
+                          - message: The maximum must be greater than the step
+                            rule: "has(self.step) ? self.max > self.step : true"
+                      dedicatedCores:
+                        description: Allowed values of the `dedicatedCores` parameter.
+                        items:
+                          type: boolean
+                        type: array
+                      memory:
+                        description: Memory sizing policy.
+                        properties:
+                          max:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            description: Maximum amount of memory.
+                            example: 8Gi
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          min:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            description: Minimum amount of memory.
+                            example: 1Gi
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          perCore:
+                            description: Amount of memory per CPU core.
+                            properties:
+                              max:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                description: Maximum amount of memory.
+                                example: 8Gi
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              min:
+                                anyOf:
+                                  - type: integer
+                                  - type: string
+                                description: Minimum amount of memory.
+                                example: 1Gi
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                            type: object
+                          step:
+                            anyOf:
+                              - type: integer
+                              - type: string
+                            description:
+                              Memory size discretization step. For example,
+                              the combination of `min=2Gi, `max=4Gi` and `step=1Gi`
+                              allows to set the virtual machine memory size to 2Gi,
+                              3Gi, or 4Gi.
+                            example: 512Mi
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                        type: object
+                    type: object
+                  type: array
+                tolerations:
+                  description: |-
+                    Tolerations are the same as `spec.tolerations` for [pods](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/).
+                    These tolerations will be merged with the tolerations specified in the VirtualMachine resource. VirtualMachine tolerations have a higher priority.
+                  items:
+                    description: |-
+                      The pod this Toleration is attached to tolerates any taint that matches
+                      the triple <key,value,effect> using the matching operator <operator>.
+                    properties:
+                      effect:
+                        description: |-
+                          Effect indicates the taint effect to match. Empty means match all taint effects.
+                          When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                        type: string
+                      key:
+                        description: |-
+                          Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                          If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                        type: string
+                      operator:
+                        description: |-
+                          Operator represents a key's relationship to the value.
+                          Valid operators are Exists and Equal. Defaults to Equal.
+                          Exists is equivalent to wildcard for value, so that a pod can
+                          tolerate all taints of a particular category.
+                        type: string
+                      tolerationSeconds:
+                        description: |-
+                          TolerationSeconds represents the period of time the toleration (which must be
+                          of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                          it is not set, which means tolerate the taint forever (do not evict). Zero and
+                          negative values will be treated as 0 (evict immediately) by the system.
+                        format: int64
+                        type: integer
+                      value:
+                        description: |-
+                          Value is the taint value the toleration matches to.
+                          If the operator is Exists, the value should be empty, otherwise just a regular string.
+                        type: string
+                    type: object
+                  type: array
+              required:
+                - cpu
+              type: object
+            status:
+              properties:
+                availableNodes:
+                  description: |-
+                    List of nodes that support this CPU model.
+                    It is not displayed for the following types: `Host`, `HostPassthrough`.
+                  example:
+                    - node-1
+                    - node-2
+                  items:
+                    type: string
+                  type: array
+                conditions:
+                  description:
+                    The latest detailed observations of the VirtualMachineClass
+                    resource.
+                  items:
+                    description:
+                      Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                cpuFeatures:
+                  description: |-
+                    CpuFeatures
+                    Information on CPU features supported by this model.
+                    Shown only for `Features` or `Discovery` types.
+                  properties:
+                    enabled:
+                      description: " List of CPU features for this model."
+                      example:
+                        - mmx
+                        - vmx
+                        - sse2
+                      items:
+                        type: string
+                      type: array
+                    notEnabledCommon:
+                      description:
+                        List of unused processor features additionally available
+                        for a given group of nodes.
+                      example:
+                        - ssse3
+                        - vme
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                maxAllocatableResources:
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description:
+                    Maximum amount of free CPU and memory resources observed
+                    among all available nodes.
+                  example:
+                    - 'maxAllocatableResources: {"cpu": 1, "memory": "10Gi"}'
+                  type: object
+                observedGeneration:
+                  description: Resource generation last processed by the controller.
+                  format: int64
+                  type: integer
+                phase:
+                  description: |-
+                    VirtualMachineClassPhase defines the current resource status:
+                    * `Pending`: The resource is not ready and waits until the suitable nodes supporting the required CPU model are available.
+                    * `Ready`: The resource is ready and available for use.
+                    * `Terminating`: The resource is terminating.
+                  enum:
+                    - Pending
+                    - Ready
+                    - Terminating
+                  type: string
+              required:
+                - phase
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

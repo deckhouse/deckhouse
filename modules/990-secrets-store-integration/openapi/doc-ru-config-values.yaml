@@ -1,0 +1,26 @@
+type: object
+properties:
+  connectionConfiguration:
+    description: |
+      Режим подключения к хранилищу секретов:
+      DiscoverLocalStronghold для автоматического подключения к внутреннему Stronghold кластера.
+      Manual для использования внешнего Stronghold или Vault.
+  connection:
+    type: object
+    properties:
+      url:
+        type: string
+        description: |
+          Адрес Stronghold или Vault, к которому будет подключаться интеграция для извлечения секретов
+      caCert:
+        type: string
+        description: |
+          CA-сертификат в формате PEM, для подключения к Stronghold или Vault
+          Если не указывать, будут использоваться системные ca-certificates
+      authPath:
+        type: string
+        description: |
+          Путь в Stronghold/Vault для подключения авторизации kubernetes
+      namespace:
+        description: |
+          Пространство имен в Vault-совместимом хранилище

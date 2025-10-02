@@ -1,0 +1,11 @@
+name: csi-yadro-tatlin-unified
+stage: "General Availability"
+weight: 920
+descriptions:
+  en: "CSI Yadro Tatlin Unified module"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+  modules:
+    snapshot-controller: ">= 0.0.0"
+namespace: d8-csi-yadro-tatlin-unified

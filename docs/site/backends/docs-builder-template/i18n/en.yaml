@@ -47,7 +47,7 @@ moduleLinkTitleSETUP: Setup
 moduleLinkTitleFAQ: FAQ
 moduleLinkTitleCRD: Custom Resources
 moduleLinkTitleCR: Custom Resources
-module_is_available_in_ee_only: The module is available only in Deckhouse Enterprise Edition.
+module_is_available_in_ee_only: The module is available in Deckhouse Platform Certified Security Edition.
 module_available_editions_prefix: Available in
 module_available_with_limitations_prefix: Available with limitations in
 module_available_without_limitations_prefix: Available without limitations in

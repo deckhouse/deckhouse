@@ -1,0 +1,9 @@
+name: sds-node-configurator
+stage: "General Availability"
+weight: 900
+descriptions:
+  en: "sds node configurator module"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+namespace: "d8-sds-node-configurator"

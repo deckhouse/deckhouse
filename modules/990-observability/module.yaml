@@ -1,0 +1,21 @@
+name: observability
+weight: 920
+description: |
+  Cluster observability module
+descriptions:
+  en: Cluster observability module
+namespace: d8-observability
+stage: Experimental
+requirements:
+  deckhouse: ">= 1.69"
+  modules:
+    console: ">= 1.39.2"
+    operator-prometheus: ">= 0.0.0"
+    prometheus: ">= 0.0.0"
+accessibility:
+  editions:
+    _default:
+      available: true
+      enabledInBundles:
+        - Default
+        - Managed

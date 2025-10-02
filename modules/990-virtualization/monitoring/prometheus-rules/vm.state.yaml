@@ -1,0 +1,39 @@
+- name: virtualization.vm.state
+  rules:
+    - alert: D8VirtualizationVirtualMachineFirmwareOutOfDate
+      expr: d8_virtualization_virtualmachine_firmware_up_to_date == 0
+      labels:
+        severity_level: "8"
+        tier: application
+      for: 60m
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_virtualization_virtualmachine_state: "D8VirtualizationVirtualMachineState,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_virtualization_virtualmachine_state: "D8VirtualizationVirtualMachineState,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: VirtualMachine have out of date firmware.
+        description: |
+          The virtual machine `{{ $labels.name }}` in the namespace `{{ $labels.namespace }}` has outdated firmware.
+          Outdated firmware may expose the VM to security vulnerabilities or compatibility issues after virtualization updates.
+          ### Why This Happens
+          Firmware (QEMU/KVM) used by a VM is tied to the version provided by the node where the VM is running. After updating the virtualization module (via Deckhouse), new firmware becomes available, but already running VMs continue using the old version until restarted or migrated.
+          ### Diagnosis
+          Inspect the VM status to confirm the firmware issue:
+          ```bash
+          d8 k -n {{ $labels.namespace }} get vm {{ $labels.name }} -o jsonpath="{.status}"
+          ```
+          ### Recommended Actions
+          To apply the latest firmware:
+          1. **Schedule maintenance** and inform relevant teams/users.
+          2. Choose one of the following options depending on your setup:
+            #### Option A: Evict the VM to another node (live migration):
+            ```bash
+            d8 v -n {{ $labels.namespace }} evict {{ $labels.name }}
+            ```
+            > Requires live migration support.
+            #### Option B: Reboot the VM:
+            ```bash
+            d8 v -n {{ $labels.namespace }} restart {{ $labels.name }}
+            ```
+            > Simpler, but causes downtime unless guest OS supports ACPI shutdown/restart.
+          3. After migration or reboot, the VM will use the updated firmware automatically.

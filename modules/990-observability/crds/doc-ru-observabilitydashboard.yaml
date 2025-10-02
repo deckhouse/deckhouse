@@ -1,0 +1,22 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+              Определяет дашборд, который отображается в интерфейсе Deckhouse Console.
+
+              Ресурс является namespace-ориентированным, что позволяет командам
+              создавать и управлять своими дашбордами независимо в пределах своего пространства имён.
+
+              Поддерживаются аннотации:
+              - `metadata.deckhouse.io/category` — задаёт папку (категорию) в интерфейсе;
+              - `metadata.deckhouse.io/title` — задаёт отображаемое название дашборда;
+                Если не указано, будет использовано `title` из JSON-манифеста.
+          properties:
+            spec:
+              properties:
+                definition:
+                  description: |
+                    JSON-манифест дашборда.
+                    JSON должно быть передано в виде строки, совместимым с форматом Grafana dashboard.

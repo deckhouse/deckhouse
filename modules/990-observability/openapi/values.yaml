@@ -1,0 +1,67 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      namespace:
+        type: string
+        default: d8-observability
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      prometheus:
+        type: object
+        default: {}
+        properties:
+          mainHAEnabled:
+            type: boolean
+            default: false
+          longtermEnabled:
+            type: boolean
+            default: false
+          longtermScrapeInterval:
+            type: string
+            default: 5m
+      certs:
+        type: object
+        default: {}
+        properties:
+          labelProxy:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+              key:
+                type: string
+              ca:
+                type: string
+          webhook:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+              key:
+                type: string
+              ca:
+                type: string
+          grafana:
+            type: object
+            default: {}
+            properties:
+              crt:
+                type: string
+              key:
+                type: string
+              ca:
+                type: string

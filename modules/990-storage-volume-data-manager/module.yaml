@@ -1,0 +1,9 @@
+name: storage-volume-data-manager
+stage: "General Availability"
+weight: 920
+descriptions:
+  en: "Data exporter module"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+namespace: d8-storage-volume-data-manager

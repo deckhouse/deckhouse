@@ -1,0 +1,53 @@
+x-config-version: 2
+type: object
+properties:
+  logLevel:
+    type: string
+    enum: ["Debug", "Info", "Error"]
+    x-examples: ["Info"]
+    description: Webhook logging level.
+    default: "Info"
+  tlsSkipVerify:
+    type: boolean
+    default: false
+    description: Allow image references to be fetched without TLS.
+  cacheEviction:
+    type: integer
+    default: 60
+    description: Cache eviction duration in seconds.
+  defaultRegistry:
+    type: string
+    x-examples: ["index.docker.io"]
+    description: Default registry. If the value is left empty, the default value will be used index.docker.io.
+    default: ""
+  additionalRegistryCA:
+    type: array
+    description: |
+      List of registry CA certificates for connecting to private registries.
+
+      If it is necessary to specify a certificate with an intermediate certificate, the chain is specified without additional line breaks.
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+        ca:
+          type: string
+    x-doc-examples:
+    - |
+      ```yaml
+      additionalRegistryCA:
+        - name: example CA
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
+        - name: CA with intermediate CA
+          ca: |
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
+            -----BEGIN CERTIFICATE-----
+            .................
+            -----END CERTIFICATE-----
+      ```

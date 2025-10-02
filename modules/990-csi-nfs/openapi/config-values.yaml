@@ -1,0 +1,45 @@
+type: object
+properties:
+  logLevel:
+    type: string
+    enum:
+      - ERROR
+      - WARN
+      - INFO
+      - DEBUG
+      - TRACE
+    description: Module log level.
+    default: DEBUG
+  v3support:
+    type: boolean
+    default: false
+    description: NFS version v3 support. After enabling this setting, rpcbind package will be installed on nodes. When this setting is disabled, it will NOT be removed from the nodes.
+  tlsParameters:
+    type: object
+    default: {}
+    x-doc-d8editions: [se, se-plus, ee, fe]
+    description: |
+      **This feature is available in SE, SE+, EE, and FE.**
+
+      RPC-with-TLS (RFC 9289) configuration.
+    properties:
+      ca:
+        type: string
+        description: Root certificate in PEM format, encoded in Base64, which can be used to verify the NFS server certificate.
+        pattern: "^[A-Za-z0-9+/]*={0,2}$"
+        x-dmt-default: "Um9vdCBjZXJ0aWZpY2F0ZS8pbiBQRU0gZm9ybWF0Cg=="
+      mtls:
+        type: object
+        default: {}
+        description: Configuration of the client certificate verification mode by the NFS server.
+        properties:
+          clientCert:
+            type: string
+            description: Client certificate in PEM format, encoded in Base64.
+            pattern: "^[A-Za-z0-9+/]*={0,2}$"
+            x-dmt-default: "Um9vdCBjZXJ0aWZpY2F0ZS8pbiBQRU0gZm9ybWF0Cg=="
+          clientKey:
+            type: string
+            description: Client key in PEM format, encoded in Base64.
+            pattern: "^[A-Za-z0-9+/]*={0,2}$"
+            x-dmt-default: "Um9vdCBjZXJ0aWZpY2F0ZS8pbiBQRU0gZm9ybWF0Cg=="

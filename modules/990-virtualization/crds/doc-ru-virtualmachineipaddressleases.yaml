@@ -1,0 +1,55 @@
+spec:
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс, определяющий факт выданной аренды для ресурса VirtualMachineIPAddress.
+          properties:
+            spec:
+              description: |
+                Параметры конфигурации ресурса VirtualMachineIPAddressLease.
+              properties:
+                virtualMachineIPAddressRef:
+                  description: |
+                    Ссылка на существующие ресурсы VirtualMachineIPAddress.
+                  properties:
+                    name:
+                      description: |
+                        Имя ссылающегося ресурса VirtualMachineIPAddress.
+                    namespace:
+                      description: |
+                        Пространство имён ссылающегося ресурса VirtualMachineIPAddress.
+            status:
+              properties:
+                conditions:
+                  description: |
+                    Последнее подтверждённое состояние данного ресурса.
+                  items:
+                    description: |
+                      Подробные сведения об одном аспекте текущего состояния данного API-ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: Время перехода условия из одного состояния в другое.
+                      message:
+                        description: Удобочитаемое сообщение с подробной информацией о последнем переходе.
+                      observedGeneration:
+                        description: |
+                          `.metadata.generation`, на основе которого было установлено условие.
+                          Например, если `.metadata.generation` в настоящее время имеет значение `12`, а `.status.conditions[x].observedgeneration` имеет значение `9`, то условие устарело.
+                      reason:
+                        description: Краткая причина последнего перехода состояния.
+                      status:
+                        description: |
+                          Статус условия. Возможные значения: `True`, `False`, `Unknown`.
+                      type:
+                        description: Тип условия.
+                phase:
+                  description: |
+                    Представляет текущее состояние ресурса VirtualMachineIPAddressLease.
+
+                    * `Bound` - ресурс VirtualMachineIPAddressLease привязан к ресурсу VirtualMachineIPAddress;
+                    * `Released` - ресурс VirtualMachineIPAddressLease доступен для связки с новым ресурсом VirtualMachineIPAddress.
+                observedGeneration:
+                  description: |
+                    Поколение ресурса, которое в последний раз обрабатывалось контроллером.

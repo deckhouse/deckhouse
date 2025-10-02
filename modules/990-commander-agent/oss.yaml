@@ -1,0 +1,4 @@
+- name: Deckhouse HELM lib
+  link: https://github.com/deckhouse/lib-helm
+  description: Helm utils template definitions for Deckhouse modules.
+  license: Apache License, version 2.0

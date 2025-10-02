@@ -1,0 +1,113 @@
+- name: kubernetes.snapshot_controller.state
+  rules:
+    - alert: D8SnapshotControllerTargetDown
+      expr: max by (job) (up{job="snapshot-controller"} == 0)
+      for: 1m
+      labels:
+        severity_level: "8"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_ignore_labels: "job"
+        summary: Prometheus cannot scrape the snapshot-controller metrics.
+        description: |
+          Prometheus is unable to scrape metrics from the `snapshot-controller`.
+
+          Troubleshooting options:
+
+          - Check the Pod's status:
+
+            ```shell
+            kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
+            ```
+
+          - Check the Pod's logs:
+
+            ```shell
+            kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
+            ```
+
+    - alert: D8SnapshotControllerTargetAbsent
+      expr: absent(up{job="snapshot-controller"}) == 1
+      for: 15m
+      labels:
+        severity_level: "8"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_ignore_labels: "job"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Snapshot-controller target is missing in Prometheus.
+        description: |
+          Troubleshooting options:
+
+          - Check the Pod's status:
+
+            ```shell
+            kubectl -n d8-snapshot-controller get pod -l app=snapshot-controller
+            ```
+
+          - Check the Pod's logs:
+
+            ```shell
+            kubectl -n d8-snapshot-controller logs -l app=snapshot-controller -c snapshot-controller
+            ```
+
+    - alert: D8SnapshotControllerPodIsNotReady
+      expr: min by (pod) (kube_pod_status_ready{condition="true", namespace="d8-snapshot-controller", pod=~"snapshot-controller-.*"}) != 1
+      for: 10m
+      labels:
+        severity_level: "8"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Snapshot-controller Pod is NOT Ready.
+        description: |
+          Troubleshooting steps:
+
+          1. Examine the Deployment's details:
+
+             ```shell
+             kubectl -n d8-snapshot-controller describe deployment snapshot-controller
+             ```
+
+          2. Check the Pod's status to determine the cause why it is not running:
+
+             ```shell
+             kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
+             ```
+
+    - alert: D8SnapshotControllerPodIsNotRunning
+      expr: absent(kube_pod_status_phase{namespace="d8-snapshot-controller",phase="Running",pod=~"snapshot-controller-.*"})
+      for: 2m
+      labels:
+        severity_level: "8"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: "markdown"
+        plk_create_group_if_not_exists__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_snapshot_controller_health: "D8SnapshotControllerHealth,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: Snapshot-controller Pod is NOT Running.
+        description: |
+          Troubleshooting steps:
+
+          1. Examine the Deployment's details:
+
+             ```shell
+             kubectl -n d8-snapshot-controller describe deployment snapshot-controller
+             ```
+
+          2. Check the Pod's status to determine the cause why it is not running:
+
+             ```shell
+             kubectl -n d8-snapshot-controller describe pod -l app=snapshot-controller
+             ```

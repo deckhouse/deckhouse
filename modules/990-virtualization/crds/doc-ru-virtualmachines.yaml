@@ -1,0 +1,747 @@
+spec:
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ).
+            На запущенной ВМ изменённые параметры применятся только после перезагрузки, за исключением следующих параметров, которые применяются «на лету»:
+
+            - `.metadata.labels`;
+            - `.metadata.annotations`;
+            - `.spec.disruptions.restartApprovalMode`.
+            - `.spec.runPolicy`.
+          properties:
+            spec:
+              properties:
+                affinity:
+                  description: |
+                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity), как и в параметре подов `spec.affinity` в Kubernetes.
+
+                    Настройка `affinity` полностью аналогична приведённой выше документации, за исключением названий некоторых параметров. Используются следующие аналоги:
+
+                    * `podAffinity` -> `virtualMachineAndPodAffinity`;
+                    * `podAffinityTerm` -> `virtualMachineAndPodAffinityTerm`.
+                  properties:
+                    nodeAffinity:
+                      description: Описывает affinity-правила узлов для ВМ.
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              preference:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          properties:
+                            nodeSelectorTerms:
+                              description: ""
+                              items:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchFields:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                    virtualMachineAndPodAffinity:
+                      description: Описывает affinity-правила подов и ВМ.
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              virtualMachineAndPodAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                              items:
+                                                description: ""
+                                      matchLabels:
+                                        additionalProperties:
+                                          description: ""
+                                        description: ""
+                                  matchLabelKeys:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  mismatchLabelKeys:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                              items:
+                                                description: ""
+                                      matchLabels:
+                                        additionalProperties:
+                                          description: ""
+                                        description: ""
+                                  namespaces:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  topologyKey:
+                                    description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchLabels:
+                                    additionalProperties:
+                                      description: ""
+                                    description: ""
+                              matchLabelKeys:
+                                description: ""
+                                items:
+                                  description: ""
+                              mismatchLabelKeys:
+                                description: ""
+                                items:
+                                  description: ""
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchLabels:
+                                    additionalProperties:
+                                      description: ""
+                                    description: ""
+                              namespaces:
+                                description: ""
+                                items:
+                                  description: ""
+                              topologyKey:
+                                description: ""
+                    virtualMachineAndPodAntiAffinity:
+                      description: Описывает anti-affinity-правила пода и ВМ.
+                      properties:
+                        preferredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              virtualMachineAndPodAffinityTerm:
+                                description: ""
+                                properties:
+                                  labelSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                              items:
+                                                description: ""
+                                      matchLabels:
+                                        additionalProperties:
+                                          description: ""
+                                        description: ""
+                                  matchLabelKeys:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  mismatchLabelKeys:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  namespaceSelector:
+                                    description: ""
+                                    properties:
+                                      matchExpressions:
+                                        description: ""
+                                        items:
+                                          description: ""
+                                          properties:
+                                            key:
+                                              description: ""
+                                            operator:
+                                              description: ""
+                                            values:
+                                              description: ""
+                                              items:
+                                                description: ""
+                                      matchLabels:
+                                        additionalProperties:
+                                          description: ""
+                                        description: ""
+                                  namespaces:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                  topologyKey:
+                                    description: ""
+                              weight:
+                                description: ""
+                        requiredDuringSchedulingIgnoredDuringExecution:
+                          description: ""
+                          items:
+                            description: ""
+                            properties:
+                              labelSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchLabels:
+                                    additionalProperties:
+                                      description: ""
+                                    description: ""
+                              matchLabelKeys:
+                                description: ""
+                                items:
+                                  description: ""
+                              mismatchLabelKeys:
+                                description: ""
+                                items:
+                                  description: ""
+                              namespaceSelector:
+                                description: ""
+                                properties:
+                                  matchExpressions:
+                                    description: ""
+                                    items:
+                                      description: ""
+                                      properties:
+                                        key:
+                                          description: ""
+                                        operator:
+                                          description: ""
+                                        values:
+                                          description: ""
+                                          items:
+                                            description: ""
+                                  matchLabels:
+                                    additionalProperties:
+                                      description: ""
+                                    description: ""
+                              namespaces:
+                                description: ""
+                                items:
+                                  description: ""
+                              topologyKey:
+                                description: ""
+                blockDeviceRefs:
+                  description: |
+                    Список блочных устройств, которые могут быть смонтированы в ВМ.
+
+                    Порядок загрузки определяется порядком в списке.
+                  items:
+                    description: |
+                      Ссылка на блочное устройство.
+                    properties:
+                      kind:
+                        description: |
+                          Поддерживаемые типы устройств:
+
+                          * `ClusterVirtualImage` — использовать ClusterVirtualImage в качестве диска. Данный тип всегда монтируется в режиме для чтения (`ReadOnly`). ISO-образ будет смонтирован как устройство CD-ROM;
+                          * `VirtualImage` — использовать VirtualImage в качестве диска. Данный тип всегда монтируется в режиме для чтения (`ReadOnly`). ISO-образ будет смонтирован как устройство CD-ROM;
+                          * `VirtualDisk` — использовать VirtualDisk в качестве диска. Данный тип всегда монтируется в режиме для чтения и записи (`ReadWrite`).
+                      name:
+                        description: |
+                          Имя ресурса заданного типа.
+                bootloader:
+                  description: |
+                    Загрузчик для ВМ:
+
+                    * `BIOS` — использовать BIOS;
+                    * `EFI` — использовать Unified Extensible Firmware (EFI/UEFI);
+                    * `EFIWithSecureBoot` — использовать UEFI/EFI с поддержкой функции Secure Boot.
+                virtualMachineClassName:
+                  description: |
+                    Имя ресурса VirtualMachineClass, который описывает требования к виртуальному CPU и памяти, а также политику размещения ресурсов.
+                cpu:
+                  description: |
+                    Блок определяет настройки CPU для виртуальной машины.
+                  properties:
+                    coreFraction:
+                      description: |
+                        Гарантированная доля времени CPU, которая будет выделена ВМ. Указывается в процентах. Диапазон доступных значений задаётся параметром `sizePolicy` в используемом VirtualMachineClass; если он не указан, используйте значения в диапазоне 1–100%.
+                    cores:
+                      description: |
+                        Количество ядер.
+                disruptions:
+                  description: |
+                    Описание политики применения изменений, требующих перезагрузки ВМ.
+
+                    Для применения изменений в некоторых параметрах конфигурации ВМ потребуется перезагрузка. Данная политика позволяет задать поведение, определяющее как ВМ будет реагировать на такие изменения.
+                  properties:
+                    restartApprovalMode:
+                      description: |
+                        Режим одобрения для изменений, требующих перезагрузки ВМ:
+
+                        - `Manual` — изменения не будут применены до тех пор, пока пользователь самостоятельно не осуществит перезагрузку ВМ;
+                        - `Automatic` — ВМ будет перезагружена сразу после сохранения параметров, требующих перезагрузки.
+                enableParavirtualization:
+                  description: |
+                    Использовать шину `virtio` для подключения виртуальных устройств ВМ. Чтобы отключить `virtio` для ВМ, установите значение `False`.
+
+                    > **Внимание**: Для использования режима паравиртуализации некоторые ОС требуют установки соответствующих драйверов.
+                memory:
+                  description: |
+                    Блок настроек оперативной памяти для виртуальной машины.
+                  properties:
+                    size:
+                      description: |
+                        Объём оперативной памяти.
+                nodeSelector:
+                  description: |
+                    [По аналогии](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes//) c параметром подов `spec.nodeSelector` в Kubernetes.
+                osType:
+                  description: |
+                    Параметр позволяет выбрать тип используемой ОС, для которой будет создана ВМ с оптимальным набором необходимых виртуальных устройств и параметров.
+
+                    * `Windows` — для ОС семейства Microsoft Windows;
+                    * `Generic` — для других типов ОС.
+                priorityClassName:
+                  description: |
+                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) с параметром подов `spec.priorityClassName` в Kubernetes.
+                provisioning:
+                  description: |
+                    Блок описания сценария начальной инициализации ВМ.
+                  properties:
+                    sysprepRef:
+                      description: |
+                        Ссылка на существующий ресурс со сценарием автоматизации Windows.
+
+                        Структура ресурса для типа `SysprepRef`:
+
+                        * `.data.autounattend.xml`;
+                        * `.data.unattend.xml`.
+                      properties:
+                        kind:
+                          description: |
+                            Тип ресурса.
+                            Используйте секрет с типом `provisioning.virtualization.deckhouse.io/sysprep`.
+                        name:
+                          description: |
+                            Имя ресурса со сценарием автоматизации.
+                    type:
+                      description: |
+                        Поддерживаемые параметры для использования сценария инициализации:
+
+                        * `UserData` — использовать сценарий `cloud-init` в секции `.spec.provisioning.UserData`;
+                        * `UserDataRef` — использовать сценарий `cloud-init`, который находится в другом ресурсе;
+                        * `SysprepRef` — использовать сценарий автоматизации установки Windows, который находится в другом ресурсе.
+                    userData:
+                      description: |
+                        Текст сценария `cloud-init`.
+
+                        [Дополнительная информация о `cloud-init` и примеры конфигурации](https://cloudinit.readthedocs.io/en/latest/reference/examples.html).
+                    userDataRef:
+                      description: |
+                        Ссылка на существующий ресурс со сценарием `cloud-init`.
+
+                        Структура ресурса для типа `userDataRef`:
+
+                        * `.data.userData`.
+                      properties:
+                        kind:
+                          description: |
+                            Тип ресурса.
+                        name:
+                          description: |
+                            Имя ресурса со сценарием `cloud-init`.
+                runPolicy:
+                  description: |
+                    Параметр определяет политику запуска ВМ:
+
+                    * `AlwaysOn` — после создания ВМ всегда находится в работающем состоянии, даже в случае отключения средствами ОС;
+                    * `AlwaysOff` — после создания ВМ всегда находится в выключенном состоянии;
+                    * `Manual` — после создания ВМ выключается. Включение и выключение ВМ контролируется через API-сервисы или средства ОС;
+                    * `AlwaysOnUnlessStoppedManually` — после создания ВМ всегда находится в работающем состоянии. ВМ можно выключить средствами ОС или воспользоваться командой для утилиты d8: `d8 v stop <vm_name>`.
+                terminationGracePeriodSeconds:
+                  description: |
+                    Период ожидания после подачи сигнала о прекращении работы ВМ (`SIGTERM`), по истечении которого работа ВМ принудительно завершается.
+                tolerations:
+                  description: |
+                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) с параметром подов `spec.tolerations` в Kubernetes.
+                  items:
+                    description: ""
+                    properties:
+                      effect:
+                        description: ""
+                      key:
+                        description: ""
+                      operator:
+                        description: ""
+                      tolerationSeconds:
+                        description: ""
+                      value:
+                        description: ""
+                topologySpreadConstraints:
+                  description: |
+                    [По аналогии](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/) с параметром подов `spec.topologySpreadConstraints` в Kubernetes.
+                  items:
+                    properties:
+                      labelSelector:
+                        description: ""
+                        properties:
+                          matchExpressions:
+                            description: ""
+                            items:
+                              properties:
+                                key:
+                                  description: ""
+                                operator:
+                                  description: ""
+                                values:
+                                  description: ""
+                                  items:
+                                    description: ""
+                          matchLabels:
+                            additionalProperties:
+                              description: ""
+                            description: ""
+                      maxSkew:
+                        description: ""
+                      topologyKey:
+                        description: ""
+                      whenUnsatisfiable:
+                        description: ""
+                virtualMachineIPAddressName:
+                  description: |
+                    Имя для связанного ресурса virtualMachineIPAddress.
+
+                    Указывается при необходимости использования ранее созданного IP-адреса ВМ.
+
+                    Если не указано явно, по умолчанию для ВМ создаётся ресурс virtualMachineIPAddress с именем, аналогичным ресурсу ВМ (`.metadata.name`).
+                liveMigrationPolicy:
+                  type: string
+                  description: |
+                    Политика для процесса живой миграции:
+
+                    * `AlwaysSafe` — использовать безопасный вариант для автоматических миграций и для ручного запуска. Не включать замедление CPU.
+                    * `PreferSafe` — использовать безопасный вариант для автоматических миграций. Замедление CPU можно включить вручную с помощью поля `force=true` в VMOP.
+                    * `AlwaysForced` — включать замедление CPU для автоматических миграций и для ручного запуска. Нельзя отключить замедление CPU.
+                    * `PreferForced` — включать замедление CPU для автоматических миграций. Замедление CPU можно выключить вручную с помощью поля `force=false` в VMOP.
+                networks:
+                  description: |
+                    Список конфигураций сетевых интерфейсов.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип сетевого интерфейса.
+
+                          Возможные типы:
+                          * `Main` - основной сетевой интерфейс, который всегда присутствует (сеть по умолчанию);
+                          * `Network` - подсеть на уровне пространства имен;
+                          * `ClusterNetwork` — подсеть на уровне кластера.
+                      name:
+                        description: |
+                          Имя сетевого интерфейса.
+            status:
+              properties:
+                blockDeviceRefs:
+                  description: |
+                    Список блочных устройств, подключенных к ВМ.
+                  items:
+                    properties:
+                      attached:
+                        type: boolean
+                        description: |
+                          Блочное устройство подключено к виртуальной машине.
+                      hotplugged:
+                        description: |
+                          Блочное устройство подключено к виртуальной машине «на лету».
+                      kind:
+                        description: |
+                          Тип блочного устройства.
+                      name:
+                        description: |
+                          Имя существующего ресурса.
+                      size:
+                        description: |
+                          Размер подключённого блочного устройства.
+                      target:
+                        description: |
+                          Название подключённого блочного устройства.
+                      virtualMachineBlockDeviceAttachmentName:
+                        description: |
+                          Имя ресурса VirtualMachineBlockDeviceAttachment, который описывает подключение диска к виртуальной машине «на лету».
+                conditions:
+                  description: |
+                    Состояние во время работы виртуальной машины.
+                  items:
+                    description: |
+                      Подробные сведения об одном аспекте текущего состояния данного API-ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: Время перехода условия из одного состояния в другое.
+                      message:
+                        description: Удобочитаемое сообщение с подробной информацией о последнем переходе.
+                      observedGeneration:
+                        description: |
+                          `.metadata.generation`, на основе которого было установлено условие.
+                          Например, если `.metadata.generation` в настоящее время имеет значение `12`, а `.status.conditions[x].observedgeneration` имеет значение `9`, то условие устарело.
+                      reason:
+                        description: Краткая причина последнего перехода состояния.
+                      status:
+                        description: |
+                          Статус условия. Возможные значения: `True`, `False`, `Unknown`.
+                      type:
+                        description: Тип условия.
+                guestOSInfo:
+                  description: |
+                    Информация о гостевой ОС, полученная от агента (QEMU Guest Agent). Агент должен быть предварительно установлен.
+
+                    Подробнее об агенте: https://www.qemu.org/docs/master/interop/qemu-ga.html.
+                ipAddress:
+                  description: |
+                    IP-адрес ВМ.
+                nodeName:
+                  description: |
+                    Имя узла, на котором в данный момент запущена ВМ.
+                phase:
+                  description: |
+                    Текущее состояние виртуальной машины:
+
+                    * `Scheduling` — ВМ запланирована для размещения на узлах кластера;
+                    * `Pending` — осуществляется процесс запуска ВМ;
+                    * `Running` — ВМ запущена;
+                    * `Degraded` — в процессе запуска или работы ВМ произошла ошибка;
+                    * `Terminating` — в настоящий момент ВМ завершает свою работу;
+                    * `Stopped` — ВМ остановлена.
+                restartAwaitingChanges:
+                  description: |
+                    Список изменений в конфигурации, требующих перезапуска ВМ.
+                virtualMachineIPAddressName:
+                  description: |
+                    Имя virtualMachineIPAddressName, содержащее IP-адрес виртуальной машины.
+                migrationState:
+                  description: |
+                    Информация о миграции виртуальной машины.
+                  properties:
+                    startTimestamp:
+                      description: Время начала миграции.
+                    endTimestamp:
+                      description: Время окончания миграции.
+                    target:
+                      description: ""
+                      properties:
+                        node:
+                          description: Имя узла, на который в данный момент выполняется миграция виртуальной машины.
+                        pod:
+                          description: Имя модуля, в который в данный момент выполняется миграция виртуальной машины.
+                    source:
+                      description: ""
+                      properties:
+                        node:
+                          description: Имя узла, на котором в данный момент запущена ВМ.
+                        pod:
+                          description: Имя пода, на котором в данный момент запущена виртуальная машина.
+                    result:
+                      description: |
+                        Результат миграции: `Succeeded` или `Failed`.
+                stats:
+                  description: Статистика по виртуальной машине.
+                  properties:
+                    phasesTransitions:
+                      description: История по фазам.
+                      items:
+                        properties:
+                          phase:
+                            description: Фаза виртуальной машины.
+                          timestamp:
+                            description: Время перехода в данную фазу.
+                    launchTimeDuration:
+                      description: Информация о запуске.
+                      properties:
+                        waitingForDependencies:
+                          description: Время ожидания зависимых ресурсов. `pending` -> `starting`.
+                        virtualMachineStarting:
+                          description: Время ожидания запуска виртуальной машины. `starting` -> `running`.
+                        guestOSAgentStarting:
+                          description: Время ожидания запуска guestOsAgent. `running` -> `running` с guestOSAgent."
+                observedGeneration:
+                  description: |
+                    Поколение ресурса, которое в последний раз обрабатывалось контроллером.
+                virtualMachinePods:
+                  description: |
+                    Список подов виртуальной машины.
+                  items:
+                    properties:
+                      active:
+                        description: Отметка активного пода.
+                      name:
+                        description: Имя пода.
+                versions:
+                  description: Версии гипервизора.
+                  properties:
+                    libvirt:
+                      description: Версия libvirt.
+                      type: string
+                    qemu:
+                      description: Версия qemu.
+                      type: string
+                  type: object
+                resources:
+                  description: Статистика использования ресурсов.
+                  properties:
+                    cpu:
+                      description: Статистика использования ресурсов CPU.
+                      properties:
+                        coreFraction:
+                          description: Текущее значение `coreFraction`.
+                        cores:
+                          description: Текущее количество ядер виртуальной машины.
+                        requestedCores:
+                          description: Количество ядер CPU, запрошенных виртуальной машиной.
+                        runtimeOverhead:
+                          description: Накладные расходы на CPU во время выполнения.
+                        topology:
+                          description: Информация о текущей топологии CPU.
+                          properties:
+                            coresPerSocket:
+                              description: Количество ядер CPU на один сокет виртуальной машины.
+                            sockets:
+                              description: Текущее количество сокетов виртуальной машины.
+                    memory:
+                      description: Статистика использования ресурсов памяти.
+                      properties:
+                        runtimeOverhead:
+                          description: Накладные расходы на память во время выполнения.
+                        size:
+                          description: Текущий размер памяти виртуальной машины.
+                networks:
+                  description: |
+                    Список сетевых интерфейсов, подключенных к ВМ.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип сетевого интерфейса.
+                      name:
+                        description: |
+                          Имя сетевого интерфейса.
+                      macAddress:
+                        type: string
+                          MAC-адрес сетевого интерфейса.

@@ -1,0 +1,55 @@
+type: object
+required: ["connectionConfiguration"]
+oneOf:
+- properties:
+    connectionConfiguration:
+      type: string
+      enum: ["DiscoverLocalStronghold"]
+    connection:
+      not:
+        required:
+          - url
+- properties:
+    connectionConfiguration:
+      type: string
+      enum: ["Manual"]
+    connection:
+      required:
+        - url
+  required:
+  - connection
+properties:
+  connectionConfiguration:
+    type: string
+    description: |
+      DiscoverLocalStronghold for use internal cluster stronghold.
+      Manual for use external stronghold or vault.
+    enum: ["Manual", "DiscoverLocalStronghold"]
+    default: "DiscoverLocalStronghold"
+  connection:
+    type: object
+    properties:
+      url:
+        type: string
+        pattern: ^https://[\.:0-9a-zA-Z-]+$
+        description: |
+          Stronghold or Vault address
+        x-examples: [ "https://vault.mycompany.com:8200" ]
+      caCert:
+        type: string
+        pattern: "^-----BEGIN CERTIFICATE-----\n(.+\n){5}"
+        description: |
+          Stronghold or Vault CA in PEM format
+      authPath:
+        type: string
+        pattern: ^[A-Za-z0-9-_]+$
+        default: kubernetes
+        description: |
+          Kubernetes Mount Path
+        x-examples: [ "kubernetes", "kube-dev" ]
+      namespace:
+        type: string
+        pattern: ^[A-Za-z0-9-_\/]+$
+        description: |
+          Namespace in Vault-compatible store
+        x-examples: [ "ns1", "ns1/sub-ns2" ]

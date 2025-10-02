@@ -1,0 +1,53 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tridentstorageclasses.trident.netapp.io
+spec:
+  conversion:
+    strategy: None
+  group: trident.netapp.io
+  names:
+    categories:
+    - trident
+    - trident-internal
+    kind: TridentStorageClass
+    listKind: TridentStorageClassList
+    plural: tridentstorageclasses
+    shortNames:
+    - tsc
+    - tstorageclass
+    singular: tridentstorageclass
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    categories:
+    - trident
+    - trident-internal
+    kind: TridentStorageClass
+    listKind: TridentStorageClassList
+    plural: tridentstorageclasses
+    shortNames:
+    - tsc
+    - tstorageclass
+    singular: tridentstorageclass
+  conditions:
+  - lastTransitionTime: "2025-04-24T09:20:25Z"
+    message: no conflicts found
+    reason: NoConflicts
+    status: "True"
+    type: NamesAccepted
+  - lastTransitionTime: "2025-04-24T09:20:25Z"
+    message: the initial names have been accepted
+    reason: InitialNamesAccepted
+    status: "True"
+    type: Established
+  storedVersions:
+  - v1

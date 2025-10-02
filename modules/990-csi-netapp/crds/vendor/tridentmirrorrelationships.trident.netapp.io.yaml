@@ -1,0 +1,133 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tridentmirrorrelationships.trident.netapp.io
+spec:
+  conversion:
+    strategy: None
+  group: trident.netapp.io
+  names:
+    categories:
+    - trident
+    - trident-internal
+    - trident-external
+    kind: TridentMirrorRelationship
+    listKind: TridentMirrorRelationshipList
+    plural: tridentmirrorrelationships
+    shortNames:
+    - tmr
+    - tmrelationship
+    - tmirrorrelationship
+    singular: tridentmirrorrelationship
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The desired mirror state
+      jsonPath: .spec.state
+      name: Desired State
+      type: string
+    - description: Local PVCs for the mirror
+      jsonPath: .spec.volumeMappings[*].localPVCName
+      name: Local PVC
+      type: string
+    - description: Status
+      jsonPath: .status.conditions[*].state
+      name: Actual state
+      type: string
+    - description: Status message
+      jsonPath: .status.conditions[*].message
+      name: Message
+      type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              replicationPolicy:
+                type: string
+              replicationSchedule:
+                type: string
+              state:
+                enum:
+                - ""
+                - promoted
+                - established
+                - reestablished
+                type: string
+              volumeMappings:
+                items:
+                  properties:
+                    localPVCName:
+                      type: string
+                    promotedSnapshotHandle:
+                      type: string
+                    remoteVolumeHandle:
+                      type: string
+                  required:
+                  - localPVCName
+                  type: object
+                maxItems: 1
+                minItems: 1
+                type: array
+            required:
+            - volumeMappings
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      type: string
+                    localPVCName:
+                      type: string
+                    localVolumeHandle:
+                      type: string
+                    message:
+                      type: string
+                    observedGeneration:
+                      type: integer
+                    remoteVolumeHandle:
+                      type: string
+                    replicationPolicy:
+                      type: string
+                    replicationSchedule:
+                      type: string
+                    state:
+                      type: string
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    categories:
+    - trident
+    - trident-internal
+    - trident-external
+    kind: TridentMirrorRelationship
+    listKind: TridentMirrorRelationshipList
+    plural: tridentmirrorrelationships
+    shortNames:
+    - tmr
+    - tmrelationship
+    - tmirrorrelationship
+    singular: tridentmirrorrelationship
+  conditions:
+  - lastTransitionTime: "2025-04-24T09:20:29Z"
+    message: no conflicts found
+    reason: NoConflicts
+    status: "True"
+    type: NamesAccepted
+  - lastTransitionTime: "2025-04-24T09:20:29Z"
+    message: the initial names have been accepted
+    reason: InitialNamesAccepted
+    status: "True"
+    type: Established
+  storedVersions:
+  - v1

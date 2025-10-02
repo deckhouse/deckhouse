@@ -1,0 +1,16 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      pythonVersions:
+        type: array
+        default: []
+        items:
+          type: string
+  registry:
+    type: object
+    description: "System field, overwritten by Deckhouse. Don't use"

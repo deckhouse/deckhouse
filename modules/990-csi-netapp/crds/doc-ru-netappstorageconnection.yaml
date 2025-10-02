@@ -1,0 +1,81 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            NetappStorageConnection - настройки подключения к СХД Netapp.
+          properties:
+            spec:
+              properties:
+                controlPlane:
+                  description: |
+                    Свойство контрол-плейн СХД Netapp
+                  properties:
+                    address:
+                      description: |
+                        Адрес менеджмент интерфейса Netapp
+                    username:
+                      description: |
+                        Имя пользователя для доступа к управлению СХД Netapp
+                    password:
+                      description: |
+                        Пароль для доступа к управлению СХД Netapp
+                    svm:
+                      description: |
+                        Название Storage Virtual Machine
+                    protocol:
+                      description: |
+                        Протокол для доступа к контрол-плейн СХД: ontapi(zapi) (по умолчанию) или rest (начаиня с ONTAP 9.15.1, если включен на СХД)
+                dataPlane:
+                  description: |
+                    Параметры дата-плейн СХД Netapp
+                  properties:
+                    protocol:
+                      description: |
+                        Протокол для доступа к данным на СХД: iscsi, fcp, nfs
+                    iSCSI:
+                      description: |
+                        Параметры iSCSI
+                      properties:
+                        chap:
+                          description: |
+                            Параметры CHAP, если используется
+                          properties:
+                            useChap:
+                              description: |
+                                Включает или выключает CHAP аутентификацию
+                            chapInitiatorSecret:
+                              description: |
+                                CHAP initiator secret. Обязателен, если useChap==true
+                            chapTargetInitiatorSecret:
+                              description: |
+                                CHAP target initiator secret. Обязателен, если useChap==true
+                            chapUsername:
+                              description: |
+                                Inbound CHAP username. Обязателен, если useChap==true
+                            chapTargetUsername:
+                              description: |
+                                Target CHAP username. Обязателен, если useChap==true.
+                    nfs:
+                      description: |
+                        Параметры соединения по NFS
+                      properties:
+                        version:
+                          description: |
+                            Версия протокола NFS (например, "3")
+                        address:
+                          description: |
+                            IP-адрес NFS сервера
+            status:
+              description: |
+                Отображает текущую информацию о StorageClass.
+              properties:
+                phase:
+                  description: |
+                    Текущее состояние StorageClass. Возможные состояния:
+                    - Failed (если контроллер получил некорректную конфигурацию ресурса или возникли ошибки в процессе выполнения операции)
+                    - Created (если все прошло успешно)
+                reason:
+                  description: |
+                    Дополнительная информация о текущем состоянии StorageClass.

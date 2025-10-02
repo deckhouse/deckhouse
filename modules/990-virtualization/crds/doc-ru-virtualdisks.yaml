@@ -1,0 +1,231 @@
+spec:
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Ресурс VirtualDisk описывает желаемую конфигурацию диска виртуальной машины. VirtualDisk можно смонтировать в виртуальной машине статически, указав его в списке дисков `.spec.blockDeviceRefs`, или «на лету» – с помощью ресурса VirtualMachineBlockDeviceAttachments.
+
+            После создания VirtualDisk можно изменить только размер диска с помощью поля `.spec.persistentVolumeClaim.size`. Все остальные поля изменить нельзя.
+
+          properties:
+            spec:
+              properties:
+                dataSource:
+                  description: |
+                    Тип источника, из которого будет создан диск. Если источник (`.spec.dataSource`) отсутствует, будет создан пустой диск.
+                  properties:
+                    containerImage:
+                      description: |
+                        Использование образа, который хранится во внешнем реестре контейнеров.
+                        Поддерживаются только реестры контейнеров с включённым протоколом TLS.
+                        Чтобы предоставить собственную цепочку центров сертификации, используйте поле `caBundle`.
+                      properties:
+                        caBundle:
+                          description: |
+                            Цепочка сертификатов в формате Base64 для проверки подключения к реестру контейнеров.
+                        image:
+                          description: |
+                            Путь к образу в реестре контейнеров.
+                        imagePullSecret:
+                          properties:
+                            name:
+                              description: |
+                                Имя секрета, содержащего учётные данные для подключения к реестру контейнеров.
+                    http:
+                      description: |
+                        Создание диска из файла, размещённого на указанном URL-адресе. Поддерживаемые схемы:
+
+                        * HTTP;
+                        * HTTPS.
+
+                        Для схемы HTTPS есть возможность пропустить проверку TLS.
+                      properties:
+                        caBundle:
+                          description: |
+                            Цепочка сертификатов в формате Base64 для проверки TLS-сертификата сервера, на котором размещается файл.
+                        checksum:
+                          description: |
+                            Контрольная сумма файла для проверки целостности и отсутствия изменений в загруженных данных. Файл должен соответствовать всем указанным контрольным суммам.
+                          properties:
+                            md5:
+                              description: ""
+                            sha256:
+                              description: ""
+                        url:
+                          description: |
+                            URL-адрес, указывающий на файл для создания образа. Допустимые форматы файла:
+                            * qcow2;
+                            * vmdk;
+                            * vdi;
+                            * iso;
+                            * raw.
+
+                            Файл может быть сжат в архив в одном из следующих форматов:
+                            * gz;
+                            * xz.
+                    objectRef:
+                      description: |
+                        Использование существующего ресурса VirtualImage, ClusterVirtualImage или VirtualDiskSnapshot для создания диска.
+                      properties:
+                        kind:
+                          description: |
+                            Ссылка на существующий ресурс VirtualImage, ClusterVirtualImage или VirtualDiskSnapshot.
+                        name:
+                          description: |
+                            Имя существующего ресурса VirtualImage, ClusterVirtualImage или VirtualDiskSnapshot.
+                    type:
+                      description: |
+                        Доступные типы источников для создания диска:
+
+                        * `HTTP` — из файла, опубликованного на HTTP/HTTPS-сервере;
+                        * `ContainerImage` — из образа в реестре контейнеров;
+                        * `ObjectRef` — из существующего ресурса;
+                        * `Upload` — загрузить образ диска вручную.
+                persistentVolumeClaim:
+                  description: |
+                    Настройки для создания PersistentVolumeClaim (PVC) для хранения диска.
+                  properties:
+                    size:
+                      description: |
+                        Желаемый размер PVC для хранения диска. Если диск создается из образа, размер PVC должен быть не меньше размера исходного образа в распакованном состоянии.
+
+                        Данный параметр можно опустить, если заполнен блок `.spec.dataSource`. В этом случае контроллер определит размер диска автоматически, на основе размера распакованного образа из источника указанного в `.spec.dataSource`.
+
+                    storageClassName:
+                      description: |
+                        Имя StorageClass, необходимого для PVC. Подробнее об использовании StorageClass для PVC: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1.
+
+                        При создании дисков пользователь может явно указать необходимый StorageClass. Если этого не сделать, будет использован StorageClass, доступный по умолчанию.
+
+                        Особенности диска и поведение виртуальной машины зависят от выбранного StorageClass.
+
+                        Параметр `VolumeBindingMode` в StorageClass влияет на процесс создания дисков. Допустимые значения:
+
+                        - `Immediate` - диск будет создан и доступен для использования сразу после создания;
+                        - `WaitForFirstConsumer` - диск будет создан при первом использовании на узле, где будет запущена виртуальная машина.
+
+                        StorageClass поддерживает различные настройки хранения:
+
+                        - создание блочного устройства (`Block`) или файловой системы (`FileSystem`);
+                        - множественный доступ (`ReadWriteMany`) или единичный доступ (`ReadWriteOnce`). `ReadWriteMany`-диски поддерживают множественный доступ, что позволяет выполнять «живую» миграцию виртуальных машин. В отличие от них, `ReadWriteOnce`-диски, ограниченные доступом только с одного узла, не могут обеспечить такую возможность.
+
+                        Для известных типов хранилищ Deckhouse самостоятельно определит наиболее эффективные настройки при создании дисков (в порядке убывания приоритетов):
+
+                        1. `Block` + `ReadWriteMany`;
+                        2. `FileSystem` + `ReadWriteMany`;
+                        3. `Block` + `ReadWriteOnce`;
+                        4. `FileSystem` + `ReadWriteOnce`.
+
+            status:
+              properties:
+                conditions:
+                  description: |
+                    Последнее подтверждённое состояние данного ресурса.
+                  items:
+                    description: |
+                      Подробные сведения об одном аспекте текущего состояния данного API-ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: Время перехода условия из одного состояния в другое.
+                      message:
+                        description: Удобочитаемое сообщение с подробной информацией о последнем переходе.
+                      observedGeneration:
+                        description: |
+                          `.metadata.generation`, на основе которого было установлено условие.
+                          Например, если `.metadata.generation` в настоящее время имеет значение `12`, а `.status.conditions[x].observedgeneration` имеет значение `9`, то условие устарело.
+                      reason:
+                        description: Краткая причина последнего перехода состояния.
+                      status:
+                        description: |
+                          Статус условия. Возможные значения: `True`, `False`, `Unknown`.
+                      type:
+                        description: Тип условия.
+                attachedToVirtualMachines:
+                  description: |
+                    Список виртуальных машин, использующих данный диск.
+                  properties:
+                    mounted:
+                      description:
+                        Флаг, указывающий, что данный VirtualDisk в настоящее время используется
+                        присоединённой VirtualMachine.
+                    name:
+                      description: Имя присоединённой VirtualMachine.
+                stats:
+                  description: |
+                    Статистика по виртуальному диску.
+                  properties:
+                    creationDuration:
+                      description: |
+                        Время создания виртуального диска.
+                      properties:
+                        waitingForDependencies:
+                          description: |
+                            Длительность ожидания зависимостей для создания виртуального диска.
+                        dvcrProvisioning:
+                          description: |
+                            Длительность загрузки в Deckhouse Virtualization Container Registry (DVCR).
+                        totalProvisioning:
+                          description: |
+                            Длительность создания ресурса (копирование, загрузка и создание диска) с момента готовности зависимостей до перехода ресурса в состояние `Ready`.
+                capacity:
+                  description: |
+                    Ёмкость PVC в удобочитаемом формате.
+                downloadSpeed:
+                  description: |
+                    Скорость загрузки образа из внешнего источника. Появляется только на этапе `Provisioning`.
+                  properties:
+                    avg:
+                      description: |
+                        Средняя скорость загрузки.
+                    avgBytes:
+                      description: |
+                        Средняя скорость загрузки в байтах в секунду.
+                    current:
+                      description: |
+                        Текущая скорость загрузки.
+                    currentBytes:
+                      description: |
+                        Текущая скорость загрузки в байтах в секунду.
+                phase:
+                  description: |
+                    Текущее состояние ресурса VirtualDisk:
+
+                    * `Pending` — ресурс был создан и находится в очереди ожидания;
+                    * `Provisioning` — идёт процесс создания ресурса: копирование, загрузка или создание диска;
+                    * `WaitForUserUpload` — ожидание загрузки образа пользователем. Путь для загрузки образа указывается в `.status.uploadCommand`;
+                    * `WaitForFirstConsumer` - ожидание пока использующая данный диск виртуальная машина не будет назначена на узел;
+                    * `Ready` — ресурс создан и готов к использованию;
+                    * `Resizing` — идёт процесс увеличения размера диска;
+                    * `Failed` — при создании ресурса произошла ошибка;
+                    * `PVCLost` — дочерний PVC ресурса отсутствует. Ресурс не может быть использован;
+                    * `Exporting` - дочерний PV ресурса находится в процессе экспорта;
+                    * `Terminating` - ресурс находится в процессе удаления.
+                progress:
+                  description: |
+                    Ход копирования образа из источника в DVCR. Отображается только на этапе `Provisioning`.
+                target:
+                  properties:
+                    persistentVolumeClaimName:
+                      description: |
+                        Имя созданного PVC для хранилища Kubernetes.
+                uploadCommand:
+                  description: |
+                    Устаревшее поле. Используйте `imageUploadURLs`.
+                imageUploadURLs:
+                  properties:
+                    external:
+                      description: |
+                        Команда для загрузки образа с использованием `Ingress` вне кластера.
+                    inCluster:
+                      description: |
+                        Команда для загрузки образа с использованием `Service` внутри кластера.
+                sourceUID:
+                  description: |
+                    UID источника (VirtualImage или ClusterVirtualImage), использованного при создании виртуального диска.
+                storageClassName:
+                  description: |
+                    Имя StorageClass, использованного для создания DataVolume.
+                observedGeneration:
+                  description: |
+                    Поколение ресурса, которое в последний раз обрабатывалось контроллером.

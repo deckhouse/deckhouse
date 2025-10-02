@@ -1,0 +1,123 @@
+type: object
+properties:
+  management:
+    type: object
+    default: {}
+    properties:
+      mode:
+        type: string
+        description: |
+          Automatic - enable Stronghold auto-init and auto-unseal. Root token will be stored in `stronghold-keys` Secret resource
+        enum: ["Automatic"]
+        default: "Automatic"
+        x-examples:
+        - Automatic
+      administrators:
+        type: array
+        description: |
+          An list of users and groups that can access Stronghold as administrators.
+          Other authenticated users will access Stronghold with default policy.
+        x-examples:
+        - - type: Group
+            name: admins
+          - type: Group
+            name: security
+          - type: User
+            name: manager@mycompany.tld
+        items:
+          type: object
+          required:
+          - name
+          - type
+          properties:
+            type:
+              type: string
+              enum: ["Group","User"]
+            name:
+              type: string
+  inlet:
+    type: string
+    enum:
+      - Ingress
+    description: |
+      The way the connection to Stronghold is implemented.
+
+      The following inlet types are supported:
+      * `Ingress` — access via ingress-nginx controller.
+    default: "Ingress"
+  ingress:
+    type: object
+    default: {}
+    properties:
+      class:
+        type: string
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        x-examples: ["public"]
+        description: |
+          The class of the Ingress controller used for Stronghold.
+
+          An optional parameter. By default, the `modules.ingressClass` global value is used.
+  enableUserInterface:
+    type: boolean
+    default: true
+    description: |
+      Enables User Interface.
+    x-examples:
+      - false
+  enableAuditLog:
+    type: boolean
+    default: false
+    description: |
+      Enables audit log (EE only feature).
+    x-examples:
+      - true
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "stronghold-tls"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with Stronghold.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "CertManager"
+        description: |
+          The HTTPS usage mode:
+          - `CertManager` — Stronghold will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — Stronghold will use HTTPS using the certificate from the `d8-system` namespace.
+        enum:
+          - "CertManager"
+          - "CustomCertificate"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for Stronghold.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with Stronghold.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  license:
+    type: string
+    description: |
+      Stronghold EE License key. Leave empty to use Stronghold CE
+    default: ""

@@ -1,0 +1,139 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: virtualmachineipaddressleases.virtualization.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: virtualization
+spec:
+  group: virtualization.deckhouse.io
+  scope: Cluster
+  names:
+    categories:
+      - virtualization
+    plural: virtualmachineipaddressleases
+    singular: virtualmachineipaddresslease
+    kind: VirtualMachineIPAddressLease
+    shortNames:
+      - vmipl
+      - vmipls
+      - vmiplease
+      - vmipleases
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Resource confirming the issued lease for VirtualMachineIPAddress.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: |
+                VirtualMachineIPAddressLease configuration parameter.
+              properties:
+                virtualMachineIPAddressRef:
+                  description: |
+                    Link to the existing VirtualMachineIPAddress resources.
+                  properties:
+                    name:
+                      description: |
+                        Name of the reference VirtualMachineIPAddress resource.
+                      type: string
+                    namespace:
+                      description: |
+                        Namespace of the reference VirtualMachineIPAddress resource.
+                      type: string
+                  required:
+                    - name
+                    - namespace
+                  type: object
+              type: object
+            status:
+              type: object
+              properties:
+                conditions:
+                  description: |
+                    Last confirmed status of the resource.
+                  items:
+                    description: Details of a single aspect of the current state for this API resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          Last time the condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          Human-readable message with details about the last transition.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          `.metadata.generation` the condition was based upon.
+                          For instance, if `.metadata.generation` is currently `12` but `.status.conditions[x].observedGeneration` is `9`, the condition is considered outdated.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          Brief reason for the condition's last transition.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: |-
+                          Condition status. Possible values: `True`, `False`, or `Unknown`.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          Condition type.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                phase:
+                  type: string
+                  enum:
+                    - "Bound"
+                    - "Released"
+                  description: |
+                    Represents the current state of the VirtualMachineIPAddressLease resource.
+
+                    * `Bound`: The VirtualMachineIPAddressLease has been bound to the VirtualMachineIPAddress resource.
+                    * `Released`: The VirtualMachineIPAddressLease resource is available for binding to the new VirtualMachineIPAddress resource.
+                observedGeneration:
+                  type: integer
+                  description: |
+                    Resource generation last processed by the controller.
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .spec.virtualMachineIPAddressRef
+          name: VirtualMachineIPAddress
+          type: string
+        - jsonPath: .status.phase
+          name: Status
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date

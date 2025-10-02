@@ -1,0 +1,168 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: pendingresizerequests.storage.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: csi-scsi-generic
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: storage.deckhouse.io
+  names:
+    kind: PendingResizeRequest
+    listKind: PendingResizeRequestList
+    plural: pendingresizerequests
+    shortNames:
+    - prr
+    singular: pendingresizerequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Associated PVC name
+      jsonPath: .spec.pvcName
+      name: PVC
+      type: string
+    - description: Requested new size for PVC
+      jsonPath: .spec.requestedSize
+      name: RequestedSize
+      type: string
+    - description: SCSI Device WWID
+      jsonPath: .spec.wwid
+      name: WWID
+      type: string
+    - description: Time since creation
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PendingResizeRequest is the Schema for the pendingresizerequests
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PendingResizeRequestSpec defines the desired state of PendingResizeRequest
+            properties:
+              pvcName:
+                description: PVCName is the name of the PVC for which the resize is
+                  requested.
+                type: string
+              requestedSize:
+                description: |-
+                  RequestedSize is the new requested size for the PVC.
+                  Represented as a string compatible with resource.Quantity.
+                type: string
+              scsiTargets:
+                description: SCSITargets represents multiple SCSI targets associated
+                  with the device.
+                items:
+                  description: |-
+                    SCSITargetDataForDevice represents processed data about a SCSI target,
+                    including protocol-specific details (iSCSI or FC), LUN, size, and status.
+                  properties:
+                    fibreChannel:
+                      description: FibreChannel contains Fibre Channel-specific configuration
+                        if applicable.
+                      properties:
+                        WWNs:
+                          description: WWNs is a list of World Wide Names for the
+                            Fibre Channel target.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - WWNs
+                      type: object
+                    iscsi:
+                      description: ISCSI contains iSCSI-specific configuration if
+                        applicable.
+                      properties:
+                        auth:
+                          description: Auth specifies authentication details for accessing
+                            the iSCSI target.
+                          properties:
+                            login:
+                              description: Login is the username used for authentication
+                                with the iSCSI target.
+                              type: string
+                            password:
+                              description: Password is the password used for authentication
+                                with the iSCSI target.
+                              type: string
+                          required:
+                          - login
+                          - password
+                          type: object
+                        iqn:
+                          description: IQN is the iSCSI Qualified Name of the target.
+                          type: string
+                        portals:
+                          description: Portals is a list of portal addresses (IP:port)
+                            for accessing the iSCSI target.
+                          items:
+                            type: string
+                          minItems: 1
+                          type: array
+                      required:
+                      - iqn
+                      - portals
+                      type: object
+                    lun:
+                      description: LUN is the Logical Unit Number for the target.
+                      type: integer
+                    name:
+                      description: Name is a human-readable name for the target.
+                      type: string
+                    size:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: Size is the size of the target as a Quantity (e.g.,
+                        "1Gi").
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    status:
+                      description: Status is the current state of the target (e.g.,
+                        Bound, Available, Failed).
+                      type: string
+                  required:
+                  - lun
+                  - size
+                  type: object
+                type: array
+              wwid:
+                description: |-
+                  WWID is the World Wide Identifier of the SCSI device.
+                  This uniquely identifies the device.
+                type: string
+            required:
+            - pvcName
+            - requestedSize
+            - wwid
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

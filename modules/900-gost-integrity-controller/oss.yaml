@@ -1,0 +1,5 @@
+- name: Gost integrity controller
+  link: https://fox.flant.com/deckhouse/deckhouse-cse/
+  description: Checking the integrity of the image, a checksum calculated using the Stribog algorithm (GOST R 34.11-2012).
+  logo: https://fox.flant.com/deckhouse/deckhouse-cse/
+  licence: Apache License 2.0

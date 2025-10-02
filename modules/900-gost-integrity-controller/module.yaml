@@ -1,0 +1,11 @@
+name: gost-integrity-controller
+weight: 900
+stage: "General Availability"
+description: |
+  Checking the hash sum of the image (GOST R 34.11-2012)
+descriptions:
+  en: Checking the hash sum of the image (GOST R 34.11-2012)
+namespace: d8-system
+
+requirements:
+  bootstrapped: true

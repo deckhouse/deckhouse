@@ -1,0 +1,5 @@
+- name: CSI Snapshotter
+  link: https://github.com/kubernetes-csi/external-snapshotter
+  description: The controller is required for CSI snapshotting to work and is not specific to any CSI driver.
+  logo: https://avatars.githubusercontent.com/u/52698954?s=200&v=4
+  license: Apache License 2.0

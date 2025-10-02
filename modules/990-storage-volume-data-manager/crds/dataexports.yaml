@@ -1,0 +1,137 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dataexports.storage.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: storage-volume-data-manager
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: storage.deckhouse.io
+  scope: Namespaced
+  names:
+    kind: DataExport
+    plural: dataexports
+    singular: dataexport
+    shortNames:
+      - de
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-immutable: true
+          description: |
+            The resource for export PV files and blocks 1
+          properties:
+            spec:
+              type: object
+              required:
+                - ttl
+                - targetRef
+              properties:
+                ttl:
+                  type: string
+                  description: Time to live after last user's request
+
+                publish:
+                  type: boolean
+                  description: Publish exporter pod outside the cluster
+
+                targetRef:
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      enum:
+                        - PersistentVolumeClaim
+                        - VolumeSnapshot
+                        - VirtualDisk
+                        - VirtualDiskSnapshot
+                    name:
+                      type: string
+
+            status:
+              type: object
+              description: status object
+              properties:
+                url:
+                  type: string
+                  description: https://X.X.X.X:8085
+                ca:
+                  type: string
+                  description: Base64 encoded CA certificate for TLS connection to the exporter pod
+                publicURL:
+                  type: string
+                  description: https://data-exporter.<public-domain>/<namespace>/<name ресурса DataExport>
+                accessTimestamp:
+                  type: string
+                  format: date-time
+                  description: accessTimestamp-description
+                volumeMode:
+                  type: string
+                  enum: ["Block", "Filesystem"]
+                  description: Volume mode of the exported data. Can be "Block" or "Filesystem".
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - reason
+                      - message
+                      - observedGeneration
+                      - lastTransitionTime
+                    properties:
+                      type:
+                        type: string
+                        enum: ["Ready", "Expired"]
+                      status:
+                        type: string
+                        enum: ["True", "False", "Unknown"]
+                      reason:
+                        type: string
+                        enum:
+                          ["Pending", "ValidationFailed", "PodReady", "Expired"]
+                      message:
+                        type: string
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      observedGeneration:
+                        type: integer
+
+      subresources:
+        status: {}
+        download: {}
+      additionalPrinterColumns:
+        - name: URL
+          type: string
+          jsonPath: .status.url
+        - name: Public URL
+          type: string
+          jsonPath: .status.publicURL
+        - name: TTL
+          type: string
+          jsonPath: .spec.ttl
+          priority: 1
+        - name: Target Kind
+          type: string
+          jsonPath: .spec.targetRef.kind
+          priority: 1
+        - name: Target Name
+          type: string
+          jsonPath: .spec.targetRef.name
+          priority: 1
+        - name: Status
+          type: string
+          description: The status of the DataExport resource.
+          jsonPath: '.status.conditions[?(@.type=="Ready")].reason'
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp

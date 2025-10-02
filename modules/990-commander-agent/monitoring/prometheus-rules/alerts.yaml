@@ -1,0 +1,16 @@
+- name: d8.commander.alerts
+  rules:
+    - alert: D8CommanderHttpsDisabled
+      expr: d8_commander_https_disabled == 1
+      for: 1m
+      labels:
+        severity_level: "4"
+        tier: application
+        d8_module: commander
+        d8_component: commander
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: Deckhouse Commander HTTPS mode is Disabled.
+        description: |
+          HTTPS is currently disabled, which is insecure. To ensure Deckhouse Commander functions properly, please enable HTTPS.

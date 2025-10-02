@@ -1,0 +1,106 @@
+x-config-version: 1
+type: object
+default: {}
+properties:
+  externalMetricsAccess:
+    type: object
+    default: {}
+    description: |
+      Settings for external access to metrics.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Whether to enable metrics external read access.
+
+          If enabled, the observability module will expose the metrics via ingress for reading.
+          Metrics can be read using the Prometheus-compatible API. Providing a valid ServiceAccount token via the `Authorization: Bearer` header is mandatory.
+          See [the documentation](faq.html#how-to-grant-access-to-cluster-metrics-outside-of-cluster) for more details.
+      whitelistSourceRanges:
+        type: array
+        items:
+          type: string
+        default: []
+        x-examples:
+          - ["1.1.1.1/32"]
+        description: An array if CIDRs that are allowed to read metrics. If not specified, no restrictions are applied.
+  https:
+    type: object
+    x-examples:
+      - mode: CustomCertificate
+        customCertificate:
+          secretName: "foobar"
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
+    description: |
+      What certificate type to use with observability module.
+
+      This parameter completely overrides the `global.modules.https` settings.
+    properties:
+      mode:
+        type: string
+        default: "Disabled"
+        description: |
+          The HTTPS usage mode:
+          - `Disabled` — the observability module will work over HTTP only;
+          - `CertManager` — the observability module will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate` — the observability module will use HTTPS using the certificate from the `d8-system` namespace.
+          - `OnlyInURI` — the observability module will work over HTTP (thinking that there is an external HTTPS load balancer in front that terminates HTTPS traffic). All the links in the `user-authn` will be generated using the HTTPS scheme. Load balancer should provide a redirect from HTTP to HTTPS.
+        enum:
+          - "Disabled"
+          - "CertManager"
+          - "CustomCertificate"
+          - "OnlyInURI"
+      certManager:
+        type: object
+        properties:
+          clusterIssuerName:
+            type: string
+            default: "letsencrypt"
+            description: |
+              What ClusterIssuer to use for the observability module.
+
+              Currently, `letsencrypt`, `letsencrypt-staging`, `selfsigned` are available. Also, you can define your own.
+      customCertificate:
+        type: object
+        default: {}
+        properties:
+          secretName:
+            type: string
+            description: |
+              The name of the secret in the `d8-system` namespace to use with the observability module.
+
+              This secret must have the [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+            default: "false"
+  grafana:
+    type: object
+    default: {}
+    description: Grafana related settings.
+    properties:
+      customPlugins:
+        type: array
+        items:
+          type: string
+        x-examples:
+          - ["agenty-flowcharting-panel", "vertamedia-clickhouse-datasource"]
+        description: |
+          A list of custom Grafana [plugins](https://grafana.com/grafana/plugins). Contains plugin names from the official repository.
+
+          Here is how you can add custom plugins (in this case, clickhouse-datasource and flowcharting-panel plugins are used):
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - agenty-flowcharting-panel
+            - vertamedia-clickhouse-datasource
+          ```
+
+          You can also install plugins from other sources by passing a link to the plugin zip archive in the format `<url to plugin zip>;<plugin name>`:
+
+          ```yaml
+          grafana:
+            customPlugins:
+            - http://10.241.32.16:3000/netsage-bumpchart-panel-1.1.1.zip;netsage-bumpchart-panel
+          ```

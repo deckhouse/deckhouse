@@ -1,0 +1,44 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: clusterobservabilitypropagateddashboards.observability.deckhouse.io
+  labels:
+    module: observability
+    heritage: deckhouse
+spec:
+  group: observability.deckhouse.io
+  scope: Cluster
+  names:
+    plural: clusterobservabilitypropagateddashboards
+    singular: clusterobservabilitypropagateddashboard
+    kind: ClusterObservabilityPropagatedDashboard
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Deckhouse internal system resource that lets you define a dashboard once and automatically make it available everywhere in the Deckhouse Console.
+
+            A dashboard defined as a ClusterObservabilityPropagatedDashboard is automatically visible: at the cluster level and in every namespace/project.
+
+            Supported annotations:
+            - `metadata.deckhouse.io/category` — sets the folder/category in the UI.
+            - `metadata.deckhouse.io/title` — sets the visible dashboard title.
+              If not set, the title from the dashboard JSON is used.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - definition
+              properties:
+                definition:
+                  type: string
+                  description: |
+                    The dashboard JSON manifest.
+                    The JSON definition should be provided as a raw JSON string compatible with the Grafana dashboard format.

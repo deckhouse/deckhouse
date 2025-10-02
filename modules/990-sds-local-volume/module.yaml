@@ -1,0 +1,12 @@
+name: "sds-local-volume"
+stage: "General Availability"
+weight: 920
+descriptions:
+  en: "SDS local volume"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+  modules:
+    sds-node-configurator: ">= 0.0.0"
+    snapshot-controller: ">= 0.0.0"
+namespace: d8-sds-local-volume

@@ -1,0 +1,21 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Это служебный ресурс Deckhouse, позволяющий один раз описать дашборд и автоматически сделать его доступным во всех областях Deckhouse Console.
+
+            После создания ресурса он автоматически доступен как дашборд: на уровне кластера и во всех пространствах имён/проектах.
+
+            Поддерживаются аннотации:
+            - `metadata.deckhouse.io/category` — задаёт папку (категорию) в интерфейсе;
+            - `metadata.deckhouse.io/title` — задаёт отображаемое название дашборда.
+              Если не указано, будет использовано название из JSON-манифеста.
+          properties:
+            spec:
+              properties:
+                definition:
+                  description: |
+                    JSON-манифест дашборда.
+                    JSON должно быть передано в виде строки, совместимым с форматом Grafana dashboard.

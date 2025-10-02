@@ -1,0 +1,31 @@
+type: object
+required:
+  - cephfsEnabled
+  - rbdEnabled
+properties:
+  cephfsEnabled:
+    type: boolean
+    default: true
+    description: Cephfs driver state
+  rbdEnabled:
+    type: boolean
+    default: true
+    description: RBD driver state
+  logLevel:
+    type: string
+    enum:
+      - ERROR
+      - WARN
+      - INFO
+      - DEBUG
+      - TRACE
+    description: Module log level
+    default: DEBUG
+  cephfsProvisionerWorkers:
+    type: integer
+    default: 10
+    description: Settings for CephFS provisioner workers (default 10). Please do not set this value if you are not sure what you are doing.
+  rbdProvisionerWorkers:
+    type: integer
+    default: 10
+    description: Settings for RBD provisioner workers (default 10). Please do not set this value if you are not sure what you are doing.

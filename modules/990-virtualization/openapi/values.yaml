@@ -1,0 +1,124 @@
+x-extend:
+  schema: config-values.yaml
+type: object
+properties:
+  internal:
+    type: object
+    default: {}
+    properties:
+      customCertificateData:
+        type: object
+        properties:
+          tls.crt:
+            type: string
+          tls.key:
+            type: string
+          ca.crt:
+            type: string
+      dvcr:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: object
+            properties:
+              ca:
+                type: string
+                default: ""
+              crt:
+                type: string
+                default: ""
+              key:
+                type: string
+                default: ""
+          passwordRW:
+            type: string
+          htpasswd:
+            type: string
+          salt:
+            type: string
+          serviceIP:
+            type: string
+      controller:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                default: ""
+              crt:
+                type: string
+                default: ""
+              key:
+                type: string
+                default: ""
+      apiserver:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                default: ""
+              crt:
+                type: string
+                default: ""
+              key:
+                type: string
+                default: ""
+          proxyCert:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                default: ""
+              crt:
+                type: string
+                default: ""
+              key:
+                type: string
+                default: ""
+      audit:
+        type: object
+        default: {}
+        properties:
+          cert:
+            type: object
+            default: {}
+            properties:
+              ca:
+                type: string
+                default: ""
+              crt:
+                type: string
+                default: ""
+              key:
+                type: string
+                default: ""
+      rootCA:
+        type: object
+        default: {}
+        properties:
+          ca:
+            type: string
+            default: ""
+          crt:
+            type: string
+            default: ""
+          key:
+            type: string
+            default: ""
+      virtHandler:
+        type: object
+        default: {}
+        properties:
+          nodeCount:
+            type: integer

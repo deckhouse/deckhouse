@@ -1,0 +1,69 @@
+spec:
+  versions:
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |-
+            VirtualMachineSnapshot предоставляет ресурс для создания снимков виртуальных машин.
+          properties:
+            spec:
+              properties:
+                keepIPAddress:
+                  description: |-
+                    Сохранить IP-адрес виртуальной машины или нет:
+
+                    * `Always` - при создании снимка IP-адрес виртуальной машины будет сконвертирован из `Auto` в `Static` и сохранён;
+                    * `Never` - при создании снимка IP-адрес виртуальной машины не будет сконвертирован.
+                requiredConsistency:
+                  description: |-
+                    Создавать снимок виртуальной машины только в том случае, если возможно заморозить её через агента.
+
+                    Если установлено значение `true`, снимок виртуальной машины будет создан только в следующих случаях:
+
+                    - виртуальная машина выключена;
+                    - виртуальная машина с агентом, операция заморозки прошла успешно.
+                virtualMachineName:
+                  description: Имя виртуальной машины для создания снимка.
+            status:
+              properties:
+                conditions:
+                  description: |
+                    Последнее подтверждённое состояние данного ресурса.
+                  items:
+                    description: |
+                      Подробные сведения об одном аспекте текущего состояния данного API-ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: Время перехода условия из одного состояния в другое.
+                      message:
+                        description: Удобочитаемое сообщение с подробной информацией о последнем переходе.
+                      observedGeneration:
+                        description: |
+                          `.metadata.generation`, на основе которого было установлено условие.
+                          Например, если `.metadata.generation` в настоящее время имеет значение `12`, а `.status.conditions[x].observedgeneration` имеет значение `9`, то условие устарело.
+                      reason:
+                        description: Краткая причина последнего перехода состояния.
+                      status:
+                        description: |
+                          Статус условия. Возможные значения: `True`, `False`, `Unknown`.
+                      type:
+                        description: Тип условия.
+                consistent:
+                  description: Снимок виртуальной машины консистентен.
+                observedGeneration:
+                  description: Поколение ресурса, которое в последний раз обрабатывалось контроллером.
+                phase:
+                  description: |-
+                    Текущее состояние ресурса VirtualMachineSnapshot:
+
+                    * `Pending` — ресурс был создан и находится в очереди ожидания;
+                    * `InProgress` — идёт процесс создания снимка виртуальной машины;
+                    * `Ready` — создание снимка успешно завершено, и он доступен для использования;
+                    * `Failed` — во время создания снимка виртуальной машины произошла ошибка;
+                    * `Terminating` — ресурс находится в процессе удаления.
+                resources:
+                  description: Список ресурсов снимка.
+                virtualDiskSnapshotNames:
+                  description: Имена созданных снимков виртуальных дисков.
+                virtualMachineSnapshotSecretName:
+                  description: Имя созданного секрета с информацией о снимке виртуальной машины.

@@ -20,6 +20,11 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
+        echo '[CSE] Converts from HuGo...'
+        find ./ -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*alert (level="[a-z]+")?\ ?>}}/{% alert \2 %}/g' {} +
+        find ./ -type f -iname '*.md' -exec sed -i -E 's/\{\{<[ ]*\/alert *>}}/{% endalert %}/g' {} +
+        find ./ -type f -name '*.ru.md' -exec bash -c 'mv "$0" "${0%.ru.md}_RU.md"' {} \;
+
         #echo '[] Creating modules.yml ...'
         #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
         ## Creating list of ALL the modules...

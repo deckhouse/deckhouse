@@ -1,0 +1,161 @@
+type: object
+properties:
+  highAvailability:
+    description: |
+      Ручное управление режимом отказоустойчивости.
+
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+  virtualMachineCIDRs:
+    description: |
+      Список подсетей используемых для выделения статических IP-адресов виртуальным машинам.
+
+      > **Внимание.** Подсеть для виртуальных машин не должна совпадать с подсетями подов, сервисов и узлов. Конфликт адресов может привести к непредсказуемому поведению и сетевым проблемам.
+      >
+      > Запрещено удалять подсети, из которых уже были назначены IP-адреса виртуальным машинам.
+  ingressClass:
+    description: |
+      Класс Ingress-контроллера, который использоваться для загрузки образов.
+      По умолчанию используется глобальное значение `modules.ingressClass`.
+  https:
+    description: |
+      Тип используемого сертификата.
+
+      Этот параметр задаёт особые настройки https для модуля, переопределяя глобальные настройки `global.modules.https`.
+    properties:
+      mode:
+        description: |
+          Режим работы HTTPS:
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имён `d8-system`.
+          - `Disabled` — доступ только по HTTP.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед web-интерфейсом стоит внешний HTTPS-балансер, который терминирует HTTPS и все ссылки в `user-authn` будут генерироваться с HTTPS-схемой.
+      certManager:
+        description: Настройки для certmanager.
+        properties:
+          clusterIssuerName:
+            description: |
+              Тип ClusterIssuer'а, используемого для заказа SSL-сертификата (в данный момент доступны `letsencrypt`, `letsencrypt-staging`, `selfsigned`, но возможно определить свои).
+      customCertificate:
+        description: Настройки для использования пользовательского сертификата.
+        properties:
+          secretName:
+            description: |
+              Имя Secret'а в пространстве имён `d8-system`, который будет использоваться для web-интерфейса загрузки модуля CDI.
+
+              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+  dvcr:
+    description: |
+      Параметры, для настройки deckhouse virtualization container registry.
+      Внутренний сервис для хранения и кеширования образов виртуальных машин.
+    properties:
+      storage:
+        description: |
+          Параметры для настройки хранилища.
+        properties:
+          type:
+            description: |
+              Тип используемого хранилища.
+              - `persistentVolumeClaim` — Использование pvc
+              - `objectStorage` — Использование objectStorage
+          persistentVolumeClaim:
+            description: |
+              Параметры для настройки PersistentVolumeClaim.
+            properties:
+              storageClassName:
+                description: |
+                  Имя StorageClass, используемого для создания persistentvolumeclaim. Если не указан - будет использоваться StorageClass, указанный в кластере по умолчанию.
+              size:
+                description: |
+                  Размер pvc.
+          objectStorage:
+            description: |
+              Параметры для настройки объектного хранилища.
+            properties:
+              s3:
+                description: |
+                  Параметры для использования s3.
+                properties:
+                  accessKey:
+                    description: |
+                      accessKey должен быть закодирован в base64.
+                      accessKey — это уникальный идентификатор, который идентифицирует вас как пользователя, имеющего доступ к S3.
+                  secretKey:
+                    description: |
+                      secretKey должен быть закодирован в base64.
+                      secretKey — это конфиденциальный секретный ключ, связанный с вашим идентификатором ключа доступа.
+                  region:
+                    description: |
+                      Географическая зона.
+                  regionEndpoint:
+                    description: |
+                      Конечная точка для подключения к сервису S3.
+                  bucket:
+                    description: |
+                      Контейнер, в котором вы можете хранить свои файлы и объекты данных.
+  virtualImages:
+    type: object
+    description: |
+      Настройка класса хранения для виртуальных образов на PVC.
+    properties:
+      storageClassName:
+        type: string
+        description: |
+          Поскольку этот параметр был устаревшим, используйте параметр `defaultStorageClassName`.
+      defaultStorageClassName:
+        type: string
+        description: |
+          Указывает имя класса хранения по умолчанию, который будет использоваться для виртуальных образов на PVC.
+      allowedStorageClassSelector:
+        type: object
+        description: |
+          Селектор разрешенных классов хранения, которые можно использовать для виртуальных образов на PVC.
+        properties:
+          matchNames:
+            type: array
+            items:
+              type: string
+  virtualDisks:
+    type: object
+    description: |
+      Настройка класса хранения для виртуальных дисков.
+    properties:
+      defaultStorageClassName:
+        type: string
+        description: |
+          Указывает имя класса хранения по умолчанию, который будет использоваться для виртуальных дисков.
+      allowedStorageClassSelector:
+        type: object
+        description: |
+          Селектор разрешенных классов хранения, используемых для виртуальных дисков.
+        properties:
+          matchNames:
+            type: array
+            items:
+              type: string
+  audit:
+    type: object
+    description: |
+      Настройки для контроллера аудита.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Включение контроллера аудита.
+  logLevel:
+    type: string
+    description: |
+      Устанавливает уровень логирования.
+
+      Работает для следующих компонентов:
+      - `virtualization-api`
+      - `virtualization-controller`
+      - `kube-api-rewriter`
+      - `vm-route-forge`
+  logFormat:
+    type: string
+    description: |
+      Устанавливает формат логирования.
+
+      Работает для следующих компонентов:
+      - `virtualization-controller`

@@ -1,0 +1,4 @@
+- name: Trident
+  link: https://github.com/NetApp/trident
+  description: This is a Container Storage Interface (CSI) for S3 (or S3 compatible) storage
+  license: Apache License 2.0

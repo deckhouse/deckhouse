@@ -1,0 +1,25 @@
+name: virtualization
+stage: General Availability
+subsystems:
+  - virtualization
+namespace: d8-virtualization
+descriptions:
+  en: The Virtualization module allows you to run and manage virtual machines within the Deckhouse platform.
+  ru: Модуль виртуализации позволяет запускать и управлять виртуальными машинами в рамках платформы Deckhouse.
+tags: ["virtualization"]
+requirements:
+  deckhouse: ">= 1.71.0"
+  modules:
+    cni-cilium: ">= 0.0.0"
+disable:
+  confirmation: true
+  message: |
+    Attention!
+
+    Disabling this module will stop all services responsible for creating and running virtual machines.
+    Before disabling the module, be sure to do the following:
+
+    - Make sure that all resources created using the module (virtual machines, disks, images, etc.) are deleted.
+    - Check for active resources using the command: `kubectl get virtualization`. If there are objects left in the command output, remove them before deactivating the module.
+
+    Failure to do so may result in data loss or incorrect system operation.

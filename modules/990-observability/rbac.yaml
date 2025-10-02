@@ -1,0 +1,9 @@
+module: observability
+namespace: d8-observability
+scopes:
+  - observability
+crds:
+  - modules/304-observability/crds/*.yaml
+allowedResources:
+  - group: observability.deckhouse.io
+    resources: [all]

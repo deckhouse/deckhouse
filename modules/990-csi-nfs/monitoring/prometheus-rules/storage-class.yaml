@@ -1,0 +1,23 @@
+- name: kubernetes.nfs.storage_class
+  rules:
+    - alert: StorageClassDoesNotMatchTheSettingsInModuleConfigCsiNfs
+      expr: count(kube_storageclass_labels{label_storage_deckhouse_io_does_not_match_moduleconfig="true"}) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: StorageClass does not match the settings in ModuleConfig csi-nfs
+        description: |
+          It seems that the settings (spec.settings) of the ModuleConfig for csi-nfs have been changed, and now some StorageClass might fail to mount PV.
+          You can find the list of problematic StorageClass using the following command:
+
+          `kubectl get sc -l storage.deckhouse.io/does-not-match-moduleconfig="true"`
+
+          It is necessary to revert the settings in the ModuleConfig for csi-nfs.
+          If the StorageClass was configured with RPC-with-TLS support, make sure to specify the certificates that were previously used when reverting the settings.
+          To edit the ModuleConfig, use the following command:
+
+          `kubectl edit mc csi-nfs`

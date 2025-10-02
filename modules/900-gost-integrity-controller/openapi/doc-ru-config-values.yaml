@@ -1,0 +1,9 @@
+properties:
+  logLevel:
+    description: Уровень логирования в вебхуке.
+  tlsSkipVerify:
+    description: Разрешить получение образов без проверки TLS.
+  cacheEviction:
+    description: Прериод очистки кэша в секундах.
+  defaultRegistry:
+    description: Репозиторий образов по умолчанию. Если значение оставить пустым, будет использоваться значение по умолчанию index.docker.io.

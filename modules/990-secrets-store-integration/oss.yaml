@@ -1,0 +1,13 @@
+- name: Kubernetes Secrets Store CSI Driver
+  link: https://secrets-store-csi-driver.sigs.k8s.io/
+  description: Secrets Store CSI Driver for Kubernetes secrets - Integrates secrets stores with Kubernetes via a Container Storage Interface (CSI) volume
+  license: Apache License, version 2.0
+- name: HashiCorp Vault Provider for Secrets Store CSI Driver
+  link: https://developer.hashicorp.com/vault/docs/platform/k8s/csi
+  description: HashiCorp Vault provider for the Secrets Store CSI driver allows you to get secrets stored in Vault and use the Secrets Store CSI driver interface to mount them into Kubernetes pods
+  logo: https://developer.hashicorp.com/favicon.ico
+  license: Mozilla Public License, version 2.0
+- name: Vault Secrets Webhook
+  link: https://bank-vaults.dev/docs/mutating-webhook/
+  description: A Kubernetes mutating webhook that makes direct secret injection into Pods possible
+  license: Apache License, version 2.0

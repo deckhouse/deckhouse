@@ -1,0 +1,145 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: virtualdisksnapshots.virtualization.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: virtualization
+spec:
+  group: virtualization.deckhouse.io
+  scope: Namespaced
+  names:
+    categories:
+      - all
+      - virtualization
+    plural: virtualdisksnapshots
+    singular: virtualdisksnapshot
+    kind: VirtualDiskSnapshot
+    shortNames:
+      - vdsnapshot
+      - vdsnapshots
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha2
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Provides a resource for creating snapshots of existing virtual disks, which can be used as data sources for generating new virtual disks.
+
+            When running, a VolumeSnapshot resource is created.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - virtualDiskName
+              properties:
+                virtualDiskName:
+                  type: string
+                  description: |
+                    Virtual disk name the snapshot is created for.
+                requiredConsistency:
+                  type: boolean
+                  default: true
+                  description: |
+                    Create a snapshot of a connected virtual machine's disk only if it is possible to freeze the machine through the agent.
+
+                    If set to `True`, a virtual disk snapshot will be created when at least one of the following conditions is met:
+                    - The virtual disk is not connected to any virtual machine.
+                    - The virtual disk is connected to a powered-off virtual machine.
+                    - The virtual disk is connected to a virtual machine with an agent, and the freeze operation was successful.
+            status:
+              type: object
+              properties:
+                conditions:
+                  description: |
+                    Last confirmed status of the resource.
+                  items:
+                    description: Details of a single aspect of the current state for this API resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          Last time the condition transitioned from one status to another.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          Human-readable message with details about the last transition.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          `.metadata.generation` the condition was based upon.
+                          For instance, if `.metadata.generation` is currently `12` but `.status.conditions[x].observedGeneration` is `9`, the condition is considered outdated.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          Brief reason for the condition's last transition.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description: |-
+                          Condition status. Possible values: `True`, `False`, or `Unknown`.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description: |-
+                          Condition type.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                volumeSnapshotName:
+                  type: string
+                  description: |
+                    Name of the created VolumeSnapshot resource.
+                consistent:
+                  type: boolean
+                  description: |
+                    Virtual disk snapshot is consistent.
+                phase:
+                  type: string
+                  description: |
+                    Current status of the VirtualDiskSnapshot resource:
+
+                    * `Pending`: The resource has been created and is on a waiting queue.
+                    * `InProgress`: The virtual disk snapshot is being created.
+                    * `Ready`: The virtual disk snapshot has been created successfully and is now available to use.
+                    * `Failed`: There was an error when creating the virtual disk snapshot.
+                    * `Terminating`: The resource is being deleted.
+                  enum:
+                    ["Pending", "InProgress", "Ready", "Failed", "Terminating"]
+                observedGeneration:
+                  type: integer
+                  description: |
+                    Resource generation last processed by the controller.
+      additionalPrinterColumns:
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: Consistent
+          type: boolean
+          jsonPath: .status.consistent
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}

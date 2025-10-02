@@ -1,0 +1,40 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Интерфейс управления StorageСlass для CSI-драйвера scsi-generic.csi.storage.deckhouse.io. Ручное создание StorageClass для данного драйвера запрещено.
+          properties:
+            spec:
+              description: |
+                Определяет конфигурацию StorageClass.
+              properties:
+                reclaimPolicy:
+                  description: |
+                    Режим поведения при удалении PVC. Может быть:
+                    - Delete (При удалении PVC будет удален PV и данные на NFS-сервере)
+                    - Retain (При удалении PVC не будут удалены PV и данные на NFS-сервере, потребуют ручного удаления пользователем)
+                scsiDeviceSelector:
+                  description: |
+                    Селектор для выбора ресурсов SCSIDevice, которые будут использоваться для провижининга PV.
+                    Только те SCSIDevice, которые удовлетворяют данным критериям, будут выбраны CSI драйвером для данного StorageClass.
+                  properties:
+                    matchLabels:
+                      description: |
+                        Карта меток, которые должны точно совпадать с метками на SCSIDevice.
+                        Устройства, не имеющие всех указанных меток с нужными значениями, будут исключены.
+                    matchExpressions:
+                      description: |
+                        Список расширенных требований для селектора.
+                        Каждое требование задаёт ключ, оператор и опциональный список значений для фильтрации SCSIDevice.
+            status:
+              properties:
+                phase:
+                  description: |
+                    Общее текущее состояние StorageClass. Может быть:
+                    - Failed (если контроллер получил некорректную конфигурацию ресурса или возникли ошибки в процессе выполнения операции)
+                    - Created (если StorageClass создан успешно)
+                reason:
+                  description: |
+                    Дополнительная информация о текущем состоянии StorageClass.

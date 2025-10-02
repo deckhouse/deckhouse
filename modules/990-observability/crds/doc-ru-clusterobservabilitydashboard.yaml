@@ -1,0 +1,21 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Определяет дашборд кластерного уровня, отображаемый в интерфейсе Deckhouse Console.
+
+            Этот ресурс не привязан к какому-либо пространству имён.
+
+            Поддерживаются аннотации:
+            - `metadata.deckhouse.io/category` — задаёт папку (категорию) в интерфейсе;
+            - `metadata.deckhouse.io/title` — задаёт отображаемое название дашборда.
+              Если не указано, будет использовано название из JSON-манифеста.
+          properties:
+            spec:
+              properties:
+                definition:
+                  description: |
+                    JSON-манифест дашборда.
+                    JSON должен быть передан в виде строки, совместимой с форматом Grafana dashboard.

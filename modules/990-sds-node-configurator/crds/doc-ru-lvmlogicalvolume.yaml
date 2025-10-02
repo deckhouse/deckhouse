@@ -1,0 +1,91 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Ресурс LVMLogicalVolume описывает, где будет выделено место при создании PV.
+          properties:
+            spec:
+              properties:
+                actualLVNameOnTheNode:
+                  type: string
+                  description: |
+                    Имя LV на узле.
+                type:
+                  description: |
+                    Тип LV: Thick или Thin.
+                size:
+                  description: |
+                    Желаемый размер LV. Может быть указан как в численном, так и процентном отношении к общему размеру VG или thin pool. Для thin pool общий размер — это реальный размер пула, умноженный на значение `allocationLimit`.
+
+                    > Обратите внимание, что при указании размера в процентах LV будет автоматически расширена при расширении VG или thin pool, а также при увеличении значения поля `allocationLimit` для thin pool.
+                lvmVolumeGroupName:
+                  description: |
+                    Имя ресурса LVMVolumeGroup, VG которого будет использовано для создания LV.
+                volumeCleanup:
+                  description: |
+                    Метод очистки тома после удаления PV.
+                    Если параметр не задан, полное удаление данных не гарантируется.
+
+                    Допустимые значения:
+
+                    - `RandomFillSinglePass` — том будет перезаписан случайными данными один раз перед удалением. Не рекомендуется использовать данную опцию для твердотельных накопителей, так как перезапись уменьшает ресурс накопителя. Для thin-томов будет перезаписано только используемое на момент удаления тома пространство.
+                    - `RandomFillThreePass` — том будет перезаписан случайными данными три раза перед удалением. Не рекомендуется использовать данную опцию для твердотельных накопителей, так как перезапись уменьшает ресурс накопителя. Для thin-томов будет перезаписано только используемое на момент удаления тома пространство.
+                    - `Discard` — перед удалением все блоки тома будут отмечены как свободные с помощью системного вызова `discard`. Данная опция применима только для твердотельных накопителей и thick-томов.
+                thin:
+                  description: |
+                    Описывает используемый thin pool. Указывается только при Thin LV.
+                  properties:
+                    poolName:
+                      description: |
+                        Имя используемого thin pool.
+                thick:
+                  description: |
+                    Описывает настройки используемого Thick LV.
+                  properties:
+                    contiguous:
+                      description: |
+                        Если для параметра задано значение `true`, логический том будет создан с флагом `contiguous`.
+
+                        > Используйте этот флаг с осторожностью, так как он может привести к невозможности создания LV, несмотря на наличие свободного пространства.
+            status:
+              description: |
+                Описывает состояние ресурса.
+              properties:
+                phase:
+                  description: |
+                    Текущая фаза ресурса.
+                reason:
+                  description: |
+                    Причина выставленной фазы.
+                actualSize:
+                  description: |
+                    Актуальный размер LV на узле.
+                contiguous:
+                  description: |
+                    Создан ли логический том с флагом `contiguous`.
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.phase
+          name: Phase
+          type: string
+          description: The current resource status.
+        - jsonPath: .spec.lvmVolumeGroupName
+          name: LVMVolumeGroup
+          type: string
+          description: The selected LVMVolumeGroup resource.
+        - jsonPath: .spec.thin.poolName
+          name: ThinPool
+          type: string
+          description: The selected ThinPool in LVMVolumeGroup. Might be empty if the LVMVolumeGroup is thick.
+        - jsonPath: .status.actualSize
+          name: Size
+          type: string
+          description: Actual LVMLogicalVolume size.
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+          description: The age of this resource

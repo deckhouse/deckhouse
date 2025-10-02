@@ -1,0 +1,9 @@
+name: csi-scsi-generic
+stage: "Experimental"
+weight: 920
+descriptions:
+  en: "CSI scsi generic module"
+requirements:
+  bootstrapped: true
+  deckhouse: ">= 1.67"
+namespace: d8-csi-scsi-generic
