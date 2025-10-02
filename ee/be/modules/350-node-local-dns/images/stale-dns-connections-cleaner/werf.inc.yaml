@@ -1,6 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
+cacheVersion: "2025-10-02"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
@@ -39,7 +40,7 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
-  - export GO_VERSION=${GOLANG_VERSION} 
+  - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - go build -ldflags="-s -w" -o stale-dns-connections-cleaner .
