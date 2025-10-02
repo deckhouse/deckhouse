@@ -226,6 +226,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
     "external": "true",
     "path": "/modules/managed-memcached/stable/"
   },
@@ -233,6 +242,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
     "external": "true",
     "path": "/modules/managed-postgres/stable/"
   },
