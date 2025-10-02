@@ -102,8 +102,8 @@ spec:
     # deny all operations with any objects with `d8ms-` prefix, except for Pods deletions
     - expression: |
         !(
-          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-")) ||
-          (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8ms-") && (request.operation == "DELETE" && oldObject.kind == "pods"))
+          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8ms-") && (request.operation == "DELETE" && object.kind == "pods")) ||
+          (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8ms-"))
         )
       messageExpression: "'Creating, updating and deleting objects with an managed services prefix is forbidden'"
       reason: Forbidden
