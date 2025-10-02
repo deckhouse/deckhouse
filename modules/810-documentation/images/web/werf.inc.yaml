@@ -20,7 +20,7 @@ git:
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
-  to: /app/docs-dkp
+  to: /app/platform
   before: setup
   excludePaths:
   - '*/gs/'
@@ -30,7 +30,7 @@ import:
   - '*/robots.txt'
 - image: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
-  to: /app/embedded-modules
+  to: /app/platform/modules
   before: setup
   includePaths:
   - en

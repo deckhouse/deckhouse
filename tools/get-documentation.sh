@@ -2,7 +2,7 @@
 
 #rm -rf /tmp/cse
 
-CSE_DOC_OUTPUT_DIR=~/deckhouse/cse/modules/810-documentation/images/web/content
+CSE_DOC_OUTPUT_DIR=/home/kar/deckhouse/cse/modules/810-documentation/images/web/content
 
 unset TMPDIR
 _TMPDIR=$(mktemp -d -t)
@@ -82,11 +82,14 @@ echo "Copying files..."
 rm -rf ${CSE_DOC_OUTPUT_DIR}
 if [ -n "${CSE_DOC_OUTPUT_DIR}" ]; then
   rm -rf "${CSE_DOC_OUTPUT_DIR}"
-  mkdir -p "${CSE_DOC_OUTPUT_DIR}"
+  mkdir -p "${CSE_DOC_OUTPUT_DIR}" ${CSE_DOC_OUTPUT_DIR}/images ${CSE_DOC_OUTPUT_DIR}/assets ${CSE_DOC_OUTPUT_DIR}/presentation ${CSE_DOC_OUTPUT_DIR}/embedded-modules
   cp -rf $_TMPDIR/app/platform/ru/* ${CSE_DOC_OUTPUT_DIR}
   cp -rf $_TMPDIR/app/platform/*.* ${CSE_DOC_OUTPUT_DIR}
-  cp -rf $_TMPDIR/app/platform/images ${CSE_DOC_OUTPUT_DIR}
-  cp -rf $_TMPDIR/app/platform/assets ${CSE_DOC_OUTPUT_DIR}/assets
+  cp -rf $_TMPDIR/app/platform/images ${CSE_DOC_OUTPUT_DIR}/
+  cp -rf $_TMPDIR/app/platform/assets ${CSE_DOC_OUTPUT_DIR}/
+  cp -rf $_TMPDIR/app/platform/presentation ${CSE_DOC_OUTPUT_DIR}/
+  cp -rf $_TMPDIR/app/platform/modules/ru/modules/* ${CSE_DOC_OUTPUT_DIR}/embedded-modules
+  cp -rf $_TMPDIR/app/platform/modules/ru/search-embedded-modules-index.json ${CSE_DOC_OUTPUT_DIR}/embedded-modules/search-embedded-modules-index.json
   echo "Result in the ${CSE_DOC_OUTPUT_DIR} directory."
 else
   echo "CSE_DOC_OUTPUT_DIR is not set!"

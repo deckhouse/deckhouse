@@ -110,6 +110,8 @@ git:
     - documentation/search-embedded-modules-*
     - documentation/pages/drafts
 {{ if ne .ModuleName "website-docs" }}
+    - documentation/pages/admin
+    - documentation/pages/architecture
     - site/pages/*.html
     - site/_includes/footer.html
     - site/_data/topnav.*
