@@ -70,3 +70,8 @@ apiVersions:
         description: |
           Switch to legacy SSH mode
         type: boolean
+      modernMode:
+        description: |
+          Switch to modern SSH mode
+        type: boolean
+
