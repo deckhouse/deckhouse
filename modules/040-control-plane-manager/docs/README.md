@@ -72,7 +72,7 @@ Upgrading **minor versions** of control plane components (e.g. from `1.29.*` to 
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
-If the target version (set with the [kubernetesVersion](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+If the target version (set with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
 
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
