@@ -10,7 +10,7 @@ To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/no
 
   Examples:  
   - [Installing the kubectl plugin](node-management.html#installing-the-cert-manager-plugin-for-kubectl-on-master-nodes)  
-  - [Configuring containerd with Nvidia GPU support](node-customization.html#how-to-use-containerd-with-nvidia-gpu-support)
+  - [Configuring containerd with Nvidia GPU support](#how-to-use-containerd-with-nvidia-gpu-support)
 
 - Updating the OS kernel to a specific version.
 
@@ -66,7 +66,7 @@ cloudProvider:
 </li>
 <li><code>.cri</code> — the container runtime interface in use (since Deckhouse version 1.49, only <code>Containerd</code> is used).</li>
 <li><code>.kubernetesVersion</code> — the version of Kubernetes in use.</li>
-<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="cr.html#nodeuser">NodeUser</a> resource.
+<li><code>.nodeUsers</code> — an array of user data added to the node using the <a href="/modules/node-manager/cr.html#nodeuser">NodeUser</a> resource.
 {% offtopic title="Example data..." %}
 ```yaml
 nodeUsers:
