@@ -88,7 +88,7 @@ var nodeThresholdMap = map[string]float64{
 }
 
 func (w *Watcher) StartNodeWatcher(ctx context.Context) {
-	factory := informers.NewSharedInformerFactory(w.clientSet, 5*time.Second)
+	factory := informers.NewSharedInformerFactory(w.clientSet, 0)
 	informer := factory.Core().V1().Nodes().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -123,7 +123,7 @@ func (w *Watcher) deleteNode(node *v1.Node) {
 // ---------------- Namespace Watcher ----------------
 
 func (w *Watcher) StartNamespaceWatcher(ctx context.Context) {
-	factory := informers.NewSharedInformerFactory(w.clientSet, 5*time.Second)
+	factory := informers.NewSharedInformerFactory(w.clientSet, 0)
 	informer := factory.Core().V1().Namespaces().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -217,7 +217,7 @@ var podThresholdMap = map[string]float64{
 func (w *Watcher) StartPodWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Core().V1().Pods().Informer()
@@ -264,7 +264,7 @@ var deamonSetThresholdMap = map[string]float64{
 func (w *Watcher) StartDaemonSetWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().DaemonSets().Informer()
@@ -311,7 +311,7 @@ var statefulSetThresholdMap = map[string]float64{
 func (w *Watcher) StartStatefulSetWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().StatefulSets().Informer()
@@ -335,7 +335,13 @@ func (w *Watcher) updateStatefulSet(ds *appsv1.StatefulSet) {
 			w.metrics.StatefulSetThreshold.WithLabelValues(ds.Namespace, ds.Name, key).
 				Set(thresholdLabel(ds.Labels, key, def))
 		}
+	} else {
+		for key := range statefulSetThresholdMap {
+			w.metrics.StatefulSetThreshold.WithLabelValues(ds.Namespace, ds.Name, key).
+				Set(0)
+		}
 	}
+
 	log.Printf("[STS UPDATE] %s/%s", ds.Namespace, ds.Name)
 	lastObserved = time.Now()
 }
@@ -358,7 +364,7 @@ var deploymentThresholdMap = map[string]float64{
 func (w *Watcher) StartDeploymentWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Apps().V1().Deployments().Informer()
@@ -404,7 +410,7 @@ var ingressThresholdMap = map[string]float64{
 func (w *Watcher) StartIngressWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Networking().V1().Ingresses().Informer()
@@ -445,7 +451,7 @@ func (w *Watcher) deleteIngress(ing *networkingv1.Ingress) {
 func (w *Watcher) StartCronJobWatcher(ctx context.Context, namespace string) {
 	factory := informers.NewSharedInformerFactoryWithOptions(
 		w.clientSet,
-		5*time.Second,
+		0,
 		informers.WithNamespace(namespace),
 	)
 	informer := factory.Batch().V1().CronJobs().Informer()
