@@ -33,7 +33,7 @@ func NewInitClientFromFlags(askPassword bool) (node.SSHClient, error) {
 		// if set --ssh-modern-mode
 		return gossh.NewInitClientFromFlags(askPassword)
 	case len(app.SSHPrivateKeys) > 0:
-		// if ssh-mode flags don't set, but ssh-private-keys is set
+		// if flags doesn't set, but we have private keys
 		return clissh.NewInitClientFromFlags(askPassword)
 	default:
 		return gossh.NewInitClientFromFlags(askPassword)
@@ -61,6 +61,7 @@ func NewClient(sess *session.Session, privateKeys []session.AgentPrivateKey) nod
 		// if set --ssh-modern-mode
 		return gossh.NewClient(sess, privateKeys)
 	case len(app.SSHPrivateKeys) > 0:
+		// if flags doesn't set, but we have private keys
 		client := clissh.NewClient(sess, privateKeys)
 		client.InitializeNewAgent = false
 		return client
