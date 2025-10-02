@@ -4,7 +4,7 @@
 
 At this point, you have created a cluster that consists of a **single** master node. Only a limited set of system components run on the master node by default. You have to add at least one worker node to the cluster for the cluster to work properly.
 
-Add a new node to the cluster (for more information about adding a static node to a cluster, read [the documentation](https://deckhouse.io/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster)):
+Add a new node to the cluster (for more information about adding a static node to a cluster, read [the documentation](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster)):
 
 - Prepare a server that will be a worker node of the cluster.
 

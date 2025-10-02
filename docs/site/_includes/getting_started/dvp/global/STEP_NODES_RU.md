@@ -4,7 +4,7 @@
 
 На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию запускаются только системные компоненты. Для полноценной работы платформы виртуализации необходимо добавить в кластер хотя бы один worker-узел.
 
-Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](https://deckhouse.ru/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере)):
+Добавьте узел в кластер (подробнее о добавлении статического узла в кластер читайте [в документации](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере)):
 
 - Подготовьте сервер, который будет worker-узлом кластера.
 
