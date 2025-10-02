@@ -303,7 +303,7 @@ func (w *Watcher) StartStatefulSetWatcher(ctx context.Context, namespace string)
 		0,
 		informers.WithNamespace(namespace),
 	)
-	informer := factory.Apps().V1().DaemonSets().Informer()
+	informer := factory.Apps().V1().StatefulSets().Informer()
 
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { w.updateStatefulSet(obj.(*appsv1.StatefulSet)) },
