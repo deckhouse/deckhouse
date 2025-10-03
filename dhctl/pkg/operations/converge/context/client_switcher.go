@@ -197,7 +197,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		sshCl.Stop()
 	}
 
-	if app.SSHModernMode || len(app.SSHPrivateKeys) == 0 {
+	if sshclient.IsModernMode() {
 		s.logger.LogDebugF("Old SSH Client: %-v\n", sshCl)
 		sshCl.Stop()
 	}
