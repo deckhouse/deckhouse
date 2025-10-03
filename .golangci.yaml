@@ -23,6 +23,7 @@ linters:
     - whitespace
     - unused
     - usestdlibvars
+    - wrapcheck
   settings:
     errcheck:
       exclude-functions:
@@ -61,6 +62,20 @@ linters:
         - all
         - '-ST1003' # waiting for package name will be fixed (underscores)
         - '-QF1008' # not need to fix; we understand how to call nested structs
+    wrapcheck:
+      # Comma-separated list of function signatures to ignore.
+      ignoreSigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Wrap(
+        - errors.Wrapf(
+        - fmt.Errorf(
+        - .IgnoreNotFound(
+        - .IgnoreAlreadyExists(
+      # Comma-separated list of packages to ignore.
+      ignorePackageGlobs:
+        - github.com/pkg/errors
+        - fmt
   exclusions:
     generated: lax
     presets:
@@ -85,6 +100,9 @@ linters:
           - staticcheck
         path: hooks/purge_orphan_resources.go
         text: 'is deprecated: use Info instead'
+      - linters:
+          - wrapcheck
+        path: _test\.go$
     paths:
       - go_lib/dependency/k8s/drain
       - modules/302-vertical-pod-autoscaler/hooks/internal/vertical-pod-autoscaler/v1
