@@ -59,7 +59,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
 
 <div id="block_layout_worker" class="tabs__content_worker">
-<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/products/kubernetes-platform/documentation/latest/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
+<p>Add a new node to the cluster (for more information about adding a static node to a cluster, read <a href="/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster">the documentation</a>):</p>
 
 <ul>
   <li>

@@ -15,9 +15,9 @@ lang: ru
 
 При создании Project из определенного ProjectTemplate происходит следующее:
 
-1. Переданные [параметры](cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](cr.html#projecttemplate));
-1. Выполняется рендеринг [шаблона для ресурсов](cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](cr.html#project-v1alpha2-spec-parameters) ресурса [Project](cr.html#project);
-1. Создаётся пространство имён с именем, которое совпадает c именем [Project](cr.html#project);
+1. Переданные [параметры](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate));
+1. Выполняется рендеринг [шаблона для ресурсов](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) ресурса [Project](/modules/multitenancy-manager/cr.html#project);
+1. Создаётся пространство имён с именем, которое совпадает c именем [Project](/modules/multitenancy-manager/cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 
 {% alert level="warning" %}
