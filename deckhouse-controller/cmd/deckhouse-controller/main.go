@@ -43,7 +43,7 @@ var (
 	ShellOperatorVersion = "dev"
 )
 
-// Variables to configure with pipeline
+// Variables to configure with build flags.
 var (
 	DefaultReleaseChannel = "Stable"
 )
