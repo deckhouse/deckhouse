@@ -1,5 +1,5 @@
 diff --git a/plugin/cache/cache.go b/plugin/cache/cache.go
-index a2ae9a307..47f89ad6c 100644
+index a2ae9a307..98d0041e6 100644
 --- a/plugin/cache/cache.go
 +++ b/plugin/cache/cache.go
 @@ -13,6 +13,9 @@ import (
@@ -17,7 +17,7 @@ index a2ae9a307..47f89ad6c 100644
  	keepttl bool
  
 +	// Metric for
-+	enableNXDomainLabels bool
++	enableNXDomainByClientDomain bool
 +
  	// Testing.
  	now func() time.Time
@@ -26,7 +26,7 @@ index a2ae9a307..47f89ad6c 100644
  		}
  		if w.ncache.Add(key, i) {
  			evictions.WithLabelValues(w.server, Denial, w.zonesMetricLabel, w.viewMetricLabel).Inc()
-+			if w.enableNXDomainLabels {
++			if w.enableNXDomainByClientDomain {
 +				qLabel := RegistrableDomain(m.Question[0].Name)
 +				cacheNXDomainByClientDomain.WithLabelValues(w.RemoteAddr().String(), qLabel).Inc()
 +			}
@@ -57,7 +57,7 @@ index a2ae9a307..47f89ad6c 100644
 +	return etld1
 +}
 diff --git a/plugin/cache/metrics.go b/plugin/cache/metrics.go
-index 77edb0286..5dfe898ab 100644
+index 77edb0286..d5c0fada1 100644
 --- a/plugin/cache/metrics.go
 +++ b/plugin/cache/metrics.go
 @@ -64,4 +64,13 @@ var (
@@ -66,7 +66,7 @@ index 77edb0286..5dfe898ab 100644
  	}, []string{"server", "type", "zones", "view"})
 +	cacheNXDomainByClientDomain = prometheus.NewCounterVec(
 +		prometheus.CounterOpts{
-+			Namespace: "coredns",
++			Namespace: plugin.Namespace,
 +			Subsystem: "cache",
 +			Name:      "nxdomain_by_client_domain_total",
 +			Help:      "NXDOMAIN responses served by cache, grouped by client IP and normalized domain.",
@@ -75,19 +75,19 @@ index 77edb0286..5dfe898ab 100644
 +	)
  )
 diff --git a/plugin/cache/setup.go b/plugin/cache/setup.go
-index f8278b872..bf5162795 100644
+index f8278b872..3be8d9e33 100644
 --- a/plugin/cache/setup.go
 +++ b/plugin/cache/setup.go
 @@ -246,6 +246,12 @@ func cacheParse(c *caddy.Controller) (*Cache, error) {
  					return nil, c.ArgErr()
  				}
  				ca.keepttl = true
-+			case "nxdomain_labels":
++			case "nxdomain_verbose":
 +				args := c.RemainingArgs()
 +				if len(args) != 0 {
 +					return nil, c.ArgErr()
 +				}
-+				ca.enableNXDomainLabels = true
++				ca.enableNXDomainByClientDomain = true
  			default:
  				return nil, c.ArgErr()
  			}
