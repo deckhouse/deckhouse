@@ -88,18 +88,29 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 		return id, fmt.Errorf("[%d] Cannot start tunnel ssh command: %w", id, err)
 	}
 
-	go func() {
-		log.DebugF("[%d] Reverse tunnel started. Wait stop tunnel...\n", id)
+	go func(localCmd *exec.Cmd, localID int) {
+		if localCmd == nil {
+			log.ErrorF("[%d] sshCmd is nil before Wait()\n", localID)
 
-		err := t.sshCmd.Wait()
+			t.errorCh <- tunnelWaitResult{
+				id:  localID,
+				err: fmt.Errorf("cannot Wait(): sshCmd is nil"),
+			}
+
+			return
+		}
+
+		log.DebugF("[%d] Reverse tunnel started. Waiting for tunnel to stop...\n", localID)
+
+		err := localCmd.Wait()
 
 		t.errorCh <- tunnelWaitResult{
-			id:  id,
+			id:  localID,
 			err: err,
 		}
 
-		log.DebugF("[%d] Reverse tunnel was stopped and handled\n", id)
-	}()
+		log.DebugF("[%d] Reverse tunnel was stopped and handled\n", localID)
+	}(t.sshCmd, id)
 
 	t.started = true
 
