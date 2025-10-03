@@ -90,3 +90,11 @@ func NewClientFromFlagsWithHosts() (node.SSHClient, error) {
 
 	return NewClientFromFlags()
 }
+
+func IsModernMode() bool {
+	return app.SSHModernMode || len(app.SSHPrivateKeys) == 0
+}
+
+func IsLegacyMode() bool {
+	return app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode)
+}

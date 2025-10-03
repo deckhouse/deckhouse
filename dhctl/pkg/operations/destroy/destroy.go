@@ -534,7 +534,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	}
 
 	// adding keys to agent is actual only in legacy mode
-	if app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
+	if sshclient.IsLegacyMode() {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)
