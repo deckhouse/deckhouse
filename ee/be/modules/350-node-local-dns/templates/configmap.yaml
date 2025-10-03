@@ -18,7 +18,7 @@ data:
         prefetch 25 1m 25%
         serve_stale 1h immediate
         servfail 0 # disable caching servfail
-        nxdomain_labels on # enabled verbose nxdomain by client ip and request domain
+        nxdomain_labels true # enabled verbose nxdomain by client ip and request domain
       }
       kubeforward {
         namespace kube-system
