@@ -95,7 +95,7 @@ description: Deckhouse управляет компонентами control plane
 При настройке OIDC-аутентификации в аудит-логах дополнительно включается информация о пользователе в поле `user.extra`:
 - `user-authn.deckhouse.io/name` - отображаемое имя пользователя
 - `user-authn.deckhouse.io/preferred_username` - предпочитаемое имя пользователя
-- `user-authn.deckhouse.io/dex-provider` - идентификатор провайдера Dex (требует скоуп `federated:id`)
+- `user-authn.deckhouse.io/dex-provider` - идентификатор провайдера Dex (требует разрешение `federated:id`)
 - совершаются с ресурсами в системных пространствах имен `kube-system`, `d8-*`.
 
 Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
