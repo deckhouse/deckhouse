@@ -505,6 +505,7 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 				VariablesPath:    r.variablesPath,
 				OutPath:          tmpFile.Name(),
 				DetailedExitCode: true,
+				NoOutput:         noout,
 			})
 		})
 
