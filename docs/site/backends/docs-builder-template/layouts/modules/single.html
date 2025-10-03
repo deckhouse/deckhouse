@@ -58,9 +58,6 @@
 
       <div class="post-content">
 
-        {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
-         {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
-        {{- end }}
 
         {{- if $moduleStatus }}
           {{- $statusKey := replace (lower $moduleStatus) " " "_" -}}
