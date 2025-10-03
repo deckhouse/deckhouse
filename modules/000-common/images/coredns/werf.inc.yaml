@@ -38,6 +38,7 @@ shell:
     - go mod edit -replace=github.com/deckhouse/coredns-kubeforward=./coredns-kubeforward # hack
     # - go mod edit -require=github.com/deckhouse/coredns-kubeforward@v0.1.0 # hack
     - go mod edit -require=github.com/deckhouse/coredns-kubeforward@nxdomain-metric # hack
+    - go mod download
     - go generate
     - go build -ldflags='-extldflags "-static" -s -w -X github.com/{{ .ImageName }}/{{ .ImageName }}/coremain.GitCommit=v1.12.3' -o /coredns
     - chown 64535:64535 /coredns
