@@ -112,12 +112,6 @@ spec:
   auditAnnotations:
     - key: 'source-user'
       valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with a managed services prefix'"
-    - key: 'operation'
-      valueExpression: "'Operation: ' + string(request.operation)"
-    - key: 'oldObject'
-      valueExpression: "'Old Object: ' + string(oldObject)"
-    - key: 'object'
-      valueExpression: "'Object: ' + string(object)"
 
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
