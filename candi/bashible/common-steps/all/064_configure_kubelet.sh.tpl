@@ -368,6 +368,12 @@ protectKernelDefaults: true
 {{- if or (eq .cri "Containerd") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
+{{- else if eq .cri "Containerdv2" }}
+containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "77Mi" }}
+containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 7 }}
+{{- else }}
+containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "99Mi" }}
+containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 9 }}
 {{- end }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriodByPodPriority:
