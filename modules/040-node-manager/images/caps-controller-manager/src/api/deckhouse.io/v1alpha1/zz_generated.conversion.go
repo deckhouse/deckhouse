@@ -192,6 +192,7 @@ func Convert_v1alpha2_SSHCredentialsList_To_v1alpha1_SSHCredentialsList(in *v1al
 func autoConvert_v1alpha1_SSHCredentialsSpec_To_v1alpha2_SSHCredentialsSpec(in *SSHCredentialsSpec, out *v1alpha2.SSHCredentialsSpec, s conversion.Scope) error {
 	out.User = in.User
 	out.PrivateSSHKey = in.PrivateSSHKey
+	out.PrivateSSHKeyPassphrase = in.PrivateSSHKeyPassphrase
 	// WARNING: in.SudoPassword requires manual conversion: does not exist in peer-type
 	out.SSHPort = in.SSHPort
 	out.SSHExtraArgs = in.SSHExtraArgs
@@ -201,6 +202,8 @@ func autoConvert_v1alpha1_SSHCredentialsSpec_To_v1alpha2_SSHCredentialsSpec(in *
 func autoConvert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in *v1alpha2.SSHCredentialsSpec, out *SSHCredentialsSpec, s conversion.Scope) error {
 	out.User = in.User
 	out.PrivateSSHKey = in.PrivateSSHKey
+	out.PrivateSSHKeyPassphrase = in.PrivateSSHKeyPassphrase
+	// WARNING: in.PasswordEncoded requires manual conversion: does not exist in peer-type
 	// WARNING: in.SudoPasswordEncoded requires manual conversion: does not exist in peer-type
 	out.SSHPort = in.SSHPort
 	out.SSHExtraArgs = in.SSHExtraArgs
