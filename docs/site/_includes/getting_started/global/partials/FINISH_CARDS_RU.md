@@ -142,7 +142,7 @@ nodegroups`. Подробнее об этом в [документации](/pro
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
 если они не равны, — у вас автоматически заработает автоскейлинг.
 
-Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | downcase }}/cr.html) и
+Чтобы создать новые группы вам понадобится создать новый [InstanceClass](/modules/cloud-provider-{{ page.platform_code | regex_replace: "^(openstack)_.+$", "\1" | replace: "dvp-provider", "dvp" | downcase }}/cr.html) и
 [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup), которая на него
 ссылается.
 {% else %}
