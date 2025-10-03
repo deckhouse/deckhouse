@@ -15,7 +15,11 @@
 package infrastructure
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"os/exec"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -52,6 +56,7 @@ type PlanOpts struct {
 	VariablesPath    string
 	OutPath          string
 	DetailedExitCode bool
+	NoOutput         bool
 }
 
 type OutputExecutor interface {
@@ -66,6 +71,7 @@ type Executor interface {
 	Plan(ctx context.Context, opts PlanOpts) (exitCode int, err error)
 	Destroy(ctx context.Context, opts DestroyOpts) error
 	Show(ctx context.Context, statePath string) (result []byte, err error)
+	GetActions(ctx context.Context, planPath string) (action []string, err error)
 
 	// TODO need refactoring getting plan changes. I do not have more time for deep refactoring
 	IsVMChange(rc plan.ResourceChange) bool
@@ -131,6 +137,10 @@ func (e *fakeExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 
 func (e *fakeExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
 	return e.showResp.resp, e.showResp.err
+}
+
+func (e *fakeExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+	return []string{}, nil
 }
 
 func (e *fakeExecutor) SetExecutorLogger(logger log.Logger) {
@@ -200,6 +210,12 @@ func (e *DummyExecutor) Show(ctx context.Context, planPath string) (result []byt
 	return nil, nil
 }
 
+func (e *DummyExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+	e.logger.LogWarnLn("Call GetActions on dummy executor")
+
+	return nil, nil
+}
+
 func (e *DummyExecutor) SetExecutorLogger(logger log.Logger) {
 	e.logger = logger
 }
@@ -222,4 +238,33 @@ func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outF
 	e.logger.LogWarnLn("Call Output on dummy output executor")
 
 	return nil, nil
+}
+
+func GetActions(ctx context.Context, cmd *exec.Cmd) (actions []string, err error) {
+	type state struct {
+		ResourceChanges []struct {
+			Change struct {
+				Actions []string `json:"actions"`
+			} `json:"change"`
+		} `json:"resource_changes"`
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, 5000))
+	cmd.Stdout = buf
+
+	if err := cmd.Run(); err != nil {
+		return actions, fmt.Errorf("failed to start terraform: %w", err)
+	}
+
+	var res state
+	err = json.Unmarshal(buf.Bytes(), &res)
+	if err != nil {
+		return actions, fmt.Errorf("failed to unmarshal json: %w", err)
+	}
+	for _, i := range res.ResourceChanges {
+		act := i.Change.Actions
+		actions = append(actions, act...)
+	}
+
+	return actions, nil
 }
