@@ -25,9 +25,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
@@ -87,12 +86,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
 
-	var sshClient node.SSHClient
-	if app.SSHLegacyMode {
-		sshClient = clissh.NewClient(sess, keys)
-	} else {
-		sshClient = gossh.NewClient(sess, keys)
-	}
+	sshClient := sshclient.NewClient(sess, keys)
 
 	cleanuper.Add(func() error {
 		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {

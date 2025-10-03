@@ -42,9 +42,9 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -475,7 +475,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 
 	log.DebugLn("Private key written")
 
-	if !app.SSHLegacyMode {
+	if sshclient.IsModernMode() {
 		log.DebugF("Old SSH Client: %-v\n", d.SSHClient)
 		log.DebugLn("Stopping old SSH client")
 		d.SSHClient.Stop()
@@ -495,14 +495,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 		BecomePass:     d.userCredentials.Password,
 	})
 
-	var newSSHClient node.SSHClient
-	if app.SSHLegacyMode {
-		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-		// Avoid starting a new ssh agent
-		newSSHClient.(*clissh.Client).InitializeNewAgent = false
-	} else {
-		newSSHClient = gossh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-	}
+	newSSHClient := sshclient.NewClient(sess, []session.AgentPrivateKey{privateKey})
 
 	log.DebugF("New SSH Client: %-v\n", newSSHClient)
 	err = newSSHClient.Start()
@@ -511,7 +504,7 @@ func (d *StaticMastersDestroyer) switchToNodeuser(settings *session.Session) err
 	}
 
 	// adding keys to agent is actual only in legacy mode
-	if app.SSHLegacyMode {
+	if sshclient.IsLegacyMode() {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)
