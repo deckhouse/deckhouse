@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -58,7 +59,7 @@ func (c *Command) Save(tarWriter *tar.Writer) error {
 	return nil
 }
 
-func createTarball() *bytes.Buffer {
+func createTarball(excludeFiles []string) *bytes.Buffer {
 	var buf bytes.Buffer
 
 	gzipWriter := gzip.NewWriter(&buf)
@@ -66,6 +67,12 @@ func createTarball() *bytes.Buffer {
 
 	tarWriter := tar.NewWriter(gzipWriter)
 	defer tarWriter.Close()
+
+	// Create a map for faster lookup of excluded files
+	excludeMap := make(map[string]bool)
+	for _, file := range excludeFiles {
+		excludeMap[file] = true
+	}
 
 	debugCommands := []Command{
 		{
@@ -278,9 +285,23 @@ func createTarball() *bytes.Buffer {
 			Cmd:  "bash",
 			Args: []string{"-c", `kubectl get modules -o json | jq -r '.items[] | select(.status.phase == "Ready" and .metadata.name == "cni-cilium") | "kubectl -n d8-cni-cilium exec -it $(kubectl -n d8-cni-cilium get pod -o name | grep agent | head -n 1) -c cilium-agent -- cilium-health status"' | bash`},
 		},
+		{
+			File: "audit-policy.json",
+			Cmd:  "kubectl",
+			Args: []string{"-n", "kube-system", "get", "secrets", "audit-policy", "-o", "json", "--ignore-not-found=true"},
+		},
 	}
 
 	for _, cmd := range debugCommands {
+		if excludeMap[cmd.File] {
+			continue
+		}
+		fileNameWithoutExt := strings.TrimSuffix(cmd.File, ".json")
+		fileNameWithoutExt = strings.TrimSuffix(fileNameWithoutExt, ".txt")
+		if excludeMap[fileNameWithoutExt] {
+			continue
+		}
+
 		if err := cmd.Save(tarWriter); err != nil {
 			fmt.Fprint(os.Stderr, err.Error())
 		}
@@ -289,10 +310,81 @@ func createTarball() *bytes.Buffer {
 	return &buf
 }
 
+func printExcludableFiles() {
+	fmt.Println("List of possible data to exclude:")
+
+	excludableFiles := []string{
+		"queue",
+		"global-values",
+		"deckhouse-enabled-modules",
+		"deckhouse-module-sources",
+		"deckhouse-module-pull-overrides",
+		"deckhouse-maintenance-modules",
+		"events",
+		"d8-all",
+		"node-groups",
+		"node-group-configuration",
+		"nodes",
+		"machines",
+		"instances",
+		"staticinstances",
+		"cloud-machine-deployment",
+		"static-machine-deployment",
+		"deckhouse-version",
+		"deckhouse-releases",
+		"deckhouse-logs",
+		"capi-controller-manager",
+		"caps-controller-manager",
+		"machine-controller-manager",
+		"mcm-logs",
+		"ccm-logs",
+		"csi-controller-logs",
+		"cluster-autoscaler-logs",
+		"vpa-admission-controller-logs",
+		"vpa-recommender-logs",
+		"vpa-updater-logs",
+		"prometheus-logs",
+		"alerts",
+		"bad-pods",
+		"cluster-authorization-rules",
+		"authorization-rules",
+		"module-configs",
+		"d8-istio-resources",
+		"d8-istio-custom-resources",
+		"d8-istio-envoy-config",
+		"d8-istio-system-logs",
+		"d8-istio-ingress-logs",
+		"d8-istio-users-logs",
+		"cilium-health-status",
+		"audit-policy",
+	}
+
+	for _, fileName := range excludableFiles {
+		fmt.Println(fileName)
+	}
+}
+
 func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug := kpApp.Command("collect-debug-info", "Collect debug info from your cluster.")
+	excludeFiles := collectDebug.Flag("exclude", "Exclude specific files from the debug archive. Can specify multiple files separated by spaces.").String()
+	listFiles := collectDebug.Flag("list-exclude", "List all files that can be excluded from the debug archive.").Bool()
+
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
-		res := createTarball()
+		if *listFiles {
+			printExcludableFiles()
+			return nil
+		}
+
+		var excludeList []string
+		if *excludeFiles != "" {
+			parts := strings.Fields(*excludeFiles)
+			for _, part := range parts {
+				if part != "" {
+					excludeList = append(excludeList, part)
+				}
+			}
+		}
+		res := createTarball(excludeList)
 		_, err := io.Copy(os.Stdout, res)
 		return err
 	})
