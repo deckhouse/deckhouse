@@ -76,6 +76,8 @@ const (
 	kubernetesNamespace = "kube-system"
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
+
+	defaultReleaseChannel = "Stable"
 )
 
 type DeckhouseController struct {
@@ -254,7 +256,7 @@ func NewDeckhouseController(
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
-		ReleaseChannel: "Stable",
+		ReleaseChannel: defaultReleaseChannel,
 	})
 
 	err = metrics.RegisterDeckhouseControllerMetrics(operator.MetricStorage)
@@ -394,7 +396,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
-			settings.ReleaseChannel = "Stable"
+			settings.ReleaseChannel = defaultReleaseChannel
 			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
 		}
 
