@@ -189,6 +189,44 @@
     "external": "true",
     "path": "/modules/delivery-kit/stable/"
   },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/stable/"
+  },
+  "managed-memcached": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-memcached/stable/"
+  },
   "neuvector": {
     "editions": [
       "ee"
