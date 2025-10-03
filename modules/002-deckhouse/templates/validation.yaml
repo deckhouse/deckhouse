@@ -99,7 +99,7 @@ spec:
     - name: 'exclude-managed-serviceaccounts'
       expression: '!(request.userInfo.username.startsWith("system:serviceaccount:") && request.userInfo.username.contains(":d8ms-"))'
     - name: 'exclude-delete-pods-operations'
-      expression: '!(request.operation == "DELETE" && oldObject.kind == "pods")'
+      expression: '!(request.operation == "DELETE" && request.resource == "pods")'
   validations:
     # deny all operations with any objects with `d8ms-` prefix, except for Pods deletions
     - expression: |
