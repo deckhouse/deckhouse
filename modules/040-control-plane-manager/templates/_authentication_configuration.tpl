@@ -29,6 +29,8 @@ jwt:
       valueExpression: 'claims.name'
     - key: 'user-authn.deckhouse.io/preferred_username'
       valueExpression: 'has(claims.preferred_username) ? claims.preferred_username : null'
+    - key: 'user-authn.deckhouse.io/dex-provider'
+      valueExpression: "has(claims.federated_claims) && has(claims.federated_claims.connector_id) ? claims.federated_claims.connector_id : null"
   userValidationRules:
   - expression: "!user.username.startsWith('system:')"
     message: 'username cannot used reserved system: prefix'

@@ -76,6 +76,11 @@ type PrefixedClaimOrExpression struct {
 	Expression string `yaml:"expression,omitempty"`
 }
 
+type ExtraClaimMapping struct {
+	Key             string `yaml:"key"`
+	ValueExpression string `yaml:"valueExpression"`
+}
+
 type AuthenticationConfigurationV1beta1 struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
@@ -89,6 +94,7 @@ type AuthenticationConfigurationV1beta1 struct {
 		ClaimMappings struct {
 			Username PrefixedClaimOrExpression `yaml:"username"`
 			Groups   PrefixedClaimOrExpression `yaml:"groups"`
+			Extra    []ExtraClaimMapping       `yaml:"extra"`
 		} `yaml:"claimMappings"`
 	} `yaml:"jwt"`
 }
@@ -745,6 +751,41 @@ resources:
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+			})
+			It("should include extra claim mappings for user-authn.deckhouse.io claims", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(s.Exists()).To(BeTrue())
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				// Verify extra claim mappings are present
+				extraMappings := config.JWT[0].ClaimMappings.Extra
+				Expect(extraMappings).To(HaveLen(3))
+
+				// Check user-authn.deckhouse.io/name mapping
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/name",
+					ValueExpression: "claims.name",
+				}))
+
+				// Check user-authn.deckhouse.io/preferred_username mapping
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/preferred_username",
+					ValueExpression: "has(claims.preferred_username) ? claims.preferred_username : null",
+				}))
+
+				// Check user-authn.deckhouse.io/dex-provider mapping (from Dex federated_claims.connector_id)
+				// Note: connector_id appears in id_token only when client requests federated:id scope
+				// Without this scope, the mapping returns null and field won't appear in .user.extra
+				// To enable: add --oidc-extra-scope=federated:id to OIDC client (e.g., kubelogin/oidc-login)
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/dex-provider",
+					ValueExpression: "has(claims.federated_claims) && has(claims.federated_claims.connector_id) ? claims.federated_claims.connector_id : null",
+				}))
 			})
 		})
 		Context("apiserver oidc settings are set fully and kubernetes 1.29", func() {
