@@ -1,6 +1,7 @@
 ---
 title: "Объектное хранилище на основе S3"
 permalink: ru/admin/configuration/storage/external/s3.html
+description: "Настройка интеграции с объектным хранилищем S3 в Deckhouse Kubernetes Platform. Настройка GeeseFS, конфигурация StorageClass и руководство по подключению S3-совместимого хранилища."
 lang: ru
 ---
 

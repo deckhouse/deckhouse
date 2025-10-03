@@ -24,6 +24,10 @@ entries:
             en: Requirements
             ru: Требования
           url: /virtualization-platform/documentation/about/requirements.html
+        - title:
+            en: Architecture options
+            ru: Архитектурные решения
+          url: /virtualization-platform/documentation/about/architecture-options.html
     - title:
         en: Administration
         ru: Администрирование
@@ -306,8 +310,8 @@ entries:
                         ru: Хранилище данных Huawei
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/huawei.html
                     - title:
-                        en: NFS data storage
-                        ru: Хранилище данных NFS
+                        en: NFS storage
+                        ru: Сетевое файловое хранилище NFS
                       url: /virtualization-platform/documentation/admin/platform-management/storage/external/nfs.html
                     - title:
                         en: SCSI-based data storage

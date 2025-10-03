@@ -1,6 +1,7 @@
 ---
 title: "Настройка реплицируемого хранилища на основе DRBD"
 permalink: ru/admin/configuration/storage/sds/lvm-replicated.html
+description: "Настройка реплицируемого хранилища на основе DRBD в Deckhouse Kubernetes Platform. Высокодоступное хранилище с бэкендом LINSTOR для отказоустойчивости и репликации данных между узлами."
 lang: ru
 ---
 

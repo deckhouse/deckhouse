@@ -1,6 +1,7 @@
 ---
 title: Short-term log storage
 permalink: en/admin/configuration/logging/storage.html
+description: "Configure short-term log storage in Deckhouse Kubernetes Platform using Grafana Loki. Log collection, storage management, and centralized logging solution setup."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides a built-in solution for short-term log storage based on the [Grafana Loki](https://grafana.com/oss/loki/) project.

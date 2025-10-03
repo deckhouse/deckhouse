@@ -1,6 +1,7 @@
 ---
 title: Управление внутренним container registry
 permalink: ru/admin/configuration/registry/internal.html
+description: "Настройка внутреннего container registry в Deckhouse Kubernetes Platform. Кэширование образов, оптимизация хранилища и управление высокодоступным registry."
 lang: ru
 ---
 

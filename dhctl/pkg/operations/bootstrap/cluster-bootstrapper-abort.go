@@ -18,11 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
@@ -90,12 +93,25 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 }
 
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+	metaConfig, err := config.ParseConfig(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+	)
 	if err != nil {
 		return err
 	}
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig))
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
@@ -145,6 +161,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 					terraStateLoader, stateCache, b.InfrastructureContext,
 					controller.ClusterInfraOptions{
 						PhasedExecutionContext: b.PhasedExecutionContext,
+						TmpDir:                 b.TmpDir,
+						Logger:                 b.Logger,
+						IsDebug:                b.IsDebug,
 					},
 				)
 			} else {
@@ -201,7 +220,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
 
-		destroyer, err = destroy.NewClusterDestroyer(destroyParams)
+		destroyParams.Logger = b.logger
+		destroyParams.IsDebug = b.IsDebug
+		destroyParams.TmpDir = b.TmpDir
+
+		destroyer, err = destroy.NewClusterDestroyer(ctx, destroyParams)
 		if err != nil {
 			return err
 		}
@@ -231,7 +254,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 	}
 
-	if destroyer == nil {
+	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
 
@@ -240,6 +263,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 	defer b.PhasedExecutionContext.Finalize(stateCache)
 
+	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err

@@ -24,7 +24,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -70,9 +71,7 @@ func TestGetMasterNodeResult(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := newTestRunner(func(_ string, _ log.Logger) Executor {
-				return &fakeExecutor{outputResp: tc.outputResp}
-			}).
+			runner := newTestRunner(&fakeExecutor{outputResp: tc.outputResp}).
 				WithName("test").
 				WithStatePath("./mocks/pipeline/empty_state.json")
 
@@ -112,50 +111,48 @@ func TestCheckBaseInfrastructurePipeline(t *testing.T) {
 			name:        "No changes",
 			showResp:    fakeResponse{resp: okPlan},
 			outputResp:  fakeResponse{resp: discoveryData},
-			expectedRes: PlanHasNoChanges,
+			expectedRes: plan.HasNoChanges,
 			expectedErr: nil,
 		},
 		{
 			name:        "Changes exit code",
-			planResp:    fakeResponse{code: hasChangesExitCode},
+			planResp:    fakeResponse{code: exec.HasChangesExitCode},
 			showResp:    fakeResponse{resp: okPlan},
 			outputResp:  fakeResponse{resp: discoveryData},
-			expectedRes: PlanHasChanges,
+			expectedRes: plan.HasChanges,
 			expectedErr: nil,
 		},
 		{
 			name:        "Changes exit code and changed zones",
-			planResp:    fakeResponse{code: hasChangesExitCode},
+			planResp:    fakeResponse{code: exec.HasChangesExitCode},
 			showResp:    fakeResponse{resp: discoveryDataWithNewZones},
-			expectedRes: PlanHasDestructiveChanges,
+			expectedRes: plan.HasDestructiveChanges,
 			expectedErr: nil,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := newTestRunner(func(_ string, _ log.Logger) Executor {
-				return &fakeExecutor{
-					showResp:   tc.showResp,
-					outputResp: fakeResponse{resp: discoveryData},
-					planResp:   tc.planResp,
-				}
+			runner := newTestRunner(&fakeExecutor{
+				showResp:   tc.showResp,
+				outputResp: fakeResponse{resp: discoveryData},
+				planResp:   tc.planResp,
 			}).
 				WithName("test").
 				WithStatePath("./mocks/pipeline/empty_state.json")
 
-			res, plan, _, err := CheckBaseInfrastructurePipeline(context.Background(), runner, "test")
+			res, pl, _, err := CheckBaseInfrastructurePipeline(context.Background(), runner, "test")
 			if tc.expectedErr != nil {
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
 
-			var expectedPlan Plan
+			var expectedPlan plan.Plan
 			require.NoError(t, json.Unmarshal(tc.showResp.resp, &expectedPlan))
 
 			require.Equal(t, tc.expectedRes, res)
-			require.Equal(t, expectedPlan, plan)
+			require.Equal(t, expectedPlan, pl)
 		})
 	}
 }
@@ -195,9 +192,7 @@ func TestDestroyPipeline(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := newTestRunner(func(_ string, _ log.Logger) Executor {
-				return &fakeExecutor{destroyResp: tc.destroyResp}
-			}).
+			runner := newTestRunner(&fakeExecutor{destroyResp: tc.destroyResp}).
 				WithName("test").
 				WithConfirm(func() *input.Confirmation {
 					return input.NewConfirmation().WithYesByDefault()

@@ -1,6 +1,7 @@
 ---
 title: "Integration with external authentication providers"
 permalink: en/admin/configuration/access/authentication/external-authentication-providers.html
+description: "Integrate Deckhouse Kubernetes Platform with external authentication providers including LDAP, OIDC, GitHub, GitLab, Atlassian Crowd, and Bitbucket. Step-by-step configuration guide."
 ---
 
 Connecting an external authentication provider allows you to use a single set of credentials to access multiple clusters and simultaneously work with multiple providers.

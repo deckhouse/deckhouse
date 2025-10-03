@@ -2,6 +2,7 @@
 title: "Управление узлами"
 permalink: ru/architecture/node.html
 lang: ru
+search: node management architecture, node lifecycle, архитектура управления узлами, жизненный цикл узлов
 ---
 
 ## Типы узлов и механика добавления

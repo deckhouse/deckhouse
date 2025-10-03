@@ -1,6 +1,7 @@
 ---
 title: "Переключение редакций"
 permalink: ru/admin/configuration/registry/switching-editions.html
+description: "Переключение между редакциями Deckhouse Kubernetes Platform. Миграция с Community Edition на Enterprise Edition и управление лицензиями."
 lang: ru
 ---
 
@@ -145,7 +146,7 @@ lang: ru
    d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ee:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](./platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](../platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Проверка статуса пода DKP:
 
@@ -347,7 +348,7 @@ lang: ru
    d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
    ```
 
-1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](./platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
+1. Дождитесь перехода пода DKP в статус `Ready` и [выполнения всех задач в очереди](../platform-scaling/control-plane/control-plane-management-and-configuration.html#проверка-состояния-и-очередей-dkp). Если в процессе возникает ошибка `ImagePullBackOff`, подождите автоматического перезапуска пода.
 
    Проверка статуса пода DKP:
 
@@ -643,7 +644,7 @@ lang: ru
 {% alert level="warning" %}
 Инструкция подразумевает использование публичного адреса container registry: `registry-cse.deckhouse.ru`.
 
-В DKP CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](revision-comparison.html).
+В DKP CSE не поддерживается работа облачных кластеров и некоторых модулей. Подробнее о поддерживаемых модулях можно узнать на странице [сравнения редакций](../../../reference/revision-comparison.html).
 
 Миграция на DKP CSE возможна только с версии DKP EE 1.58, 1.64 или 1.67.
 
@@ -948,7 +949,7 @@ Deckhouse CSE 1.58 и 1.64 поддерживает Kubernetes версии 1.27
 {% alert level="warning" %}
 - Работоспособность инструкции подтверждена только для версий Deckhouse от `v1.70`. Если ваша версия младше, используйте соответствующую ей документацию.
 - Для коммерческих изданий требуется действующий лицензионный ключ с поддержкой нужного издания. При необходимости можно [запросить временный ключ](/products/enterprise_edition.html).
-- Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](../third-party.html).
+- Инструкция подразумевает использование публичного адреса container registry: `registry.deckhouse.ru`. В случае использования другого адреса container registry измените команды или воспользуйтесь [инструкцией по переключению Deckhouse на использование стороннего registry](./third-party.html).
 - В редакциях Deckhouse CE/BE/SE/SE+ не поддерживается работа облачных провайдеров Dynamix, Openstack, VCD, vSphere (vSphere поддерживается в редакции SE+) и ряда модулей.
 - Все команды выполняются на master-узле существующего кластера под пользователем `root`.
 {% endalert %}

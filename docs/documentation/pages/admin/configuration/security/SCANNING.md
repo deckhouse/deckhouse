@@ -1,6 +1,7 @@
 ---
 title: Container image vulnerability scanning
 permalink: en/admin/configuration/security/scanning.html
+description: "Configure container image vulnerability scanning in Deckhouse Kubernetes Platform using Trivy. Automated security scanning, vulnerability detection, and security policy enforcement."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides a built-in tool for automatically detecting vulnerabilities

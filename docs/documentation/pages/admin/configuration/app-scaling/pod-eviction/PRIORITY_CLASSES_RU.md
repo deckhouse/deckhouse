@@ -1,6 +1,7 @@
 ---
 title: "Приоритеты подов"
 permalink: ru/admin/configuration/app-scaling/pod-eviction/priority-classes.html
+description: "Настройка классов приоритета подов в Deckhouse Kubernetes Platform. Политики вытеснения подов, приоритеты распределения ресурсов и оптимизация управления ресурсами кластера."
 lang: ru
 ---
 

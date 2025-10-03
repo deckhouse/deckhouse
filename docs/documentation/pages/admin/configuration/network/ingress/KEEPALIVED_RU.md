@@ -1,6 +1,7 @@
 ---
 title: "Обеспечение высокой доступности и отказоустойчивости (keepalived)"
 permalink: ru/admin/configuration/network/ingress/keepalived.html
+description: "Настройка keepalived для высокой доступности в Deckhouse Kubernetes Platform. Конфигурация отказоустойчивости и настройка сетевой избыточности для инфраструктуры кластера."
 lang: ru
 ---
 

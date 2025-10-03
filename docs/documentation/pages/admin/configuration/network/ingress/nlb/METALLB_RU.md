@@ -1,6 +1,7 @@
 ---
 title: "Балансировка средствами MetalLB"
 permalink: ru/admin/configuration/network/ingress/nlb/metallb.html
+description: "Настройка балансировки нагрузки MetalLB в Deckhouse Kubernetes Platform для bare-metal и облачных сред. Поддержка сервисов LoadBalancer и управление IP-адресами."
 lang: ru
 ---
 

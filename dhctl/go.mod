@@ -1,8 +1,8 @@
 module github.com/deckhouse/deckhouse/dhctl
 
-go 1.24
+go 1.24.0
 
-toolchain go1.24.3
+toolchain go1.24.6
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -32,10 +32,11 @@ require (
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mwitkow/grpc-proxy v0.0.0-20230212185441-f345521cb9c9
+	github.com/name212/govalue v1.0.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/client_model v0.6.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/vmware/go-vcloud-director/v3 v3.0.0-alpha.31
 	github.com/werf/logboek v0.5.5
 	golang.org/x/crypto v0.40.0

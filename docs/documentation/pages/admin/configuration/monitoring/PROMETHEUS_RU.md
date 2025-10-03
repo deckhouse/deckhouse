@@ -1,6 +1,7 @@
 ---
 title: "Настройка системы сбора и хранения метрик"
 permalink: ru/admin/configuration/monitoring/prometheus.html
+description: "Настройка сбора и хранения метрик Prometheus в Deckhouse Kubernetes Platform. Установка Deckhouse Prom++, настройка метрик и управление системой мониторинга."
 lang: ru
 ---
 

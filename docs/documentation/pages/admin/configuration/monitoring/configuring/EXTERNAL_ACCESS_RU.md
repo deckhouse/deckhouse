@@ -65,7 +65,7 @@ data:
 В качестве URL необходимо указать `https://prometheus-api.<домен-вашего-кластера>`**.
 {% endalert %}
 
-<img src="../../images/prometheus/prometheus_connect_settings.png" height="500">
+<img src="../../../../images/prometheus/prometheus_connect_settings.png" height="500">
 
 * **Basic-авторизация** не является надежной мерой безопасности. Рекомендуется ввести дополнительные меры безопасности, например указать аннотацию `nginx.ingress.kubernetes.io/whitelist-source-range`.
 

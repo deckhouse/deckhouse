@@ -40,18 +40,20 @@ $(window).on('load', function() {
     return elementTop + parentTop.offsetTop;
   }
 
-  const activeLinkTop = getTopActiveLinkSidebar(activeLink);
-  const activeLinkTopForScroll = getTopActiveLink(activeLink, sidebarLeft);
+  if(activeLink) {
+    const activeLinkTop = getTopActiveLinkSidebar(activeLink);
+    const activeLinkTopForScroll = getTopActiveLink(activeLink, sidebarLeft);
 
-  if(activeLinkTopForScroll < sidebars[0].scrollTop || (activeLinkTopForScroll + activeLink.offsetHeight) > (sidebars[0].scrollTop + sidebars[0].scrollHeight)) {
-    sidebars[0].scrollIntoView({
-      block: 'nearest',
+    if(activeLinkTopForScroll < sidebars[0].scrollTop || (activeLinkTopForScroll + activeLink.offsetHeight) > (sidebars[0].scrollTop + sidebars[0].scrollHeight)) {
+      sidebars[0].scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth'
+      })
+    }
+
+    sidebars[0].scrollTo({
+      top: activeLinkTop,
       behavior: 'smooth'
     })
   }
-
-  sidebars[0].scrollTo({
-    top: activeLinkTop,
-    behavior: 'smooth'
-  })
 });

@@ -145,7 +145,7 @@ To switch from Deckhouse Community Edition to Enterprise Edition, follow these s
    d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ee@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ee:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
+1. Wait for the Deckhouse pod to reach the `Ready` status and for [all tasks in the queue](../platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
    If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -352,7 +352,7 @@ To switch from Deckhouse Enterprise Edition to Community Edition, follow these s
    d8 k --as=system:serviceaccount:d8-system:deckhouse -n d8-system set image deployment/deckhouse init-downloaded-modules=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_INIT_CONTAINER kube-rbac-proxy=registry.deckhouse.ru/deckhouse/ce@$DECKHOUSE_KUBE_RBAC_PROXY deckhouse=registry.deckhouse.ru/deckhouse/ce:$DECKHOUSE_VERSION
    ```
 
-1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](./platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
+1. Wait for the DKP pod to reach the `Ready` status and for [all tasks in the queue](../platform-scaling/control-plane/control-plane-management-and-configuration.html#checking-dkp-status-and-queues) to complete.  
 If you encounter the `ImagePullBackOff` error during this process, wait for the pod to restart automatically.
 
    Check the status of the DKP pod:
@@ -650,7 +650,7 @@ All commands must be executed on the master node of the existing cluster.
 {% alert level="warning" %}
 This guide assumes the use of the public container registry address: `registry-cse.deckhouse.ru`.
 
-DKP CSE does not support cloud clusters and certain modules. See the [edition comparison](revision-comparison.html) page for details on supported modules.
+DKP CSE does not support cloud clusters and certain modules. See the [edition comparison](../../../reference/revision-comparison.html) page for details on supported modules.
 
 Migration to DKP CSE is only possible from DKP EE versions **1.58**, **1.64**, or **1.67**.
 
@@ -955,7 +955,7 @@ To switch to `Unmanaged` mode, follow the [instruction](/modules/registry/exampl
 {% alert level="warning" %}
 - The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
 - For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](/products/enterprise_edition.html).
-- The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](../third-party.html).
+- The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](./third-party.html).
 - The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules.
 - All commands are executed on the master node of the existing cluster with `root` user.
 {% endalert %}

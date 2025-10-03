@@ -1,6 +1,7 @@
 ---
 title: FAQ
 permalink: ru/admin/configuration/update/faq.html
+description: "Часто задаваемые вопросы об обновлениях платформы Deckhouse Kubernetes Platform. Устранение неполадок обновлений, конфигурация и лучшие практики обслуживания платформы."
 lang: ru
 ---
 

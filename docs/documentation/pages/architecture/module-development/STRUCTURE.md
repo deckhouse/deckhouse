@@ -610,7 +610,7 @@ Parameter description:
 - `_default`: *Object.* Default configuration used when no settings are defined for a specific edition.
 - `available`: *Boolean.* Defines whether the module is available in the specified edition.
 - `enabledInBundles`: *Array of strings.* Module bundles in which the module is enabled by default.
-  Supported module bundles (the full contents of each bundle are listed on [this page](../../../v1/#module-bundles)):
+  Supported module bundles (the full contents of each bundle are listed on [this page](../../../admin/configuration/#module-bundles)):
   - `Default`: Recommended set of modules for running a cluster.
     Includes monitoring, authorization control, networking, and other essential components.
   - `Managed`: Set of modules for clusters managed by cloud providers (for example, Google Kubernetes Engine).

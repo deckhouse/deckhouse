@@ -2,6 +2,7 @@
 title: "Аутентификация"
 permalink: ru/architecture/authentication.html
 lang: ru
+search: authentication, kubeconfig, user authentication, access control, kubernetes API access, аутентификация, kubeconfig, аутентификация пользователей, контроль доступа, доступ к API Kubernetes
 ---
 
 {% raw %}

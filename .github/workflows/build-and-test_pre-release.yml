@@ -3758,6 +3758,8 @@ jobs:
         id: list_changed_modules
         env:
           IMAGE_TO: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          COMPARE_MAX_ATTEMPTS: 10
+          COMPARE_RETRY_DELAY: 30
         run: |
           TAG_FROM="$(git ls-remote --tags origin | grep -F tags/v${GITHUB_REF_NAME#release-} | awk -F '/' '{print $3}' | sort -V | tail -n 1)"
           if [[ -n "${TAG_FROM}" ]]; then

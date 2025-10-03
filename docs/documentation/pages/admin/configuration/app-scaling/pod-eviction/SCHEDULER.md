@@ -1,6 +1,7 @@
 ---
 title: "Scheduler"
-permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html 
+permalink: en/admin/configuration/app-scaling/pod-eviction/scheduler.html
+description: "Configure Kubernetes scheduler in Deckhouse Kubernetes Platform. Pod scheduling policies, node selection, resource allocation, and cluster workload distribution optimization."
 ---
 
 ## Pod scheduling
@@ -215,7 +216,7 @@ This mechanism is controlled by the [`descheduler`](/modules/descheduler/) modul
 
 You can set the threshold in two ways:
 
-- By class name: Use `priorityClassThreshold.name` to evict only pods with a priority lower than the specified [priority class](./admin/configuration/app-scaling/pod-eviction/priority-classes.html).
+- By class name: Use `priorityClassThreshold.name` to evict only pods with a priority lower than the specified [priority class](./priority-classes.html).
 - By numeric value: Use `priorityClassThreshold.value` to evict pods with a priority lower than the specified integer value.
 
 Example:

@@ -2,6 +2,7 @@
 title: Обновление
 permalink: ru/architecture/updating.html
 lang: ru
+search: architecture deckhouse updates, release management architecture, update architecture, архитектура обновления Deckhouse, архитектура управления релизами и обновлениями
 ---
 
 ## Релизы

@@ -1,6 +1,7 @@
 ---
 title: "Monitoring in Deckhouse Kubernetes Platform"
 permalink: en/admin/configuration/monitoring/
+description: "Configure comprehensive monitoring for Deckhouse Kubernetes Platform with Prometheus and Grafana. Metrics collection, alerting, dashboards, and SLA monitoring for cluster health."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides a Kubernetes monitoring solution based on **Prometheus** and **Grafana**.
@@ -8,9 +9,10 @@ The module automatically configures metrics collection from nodes, pods, and key
 
 All components operate in a fault-tolerant mode, including Prometheus and Alertmanager, and are adapted for both cloud and bare metal environments.
 
-The principles of operation and Prometheus configuration are covered in the [article](docs/documentation/pages/admin/monitoring/prometheus.html).
+The principles of operation and Prometheus configuration are covered in the [article](./prometheus.html).
 
 Several types of monitoring are implemented:
+
 - [Hardware resource monitoring](#hardware-resource-monitoring);
 - [Kubernetes monitoring](#kubernetes-monitoring);
 - [Ingress monitoring](#ingress-monitoring).
@@ -51,7 +53,7 @@ It provides secure metrics collection and offers a basic set of rules for monito
 ## Ingress monitoring
 
 Statistics collection for ingress-nginx in Prometheus is implemented with detailed metrics (response time, codes, geography, etc.), available in different dimensions (namespace, vhost, ingress). Data is visualized in Grafana with interactive dashboards.
-Detailed description is in the [Ingress monitoring](../../../admin/network/alb-nginx.html#monitoring-and-statistics) section.
+Detailed description is in the [Ingress monitoring](../network/ingress/alb/nginx.html#monitoring-and-statistics) section.
 
 ## Control plane monitoring
 

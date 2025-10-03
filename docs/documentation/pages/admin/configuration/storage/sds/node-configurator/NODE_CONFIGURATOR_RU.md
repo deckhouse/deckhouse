@@ -1,6 +1,7 @@
 ---
 title: "Обзор"
 permalink: ru/admin/configuration/storage/sds/node-configurator/about.html
+description: "Настройка автоматического управления логическими томами в Deckhouse Kubernetes Platform. Автоматическое управление LVM, обнаружение блочных устройств и конфигурация хранилища на узлах кластера."
 lang: ru
 ---
 

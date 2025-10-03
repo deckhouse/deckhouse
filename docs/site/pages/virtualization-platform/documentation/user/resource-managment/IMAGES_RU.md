@@ -56,7 +56,7 @@ lang: ru
 Использование образа с параметром `storage: PersistentVolumeClaim` поддерживается только для создания дисков в том же классе хранения (StorageClass).
 {% endalert %}
 
-С полным описанием параметров конфигурации ресурса `VirtualImage` можно ознакомиться [в документации к ресурсу](/products/virtualization-platform/reference/cr/virtualimage.html).
+С полным описанием параметров конфигурации ресурса `VirtualImage` можно ознакомиться [в документации к ресурсу](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Создание образа с HTTP-сервера
 

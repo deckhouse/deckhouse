@@ -4,6 +4,7 @@ permalink: ru/admin/configuration/network/policy/configuration.html
 description: |
   Настройка сетевых политик Deckhouse Kubernetes Platform. Условия для включения режимов туннелирования трафика подов.
 lang: ru
+search: network policy configuration, network policies, traffic tunneling, pod traffic, network security, настройка сетевых политик, сетевые политики, сетевая безопасность
 ---
 
 Если на уровне инфраструктуры, где работает Deckhouse Kubernetes Platform, есть требования для ограничения сетевого взаимодействия между серверами, то необходимо соблюсти следующие условия:

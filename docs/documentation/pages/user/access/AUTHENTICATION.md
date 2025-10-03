@@ -24,7 +24,7 @@ Example of DKP authentication interface:
 
 ![Example authentication interface](../../images/user/access/authentication/web-auth-example.png)
 
-The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication.html#local-authentication) are defined in DKP, the user will be prompted to enter a username and password.
+The authentication interface allows users to choose an authentication method if multiple methods are configured. If only one external provider is configured, the user is redirected directly to that provider's login page. If [local users](../../admin/configuration/access/authentication/local.html) are defined in DKP, the user will be prompted to enter a username and password.
 
 Example of DKP authentication interface with username and password input:
 
@@ -88,7 +88,7 @@ To enable authentication for an application deployed in DKP, follow these steps:
    - The `applicationDomain` parameter in the `DexAuthenticator` defines the main domain of the application. Additional domains can be specified via the `additionalApplications.domain` parameter.
    - The `whitelistSourceRanges` and `additionalApplications.whitelistSourceRanges` parameters allow you to restrict authentication access to a specific list of IP addresses.
 
-     Refer to the [Authorization](./admin/configuration/access/authorization/) section for information about configuring authorization. A full description of all `DexAuthenticator` parameters can be found in the [Reference](/modules/user-authn/configuration.html) section.
+     Refer to the [Authorization](../../admin/configuration/access/authorization/) section for information about configuring authorization. A full description of all `DexAuthenticator` parameters can be found in the [Reference](/modules/user-authn/configuration.html) section.
 
 1. Add the following annotations to the application's Ingress resource:
 

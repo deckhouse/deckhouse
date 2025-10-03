@@ -10,12 +10,12 @@ locals {
 }
 
 module "security_groups" {
-  source               = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/security-groups"
+  source               = "../../../terraform-modules/security-groups"
   security_group_names = local.security_group_names
 }
 
 module "volume_zone" {
-  source       = "/deckhouse/candi/cloud-providers/openstack/terraform-modules/volume-zone"
+  source       = "../../../terraform-modules/volume-zone"
   compute_zone = element(local.zones, var.nodeIndex)
   region       = var.providerClusterConfiguration.provider.region
 }

@@ -50,7 +50,7 @@ apiVersions:
         description: |
           Домен кластера (используется для маршрутизации внутри кластера).
 
-          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
+          **Обратите внимание:** домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Например, нельзя одновременно устанавливать `clusterDomain: cluster.local` и `publicDomainTemplate: %s.cluster.local`.
 
           > При необходимости смены параметра в уже развернутом кластере рекомендуется воспользоваться [инструкцией](/modules/kube-dns/faq.html#как-поменять-домен-кластера-с-минимальным-простоем)
       defaultCRI:

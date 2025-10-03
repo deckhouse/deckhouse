@@ -1,6 +1,7 @@
 ---
 title: "Мониторинг в Deckhouse Kubernetes Platform"
 permalink: ru/admin/configuration/monitoring/
+description: "Настройка комплексного мониторинга для платформы Deckhouse Kubernetes Platform с Prometheus и Grafana. Сбор метрик, алертинг, дашборды и мониторинг SLA для здоровья кластера."
 lang: ru
 ---
 
@@ -9,9 +10,10 @@ Deckhouse Kubernetes Platform (DKP) предоставляет решение д
 
 Все компоненты работают в отказоустойчивом режиме, включая Prometheus и Alertmanager и адаптированы под облака и bare metal.
 
-Принцип работы и настройки Prometheus рассмотрены в [статье](docs/documentation/pages/admin/monitoring/prometheus.html).
+Принцип работы и настройки Prometheus рассмотрены в [статье](./prometheus.html).
 
 Реализовано несколько видов мониторинга:
+
 - [Мониторинг аппаратных ресурсов](#мониторинг-аппаратных-ресурсов);
 - [Мониторинг Kubernetes](#мониторинг-kubernetes);
 - [Мониторинг Ingress](#мониторинг-ingress).
@@ -52,7 +54,7 @@ Deckhouse Kubernetes Platform (DKP) предоставляет решение д
 ## Мониторинг Ingress
 
 Реализован сбор статистики для ingress-nginx в Prometheus с детальными метриками (время ответа, коды, география и др.), доступной в разных разрезах (namespace, vhost, ingress). Данные визуализированы в Grafana с интерактивными дашбордами.
-Подробное описание - в разделе [мониторинг Ingress](../../../admin/network/alb-nginx.html#мониторинг-и-статистика).
+Подробное описание - в разделе [мониторинг Ingress](../network/ingress/alb/nginx.html#мониторинг-и-статистика).
 
 ## Мониторинг control plane
 

@@ -1,6 +1,7 @@
 ---
 title: "General management and configuration of the control plane"
 permalink: en/admin/configuration/platform-scaling/control-plane/control-plane-management-and-configuration.html
+description: "Configure and manage Kubernetes control plane in Deckhouse Kubernetes Platform. High availability, certificate management, and control plane component configuration."
 ---
 
 ## Main features
@@ -50,7 +51,7 @@ You can enable or disable the [`control-plane-manager`](/modules/control-plane-m
    d8 platform module disable control-plane-manager
    ```  
   
-1. Via the [Deckhouse web interface](/modules/console):
+1. Via the [Deckhouse web interface](/modules/console/):
 
    - Go to the “Deckhouse → Modules” section.
    - Find the `control-plane-manager` module and click on it.

@@ -4,6 +4,7 @@ permalink: ru/reference/network_interaction.html
 description: |
   Подробная информация о настройке сетевых политик для Deckhouse Kubernetes Platform, в частно в средах с ограничениями на сетевое взаимодействие между узлами. Описывает необходимые условия для включения режимов туннелирования для трафика подов с использованием CNI Cilium и Flannel.
 lang: ru
+search: network interaction, network policies, CNI configuration, Cilium, Flannel, network tunneling, сетевое взаимодействие, сетевые политики, конфигурация CNI, туннелирование сети
 ---
 
 Если на площадке, где работает Deckhouse Kubernetes Platform (DKP), есть требования для ограничения сетевого взаимодействия между серверами на уровне инфраструктуры, то необходимо соблюсти следующие условия:
@@ -32,7 +33,7 @@ tunnel-protocol: vxlan
 
 {% alert level="info" %}
 Изменения, связанные с добавлением, удалением или переопределением портов в таблицах,
-перечислены в подразделе «Сеть» соответствующей версии DKP [на странице «История изменений»](release-notes.html).
+перечислены в подразделе «Сеть» соответствующей версии DKP [на странице «История изменений»](../release-notes.html).
 {% endalert %}
 
 {% include network_security_setup.liquid %}

@@ -1,6 +1,7 @@
 ---
 title: "Доступ для CI/CD"
 permalink: ru/admin/configuration/access/authorization/ci_cd.html
+description: "Настройка доступа CI/CD к кластеру Kubernetes в Deckhouse Kubernetes Platform. Настройка ServiceAccount, генерация kubeconfig и конфигурация доступа для CI/CD."
 lang: ru
 ---
 
@@ -41,7 +42,7 @@ lang: ru
    spec:
      subjects:
      - kind: ServiceAccount
-       name: gitlab-runner-deploy-token
+       name: gitlab-runner-deploy
        namespace: d8-service-accounts
      accessLevel: SuperAdmin
      portForwarding: true
@@ -56,9 +57,8 @@ lang: ru
      name: gitlab-admin-access
    subjects:
    - kind: ServiceAccount
-     name: gitlab-runner-deploy-token
+     name: gitlab-runner-deploy
      namespace: d8-service-accounts
-     apiGroup: rbac.authorization.k8s.io
    roleRef:
      kind: ClusterRole
      name: d8:manage:all:manager

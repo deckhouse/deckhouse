@@ -806,7 +806,7 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
-		case strings.HasPrefix(name, "base-infrastructure"):
+		case strings.HasPrefix(name, string(infrastructure.BaseInfraStep)):
 			fallthrough
 		case strings.HasPrefix(name, "uuid"):
 			fallthrough

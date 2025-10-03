@@ -1,6 +1,7 @@
 ---
 title: Настройка уведомлений о новых релизах
 permalink: ru/admin/configuration/update/notifications.html
+description: "Настройка уведомлений об обновлениях в Deckhouse Kubernetes Platform. Настройка алертов, интеграция с внешними системами и автоматизированное управление уведомлениями об обновлениях платформы."
 lang: ru
 ---
 

@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	conversionFolder = "/openapi/conversions"
+	conversionFolder        = "/openapi/conversions"
+	globalConversionsFolder = "global-hooks/openapi/conversions"
 )
 
 var regexVersionFile = regexp.MustCompile("v([1-9]|[1-9][0-9]|[1-9][0-9][0-9]).yaml")
@@ -47,11 +48,18 @@ type moduleFile struct {
 type conversion struct {
 	Version     *int         `yaml:"version,omitempty"`
 	Description *description `yaml:"description,omitempty"`
+	Conversions []string     `yaml:"conversions,omitempty"`
 }
 
 type description struct {
 	English string `yaml:"en,omitempty"`
 	Russian string `yaml:"ru,omitempty"`
+}
+
+type globalConversion struct {
+	Version     *int         `yaml:"version,omitempty"`
+	Conversions []string     `yaml:"conversions,omitempty"`
+	Description *description `yaml:"description,omitempty"`
 }
 
 func run() error {
@@ -64,7 +72,7 @@ func run() error {
 
 	modules := modules(deckhouseRoot)
 
-	result := make(map[string][]conversion, len(modules))
+	result := make(map[string][]conversion, len(modules)+1) // +1 for global conversions
 
 	for _, module := range modules {
 		folder := filepath.Join(deckhouseRoot, module.Path, conversionFolder)
@@ -110,6 +118,15 @@ func run() error {
 
 			return nil
 		})
+	}
+
+	// Process global conversions
+	globalConversions, err := processGlobalConversions(deckhouseRoot)
+	if err != nil {
+		return fmt.Errorf("process global conversions: %w", err)
+	}
+	if len(globalConversions) > 0 {
+		result["global"] = globalConversions
 	}
 
 	fileName := filepath.Join(deckhouseRoot, "docs/documentation/_data/conversions.yml")
@@ -184,4 +201,54 @@ func parseModules(deckhouseRoot string, folder string) []module {
 	}
 
 	return modules
+}
+
+func processGlobalConversions(deckhouseRoot string) ([]conversion, error) {
+	globalFolder := filepath.Join(deckhouseRoot, globalConversionsFolder)
+
+	stat, err := os.Stat(globalFolder)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("stat global conversions folder: %w", err)
+	}
+
+	if os.IsNotExist(err) || !stat.IsDir() {
+		return []conversion{}, nil
+	}
+
+	conversions := make([]conversion, 0)
+
+	err = filepath.Walk(globalFolder, func(path string, info fs.FileInfo, _ error) error {
+		if !regexVersionFile.MatchString(filepath.Base(path)) {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return fmt.Errorf("open global conversion file: %w", err)
+		}
+		defer file.Close()
+
+		gc := new(globalConversion)
+		err = yaml.NewDecoder(file).Decode(gc)
+		if err != nil {
+			return fmt.Errorf("yaml decode global conversion: %w", err)
+		}
+
+		// Convert globalConversion to conversion format
+		c := conversion{
+			Version:     gc.Version,
+			Description: gc.Description,
+			Conversions: gc.Conversions,
+		}
+
+		conversions = append(conversions, c)
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("walk global conversions folder: %w", err)
+	}
+
+	return conversions, nil
 }

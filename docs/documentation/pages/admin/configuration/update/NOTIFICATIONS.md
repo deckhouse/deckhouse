@@ -1,6 +1,7 @@
 ---
 title: Configuring notifications on new releases
 permalink: en/admin/configuration/update/notifications.html
+description: "Configure update notifications in Deckhouse Kubernetes Platform. Alert setup, external system integration, and automated notification management for platform updates."
 ---
 
 Deckhouse Kubernetes Platform (DKP) generates [alerts](#alerts-in-the-monitoring-system) in the monitoring system

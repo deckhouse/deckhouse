@@ -1,6 +1,7 @@
 ---
 title: Кратковременное хранение логов
 permalink: ru/admin/configuration/logging/storage.html
+description: "Настройка кратковременного хранения логов в Deckhouse Kubernetes Platform с использованием Grafana Loki. Сбор логов, управление хранилищем и настройка централизованного логирования."
 lang: ru
 ---
 

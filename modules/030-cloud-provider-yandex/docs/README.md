@@ -28,7 +28,7 @@ This section provides general guidelines for setting up a security group. Incorr
 
 1. Find out in which cloud network the Deckhouse Kubernetes Platform cluster is running.
 
-   The network name matches the `prefix` field of the [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration) resource. It can be retrieved using the following command:
+   The network name matches the `prefix` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource. It can be retrieved using the following command:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

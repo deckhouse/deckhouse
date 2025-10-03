@@ -1,6 +1,7 @@
 ---
 title: Overview
 permalink: en/admin/integrations/public/overview.html
+description: "Deploy Deckhouse Kubernetes Platform on public cloud providers including AWS, Azure, GCP, OpenStack, OVH, Selectel, VK, and Yandex. Complete cloud integration guide."
 ---
 
 Deckhouse Kubernetes Platform (DKP) can be deployed in various public clouds,

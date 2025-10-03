@@ -249,7 +249,7 @@ func TestTomb(t *testing.T) {
 				ready:        ready,
 				work:         work,
 				shutdown:     shutdown,
-				signalAction: sendSignalAction(t, syscall.SIGUSR2, 1500*time.Millisecond),
+				signalAction: sendSignalAction(t, syscall.SIGALRM, 1500*time.Millisecond),
 			},
 			expectedCode: 0,
 			expectedOut:  []string{ready, work, shutdown},

@@ -1,6 +1,7 @@
 ---
 title: "ALB средствами NGINX Ingress controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
+description: "Настройка балансировщика нагрузки приложения с помощью контроллера NGINX Ingress в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
 ---
 

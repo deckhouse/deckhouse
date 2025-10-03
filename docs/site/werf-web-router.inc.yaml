@@ -10,9 +10,7 @@ shell:
   - go build -ldflags "-w -s" -v -o /go/src/app/server /go/src/app/cmd/v-router
 git:
   - url: https://github.com/flant/web-router.git
-    # TODO Switch to something stable
-    #tag: v1.0.14
-    tag: v1.0.15-dev
+    tag: v1.0.14
     add: /
     to: /go/src/app
     stageDependencies:
@@ -23,11 +21,16 @@ image: web-router
 imageSpec:
   config:
     workingDir: "/app"
-fromImage: builder/alpine-3.20
-shell:
-  install:
-  - apk add --no-cache curl jq
+fromImage: builder/alpine-3.22
 import:
+  - image: tools/curl
+    add: /usr/bin/curl-static
+    to: /usr/bin/curl
+    before: setup
+  - image: tools/jq
+    add: /usr/bin/jq
+    to: /usr/bin/jq
+    before: setup
   - image: web-router-artifact
     add: /go/src/app/server
     to: /app/server

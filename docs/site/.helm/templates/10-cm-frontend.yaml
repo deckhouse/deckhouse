@@ -15,7 +15,7 @@ data:
     }
 
     http {
-      include       /etc/nginx/mime.types;
+      include       /usr/conf/mime.types;
       default_type  application/octet-stream;
 
       client_body_temp_path /tmp/client_temp;
@@ -187,7 +187,11 @@ data:
         # This is the default URL for DKP documentation and it is indexed by search engines.
         location ~* ^/products/kubernetes-platform/documentation/v1/(.*)$ {
             # $channel_name is mapped to $channel_version (see map above)
+{{- if eq $.Values.werf.env "web-production" }}
             set $channel_name "stable";
+{{- else }}
+            set $channel_name "latest";
+{{- end }}
             set $doc_path "$1";
 
             # Serve doc for the stable channel.

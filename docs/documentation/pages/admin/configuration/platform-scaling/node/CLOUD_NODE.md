@@ -1,6 +1,7 @@
 ---
 title: "Adding and managing cloud nodes"
 permalink: en/admin/configuration/platform-scaling/node/cloud-node.html
+description: "Manage cloud nodes in Deckhouse Kubernetes Platform including CloudEphemeral, CloudPermanent, and CloudStatic nodes. Auto-scaling, node lifecycle management, and cloud provider integration."
 ---
 
 In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following types:
@@ -89,7 +90,7 @@ spec:
 
 ## Modifying the cloud provider configuration in a cluster
 
-The configuration of the cloud provider used in a cloud or hybrid cluster is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}modules/cloud-provider-openstack/cluster_configuration.html).
+The configuration of the cloud provider used in a cloud or hybrid cluster is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}/products/kubernetes-platform/documentation/v1/{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
 
 Regardless of the cloud provider used, its settings can be modified using the following command:
 

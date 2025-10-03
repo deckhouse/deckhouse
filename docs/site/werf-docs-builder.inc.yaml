@@ -20,7 +20,7 @@ imageSpec:
     entrypoint: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
-    to: /app/hugo
+    to: /app/hugo-init
 {{ if ne .ModuleName "website-docs" }}
 {{- include "image mount points" . | nindent 2 }}
     excludePaths:

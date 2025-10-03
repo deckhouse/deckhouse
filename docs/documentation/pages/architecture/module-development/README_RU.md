@@ -2,6 +2,7 @@
 title: "Разработка модуля Deckhouse Kubernetes Platform"
 permalink: ru/architecture/module-development/
 lang: ru
+search: module development, deckhouse modules, module architecture, module development guide, custom modules, разработка модулей, модули Deckhouse, архитектура модулей, руководство по разработке модулей, пользовательские модули
 ---
 
 Модуль — набор ресурсов и приложений, предназначенных для расширения функциональности Deckhouse Kubernetes Platform.

@@ -1,6 +1,7 @@
 ---
 title: Сбор и доставка логов
 permalink: ru/admin/configuration/logging/delivery.html
+description: "Настройка сбора и доставки логов в Deckhouse Kubernetes Platform. Централизованное логирование из подов и узлов во внутренние или внешние системы хранения с фильтрацией и маршрутизацией."
 lang: ru
 ---
 

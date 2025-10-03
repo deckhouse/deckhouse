@@ -1,6 +1,7 @@
 ---
 title: "Интеграция с внешними провайдерами аутентификации"
 permalink: ru/admin/configuration/access/authentication/external-authentication-providers.html
+description: "Интеграция платформы Deckhouse Kubernetes Platform с внешними провайдерами аутентификации включая LDAP, OIDC, GitHub, GitLab, Atlassian Crowd и Bitbucket. Пошаговое руководство по настройке."
 lang: ru
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: "Current authorization model"
 permalink: en/admin/configuration/access/authorization/rbac-current.html
+description: "Configure current RBAC authorization model in Deckhouse Kubernetes Platform. User-authz module setup, ClusterRole management, and role-based access control configuration."
 ---
 
 To use the current role model, the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.

@@ -16,7 +16,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine-3.22
 imageSpec:
   config:
     workingDir: "/app"

@@ -2,7 +2,6 @@
 title: Overview
 permalink: en/admin/configuration/high-reliability-and-availability/
 description: High reliability and availability
-lang: en
 ---
 
 The reliability and resilience of a Kubernetes cluster are key characteristics

@@ -28,7 +28,7 @@ description: "Управление облачными ресурсами в Deck
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
-   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](../../installing/configuration.html#clusterconfiguration). Его можно узнать с помощью команды:
+   Название сети совпадает с полем `prefix` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration). Его можно узнать с помощью команды:
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \

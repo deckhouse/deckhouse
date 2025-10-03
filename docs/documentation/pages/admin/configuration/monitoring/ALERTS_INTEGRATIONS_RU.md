@@ -1,6 +1,7 @@
 ---
 title: "Настройка интеграций"
 permalink: ru/admin/configuration/monitoring/alerts-integrations.html
+description: "Настройка интеграций алертов в Deckhouse Kubernetes Platform с Zabbix, Slack, Telegram и другими системами. Маршрутизация алертов, настройка уведомлений и интеграция с системами мониторинга."
 lang: ru
 ---
 

@@ -12,7 +12,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
     * Monitoring of a group as a single entity (grouping nodes on graphs by groups, grouping alerts about node unavailability, alerts about the unavailability of N or N% of nodes in a group).
 2. **Chaos monkey** — the systemic termination of nodes. This feature tests the resilience of cluster elements and running applications.
 3. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
-    * Installing operating system (see the list of [supported OS](../../supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
+    * Installing operating system (see the list of [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
     * Configuring nginx (and the system for automatically updating the list of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.

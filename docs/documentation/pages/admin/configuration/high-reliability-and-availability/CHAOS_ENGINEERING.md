@@ -40,7 +40,7 @@ Enable chaos engineering mode for a node group in one of the following ways:
        period: 24h
    ```
 
-1. If the [`console`](/modules/console) module is enabled in the cluster,
+1. If the [`console`](/modules/console/) module is enabled in the cluster,
   open the Deckhouse web UI, go to the settings of the desired node group under **Nodes** — **Node Groups**,
   and enable Chaos Monkey in the **Chaos monkey settings** section
   by specifying the time intervals in the corresponding fields.

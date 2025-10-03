@@ -2,6 +2,7 @@
 title: Управление алертами
 permalink: ru/user/web/alertmanager.html
 lang: ru
+search: alert management, alertmanager, notification management, alert silencing, управление алертами, обработка алертов, управление уведомлениями, подавление алертов
 ---
 
 С помощью веб-интерфейса управления алертами можно получить подробную информацию об алерте, включая источник, уровень критичности и время срабатывания,

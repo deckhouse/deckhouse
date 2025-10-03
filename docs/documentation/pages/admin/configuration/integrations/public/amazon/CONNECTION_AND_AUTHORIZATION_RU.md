@@ -1,6 +1,7 @@
 ---
 title: Подключение и авторизация
 permalink: ru/admin/integrations/public/amazon/amazon-authorization.html
+description: "Настройка подключения и авторизации AWS для Deckhouse Kubernetes Platform. Роли IAM, настройка учетных данных и требования к интеграции AWS для облачного развертывания."
 lang: ru
 ---
 

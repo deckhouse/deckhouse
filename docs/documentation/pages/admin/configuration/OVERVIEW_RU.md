@@ -1,6 +1,7 @@
 ---
 title: "Как настроить?"
 permalink: ru/admin/configuration/
+description: "Узнайте, как настроить платформу Deckhouse Kubernetes Platform с помощью глобальных настроек, конфигураций модулей и пользовательских ресурсов. Руководство по настройке DKP."
 lang: ru
 ---
 

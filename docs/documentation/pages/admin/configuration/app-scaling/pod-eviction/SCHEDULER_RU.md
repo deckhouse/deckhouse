@@ -1,6 +1,7 @@
 ---
 title: "Планировщик"
-permalink: ru/admin/configuration/app-scaling/pod-eviction/scheduler.html 
+permalink: ru/admin/configuration/app-scaling/pod-eviction/scheduler.html
+description: "Настройка планировщика Kubernetes в Deckhouse Kubernetes Platform. Политики планирования подов, выбор узлов, распределение ресурсов и оптимизация распределения нагрузки кластера."
 lang: ru
 ---
 
@@ -209,7 +210,7 @@ Deckhouse Kubernetes Platform использует механизм приори
 
 Порог можно указать двумя способами:
 
-- По названию класса: если указать `priorityClassThreshold.name`, то вытеснению будут подлежать только поды с приоритетом ниже указанного [класса приоритета](./admin/configuration/app-scaling/pod-eviction/priority-classes.html).
+- По названию класса: если указать `priorityClassThreshold.name`, то вытеснению будут подлежать только поды с приоритетом ниже указанного [класса приоритета](./priority-classes.html).
 - По числовому значению: если указать `priorityClassThreshold.value`, то вытеснению подлежат поды с приоритетом ниже заданного значения (целочисленное значение).
 
 Пример:

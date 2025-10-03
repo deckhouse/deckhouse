@@ -164,7 +164,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
    Useful links:
 
    - [cloud-init documentation](https://cloudinit.readthedocs.io/)
-   - [Resource Parameters](/products/virtualization-platform/reference/cr/)
+   - [Resource Parameters](/modules/virtualization/cr.html)
 
 1. Verify with the command that the image and disk have been created and the virtual machine is running. Resources are not created instantly, so you will need to wait a while before they are ready.
 
@@ -230,7 +230,7 @@ The `VirtualMachine` resource is used to create a virtual machine, its parameter
 - initial configuration scenarios (cloud-init);
 - list of block devices.
 
-The full description of virtual machine configuration parameters can be found at [link](/products/virtualization-platform/reference/cr/virtualmachine.html)
+The full description of virtual machine configuration parameters can be found at [link](/modules/virtualization/cr.html#virtualmachine)
 
 ### Creating a virtual machine
 
@@ -1720,8 +1720,8 @@ The virtual machine's IP address is assigned automatically from the subnets defi
 
 The full description of `vmip` and `vmipl` machine resource configuration parameters can be found at the links:
 
-- [`VirtualMachineIPAddress`](/products/virtualization-platform/reference/cr/virtualmachineipaddress.html)
-- [`VirtualMachineIPAddressLease`](/products/virtualization-platform/reference/cr/virtualmachineipaddresslease.html)
+- [`VirtualMachineIPAddress`](/modules/virtualization/cr.html#virtualmachineipaddress)
+- [`VirtualMachineIPAddressLease`](/modules/virtualization/cr.html#virtualmachineipaddresslease)
 
 #### How to request a required ip address?
 

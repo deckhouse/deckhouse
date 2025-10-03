@@ -1,7 +1,6 @@
 ---
 title: "Migrating container runtime to containerd v2"
 permalink: en/admin/configuration/platform-scaling/node/migrating.html
-lang: en
 ---
 
 You can configure containerd v2 as the primary container runtime either at the cluster level or for specific node groups. This runtime option enables the use of cgroups v2, provides improved security, and allows more flexible resource management.

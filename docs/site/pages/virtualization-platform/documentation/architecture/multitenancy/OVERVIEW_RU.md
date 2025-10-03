@@ -10,14 +10,14 @@ lang: ru
 
 Для создания проекта используются следующие кастомные ресурсы:
 
-* [ProjectTemplate](/products/virtualization-platform/reference/cr/project.html) — описывает шаблон проекта. Задается список ресурсов, которые будут созданы в проекте, а также схему параметров, которые можно передать при создании проекта;
-* [Project](/products/virtualization-platform/reference/cr/projecttemplate.html) — описывает конкретный проект.
+* [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) — описывает шаблон проекта. Задается список ресурсов, которые будут созданы в проекте, а также схему параметров, которые можно передать при создании проекта;
+* [Project](/modules/multitenancy-manager/cr.html#project) — описывает конкретный проект.
 
 При создании Project из определенного ProjectTemplate происходит следующее:
 
-1. Переданные [параметры](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](/products/virtualization-platform/reference/cr/projecttemplate.html));
-1. Выполняется рендеринг [шаблона для ресурсов](/products/virtualization-platform/reference/cr/projecttemplate.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) ресурса [Project](/products/virtualization-platform/reference/cr/project.html#project);
-1. Создаётся пространство имён с именем, которое совпадает c именем [Project](/products/virtualization-platform/reference/cr/project.html#project);
+1. Переданные [параметры](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [openAPI](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema) ресурса [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate));
+1. Выполняется рендеринг [шаблона для ресурсов](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) ресурса [Project](/modules/multitenancy-manager/cr.html#project);
+1. Создаётся пространство имён с именем, которое совпадает c именем [Project](/modules/multitenancy-manager/cr.html#project);
 1. По очереди создаются все ресурсы, описанные в шаблоне.
 
 {% alert level="warning" %}

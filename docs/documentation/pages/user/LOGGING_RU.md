@@ -2,6 +2,7 @@
 title: "Настройки логирования"
 permalink: ru/user/logging/
 lang: ru
+search: logging configuration, log collection, log filtering, log shipping, centralized logging, настройка логирования, сбор логов, фильтрация логов, отправка логов, централизованное логирование
 ---
 
 В Deckhouse Kubernetes Platform (DKP) предусмотрен сбор и доставка логов из узлов и подов кластера
@@ -16,7 +17,7 @@ DKP позволяет:
 - использовать буферизацию логов для повышения производительности;
 - хранить логи во внутреннем кратковременном хранилище на базе Grafana Loki.
 
-Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../architecture/logging/delivery.html).
+Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../architecture/logging/delivery.html).
 
 Пользователям DKP доступна настройка параметров сбора логов из приложения с помощью ресурса [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), который описывает источник логов в рамках заданного пространства имён, включая правила сбора, фильтрации и парсинга.
 
@@ -27,7 +28,7 @@ DKP позволяет:
 1. Создайте ресурс [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) в своём пространстве имён.
 
    В данном примере логи собираются со всех подов указанного пространства имён
-   и отправляются в кратковременное хранилище [на базе Grafana Loki](../admin/configuration/logging/storage.html):
+   и отправляются в кратковременное хранилище [на базе Grafana Loki](../../admin/configuration/logging/storage.html):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
