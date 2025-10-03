@@ -19,6 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
@@ -28,7 +29,15 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DoNotWriteDebugLogFile = true
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit, app.ServerRequestsCounterMaxDuration)
+		return server.Serve(settings.ServerParams{
+			ServerGeneralParams: settings.ServerGeneralParams{
+				Network: app.ServerNetwork,
+				Address: app.ServerAddress,
+				TmpDir:  app.TmpDirName,
+			},
+			ParallelTasksLimit:         app.ServerParallelTasksLimit,
+			RequestsCounterMaxDuration: app.ServerRequestsCounterMaxDuration,
+		})
 	})
 	return cmd
 }
@@ -39,7 +48,13 @@ func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClaus
 	app.DoNotWriteDebugLogFile = true
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return singlethreaded.Serve(app.ServerNetwork, app.ServerAddress)
+		return singlethreaded.Serve(settings.ServerSingleshotParams{
+			ServerGeneralParams: settings.ServerGeneralParams{
+				Network: app.ServerNetwork,
+				Address: app.ServerAddress,
+				TmpDir:  app.TmpDirName,
+			},
+		})
 	})
 	return cmd
 }
