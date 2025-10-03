@@ -68,5 +68,10 @@ apiVersions:
         type: string
       legacyMode:
         description: |
-          Switch to legacy SSH mode
+          Switch to legacy SSH mode (clissh).
         type: boolean
+      modernMode:
+        description: |
+          Switch to modern SSH mode (gossh).
+        type: boolean
+

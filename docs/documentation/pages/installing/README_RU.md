@@ -638,6 +638,12 @@ echo "$MYRESULTSTRING"
    - `--no-modules` — для пропуска загрузки пакетов модулей (module-*.tar);
    - `--no-security-db` — для пропуска загрузки пакета баз данных сканера уязвимостей (security.tar);
    - `--include-module` / `-i` = `name[@Major.Minor]` — для загрузки только определенного набора модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
+
+     Поддерживаются следующие синтаксисы для указания версий модулей:
+     - `module-name@1.3.0` — загрузка версий с semver ^ ограничением (^1.3.0), включая v1.3.0, v1.3.3, v1.4.1;
+     - `module-name@~1.3.0` — загрузка версий с semver ~ ограничением (>=1.3.0 <1.4.0), включая только v1.3.0, v1.3.3;
+     - `module-name@=v1.3.0` — загрузка точного соответствия тегу v1.3.0, публикация во все каналы релизов;
+     - `module-name@=bobV1` — загрузка точного соответствия тегу "bobV1", публикация во все каналы релизов;
    - `--exclude-module` / `-e` = `name` — для пропуска загрузки определенного набора модулей по принципу черного списка. Укажите несколько раз, чтобы добавить в черный список больше модулей. Игнорируется, если используются `--no-modules` или `--include-module`.
    - `--modules-path-suffix` — для изменения суффикса пути к репозиторию модулей в основном репозитории DKP. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`).
    - `--since-version=X.Y` — чтобы скачать все версии DKP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указана версия выше чем версия находящаяся на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
@@ -706,6 +712,36 @@ echo "$MYRESULTSTRING"
    --no-platform --no-security-db \
    --include-module stronghold \
    --include-module secrets-store-integration \
+   /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки модуля `stronghold` с semver `^` ограничением от версии 1.2.0:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@1.2.0 \
+   /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки модуля `secrets-store-integration` с semver `~` ограничением от версии 1.1.0:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module secrets-store-integration@~1.1.0 \
+   /home/user/d8-bundle
+   ```
+
+   Пример команды для загрузки точной версии модуля `stronghold` 1.2.5 с публикацией во все каналы релизов:
+
+   ```shell
+   d8 mirror pull \
+   --license='<LICENSE_KEY>' \
+   --no-platform --no-security-db \
+   --include-module stronghold@=v1.2.5 \
    /home/user/d8-bundle
    ```
 

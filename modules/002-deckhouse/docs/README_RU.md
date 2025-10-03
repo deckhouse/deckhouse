@@ -13,7 +13,7 @@ search: releaseChannel, стабилизация релизного канала
   Независимо от используемого набора включенных по умолчанию модулей любой модуль может быть явно включен или выключен в конфигурации Deckhouse (подробнее [про включение и отключение модуля](/products/kubernetes-platform/documentation/v1/admin/configuration/#включение-и-отключение-модуля)).
 - **[Канал обновлений](configuration.html#parameters-releasechannel)**
 
-  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](/products/kubernetes-platform/documentation/v1/reference/deckhouse-release-channels.html), различающиеся стабильностью и частотой выхода версий. Ознакомьтесь подробнее с тем, [как работает механизм автоматического обновления](../../deckhouse-faq.html#как-работает-автоматическое-обновление-deckhouse) и [как установить желаемый канал обновлений](/products/kubernetes-platform/documentation/v1/admin/configuration/update/configuration.html).
+  В Deckhouse реализован механизм автоматического обновления. Этот механизм использует [5 каналов обновлений](/products/kubernetes-platform/documentation/v1/reference/release-channels.html), различающиеся стабильностью и частотой выхода версий. Ознакомьтесь подробнее с тем, [как работает механизм автоматического обновления](/products/kubernetes-platform/documentation/v1/architecture/updating.html) и [как установить желаемый канал обновлений](/products/kubernetes-platform/documentation/v1/admin/configuration/update/configuration.html).
 - **[Режим обновлений](configuration.html#parameters-update-mode)** и **[окна обновлений](configuration.html#parameters-update-windows)**
 
   Deckhouse может использовать **ручной** или **автоматический** режим обновлений.
