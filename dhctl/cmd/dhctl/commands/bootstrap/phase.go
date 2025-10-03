@@ -63,8 +63,6 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
-
 		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
@@ -115,8 +113,6 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
-
 		sshClient, err := sshclient.NewClientFromFlags()
 		if err != nil {
 			return err
@@ -150,8 +146,6 @@ func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		logger := log.GetDefaultLogger()
-
 		sshClient, err := sshclient.NewClientFromFlagsWithHosts()
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
