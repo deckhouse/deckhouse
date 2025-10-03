@@ -83,7 +83,7 @@ spec:
                     **By default**, the value from 'HuaweiCloudDiscoverData' is used.
                 additionalNetworks:
                   description: |
-                  List of networks (subnets) for secondary NICs.
+                    List of networks (subnets) for secondary NICs.
                 subnets:
                   description: |
                     DEPRICATED. Use 'additionalNetworks' instead.
