@@ -14,10 +14,11 @@ data:
       }
       cache {
         success 39936 30 5 # <cache size> <TTL max> <TTL min>
-        denial 9984 5 5    # <cache size> <TTL max> <TTL min>
-        prefetch 10 1m 25%
+        denial 65536 10 0    # <cache size> <TTL max> <TTL min>
+        prefetch 25 1m 25%
         serve_stale 1h immediate
         servfail 0 # disable caching servfail
+        nxdomain_verbose # enabled verbose nxdomain by client ip and request domain
       }
       kubeforward {
         namespace kube-system
