@@ -47,7 +47,7 @@ fi
 if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
   DATA_DEVICE="$(</var/lib/bashible/kubernetes_data_device_path)"
 else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$HOSTNAME" '.data[$hostname] // empty' | base64 -d)"
+  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
   if [ -z "$DATA_DEVICE" ]; then
     >&2 echo "failed to get data device path"
     exit 1
