@@ -193,11 +193,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	kubeCl.KubeProxy.StopAll()
 
 	if sshclient.IsModernMode() {
-		s.logger.LogDebugLn("Stopping old ssh client for replacing kube client")
-		sshCl.Stop()
-	}
-
-	if sshclient.IsModernMode() {
 		s.logger.LogDebugF("Old SSH Client: %-v\n", sshCl)
 		sshCl.Stop()
 	}
