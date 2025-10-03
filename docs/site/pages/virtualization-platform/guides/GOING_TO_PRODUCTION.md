@@ -162,7 +162,7 @@ Use two system nodes.
 {% endalert %}
 
 System nodes are used to run Deckhouse modules.
-Their [NodeGroup](modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
+Their [NodeGroup](/modules/node-manager/cr.html#nodegroup) has the `node-role.deckhouse.io/system` label.
 
 Allocate two system nodes.
 This way, Deckhouse modules will run on them without interfering with user applications in the cluster.
