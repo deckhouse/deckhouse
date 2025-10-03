@@ -85,6 +85,8 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHHosts = sshHosts
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
+	app.SSHLegacyMode = config.SSHConfig.LegacyMode
+	app.SSHModernMode = config.SSHConfig.ModernMode
 
 	sshClient := sshclient.NewClient(sess, keys)
 
