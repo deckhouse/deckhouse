@@ -87,3 +87,22 @@ func (w *Watcher) updateMetrics(
 	}
 	met.UpdateLastObserved()
 }
+
+func (w *Watcher) cleanupNamespaceResources(ns string) {
+	w.metrics.PodEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+	w.metrics.PodThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+
+	w.metrics.DaemonSetEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+	w.metrics.DaemonSetThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+
+	w.metrics.StatefulSetEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+	w.metrics.StatefulSetThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+
+	w.metrics.DeploymentEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+	w.metrics.DeploymentThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+
+	w.metrics.IngressEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+	w.metrics.IngressThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+
+	w.metrics.CronJobEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+}

@@ -32,8 +32,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-// ---------------- Watcher ----------------
-
 type Watcher struct {
 	clientSet  *kubernetes.Clientset
 	mu         sync.Mutex
@@ -128,7 +126,10 @@ func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
 		w.mu.Lock()
 		delete(w.nsWatchers, ns.Name)
 		w.mu.Unlock()
-		log.Printf("[NS DISABLED] %s watchers stopped", ns.Name)
+
+		w.cleanupNamespaceResources(ns.Name)
+
+		log.Printf("[NS DISABLED] %s watchers stopped and resource metrics cleaned", ns.Name)
 	}
 
 	if enabled == 1 && !exists {
