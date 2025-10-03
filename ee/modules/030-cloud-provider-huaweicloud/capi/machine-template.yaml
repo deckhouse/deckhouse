@@ -28,20 +28,32 @@ spec:
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
       {{- end }}
+
       {{- $ic := .nodeGroup.instanceClass -}}
       {{- $primary := (default $subnetID $ic.mainNetwork) -}}
       {{- $nets := list $primary -}}
-      {{- if $ic.additionalNetworks }}{{- $nets = concat $nets $ic.additionalNetworks }}{{- end }}
-      {{- if $ic.subnets }}            {{- $nets = concat $nets $ic.subnets }}            {{- end }} {{/* DEPRECATED compat */}}
+      {{- if $ic.additionalNetworks -}}
+      {{- $nets = concat $nets $ic.additionalNetworks -}}
+      {{- end -}}
+      {{- if $ic.subnets -}}
+      {{- $nets = concat $nets $ic.subnets -}}
+      {{- end }}
+
       subnets:
-      {{- range $n := $nets }}
+      {{- range $n := (uniq $nets) }}
         - {{ $n | quote }}
       {{- end }}
+
       {{- if .nodeGroup.instanceClass.securityGroups }}
-      securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
-      {{- else }}
-      securityGroups: [{{ $securityGroupID }}]
+      securityGroups:
+      {{- range $sg := (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}
+        - {{ $sg | quote }}
       {{- end }}
+      {{- else }}
+      securityGroups:
+        - {{ $securityGroupID | quote }}
+      {{- end }}
+
       {{- if .nodeGroup.instanceClass.serverGroupID }}
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
