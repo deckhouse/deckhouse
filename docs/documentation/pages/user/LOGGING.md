@@ -15,7 +15,7 @@ DKP allows you to:
 - Use log buffering to improve performance.
 - Store logs in internal short-term storage based on Grafana Loki.
 
-The general mechanism of log collection, delivery and filtering is described in detail [in the "Architecture" section](../architecture/logging/delivery.html).
+The general mechanism of log collection, delivery and filtering is described in detail [in the "Architecture" section](../../architecture/logging/delivery.html).
 
 DKP users can configure application log collection parameters using the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource, which describes log sources within a specified namespace, including collection, filtering and parsing rules.
 
@@ -26,7 +26,7 @@ DKP users can configure application log collection parameters using the [PodLogg
 1. Create a [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in your namespace.
 
    In this example, logs are collected from all pods in the specified namespace
-   and sent to short-term storage [based on Grafana Loki](../admin/configuration/logging/storage.html):
+   and sent to short-term storage [based on Grafana Loki](../../admin/configuration/logging/storage.html):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
