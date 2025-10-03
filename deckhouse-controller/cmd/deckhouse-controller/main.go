@@ -45,7 +45,11 @@ var (
 
 // Variables to configure with build flags.
 var (
-	DefaultReleaseChannel = "Stable"
+	DefaultReleaseChannel = ""
+)
+
+const (
+	defaultReleaseChannel = "Stable"
 )
 
 func version() string {

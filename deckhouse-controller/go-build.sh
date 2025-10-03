@@ -18,15 +18,29 @@ set -e
 
 deckhouseVer=${D8_VERSION:-"dev"}
 defaultKubernetesVer=${DEFAULT_KUBERNETES_VERSION}
+defaultReleaseChannel=${DEFAULT_RELEASE_CHANNEL}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 
-if [ -z ${defaultKubernetesVer} ]; then
+# Validate required variables
+if [ -z "${defaultKubernetesVer}" ]; then
   echo "DEFAULT_KUBERNETES_VERSION is not set"
   exit 1
 fi
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+
+# Build ldflags
+LDFLAGS="-s -w"
+LDFLAGS="${LDFLAGS} -X 'main.DeckhouseVersion=${deckhouseVer}'"
+LDFLAGS="${LDFLAGS} -X 'main.AddonOperatorVersion=${addonOpVer}'"
+LDFLAGS="${LDFLAGS} -X 'main.ShellOperatorVersion=${shellOpVer}'"
+LDFLAGS="${LDFLAGS} -X 'main.DefaultReleaseChannel=${defaultReleaseChannel}'"
+LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=${defaultKubernetesVer}'"
+
+# Build the binary
+CGO_ENABLED=0 \
+GOOS=linux \
+GOARCH=amd64 \
     go build \
-     -ldflags="-s -w -X 'main.DeckhouseVersion=$deckhouseVer' -X 'main.AddonOperatorVersion=$addonOpVer' -X 'main.ShellOperatorVersion=$shellOpVer' -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=$defaultKubernetesVer'" \
-     -o ./deckhouse-controller \
-     ./cmd/deckhouse-controller
+        -ldflags="${LDFLAGS}" \
+        -o ./deckhouse-controller \
+        ./cmd/deckhouse-controller

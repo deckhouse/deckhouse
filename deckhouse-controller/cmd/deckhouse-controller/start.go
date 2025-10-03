@@ -255,6 +255,10 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("lock on bootstrap: %w", err)
 	}
 
+	if DefaultReleaseChannel == "" {
+		DefaultReleaseChannel = defaultReleaseChannel
+	}
+
 	deckhouseController, err := controller.NewDeckhouseController(ctx, DeckhouseVersion, DefaultReleaseChannel, operator, logger.Named("deckhouse-controller"))
 	if err != nil {
 		return fmt.Errorf("create deckhouse controller: %w", err)
