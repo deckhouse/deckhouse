@@ -1,7 +1,7 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
-cacheVersion: "2025-10-03.01"
+cacheVersion: "2025-10-03.02"
 final: false
 secrets:
 - id: SOURCE_REPO
@@ -19,7 +19,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine
-cacheVersion: "2025-10-03.01"
+cacheVersion: "2025-10-03.02"
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -46,7 +46,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
-cacheVersion: "2025-10-03.01"
+cacheVersion: "2025-10-03.02"
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /coredns
