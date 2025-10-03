@@ -88,12 +88,16 @@ type DeckhouseController struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	settings       *helpers.DeckhouseSettingsContainer
-	log            *log.Logger
+
+	defaultReleaseChannel string
+
+	log *log.Logger
 }
 
 func NewDeckhouseController(
 	ctx context.Context,
 	version string,
+	defaultReleaseChannel string,
 	operator *addonoperator.AddonOperator,
 	logger *log.Logger,
 ) (*DeckhouseController, error) {
@@ -254,7 +258,7 @@ func NewDeckhouseController(
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
-		ReleaseChannel: "Stable",
+		ReleaseChannel: defaultReleaseChannel,
 	})
 
 	err = metrics.RegisterDeckhouseControllerMetrics(operator.MetricStorage)
@@ -322,7 +326,10 @@ func NewDeckhouseController(
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
-		log:            logger,
+
+		defaultReleaseChannel: defaultReleaseChannel,
+
+		log: logger,
 	}, nil
 }
 
@@ -394,7 +401,7 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
-			settings.ReleaseChannel = "Stable"
+			settings.ReleaseChannel = c.defaultReleaseChannel
 			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release channel", settings.ReleaseChannel))
 		}
 
