@@ -55,7 +55,7 @@ shell:
   - cd /usr/src/app
   - /go/bin/wire gen -tags oss ./pkg/server
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags -w -ldflags "-X main.version={{ $grafanaVersion }} -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana`) | indent 6 }}
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags -w -ldflags "-X main.version=$GRAFANA_VERSION -linkmode external -extldflags -static" -tags netgo -o ./bin/linux-amd64/grafana ./pkg/cmd/grafana`) | indent 6 }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-entrypoint
 final: false
