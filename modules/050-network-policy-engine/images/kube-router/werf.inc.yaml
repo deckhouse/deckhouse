@@ -3,6 +3,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
 final: false
 fromImage: common/relocate-artifact
+cacheVersion: "2025-10-03"
 shell:
   beforeInstall:
   - apt-get install -y ipset conntrack-tools
@@ -15,10 +16,17 @@ fromImage: common/src-artifact
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
   - git clone --depth 1 --branch v2.0.1 $(cat /run/secrets/SOURCE_REPO)/cloudnativelabs/kube-router.git /src
   - cd /src
+  - git apply /patches/001-fix-cve-gomod.patch
   - git describe --tags --dirty > GIT_COMMIT
   - rm -rf .git
 ---
