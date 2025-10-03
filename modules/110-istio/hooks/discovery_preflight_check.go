@@ -68,7 +68,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	var metaConfig *config.MetaConfig
 	metaConfig, err = config.ParseConfigFromData(string(ccYaml))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config: %w", err)
 	}
 
 	kubernetesVersion, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
@@ -109,8 +109,11 @@ func rawMessageToString(message json.RawMessage) (string, error) {
 	var result string
 	b, err := message.MarshalJSON()
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("marshal: %w", err)
 	}
 	err = json.Unmarshal(b, &result)
-	return result, err
+	if err != nil {
+		return result, fmt.Errorf("unmarshal: %w", err)
+	}
+	return result, nil
 }

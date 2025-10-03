@@ -86,7 +86,7 @@ type nodeKernelVersion struct {
 func filterNodes(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var node corev1.Node
 	if err := sdk.FromUnstructured(obj, &node); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	return nodeKernelVersion{
 		Name:          node.Name,

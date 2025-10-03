@@ -125,19 +125,19 @@ func clusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
 
 	var provider Provider
 	if err := json.Unmarshal(metaCfg.ProviderClusterConfig["provider"], &provider); err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	var discoveryData DiscoveryData
 	err = json.Unmarshal(cloudDiscoveryData, &discoveryData)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	tags := make(map[string]string)
 	if len(metaCfg.ProviderClusterConfig["tags"]) != 0 {
 		if err := json.Unmarshal(metaCfg.ProviderClusterConfig["tags"], &tags); err != nil {
-			return err
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 	}
 

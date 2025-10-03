@@ -108,7 +108,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	for _, excludePattern := range provisionExcludeNames {
 		var r, err = regexp.Compile(excludePattern.String())
 		if err != nil {
-			return err
+			return fmt.Errorf("compile: %w", err)
 		}
 		provisionRegexps = append(provisionRegexps, r)
 	}
@@ -138,7 +138,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	for _, excludePattern := range excludeStorageClasses {
 		var r, err = regexp.Compile(excludePattern.String())
 		if err != nil {
-			return err
+			return fmt.Errorf("compile: %w", err)
 		}
 		excludeRegexps = append(excludeRegexps, r)
 	}

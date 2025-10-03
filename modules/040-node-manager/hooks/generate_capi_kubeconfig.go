@@ -155,7 +155,7 @@ func createCAPIServiceAccount(k8sClient k8s.Client, saName string) error {
 
 	_, err := k8sClient.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
+		return fmt.Errorf("create: %w", err)
 	}
 
 	serviceAccount := &corev1.ServiceAccount{

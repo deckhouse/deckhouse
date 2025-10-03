@@ -81,7 +81,11 @@ func (a *authConfig) MarshalJSON() ([]byte, error) {
 	if a.Username != "" && a.Password != "" {
 		a.Auth = base64.StdEncoding.EncodeToString([]byte(a.Username + ":" + a.Password))
 	}
-	return json.Marshal(a)
+	data, err := json.Marshal(a)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return data, nil
 }
 
 func filterTrivyProviderSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

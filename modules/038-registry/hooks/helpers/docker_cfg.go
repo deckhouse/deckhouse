@@ -45,7 +45,11 @@ func DockerCfgFromCreds(username, password, host string) ([]byte, error) {
 			},
 		},
 	}
-	return json.Marshal(cfg)
+	result, err := json.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return result, nil
 }
 
 func CredsFromDockerCfg(rawCfg []byte, host string) (string, string, error) {

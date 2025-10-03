@@ -18,6 +18,7 @@ package requirements
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -30,7 +31,7 @@ func init() {
 	f := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		desiredVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 		currentVersionStr, exists := getter.Get(minK8sVersionRequirementKey)
 		if !exists {
@@ -38,7 +39,7 @@ func init() {
 		}
 		currentVersion, err := semver.NewVersion(currentVersionStr.(string))
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 
 		if currentVersion.LessThan(desiredVersion) {

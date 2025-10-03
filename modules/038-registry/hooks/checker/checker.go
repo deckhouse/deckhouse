@@ -54,7 +54,7 @@ func checkRegistryItem(ctx context.Context, puller *gcr_remote.Puller, isHTTPS b
 	_, err = puller.Head(ctx, ref)
 	if err != nil {
 		if ctx.Err() == nil {
-			return err
+			return fmt.Errorf("head: %w", err)
 		}
 
 		return fmt.Errorf("Request timeout")
@@ -140,10 +140,14 @@ func buildPuller(params RegistryParams) (*gcr_remote.Puller, error) {
 		}
 	}
 
-	return gcr_remote.NewPuller(
+	puller, err := gcr_remote.NewPuller(
 		gcr_remote.WithTransport(transport),
 		gcr_remote.WithAuth(auth),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("new puller: %w", err)
+	}
+	return puller, nil
 }
 
 func checkRegistry(ctx context.Context, queue *registryQueue, params RegistryParams) (int, error) {

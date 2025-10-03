@@ -132,7 +132,7 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			l.logger.Info("the module does not exist, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
@@ -446,7 +446,10 @@ func restoreModuleSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath 
 		return fmt.Errorf("get stat of the '%s': %v", moduleRelativePath, err)
 	}
 
-	return os.Symlink(moduleRelativePath, symlinkPath)
+	if err := os.Symlink(moduleRelativePath, symlinkPath); err != nil {
+		return fmt.Errorf("symlink: %w", err)
+	}
+	return nil
 }
 
 // deleteModuleSymlinks checks if there are symlinks for the module with different weight in the symlink folder

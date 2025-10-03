@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -73,11 +74,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	patch, err := json.Marshal(deleteFinalizersPatch)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	// Clean up cluster-wide IstioFederation resources

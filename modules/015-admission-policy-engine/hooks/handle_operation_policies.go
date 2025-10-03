@@ -50,7 +50,7 @@ func handleOP(_ context.Context, input *go_hook.HookInput) error {
 
 	data, err := json.Marshal(ops)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.operationPolicies", json.RawMessage(data))
@@ -63,7 +63,7 @@ func filterOP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 
 	err := sdk.FromUnstructured(obj, &op)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &op, nil

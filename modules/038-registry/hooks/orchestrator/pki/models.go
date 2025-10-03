@@ -33,13 +33,17 @@ func (pcm *CertModel) toPKI() (pki.CertKey, error) {
 	if pcm == nil {
 		return pki.CertKey{}, fmt.Errorf("cannot convert nil to CertKey")
 	}
-	return pki.DecodeCertKey([]byte(pcm.Cert), []byte(pcm.Key))
+	result, err := pki.DecodeCertKey([]byte(pcm.Cert), []byte(pcm.Key))
+	if err != nil {
+		return pki.CertKey{}, fmt.Errorf("decode cert key: %w", err)
+	}
+	return result, nil
 }
 
 func pkiCertModel(value pki.CertKey) (*CertModel, error) {
 	cert, key, err := pki.EncodeCertKey(value)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encode cert key: %w", err)
 	}
 	return &CertModel{Cert: string(cert), Key: string(key)}, nil
 }

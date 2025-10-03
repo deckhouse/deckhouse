@@ -84,7 +84,7 @@ func providerConfigurationSecretFilter(unstructured *unstructured.Unstructured) 
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &secret, nil
@@ -95,7 +95,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	err := sdk.FromUnstructured(unstructured, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if version, ok := cm.Data["version"]; ok {
@@ -130,7 +130,7 @@ func migrateDiskGBHandler(ctx context.Context, input *go_hook.HookInput) error {
 	var rawConfig map[string]interface{}
 	err = yaml.Unmarshal(providerConfigSecret.Data[providerConfigKey], &rawConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	needMigratieMasters, err := needMigrateMasterInstanceClass(rawConfig)
@@ -154,7 +154,7 @@ func migrateDiskGBHandler(ctx context.Context, input *go_hook.HookInput) error {
 
 	data, err := yaml.Marshal(rawConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 
 	patch := map[string]interface{}{
@@ -165,13 +165,13 @@ func migrateDiskGBHandler(ctx context.Context, input *go_hook.HookInput) error {
 
 	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", secretName)
 
-	return err
+	return nil
 }
 
 func hasDiskSizeGB(rawConfig map[string]interface{}, fields []string) (bool, error) {
 	_, found, err := unstructured.NestedFieldNoCopy(rawConfig, fields...)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("nested field no copy: %w", err)
 	}
 
 	return found, nil
@@ -180,7 +180,7 @@ func hasDiskSizeGB(rawConfig map[string]interface{}, fields []string) (bool, err
 func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool, error) {
 	nodeGroups, found, err := unstructured.NestedSlice(rawConfig, "nodeGroups")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("nested slice: %w", err)
 	}
 
 	if !found {
@@ -208,7 +208,7 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool,
 
 		err = unstructured.SetNestedField(ng, int64(20), fieldForNG...)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("set nested field: %w", err)
 		}
 
 		needMigrate = true
@@ -221,7 +221,7 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}) (bool,
 
 	err = unstructured.SetNestedSlice(rawConfig, resultNgs, "nodeGroups")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("set nested slice: %w", err)
 	}
 
 	return true, nil
@@ -241,7 +241,7 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}) (bool, err
 
 	err = unstructured.SetNestedField(rawConfig, int64(20), fieldForMaster...)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("set nested field: %w", err)
 	}
 
 	return true, nil
@@ -270,7 +270,7 @@ func needMigrateForDeckhouseInstallVersion(_ context.Context, input *go_hook.Hoo
 
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("new version: %w", err)
 	}
 
 	if version.Compare(semver.MustParse("1.62.0")) >= 0 {

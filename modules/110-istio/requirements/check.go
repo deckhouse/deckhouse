@@ -36,7 +36,7 @@ func init() {
 	checkMinimalIstioVersionFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		minimalIstioVersion, err := semver.NewVersion(requirementValue)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 		currentVersionRaw, exists := getter.Get(minVersionValuesKey)
 		if !exists {
@@ -45,7 +45,7 @@ func init() {
 		currentVersionStr := currentVersionRaw.(string)
 		currentVersion, err := semver.NewVersion(currentVersionStr)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 
 		if currentVersion.LessThan(minimalIstioVersion) {
@@ -58,7 +58,7 @@ func init() {
 	checkIstioAndK8sVersionsCompatibilityFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		comingDefaultK8sVersionSemver, err := semver.NewVersion(requirementValue)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("new version: %w", err)
 		}
 		comingDefaultK8sVersion := fmt.Sprintf("%d.%d", comingDefaultK8sVersionSemver.Major(), comingDefaultK8sVersionSemver.Minor())
 

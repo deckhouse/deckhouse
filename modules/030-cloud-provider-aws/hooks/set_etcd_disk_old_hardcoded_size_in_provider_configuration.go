@@ -72,12 +72,12 @@ func patchClusterConfiguration(_ context.Context, input *go_hook.HookInput) erro
 	var clusterConfiguration map[string]interface{}
 
 	if err := yaml.Unmarshal(data, &clusterConfiguration); err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	value, _, err := unstructured.NestedString(clusterConfiguration, "masterNodeGroup", "instanceClass", "etcdDisk", "type")
 	if err != nil {
-		return err
+		return fmt.Errorf("nested string: %w", err)
 	}
 
 	// skip if values are set
@@ -92,7 +92,7 @@ func patchClusterConfiguration(_ context.Context, input *go_hook.HookInput) erro
 
 	err = unstructured.SetNestedField(clusterConfiguration, etcdDiskValues, "masterNodeGroup", "instanceClass", "etcdDisk")
 	if err != nil {
-		return err
+		return fmt.Errorf("set nested field: %w", err)
 	}
 
 	buf := bytes.NewBuffer(nil)
@@ -100,7 +100,7 @@ func patchClusterConfiguration(_ context.Context, input *go_hook.HookInput) erro
 	enc.SetIndent(2)
 	err = enc.Encode(clusterConfiguration)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode: %w", err)
 	}
 
 	patch := map[string]interface{}{

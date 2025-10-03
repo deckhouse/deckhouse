@@ -87,5 +87,9 @@ func (t *DynamicTransform) MarshalJSON() ([]byte, error) {
 		m[k] = b
 	}
 
-	return json.Marshal(m)
+	result, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("marshal: %w", err)
+	}
+	return result, nil
 }

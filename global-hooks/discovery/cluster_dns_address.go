@@ -62,7 +62,7 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	var service v1core.Service
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ServiceAddr{service.Name, service.Spec.ClusterIP}, nil

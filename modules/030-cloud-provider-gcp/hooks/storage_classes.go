@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -79,7 +80,7 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 		for _, excludePattern := range excludeStorageClasses {
 			var r, err = regexp.Compile(excludePattern.String())
 			if err != nil {
-				return false, err
+				return false, fmt.Errorf("compile regexp: %w", err)
 			}
 			if r.MatchString(storageClassName) {
 				return true, nil

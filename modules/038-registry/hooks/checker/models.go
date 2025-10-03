@@ -51,9 +51,13 @@ type Params struct {
 }
 
 func (params Params) Validate() error {
-	return validation.ValidateStruct(&params,
+	err := validation.ValidateStruct(&params,
 		validation.Field(&params.Registries),
 	)
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	return nil
 }
 
 type RegistryParams struct {
@@ -65,20 +69,32 @@ type RegistryParams struct {
 }
 
 func (rp RegistryParams) Validate() error {
-	return validation.ValidateStruct(&rp,
+	err := validation.ValidateStruct(&rp,
 		validation.Field(&rp.Address, validation.Required),
 		validation.Field(&rp.Scheme, validation.In("HTTP", "HTTPS")),
 		validation.Field(&rp.Username, validation.When(rp.Password != "", validation.Required)),
 		validation.Field(&rp.Password, validation.When(rp.Username != "", validation.Required)),
 	)
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	return nil
 }
 
 func (rp *RegistryParams) toGCRepo() (gcr_name.Repository, error) {
 	if rp.isHTTPS() {
-		return gcr_name.NewRepository(rp.Address)
+		repo, err := gcr_name.NewRepository(rp.Address)
+		if err != nil {
+			return gcr_name.Repository{}, fmt.Errorf("new repository: %w", err)
+		}
+		return repo, nil
 	}
 
-	return gcr_name.NewRepository(rp.Address, gcr_name.Insecure)
+	repo, err := gcr_name.NewRepository(rp.Address, gcr_name.Insecure)
+	if err != nil {
+		return gcr_name.Repository{}, fmt.Errorf("new repository: %w", err)
+	}
+	return repo, nil
 }
 
 func (rp *RegistryParams) isHTTPS() bool {

@@ -86,7 +86,7 @@ func internalNetworkFromStaticConfiguration(data []byte) (interface{}, error) {
 
 	metaConfig, err = config.ParseConfigFromData(string(data))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse config from data: %w", err)
 	}
 
 	intNet := metaConfig.StaticClusterConfig["internalNetworkCIDRs"]

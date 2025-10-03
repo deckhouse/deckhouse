@@ -83,7 +83,7 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 
 			urlPrefix, err := url.JoinPath(fmt.Sprintf("https://%s.%s.svc.%s:%d", config.ClientConfig.Service.Name, config.ClientConfig.Service.Namespace, clusterDomain, config.ClientConfig.Service.Port), config.ClientConfig.Service.Path)
 			if err != nil {
-				return err
+				return fmt.Errorf("join path: %w", err)
 			}
 			newExtender := extenderConfig{
 				URLPrefix: urlPrefix,
@@ -102,10 +102,13 @@ func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 func verifyCAChain(caBase64 string) error {
 	caData, err := base64.StdEncoding.DecodeString(caBase64)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode string: %w", err)
 	}
 	_, err = certificate.ParseCertificate(string(caData))
-	return err
+	if err != nil {
+		return fmt.Errorf("parse certificate: %w", err)
+	}
+	return nil
 }
 
 type KubeSchedulerWebhookConfiguration struct {

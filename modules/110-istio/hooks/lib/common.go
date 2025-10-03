@@ -53,7 +53,7 @@ func Contains(s []string, str string) bool {
 func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, int, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("new request: %w", err)
 	}
 
 	if len(bearerToken) > 0 {
@@ -62,13 +62,13 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("do: %w", err)
 	}
 	defer res.Body.Close()
 
 	dataBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("read all: %w", err)
 	}
 
 	return dataBytes, res.StatusCode, nil

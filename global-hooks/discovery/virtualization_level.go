@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"strconv"
@@ -58,7 +59,7 @@ func applyMasterNodesFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	virtualizationLevel := 0

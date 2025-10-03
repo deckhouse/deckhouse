@@ -51,7 +51,7 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	n := &Node{}

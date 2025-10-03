@@ -57,12 +57,12 @@ const (
 func applySpecControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	version, _, err := unstructured.NestedString(obj.Object, "spec", "controllerVersion")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string: %w", err)
 	}
 
 	ingressClass, ok, err := unstructured.NestedString(obj.Object, "spec", "ingressClass")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested string: %w", err)
 	}
 	if !ok {
 		return nil, nil
@@ -102,7 +102,7 @@ func discoverMinimalNginxVersion(_ context.Context, input *go_hook.HookInput) er
 		}
 		ctrlVersion, err := semver.NewVersion(ctrl.Version)
 		if err != nil {
-			return err
+			return fmt.Errorf("parse version: %w", err)
 		}
 
 		if v, ok := classVersionMap[ctrl.IngressClass]; ok {

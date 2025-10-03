@@ -100,10 +100,10 @@ func generateNewBashibleCert(_ context.Context, input *go_hook.HookInput) (certi
 		certificate.WithKeySize(256),
 		certificate.WithCAExpiry("87600h"))
 	if err != nil {
-		return certificate.Certificate{}, err
+		return certificate.Certificate{}, fmt.Errorf("generate ca: %w", err)
 	}
 
-	return certificate.GenerateSelfSignedCert(input.Logger,
+	cert, err := certificate.GenerateSelfSignedCert(input.Logger,
 		"node-manager",
 		ca,
 		certificate.WithSANs("127.0.0.1", "bashible-api.d8-cloud-instance-manager.svc"),
@@ -116,4 +116,8 @@ func generateNewBashibleCert(_ context.Context, input *go_hook.HookInput) (certi
 			"requestheader-client",
 		}),
 	)
+	if err != nil {
+		return certificate.Certificate{}, fmt.Errorf("generate self signed cert: %w", err)
+	}
+	return cert, nil
 }

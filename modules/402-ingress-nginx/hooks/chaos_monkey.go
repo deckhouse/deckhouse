@@ -128,7 +128,7 @@ func chaosMonkey(_ context.Context, input *go_hook.HookInput, dc dependency.Cont
 
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	for res, err := range sdkobjectpatch.SnapshotIter[ingressDaemonSetFilterResult](daemonsets) {
@@ -152,7 +152,7 @@ func chaosMonkey(_ context.Context, input *go_hook.HookInput, dc dependency.Cont
 
 		podList, err := kubeClient.CoreV1().Pods(internal.Namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labels.FormatLabels(res.LabelSelector)})
 		if err != nil {
-			return err
+			return fmt.Errorf("list pods: %w", err)
 		}
 
 		if len(podList.Items) < 2 {

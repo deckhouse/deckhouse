@@ -641,7 +641,7 @@ func (state *State) processRegistrySwitcher(params registryswitcher.Params, inpu
 	// Update Deckhouse-registry secret and wait
 	result, err := state.RegistrySecret.Process(params, inputs.RegistrySwitcher)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("process: %w", err)
 	}
 	if !result.Ready {
 		state.setCondition(metav1.Condition{

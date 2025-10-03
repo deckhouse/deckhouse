@@ -62,10 +62,14 @@ func getETCDClient(input *go_hook.HookInput, dc dependency.Container, endpoints 
 
 	caCert, clientCert, err := certificate.ParseCertificatesFromPEM(cert.CA, cert.Cert, cert.Key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse certificates from pem: %w", err)
 	}
 
-	return dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
+	etcdClient, err := dc.GetEtcdClient(endpoints, etcd.WithClientCert(clientCert, caCert), etcd.WithInsecureSkipVerify())
+	if err != nil {
+		return nil, fmt.Errorf("get etcd client: %w", err)
+	}
+	return etcdClient, nil
 }
 
 var (

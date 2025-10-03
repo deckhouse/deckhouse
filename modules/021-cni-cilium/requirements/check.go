@@ -83,5 +83,9 @@ func checkMinimalKernelVersionFunc(requirementValue string, getter requirements.
 
 func parseKernelSemver(version string) (*semver.Version, error) {
 	base := strings.SplitN(version, "-", 2)[0]
-	return semver.NewVersion(base)
+	v, err := semver.NewVersion(base)
+	if err != nil {
+		return nil, fmt.Errorf("new version: %w", err)
+	}
+	return v, nil
 }

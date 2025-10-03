@@ -18,6 +18,7 @@ package capacity
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -94,11 +95,11 @@ func (vic vsphereInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alp
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 	memRes, err := resource.ParseQuantity(memStr + "Mi")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 
 	return &v1alpha1.InstanceType{
@@ -170,11 +171,11 @@ func (yic yandexInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alph
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 	memRes, err := resource.ParseQuantity(memStr + "Mi")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 
 	return &v1alpha1.InstanceType{
@@ -228,11 +229,11 @@ func (zic zvirtInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 	memRes, err := resource.ParseQuantity(memStr + "Mi")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 
 	return &v1alpha1.InstanceType{
@@ -253,11 +254,11 @@ func (d dynamixInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 	memRes, err := resource.ParseQuantity(memStr + "Mi")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 
 	return &v1alpha1.InstanceType{
@@ -297,11 +298,11 @@ func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.In
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 	memRes, err := resource.ParseQuantity(memStr + "Mi")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse quantity: %w", err)
 	}
 
 	return &v1alpha1.InstanceType{
@@ -399,8 +400,12 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 	data, _ := json.Marshal(instanceClassSpec)
 	err := json.Unmarshal(data, extractor)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
-	return extractor.ExtractCapacity(catalog)
+	capacity, err := extractor.ExtractCapacity(catalog)
+	if err != nil {
+		return nil, fmt.Errorf("extract capacity: %w", err)
+	}
+	return capacity, nil
 }

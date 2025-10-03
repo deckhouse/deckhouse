@@ -99,6 +99,9 @@ func handleHostNetworkFalseWithHostPorts(_ context.Context, input *go_hook.HookI
 	}
 
 	_, err = k8sClient.AppsV1().DaemonSets("d8-istio").Update(context.TODO(), ds, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("update daemonset: %w", err)
+	}
 
-	return err
+	return nil
 }

@@ -507,7 +507,7 @@ func serializePolicy(policy *audit.Policy) (string, error) {
 	}
 	err := builder.AddToScheme(schema)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("add to scheme: %w", err)
 	}
 	serializer := json.NewSerializerWithOptions(
 		json.DefaultMetaFactory, schema, schema,

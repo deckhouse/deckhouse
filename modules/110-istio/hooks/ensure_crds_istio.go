@@ -56,7 +56,7 @@ func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Con
 	for i, version := range istioVersions {
 		v, err := semver.NewVersion(version)
 		if err != nil {
-			return err
+			return fmt.Errorf("new version: %w", err)
 		}
 		semvers[i] = v
 	}

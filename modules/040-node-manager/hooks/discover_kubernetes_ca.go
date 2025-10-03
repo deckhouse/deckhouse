@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -33,7 +34,7 @@ const rootCAFile = "/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 func discoverKubernetesCAHandler(_ context.Context, input *go_hook.HookInput) error {
 	caBytes, err := os.ReadFile(rootCAFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("read file: %w", err)
 	}
 
 	input.Values.Set("nodeManager.internal.kubernetesCA", string(caBytes))

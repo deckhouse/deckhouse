@@ -82,7 +82,7 @@ func ngFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng v1.NodeGroup
 	err := sdk.FromUnstructured(obj, &ng)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &NodeGroup{
@@ -99,7 +99,7 @@ func configMapName(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	var cm corev1.ConfigMap
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &CM{Name: cm.Name}, nil
@@ -126,7 +126,7 @@ func systemReserve(_ context.Context, input *go_hook.HookInput) error {
 			objCopy := u.DeepCopy()
 			err := unstructured.SetNestedField(objCopy.Object, "Off", "spec", "kubelet", "resourceReservation", "mode")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("set nested field: %w", err)
 			}
 			return objCopy, nil
 		}, "deckhouse.io/v1", "NodeGroup", "", ng.Name)

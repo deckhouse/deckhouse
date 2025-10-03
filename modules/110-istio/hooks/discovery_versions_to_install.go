@@ -61,7 +61,7 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 		// maybe there is a global istiod Service with annotation?
 		k8sClient, err := dc.GetK8sClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("get k8s client: %w", err)
 		}
 
 		service, err := k8sClient.CoreV1().Services("d8-istio").Get(context.TODO(), "istiod", metav1.GetOptions{})

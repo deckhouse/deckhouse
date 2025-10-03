@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -70,7 +71,7 @@ func applyDeploymentCorednsPortsFilter(obj *unstructured.Unstructured) (go_hook.
 	var depl appsv1.Deployment
 	err := sdk.FromUnstructured(obj, &depl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	ports := []v1.ContainerPort{}
 	for _, v := range depl.Spec.Template.Spec.Containers {
@@ -91,7 +92,7 @@ func ensureCorednsPorts(_ context.Context, input *go_hook.HookInput) error {
 		var depl appsv1.Deployment
 		err := sdk.FromUnstructured(u, &depl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal: %w", err)
 		}
 
 		for i, v := range depl.Spec.Template.Spec.Containers {

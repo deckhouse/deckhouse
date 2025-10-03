@@ -105,7 +105,7 @@ func RegisterController(
 		metricsUpdater:       releaseUpdater.NewMetricsUpdater(ms, releaseUpdater.ModuleReleaseBlockedMetricName),
 		shutdownFunc: func() error {
 			if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
-				return err
+				return fmt.Errorf("kill: %w", err)
 			}
 
 			return nil
@@ -129,12 +129,15 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleRelease{}).
 		// for reconcile documentation if accidentally removed
 		Owns(&v1alpha1.ModuleDocumentation{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(releaseController)
+		Complete(releaseController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type MetricsUpdater interface {
@@ -379,7 +382,7 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 			return nil
 		})
 		if err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update with retry: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil
@@ -639,7 +642,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	if err = r.client.Update(ctx, settings); err != nil {
 		r.log.Warn("failed to update module settings", slog.String("module", release.GetModuleName()), log.Err(err))
 
-		return res, err
+		return res, fmt.Errorf("update: %w", err)
 	}
 
 	return res, nil
@@ -792,7 +795,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 	if err != nil {
 		logger.Error("failed to parse the notification config", log.Err(err))
 
-		return res, err
+		return res, fmt.Errorf("get notification config: %w", err)
 	}
 
 	us := &releaseUpdater.Settings{
@@ -811,7 +814,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, release)
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("calculate pending release task: %w", err)
 	}
 
 	if release.GetForce() {
@@ -1618,7 +1621,7 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 		r.metricsUpdater.PurgeReleaseMetric(mr.GetName())
 	}
 
-	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, mr, func() error {
+	if err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, mr, func() error {
 		if mr.GetPhase() != status.Phase {
 			mr.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		}
@@ -1627,7 +1630,10 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 		mr.Status.Message = status.Message
 
 		return nil
-	}, ctrlutils.WithRetryOnConflictBackoff(backoff))
+	}, ctrlutils.WithRetryOnConflictBackoff(backoff)); err != nil {
+		return fmt.Errorf("update status with retry: %w", err)
+	}
+	return nil
 }
 
 func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, msg, reason string, conditionState bool) error {
@@ -1670,7 +1676,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		if err := r.client.Status().Update(ctx, release); err != nil {
 			r.log.Warn("failed to set terminating to the release", slog.String("release", release.GetName()), log.Err(err))
 
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil
@@ -1680,7 +1686,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 
 	if err := os.RemoveAll(modulePath); err != nil {
 		r.log.Error("failed to remove module in downloaded dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("remove all: %w", err)
 	}
 
 	if release.GetPhase() == v1alpha1.ModuleReleasePhaseDeployed {
@@ -1689,7 +1695,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		symlinkPath := filepath.Join(r.symlinksDir, fmt.Sprintf("%d-%s", release.GetWeight(), release.GetModuleName()))
 		if err := os.RemoveAll(symlinkPath); err != nil {
 			r.log.Error("failed to remove module in downloaded symlinks dir", slog.String("release", release.GetName()), slog.String("path", modulePath), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("remove all: %w", err)
 		}
 
 		r.log.Info("module release deleted, waiting for Deckhouse restart", slog.String("release", release.GetName()))
@@ -1706,7 +1712,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 

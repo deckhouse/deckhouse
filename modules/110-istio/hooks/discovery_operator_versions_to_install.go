@@ -110,7 +110,7 @@ func operatorRevisionsToInstallDiscovery(_ context.Context, input *go_hook.HookI
 	for _, version := range operatorVersionsToInstall {
 		versionSemver, err := semver.NewVersion(version)
 		if err != nil {
-			return err
+			return fmt.Errorf("parse version: %w", err)
 		}
 		if minVersion == nil || versionSemver.LessThan(minVersion) {
 			minVersion = versionSemver

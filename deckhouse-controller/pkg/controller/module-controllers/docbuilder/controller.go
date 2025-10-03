@@ -81,10 +81,10 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("new: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ModuleDocumentation{}).
 		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(r.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(event event.CreateEvent) bool {
@@ -106,6 +106,10 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		})).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(ctr)
+	if err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 func (r *reconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
@@ -116,7 +120,7 @@ func (r *reconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) [
 
 		err := r.client.List(ctx, mdl)
 		if err != nil {
-			return err
+			return fmt.Errorf("list: %w", err)
 		}
 
 		requests = make([]reconcile.Request, 0, len(mdl.Items))
@@ -141,7 +145,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	md := new(v1alpha1.ModuleDocumentation)
 
 	if err := r.client.Get(ctx, req.NamespacedName, md); err != nil {
-		return result, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) != nil {
+			return result, fmt.Errorf("get: %w", err)
+		}
+		return result, nil
 	}
 
 	if !md.DeletionTimestamp.IsZero() {
@@ -284,7 +291,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 	}
 
 	if err = r.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md)); err != nil {
-		return result, err
+		return result, fmt.Errorf("patch: %w", err)
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
@@ -296,7 +303,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		if err = r.client.Update(ctx, mdCopy); err != nil {
 			r.logger.Error("update finalizer", log.Err(err))
 
-			return result, err
+			return result, fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -331,7 +338,7 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("stat: %w", err)
 	}
 
 	if !dir.IsDir() {
@@ -356,13 +363,13 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 
 		header, err := tar.FileInfoHeader(info, info.Name())
 		if err != nil {
-			return err
+			return fmt.Errorf("file info header: %w", err)
 		}
 
 		header.Name = strings.TrimPrefix(file, moduleDir)
 
 		if err = tw.WriteHeader(header); err != nil {
-			return err
+			return fmt.Errorf("write header: %w", err)
 		}
 
 		if info.IsDir() {
@@ -371,14 +378,14 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 
 		f, err := os.Open(file)
 		if err != nil {
-			return err
+			return fmt.Errorf("open: %w", err)
 		}
 		defer f.Close()
 
 		r.logger.Debug("copy file", slog.String("path", file))
 
 		if _, err = io.Copy(tw, f); err != nil {
-			return err
+			return fmt.Errorf("copy: %w", err)
 		}
 
 		return nil

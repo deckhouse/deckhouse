@@ -17,6 +17,7 @@ limitations under the License.
 package transform
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -79,7 +80,7 @@ func createFilterTransform(name string, filters []v1alpha1.Filter, mutate mutate
 
 		condition, err := rule.Render(vrl.Args{"filter": filter})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("render: %w", err)
 		}
 
 		transforms = append(transforms, &DynamicTransform{

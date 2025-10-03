@@ -64,7 +64,7 @@ func csrFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 	csr := &cv1.CertificateSigningRequest{}
 	err := sdk.FromUnstructured(obj, csr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	// CSR already has a certificate, ignoring
@@ -121,7 +121,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func csrHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sCli, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 	snaps := input.Snapshots.Get("csr")
 	for csrInfo, err := range sdkobjectpatch.SnapshotIter[CsrInfo](snaps) {
@@ -136,14 +136,14 @@ func csrHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Conta
 
 		csr, err := k8sCli.CertificatesV1().CertificateSigningRequests().Get(context.TODO(), csrInfo.Name, metav1.GetOptions{})
 		if err != nil {
-			return err
+			return fmt.Errorf("get: %w", err)
 		}
 
 		appendApprovalCondition(csr)
 
 		_, err = k8sCli.CertificatesV1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr.Name, csr, metav1.UpdateOptions{})
 		if err != nil {
-			return err
+			return fmt.Errorf("update approval: %w", err)
 		}
 	}
 
@@ -192,7 +192,7 @@ func parseCSR(obj *cv1.CertificateSigningRequest) (*x509.CertificateRequest, err
 	}
 	csr, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse certificate request: %w", err)
 	}
 	return csr, nil
 }

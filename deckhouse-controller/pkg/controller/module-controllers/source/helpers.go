@@ -41,7 +41,7 @@ var (
 )
 
 func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, moduleName string) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			module := new(v1alpha1.Module)
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -80,7 +80,10 @@ func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, module
 
 			return r.client.Update(ctx, module)
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // syncRegistrySettings checks if modules source registry settings were updated

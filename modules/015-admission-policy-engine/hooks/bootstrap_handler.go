@@ -133,7 +133,7 @@ func filterGatekeeperTemplates(obj *unstructured.Unstructured) (go_hook.FilterRe
 	// check if CRD has been successfully created from the ConstraintTemplate
 	created, found, err := unstructured.NestedBool(obj.Object, "status", "created")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested bool: %w", err)
 	}
 
 	return cTemplate{
@@ -165,25 +165,25 @@ func getRequiredTemplates() ([]string, error) {
 			return nil
 		}
 		if matched, err := filepath.Match(pattern, filepath.Base(path)); err != nil {
-			return err
+			return fmt.Errorf("match: %w", err)
 		} else if matched {
 			files = append(files, path)
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("walk dir: %w", err)
 	}
 
 	for _, file := range files {
 		template := &ctemplate{}
 		yamlFile, err := os.ReadFile(file)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read file: %w", err)
 		}
 		err = yaml.Unmarshal(yamlFile, template)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unmarshal: %w", err)
 		}
 		if template.ObjectMeta != nil && template.Kind == "ConstraintTemplate" && template.APIVersion == "templates.gatekeeper.sh/v1" {
 			requiredTemplates = append(requiredTemplates, template.ObjectMeta.Name)

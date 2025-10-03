@@ -101,7 +101,7 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		input.Logger.Error(err.Error())
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	// make map with nodes to kill

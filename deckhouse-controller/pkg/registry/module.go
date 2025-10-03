@@ -65,7 +65,7 @@ func (svc *moduleReleaseService) ListModules(ctx context.Context) ([]string, err
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
 
-	return ls, err
+	return ls, nil
 }
 
 var (
@@ -123,7 +123,7 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -141,7 +141,7 @@ func (svc *moduleReleaseService) fetchModuleReleaseMetadata(img v1.Image) (*modR
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode: %w", err)
 		}
 	}
 

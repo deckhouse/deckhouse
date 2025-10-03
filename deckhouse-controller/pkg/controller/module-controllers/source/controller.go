@@ -113,7 +113,7 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleSource{}).
 		Watches(&v1alpha1.Module{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Properties.Source}}}
@@ -149,7 +149,10 @@ func RegisterController(
 			},
 		})).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(sourceController)
+		Complete(sourceController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type reconciler struct {
@@ -249,7 +252,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		// new registry settings checksum should be applied to module source
 		if err = r.client.Update(ctx, source); err != nil {
 			r.logger.Error("failed to update module source status", slog.String("source_name", source.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 		// requeue module source after modifying annotation
 		r.logger.Debug("module source will be requeued", slog.String("source_name", source.Name))
@@ -526,7 +529,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if err := r.client.Status().Update(ctx, source); err != nil {
 			r.logger.Warn("failed to set terminating to the source", slog.String("moduleSource", source.GetName()), log.Err(err))
 
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -537,7 +540,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 			if err := r.client.List(ctx, releases, client.MatchingLabels{"source": source.Name, "status": "deployed"}); err != nil {
 				r.logger.Warn("failed to list releases", slog.String("moduleSource", source.GetName()), log.Err(err))
 
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("list: %w", err)
 			}
 
 			// prevent deletion if there are deployed releases
@@ -548,7 +551,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 				})
 				if err != nil {
 					r.logger.Error("failed to update module source status", slog.String("name", source.Name), log.Err(err))
-					return ctrl.Result{}, err
+					return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 				}
 
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
@@ -558,7 +561,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.logger.Error("failed to update module source", slog.String("name", source.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -575,7 +578,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.logger.Error("failed to update module source", slog.String("source_name", source.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 

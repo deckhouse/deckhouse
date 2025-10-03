@@ -65,7 +65,7 @@ func applyClusterConfigForProviderFilter(obj *unstructured.Unstructured) (go_hoo
 	var cm v1core.Secret
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	clusterConf, ok := cm.Data["cluster-configuration.yaml"]

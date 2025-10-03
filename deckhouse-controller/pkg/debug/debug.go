@@ -294,6 +294,9 @@ func DefineCollectDebugInfoCommand(kpApp *kingpin.Application) {
 	collectDebug.Action(func(_ *kingpin.ParseContext) error {
 		res := createTarball()
 		_, err := io.Copy(os.Stdout, res)
-		return err
+		if err != nil {
+			return fmt.Errorf("copy: %w", err)
+		}
+		return nil
 	})
 }

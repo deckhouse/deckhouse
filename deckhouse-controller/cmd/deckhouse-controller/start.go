@@ -410,7 +410,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		Cap:      5 * time.Minute,
 	}
 
-	return retry.OnError(bk, func(err error) bool {
+	err := retry.OnError(bk, func(err error) bool {
 		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
 		// retry on any error
 		return true
@@ -444,6 +444,10 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 func registerTelemetry(ctx context.Context) func(ctx context.Context) error {
