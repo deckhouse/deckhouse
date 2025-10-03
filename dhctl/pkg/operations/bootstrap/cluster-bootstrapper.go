@@ -42,11 +42,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -206,15 +205,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			var sshClient node.SSHClient
-			if app.SSHLegacyMode {
-				sshClient = clissh.NewClientFromFlags()
-			} else {
-				var err error
-				sshClient, err = gossh.NewClientFromFlags()
-				if err != nil {
-					return err
-				}
+			sshClient, err := sshclient.NewClientFromFlags()
+			if err != nil {
+				return err
 			}
 
 			if metaConfig.IsStatic() {

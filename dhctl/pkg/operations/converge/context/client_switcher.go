@@ -28,11 +28,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeClientSwitcher struct {
@@ -156,7 +155,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	kubeCl.KubeProxy.StopAll()
 
-	if !app.SSHLegacyMode {
+	if sshclient.IsModernMode() {
 		log.DebugF("Old SSH Client: %-v\n", sshCl)
 		sshCl.Stop()
 	}
@@ -174,15 +173,14 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 		BecomePass:     convergeState.NodeUserCredentials.Password,
 	})
 
-	var newSSHClient node.SSHClient
-	if app.SSHLegacyMode {
-		newSSHClient = clissh.NewClient(sess, []session.AgentPrivateKey{privateKey})
-		// Avoid starting a new ssh agent
-		newSSHClient.(*clissh.Client).InitializeNewAgent = false
+	var pkeys []session.AgentPrivateKey
+
+	if sshclient.IsLegacyMode() {
+		pkeys = append(pkeys, session.AgentPrivateKey(privateKey))
 	} else {
-		pkeys := append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
-		newSSHClient = gossh.NewClient(sess, pkeys)
+		pkeys = append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
 	}
+	newSSHClient := sshclient.NewClient(sess, pkeys)
 
 	err = newSSHClient.Start()
 	if err != nil {
@@ -192,7 +190,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	log.DebugLn("ssh client started for replacing kube client")
 
 	// adding keys to agent is actual only in legacy mode
-	if app.SSHLegacyMode {
+	if sshclient.IsLegacyMode() {
 		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
 		if err != nil {
 			return fmt.Errorf("failed to add keys to ssh agent: %w", err)

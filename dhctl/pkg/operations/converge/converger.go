@@ -35,9 +35,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -139,10 +138,9 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(false)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(false)
+		sshClient, err := sshclient.NewInitClientFromFlags(false)
+		if err != nil {
+			return err
 		}
 
 		if err != nil {
@@ -401,8 +399,6 @@ func (c *Converger) AutoConverge() error {
 	if c.KubeClient != nil {
 		kubeCl = c.KubeClient
 	} else {
-		var sshClient node.SSHClient
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -410,12 +406,7 @@ func (c *Converger) AutoConverge() error {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(false)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(false)
-		}
-
+		sshClient, err := sshclient.NewInitClientFromFlags(false)
 		if err != nil {
 			return err
 		}

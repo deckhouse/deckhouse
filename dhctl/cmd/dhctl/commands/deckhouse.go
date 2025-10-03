@@ -26,10 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -39,9 +37,6 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient node.SSHClient
-		var err error
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -49,10 +44,9 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		if err != nil {
+			return err
 		}
 
 		err = log.Process("default", "Remove Deckhouse️", func() error {
@@ -99,8 +93,6 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		var sshClient node.SSHClient
-
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -108,11 +100,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(true)
 		if err != nil {
 			return err
 		}

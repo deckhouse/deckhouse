@@ -45,6 +45,7 @@ type SSHConfig struct {
 	SSHBastionPassword  string               `json:"sshBastionPassword,omitempty"`
 	SudoPassword        string               `json:"sudoPassword,omitempty"`
 	LegacyMode          bool                 `json:"legacyMode,omitempty"`
+	ModernMode          bool                 `json:"modernMode,omitempty"`
 }
 
 type SSHAgentPrivateKey struct {
@@ -205,6 +206,7 @@ func (ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
 	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
 	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
+	app.SSHModernMode = cfg.SSHConfig.ModernMode
 
 	return nil
 }
